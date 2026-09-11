@@ -1,0 +1,4 @@
+package io.screentrace.adapter.spring;
+import static org.junit.jupiter.api.Assertions.*;
+import io.screentrace.scanner.ProjectScanner; import java.nio.file.*; import org.junit.jupiter.api.Test;
+class SpringBootAnalyzerTest { @Test void resolvesClassAndMethodMappingsAndView() throws Exception { Path root=Files.createTempDirectory("st"); Path java=root.resolve("src/main/java/X.java"); Files.createDirectories(java.getParent()); Files.writeString(java,"import org.springframework.stereotype.*; import org.springframework.web.bind.annotation.*; @Controller @RequestMapping(\"/users\") class X { @GetMapping(\"/{id}\") String detail(){ return \"user/detail\"; }}"); var graph=new SpringBootAnalyzer().analyze(new ProjectScanner().scan(root)); assertTrue(graph.nodes().stream().anyMatch(n->n.name().equals("GET /users/{id}"))); assertTrue(graph.nodes().stream().anyMatch(n->n.name().equals("user/detail"))); } }

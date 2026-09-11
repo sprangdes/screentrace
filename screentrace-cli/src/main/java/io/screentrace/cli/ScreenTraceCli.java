@@ -1,0 +1,21 @@
+package io.screentrace.cli;
+
+import com.sun.net.httpserver.HttpServer;
+import java.awt.Desktop;
+import io.screentrace.adapter.spring.SpringBootAnalyzer;
+import io.screentrace.report.ReportGenerator;
+import io.screentrace.scanner.ProjectScanner;
+import java.io.*; import java.net.*; import java.nio.file.*; import java.util.*;
+
+public final class ScreenTraceCli {
+  public static void main(String[] args) throws Exception {
+    String command=args.length==0?"analyze":args[0]; Parsed p=Parsed.of(Arrays.copyOfRange(args,1,args.length));
+    if(command.equals("analyze")){ Path out=p.output==null?p.target.resolve(".screentrace"):p.output; var graph=new SpringBootAnalyzer().analyze(new ProjectScanner().scan(p.target)); capture(new Parsed(p.target,out,false)); new ReportGenerator().write(graph,out); long screens=graph.nodes().stream().filter(n->n.type().name().equals("SCREEN")).count(), endpoints=graph.nodes().stream().filter(n->n.type().name().equals("ENDPOINT")).count(); System.out.printf("ScreenTrace%n%nAnalyzing:%n  %s%n%nDetected framework:%n  %s%n%nAnalysis result:%n  Endpoints: %d%n  Screens: %d%n  Components: %d%n%nGenerated:%n  %s%n",p.target,String.join(", ",graph.application().technologies()),endpoints,screens,graph.nodes().stream().filter(n->n.type().name().equals("COMPONENT")).count(),out); if(p.serve) serve(out.resolve("report")); }
+    else if(command.equals("capture")) capture(p);
+    else if(command.equals("serve")) serve((p.output==null?p.target.resolve(".screentrace"):p.output).resolve("report"));
+    else throw new IllegalArgumentException("Usage: screentrace analyze [project] [--output directory] [--serve] | screentrace serve [project]");
+  }
+  private static void capture(Parsed p) throws IOException, InterruptedException { Path output=p.output==null?p.target.resolve(".screentrace"):p.output; Process process=new ProcessBuilder("node",Path.of("screentrace-capture/capture.mjs").toAbsolutePath().toString(),p.target.toString(),output.toString()).inheritIO().start(); if(process.waitFor()!=0)throw new IllegalStateException("Runtime capture failed."); System.out.println("Generated runtime screenshots: "+output.resolve("screenshots")); }
+  private static void serve(Path report) throws IOException { if(!Files.isDirectory(report))throw new IllegalArgumentException("Report not found: "+report); HttpServer server=HttpServer.create(new InetSocketAddress(8088),0);server.createContext("/",e->{String uri=e.getRequestURI().getPath();Path requested=(uri.equals("/application-graph.json")||uri.equals("/prototype-model.json")||uri.equals("/edit-overlay.json")||uri.startsWith("/screenshots/"))?report.getParent().resolve(uri.substring(1)):report.resolve(uri.substring(1)).normalize();if(uri.equals("/")||!Files.isRegularFile(requested))requested=report.resolve("index.html");byte[] b=Files.readAllBytes(requested);e.getResponseHeaders().set("Content-Type",requested.toString().endsWith(".json")?"application/json":requested.toString().endsWith(".png")?"image/png":"text/html; charset=utf-8");e.sendResponseHeaders(200,b.length);e.getResponseBody().write(b);e.close();});server.start();System.out.println("ScreenTrace report running at:\n\nhttp://localhost:8088"); try { if (Desktop.isDesktopSupported()) Desktop.getDesktop().browse(URI.create("http://localhost:8088")); } catch (Exception ignored) { } }
+  private record Parsed(Path target,Path output,boolean serve){static Parsed of(String[] a){Path target=Path.of(".").toAbsolutePath().normalize(),out=null;boolean serve=false;for(int i=0;i<a.length;i++){if(a[i].equals("--serve"))serve=true;else if(a[i].equals("--output"))out=Path.of(a[++i]).toAbsolutePath().normalize();else target=Path.of(a[i]).toAbsolutePath().normalize();}return new Parsed(target,out,serve);}}
+}
