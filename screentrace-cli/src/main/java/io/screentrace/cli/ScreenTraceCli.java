@@ -17,25 +17,29 @@ import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
-import java.util.Set;
 import java.util.UUID;
 
 public final class ScreenTraceCli {
   static final int MAX_OVERLAY_BYTES = 1_048_576;
   static final InetAddress REPORT_ADDRESS = InetAddress.getLoopbackAddress();
+  private static final String ANALYSIS_DIRECTORY = ".screentrace";
+  private static final String INDEX_FILE = "index.html";
+  private static final String JSON_CONTENT_TYPE = "application/json";
+  private static final String HTML_CONTENT_TYPE = "text/html; charset=utf-8";
 
-  public static void main(String[] args) throws Exception {
+  @SuppressWarnings("java:S106") // This is a command-line program; progress belongs on the terminal.
+  public static void main(String[] args) throws IOException, InterruptedException {
     String command = args.length == 0 ? "analyze" : args[0];
     Parsed parsed = Parsed.of(Arrays.copyOfRange(args, 1, args.length));
     if (command.equals("analyze")) analyze(parsed);
     else if (command.equals("capture")) capture(parsed);
     else if (command.equals("export")) export(parsed);
-    else if (command.equals("serve")) serve((parsed.output == null ? parsed.target.resolve(".screentrace") : parsed.output).resolve("report"));
+    else if (command.equals("serve")) serve(analysisDirectory(parsed).resolve("report"));
     else throw new IllegalArgumentException("Usage: screentrace analyze [project] [--output directory] [--capture] [--serve] | screentrace capture [project] [--output directory] | screentrace serve [project] | screentrace export [project] [--output file]");
   }
 
-  private static void analyze(Parsed parsed) throws Exception {
-    Path output = parsed.output == null ? parsed.target.resolve(".screentrace") : parsed.output;
+  private static void analyze(Parsed parsed) throws IOException, InterruptedException {
+    Path output = analysisDirectory(parsed);
     var graph = new SpringBootAnalyzer().analyze(new ProjectScanner().scan(parsed.target));
     if (parsed.capture) capture(new Parsed(parsed.target, output, false, false));
     new ReportGenerator().write(graph, output);
@@ -46,14 +50,14 @@ public final class ScreenTraceCli {
   }
 
   private static void export(Parsed parsed) throws IOException {
-    Path analysis = parsed.target.resolve(".screentrace");
+    Path analysis = parsed.target.resolve(ANALYSIS_DIRECTORY);
     Path destination = parsed.output == null ? analysis.resolve("review-result.json") : parsed.output;
     new ReviewResultGenerator().write(analysis, destination);
     System.out.println("Review result exported:\n  " + destination);
   }
 
   private static void capture(Parsed parsed) throws IOException, InterruptedException {
-    Path output = parsed.output == null ? parsed.target.resolve(".screentrace") : parsed.output;
+    Path output = analysisDirectory(parsed);
     Process process = new ProcessBuilder("node", Path.of("screentrace-capture/capture.mjs").toAbsolutePath().toString(), parsed.target.toString(), output.toString()).inheritIO().start();
     if (process.waitFor() != 0) throw new IllegalStateException("Runtime capture failed.");
     System.out.println("Generated runtime screenshots: " + output.resolve("screenshots"));
@@ -98,7 +102,7 @@ public final class ScreenTraceCli {
       exchange.close();
       return;
     }
-    sendFile(exchange, overlay, "application/json");
+    sendFile(exchange, overlay, JSON_CONTENT_TYPE);
   }
 
   private static void handleReviewResult(HttpExchange exchange, Path analysis, Path overlay, String sessionToken) throws IOException {
@@ -111,7 +115,7 @@ public final class ScreenTraceCli {
     if (!writeOverlay(exchange, overlay)) return;
     Path result = new ReviewResultGenerator().write(analysis, analysis.resolve("review-result.json"));
     exchange.getResponseHeaders().set("Content-Disposition", "attachment; filename=review-result.json");
-    sendFile(exchange, result, "application/json");
+    sendFile(exchange, result, JSON_CONTENT_TYPE);
   }
 
   private static boolean writeOverlay(HttpExchange exchange, Path overlay) throws IOException {
@@ -148,10 +152,10 @@ public final class ScreenTraceCli {
       exchange.close();
       return;
     }
-    if (!Files.isRegularFile(requested)) requested = report.resolve("index.html");
-    if (requested.equals(report.resolve("index.html"))) {
+    if (!Files.isRegularFile(requested)) requested = report.resolve(INDEX_FILE);
+    if (requested.equals(report.resolve(INDEX_FILE))) {
       byte[] body = Files.readString(requested).replace("__SCREEN_TRACE_SESSION_TOKEN__", sessionToken).getBytes();
-      exchange.getResponseHeaders().set("Content-Type", "text/html; charset=utf-8");
+      exchange.getResponseHeaders().set("Content-Type", HTML_CONTENT_TYPE);
       exchange.sendResponseHeaders(200, body.length);
       exchange.getResponseBody().write(body);
       exchange.close();
@@ -161,7 +165,7 @@ public final class ScreenTraceCli {
   }
 
   static Path staticFile(String uri, Path report, Path analysis) {
-    if (uri.equals("/")) return report.resolve("index.html");
+    if (uri.equals("/")) return report.resolve(INDEX_FILE);
     if (uri.equals("/application-graph.json") || uri.equals("/prototype-model.json")) return resolveWithin(analysis, uri.substring(1));
     if (uri.startsWith("/screenshots/")) return resolveWithin(analysis.resolve("screenshots"), uri.substring("/screenshots/".length()));
     return resolveWithin(report, uri.substring(1));
@@ -176,7 +180,7 @@ public final class ScreenTraceCli {
       Path realRoot = normalizedRoot.toRealPath();
       Path realResolved = resolved.toRealPath();
       return realResolved.startsWith(realRoot) ? resolved : null;
-    } catch (IOException ignored) {
+    } catch (IOException | SecurityException ignored) {
       return null;
     }
   }
@@ -185,7 +189,8 @@ public final class ScreenTraceCli {
     try (input; ByteArrayOutputStream output = new ByteArrayOutputStream()) {
       byte[] buffer = new byte[8192];
       long total = 0;
-      for (int read; (read = input.read(buffer)) != -1;) {
+      int read;
+      while ((read = input.read(buffer)) != -1) {
         total += read;
         if (total > MAX_OVERLAY_BYTES) throw new RequestTooLargeException();
         output.write(buffer, 0, read);
@@ -204,16 +209,24 @@ public final class ScreenTraceCli {
 
   private static String contentType(Path file) {
     String value = file.toString();
-    return value.endsWith(".json") ? "application/json" : value.endsWith(".png") ? "image/png" : "text/html; charset=utf-8";
+    if (value.endsWith(".json")) return JSON_CONTENT_TYPE;
+    if (value.endsWith(".png")) return "image/png";
+    return HTML_CONTENT_TYPE;
   }
 
   private static void openReport() {
     try {
       if (Desktop.isDesktopSupported()) Desktop.getDesktop().browse(URI.create("http://localhost:8088"));
-    } catch (Exception ignored) { }
+    } catch (IOException ignored) {
+      // Opening a browser is best effort and must not prevent report serving.
+    }
   }
 
   static final class RequestTooLargeException extends IOException { }
+
+  private static Path analysisDirectory(Parsed parsed) {
+    return parsed.output == null ? parsed.target.resolve(ANALYSIS_DIRECTORY) : parsed.output;
+  }
 
   private record Parsed(Path target, Path output, boolean serve, boolean capture) {
     static Parsed of(String[] arguments) {

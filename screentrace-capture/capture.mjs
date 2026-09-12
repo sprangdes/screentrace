@@ -14,10 +14,18 @@ const wait = ms => new Promise(done => setTimeout(done, ms));
 async function ready() { try { return (await fetch('http://127.0.0.1:4173/')).ok; } catch { return false; } }
 const fileFor = path => `${(path === '/' ? 'home' : path.slice(1)).replaceAll('/', '__').replace(/[:?=&]/g, '_')}.png`;
 const concrete = path => path.replace(/:id\b/g, 'preview').replace(/:requestToken\b/g, 'preview-token');
-const roleFor = path => (/^\/(business|service|settings)/.test(path) || path.includes('/reservation/manage') || path.includes('/reservation/today/manage')) ? 'business' : (/^\/(login|register|forgot-password|force-change-password|$)/.test(path) ? 'anonymous' : 'customer');
-const user = role => role === 'business'
-  ? { role: 'ROLE_BUSINESS', username: '示範商家', email: 'merchant@preview.local', emailVerified: true, business: { id: 1, name: '示範預約店', category: '美容服務', phone: '02-5555-0101', address: '台北市示範路 1 號', slotInterval: 30 } }
-  : role === 'customer' ? { role: 'ROLE_USER', username: '示範客戶', email: 'customer@preview.local', emailVerified: true } : null;
+const businessUser = { role: 'ROLE_BUSINESS', username: '示範商家', email: 'merchant@preview.local', emailVerified: true, business: { id: 1, name: '示範預約店', category: '美容服務', phone: '02-5555-0101', address: '台北市示範路 1 號', slotInterval: 30 } };
+const customerUser = { role: 'ROLE_USER', username: '示範客戶', email: 'customer@preview.local', emailVerified: true };
+const roleFor = path => {
+  if (/^\/(business|service|settings)/.test(path) || path.includes('/reservation/manage') || path.includes('/reservation/today/manage')) return 'business';
+  if (/^\/(login|register|forgot-password|force-change-password|$)/.test(path)) return 'anonymous';
+  return 'customer';
+};
+const user = role => {
+  if (role === 'business') return businessUser;
+  if (role === 'customer') return customerUser;
+  return null;
+};
 function response(url, role) {
   const me = user(role); let data = [];
   if (url.pathname === '/api/me') data = me;
@@ -32,7 +40,11 @@ function response(url, role) {
 }
 const viteProcess = spawn(process.execPath, [vite, '--host', '127.0.0.1', '--port', '4173', '--strictPort'], { cwd: frontend, stdio: 'ignore' });
 try {
-  for (let i = 0; i < 40 && !(await ready()); i++) await wait(250);
+  let attempts = 40;
+  while (attempts > 0 && !(await ready())) {
+    await wait(250);
+    attempts--;
+  }
   if (!(await ready())) throw new Error('Vite preview did not start on port 4173.');
   const browser = await chromium.launch({ headless: true }); const manifest = {}, interactions = {}, failures = [];
   try {
