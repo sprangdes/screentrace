@@ -8,6 +8,7 @@ import io.screentrace.core.ApplicationGraph.GraphNode;
 import io.screentrace.core.ApplicationGraph.NodeType;
 import io.screentrace.core.ApplicationGraph.SourceLocation;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -23,7 +24,8 @@ public final class ReviewResultGenerator {
 
   public Path write(Path analysisOutput, Path destination) throws IOException {
     ApplicationGraph graph = json.readValue(analysisOutput.resolve("application-graph.json").toFile(), ApplicationGraph.class);
-    JsonNode interactions = json.readTree(analysisOutput.resolve("screenshots/interactions.json").toFile());
+    Path interactionsFile = analysisOutput.resolve("screenshots/interactions.json");
+    JsonNode interactions = Files.exists(interactionsFile) ? json.readTree(interactionsFile.toFile()) : json.createObjectNode();
     JsonNode overlay = json.readTree(analysisOutput.resolve("edit-overlay.json").toFile());
     Map<String, String> decisions = decisions(overlay);
     Map<String, GraphNode> nodes = new HashMap<>();
