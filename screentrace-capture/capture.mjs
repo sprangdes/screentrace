@@ -45,10 +45,11 @@ try {
         await page.waitForTimeout(800);
         interactions[route] = await page.locator('a[href], button').evaluateAll(items => {
           const normalize = href => { try { const url = new URL(href, window.location.href); return url.origin === window.location.origin ? url.pathname : null; } catch { return null; } };
-          return items.map(item => {
+          return items.map((item, index) => {
             const box = item.getBoundingClientRect(), style = getComputedStyle(item), href = item instanceof HTMLAnchorElement ? item.href : null;
             const css = Object.fromEntries(['display', 'position', 'width', 'height', 'padding', 'margin', 'color', 'backgroundColor', 'border', 'borderRadius', 'boxShadow', 'fontFamily', 'fontSize', 'fontWeight', 'lineHeight', 'textAlign', 'cursor', 'opacity'].map(property => [property, style[property]]));
-            return { type: item.tagName === 'A' ? 'LINK' : 'BUTTON', label: (item.getAttribute('aria-label') || item.textContent || '').replace(/\s+/g, ' ').trim(), target: href ? normalize(href) : null, visible: style.visibility !== 'hidden' && style.display !== 'none', bounds: { x: box.left + window.scrollX, y: box.top + window.scrollY, width: box.width, height: box.height }, css };
+            const visible = style.visibility !== 'hidden' && style.display !== 'none' && Number.parseFloat(style.opacity) > 0 && box.width > 0 && box.height > 0 && box.bottom > 0 && box.right > 0 && box.left < window.innerWidth;
+            return { id: `runtime-component-${index}`, type: item.tagName === 'A' ? 'LINK' : 'BUTTON', label: (item.getAttribute('aria-label') || item.textContent || '').replace(/\s+/g, ' ').trim(), target: href ? normalize(href) : null, visible, bounds: { x: box.left + window.scrollX, y: box.top + window.scrollY, width: box.width, height: box.height }, css };
           }).filter(item => item.visible && item.label && item.bounds.width > 0 && item.bounds.height > 0);
         });
         interactions[route] = { width: await page.evaluate(() => document.documentElement.scrollWidth), height: await page.evaluate(() => document.documentElement.scrollHeight), items: interactions[route] };
