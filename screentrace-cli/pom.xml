@@ -1,1 +1,59 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0"><modelVersion>4.0.0</modelVersion><parent><groupId>io.screentrace</groupId><artifactId>screentrace</artifactId><version>0.1.0-SNAPSHOT</version></parent><artifactId>screentrace-cli</artifactId><dependencies><dependency><groupId>io.screentrace</groupId><artifactId>screentrace-core</artifactId><version>${project.version}</version></dependency><dependency><groupId>io.screentrace</groupId><artifactId>screentrace-scanner</artifactId><version>${project.version}</version></dependency><dependency><groupId>io.screentrace</groupId><artifactId>screentrace-adapter-spring</artifactId><version>${project.version}</version></dependency><dependency><groupId>io.screentrace</groupId><artifactId>screentrace-report</artifactId><version>${project.version}</version></dependency></dependencies><build><plugins><plugin><artifactId>maven-shade-plugin</artifactId><version>3.5.3</version><executions><execution><phase>package</phase><goals><goal>shade</goal></goals><configuration><createDependencyReducedPom>false</createDependencyReducedPom><transformers><transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer"><mainClass>io.screentrace.cli.ScreenTraceCli</mainClass></transformer></transformers></configuration></execution></executions></plugin></plugins></build></project>
+<project xmlns="http://maven.apache.org/POM/4.0.0">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>io.screentrace</groupId>
+    <artifactId>screentrace</artifactId>
+    <version>0.1.0-SNAPSHOT</version>
+  </parent>
+
+  <artifactId>screentrace-cli</artifactId>
+
+  <dependencies>
+    <dependency>
+      <groupId>io.screentrace</groupId>
+      <artifactId>screentrace-core</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>io.screentrace</groupId>
+      <artifactId>screentrace-scanner</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>io.screentrace</groupId>
+      <artifactId>screentrace-adapter-spring</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>io.screentrace</groupId>
+      <artifactId>screentrace-report</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <artifactId>maven-shade-plugin</artifactId>
+        <version>3.5.3</version>
+        <executions>
+          <execution>
+            <phase>package</phase>
+            <goals>
+              <goal>shade</goal>
+            </goals>
+            <configuration>
+              <createDependencyReducedPom>false</createDependencyReducedPom>
+              <transformers>
+                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                  <mainClass>io.screentrace.cli.ScreenTraceCli</mainClass>
+                </transformer>
+              </transformers>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+</project>
