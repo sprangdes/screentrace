@@ -15,7 +15,7 @@ class ApplicationGraphTest {
     assertTrue(new ObjectMapper().writeValueAsString(graph).contains("CONFIRMED"));
   }
 
-  @Test void deserializesAnEmptyGraphWhoseEmptyListsWereOmitted() throws Exception {
+  @Test void deserializesAnEmptyGraphWhoseEmptyListsWereOmitted() {
     ObjectMapper json = new ObjectMapper();
     var graph = new ApplicationGraph(new ApplicationGraph.Application("sample", "/sample", List.of()), List.of(), List.of(), List.of());
     assertDoesNotThrow(() -> json.readValue(json.writeValueAsString(graph), ApplicationGraph.class));

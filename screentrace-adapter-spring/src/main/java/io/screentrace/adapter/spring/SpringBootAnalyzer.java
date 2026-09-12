@@ -33,7 +33,10 @@ import java.util.regex.Pattern;
 
 /** AST-based Spring mapping parser; React extraction is deliberately limited to declared route/link/API literals. */
 public final class SpringBootAnalyzer {
-    private static final Set<String> MAPPINGS = Set.of("RequestMapping", "GetMapping", "PostMapping", "PutMapping", "DeleteMapping", "PatchMapping");
+    private static final String REQUEST_MAPPING = "RequestMapping";
+    private static final String ROUTE = "route";
+    private static final String ROUTE_SEPARATOR = "/";
+    private static final Set<String> MAPPINGS = Set.of(REQUEST_MAPPING, "GetMapping", "PostMapping", "PutMapping", "DeleteMapping", "PatchMapping");
     private static final Set<String> PATH_NAMES = Set.of("value", "path");
     private static final String NAVIGATION = "NAVIGATION";
     private static final String REQUEST = "REQUEST";
@@ -42,7 +45,7 @@ public final class SpringBootAnalyzer {
     private static final Pattern LINK_PATTERN = Pattern.compile("<(?:Link|NavLink)\\b[^>]*\\bto\\s*=\\s*(?:\\{)?[\\\"'](/[^\\\"'}]+)");
     private static final Pattern NAVIGATE_PATTERN = Pattern.compile("\\bnavigate\\s*\\(\\s*[\\\"'](/[^\\\"')]+)");
     private static final Pattern API_PATTERN = Pattern.compile("[\\\"'](/api/[^\\\"'?` }]+)");
-    private static final Pattern IMPORT_PATTERN = Pattern.compile("import\\s+(?:\\{\\s*)?([A-Z]\\w*).*?from\\s+[\\\"']([^\\\"']+)[\\\"']");
+    private static final Pattern IMPORT_PATTERN = Pattern.compile("import\\s+(?:\\{\\s*)?([A-Z]\\w*)\\s*(?:,\\s*\\w+\\s*)*\\}?\\s*from\\s+[\\\"']([^\\\"']+)[\\\"']");
     private static final List<String> IMPORT_SUFFIXES = List.of(".tsx", ".jsx", ".ts", ".js", "/index.tsx");
 
     public ApplicationGraph analyze(ProjectInventory inventory) throws IOException {
@@ -63,7 +66,7 @@ public final class SpringBootAnalyzer {
         try {
             String relative = root.relativize(file).toString();
             for (ClassOrInterfaceDeclaration type : StaticJavaParser.parse(file).findAll(ClassOrInterfaceDeclaration.class)) {
-                parseControllerType(root, type, relative, state);
+                parseControllerType(type, relative, state);
             }
         } catch (IOException | RuntimeException exception) {
             state.diagnostics.add(new Diagnostic("Unable to parse Java source: " + exception.getMessage(), Confidence.UNRESOLVED,
@@ -71,58 +74,58 @@ public final class SpringBootAnalyzer {
         }
     }
 
-    private void parseControllerType(Path root, ClassOrInterfaceDeclaration type, String relative, AnalysisState state) {
+    private void parseControllerType(ClassOrInterfaceDeclaration type, String relative, AnalysisState state) {
         if (!isController(type)) {
             return;
         }
         boolean rest = annotation(type, "RestController") != null;
-        List<String> bases = paths(annotation(type, "RequestMapping"));
+        List<String> bases = paths(annotation(type, REQUEST_MAPPING));
         if (bases.isEmpty()) {
             bases = List.of("");
         }
         for (MethodDeclaration method : type.getMethods()) {
             java.util.Optional<AnnotationExpr> mapping = mapping(method);
             if (mapping.isPresent()) {
-                parseMapping(root, type, method, relative, bases, rest, mapping.get(), state);
+                parseMapping(method, mapping.get(), new ControllerContext(type.getNameAsString(), relative, bases, rest), state);
             }
         }
     }
 
-    private void parseMapping(Path root, ClassOrInterfaceDeclaration type, MethodDeclaration method, String relative,
-            List<String> bases, boolean rest, AnnotationExpr mapping, AnalysisState state) {
+    private void parseMapping(MethodDeclaration method, AnnotationExpr mapping, ControllerContext controller, AnalysisState state) {
         String httpMethod = httpMethod(mapping);
         List<String> methodPaths = paths(mapping);
         if (methodPaths.isEmpty()) {
             methodPaths = List.of("");
         }
-        SourceLocation source = new SourceLocation(relative, method.getBegin().map(position -> position.line).orElse(1));
-        String handlerName = type.getNameAsString() + "." + method.getNameAsString() + "()";
-        String handlerId = ApplicationGraph.id(NodeType.HANDLER, relative + ":" + handlerName + ":" + source.line());
+        SourceLocation source = new SourceLocation(controller.relative(), method.getBegin().map(position -> position.line).orElse(1));
+        String handlerName = controller.typeName() + "." + method.getNameAsString() + "()";
+        String handlerId = ApplicationGraph.id(NodeType.HANDLER, controller.relative() + ":" + handlerName + ":" + source.line());
         addNode(state.nodes, new GraphNode(handlerId, NodeType.HANDLER, handlerName,
-                Map.of("class", type.getNameAsString(), "method", method.getNameAsString()), source, Confidence.CONFIRMED));
+                Map.of("class", controller.typeName(), "method", method.getNameAsString()), source, Confidence.CONFIRMED));
 
         String result = returnLiteral(method);
         boolean redirect = result != null && result.startsWith("redirect:");
-        for (String base : bases) {
+        EndpointContext endpoint = new EndpointContext(handlerId, httpMethod, controller.rest(), redirect, result, source);
+        for (String base : controller.bases()) {
             for (String child : methodPaths) {
-                addEndpoint(root, state, handlerId, httpMethod, join(base, child), rest, redirect, result, source);
+                addEndpoint(state, join(base, child), endpoint);
             }
         }
     }
 
-    private void addEndpoint(Path root, AnalysisState state, String handlerId, String httpMethod, String path,
-            boolean rest, boolean redirect, String result, SourceLocation source) {
-        String label = httpMethod + " " + path;
-        String endpointId = ApplicationGraph.id(NodeType.ENDPOINT, label + ":" + handlerId);
+    private void addEndpoint(AnalysisState state, String path, EndpointContext endpoint) {
+        String label = endpoint.httpMethod() + " " + path;
+        String endpointId = ApplicationGraph.id(NodeType.ENDPOINT, label + ":" + endpoint.handlerId());
         Map<String, String> attributes = new TreeMap<>();
-        attributes.put("httpMethod", httpMethod);
+        attributes.put("httpMethod", endpoint.httpMethod());
         attributes.put("path", path);
-        attributes.put("category", rest ? "REST_API" : redirect ? "REDIRECT" : "MVC_SCREEN");
-        addNode(state.nodes, new GraphNode(endpointId, NodeType.ENDPOINT, label, attributes, source, Confidence.CONFIRMED));
+        attributes.put("category", endpoint.category());
+        addNode(state.nodes, new GraphNode(endpointId, NodeType.ENDPOINT, label, attributes, endpoint.source(), Confidence.CONFIRMED));
         state.endpointByRoute.putIfAbsent(path, endpointId);
-        edge(state.edges, EdgeType.HANDLED_BY, endpointId, handlerId, Confidence.CONFIRMED, source);
-        if (!rest && result != null && !redirect) {
-            edge(state.edges, EdgeType.RENDERS, handlerId, screen(result, state.nodes, source), Confidence.CONFIRMED, source);
+        edge(state.edges, EdgeType.HANDLED_BY, endpointId, endpoint.handlerId(), Confidence.CONFIRMED, endpoint.source());
+        if (endpoint.rendersScreen()) {
+            edge(state.edges, EdgeType.RENDERS, endpoint.handlerId(), screen(endpoint.result(), state.nodes, endpoint.source()), Confidence.CONFIRMED,
+                    endpoint.source());
         }
     }
 
@@ -138,18 +141,25 @@ public final class SpringBootAnalyzer {
         Matcher routes = ROUTE_PATTERN.matcher(text);
         while (routes.find()) {
             String route = routes.group(1);
-            String view = lastView(routes.group(2));
-            String name = route.equals("/") ? "Home" : route.substring(1);
-            SourceLocation source = new SourceLocation(relative, line(text, routes.start()));
-            Map<String, String> attributes = new TreeMap<>();
-            String viewSource = sourceForView(text, view, imports, relative);
-            attributes.put("route", route);
-            attributes.put("view", view);
-            attributes.put("viewSource", viewSource);
-            attributes.put("viewSources", String.join("|", sourceClosure(root, viewSource, new LinkedHashSet<>())));
-            String id = ApplicationGraph.id(NodeType.SCREEN, relative + ":" + route);
-            addNode(state.nodes, new GraphNode(id, NodeType.SCREEN, name, attributes, source, Confidence.CONFIRMED));
+            addRoute(root, text, relative, imports, state, routes, route);
         }
+    }
+
+    private void addRoute(Path root, String text, String relative, Map<String, String> imports, AnalysisState state, Matcher routes, String route) {
+        String view = lastView(routes.group(2));
+        SourceLocation source = new SourceLocation(relative, line(text, routes.start()));
+        String viewSource = sourceForView(text, view, imports, relative);
+        Map<String, String> attributes = new TreeMap<>();
+        attributes.put(ROUTE, route);
+        attributes.put("view", view);
+        attributes.put("viewSource", viewSource);
+        attributes.put("viewSources", String.join("|", sourceClosure(root, viewSource, new LinkedHashSet<>())));
+        String id = ApplicationGraph.id(NodeType.SCREEN, relative + ":" + route);
+        addNode(state.nodes, new GraphNode(id, NodeType.SCREEN, routeName(route), attributes, source, Confidence.CONFIRMED));
+    }
+
+    private static String routeName(String route) {
+        return route.equals(ROUTE_SEPARATOR) ? "Home" : route.substring(1);
     }
 
     private void addComponents(String text, String relative, AnalysisState state) {
@@ -163,19 +173,17 @@ public final class SpringBootAnalyzer {
         Matcher matcher = pattern.matcher(text);
         while (matcher.find()) {
             String target = matcher.group(1);
-            String endpoint = endpointGroup == null ? null : target;
-            addComponent(relative, text, matcher.start(), type, action, target, endpoint, state);
+            addComponent(new ComponentContext(relative, text, matcher.start(), type, action, target, endpointGroup == null ? null : target), state);
         }
     }
 
-    private void addComponent(String relative, String text, int offset, String type, String action, String target,
-            String endpoint, AnalysisState state) {
-        SourceLocation source = new SourceLocation(relative, line(text, offset));
-        String id = ApplicationGraph.id(NodeType.COMPONENT, relative + ":" + source.line() + ":" + target);
-        addNode(state.nodes, new GraphNode(id, NodeType.COMPONENT, target,
-                Map.of("componentType", type, "action", action, "target", target), source, Confidence.CONFIRMED));
-        if (endpoint != null) {
-            String endpointId = state.endpointByRoute.get(endpoint);
+    private void addComponent(ComponentContext component, AnalysisState state) {
+        SourceLocation source = new SourceLocation(component.relative(), line(component.text(), component.offset()));
+        String id = ApplicationGraph.id(NodeType.COMPONENT, component.relative() + ":" + source.line() + ":" + component.target());
+        addNode(state.nodes, new GraphNode(id, NodeType.COMPONENT, component.target(),
+                Map.of("componentType", component.type(), "action", component.action(), "target", component.target()), source, Confidence.CONFIRMED));
+        if (component.endpoint() != null) {
+            String endpointId = state.endpointByRoute.get(component.endpoint());
             if (endpointId != null) {
                 edge(state.edges, EdgeType.TRIGGERS, id, endpointId, Confidence.CONFIRMED, source);
             }
@@ -269,8 +277,8 @@ public final class SpringBootAnalyzer {
     private static void connectReactGraph(AnalysisState state) {
         Map<String, GraphNode> screensByRoute = new HashMap<>();
         for (GraphNode node : state.nodes) {
-            if (node.type() == NodeType.SCREEN && node.attributes().containsKey("route")) {
-                screensByRoute.put(node.attributes().get("route"), node);
+            if (node.type() == NodeType.SCREEN && node.attributes().containsKey(ROUTE)) {
+                screensByRoute.put(node.attributes().get(ROUTE), node);
             }
         }
         for (GraphNode screen : state.nodes.stream().filter(node -> node.type() == NodeType.SCREEN).toList()) {
@@ -360,7 +368,7 @@ public final class SpringBootAnalyzer {
     }
 
     private static String httpMethod(AnnotationExpr mapping) {
-        if (!"RequestMapping".equals(mapping.getNameAsString())) {
+        if (!REQUEST_MAPPING.equals(mapping.getNameAsString())) {
             return Map.of("GetMapping", "GET", "PostMapping", "POST", "PutMapping", "PUT", "DeleteMapping", "DELETE", "PatchMapping", "PATCH")
                     .getOrDefault(mapping.getNameAsString(), "ANY");
         }
@@ -376,8 +384,11 @@ public final class SpringBootAnalyzer {
     }
 
     private static String join(String base, String child) {
-        String path = (base + "/" + child).replaceAll("/{2,}", "/");
-        return path.isEmpty() ? "/" : path.startsWith("/") ? path : "/" + path;
+        String path = (base + ROUTE_SEPARATOR + child).replaceAll("/{2,}", ROUTE_SEPARATOR);
+        if (path.isEmpty()) {
+            return ROUTE_SEPARATOR;
+        }
+        return path.startsWith(ROUTE_SEPARATOR) ? path : ROUTE_SEPARATOR + path;
     }
 
     private static String returnLiteral(MethodDeclaration method) {
@@ -396,5 +407,24 @@ public final class SpringBootAnalyzer {
         private final List<Relationship> edges = new ArrayList<>();
         private final Map<String, String> endpointByRoute = new HashMap<>();
         private final List<Diagnostic> diagnostics = new ArrayList<>();
+    }
+
+    private record ControllerContext(String typeName, String relative, List<String> bases, boolean rest) {
+    }
+
+    private record EndpointContext(String handlerId, String httpMethod, boolean rest, boolean redirect, String result, SourceLocation source) {
+        private String category() {
+            if (rest) {
+                return "REST_API";
+            }
+            return redirect ? "REDIRECT" : "MVC_SCREEN";
+        }
+
+        private boolean rendersScreen() {
+            return !rest && result != null && !redirect;
+        }
+    }
+
+    private record ComponentContext(String relative, String text, int offset, String type, String action, String target, String endpoint) {
     }
 }

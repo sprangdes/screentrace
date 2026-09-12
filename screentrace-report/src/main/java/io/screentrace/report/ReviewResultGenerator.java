@@ -23,6 +23,7 @@ public final class ReviewResultGenerator {
     private static final String KEEP = "KEEP";
     private static final String REMOVE = "REMOVE";
     private static final String UNDECIDED = "UNDECIDED";
+    private static final String ROUTE = "route";
     private final ObjectMapper json = new ObjectMapper().enable(SerializationFeature.INDENT_OUTPUT);
 
     public Path write(Path analysisOutput, Path destination) throws IOException {
@@ -50,18 +51,18 @@ public final class ReviewResultGenerator {
     private List<Map<String, Object>> screens(ApplicationGraph graph, JsonNode interactions, Map<String, String> decisions, ReviewCounts counts) {
         List<Map<String, Object>> screens = new ArrayList<>();
         graph.nodes().stream().filter(node -> node.type() == NodeType.SCREEN)
-                .sorted(Comparator.comparing(node -> node.attributes().getOrDefault("route", node.name())))
+                .sorted(Comparator.comparing(node -> node.attributes().getOrDefault(ROUTE, node.name())))
                 .forEach(screen -> screens.add(screen(screen, interactions, decisions, counts)));
         return screens;
     }
 
     private Map<String, Object> screen(GraphNode screen, JsonNode interactions, Map<String, String> decisions, ReviewCounts counts) {
-        String route = screen.attributes().getOrDefault("route", screen.name());
+        String route = screen.attributes().getOrDefault(ROUTE, screen.name());
         String status = decision(decisions.get(key(screen.id(), null)));
         counts.screen(status);
         Map<String, Object> item = new LinkedHashMap<>();
         item.put("id", screen.id());
-        item.put("route", route);
+        item.put(ROUTE, route);
         item.put("name", screen.name());
         item.put("decision", status);
         putSource(item, screen.source());
@@ -120,10 +121,6 @@ public final class ReviewResultGenerator {
         return UNDECIDED;
     }
 
-    private static Map<String, Integer> counts(int keep, int remove, int undecided) {
-        return Map.of("keep", keep, "remove", remove, "undecided", undecided);
-    }
-
     private static void putSource(Map<String, Object> item, SourceLocation source) {
         if (source != null) {
             item.put("source", Map.of("file", source.file(), "line", source.line()));
@@ -159,11 +156,15 @@ public final class ReviewResultGenerator {
         }
 
         private Map<String, Integer> screens() {
-            return counts(keptScreens, removedScreens, undecidedScreens);
+            return countSummary(keptScreens, removedScreens, undecidedScreens);
         }
 
         private Map<String, Integer> components() {
-            return counts(keptComponents, removedComponents, undecidedComponents);
+            return countSummary(keptComponents, removedComponents, undecidedComponents);
+        }
+
+        private static Map<String, Integer> countSummary(int keep, int remove, int undecided) {
+            return Map.of("keep", keep, "remove", remove, "undecided", undecided);
         }
     }
 }

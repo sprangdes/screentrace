@@ -18,6 +18,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.UUID;
+import java.util.logging.Logger;
 
 public final class ScreenTraceCli {
   static final int MAX_OVERLAY_BYTES = 1_048_576;
@@ -26,8 +27,8 @@ public final class ScreenTraceCli {
   private static final String INDEX_FILE = "index.html";
   private static final String JSON_CONTENT_TYPE = "application/json";
   private static final String HTML_CONTENT_TYPE = "text/html; charset=utf-8";
+  private static final Logger LOGGER = Logger.getLogger(ScreenTraceCli.class.getName());
 
-  @SuppressWarnings("java:S106") // This is a command-line program; progress belongs on the terminal.
   public static void main(String[] args) throws IOException, InterruptedException {
     String command = args.length == 0 ? "analyze" : args[0];
     Parsed parsed = Parsed.of(Arrays.copyOfRange(args, 1, args.length));
@@ -45,7 +46,9 @@ public final class ScreenTraceCli {
     new ReportGenerator().write(graph, output);
     long screens = graph.nodes().stream().filter(node -> node.type().name().equals("SCREEN")).count();
     long endpoints = graph.nodes().stream().filter(node -> node.type().name().equals("ENDPOINT")).count();
-    System.out.printf("ScreenTrace%n%nAnalyzing:%n  %s%n%nDetected framework:%n  %s%n%nAnalysis result:%n  Endpoints: %d%n  Screens: %d%n  Components: %d%n%nGenerated:%n  %s%n", parsed.target, String.join(", ", graph.application().technologies()), endpoints, screens, graph.nodes().stream().filter(node -> node.type().name().equals("COMPONENT")).count(), output);
+    LOGGER.info(() -> "ScreenTrace%n%nAnalyzing:%n  %s%n%nDetected framework:%n  %s%n%nAnalysis result:%n  Endpoints: %d%n  Screens: %d%n  Components: %d%n%nGenerated:%n  %s%n"
+        .formatted(parsed.target, String.join(", ", graph.application().technologies()), endpoints, screens,
+            graph.nodes().stream().filter(node -> node.type().name().equals("COMPONENT")).count(), output));
     if (parsed.serve) serve(output.resolve("report"));
   }
 
@@ -53,14 +56,15 @@ public final class ScreenTraceCli {
     Path analysis = parsed.target.resolve(ANALYSIS_DIRECTORY);
     Path destination = parsed.output == null ? analysis.resolve("review-result.json") : parsed.output;
     new ReviewResultGenerator().write(analysis, destination);
-    System.out.println("Review result exported:\n  " + destination);
+    LOGGER.info(() -> "Review result exported:\n  " + destination);
   }
 
+  @SuppressWarnings("java:S4036") // Runtime capture intentionally uses the user's Node runtime, as documented by the CLI contract.
   private static void capture(Parsed parsed) throws IOException, InterruptedException {
     Path output = analysisDirectory(parsed);
     Process process = new ProcessBuilder("node", Path.of("screentrace-capture/capture.mjs").toAbsolutePath().toString(), parsed.target.toString(), output.toString()).inheritIO().start();
     if (process.waitFor() != 0) throw new IllegalStateException("Runtime capture failed.");
-    System.out.println("Generated runtime screenshots: " + output.resolve("screenshots"));
+    LOGGER.info(() -> "Generated runtime screenshots: " + output.resolve("screenshots"));
   }
 
   private static void serve(Path report) throws IOException {
@@ -69,7 +73,7 @@ public final class ScreenTraceCli {
     try {
       server = HttpServer.create(new InetSocketAddress(REPORT_ADDRESS, 8088), 0);
     } catch (BindException ignored) {
-      System.out.println("ScreenTrace report is already running at:\n\nhttp://localhost:8088\n\nReload the page to view the latest analysis.");
+      LOGGER.info("ScreenTrace report is already running at:\n\nhttp://localhost:8088\n\nReload the page to view the latest analysis.");
       openReport();
       return;
     }
@@ -80,7 +84,7 @@ public final class ScreenTraceCli {
     server.createContext("/review-result.json", exchange -> handleReviewResult(exchange, analysis, overlay, sessionToken));
     server.createContext("/", exchange -> serveStatic(exchange, report, analysis, sessionToken));
     server.start();
-    System.out.println("ScreenTrace report running at:\n\nhttp://localhost:8088");
+    LOGGER.info("ScreenTrace report running at:\n\nhttp://localhost:8088");
     openReport();
   }
 
@@ -234,13 +238,20 @@ public final class ScreenTraceCli {
       Path output = null;
       boolean serve = false;
       boolean capture = false;
-      for (int index = 0; index < arguments.length; index++) {
+      int index = 0;
+      while (index < arguments.length) {
         if (arguments[index].equals("--serve")) serve = true;
         else if (arguments[index].equals("--capture")) capture = true;
-        else if (arguments[index].equals("--output")) output = Path.of(arguments[++index]).toAbsolutePath().normalize();
+        else if (arguments[index].equals("--output")) output = outputDirectory(arguments, ++index);
         else target = Path.of(arguments[index]).toAbsolutePath().normalize();
+        index++;
       }
       return new Parsed(target, output, serve, capture);
+    }
+
+    private static Path outputDirectory(String[] arguments, int index) {
+      if (index >= arguments.length) throw new IllegalArgumentException("Missing directory after --output");
+      return Path.of(arguments[index]).toAbsolutePath().normalize();
     }
   }
 }

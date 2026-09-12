@@ -39,17 +39,21 @@ final class PrototypeModelGenerator {
         List<PrototypeModel.PrototypeComponent> components = new ArrayList<>();
         int index = 0;
         for (Relationship contains : graph.relationships()) {
-            if (contains.type() != EdgeType.CONTAINS || !screens.containsKey(contains.from())) {
-                continue;
+            GraphNode component = componentFor(contains, screens, nodesById);
+            if (component != null) {
+                components.add(component(graph, screens, contains, component, index));
+                index++;
             }
-            GraphNode component = nodesById.get(contains.to());
-            if (component == null) {
-                continue;
-            }
-            components.add(component(graph, screens, contains, component, index));
-            index++;
         }
         return components;
+    }
+
+    private static GraphNode componentFor(Relationship contains, Map<String, PrototypeModel.PrototypeScreen> screens,
+            Map<String, GraphNode> nodesById) {
+        if (contains.type() != EdgeType.CONTAINS || !screens.containsKey(contains.from())) {
+            return null;
+        }
+        return nodesById.get(contains.to());
     }
 
     private static PrototypeModel.PrototypeComponent component(ApplicationGraph graph,
