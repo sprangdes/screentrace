@@ -14,11 +14,14 @@ class SpringMvcAnalyzerTest {
         Path root = Files.createTempDirectory("st-mvc");
         Path java = root.resolve("src/main/java/UsersController.java");
         Path jsp = root.resolve("src/main/webapp/WEB-INF/jsp/users/detail.jsp");
+        Path fragment = root.resolve("src/main/webapp/WEB-INF/jsp/common/filters.jspf");
         Files.createDirectories(java.getParent());
         Files.createDirectories(jsp.getParent());
+        Files.createDirectories(fragment.getParent());
         Files.writeString(root.resolve("pom.xml"), "<project><dependency><artifactId>spring-webmvc</artifactId></dependency></project>");
         Files.writeString(java, "import org.springframework.stereotype.*; import org.springframework.web.bind.annotation.*; @Controller @RequestMapping(\"/users\") class UsersController { @GetMapping(\"/{id}\") String detail(){ return \"users/detail\"; } @PostMapping(\"/search\") ModelAndView search(){ return new ModelAndView(\"users/detail\"); }}");
-        Files.writeString(jsp, "<form action=\"/users/search\"><form:input path=\"name\"/><button formaction=\"/users/search\">Search</button></form><a href=\"/users/7\">Detail</a>");
+        Files.writeString(jsp, "<%@ include file=\"/WEB-INF/jsp/common/filters.jspf\" %><form:form action=\"/users/search\"><form:input path=\"name\"/><button formaction=\"/users/search\">Search</button></form:form><html:link page=\"/users/7\">Detail</html:link>");
+        Files.writeString(fragment, "<input name=\"name\"/>");
 
         ApplicationGraph graph = new SpringMvcAnalyzer().analyze(new ProjectScanner().scan(root));
 
@@ -29,6 +32,8 @@ class SpringMvcAnalyzerTest {
     assertTrue(graph.relationships().stream().anyMatch(edge -> edge.type() == ApplicationGraph.EdgeType.TRIGGERS));
     assertTrue(graph.nodes().stream().filter(node -> node.type() == ApplicationGraph.NodeType.SCREEN)
         .anyMatch(node -> node.attributes().getOrDefault("staticPreview", "").contains("FIELD:name")));
+    assertTrue(graph.nodes().stream().anyMatch(node -> node.type() == ApplicationGraph.NodeType.TEMPLATE_FRAGMENT));
+    assertTrue(graph.relationships().stream().anyMatch(edge -> edge.type() == ApplicationGraph.EdgeType.INCLUDES));
     }
 
     @Test

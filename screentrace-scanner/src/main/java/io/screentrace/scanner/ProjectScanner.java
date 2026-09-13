@@ -36,7 +36,8 @@ public final class ProjectScanner {
     boolean springMvc = files.stream().filter(path -> path.getFileName().toString().equals(POM_FILE)).anyMatch(path -> contains(path, "spring-webmvc"));
     if (springBoot) technologies.add("Spring Boot");
     if (springMvc) technologies.add("Spring MVC");
-    if (files.stream().anyMatch(path -> hasExtension(path, ".jsp"))) technologies.add("JSP");
+    if (files.stream().anyMatch(path -> hasExtension(path, ".jsp") || hasExtension(path, ".jspf"))) technologies.add("JSP");
+    if (files.stream().filter(path -> hasExtension(path, ".xml")).anyMatch(path -> contains(path, "tiles-definitions"))) technologies.add("Tiles");
     return List.copyOf(technologies);
   }
 
@@ -70,6 +71,14 @@ public final class ProjectScanner {
 
     public List<Path> jspFiles() {
       return files.stream().filter(path -> hasExtension(path, ".jsp")).toList();
+    }
+
+    public List<Path> jspFragmentFiles() {
+      return files.stream().filter(path -> hasExtension(path, ".jspf")).toList();
+    }
+
+    public List<Path> tilesConfigFiles() {
+      return files.stream().filter(path -> hasExtension(path, ".xml") && contains(path, "tiles-definitions")).toList();
     }
   }
 }

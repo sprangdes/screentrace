@@ -18,6 +18,8 @@ import io.screentrace.core.ApplicationGraph.NodeType;
 import io.screentrace.core.ApplicationGraph.Relationship;
 import io.screentrace.core.ApplicationGraph.SourceLocation;
 import io.screentrace.scanner.ProjectScanner.ProjectInventory;
+import io.screentrace.parser.jsp.JspAnalysis;
+import io.screentrace.parser.jsp.JspProjectParser;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -34,16 +36,18 @@ import java.util.regex.Pattern;
 public final class SpringMvcAnalyzer {
     private static final Set<String> MAPPINGS = Set.of("RequestMapping", "GetMapping", "PostMapping", "PutMapping", "DeleteMapping", "PatchMapping");
     private static final Set<String> PATH_NAMES = Set.of("value", "path");
-    private static final Pattern FORM = Pattern.compile("<(?:form|FORM)\\b[^>]*?\\baction\\s*=\\s*[\\\"']([^\\\"']+)[\\\"'][^>]*", Pattern.DOTALL);
-    private static final Pattern LINK = Pattern.compile("<(?:a|A)\\b[^>]*?\\bhref\\s*=\\s*[\\\"']([^\\\"']+)[\\\"'][^>]*", Pattern.DOTALL);
-    private static final Pattern BUTTON = Pattern.compile("<(?:button|input|BUTTON|INPUT)\\b[^>]*?\\bformaction\\s*=\\s*[\\\"']([^\\\"']+)[\\\"'][^>]*", Pattern.DOTALL);
 
     public ApplicationGraph analyze(ProjectInventory inventory) throws IOException {
         State state = new State(inventory.root());
-        for (Path jsp : inventory.jspFiles()) addJspScreen(jsp, state);
+        JspAnalysis jsp = new JspProjectParser().analyze(inventory.root(), inventory.files());
+        for (JspAnalysis.View view : jsp.views()) if (view.kind() == JspAnalysis.ViewKind.JSP) addJspScreen(inventory.root().resolve(view.path()), state);
+        addJspFragments(jsp, state);
+        addTilesDefinitions(jsp, state);
         discoverExceptionView(inventory, state);
         for (Path java : inventory.javaFiles()) parseController(java, state);
-        for (Path jsp : inventory.jspFiles()) parseJsp(jsp, state);
+        addJspInteractions(jsp, state);
+        addJspIncludes(jsp, state);
+        state.diagnostics.addAll(jsp.diagnostics());
         return new ApplicationGraph(new ApplicationGraph.Application(inventory.root().getFileName().toString(), inventory.root().toString(), inventory.technologies()),
                 state.nodes, state.edges, state.diagnostics);
     }
@@ -141,36 +145,56 @@ public final class SpringMvcAnalyzer {
         return id;
     }
 
-    private static void parseJsp(Path file, State state) throws IOException {
-        String text = Files.readString(file);
-        String relative = state.root.relativize(file).toString();
-        String screenId = state.screensByView.get(relative);
-        addComponents(text, relative, screenId, FORM, "FORM", state);
-        addComponents(text, relative, screenId, BUTTON, "BUTTON", state);
-        addComponents(text, relative, screenId, LINK, "LINK", state);
-    }
-
-    private static void addComponents(String text, String relative, String screenId, Pattern pattern, String kind, State state) {
-        Matcher matches = pattern.matcher(text);
-        while (matches.find()) {
-            String target = matches.group(1);
-            SourceLocation source = new SourceLocation(relative, 1 + (int) text.substring(0, matches.start()).chars().filter(c -> c == '\n').count());
-            String id = ApplicationGraph.id(NodeType.COMPONENT, relative + ":" + source.line() + ":" + target);
-            addNode(state, new GraphNode(id, NodeType.COMPONENT, target, Map.of("componentType", kind, "target", target), source,
-                    staticPath(target) ? Confidence.CONFIRMED : Confidence.UNRESOLVED));
-            edge(state, EdgeType.CONTAINS, screenId, id, Confidence.CONFIRMED, source);
-            if (!staticPath(target)) {
-                state.diagnostics.add(new Diagnostic("JSP target cannot be resolved statically: " + target, Confidence.UNRESOLVED, source));
-                continue;
-            }
-            String endpoint = state.endpointByPath.get(target);
-            if (endpoint != null) edge(state, EdgeType.TRIGGERS, id, endpoint, Confidence.CONFIRMED, source);
-            String next = state.screensByView.get(target);
-            if (next != null) edge(state, EdgeType.NAVIGATES_TO, id, next, Confidence.CONFIRMED, source);
+    private static void addJspFragments(JspAnalysis jsp, State state) {
+        for (JspAnalysis.View view : jsp.views()) {
+            if (view.kind() != JspAnalysis.ViewKind.JSPF) continue;
+            String id = ApplicationGraph.id(NodeType.TEMPLATE_FRAGMENT, view.path());
+            addNode(state, new GraphNode(id, NodeType.TEMPLATE_FRAGMENT, Path.of(view.path()).getFileName().toString(),
+                    Map.of("view", view.path()), view.source(), Confidence.CONFIRMED));
+            state.fragmentsByPath.put(view.path(), id);
+            webPath(view.path()).ifPresent(path -> state.fragmentsByPath.put(path, id));
         }
     }
 
-    private static boolean staticPath(String target) { return target.startsWith("/") && !target.contains("${") && !target.contains("<%"); }
+    private static void addTilesDefinitions(JspAnalysis jsp, State state) {
+        for (JspAnalysis.TilesDefinition definition : jsp.tilesDefinitions()) {
+            String id = ApplicationGraph.id(NodeType.VIEW, "tiles:" + definition.name());
+            addNode(state, new GraphNode(id, NodeType.VIEW, definition.name(),
+                    Map.of("tilesDefinition", "true", "template", definition.template()), definition.source(), Confidence.CONFIRMED));
+        }
+    }
+
+    private static void addJspInteractions(JspAnalysis jsp, State state) {
+        for (JspAnalysis.Interaction interaction : jsp.interactions()) {
+            String screenId = state.screensByView.get(interaction.viewPath());
+            if (screenId == null) continue;
+            String id = ApplicationGraph.id(NodeType.COMPONENT, interaction.viewPath() + ":" + interaction.source().line() + ":" + interaction.target());
+            Map<String, String> attributes = new TreeMap<>();
+            attributes.put("componentType", interaction.type().name());
+            attributes.put("target", interaction.target());
+            if (interaction.httpMethod() != null) attributes.put("httpMethod", interaction.httpMethod());
+            addNode(state, new GraphNode(id, NodeType.COMPONENT, interaction.label(), attributes, interaction.source(), interaction.confidence()));
+            edge(state, EdgeType.CONTAINS, screenId, id, Confidence.CONFIRMED, interaction.source());
+            if (interaction.confidence() == Confidence.UNRESOLVED) continue;
+            String endpoint = state.endpointByPath.get(interaction.target());
+            if (endpoint != null) edge(state, EdgeType.TRIGGERS, id, endpoint, Confidence.CONFIRMED, interaction.source());
+            String next = state.screensByView.get(interaction.target());
+            if (next != null) edge(state, EdgeType.NAVIGATES_TO, id, next, Confidence.CONFIRMED, interaction.source());
+        }
+    }
+
+    private static void addJspIncludes(JspAnalysis jsp, State state) {
+        for (JspAnalysis.Include include : jsp.includes()) {
+            String screenId = state.screensByView.get(include.sourceViewPath());
+            String fragmentId = state.fragmentsByPath.get(include.targetPath());
+            if (screenId != null && fragmentId != null) edge(state, EdgeType.INCLUDES, screenId, fragmentId, include.confidence(), include.source());
+        }
+    }
+
+    private static java.util.Optional<String> webPath(String path) {
+        int marker = path.indexOf("/WEB-INF/");
+        return marker < 0 ? java.util.Optional.empty() : java.util.Optional.of(path.substring(marker));
+    }
     private static AnnotationExpr annotation(ClassOrInterfaceDeclaration type, String name) { return type.getAnnotations().stream().filter(a -> a.getNameAsString().equals(name)).findFirst().orElse(null); }
     private static List<String> paths(AnnotationExpr annotation) {
         if (annotation == null) return List.of();
@@ -217,7 +241,8 @@ public final class SpringMvcAnalyzer {
     private static void edge(State state, EdgeType type, String from, String to, Confidence confidence, SourceLocation source) { String id = ApplicationGraph.id(NodeType.COMPONENT, type + ":" + from + ":" + to); if (state.edges.stream().noneMatch(e -> e.id().equals(id))) state.edges.add(new Relationship(id, type, from, to, confidence, source)); }
     private static final class State {
         private final Path root; private final List<GraphNode> nodes = new ArrayList<>(); private final List<Relationship> edges = new ArrayList<>(); private final List<Diagnostic> diagnostics = new ArrayList<>();
-        private final Map<String, String> endpointByPath = new HashMap<>(); private final Map<String, String> screensByView = new HashMap<>(); private String defaultExceptionView;
+        private final Map<String, String> endpointByPath = new HashMap<>(); private final Map<String, String> screensByView = new HashMap<>();
+        private final Map<String, String> fragmentsByPath = new HashMap<>(); private String defaultExceptionView;
         private State(Path root) { this.root = root; }
     }
 }
