@@ -2,7 +2,7 @@
 
 ## POC priority
 
-The first executable POC targets Spring Boot applications and the frontend technology actually detected in Reservio (React). Struts remains a future adapter. ScreenTrace is standalone: it never joins the target Maven/Gradle build and does not execute or modify target source, apart from writing its explicitly selected analysis output directory.
+The executable POC supports Spring Boot applications with React and annotation-based Spring MVC applications with JSP. Struts remains a future adapter. Spring MVC support resolves literal controller view names, literal `ModelAndView` views, conventional JSP paths, and literal JSP form/link/button targets. JSP reports expand supported local tag files, transform supported Spring/JSTL markup into standalone static HTML, use Playwright only to create static HTML thumbnails for All screens, and load that HTML directly in Page view. Spring MVC/JSP analysis never starts the target application. Dynamic values, XML Controller beans, Tiles, FreeMarker, and Thymeleaf remain unsupported. ScreenTrace is standalone: it never joins the target Maven/Gradle build and does not execute or modify target source, apart from writing its explicitly selected analysis output directory.
 
 ## Prototype and Edit Mode Contract
 

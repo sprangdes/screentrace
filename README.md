@@ -1,8 +1,16 @@
 # ScreenTrace
 
-ScreenTrace 會分析 Web 專案的畫面、路由與可互動元件，產生可瀏覽的 Screen flow、截圖參考、按鈕資訊與確認結果。預設只進行靜態分析；Playwright runtime capture 必須明確指定，因為它會執行目標專案的前端工具與程式碼。
+ScreenTrace 會分析 Web 專案的畫面、路由與可互動元件，產生可瀏覽的 Screen flow、靜態頁面、按鈕資訊與確認結果。Spring MVC/JSP 不會啟動目標專案；Playwright 只會對靜態渲染的 HTML 產生 All screens 縮圖。
 
-目前 POC 優先支援 Spring Boot + React 專案；產生的資料與報表都寫入被分析專案的 `.screentrace/`，不會修改原始程式碼。
+目前支援 Spring Boot + React，以及 annotation-based Spring MVC + JSP 專案；產生的資料與報表都寫入被分析專案的 `.screentrace/`，不會修改原始程式碼。
+
+Spring MVC / JSP 會展開可解析的 JSP Tag、CSS 與本地資源，直接產生報表載入的靜態 HTML：
+
+```bash
+java -jar screentrace-cli/target/screentrace-cli-0.1.0-SNAPSHOT.jar analyze /path/to/project --serve
+```
+
+ScreenTrace 只擷取可靜態解析的 `GET`／`ANY` MVC endpoint；含路徑參數的 endpoint 會保留在 `.screentrace/screenshots/capture-errors.json`，不會猜測測試資料。
 
 ## 系統需求
 

@@ -32,7 +32,11 @@ public final class ProjectScanner {
     if (files.stream().anyMatch(path -> hasExtension(path, ".java"))) technologies.add("Java");
     if (files.stream().anyMatch(path -> hasExtension(path, ".tsx") || hasExtension(path, ".jsx"))) technologies.add("React");
     if (files.stream().anyMatch(path -> hasExtension(path, ".html"))) technologies.add("HTML");
-    if (contains(root.resolve(POM_FILE), "spring-boot") || contains(root.resolve(POM_FILE), "spring-web")) technologies.add("Spring Boot");
+    boolean springBoot = files.stream().filter(path -> path.getFileName().toString().equals(POM_FILE)).anyMatch(path -> contains(path, "spring-boot"));
+    boolean springMvc = files.stream().filter(path -> path.getFileName().toString().equals(POM_FILE)).anyMatch(path -> contains(path, "spring-webmvc"));
+    if (springBoot) technologies.add("Spring Boot");
+    if (springMvc) technologies.add("Spring MVC");
+    if (files.stream().anyMatch(path -> hasExtension(path, ".jsp"))) technologies.add("JSP");
     return List.copyOf(technologies);
   }
 
@@ -62,6 +66,10 @@ public final class ProjectScanner {
 
     public List<Path> reactFiles() {
       return files.stream().filter(path -> hasExtension(path, ".tsx") || hasExtension(path, ".jsx")).toList();
+    }
+
+    public List<Path> jspFiles() {
+      return files.stream().filter(path -> hasExtension(path, ".jsp")).toList();
     }
   }
 }
