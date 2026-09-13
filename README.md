@@ -1,10 +1,10 @@
 # ScreenTrace
 
-ScreenTrace 會分析 Web 專案的畫面、路由與可互動元件，產生可瀏覽的 Screen flow、靜態頁面、按鈕資訊與確認結果。Spring MVC/JSP 不會啟動目標專案；Playwright 只會對靜態渲染的 HTML 產生 All screens 縮圖。
+ScreenTrace 會分析 Web 專案的畫面、路由與可互動元件，產生可瀏覽的 Screen flow、靜態頁面、按鈕資訊與確認結果。Spring MVC/JSP 不會啟動目標專案；Playwright 只會對靜態渲染的 HTML 產生 All screens 縮圖。Spring Boot/React 會在隔離的 Vite 與 mock API 環境中渲染路由，產生不含 React script 的靜態頁面與縮圖，不會啟動 Spring Boot 後端；支援的多步驟表單會使用內建合成資料自動擷取後續流程狀態。
 
 目前支援 Spring Boot + React，以及 annotation-based Spring MVC + JSP 專案；產生的資料與報表都寫入被分析專案的 `.screentrace/`，不會修改原始程式碼。
 
-Spring MVC / JSP 會展開可解析的 JSP Tag、CSS 與本地資源，直接產生報表載入的靜態 HTML：
+Spring MVC / JSP 會展開可解析的 JSP Tag、CSS 與本地資源；Spring Boot / React 會凍結隔離渲染後的 DOM、CSS 與本地資源。兩者都直接產生報表載入的靜態 HTML：
 
 ```bash
 java -jar screentrace-cli/target/screentrace-cli-0.1.0-SNAPSHOT.jar analyze /path/to/project --serve
@@ -66,11 +66,7 @@ cd ..
 ./bin/screentrace analyze /絕對路徑/目標專案 --output /tmp/screentrace-output
 ```
 
-若已在隔離環境確認可執行目標前端，可明確要求擷取 runtime 截圖：
-
-```bash
-./bin/screentrace analyze /絕對路徑/目標專案 --capture
-```
+Spring Boot / React 專案需要目標專案的 `frontend/node_modules/vite` 已安裝，分析時會自動產生靜態預覽；`--capture` 可保留作為明確重新擷取指令。
 
 ## 啟動互動報表
 
@@ -202,8 +198,11 @@ AI 應以 `REMOVE` 作為可移除範圍、以 `KEEP` 作為必須保留範圍�
 ├── review-result.json           # 匯出給 AI 的確認結果
 ├── report/
 │   └── index.html               # 互動報表
+├── static-preview/
+│   ├── manifest.json            # Screen ID 與靜態頁面對應
+│   └── *.html                   # JSP 或 React 凍結後的靜態頁面
 └── screenshots/
-    ├── manifest.json            # 路由與截圖檔案對應
+    ├── manifest.json            # Screen ID 與截圖檔案對應
     ├── interactions.json        # 可見按鈕／連結、位置與 CSS
     └── *.png                    # Playwright 擷取的完整長截圖
 ```
@@ -212,10 +211,10 @@ AI 應以 `REMOVE` 作為可移除範圍、以 `KEEP` 作為必須保留範圍�
 
 ### 報表空白或沒有畫面
 
-先在隔離環境執行分析與 runtime capture，並確認終端機列出 `Captured /...`：
+先重新執行分析，並確認終端機列出 `Captured /...`：
 
 ```bash
-./bin/screentrace analyze /絕對路徑/目標專案 --capture
+./bin/screentrace analyze /絕對路徑/目標專案
 ```
 
 再啟動或重新整理報表。

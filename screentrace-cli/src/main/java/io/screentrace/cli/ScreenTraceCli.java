@@ -5,6 +5,7 @@ import com.sun.net.httpserver.HttpServer;
 import io.screentrace.adapter.spring.SpringProjectAnalyzer;
 import io.screentrace.report.ReportGenerator;
 import io.screentrace.report.ReviewResultGenerator;
+import io.screentrace.report.FlowStateGraphAugmenter;
 import io.screentrace.scanner.ProjectScanner;
 import java.awt.Desktop;
 import java.io.ByteArrayOutputStream;
@@ -43,13 +44,22 @@ public final class ScreenTraceCli {
     Path output = analysisDirectory(parsed);
     var graph = new SpringProjectAnalyzer().analyze(new ProjectScanner().scan(parsed.target));
     new ReportGenerator().write(graph, output);
-    if (graph.application().technologies().contains("JSP")) renderStaticJsp(parsed.target, output);
-    if (parsed.capture) capture(new Parsed(parsed.target, output, false, false, parsed.captureUrl));
-    long screens = graph.nodes().stream().filter(node -> node.type().name().equals("SCREEN")).count();
-    long endpoints = graph.nodes().stream().filter(node -> node.type().name().equals("ENDPOINT")).count();
+    boolean serverRendered = graph.application().technologies().contains("JSP");
+    boolean react = graph.application().technologies().contains("React");
+    if (serverRendered) renderStaticJsp(parsed.target, output);
+    else if (react) {
+      renderStaticReact(parsed.target, output);
+      graph = new FlowStateGraphAugmenter().augment(graph, output);
+      new ReportGenerator().write(graph, output);
+    }
+    if (parsed.capture && !serverRendered && !react) capture(new Parsed(parsed.target, output, false, false, parsed.captureUrl));
+    var result = graph;
+    long screens = result.nodes().stream().filter(node -> node.type().name().equals("SCREEN")).count();
+    long endpoints = result.nodes().stream().filter(node -> node.type().name().equals("ENDPOINT")).count();
+    long components = result.nodes().stream().filter(node -> node.type().name().equals("COMPONENT")).count();
     LOGGER.info(() -> "ScreenTrace%n%nAnalyzing:%n  %s%n%nDetected framework:%n  %s%n%nAnalysis result:%n  Endpoints: %d%n  Screens: %d%n  Components: %d%n%nGenerated:%n  %s%n"
-        .formatted(parsed.target, String.join(", ", graph.application().technologies()), endpoints, screens,
-            graph.nodes().stream().filter(node -> node.type().name().equals("COMPONENT")).count(), output));
+        .formatted(parsed.target, String.join(", ", result.application().technologies()), endpoints, screens,
+            components, output));
     if (parsed.serve) serve(output.resolve("report"));
   }
 
@@ -57,6 +67,12 @@ public final class ScreenTraceCli {
   private static void renderStaticJsp(Path target, Path output) throws IOException, InterruptedException {
     Process process = new ProcessBuilder("node", Path.of("screentrace-capture/capture-static-jsp.mjs").toAbsolutePath().toString(), target.toString(), output.toString()).inheritIO().start();
     if (process.waitFor() != 0) LOGGER.warning("Static JSP preview could not be rendered; source-derived fallback preview remains available.");
+  }
+
+  @SuppressWarnings("java:S4036") // React is rendered only through an isolated Vite process with mocked API responses.
+  private static void renderStaticReact(Path target, Path output) throws IOException, InterruptedException {
+    Process process = new ProcessBuilder("node", Path.of("screentrace-capture/capture.mjs").toAbsolutePath().toString(), target.toString(), output.toString()).inheritIO().start();
+    if (process.waitFor() != 0) LOGGER.warning("Static React preview could not be rendered; screenshot and source-derived fallbacks remain available.");
   }
 
   private static void export(Parsed parsed) throws IOException {
@@ -78,7 +94,7 @@ public final class ScreenTraceCli {
     String script = "screentrace-capture/capture.mjs";
     Process process = new ProcessBuilder("node", Path.of(script).toAbsolutePath().toString(), parsed.target.toString(), output.toString(), parsed.captureUrl).inheritIO().start();
     if (process.waitFor() != 0) throw new IllegalStateException("Runtime capture failed.");
-    LOGGER.info(() -> "Generated runtime screenshots: " + output.resolve("screenshots"));
+    LOGGER.info(() -> "Generated static React previews: " + output.resolve("static-preview"));
   }
 
   private static void serve(Path report) throws IOException {
