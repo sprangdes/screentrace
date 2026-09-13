@@ -1,6 +1,6 @@
 # ScreenTrace
 
-ScreenTrace 會分析 Web 專案的畫面、路由與可互動元件，產生可瀏覽的 Screen flow、長截圖、按鈕資訊與確認結果。分析採用靜態分析為主，並以 Playwright 擷取實際頁面畫面與可見的按鈕／連結。
+ScreenTrace 會分析 Web 專案的畫面、路由與可互動元件，產生可瀏覽的 Screen flow、截圖參考、按鈕資訊與確認結果。預設只進行靜態分析；Playwright runtime capture 必須明確指定，因為它會執行目標專案的前端工具與程式碼。
 
 目前 POC 優先支援 Spring Boot + React 專案；產生的資料與報表都寫入被分析專案的 `.screentrace/`，不會修改原始程式碼。
 
@@ -56,6 +56,12 @@ cd ..
 
 ```bash
 ./bin/screentrace analyze /絕對路徑/目標專案 --output /tmp/screentrace-output
+```
+
+若已在隔離環境確認可執行目標前端，可明確要求擷取 runtime 截圖：
+
+```bash
+./bin/screentrace analyze /絕對路徑/目標專案 --capture
 ```
 
 ## 啟動互動報表
@@ -198,10 +204,10 @@ AI 應以 `REMOVE` 作為可移除範圍、以 `KEEP` 作為必須保留範圍�
 
 ### 報表空白或沒有畫面
 
-先重新執行分析並確認終端機列出 `Captured /...`：
+先在隔離環境執行分析與 runtime capture，並確認終端機列出 `Captured /...`：
 
 ```bash
-./bin/screentrace analyze /絕對路徑/目標專案
+./bin/screentrace analyze /絕對路徑/目標專案 --capture
 ```
 
 再啟動或重新整理報表。
