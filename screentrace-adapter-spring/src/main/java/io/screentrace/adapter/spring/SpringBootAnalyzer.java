@@ -45,7 +45,6 @@ public final class SpringBootAnalyzer {
     private static final Pattern LINK_PATTERN = Pattern.compile("<(?:Link|NavLink)\\b[^>]*\\bto\\s*=\\s*(?:\\{)?[\\\"'](/[^\\\"'}]+)");
     private static final Pattern NAVIGATE_PATTERN = Pattern.compile("\\bnavigate\\s*\\(\\s*[\\\"'](/[^\\\"')]+)");
     private static final Pattern API_PATTERN = Pattern.compile("[\\\"'](/api/[^\\\"'?` }]+)");
-    private static final Pattern IMPORT_PATTERN = Pattern.compile("import\\s+(?:\\{\\s*)?([A-Z]\\w*)\\s*(?:,\\s*\\w+\\s*)*\\}?\\s*from\\s+[\\\"']([^\\\"']+)[\\\"']");
     private static final List<String> IMPORT_SUFFIXES = List.of(".tsx", ".jsx", ".ts", ".js", "/index.tsx");
 
     public ApplicationGraph analyze(ProjectInventory inventory) throws IOException {
@@ -192,18 +191,74 @@ public final class SpringBootAnalyzer {
 
     private static Map<String, String> imports(Path root, Path file, String text) {
         Map<String, String> result = new HashMap<>();
-        Matcher matcher = IMPORT_PATTERN.matcher(text);
-        while (matcher.find()) {
-            Path base = file.getParent().resolve(matcher.group(2));
+        for (String statement : text.lines().toList()) {
+            ImportedComponent imported = importedComponent(statement);
+            if (imported == null) {
+                continue;
+            }
+            Path base = file.getParent().resolve(imported.source());
             for (String suffix : IMPORT_SUFFIXES) {
                 Path candidate = Path.of(base + suffix);
                 if (Files.exists(candidate)) {
-                    result.put(matcher.group(1), root.relativize(candidate).toString());
+                    result.put(imported.name(), root.relativize(candidate).toString());
                     break;
                 }
             }
         }
         return result;
+    }
+
+    private static ImportedComponent importedComponent(String statement) {
+        String line = statement.strip();
+        if (!line.startsWith("import ")) {
+            return null;
+        }
+        int from = fromKeyword(line);
+        if (from < 0) {
+            return null;
+        }
+        String name = importedName(line.substring("import ".length(), from));
+        String source = quotedValue(line.substring(from + "from".length()).strip());
+        return name == null || source == null ? null : new ImportedComponent(name, source);
+    }
+
+    private static int fromKeyword(String line) {
+        int position = line.indexOf("from");
+        while (position >= 0) {
+            boolean startsAfterWhitespace = position > 0 && Character.isWhitespace(line.charAt(position - 1));
+            int end = position + "from".length();
+            boolean endsBeforeWhitespace = end < line.length() && Character.isWhitespace(line.charAt(end));
+            if (startsAfterWhitespace && endsBeforeWhitespace) {
+                return position;
+            }
+            position = line.indexOf("from", end);
+        }
+        return -1;
+    }
+
+    private static String importedName(String declaration) {
+        int index = 0;
+        while (index < declaration.length() && (Character.isWhitespace(declaration.charAt(index)) || declaration.charAt(index) == '{')) {
+            index++;
+        }
+        if (index == declaration.length() || !Character.isUpperCase(declaration.charAt(index))) {
+            return null;
+        }
+        int end = index + 1;
+        while (end < declaration.length()
+                && (Character.isLetterOrDigit(declaration.charAt(end)) || declaration.charAt(end) == '_')) {
+            end++;
+        }
+        return declaration.substring(index, end);
+    }
+
+    private static String quotedValue(String value) {
+        if (value.length() < 2 || (value.charAt(0) != '\'' && value.charAt(0) != '\"')) {
+            return null;
+        }
+        char quote = value.charAt(0);
+        int end = value.indexOf(quote, 1);
+        return end < 0 ? null : value.substring(1, end);
     }
 
     private static String sourceForView(String text, String view, Map<String, String> imports, String fallback) {
@@ -426,5 +481,8 @@ public final class SpringBootAnalyzer {
     }
 
     private record ComponentContext(String relative, String text, int offset, String type, String action, String target, String endpoint) {
+    }
+
+    private record ImportedComponent(String name, String source) {
     }
 }
