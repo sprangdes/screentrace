@@ -2,7 +2,7 @@ package io.screentrace.cli;
 
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
-import io.screentrace.adapter.spring.SpringBootAnalyzer;
+import io.screentrace.adapter.spring.SpringProjectAnalyzer;
 import io.screentrace.report.ReportGenerator;
 import io.screentrace.report.ReviewResultGenerator;
 import io.screentrace.scanner.ProjectScanner;
@@ -36,20 +36,27 @@ public final class ScreenTraceCli {
     else if (command.equals("capture")) capture(parsed);
     else if (command.equals("export")) export(parsed);
     else if (command.equals("serve")) serve(analysisDirectory(parsed).resolve("report"));
-    else throw new IllegalArgumentException("Usage: screentrace analyze [project] [--output directory] [--capture] [--serve] | screentrace capture [project] [--output directory] | screentrace serve [project] | screentrace export [project] [--output file]");
+    else throw new IllegalArgumentException("Usage: screentrace analyze [project] [--output directory] [--capture] [--capture-url url] [--serve] | screentrace capture [project] [--output directory] [--capture-url url] | screentrace serve [project] | screentrace export [project] [--output file]");
   }
 
   private static void analyze(Parsed parsed) throws IOException, InterruptedException {
     Path output = analysisDirectory(parsed);
-    var graph = new SpringBootAnalyzer().analyze(new ProjectScanner().scan(parsed.target));
-    if (parsed.capture) capture(new Parsed(parsed.target, output, false, false));
+    var graph = new SpringProjectAnalyzer().analyze(new ProjectScanner().scan(parsed.target));
     new ReportGenerator().write(graph, output);
+    if (graph.application().technologies().contains("JSP")) renderStaticJsp(parsed.target, output);
+    if (parsed.capture) capture(new Parsed(parsed.target, output, false, false, parsed.captureUrl));
     long screens = graph.nodes().stream().filter(node -> node.type().name().equals("SCREEN")).count();
     long endpoints = graph.nodes().stream().filter(node -> node.type().name().equals("ENDPOINT")).count();
     LOGGER.info(() -> "ScreenTrace%n%nAnalyzing:%n  %s%n%nDetected framework:%n  %s%n%nAnalysis result:%n  Endpoints: %d%n  Screens: %d%n  Components: %d%n%nGenerated:%n  %s%n"
         .formatted(parsed.target, String.join(", ", graph.application().technologies()), endpoints, screens,
             graph.nodes().stream().filter(node -> node.type().name().equals("COMPONENT")).count(), output));
     if (parsed.serve) serve(output.resolve("report"));
+  }
+
+  @SuppressWarnings("java:S4036") // The static JSP renderer intentionally runs in an isolated Node process.
+  private static void renderStaticJsp(Path target, Path output) throws IOException, InterruptedException {
+    Process process = new ProcessBuilder("node", Path.of("screentrace-capture/capture-static-jsp.mjs").toAbsolutePath().toString(), target.toString(), output.toString()).inheritIO().start();
+    if (process.waitFor() != 0) LOGGER.warning("Static JSP preview could not be rendered; source-derived fallback preview remains available.");
   }
 
   private static void export(Parsed parsed) throws IOException {
@@ -62,7 +69,14 @@ public final class ScreenTraceCli {
   @SuppressWarnings("java:S4036") // Runtime capture intentionally uses the user's Node runtime, as documented by the CLI contract.
   private static void capture(Parsed parsed) throws IOException, InterruptedException {
     Path output = analysisDirectory(parsed);
-    Process process = new ProcessBuilder("node", Path.of("screentrace-capture/capture.mjs").toAbsolutePath().toString(), parsed.target.toString(), output.toString()).inheritIO().start();
+    boolean serverRendered = new ProjectScanner().scan(parsed.target).technologies().contains("JSP");
+    if (serverRendered) {
+      renderStaticJsp(parsed.target, output);
+      LOGGER.info(() -> "Generated static JSP previews: " + output.resolve("static-preview"));
+      return;
+    }
+    String script = "screentrace-capture/capture.mjs";
+    Process process = new ProcessBuilder("node", Path.of(script).toAbsolutePath().toString(), parsed.target.toString(), output.toString(), parsed.captureUrl).inheritIO().start();
     if (process.waitFor() != 0) throw new IllegalStateException("Runtime capture failed.");
     LOGGER.info(() -> "Generated runtime screenshots: " + output.resolve("screenshots"));
   }
@@ -156,12 +170,16 @@ public final class ScreenTraceCli {
       exchange.close();
       return;
     }
-    if (!Files.isRegularFile(requested)) requested = report.resolve(INDEX_FILE);
     if (requested.equals(report.resolve(INDEX_FILE))) {
       byte[] body = Files.readString(requested).replace("__SCREEN_TRACE_SESSION_TOKEN__", sessionToken).getBytes();
       exchange.getResponseHeaders().set("Content-Type", HTML_CONTENT_TYPE);
       exchange.sendResponseHeaders(200, body.length);
       exchange.getResponseBody().write(body);
+      exchange.close();
+      return;
+    }
+    if (!Files.isRegularFile(requested)) {
+      exchange.sendResponseHeaders(404, -1);
       exchange.close();
       return;
     }
@@ -172,6 +190,7 @@ public final class ScreenTraceCli {
     if (uri.equals("/")) return report.resolve(INDEX_FILE);
     if (uri.equals("/application-graph.json") || uri.equals("/prototype-model.json")) return resolveWithin(analysis, uri.substring(1));
     if (uri.startsWith("/screenshots/")) return resolveWithin(analysis.resolve("screenshots"), uri.substring("/screenshots/".length()));
+    if (uri.startsWith("/static-preview/")) return resolveWithin(analysis.resolve("static-preview"), uri.substring("/static-preview/".length()));
     return resolveWithin(report, uri.substring(1));
   }
 
@@ -215,6 +234,11 @@ public final class ScreenTraceCli {
     String value = file.toString();
     if (value.endsWith(".json")) return JSON_CONTENT_TYPE;
     if (value.endsWith(".png")) return "image/png";
+    if (value.endsWith(".css")) return "text/css; charset=utf-8";
+    if (value.endsWith(".js")) return "text/javascript; charset=utf-8";
+    if (value.endsWith(".svg")) return "image/svg+xml";
+    if (value.endsWith(".woff")) return "font/woff";
+    if (value.endsWith(".ttf")) return "font/ttf";
     return HTML_CONTENT_TYPE;
   }
 
@@ -232,26 +256,35 @@ public final class ScreenTraceCli {
     return parsed.output == null ? parsed.target.resolve(ANALYSIS_DIRECTORY) : parsed.output;
   }
 
-  private record Parsed(Path target, Path output, boolean serve, boolean capture) {
+  private record Parsed(Path target, Path output, boolean serve, boolean capture, String captureUrl) {
     static Parsed of(String[] arguments) {
       Path target = Path.of(".").toAbsolutePath().normalize();
       Path output = null;
       boolean serve = false;
       boolean capture = false;
+      String captureUrl = "http://127.0.0.1:8080";
       int index = 0;
       while (index < arguments.length) {
         if (arguments[index].equals("--serve")) serve = true;
         else if (arguments[index].equals("--capture")) capture = true;
+        else if (arguments[index].equals("--capture-url")) captureUrl = captureUrl(arguments, ++index);
         else if (arguments[index].equals("--output")) output = outputDirectory(arguments, ++index);
         else target = Path.of(arguments[index]).toAbsolutePath().normalize();
         index++;
       }
-      return new Parsed(target, output, serve, capture);
+      return new Parsed(target, output, serve, capture, captureUrl);
     }
 
     private static Path outputDirectory(String[] arguments, int index) {
       if (index >= arguments.length) throw new IllegalArgumentException("Missing directory after --output");
       return Path.of(arguments[index]).toAbsolutePath().normalize();
+    }
+
+    private static String captureUrl(String[] arguments, int index) {
+      if (index >= arguments.length) throw new IllegalArgumentException("Missing URL after --capture-url");
+      String value = arguments[index];
+      if (!value.startsWith("http://") && !value.startsWith("https://")) throw new IllegalArgumentException("Capture URL must use http:// or https://");
+      return value.replaceAll("/$", "");
     }
   }
 }

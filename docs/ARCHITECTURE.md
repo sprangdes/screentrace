@@ -2,13 +2,13 @@
 
 ## Current POC implementation
 
-The current implementation follows the product pipeline for Spring Boot and React projects:
+The current implementation follows two product pipelines: Spring Boot with React, and annotation-based Spring MVC with JSP.
 
 ```text
-Target source (read-only) -> scanner -> Spring Boot adapter -> ApplicationGraph JSON -> standalone report
+Target source (read-only) -> scanner -> selected Spring adapter -> ApplicationGraph JSON -> standalone report
 ```
 
-`screentrace-core` has no Spring dependency. `screentrace-scanner` inventories files and technology signals only. `screentrace-adapter-spring` uses JavaParser to inspect controller annotations and handler return values; it also performs intentionally bounded extraction of statically declared React routes, navigation literals, and API literals. `screentrace-report` reads only `application-graph.json` in the browser. `screentrace-cli` writes output to `<target>/.screentrace` unless `--output` is supplied and hosts the report independently on port 8088.
+`screentrace-core` has no Spring dependency. `screentrace-scanner` inventories files and technology signals only. `screentrace-adapter-spring` dispatches Spring Boot projects to REST/React analysis and Spring MVC projects to controller, literal view, conventional JSP, form, link, and button analysis. It uses JavaParser for Java and bounded static extraction for markup. `screentrace-report` reads only `application-graph.json` in the browser. `screentrace-cli` writes output to `<target>/.screentrace` unless `--output` is supplied and hosts the report independently on port 8088.
 
 ## Prototype and Edit Mode
 

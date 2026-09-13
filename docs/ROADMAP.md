@@ -257,13 +257,13 @@ Goal: prove that the Application Graph is framework-neutral.
 
 ### Tasks
 
-- [ ] Parse `@RequestMapping`
-- [ ] Parse `@GetMapping`
-- [ ] Parse `@PostMapping`
-- [ ] Identify controllers
-- [ ] Resolve returned view names
-- [ ] Resolve ModelAndView
-- [ ] Resolve JSP views
+- [x] Parse `@RequestMapping`
+- [x] Parse `@GetMapping`
+- [x] Parse `@PostMapping`
+- [x] Identify controllers
+- [x] Resolve literal returned view names
+- [x] Resolve literal `ModelAndView` views
+- [x] Resolve conventional JSP views
 
 ### Exit Criteria
 
