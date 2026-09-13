@@ -202,6 +202,14 @@ The UI must not contain framework-specific analysis logic.
 
 The Application Graph is the canonical representation of an analyzed system.
 
+### 4.1 Schema contract and compatibility
+
+`application-graph.json` is versioned. New analyses emit schema version `2.0`; consumers must also accept explicit version `1.0` and versionless legacy JSON. Versionless JSON is normalized to `2.0` when read.
+
+Schema 2 preserves schema-1 fields (`source`, `confidence`) and constructors. It adds an `evidence` collection to nodes, relationships, and diagnostics so multiple source assertions can support one discovered relationship. Each evidence item records source location, parser, resolution status, and optional detail. This keeps existing report output readable while allowing Struts, Spring, JSP, and Tiles adapters to contribute independently.
+
+The graph remains framework-neutral. Framework identifiers belong in evidence/parser metadata or node attributes, never in node or edge type names.
+
 ### Example nodes
 
 ```text
@@ -212,6 +220,9 @@ HANDLER
 ENDPOINT
 VIEW
 SOURCE_ARTIFACT
+FORM_MODEL
+TEMPLATE_FRAGMENT
+INTEGRATION
 ```
 
 ### Example edges
@@ -225,6 +236,9 @@ HANDLED_BY
 NAVIGATES_TO
 DEFINED_IN
 FORWARDS_TO
+INCLUDES
+BINDS_TO
+DECLARED_BY
 ```
 
 Example:
