@@ -8,17 +8,36 @@ ScreenTrace 會展開可解析的 JSP Tag、CSS 與本地資源，並以 Playwri
 
 ## 初次執行
 
-在 macOS 的終端機進入 ScreenTrace 專案根目錄後，直接啟動 ScreenTrace：
+### macOS
+
+在終端機進入 ScreenTrace 專案根目錄後執行：
 
 ```bash
 ./bin/screentrace
 ```
 
-腳本會自動檢查 Java 17+、Maven 3.9+ 與 Node.js 18+；缺少或版本不足時，會透過 Homebrew 安裝。也會安裝 ScreenTrace 使用的 Playwright 與 Chromium。首次開啟會要求設定所有專案的根目錄與分析結果根目錄，預設結果位置是 `<專案根目錄>/analyze/`。設定保存於 `~/.screentrace/config.json`。初次執行需要網路連線，且 Homebrew 可能要求輸入 macOS 管理者密碼。
+腳本會自動檢查 Java 17+、Maven 3.9+、Node.js 18+、Playwright 與 Chromium。缺少 Java、Maven 或 Node.js 時，會透過 Homebrew 安裝。首次執行需要網路連線，Homebrew 可能要求輸入 macOS 管理者密碼。
+
+### Windows
+
+在 PowerShell 或命令提示字元進入 ScreenTrace 專案根目錄後執行：
+
+```powershell
+.\bin\screentrace.cmd
+```
+
+腳本會自動檢查 Java 17+、Maven 3.9+、Node.js 18+、Playwright 與 Chromium。缺少 Java、Maven 或 Node.js 時，會透過 `winget` 安裝。首次執行需要網路連線，安裝時可能出現 Windows 權限確認。需使用 Windows 10／11，且已安裝 App Installer（提供 `winget`）。
+
+首次啟動時會要求設定所有專案的根目錄與分析結果根目錄，預設結果位置是 `<專案根目錄>/analyze/`。設定檔位置如下：
+
+| 系統 | 設定檔 |
+| --- | --- |
+| macOS | `~/.screentrace/config.json` |
+| Windows | `%USERPROFILE%\.screentrace\config.json` |
 
 ## CLI 指令
 
-直接執行 `./bin/screentrace` 後，以 ↑ / ↓ 選擇、Enter 確認：
+直接執行 macOS 的 `./bin/screentrace` 或 Windows 的 `.\bin\screentrace.cmd` 後，以 ↑ / ↓ 選擇、Enter 確認：
 
 ```text
 ❯ 分析專案
@@ -30,8 +49,16 @@ ScreenTrace 會展開可解析的 JSP Tag、CSS 與本地資源，並以 Playwri
 
 ### 分析專案並開啟報表
 
+macOS：
+
 ```bash
 ./bin/screentrace
+```
+
+Windows：
+
+```powershell
+.\bin\screentrace.cmd
 ```
 
 分析完成後，結果會產生在分析結果根目錄內：
@@ -40,25 +67,44 @@ ScreenTrace 會展開可解析的 JSP Tag、CSS 與本地資源，並以 Playwri
 /project/ocp/analyze/專案名稱/
 ```
 
-分析完成後會自動開啟報表，並顯示本機網址。JSP 專案會同時產生靜態預覽、渲染截圖與元件位置資料。
+分析完成後會自動開啟報表，並顯示本機網址。JSP 專案會同時產生靜態預覽、渲染截圖與元件位置資料。報表開啟期間，在 CLI 按 Esc 可只關閉 localhost 報表並回到功能選單。
 
 ### 開啟報表
 
 若專案已分析完成，可不重新掃描，直接啟動報表：
 
+macOS：
+
 ```bash
 ./bin/screentrace
+```
+
+Windows：
+
+```powershell
+.\bin\screentrace.cmd
 ```
 
 在選單中選擇「開啟報表」與目標專案。每個報表會自動使用可用的本機連接埠。
 
 也可用於自動化：
 
+macOS：
+
 ```bash
 ./bin/screentrace analyze 專案名稱
 ./bin/screentrace report 專案名稱
 ./bin/screentrace export 專案名稱
 ./bin/screentrace config
+```
+
+Windows：
+
+```powershell
+.\bin\screentrace.cmd analyze 專案名稱
+.\bin\screentrace.cmd report 專案名稱
+.\bin\screentrace.cmd export 專案名稱
+.\bin\screentrace.cmd config
 ```
 
 ## 報表操作
@@ -136,8 +182,16 @@ review-result.json
 
 不需要重新分析：
 
+macOS：
+
 ```bash
 ./bin/screentrace
+```
+
+Windows：
+
+```powershell
+.\bin\screentrace.cmd
 ```
 
 預設輸出：
@@ -182,8 +236,16 @@ AI 應以 `REMOVE` 作為可移除範圍、以 `KEEP` 作為必須保留範圍�
 
 先重新執行分析：
 
+macOS：
+
 ```bash
 ./bin/screentrace
+```
+
+Windows：
+
+```powershell
+.\bin\screentrace.cmd
 ```
 
 再啟動或重新整理報表。
@@ -192,8 +254,16 @@ AI 應以 `REMOVE` 作為可移除範圍、以 `KEEP` 作為必須保留範圍�
 
 重新啟動最新 server：
 
+macOS：
+
 ```bash
 ./bin/screentrace
+```
+
+Windows：
+
+```powershell
+.\bin\screentrace.cmd
 ```
 
 再選擇「開啟報表」。也可選擇「匯出確認結果」直接產生 JSON。
