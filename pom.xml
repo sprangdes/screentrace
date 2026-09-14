@@ -14,6 +14,7 @@
     <junit.version>5.10.2</junit.version>
     <jackson.version>2.17.1</jackson.version>
     <javaparser.version>3.26.1</javaparser.version>
+    <jline.version>3.26.3</jline.version>
   </properties>
 
   <modules>
@@ -43,6 +44,11 @@
         <artifactId>junit-jupiter</artifactId>
         <version>${junit.version}</version>
         <scope>test</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.jline</groupId>
+        <artifactId>jline</artifactId>
+        <version>${jline.version}</version>
       </dependency>
     </dependencies>
   </dependencyManagement>

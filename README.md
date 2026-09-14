@@ -2,53 +2,112 @@
 
 ScreenTrace 會分析伺服端渲染 JSP 專案的畫面、路由與可互動元件，產生可瀏覽的 Screen flow、靜態頁面、按鈕資訊與確認結果；不會啟動或修改目標專案。
 
-目前支援 Struts 1、Struts + Spring、Spring MVC JSP、Spring Boot JSP 專案；產生的資料與報表都寫入被分析專案的 `.screentrace/`，不會修改原始程式碼。
+目前支援 Struts 1、Struts + Spring、Spring MVC JSP、Spring Boot JSP 專案；產生的資料與報表都寫入設定的分析結果根目錄，不會修改原始程式碼。
 
-ScreenTrace 會展開可解析的 JSP Tag、CSS 與本地資源，產生報表載入的靜態 HTML。
+ScreenTrace 會展開可解析的 JSP Tag、CSS 與本地資源，並以 Playwright Chromium 渲染靜態 HTML，產生畫面截圖與可見元件位置。JSP 的動態清單、明細與欄位會填入合成示範資料；不會啟動目標專案或連線其資料庫。
 
 ## 初次執行
 
-在 macOS 的終端機進入 ScreenTrace 專案根目錄後，直接執行分析指令：
+### macOS
+
+在終端機進入 ScreenTrace 專案根目錄後執行：
 
 ```bash
-./bin/screentrace analyze /絕對路徑/目標專案
+./bin/screentrace
 ```
 
-腳本會自動檢查 Java 17+、Maven 3.9+ 與 Node.js 18+；缺少或版本不足時，會透過 Homebrew 安裝。若尚未安裝 Homebrew，腳本也會先依 Homebrew 官方安裝程序完成安裝。初次執行需要網路連線，且 Homebrew 可能要求輸入 macOS 管理者密碼。
+腳本會自動檢查 Java 17+、Maven 3.9+、Node.js 18+、Playwright 與 Chromium。缺少 Java、Maven 或 Node.js 時，會透過 Homebrew 安裝。首次執行需要網路連線，Homebrew 可能要求輸入 macOS 管理者密碼。
+
+### Windows
+
+在 PowerShell 或命令提示字元進入 ScreenTrace 專案根目錄後執行：
+
+```powershell
+.\bin\screentrace.cmd
+```
+
+腳本會自動檢查 Java 17+、Maven 3.9+、Node.js 18+、Playwright 與 Chromium。缺少 Java、Maven 或 Node.js 時，會透過 `winget` 安裝。首次執行需要網路連線，安裝時可能出現 Windows 權限確認。需使用 Windows 10／11，且已安裝 App Installer（提供 `winget`）。
+
+首次啟動時會要求設定所有專案的根目錄與分析結果根目錄，預設結果位置是 `<專案根目錄>/analyze/`。設定檔位置如下：
+
+| 系統 | 設定檔 |
+| --- | --- |
+| macOS | `~/.screentrace/config.json` |
+| Windows | `%USERPROFILE%\.screentrace\config.json` |
 
 ## CLI 指令
 
-所有分析資料與確認結果固定寫入目標專案的 `.screentrace/`。CLI 不提供自訂輸出位置。
+直接執行 macOS 的 `./bin/screentrace` 或 Windows 的 `.\bin\screentrace.cmd` 後，以 ↑ / ↓ 選擇、Enter 確認：
+
+```text
+❯ 分析專案
+  開啟報表
+  匯出確認結果
+  結束 ScreenTrace
+```
+
+「分析專案」列出專案根目錄下所有直接子資料夾；「開啟報表」與「匯出確認結果」只列出已有完整分析結果的專案。
+可選擇「結束 ScreenTrace」，或按 `q`／Esc 正常結束 CLI。專案選單可選擇「← 返回功能選單」，或按 `b`／Esc 返回功能選單。
 
 ### 分析專案並開啟報表
 
+macOS：
+
 ```bash
-./bin/screentrace analyze /絕對路徑/目標專案
+./bin/screentrace
 ```
 
-分析完成後，結果會產生在目標專案內：
+Windows：
+
+```powershell
+.\bin\screentrace.cmd
+```
+
+分析完成後，結果會產生在分析結果根目錄內：
 
 ```text
-/絕對路徑/目標專案/.screentrace/
+/project/ocp/analyze/專案名稱/
 ```
 
-分析完成後會自動開啟 `http://localhost:8088`。JSP 專案會同時產生靜態預覽。
+分析完成後會自動開啟報表，並顯示本機網址。JSP 專案會同時產生靜態預覽、渲染截圖與元件位置資料。報表開啟期間，在 CLI 按 Esc 可只關閉 localhost 報表並回到功能選單。
 
 ### 開啟報表
 
 若專案已分析完成，可不重新掃描，直接啟動報表：
 
+macOS：
+
 ```bash
-./bin/screentrace open /絕對路徑/目標專案
+./bin/screentrace
 ```
 
-瀏覽器開啟：
+Windows：
 
-```text
-http://localhost:8088
+```powershell
+.\bin\screentrace.cmd
 ```
 
-若顯示 `Address already in use`，代表已有 ScreenTrace server 使用 8088。可直接重新整理既有的 `http://localhost:8088`；若剛更新 CLI 功能，請先停止舊 server（終端機按 `Ctrl+C`）再重新執行 `open`。
+在選單中選擇「開啟報表」與目標專案。每個報表會自動使用可用的本機連接埠。
+
+也可用於自動化：
+
+macOS：
+
+```bash
+./bin/screentrace analyze 專案名稱
+./bin/screentrace report 專案名稱
+./bin/screentrace export 專案名稱
+./bin/screentrace config
+```
+
+Windows：
+
+```powershell
+.\bin\screentrace.cmd analyze 專案名稱
+.\bin\screentrace.cmd report 專案名稱
+.\bin\screentrace.cmd export 專案名稱
+.\bin\screentrace.cmd config
+```
 
 ## 報表操作
 
@@ -76,7 +135,7 @@ http://localhost:8088
 
 ### Page view
 
-Page view 顯示由 JSP 原始碼轉換的靜態 HTML。
+Page view 顯示由 JSP 原始碼轉換的靜態 HTML；Screen Explorer 與 Screen flow 顯示該 HTML 經 Chromium 渲染後的截圖。
 
 - 單擊可解析按鈕或連結會在右欄開啟 Button Detail。
 - 雙擊具備已解析目標的元件，會直接前往目標畫面。
@@ -105,7 +164,7 @@ Page view 顯示由 JSP 原始碼轉換的靜態 HTML。
 
 確認決策屬於使用者資料，不會改寫 Application Graph 或被分析專案的原始碼。
 
-- server 可用時，寫入 `.screentrace/edit-overlay.json`。
+- server 可用時，寫入分析結果目錄的 `edit-overlay.json`。
 - 瀏覽器同時保留一份本機狀態，避免暫時無法寫入 server 時遺失操作。
 - 再次執行 `analyze` 時，既有的 `edit-overlay.json` 不會被覆蓋。
 
@@ -125,14 +184,22 @@ review-result.json
 
 不需要重新分析：
 
+macOS：
+
 ```bash
-./bin/screentrace export /絕對路徑/目標專案
+./bin/screentrace
+```
+
+Windows：
+
+```powershell
+.\bin\screentrace.cmd
 ```
 
 預設輸出：
 
 ```text
-/絕對路徑/目標專案/.screentrace/review-result.json
+/project/ocp/analyze/專案名稱/review-result.json
 ```
 
 輸出內容包含：
@@ -145,10 +212,10 @@ review-result.json
 
 AI 應以 `REMOVE` 作為可移除範圍、以 `KEEP` 作為必須保留範圍；`UNDECIDED` 表示尚未取得客戶決策，不應自行移除。
 
-## `.screentrace` 產物說明
+## 分析產物說明
 
 ```text
-.screentrace/
+<分析結果根目錄>/<專案名稱>/
 ├── application-graph.json       # 靜態分析出的標準 Application Graph
 ├── prototype-model.json         # 原型畫面與元件基準資料
 ├── preview-model.json           # 預覽畫面與可見元件的統一資料
@@ -159,6 +226,10 @@ AI 應以 `REMOVE` 作為可移除範圍、以 `KEEP` 作為必須保留範圍�
 ├── static-preview/
 │   ├── manifest.json            # Screen ID 與靜態頁面對應
 │   └── *.html                   # JSP 轉換後的靜態頁面
+└── screenshots/
+    ├── manifest.json            # Screen ID 與渲染截圖對應
+    ├── interactions.json        # 可見元件的實際位置與 CSS
+    └── *.png                    # Chromium 渲染截圖
 ```
 
 ## 疑難排解
@@ -167,8 +238,16 @@ AI 應以 `REMOVE` 作為可移除範圍、以 `KEEP` 作為必須保留範圍�
 
 先重新執行分析：
 
+macOS：
+
 ```bash
-./bin/screentrace analyze /絕對路徑/目標專案
+./bin/screentrace
+```
+
+Windows：
+
+```powershell
+.\bin\screentrace.cmd
 ```
 
 再啟動或重新整理報表。
@@ -177,11 +256,19 @@ AI 應以 `REMOVE` 作為可移除範圍、以 `KEEP` 作為必須保留範圍�
 
 重新啟動最新 server：
 
+macOS：
+
 ```bash
-./bin/screentrace open /絕對路徑/目標專案
+./bin/screentrace
 ```
 
-再重新開啟 `http://localhost:8088`。也可改用 `screentrace export` 指令直接產生 JSON。
+Windows：
+
+```powershell
+.\bin\screentrace.cmd
+```
+
+再選擇「開啟報表」。也可選擇「匯出確認結果」直接產生 JSON。
 
 ## 開發與驗證
 
@@ -189,4 +276,4 @@ AI 應以 `REMOVE` 作為可移除範圍、以 `KEEP` 作為必須保留範圍�
 mvn clean verify
 ```
 
-分析產物是執行結果，應維持在被分析專案的 `.screentrace/`，不應提交到 ScreenTrace 原始碼版本庫。
+分析產物是執行結果，應維持在設定的分析結果根目錄，不應提交到 ScreenTrace 原始碼版本庫。

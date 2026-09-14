@@ -10,7 +10,7 @@
 - [x] Static React route, navigation, and API-literal extraction
 - [x] Generated, standalone interactive report
 - [x] Prototype Model and non-destructive Edit Overlay contracts
-- [x] Simple CLI workflows: `analyze`, `open`, and `export`, all using `<target>/.screentrace`
+- [x] Interactive workspace CLI: Chinese action menu, project selection, configured output root, and `analyze` / `report` / `export` commands
 - [x] Shared JSP/JSPF/Tiles contribution parser
 - [x] Struts 1 Action Mapping, ActionForm, forward, and Spring XML Action-bean resolution
 - [x] Spring MVC XML Controller, `InternalResourceViewResolver`, Tiles view, and Spring URL tag resolution
@@ -18,7 +18,7 @@
 - [x] Regression fixtures: Struts, Struts + Spring, Spring MVC JSP, Spring Boot JSP
 - [x] Fixture report parity: Screen Explorer, Flow View, Page View, Component Trace, Review/Edit Mode
 - [x] Analysis automatically generates previews; standalone capture command removed
-- [x] Remove Playwright screenshot and runtime-capture dependencies
+- [x] Playwright static JSP preview screenshot and component-bound capture
 - [ ] Expand React JSX/component extraction based on Reservio gaps
 - [ ] Record full Reservio validation results
 

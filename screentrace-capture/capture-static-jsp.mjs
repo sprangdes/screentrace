@@ -1,16 +1,23 @@
 import { access, cp, mkdir, readFile, writeFile } from 'node:fs/promises';
 import { constants } from 'node:fs';
 import path from 'node:path';
+import { pathToFileURL } from 'node:url';
+import { chromium } from 'playwright';
 
 const [targetArg, outputArg] = process.argv.slice(2);
 if (!targetArg) throw new Error('Usage: capture-static-jsp.mjs <target-project> [output-directory]');
 const target = path.resolve(targetArg);
 const output = path.resolve(outputArg || path.join(target, '.screentrace'));
 const graph = JSON.parse(await readFile(path.join(output, 'application-graph.json'), 'utf8'));
+const endpointByPath = new Map(graph.nodes.filter(node => node.type === 'ENDPOINT').map(node => [node.attributes?.path, node]));
+const handlerByEndpoint = new Map(graph.relationships.filter(edge => edge.type === 'HANDLED_BY').map(edge => [edge.from, edge.to]));
+const screenByHandler = new Map(graph.relationships.filter(edge => edge.type === 'RENDERS').map(edge => [edge.from, edge.to]));
 const webRoot = path.join(target, 'src/main/webapp');
 const tagRoot = path.join(webRoot, 'WEB-INF/tags');
 const htmlRoot = path.join(output, 'static-preview');
+const screenshotRoot = path.join(output, 'screenshots');
 await mkdir(htmlRoot, { recursive: true });
+await mkdir(screenshotRoot, { recursive: true });
 if (await exists(path.join(webRoot, 'resources'))) await cp(path.join(webRoot, 'resources'), path.join(htmlRoot, 'assets/resources'), { recursive: true });
 
 async function exists(file) { try { await access(file, constants.R_OK); return true; } catch { return false; } }
@@ -23,14 +30,27 @@ function attrs(source) {
 function removeDirectives(source) { return source.replace(/<%@[^%]*%>/g, '').replace(/<%--[\s\S]*?--%>/g, ''); }
 function placeholder(expression) {
   const value = expression.trim();
+  const escaped = value.match(/^fn:escapeXml\((.+)\)$/);
+  if (escaped) return placeholder(escaped[1]);
   if (value.includes('pageContext')) return '';
-  if (/\.id$/.test(value)) return 'Sample ID';
-  if (/owner\.(firstName|lastName)/.test(value)) return 'Sample Owner';
+  if (/\.id$/.test(value)) return '1';
+  if (/\.(firstName|givenName)$/.test(value)) return 'Alex';
+  if (/\.lastName$/.test(value)) return 'Johnson';
+  if (/\.(address|street)$/.test(value)) return '123 Sample Street';
+  if (/\.(city|town)$/.test(value)) return 'Taipei';
+  if (/\.(telephone|phone|mobile)$/.test(value)) return '02-5555-0101';
+  if (/\.(birthDate|date)$/.test(value)) return '2020-05-12';
+  if (/\.(description|message|note)$/.test(value)) return 'Routine check-up';
+  if (/\.type\.name$/.test(value)) return 'Dog';
+  if (/\.(name|title)$/.test(value)) return /owner/.test(value) ? 'Alex Johnson' : 'Buddy';
   if (/errorMessage/.test(value)) return 'Validation message';
   return value.split(/[.[' ]/)[0].replace(/^./, c => c.toUpperCase()) || 'Sample value';
 }
 function replaceExpressions(source, values = {}) {
-  return source.replace(/\$\{([^}]+)\}/g, (_, expression) => values[expression.trim()] ?? placeholder(expression));
+  return source.replace(/\$\{([^}]+)\}/g, (_, expression) => {
+    const value = expression.trim(), escaped = value.match(/^fn:escapeXml\((.+)\)$/)?.[1];
+    return values[value] ?? (escaped ? values[escaped] ?? placeholder(escaped) : placeholder(value));
+  });
 }
 async function expandTag(name, attributeText, body, slots, depth) {
   if (depth > 12) return body;
@@ -38,9 +58,9 @@ async function expandTag(name, attributeText, body, slots, depth) {
   if (!(await exists(file))) return body || '';
   const values = attrs(attributeText);
   let template = removeDirectives(await text(file));
+  template = replaceExpressions(template, values);
   template = template.replace(/<jsp:doBody\s*\/>/g, body || '');
   template = template.replace(/<jsp:invoke\s+fragment=["']customScript["']\s*\/>/g, slots.customScript || '');
-  template = replaceExpressions(template, values);
   return expandTags(template, slots, depth + 1);
 }
 async function expandTags(source, slots = {}, depth = 0) {
@@ -66,6 +86,8 @@ async function replaceAsync(source, expression, mapper) {
 }
 function htmlControls(source) {
   return source
+    .replace(/<c:out\b([^>]*)\/>/g, (_, attributeText) => attrs(attributeText).value || attrs(attributeText).default || 'Sample value')
+    .replace(/<fmt:formatDate\b([^>]*)\/>/g, (_, attributeText) => attrs(attributeText).value || '2020-05-12')
     .replace(/<spring:url\s+value=["']([^"']+)["'][^>]*\/>/g, '$1')
     .replace(/<form:form\b([^>]*)>/g, '<form$1>').replace(/<\/form:form>/g, '</form>')
     .replace(/<form:input\b([^>]*)\/>/g, '<input$1/>')
@@ -97,8 +119,17 @@ async function renderJsp(screen) {
   source = source.replace(/<jsp:attribute\s+name=["']customScript["'][^>]*>[\s\S]*?<\/jsp:attribute>/g, '');
   source = await expandTags(source, { customScript: custom });
   const urls = {};
-  source = source.replace(/<spring:url\s+value=["']([^"']+)["']\s+var=["']([^"']+)["'][^>]*\/>/g, (_, value, variable) => {
-    urls[variable] = value;
+  source = source.replace(/<spring:url\b([^>]*?)\/>/g, (_, attributeText) => {
+    const attributes = attrs(attributeText);
+    if (attributes.var && attributes.value) {
+      urls[attributes.var] = attributes.value.replace(/\{[^}]+\}/g, '1');
+      return '';
+    }
+    return attributes.value || '';
+  });
+  source = source.replace(/<spring:url\b([^>]*)>([\s\S]*?)<\/spring:url>/g, (_, attributeText) => {
+    const attributes = attrs(attributeText), value = attributes.value;
+    if (attributes.var && value) urls[attributes.var] = value.replace(/\{[^}]+\}/g, '1');
     return '';
   });
   source = localStaticResources(htmlControls(replaceExpressions(source, urls)));
@@ -112,10 +143,36 @@ async function renderJsp(screen) {
   return htmlFile;
 }
 
-const manifest = {};
+const manifest = {}, screenshots = {}, interactions = {};
+const browser = await chromium.launch({ headless: true });
+const page = await browser.newPage({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1 });
 for (const screen of graph.nodes.filter(node => node.type === 'SCREEN')) {
   const htmlFile = await renderJsp(screen);
   if (!htmlFile) continue;
   manifest[screen.id] = `static-preview/${path.basename(htmlFile)}`;
+  await page.goto(pathToFileURL(htmlFile).href, { waitUntil: 'load' });
+  const items = await page.locator('a[href], button, input[type="submit"], input[type="button"], form[action]').evaluateAll(items => items.map((item, index) => {
+    const box = item.getBoundingClientRect(), style = getComputedStyle(item);
+    const form = item.tagName === 'FORM' ? item : item.closest('form');
+    const target = item.getAttribute('href') || item.getAttribute('formaction') || form?.getAttribute('action') || null;
+    const css = Object.fromEntries(['display', 'position', 'width', 'height', 'padding', 'margin', 'color', 'backgroundColor', 'border', 'borderRadius', 'boxShadow', 'fontFamily', 'fontSize', 'fontWeight', 'lineHeight', 'textAlign', 'cursor', 'opacity'].map(property => [property, style[property]]));
+    return { id: `static-component-${index}`, type: item.tagName === 'A' ? 'LINK' : item.tagName === 'FORM' ? 'FORM' : 'BUTTON',
+      label: (item.getAttribute('aria-label') || item.getAttribute('value') || item.textContent || item.id || '').replace(/\s+/g, ' ').trim(), target,
+      source: 'STATIC_RENDERED', visible: style.visibility !== 'hidden' && style.display !== 'none' && box.width > 0 && box.height > 0,
+      bounds: { x: box.left + window.scrollX, y: box.top + window.scrollY, width: box.width, height: box.height }, css };
+  }).filter(item => item.visible && item.label));
+  for (const item of items) {
+    const endpoint = endpointByPath.get(item.target);
+    const handler = endpoint && handlerByEndpoint.get(endpoint.id);
+    const targetScreenId = handler && screenByHandler.get(handler);
+    if (targetScreenId) item.targetScreenId = targetScreenId;
+  }
+  interactions[screen.id] = { width: await page.evaluate(() => document.documentElement.scrollWidth), height: await page.evaluate(() => document.documentElement.scrollHeight), items };
+  const file = `static-${screen.id.replace(/[^a-z0-9-]/gi, '_')}.png`;
+  await page.screenshot({ path: path.join(screenshotRoot, file), fullPage: true });
+  screenshots[screen.id] = `screenshots/${file}`;
 }
+await browser.close();
 await writeFile(path.join(htmlRoot, 'manifest.json'), JSON.stringify(manifest, null, 2));
+await writeFile(path.join(screenshotRoot, 'manifest.json'), JSON.stringify(screenshots, null, 2));
+await writeFile(path.join(screenshotRoot, 'interactions.json'), JSON.stringify(interactions, null, 2));
