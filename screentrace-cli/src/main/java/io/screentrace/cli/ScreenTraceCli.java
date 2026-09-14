@@ -43,32 +43,56 @@ public final class ScreenTraceCli {
       }
       List<ProjectCatalog.Project> projects = command.action() == Action.ANALYZE
           ? catalog.allProjects(settings) : catalog.analyzedProjects(settings);
-      ProjectCatalog.Project project = selectProject(console, catalog, projects, command.projectName());
-      if (command.action() == Action.ANALYZE) serve(analyze(project));
+      ProjectCatalog.Project project;
+      try {
+        project = selectProject(console, catalog, projects, command.projectName());
+      } catch (InteractiveConsole.SelectionCancelledException ignored) {
+        return;
+      }
+      if (command.action() == Action.ANALYZE) {
+        AnalysisResult result = analyze(project);
+        logAnalysis(result);
+        serve(result.report());
+      }
       else if (command.action() == Action.REPORT) serve(project.analysisDirectory().resolve("report"));
-      else export(project);
+      else logExport(export(project));
     }
   }
 
   private static void runInteractive(InteractiveConsole console, WorkspaceSettings settings, ProjectCatalog catalog)
       throws IOException, InterruptedException {
-    try {
-      while (true) {
-        Action action = chooseCommand(console);
-        List<ProjectCatalog.Project> projects = action == Action.ANALYZE
-            ? catalog.allProjects(settings) : catalog.analyzedProjects(settings);
-        ProjectCatalog.Project project = selectProject(console, catalog, projects, null);
-        if (action == Action.EXPORT) {
-          export(project);
-          continue;
-        }
-        Path report = action == Action.ANALYZE ? analyze(project) : project.analysisDirectory().resolve("report");
-        try (RunningReport running = startReport(report)) {
-          console.waitForReportClose(running.url());
-        }
+    while (true) {
+      Action action;
+      try {
+        action = chooseCommand(console);
+      } catch (InteractiveConsole.SelectionCancelledException ignored) {
+        return;
       }
-    } catch (IllegalStateException exception) {
-      if (!"操作已取消。".equals(exception.getMessage())) throw exception;
+      if (action == Action.EXIT) return;
+      List<ProjectCatalog.Project> projects = action == Action.ANALYZE
+          ? catalog.allProjects(settings) : catalog.analyzedProjects(settings);
+      ProjectCatalog.Project project;
+      try {
+        project = selectProject(console, catalog, projects, null);
+      } catch (InteractiveConsole.SelectionCancelledException ignored) {
+        continue;
+      }
+      if (action == Action.EXPORT) {
+        console.showExportComplete(export(project));
+        continue;
+      }
+      Path report;
+      if (action == Action.ANALYZE) {
+        AnalysisResult result = analyze(project);
+        console.showAnalysisComplete(result.project(), result.technologies(), result.endpoints(), result.screens(),
+            result.components(), result.output());
+        report = result.report();
+      } else {
+        report = project.analysisDirectory().resolve("report");
+      }
+      try (RunningReport running = startReport(report)) {
+        console.waitForReportClose(running.url());
+      }
     }
   }
 
@@ -101,16 +125,24 @@ public final class ScreenTraceCli {
   }
 
   private static Action chooseCommand(InteractiveConsole console) throws IOException {
-    return console.select("請選擇功能", List.of(Action.ANALYZE, Action.REPORT, Action.EXPORT), Action::label);
+    return console.select("請選擇功能", List.of(Action.ANALYZE, Action.REPORT, Action.EXPORT, Action.EXIT),
+        Action::label, 'q', "q / Esc 結束", 3);
   }
 
   private static ProjectCatalog.Project selectProject(InteractiveConsole console, ProjectCatalog catalog,
       List<ProjectCatalog.Project> projects, String projectName) throws IOException {
     if (projectName != null) return catalog.named(projects, projectName);
-    return console.select("請選擇專案", projects, ProjectCatalog.Project::name);
+    if (projects.isEmpty()) throw new IllegalArgumentException("沒有可操作的專案。");
+    List<ProjectChoice> choices = new java.util.ArrayList<>(projects.stream()
+        .map(project -> new ProjectChoice(project, project.name())).toList());
+    choices.add(new ProjectChoice(null, "← 返回功能選單"));
+    ProjectChoice choice = console.select("請選擇專案", choices, ProjectChoice::label, 'b', "b / Esc 返回",
+        choices.size() - 1);
+    if (choice.project() == null) throw new InteractiveConsole.SelectionCancelledException();
+    return choice.project();
   }
 
-  private static Path analyze(ProjectCatalog.Project project) throws IOException, InterruptedException {
+  private static AnalysisResult analyze(ProjectCatalog.Project project) throws IOException, InterruptedException {
     Path output = project.analysisDirectory();
     var inventory = new ProjectScanner().scan(project.sourceDirectory());
     var graph = analyze(inventory);
@@ -122,10 +154,15 @@ public final class ScreenTraceCli {
     long screens = graph.nodes().stream().filter(node -> node.type().name().equals("SCREEN")).count();
     long endpoints = graph.nodes().stream().filter(node -> node.type().name().equals("ENDPOINT")).count();
     long components = graph.nodes().stream().filter(node -> node.type().name().equals("COMPONENT")).count();
-    LOGGER.info(() -> "分析完成：\n  專案：" + project.name() + "\n  技術："
-        + String.join(", ", graph.application().technologies()) + "\n  Endpoints：" + endpoints
-        + "\n  Screens：" + screens + "\n  Components：" + components + "\n  輸出：" + output);
-    return output.resolve("report");
+    return new AnalysisResult(output.resolve("report"), project.name(), graph.application().technologies(), endpoints,
+        screens, components, output);
+  }
+
+  private static void logAnalysis(AnalysisResult result) {
+    LOGGER.info(() -> "分析完成：\n  專案：" + result.project() + "\n  技術："
+        + String.join(", ", result.technologies()) + "\n  Endpoints：" + result.endpoints()
+        + "\n  Screens：" + result.screens() + "\n  Components：" + result.components()
+        + "\n  輸出：" + result.output());
   }
 
   private static ApplicationGraph analyze(ProjectScanner.ProjectInventory inventory) throws IOException {
@@ -142,14 +179,19 @@ public final class ScreenTraceCli {
     if (process.waitFor() != 0) LOGGER.warning("無法建立 JSP 靜態預覽；報表會改用原始碼預覽。");
   }
 
-  private static void export(ProjectCatalog.Project project) throws IOException {
+  private static Path export(ProjectCatalog.Project project) throws IOException {
     Path destination = project.analysisDirectory().resolve("review-result.json");
     new ReviewResultGenerator().write(project.analysisDirectory(), destination);
+    return destination;
+  }
+
+  private static void logExport(Path destination) {
     LOGGER.info(() -> "確認功能結果已匯出：\n  " + destination);
   }
 
   private static void serve(Path report) throws IOException {
-    startReport(report);
+    RunningReport running = startReport(report);
+    LOGGER.info("ScreenTrace report running at:\n\n" + running.url());
   }
 
   private static RunningReport startReport(Path report) throws IOException {
@@ -164,7 +206,6 @@ public final class ScreenTraceCli {
     server.createContext("/", exchange -> serveStatic(exchange, report, analysis, sessionToken));
     server.start();
     String url = "http://localhost:" + port;
-    LOGGER.info("ScreenTrace report running at:\n\n" + url);
     openReport(url);
     return new RunningReport(server, url);
   }
@@ -328,9 +369,14 @@ public final class ScreenTraceCli {
     }
   }
 
+  private record ProjectChoice(ProjectCatalog.Project project, String label) { }
+
+  private record AnalysisResult(Path report, String project, List<String> technologies, long endpoints, long screens,
+      long components, Path output) { }
+
   private enum Action {
     INTERACTIVE(null, null), ANALYZE("analyze", "分析專案"), REPORT("report", "開啟報表"),
-    EXPORT("export", "匯出確認結果"), CONFIG("config", "設定");
+    EXPORT("export", "匯出確認結果"), EXIT(null, "結束 ScreenTrace"), CONFIG("config", "設定");
 
     private final String command;
     private final String label;

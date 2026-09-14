@@ -5,11 +5,14 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.function.Function;
+import org.jline.keymap.BindingReader;
+import org.jline.keymap.KeyMap;
 import org.jline.reader.LineReader;
 import org.jline.reader.LineReaderBuilder;
 import org.jline.terminal.Attributes;
 import org.jline.terminal.Terminal;
 import org.jline.terminal.TerminalBuilder;
+import org.jline.utils.InfoCmp.Capability;
 import org.jline.utils.NonBlockingReader;
 
 /** Small terminal UI using arrow-key selection and editable path prompts. */
@@ -45,21 +48,35 @@ final class InteractiveConsole implements AutoCloseable {
     }
   }
 
-  <T> T select(String title, List<T> options, Function<T, String> label) throws IOException {
+  <T> T select(String title, List<T> options, Function<T, String> label, char shortcut, String exitHint,
+      int separatorBefore) throws IOException {
     if (options.isEmpty()) throw new IllegalArgumentException("沒有可操作的專案。");
+    if (!supportsInPlaceRedraw()) {
+      return selectByNumber(title, options, label, shortcut, exitHint, separatorBefore);
+    }
     int selected = 0;
     Attributes original = terminal.enterRawMode();
+    List<String> menu = menuLines(title, options, label, selected, exitHint, separatorBefore);
     try {
       NonBlockingReader input = terminal.reader();
+      BindingReader keys = new BindingReader(input);
+      renderMenu(menu, false);
       while (true) {
-        render(title, options, label, selected);
-        int key = readKey(input);
-        if (key == 27) throw new IllegalStateException("操作已取消。");
-        if (key == '\r' || key == '\n') return options.get(selected);
-        if (key == 65 || key == 'k') selected = (selected + options.size() - 1) % options.size();
-        if (key == 66 || key == 'j') selected = (selected + 1) % options.size();
+        MenuKey key = readMenuKey(keys, shortcut);
+        if (key == MenuKey.CANCEL || key == MenuKey.SHORTCUT) throw new SelectionCancelledException();
+        if (key == MenuKey.ACCEPT) return options.get(selected);
+        int next = selected;
+        if (key == MenuKey.UP) next = (selected + options.size() - 1) % options.size();
+        if (key == MenuKey.DOWN) next = (selected + 1) % options.size();
+        if (next != selected) {
+          selected = next;
+          menu = menuLines(title, options, label, selected, exitHint, separatorBefore);
+          renderMenu(menu, true);
+        }
       }
     } finally {
+      moveCursorUp(menu.size());
+      terminal.puts(Capability.clr_eos);
       terminal.setAttributes(original);
       terminal.writer().println();
       terminal.flush();
@@ -68,20 +85,38 @@ final class InteractiveConsole implements AutoCloseable {
 
   void waitForReportClose(String url) throws IOException {
     Attributes original = terminal.enterRawMode();
+    List<String> panel = reportPanelLines(url);
     try {
-      terminal.writer().println();
-      terminal.writer().println("報表已開啟：" + url);
-      terminal.writer().println("按 Esc 關閉 localhost 報表並回到功能選單。");
-      terminal.flush();
+      renderMenu(panel, false);
       NonBlockingReader input = terminal.reader();
-      while (readKey(input) != 27) {
-        // Only Esc closes the report; all other input remains available to the browser.
+      BindingReader keys = new BindingReader(input);
+      while (true) {
+        MenuKey key = readMenuKey(keys, 'q');
+        if (key == MenuKey.CANCEL || key == MenuKey.SHORTCUT) return;
       }
     } finally {
+      moveCursorUp(panel.size());
+      terminal.puts(Capability.clr_eos);
       terminal.setAttributes(original);
       terminal.writer().println();
       terminal.flush();
     }
+  }
+
+  void showAnalysisComplete(String project, List<String> technologies, long endpoints, long screens, long components,
+      Path output) {
+    List<String> details = List.of(
+        "專案：" + project,
+        "技術：" + String.join(", ", technologies),
+        "Endpoints：" + endpoints,
+        "Screens：" + screens,
+        "Components：" + components,
+        "輸出：" + output);
+    showCompletionPanel("分析完成", details);
+  }
+
+  void showExportComplete(Path destination) {
+    showCompletionPanel("確認功能結果已匯出", List.of("輸出：" + destination));
   }
 
   private String read(String prompt, Path defaultValue) {
@@ -89,26 +124,184 @@ final class InteractiveConsole implements AutoCloseable {
     return value.isEmpty() ? defaultValue.toString() : value;
   }
 
-  private static int readKey(NonBlockingReader input) throws IOException {
-    int first = input.read();
-    if (first != 27) return first;
-    int second = input.read();
-    if (second != '[') return 27;
-    return input.read();
+  private MenuKey readMenuKey(BindingReader reader, char shortcut) {
+    KeyMap<MenuKey> bindings = new KeyMap<>();
+    bindings.bind(MenuKey.UP, "\u001b[A", "k");
+    bindings.bind(MenuKey.DOWN, "\u001b[B", "j");
+    bindTerminalKey(bindings, MenuKey.UP, Capability.key_up);
+    bindTerminalKey(bindings, MenuKey.DOWN, Capability.key_down);
+    bindings.bind(MenuKey.ACCEPT, "\r", "\n");
+    bindings.bind(MenuKey.CANCEL, KeyMap.esc());
+    bindings.bind(MenuKey.SHORTCUT, String.valueOf(shortcut));
+    bindings.setNomatch(MenuKey.IGNORE);
+    bindings.setAmbiguousTimeout(50);
+    return reader.readBinding(bindings);
   }
 
-  private <T> void render(String title, List<T> options, Function<T, String> label, int selected) {
-    terminal.writer().print("\033[H\033[2J");
+  private void bindTerminalKey(KeyMap<MenuKey> bindings, MenuKey key, Capability capability) {
+    String sequence = KeyMap.key(terminal, capability);
+    if (sequence != null) bindings.bind(key, sequence);
+  }
+
+  private boolean supportsInPlaceRedraw() {
+    return supportsInPlaceRedraw(terminal.getType(), terminal.getWidth(), terminal.getHeight(),
+        terminal.getStringCapability(Capability.cursor_up) != null,
+        terminal.getStringCapability(Capability.clr_eol) != null,
+        terminal.getStringCapability(Capability.clr_eos) != null);
+  }
+
+  static boolean supportsInPlaceRedraw(String terminalType, int width, int height, boolean cursorUp,
+      boolean clearLine, boolean clearBelow) {
+    return width > 0 && height > 0 && !Terminal.TYPE_DUMB.equals(terminalType)
+        && !Terminal.TYPE_DUMB_COLOR.equals(terminalType) && cursorUp && clearLine && clearBelow;
+  }
+
+  private <T> T selectByNumber(String title, List<T> options, Function<T, String> label, char shortcut,
+      String exitHint, int separatorBefore) {
     terminal.writer().println("ScreenTrace");
     terminal.writer().println();
     terminal.writer().println(title);
     for (int index = 0; index < options.size(); index++) {
-      terminal.writer().println((index == selected ? "❯ " : "  ") + label.apply(options.get(index)));
+      if (index == separatorBefore) terminal.writer().println();
+      terminal.writer().println((index + 1) + ". " + label.apply(options.get(index)));
     }
-    terminal.writer().println();
-    terminal.writer().print("↑ / ↓ 選擇，Enter 確認，Esc 取消");
+    terminal.flush();
+    while (true) {
+      String value = lines.readLine("輸入編號，或 " + shortcut + " " + exitHint + "：").trim();
+      if (value.equalsIgnoreCase(String.valueOf(shortcut))) throw new SelectionCancelledException();
+      try {
+        int selected = Integer.parseInt(value) - 1;
+        if (selected >= 0 && selected < options.size()) return options.get(selected);
+      } catch (NumberFormatException ignored) {
+        // Display the concise validation message below.
+      }
+      terminal.writer().println("請輸入 1 到 " + options.size() + "。");
+      terminal.flush();
+    }
+  }
+
+  private <T> List<String> menuLines(String title, List<T> options, Function<T, String> label, int selected,
+      String exitHint, int separatorBefore) {
+    List<String> output = new java.util.ArrayList<>();
+    List<String> choices = new java.util.ArrayList<>();
+    for (int index = 0; index < options.size(); index++) {
+      if (index == separatorBefore) choices.add("");
+      choices.add((index == selected ? "❯ " : "  ") + label.apply(options.get(index)));
+    }
+    String instructions = "↑ / ↓ 選擇 · Enter 確認 · " + exitHint;
+    int width = Math.max(terminalWidth("ScreenTrace"), Math.max(terminalWidth(title), terminalWidth(instructions)));
+    for (String choice : choices) width = Math.max(width, terminalWidth(choice));
+    width += 4;
+
+    output.add("╭" + "─".repeat(width) + "╮");
+    output.add(boxLine("ScreenTrace", width, true));
+    output.add("├" + "─".repeat(width) + "┤");
+    output.add(boxLine(title, width, false));
+    output.add(boxLine("", width, false));
+    for (String choice : choices) output.add(boxLine(choice, width, false));
+    output.add(boxLine("", width, false));
+    output.add("├" + "─".repeat(width) + "┤");
+    output.add(boxLine(instructions, width, false));
+    output.add("╰" + "─".repeat(width) + "╯");
+    return output;
+  }
+
+  private static String boxLine(String text, int width, boolean centered) {
+    int padding = width - terminalWidth(text);
+    int left = centered ? padding / 2 : 1;
+    int right = padding - left;
+    return "│" + " ".repeat(left) + text + " ".repeat(right) + "│";
+  }
+
+  private static int terminalWidth(String text) {
+    return new org.jline.utils.AttributedString(text).columnLength();
+  }
+
+  private List<String> reportPanelLines(String url) {
+    String instruction = "q / Esc 關閉報表並返回功能選單";
+    return completionPanelLines("報表已開啟", List.of(url), instruction);
+  }
+
+  private void showCompletionPanel(String title, List<String> details) {
+    for (String line : completionPanelLines(title, details, null)) terminal.writer().println(line);
     terminal.flush();
   }
+
+  private List<String> completionPanelLines(String title, List<String> details, String footer) {
+    int width = terminalWidth("ScreenTrace");
+    width = Math.max(width, terminalWidth(title));
+    for (String detail : details) width = Math.max(width, terminalWidth(detail));
+    if (footer != null) width = Math.max(width, terminalWidth(footer));
+    width = panelWidth(width + 4);
+    List<String> output = new java.util.ArrayList<>();
+    output.add("╭" + "─".repeat(width) + "╮");
+    addBoxText(output, "ScreenTrace", width, true);
+    output.add("├" + "─".repeat(width) + "┤");
+    addBoxText(output, title, width, false);
+    output.add(boxLine("", width, false));
+    for (String detail : details) addBoxText(output, detail, width, false);
+    if (footer != null) {
+      output.add(boxLine("", width, false));
+      output.add("├" + "─".repeat(width) + "┤");
+      addBoxText(output, footer, width, false);
+    }
+    output.add("╰" + "─".repeat(width) + "╯");
+    return output;
+  }
+
+  private int panelWidth(int desiredWidth) {
+    int terminalWidth = terminal.getWidth();
+    if (terminalWidth <= 4) return desiredWidth;
+    return Math.min(desiredWidth, terminalWidth - 2);
+  }
+
+  private static void addBoxText(List<String> output, String text, int width, boolean centered) {
+    List<String> lines = wrapForBox(text, width - 2);
+    for (String line : lines) output.add(boxLine(line, width, centered && lines.size() == 1));
+  }
+
+  private static List<String> wrapForBox(String text, int maxWidth) {
+    if (text.isEmpty()) return List.of("");
+    List<String> lines = new java.util.ArrayList<>();
+    StringBuilder current = new StringBuilder();
+    int currentWidth = 0;
+    for (int offset = 0; offset < text.length();) {
+      int codePoint = text.codePointAt(offset);
+      String character = new String(Character.toChars(codePoint));
+      int characterWidth = terminalWidth(character);
+      if (currentWidth > 0 && currentWidth + characterWidth > maxWidth) {
+        lines.add(current.toString());
+        current.setLength(0);
+        currentWidth = 0;
+      }
+      current.append(character);
+      currentWidth += characterWidth;
+      offset += Character.charCount(codePoint);
+    }
+    if (!current.isEmpty()) lines.add(current.toString());
+    return lines;
+  }
+
+  private void renderMenu(List<String> lines, boolean replace) {
+    if (replace) moveCursorUp(lines.size());
+    for (String line : lines) {
+      terminal.puts(Capability.clr_eol);
+      terminal.writer().println(line);
+    }
+    terminal.flush();
+  }
+
+  private void moveCursorUp(int lines) {
+    for (int index = 0; index < lines; index++) terminal.puts(Capability.cursor_up);
+  }
+
+  static final class SelectionCancelledException extends IllegalStateException {
+    SelectionCancelledException() {
+      super("操作已取消。");
+    }
+  }
+
+  private enum MenuKey { UP, DOWN, ACCEPT, CANCEL, SHORTCUT, IGNORE }
 
   @Override
   public void close() throws IOException {
