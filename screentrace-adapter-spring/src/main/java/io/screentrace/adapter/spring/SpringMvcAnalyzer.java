@@ -21,6 +21,7 @@ import io.screentrace.scanner.ProjectScanner.ProjectInventory;
 import io.screentrace.parser.jsp.JspAnalysis;
 import io.screentrace.parser.jsp.JspProjectParser;
 import java.io.IOException;
+import java.io.StringReader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -31,6 +32,12 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import javax.xml.XMLConstants;
+import javax.xml.parsers.DocumentBuilderFactory;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.NodeList;
+import org.xml.sax.InputSource;
 
 /** Static analysis for annotation-based, server-rendered Spring MVC applications. */
 public final class SpringMvcAnalyzer {
@@ -44,6 +51,7 @@ public final class SpringMvcAnalyzer {
         addJspFragments(jsp, state);
         addTilesDefinitions(jsp, state);
         discoverExceptionView(inventory, state);
+        parseXmlControllers(inventory, state);
         for (Path java : inventory.javaFiles()) parseController(java, state);
         addJspInteractions(jsp, state);
         addJspIncludes(jsp, state);
@@ -77,6 +85,7 @@ public final class SpringMvcAnalyzer {
                 attributes, source, Confidence.CONFIRMED));
         state.screensByView.put(relative, id);
         state.screensByView.put("/" + relative, id);
+        webPath(relative).ifPresent(path -> state.screensByView.put(path, id));
         for (String prefix : List.of("src/main/webapp/WEB-INF/jsp/", "src/main/webapp/WEB-INF/views/", "WEB-INF/jsp/", "WEB-INF/views/")) {
             if (relative.startsWith(prefix)) state.screensByView.put(relative.substring(prefix.length()).replaceFirst("\\.jsp$", ""), id);
         }
@@ -130,19 +139,148 @@ public final class SpringMvcAnalyzer {
                     Map.of("httpMethod", httpMethod(mapping), "path", path, "category", !views.isEmpty() && views.stream().allMatch(view -> view.startsWith("redirect:")) ? "REDIRECT" : "MVC_SCREEN"), source, Confidence.CONFIRMED));
             state.endpointByPath.putIfAbsent(path, endpointId);
             edge(state, EdgeType.HANDLED_BY, endpointId, handlerId, Confidence.CONFIRMED, source);
-            for (String view : views.stream().filter(view -> !view.startsWith("redirect:")).distinct().toList()) edge(state, EdgeType.RENDERS, handlerId, screenForView(view, source, state), state.screensByView.containsKey(view) ? Confidence.CONFIRMED : Confidence.INFERRED, source);
+            for (String view : views.stream().filter(view -> !view.startsWith("redirect:")).distinct().toList()) edge(state, EdgeType.RENDERS, handlerId, screenForView(view, source, state), resolvedScreenId(view, state) != null ? Confidence.CONFIRMED : Confidence.INFERRED, source);
             if (views.isEmpty() && state.defaultExceptionView != null) edge(state, EdgeType.RENDERS, handlerId, screenForView(state.defaultExceptionView, source, state), Confidence.INFERRED, source);
             if (views.isEmpty()) state.diagnostics.add(new Diagnostic("Handler return view cannot be resolved statically: " + handlerName, Confidence.UNRESOLVED, source));
         }
     }
 
     private static String screenForView(String view, SourceLocation source, State state) {
-        String known = state.screensByView.get(view);
+        String known = resolvedScreenId(view, state);
         if (known != null) return known;
         String id = ApplicationGraph.id(NodeType.SCREEN, view);
         addNode(state, new GraphNode(id, NodeType.SCREEN, view, Map.of("view", view), source, Confidence.INFERRED));
         state.diagnostics.add(new Diagnostic("No JSP source found for view: " + view, Confidence.UNRESOLVED, source));
         return id;
+    }
+
+    private static String resolvedScreenId(String view, State state) {
+        String known = state.screensByView.get(view);
+        if (known != null) return known;
+        for (ViewResolver resolver : state.viewResolvers) {
+            String candidate = normalizeResolverPath(resolver.prefix(), view, resolver.suffix());
+            known = state.screensByView.get(candidate);
+            if (known != null) return known;
+        }
+        return null;
+    }
+
+    private static void parseXmlControllers(ProjectInventory inventory, State state) {
+        for (Path file : inventory.springXmlFiles()) {
+            String relative = state.root.relativize(file).toString().replace('\\', '/');
+            try {
+                Document document = xml(Files.readString(file));
+                Map<String, Element> beans = beans(document);
+                addViewResolvers(beans, state);
+                Map<String, String> routes = xmlRoutes(beans);
+                for (Map.Entry<String, String> route : routes.entrySet()) addXmlController(route.getKey(), route.getValue(), beans, relative, state);
+            } catch (Exception exception) {
+                state.diagnostics.add(new Diagnostic("Unable to parse Spring MVC XML: " + exception.getMessage(), Confidence.UNRESOLVED,
+                        new SourceLocation(relative, 1), "SPRING_XML_UNRESOLVED", List.of()));
+            }
+        }
+    }
+
+    private static Map<String, Element> beans(Document document) {
+        Map<String, Element> beans = new HashMap<>();
+        NodeList nodes = document.getElementsByTagName("bean");
+        for (int index = 0; index < nodes.getLength(); index++) {
+            Element bean = (Element) nodes.item(index);
+            String id = bean.getAttribute("id");
+            beans.put(id.isBlank() ? "__anonymous_" + index : id, bean);
+        }
+        return beans;
+    }
+
+    private static void addViewResolvers(Map<String, Element> beans, State state) {
+        for (Element bean : beans.values()) {
+            if (!bean.getAttribute("class").contains("InternalResourceViewResolver")) continue;
+            String prefix = property(bean, "prefix");
+            String suffix = property(bean, "suffix");
+            state.viewResolvers.add(new ViewResolver(prefix == null ? "" : prefix, suffix == null ? "" : suffix));
+        }
+    }
+
+    private static Map<String, String> xmlRoutes(Map<String, Element> beans) {
+        Map<String, String> routes = new TreeMap<>();
+        for (Element bean : beans.values()) {
+            if (bean.getAttribute("class").contains("SimpleUrlHandlerMapping")) routes.putAll(urlMap(bean));
+            if (bean.getAttribute("id").startsWith("/") && isXmlController(bean)) routes.put(bean.getAttribute("id"), bean.getAttribute("id"));
+        }
+        return routes;
+    }
+
+    private static Map<String, String> urlMap(Element bean) {
+        Map<String, String> routes = new TreeMap<>();
+        NodeList entries = bean.getElementsByTagName("entry");
+        for (int index = 0; index < entries.getLength(); index++) {
+            Element entry = (Element) entries.item(index);
+            String target = entry.hasAttribute("value-ref") ? entry.getAttribute("value-ref") : entry.getAttribute("value");
+            if (!entry.getAttribute("key").isBlank() && !target.isBlank()) routes.put(entry.getAttribute("key"), target);
+        }
+        NodeList properties = bean.getElementsByTagName("prop");
+        for (int index = 0; index < properties.getLength(); index++) {
+            Element property = (Element) properties.item(index);
+            if (!property.getAttribute("key").isBlank() && !property.getTextContent().isBlank()) routes.put(property.getAttribute("key"), property.getTextContent().trim());
+        }
+        return routes;
+    }
+
+    private static void addXmlController(String path, String beanId, Map<String, Element> beans, String relative, State state) {
+        Element bean = beans.get(beanId);
+        if (bean == null || !isXmlController(bean)) {
+            state.diagnostics.add(new Diagnostic("Spring XML route has no statically identifiable controller: " + path, Confidence.UNRESOLVED,
+                    new SourceLocation(relative, 1), "SPRING_XML_CONTROLLER_UNRESOLVED", List.of()));
+            return;
+        }
+        SourceLocation source = new SourceLocation(relative, 1);
+        String className = bean.getAttribute("class");
+        String handlerId = ApplicationGraph.id(NodeType.HANDLER, relative + ":" + beanId);
+        addNode(state, new GraphNode(handlerId, NodeType.HANDLER, className + ".handleRequest()",
+                Map.of("class", className, "bean", beanId), source, Confidence.CONFIRMED));
+        String endpointId = ApplicationGraph.id(NodeType.ENDPOINT, "ANY " + path + ":" + handlerId);
+        addNode(state, new GraphNode(endpointId, NodeType.ENDPOINT, "ANY " + path,
+                Map.of("httpMethod", "ANY", "path", path, "category", "MVC_SCREEN"), source, Confidence.CONFIRMED));
+        state.endpointByPath.putIfAbsent(path, endpointId);
+        edge(state, EdgeType.HANDLED_BY, endpointId, handlerId, Confidence.CONFIRMED, source);
+        String view = property(bean, "viewName");
+        if (view == null || view.isBlank()) {
+            state.diagnostics.add(new Diagnostic("Spring XML controller view cannot be resolved statically: " + beanId, Confidence.UNRESOLVED,
+                    source, "SPRING_XML_VIEW_UNRESOLVED", List.of()));
+        } else edge(state, EdgeType.RENDERS, handlerId, screenForView(view, source, state), Confidence.CONFIRMED, source);
+    }
+
+    private static boolean isXmlController(Element bean) {
+        String className = bean.getAttribute("class");
+        return className.contains("Controller") || className.contains("HttpRequestHandler");
+    }
+
+    private static String property(Element bean, String name) {
+        NodeList properties = bean.getElementsByTagName("property");
+        for (int index = 0; index < properties.getLength(); index++) {
+            Element property = (Element) properties.item(index);
+            if (!name.equals(property.getAttribute("name"))) continue;
+            if (property.hasAttribute("value")) return property.getAttribute("value");
+            NodeList values = property.getElementsByTagName("value");
+            if (values.getLength() > 0) return values.item(0).getTextContent().trim();
+        }
+        return null;
+    }
+
+    private static String normalizeResolverPath(String prefix, String view, String suffix) {
+        String joined = (prefix + "/" + view + suffix).replaceAll("/{2,}", "/");
+        return joined.startsWith("/") ? joined : "/" + joined;
+    }
+
+    private static Document xml(String source) throws Exception {
+        DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+        factory.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
+        factory.setAttribute(XMLConstants.ACCESS_EXTERNAL_DTD, "");
+        factory.setAttribute(XMLConstants.ACCESS_EXTERNAL_SCHEMA, "");
+        factory.setExpandEntityReferences(false);
+        var builder = factory.newDocumentBuilder();
+        builder.setEntityResolver((publicId, systemId) -> new InputSource(new StringReader("")));
+        return builder.parse(new InputSource(new StringReader(source)));
     }
 
     private static void addJspFragments(JspAnalysis jsp, State state) {
@@ -158,9 +296,10 @@ public final class SpringMvcAnalyzer {
 
     private static void addTilesDefinitions(JspAnalysis jsp, State state) {
         for (JspAnalysis.TilesDefinition definition : jsp.tilesDefinitions()) {
-            String id = ApplicationGraph.id(NodeType.VIEW, "tiles:" + definition.name());
-            addNode(state, new GraphNode(id, NodeType.VIEW, definition.name(),
+            String id = ApplicationGraph.id(NodeType.SCREEN, "tiles:" + definition.name());
+            addNode(state, new GraphNode(id, NodeType.SCREEN, definition.name(),
                     Map.of("tilesDefinition", "true", "template", definition.template()), definition.source(), Confidence.CONFIRMED));
+            state.screensByView.put(definition.name(), id);
         }
     }
 
@@ -242,7 +381,9 @@ public final class SpringMvcAnalyzer {
     private static final class State {
         private final Path root; private final List<GraphNode> nodes = new ArrayList<>(); private final List<Relationship> edges = new ArrayList<>(); private final List<Diagnostic> diagnostics = new ArrayList<>();
         private final Map<String, String> endpointByPath = new HashMap<>(); private final Map<String, String> screensByView = new HashMap<>();
-        private final Map<String, String> fragmentsByPath = new HashMap<>(); private String defaultExceptionView;
+        private final Map<String, String> fragmentsByPath = new HashMap<>(); private final List<ViewResolver> viewResolvers = new ArrayList<>();
+        private String defaultExceptionView;
         private State(Path root) { this.root = root; }
     }
+    private record ViewResolver(String prefix, String suffix) { }
 }

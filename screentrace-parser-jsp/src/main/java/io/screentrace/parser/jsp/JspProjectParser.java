@@ -8,8 +8,10 @@ import java.io.StringReader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import javax.xml.XMLConstants;
 import javax.xml.parsers.DocumentBuilderFactory;
 import org.w3c.dom.Document;
@@ -49,20 +51,33 @@ public final class JspProjectParser {
     String relative = relative(root, file);
     JspAnalysis.ViewKind kind = relative.endsWith(".jspf") ? JspAnalysis.ViewKind.JSPF : JspAnalysis.ViewKind.JSP;
     views.add(new JspAnalysis.View(relative, kind, new SourceLocation(relative, 1)));
+    Map<String, String> urls = new HashMap<>();
     for (MarkupTag tag : MarkupTag.scan(text)) {
       SourceLocation source = new SourceLocation(relative, tag.line());
       switch (tag.name().toLowerCase(Locale.ROOT)) {
+        case "spring:url" -> registerUrl(tag, urls);
         case "jsp:include", "@include" -> include(relative, target(tag, "page", "file"), source, includes, diagnostics);
         case "form", "html:form", "form:form" -> interaction(relative, JspAnalysis.InteractionType.FORM, tag,
-            target(tag, "action"), method(tag), source, interactions, diagnostics);
+            resolvedTarget(target(tag, "action"), urls), method(tag), source, interactions, diagnostics);
         case "a", "html:link" -> interaction(relative, JspAnalysis.InteractionType.LINK, tag,
-            target(tag, "href", "page", "action"), "GET", source, interactions, diagnostics);
+            resolvedTarget(target(tag, "href", "page", "action"), urls), "GET", source, interactions, diagnostics);
         case "button", "input", "html:submit", "html:button", "form:button" -> interaction(relative,
-            JspAnalysis.InteractionType.BUTTON, tag, target(tag, "formaction", "action"), null, source,
+            JspAnalysis.InteractionType.BUTTON, tag, resolvedTarget(target(tag, "formaction", "action"), urls), null, source,
             interactions, diagnostics);
         default -> { }
       }
     }
+  }
+
+  private static void registerUrl(MarkupTag tag, Map<String, String> urls) {
+    String variable = tag.attribute("var");
+    String value = tag.attribute("value");
+    if (variable != null && literal(value)) urls.put(variable, value);
+  }
+
+  private static String resolvedTarget(String target, Map<String, String> urls) {
+    if (target == null || !target.startsWith("${") || !target.endsWith("}")) return target;
+    return urls.getOrDefault(target.substring(2, target.length() - 1), target);
   }
 
   private static void include(String sourcePath, String target, SourceLocation source, List<JspAnalysis.Include> includes,

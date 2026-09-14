@@ -13,6 +13,7 @@
 - [x] `analyze`, `--output`, `--serve`, and `serve` CLI workflows
 - [x] Shared JSP/JSPF/Tiles contribution parser
 - [x] Struts 1 Action Mapping, ActionForm, forward, and Spring XML Action-bean resolution
+- [x] Spring MVC XML Controller, `InternalResourceViewResolver`, Tiles view, and Spring URL tag resolution
 - [ ] Expand React JSX/component extraction based on Reservio gaps
 - [ ] Record full Reservio validation results
 
@@ -266,6 +267,9 @@ Goal: prove that the Application Graph is framework-neutral.
 - [x] Resolve literal returned view names
 - [x] Resolve literal `ModelAndView` views
 - [x] Resolve conventional JSP views
+- [x] Parse XML Controller and `SimpleUrlHandlerMapping`
+- [x] Resolve `InternalResourceViewResolver` JSP paths and Tiles definition views
+- [x] Resolve literal `<spring:url>` variables used by JSP interactions
 
 ### Exit Criteria
 
