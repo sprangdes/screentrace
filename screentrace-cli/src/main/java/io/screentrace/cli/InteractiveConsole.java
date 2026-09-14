@@ -66,6 +66,24 @@ final class InteractiveConsole implements AutoCloseable {
     }
   }
 
+  void waitForReportClose(String url) throws IOException {
+    Attributes original = terminal.enterRawMode();
+    try {
+      terminal.writer().println();
+      terminal.writer().println("報表已開啟：" + url);
+      terminal.writer().println("按 Esc 關閉 localhost 報表並回到功能選單。");
+      terminal.flush();
+      NonBlockingReader input = terminal.reader();
+      while (readKey(input) != 27) {
+        // Only Esc closes the report; all other input remains available to the browser.
+      }
+    } finally {
+      terminal.setAttributes(original);
+      terminal.writer().println();
+      terminal.flush();
+    }
+  }
+
   private String read(String prompt, Path defaultValue) {
     String value = lines.readLine(prompt + " [" + defaultValue + "]：").trim();
     return value.isEmpty() ? defaultValue.toString() : value;

@@ -37,13 +37,38 @@ public final class ScreenTraceCli {
       WorkspaceSettings settings = command.action() == Action.CONFIG ? configure(console) : loadOrConfigure(console);
       if (command.action() == Action.CONFIG) return;
       ProjectCatalog catalog = new ProjectCatalog();
-      if (command.action() == Action.INTERACTIVE) command = new Command(chooseCommand(console), null);
+      if (command.action() == Action.INTERACTIVE) {
+        runInteractive(console, settings, catalog);
+        return;
+      }
       List<ProjectCatalog.Project> projects = command.action() == Action.ANALYZE
           ? catalog.allProjects(settings) : catalog.analyzedProjects(settings);
       ProjectCatalog.Project project = selectProject(console, catalog, projects, command.projectName());
-      if (command.action() == Action.ANALYZE) analyze(project);
+      if (command.action() == Action.ANALYZE) serve(analyze(project));
       else if (command.action() == Action.REPORT) serve(project.analysisDirectory().resolve("report"));
       else export(project);
+    }
+  }
+
+  private static void runInteractive(InteractiveConsole console, WorkspaceSettings settings, ProjectCatalog catalog)
+      throws IOException, InterruptedException {
+    try {
+      while (true) {
+        Action action = chooseCommand(console);
+        List<ProjectCatalog.Project> projects = action == Action.ANALYZE
+            ? catalog.allProjects(settings) : catalog.analyzedProjects(settings);
+        ProjectCatalog.Project project = selectProject(console, catalog, projects, null);
+        if (action == Action.EXPORT) {
+          export(project);
+          continue;
+        }
+        Path report = action == Action.ANALYZE ? analyze(project) : project.analysisDirectory().resolve("report");
+        try (RunningReport running = startReport(report)) {
+          console.waitForReportClose(running.url());
+        }
+      }
+    } catch (IllegalStateException exception) {
+      if (!"操作已取消。".equals(exception.getMessage())) throw exception;
     }
   }
 
@@ -85,7 +110,7 @@ public final class ScreenTraceCli {
     return console.select("請選擇專案", projects, ProjectCatalog.Project::name);
   }
 
-  private static void analyze(ProjectCatalog.Project project) throws IOException, InterruptedException {
+  private static Path analyze(ProjectCatalog.Project project) throws IOException, InterruptedException {
     Path output = project.analysisDirectory();
     var inventory = new ProjectScanner().scan(project.sourceDirectory());
     var graph = analyze(inventory);
@@ -100,7 +125,7 @@ public final class ScreenTraceCli {
     LOGGER.info(() -> "分析完成：\n  專案：" + project.name() + "\n  技術："
         + String.join(", ", graph.application().technologies()) + "\n  Endpoints：" + endpoints
         + "\n  Screens：" + screens + "\n  Components：" + components + "\n  輸出：" + output);
-    serve(output.resolve("report"));
+    return output.resolve("report");
   }
 
   private static ApplicationGraph analyze(ProjectScanner.ProjectInventory inventory) throws IOException {
@@ -124,6 +149,10 @@ public final class ScreenTraceCli {
   }
 
   private static void serve(Path report) throws IOException {
+    startReport(report);
+  }
+
+  private static RunningReport startReport(Path report) throws IOException {
     if (!Files.isDirectory(report)) throw new IllegalArgumentException("找不到報表：" + report);
     HttpServer server = HttpServer.create(new InetSocketAddress(REPORT_ADDRESS, 0), 0);
     int port = server.getAddress().getPort();
@@ -137,6 +166,11 @@ public final class ScreenTraceCli {
     String url = "http://localhost:" + port;
     LOGGER.info("ScreenTrace report running at:\n\n" + url);
     openReport(url);
+    return new RunningReport(server, url);
+  }
+
+  private record RunningReport(HttpServer server, String url) implements AutoCloseable {
+    @Override public void close() { server.stop(0); }
   }
 
   private static void handleOverlay(HttpExchange exchange, Path overlay, String sessionToken) throws IOException {
