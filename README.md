@@ -4,35 +4,17 @@ ScreenTrace 會分析伺服端渲染 JSP 專案的畫面、路由與可互動元
 
 目前支援 Struts 1、Struts + Spring、Spring MVC JSP、Spring Boot JSP 專案；產生的資料與報表都寫入被分析專案的 `.screentrace/`，不會修改原始程式碼。
 
-ScreenTrace 會展開可解析的 JSP Tag、CSS 與本地資源，產生報表載入的靜態 HTML：
+ScreenTrace 會展開可解析的 JSP Tag、CSS 與本地資源，產生報表載入的靜態 HTML。
+
+## 初次執行
+
+在 macOS 的終端機進入 ScreenTrace 專案根目錄後，直接執行分析指令：
 
 ```bash
-java -jar screentrace-cli/target/screentrace-cli-0.1.0-SNAPSHOT.jar analyze /path/to/project
+./bin/screentrace analyze /絕對路徑/目標專案
 ```
 
-## 系統需求
-
-- Java 17 以上
-- Maven 3.9 以上
-- Node.js 18 以上（轉換 JSP 靜態預覽）
-
-在 macOS 可確認版本：
-
-```bash
-java -version
-mvn -version
-node -v
-```
-
-## 第一次使用
-
-在 ScreenTrace 專案根目錄執行：
-
-```bash
-mvn clean verify
-```
-
-也可直接執行 `bin/screentrace`；若 CLI JAR 尚未建立，腳本會自動建置。
+腳本會自動檢查 Java 17+、Maven 3.9+ 與 Node.js 18+；缺少或版本不足時，會透過 Homebrew 安裝。若尚未安裝 Homebrew，腳本也會先依 Homebrew 官方安裝程序完成安裝。初次執行需要網路連線，且 Homebrew 可能要求輸入 macOS 管理者密碼。
 
 ## CLI 指令
 
