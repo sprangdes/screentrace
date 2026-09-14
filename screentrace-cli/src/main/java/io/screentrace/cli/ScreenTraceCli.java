@@ -50,7 +50,10 @@ public final class ScreenTraceCli {
     new ReportGenerator().write(graph, output);
     boolean serverRendered = graph.application().technologies().contains("JSP");
     boolean react = graph.application().technologies().contains("React");
-    if (serverRendered) renderStaticJsp(parsed.target, output);
+    if (serverRendered) {
+      renderStaticJsp(parsed.target, output);
+      new ReportGenerator().write(graph, output);
+    }
     else if (react) {
       renderStaticReact(parsed.target, output);
       graph = new FlowStateGraphAugmenter().augment(graph, output);
@@ -97,15 +100,19 @@ public final class ScreenTraceCli {
   @SuppressWarnings("java:S4036") // Runtime capture intentionally uses the user's Node runtime, as documented by the CLI contract.
   private static void capture(Parsed parsed) throws IOException, InterruptedException {
     Path output = analysisDirectory(parsed);
-    boolean serverRendered = new ProjectScanner().scan(parsed.target).technologies().contains("JSP");
+    var inventory = new ProjectScanner().scan(parsed.target);
+    ApplicationGraph graph = analyze(inventory);
+    boolean serverRendered = inventory.technologies().contains("JSP");
     if (serverRendered) {
       renderStaticJsp(parsed.target, output);
+      new ReportGenerator().write(graph, output);
       LOGGER.info(() -> "Generated static JSP previews: " + output.resolve("static-preview"));
       return;
     }
     String script = "screentrace-capture/capture.mjs";
     Process process = new ProcessBuilder("node", Path.of(script).toAbsolutePath().toString(), parsed.target.toString(), output.toString(), parsed.captureUrl).inheritIO().start();
     if (process.waitFor() != 0) throw new IllegalStateException("Runtime capture failed.");
+    new ReportGenerator().write(new FlowStateGraphAugmenter().augment(graph, output), output);
     LOGGER.info(() -> "Generated static React previews: " + output.resolve("static-preview"));
   }
 
@@ -216,7 +223,7 @@ public final class ScreenTraceCli {
 
   static Path staticFile(String uri, Path report, Path analysis) {
     if (uri.equals("/")) return report.resolve(INDEX_FILE);
-    if (uri.equals("/application-graph.json") || uri.equals("/prototype-model.json")) return resolveWithin(analysis, uri.substring(1));
+    if (uri.equals("/application-graph.json") || uri.equals("/prototype-model.json") || uri.equals("/preview-model.json")) return resolveWithin(analysis, uri.substring(1));
     if (uri.startsWith("/screenshots/")) return resolveWithin(analysis.resolve("screenshots"), uri.substring("/screenshots/".length()));
     if (uri.startsWith("/static-preview/")) return resolveWithin(analysis.resolve("static-preview"), uri.substring("/static-preview/".length()));
     return resolveWithin(report, uri.substring(1));

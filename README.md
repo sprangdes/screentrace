@@ -194,6 +194,7 @@ AI 應以 `REMOVE` 作為可移除範圍、以 `KEEP` 作為必須保留範圍�
 .screentrace/
 ├── application-graph.json       # 靜態分析出的標準 Application Graph
 ├── prototype-model.json         # 原型畫面與元件基準資料
+├── preview-model.json           # 預覽畫面、截圖與可見元件的統一資料
 ├── edit-overlay.json            # 使用者確認與編輯決策
 ├── review-result.json           # 匯出給 AI 的確認結果
 ├── report/

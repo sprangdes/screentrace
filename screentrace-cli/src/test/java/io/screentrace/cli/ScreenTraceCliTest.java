@@ -17,10 +17,12 @@ class ScreenTraceCliTest {
     Files.writeString(outside, "secret");
     Files.writeString(report.resolve("index.html"), "report");
     Files.writeString(analysis.resolve("application-graph.json"), "{}");
+    Files.writeString(analysis.resolve("preview-model.json"), "{}");
     Files.writeString(screenshots.resolve("screen.png"), "png");
 
     assertEquals(report.resolve("index.html"), ScreenTraceCli.staticFile("/", report, analysis));
     assertEquals(analysis.resolve("application-graph.json"), ScreenTraceCli.staticFile("/application-graph.json", report, analysis));
+    assertEquals(analysis.resolve("preview-model.json"), ScreenTraceCli.staticFile("/preview-model.json", report, analysis));
     assertEquals(screenshots.resolve("screen.png"), ScreenTraceCli.staticFile("/screenshots/screen.png", report, analysis));
     assertNull(ScreenTraceCli.staticFile("/../secret.txt", report, analysis));
     assertNull(ScreenTraceCli.staticFile("/screenshots/../../secret.txt", report, analysis));

@@ -1,12 +1,13 @@
 package io.screentrace.report;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import io.screentrace.core.ApplicationGraph;
 import io.screentrace.core.ApplicationGraph.GraphNode;
 import io.screentrace.core.ApplicationGraph.NodeType;
 import io.screentrace.core.ApplicationGraph.SourceLocation;
+import io.screentrace.core.PreviewModel;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -28,10 +29,10 @@ public final class ReviewResultGenerator {
 
     public Path write(Path analysisOutput, Path destination) throws IOException {
         ApplicationGraph graph = json.readValue(analysisOutput.resolve("application-graph.json").toFile(), ApplicationGraph.class);
-        JsonNode interactions = interactions(analysisOutput);
+        PreviewModel preview = json.readValue(analysisOutput.resolve("preview-model.json").toFile(), PreviewModel.class);
         Map<String, String> decisions = decisions(json.readTree(analysisOutput.resolve("edit-overlay.json").toFile()));
         ReviewCounts counts = new ReviewCounts();
-        List<Map<String, Object>> screens = screens(graph, interactions, decisions, counts);
+        List<Map<String, Object>> screens = screens(graph, preview, decisions, counts);
 
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("version", "1");
@@ -43,20 +44,17 @@ public final class ReviewResultGenerator {
         return destination;
     }
 
-    private JsonNode interactions(Path analysisOutput) throws IOException {
-        Path file = analysisOutput.resolve("screenshots/interactions.json");
-        return Files.exists(file) ? json.readTree(file.toFile()) : json.createObjectNode();
-    }
-
-    private List<Map<String, Object>> screens(ApplicationGraph graph, JsonNode interactions, Map<String, String> decisions, ReviewCounts counts) {
+    private List<Map<String, Object>> screens(ApplicationGraph graph, PreviewModel preview, Map<String, String> decisions, ReviewCounts counts) {
+        Map<String, List<PreviewModel.PreviewComponent>> components = new HashMap<>();
+        preview.components().forEach(component -> components.computeIfAbsent(component.graphScreenId(), ignored -> new ArrayList<>()).add(component));
         List<Map<String, Object>> screens = new ArrayList<>();
         graph.nodes().stream().filter(node -> node.type() == NodeType.SCREEN)
                 .sorted(Comparator.comparing(node -> node.attributes().getOrDefault(ROUTE, node.name())))
-                .forEach(screen -> screens.add(screen(screen, interactions, decisions, counts)));
+                .forEach(screen -> screens.add(screen(screen, components.getOrDefault(screen.id(), List.of()), decisions, counts)));
         return screens;
     }
 
-    private Map<String, Object> screen(GraphNode screen, JsonNode interactions, Map<String, String> decisions, ReviewCounts counts) {
+    private Map<String, Object> screen(GraphNode screen, List<PreviewModel.PreviewComponent> previewComponents, Map<String, String> decisions, ReviewCounts counts) {
         String route = screen.attributes().getOrDefault(ROUTE, screen.name());
         String status = decision(decisions.get(key(screen.id(), null)));
         counts.screen(status);
@@ -66,14 +64,14 @@ public final class ReviewResultGenerator {
         item.put("name", screen.name());
         item.put("decision", status);
         putSource(item, screen.source());
-        item.put("components", components(screen, interactions.path(route).path("items"), decisions, counts));
+        item.put("components", components(screen, previewComponents, decisions, counts));
         return item;
     }
 
-    private List<Map<String, Object>> components(GraphNode screen, JsonNode runtimeComponents, Map<String, String> decisions, ReviewCounts counts) {
+    private List<Map<String, Object>> components(GraphNode screen, List<PreviewModel.PreviewComponent> previewComponents, Map<String, String> decisions, ReviewCounts counts) {
         List<Map<String, Object>> components = new ArrayList<>();
-        for (JsonNode component : runtimeComponents) {
-            String id = component.path("id").asText();
+        for (PreviewModel.PreviewComponent component : previewComponents) {
+            String id = component.id();
             String status = decision(decisions.get(key(screen.id(), id)));
             counts.component(status);
             components.add(component(component, id, status));
@@ -81,17 +79,17 @@ public final class ReviewResultGenerator {
         return components;
     }
 
-    private Map<String, Object> component(JsonNode component, String id, String status) {
+    private Map<String, Object> component(PreviewModel.PreviewComponent component, String id, String status) {
         Map<String, Object> item = new LinkedHashMap<>();
         item.put("id", id);
-        item.put("type", component.path("type").asText());
-        item.put("label", component.path("label").asText());
-        String target = component.path("target").asText();
-        if (!target.isBlank()) {
+        item.put("type", component.type());
+        item.put("label", component.label());
+        String target = component.target();
+        if (target != null && !target.isBlank()) {
             item.put("target", target);
         }
         item.put("decision", status);
-        item.put("css", json.convertValue(component.path("css"), Map.class));
+        item.put("css", component.css());
         return item;
     }
 
