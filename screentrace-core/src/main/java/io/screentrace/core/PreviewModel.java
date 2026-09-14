@@ -5,7 +5,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
-/** Framework-neutral, captured preview evidence consumed by the interactive report. */
+/** Framework-neutral static preview and graph-derived component evidence consumed by the report. */
 @JsonInclude(JsonInclude.Include.NON_EMPTY)
 public record PreviewModel(String version, List<PreviewScreen> screens, List<PreviewComponent> components) {
   public PreviewModel {
@@ -13,7 +13,7 @@ public record PreviewModel(String version, List<PreviewScreen> screens, List<Pre
     components = components == null ? List.of() : components.stream().sorted().toList();
   }
 
-  public record PreviewScreen(String graphScreenId, String staticDocument, String screenshot, int width, int height)
+  public record PreviewScreen(String graphScreenId, String staticDocument, int width, int height)
       implements Comparable<PreviewScreen> {
     @Override public int compareTo(PreviewScreen other) { return graphScreenId.compareTo(other.graphScreenId); }
   }

@@ -27,7 +27,7 @@ final class PrototypeModelGenerator {
         for (GraphNode node : graph.nodes()) {
             if (node.type() == ApplicationGraph.NodeType.SCREEN) {
                 String route = node.attributes().getOrDefault(ROUTE, "");
-                screens.put(node.id(), new PrototypeModel.PrototypeScreen("prototype:" + node.id(), node.id(), node.name(), route, screenshot(route)));
+                screens.put(node.id(), new PrototypeModel.PrototypeScreen("prototype:" + node.id(), node.id(), node.name(), route));
             }
         }
         return screens;
@@ -102,11 +102,4 @@ final class PrototypeModelGenerator {
         return new PrototypeModel.Bounds(32, 80 + index % COMPONENTS_PER_COLUMN * 52, 320, 40);
     }
 
-    private static String screenshot(String route) {
-        if (route == null || route.isBlank()) {
-            return null;
-        }
-        String path = route.equals("/") ? "home" : route.substring(1);
-        return "screenshots/" + path.replace("/", "__").replaceAll("[:?=&]", "_") + ".png";
-    }
 }

@@ -1,6 +1,6 @@
 # ScreenTrace Implementation Roadmap
 
-> Current POC direction (2026-09-14): Spring Boot/React and server-rendered JSP analysis share the same framework-neutral Application Graph. The executable pipeline is `scanner -> selected Spring and/or Struts adapter -> Application Graph JSON -> standalone report -> CLI`.
+> Current POC direction (2026-09-14): server-rendered JSP analysis uses a framework-neutral Application Graph. The executable pipeline is `scanner -> selected Spring and/or Struts adapter -> Application Graph JSON -> standalone report -> CLI`.
 
 ## Spring Boot / React POC
 
@@ -18,6 +18,7 @@
 - [x] Regression fixtures: Struts, Struts + Spring, Spring MVC JSP, Spring Boot JSP
 - [x] Fixture report parity: Screen Explorer, Flow View, Page View, Component Trace, Review/Edit Mode
 - [x] Analysis automatically generates previews; standalone capture command removed
+- [x] Remove Playwright screenshot and runtime-capture dependencies
 - [ ] Expand React JSX/component extraction based on Reservio gaps
 - [ ] Record full Reservio validation results
 

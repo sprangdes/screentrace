@@ -2,13 +2,13 @@
 
 ## Current POC implementation
 
-The current implementation follows two product pipelines: Spring Boot with React, and annotation-based Spring MVC with JSP.
+The current implementation analyzes server-rendered JSP applications using Struts 1, Spring MVC, Spring Boot, or their supported combinations.
 
 ```text
 Target source (read-only) -> scanner -> selected Spring adapter -> ApplicationGraph JSON -> standalone report
 ```
 
-`screentrace-core` has no Spring dependency. `screentrace-scanner` inventories files and technology signals only. `screentrace-parser-jsp` is the shared, framework-neutral parser for JSP, JSPF, literal interactive targets, JSP includes, Tiles definitions, and literal Spring URL-tag variables. `screentrace-adapter-spring` consumes that contribution and adds annotation and XML Controller endpoint correlation, `SimpleUrlHandlerMapping`, `InternalResourceViewResolver`, and Tiles view resolution. `screentrace-adapter-struts` consumes the same contribution, resolves Struts 1 Action mappings, ActionForms, local/global forwards, and Spring XML-managed Action beans. A project with Struts and annotation-based Spring MVC/Boot combines both contributions through the core graph merger; a classic Struts + Spring XML project is resolved directly by the Struts adapter. For React routes, `screentrace-capture` starts only the target frontend's local Vite process, fulfills API requests with isolated mock responses, freezes the rendered DOM/CSS/resources to `static-preview/`, then stops Vite; it never starts the target Spring Boot backend. The capture process can explore supported multi-step forms using internally generated data. It emits `flow-states.json`; `FlowStateGraphAugmenter` adds the reached states and their button transitions to the Application Graph with `INFERRED` confidence and a synthetic `#step-n` identity, preserving the source route separately. `screentrace-report` reads only the Application Graph, Prototype, and Preview contracts (plus the user-owned edit overlay) in the browser; preview asset manifests and captured interactions are consolidated before rendering. `screentrace-cli` writes output to `<target>/.screentrace` unless `--output` is supplied and hosts the report independently on port 8088.
+`screentrace-core` has no Spring dependency. `screentrace-scanner` inventories files and technology signals only. `screentrace-parser-jsp` is the shared, framework-neutral parser for JSP, JSPF, literal interactive targets, JSP includes, Tiles definitions, and literal Spring URL-tag variables. `screentrace-adapter-spring` consumes that contribution and adds annotation and XML Controller endpoint correlation, `SimpleUrlHandlerMapping`, `InternalResourceViewResolver`, and Tiles view resolution. `screentrace-adapter-struts` consumes the same contribution, resolves Struts 1 Action mappings, ActionForms, local/global forwards, and Spring XML-managed Action beans. A project with Struts and annotation-based Spring MVC/Boot combines both contributions through the core graph merger; a classic Struts + Spring XML project is resolved directly by the Struts adapter. The static JSP renderer expands supported local markup and resources into `static-preview/` without starting the target application or a browser. `screentrace-report` reads only the Application Graph, Prototype, and Preview contracts (plus the user-owned edit overlay) in the browser. `screentrace-cli` writes output to `<target>/.screentrace` unless `--output` is supplied and hosts the report independently on port 8088.
 
 ## Prototype and Edit Mode
 
@@ -17,11 +17,11 @@ The report emits three independent, durable contracts:
 ```text
 application-graph.json   source-derived relationships and evidence
 prototype-model.json     editable visual baseline projected from the graph
-preview-model.json       captured static documents, screenshots, bounds, and styles
+preview-model.json       static documents and graph-derived component trace data
 edit-overlay.json        user-owned target-state operations
 ```
 
-`edit-overlay.json` is initialized once and never overwritten by later analyses. Operations (`HIDE`, `UPDATE`, `MOVE`, `ADD`) target stable prototype component IDs. Runtime screenshots are optional visual references under `screenshots/`; they are not the editable model.
+`edit-overlay.json` is initialized once and never overwritten by later analyses. Operations (`HIDE`, `UPDATE`, `MOVE`, `ADD`) target stable prototype component IDs.
 
 ## 1. Architectural Goal
 

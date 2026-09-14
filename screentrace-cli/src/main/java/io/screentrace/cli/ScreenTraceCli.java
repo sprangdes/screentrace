@@ -8,7 +8,6 @@ import io.screentrace.core.ApplicationGraph;
 import io.screentrace.core.ApplicationGraphMerger;
 import io.screentrace.report.ReportGenerator;
 import io.screentrace.report.ReviewResultGenerator;
-import io.screentrace.report.FlowStateGraphAugmenter;
 import io.screentrace.scanner.ProjectScanner;
 import java.awt.Desktop;
 import java.io.ByteArrayOutputStream;
@@ -48,14 +47,8 @@ public final class ScreenTraceCli {
     var graph = analyze(inventory);
     new ReportGenerator().write(graph, output);
     boolean serverRendered = graph.application().technologies().contains("JSP");
-    boolean react = graph.application().technologies().contains("React");
     if (serverRendered) {
       renderStaticJsp(parsed.target, output);
-      new ReportGenerator().write(graph, output);
-    }
-    else if (react) {
-      renderStaticReact(parsed.target, output);
-      graph = new FlowStateGraphAugmenter().augment(graph, output);
       new ReportGenerator().write(graph, output);
     }
     var result = graph;
@@ -80,12 +73,6 @@ public final class ScreenTraceCli {
   private static void renderStaticJsp(Path target, Path output) throws IOException, InterruptedException {
     Process process = new ProcessBuilder("node", Path.of("screentrace-capture/capture-static-jsp.mjs").toAbsolutePath().toString(), target.toString(), output.toString()).inheritIO().start();
     if (process.waitFor() != 0) LOGGER.warning("Static JSP preview could not be rendered; source-derived fallback preview remains available.");
-  }
-
-  @SuppressWarnings("java:S4036") // React is rendered only through an isolated Vite process with mocked API responses.
-  private static void renderStaticReact(Path target, Path output) throws IOException, InterruptedException {
-    Process process = new ProcessBuilder("node", Path.of("screentrace-capture/capture.mjs").toAbsolutePath().toString(), target.toString(), output.toString()).inheritIO().start();
-    if (process.waitFor() != 0) LOGGER.warning("Static React preview could not be rendered; screenshot and source-derived fallbacks remain available.");
   }
 
   private static void export(Parsed parsed) throws IOException {
@@ -203,7 +190,6 @@ public final class ScreenTraceCli {
   static Path staticFile(String uri, Path report, Path analysis) {
     if (uri.equals("/")) return report.resolve(INDEX_FILE);
     if (uri.equals("/application-graph.json") || uri.equals("/prototype-model.json") || uri.equals("/preview-model.json")) return resolveWithin(analysis, uri.substring(1));
-    if (uri.startsWith("/screenshots/")) return resolveWithin(analysis.resolve("screenshots"), uri.substring("/screenshots/".length()));
     if (uri.startsWith("/static-preview/")) return resolveWithin(analysis.resolve("static-preview"), uri.substring("/static-preview/".length()));
     return resolveWithin(report, uri.substring(1));
   }

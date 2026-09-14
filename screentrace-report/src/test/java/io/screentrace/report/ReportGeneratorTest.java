@@ -31,12 +31,7 @@ class ReportGeneratorTest {
         List.of(new Relationship("contains", EdgeType.CONTAINS, screen.id(), component.id(), Confidence.CONFIRMED, null),
             new Relationship("navigates", EdgeType.NAVIGATES_TO, component.id(), target.id(), Confidence.CONFIRMED, null)), List.of());
     Files.createDirectories(output.resolve("static-preview"));
-    Files.createDirectories(output.resolve("screenshots"));
     Files.writeString(output.resolve("static-preview/manifest.json"), "{\"screen:orders\":\"static-preview/orders.html\"}");
-    Files.writeString(output.resolve("screenshots/manifest.json"), "{\"screen:orders\":\"screenshots/orders.png\"}");
-    Files.writeString(output.resolve("screenshots/interactions.json"), """
-        {"screen:orders":{"width":1280,"height":720,"items":[{"id":"static-component-0","type":"BUTTON","label":"Next","target":"/done","bounds":{"x":1,"y":2,"width":3,"height":4},"css":{"color":"red"}}]}}
-        """);
 
     new ReportGenerator().write(graph, output);
 
@@ -45,8 +40,6 @@ class ReportGeneratorTest {
     assertEquals("screen:done", preview.path("components").get(0).path("targetScreenId").asText());
     String report = Files.readString(output.resolve("report/index.html"));
     assertTrue(report.contains("/preview-model.json"));
-    assertFalse(report.contains("/screenshots/manifest.json"));
-    assertFalse(report.contains("/screenshots/interactions.json"));
     assertFalse(report.contains("/static-preview/manifest.json"));
   }
 }

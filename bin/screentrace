@@ -2,9 +2,5 @@
 set -euo pipefail
 base_dir="$(cd "$(dirname "$0")/.." && pwd)"
 jar="$base_dir/screentrace-cli/target/screentrace-cli-0.1.0-SNAPSHOT.jar"
-capture_dir="$base_dir/screentrace-capture"
 if [[ ! -f "$jar" ]]; then (cd "$base_dir" && mvn -q -DskipTests package); fi
-if [[ ! -d "$capture_dir/node_modules/playwright" ]]; then
-  (cd "$capture_dir" && npm install && npx playwright install chromium)
-fi
 exec java -jar "$jar" "$@"

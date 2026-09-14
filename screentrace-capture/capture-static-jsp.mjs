@@ -1,23 +1,16 @@
 import { access, cp, mkdir, readFile, writeFile } from 'node:fs/promises';
 import { constants } from 'node:fs';
 import path from 'node:path';
-import { pathToFileURL } from 'node:url';
-import { chromium } from 'playwright';
 
 const [targetArg, outputArg] = process.argv.slice(2);
 if (!targetArg) throw new Error('Usage: capture-static-jsp.mjs <target-project> [output-directory]');
 const target = path.resolve(targetArg);
 const output = path.resolve(outputArg || path.join(target, '.screentrace'));
 const graph = JSON.parse(await readFile(path.join(output, 'application-graph.json'), 'utf8'));
-const endpointByPath = new Map(graph.nodes.filter(node => node.type === 'ENDPOINT').map(node => [node.attributes?.path, node]));
-const handlerByEndpoint = new Map(graph.relationships.filter(edge => edge.type === 'HANDLED_BY').map(edge => [edge.from, edge.to]));
-const screenByHandler = new Map(graph.relationships.filter(edge => edge.type === 'RENDERS').map(edge => [edge.from, edge.to]));
 const webRoot = path.join(target, 'src/main/webapp');
 const tagRoot = path.join(webRoot, 'WEB-INF/tags');
 const htmlRoot = path.join(output, 'static-preview');
-const screenshotRoot = path.join(output, 'screenshots');
 await mkdir(htmlRoot, { recursive: true });
-await mkdir(screenshotRoot, { recursive: true });
 if (await exists(path.join(webRoot, 'resources'))) await cp(path.join(webRoot, 'resources'), path.join(htmlRoot, 'assets/resources'), { recursive: true });
 
 async function exists(file) { try { await access(file, constants.R_OK); return true; } catch { return false; } }
@@ -119,36 +112,10 @@ async function renderJsp(screen) {
   return htmlFile;
 }
 
-const manifest = {}, screenshots = {}, interactions = {};
-const browser = await chromium.launch({ headless: true });
-const page = await browser.newPage({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1 });
+const manifest = {};
 for (const screen of graph.nodes.filter(node => node.type === 'SCREEN')) {
   const htmlFile = await renderJsp(screen);
   if (!htmlFile) continue;
   manifest[screen.id] = `static-preview/${path.basename(htmlFile)}`;
-  await page.goto(pathToFileURL(htmlFile).href, { waitUntil: 'load' });
-  const items = await page.locator('a[href], button, input[type="submit"], input[type="button"], form[action]').evaluateAll(items => items.map((item, index) => {
-    const box = item.getBoundingClientRect(), style = getComputedStyle(item);
-    const form = item.tagName === 'FORM' ? item : item.closest('form');
-    const target = item.getAttribute('href') || item.getAttribute('formaction') || form?.getAttribute('action') || null;
-    const css = Object.fromEntries(['display', 'position', 'width', 'height', 'padding', 'margin', 'color', 'backgroundColor', 'border', 'borderRadius', 'boxShadow', 'fontFamily', 'fontSize', 'fontWeight', 'lineHeight', 'textAlign', 'cursor', 'opacity'].map(property => [property, style[property]]));
-    return { id: `static-component-${index}`, type: item.tagName === 'A' ? 'LINK' : item.tagName === 'FORM' ? 'FORM' : 'BUTTON',
-      label: (item.getAttribute('aria-label') || item.getAttribute('value') || item.textContent || item.id || '').replace(/\s+/g, ' ').trim(), target,
-      source: 'STATIC_RENDERED', visible: style.visibility !== 'hidden' && style.display !== 'none' && box.width > 0 && box.height > 0,
-      bounds: { x: box.left + window.scrollX, y: box.top + window.scrollY, width: box.width, height: box.height }, css };
-  }).filter(item => item.visible && item.label));
-  for (const item of items) {
-    const endpoint = endpointByPath.get(item.target);
-    const handler = endpoint && handlerByEndpoint.get(endpoint.id);
-    const targetScreenId = handler && screenByHandler.get(handler);
-    if (targetScreenId) item.targetScreenId = targetScreenId;
-  }
-  interactions[screen.id] = { width: await page.evaluate(() => document.documentElement.scrollWidth), height: await page.evaluate(() => document.documentElement.scrollHeight), items };
-  const file = `static-${screen.id.replace(/[^a-z0-9-]/gi, '_')}.png`;
-  await page.screenshot({ path: path.join(screenshotRoot, file), fullPage: true });
-  screenshots[screen.id] = `screenshots/${file}`;
 }
-await browser.close();
 await writeFile(path.join(htmlRoot, 'manifest.json'), JSON.stringify(manifest, null, 2));
-await writeFile(path.join(screenshotRoot, 'manifest.json'), JSON.stringify(screenshots, null, 2));
-await writeFile(path.join(screenshotRoot, 'interactions.json'), JSON.stringify(interactions, null, 2));

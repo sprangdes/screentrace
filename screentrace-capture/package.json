@@ -1,6 +1,0 @@
-{
-  "name": "screentrace-capture",
-  "private": true,
-  "type": "module",
-  "devDependencies": { "playwright": "1.53.0" }
-}
