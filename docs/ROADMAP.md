@@ -16,6 +16,7 @@
 - [x] Spring MVC XML Controller, `InternalResourceViewResolver`, Tiles view, and Spring URL tag resolution
 - [x] Report reads consolidated Graph, Prototype, and Preview contracts
 - [x] Regression fixtures: Struts, Struts + Spring, Spring MVC JSP, Spring Boot JSP
+- [x] Fixture report parity: Screen Explorer, Flow View, Page View, Component Trace, Review/Edit Mode
 - [ ] Expand React JSX/component extraction based on Reservio gaps
 - [ ] Record full Reservio validation results
 
