@@ -37,12 +37,12 @@ public final class ScreenTraceCli {
     Parsed parsed = Parsed.of(Arrays.copyOfRange(args, 1, args.length));
     if (command.equals("analyze")) analyze(parsed);
     else if (command.equals("export")) export(parsed);
-    else if (command.equals("serve")) serve(analysisDirectory(parsed).resolve("report"));
-    else throw new IllegalArgumentException("Usage: screentrace analyze [project] [--output directory] [--serve] | screentrace serve [project] | screentrace export [project] [--output file]");
+    else if (command.equals("open")) serve(analysisDirectory(parsed.target).resolve("report"));
+    else throw new IllegalArgumentException("Usage: screentrace analyze [project] | screentrace open [project] | screentrace export [project]");
   }
 
   private static void analyze(Parsed parsed) throws IOException, InterruptedException {
-    Path output = analysisDirectory(parsed);
+    Path output = analysisDirectory(parsed.target);
     var inventory = new ProjectScanner().scan(parsed.target);
     var graph = analyze(inventory);
     new ReportGenerator().write(graph, output);
@@ -58,7 +58,7 @@ public final class ScreenTraceCli {
     LOGGER.info(() -> "ScreenTrace%n%nAnalyzing:%n  %s%n%nDetected framework:%n  %s%n%nAnalysis result:%n  Endpoints: %d%n  Screens: %d%n  Components: %d%n%nGenerated:%n  %s%n"
         .formatted(parsed.target, String.join(", ", result.application().technologies()), endpoints, screens,
             components, output));
-    if (parsed.serve) serve(output.resolve("report"));
+    serve(output.resolve("report"));
   }
 
   private static ApplicationGraph analyze(ProjectScanner.ProjectInventory inventory) throws IOException {
@@ -77,7 +77,7 @@ public final class ScreenTraceCli {
 
   private static void export(Parsed parsed) throws IOException {
     Path analysis = parsed.target.resolve(ANALYSIS_DIRECTORY);
-    Path destination = parsed.output == null ? analysis.resolve("review-result.json") : parsed.output;
+    Path destination = analysis.resolve("review-result.json");
     new ReviewResultGenerator().write(analysis, destination);
     LOGGER.info(() -> "Review result exported:\n  " + destination);
   }
@@ -252,29 +252,18 @@ public final class ScreenTraceCli {
 
   static final class RequestTooLargeException extends IOException { }
 
-  private static Path analysisDirectory(Parsed parsed) {
-    return parsed.output == null ? parsed.target.resolve(ANALYSIS_DIRECTORY) : parsed.output;
+  private static Path analysisDirectory(Path target) {
+    return target.resolve(ANALYSIS_DIRECTORY);
   }
 
-  private record Parsed(Path target, Path output, boolean serve) {
+  private record Parsed(Path target) {
     static Parsed of(String[] arguments) {
       Path target = Path.of(".").toAbsolutePath().normalize();
-      Path output = null;
-      boolean serve = false;
-      int index = 0;
-      while (index < arguments.length) {
-        if (arguments[index].equals("--serve")) serve = true;
-        else if (arguments[index].equals("--output")) output = outputDirectory(arguments, ++index);
-        else if (arguments[index].startsWith("--")) throw new IllegalArgumentException("Unknown option: " + arguments[index]);
-        else target = Path.of(arguments[index]).toAbsolutePath().normalize();
-        index++;
+      for (String argument : arguments) {
+        if (argument.startsWith("--")) throw new IllegalArgumentException("Unknown option: " + argument);
+        target = Path.of(argument).toAbsolutePath().normalize();
       }
-      return new Parsed(target, output, serve);
-    }
-
-    private static Path outputDirectory(String[] arguments, int index) {
-      if (index >= arguments.length) throw new IllegalArgumentException("Missing directory after --output");
-      return Path.of(arguments[index]).toAbsolutePath().normalize();
+      return new Parsed(target);
     }
   }
 }

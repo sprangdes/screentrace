@@ -7,7 +7,7 @@ ScreenTrace 會分析伺服端渲染 JSP 專案的畫面、路由與可互動元
 ScreenTrace 會展開可解析的 JSP Tag、CSS 與本地資源，產生報表載入的靜態 HTML：
 
 ```bash
-java -jar screentrace-cli/target/screentrace-cli-0.1.0-SNAPSHOT.jar analyze /path/to/project --serve
+java -jar screentrace-cli/target/screentrace-cli-0.1.0-SNAPSHOT.jar analyze /path/to/project
 ```
 
 ## 系統需求
@@ -34,7 +34,11 @@ mvn clean verify
 
 也可直接執行 `bin/screentrace`；若 CLI JAR 尚未建立，腳本會自動建置。
 
-## 分析專案
+## CLI 指令
+
+所有分析資料與確認結果固定寫入目標專案的 `.screentrace/`。CLI 不提供自訂輸出位置。
+
+### 分析專案並開啟報表
 
 ```bash
 ./bin/screentrace analyze /絕對路徑/目標專案
@@ -46,26 +50,14 @@ mvn clean verify
 /絕對路徑/目標專案/.screentrace/
 ```
 
-可在分析後立刻啟動報表：
+分析完成後會自動開啟 `http://localhost:8088`。JSP 專案會同時產生靜態預覽。
 
-```bash
-./bin/screentrace analyze /絕對路徑/目標專案 --serve
-```
-
-或指定自訂分析輸出目錄：
-
-```bash
-./bin/screentrace analyze /絕對路徑/目標專案 --output /tmp/screentrace-output
-```
-
-JSP 專案分析時會自動產生靜態預覽。
-
-## 啟動互動報表
+### 開啟報表
 
 若專案已分析完成，可不重新掃描，直接啟動報表：
 
 ```bash
-./bin/screentrace serve /絕對路徑/目標專案
+./bin/screentrace open /絕對路徑/目標專案
 ```
 
 瀏覽器開啟：
@@ -74,7 +66,7 @@ JSP 專案分析時會自動產生靜態預覽。
 http://localhost:8088
 ```
 
-若顯示 `Address already in use`，代表已有 ScreenTrace server 使用 8088。可直接重新整理既有的 `http://localhost:8088`；若剛更新 CLI 功能，請先停止舊 server（終端機按 `Ctrl+C`）再重新執行 `serve`。
+若顯示 `Address already in use`，代表已有 ScreenTrace server 使用 8088。可直接重新整理既有的 `http://localhost:8088`；若剛更新 CLI 功能，請先停止舊 server（終端機按 `Ctrl+C`）再重新執行 `open`。
 
 ## 報表操作
 
@@ -147,7 +139,7 @@ Page view 顯示由 JSP 原始碼轉換的靜態 HTML。
 review-result.json
 ```
 
-### 從指令匯出
+### 下載確認功能結果
 
 不需要重新分析：
 
@@ -159,13 +151,6 @@ review-result.json
 
 ```text
 /絕對路徑/目標專案/.screentrace/review-result.json
-```
-
-指定輸出檔案：
-
-```bash
-./bin/screentrace export /絕對路徑/目標專案 \
-  --output /絕對路徑/review-result.json
 ```
 
 輸出內容包含：
@@ -211,7 +196,7 @@ AI 應以 `REMOVE` 作為可移除範圍、以 `KEEP` 作為必須保留範圍�
 重新啟動最新 server：
 
 ```bash
-./bin/screentrace serve /絕對路徑/目標專案
+./bin/screentrace open /絕對路徑/目標專案
 ```
 
 再重新開啟 `http://localhost:8088`。也可改用 `screentrace export` 指令直接產生 JSON。

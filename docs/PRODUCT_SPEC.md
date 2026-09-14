@@ -2,7 +2,7 @@
 
 ## POC priority
 
-The executable POC supports server-rendered JSP applications using Struts 1, Struts + Spring, Spring MVC, or Spring Boot. Spring MVC support resolves annotation and XML Controller mappings, literal `ModelAndView` views, `InternalResourceViewResolver` JSP paths, Tiles definitions, literal Spring URL-tag variables, and literal JSP form/link/button targets. JSP reports expand supported local tag files, transform supported Spring/JSTL markup into standalone static HTML, and load that HTML directly in Page view. Dynamic values, FreeMarker, and Thymeleaf remain unsupported. ScreenTrace is standalone: it never joins the target Maven/Gradle build and does not execute or modify target source, apart from writing its explicitly selected analysis output directory.
+The executable POC supports server-rendered JSP applications using Struts 1, Struts + Spring, Spring MVC, or Spring Boot. Spring MVC support resolves annotation and XML Controller mappings, literal `ModelAndView` views, `InternalResourceViewResolver` JSP paths, Tiles definitions, literal Spring URL-tag variables, and literal JSP form/link/button targets. JSP reports expand supported local tag files, transform supported Spring/JSTL markup into standalone static HTML, and load that HTML directly in Page view. Dynamic values, FreeMarker, and Thymeleaf remain unsupported. ScreenTrace is standalone: it never joins the target Maven/Gradle build and does not execute or modify target source, apart from writing analysis data to the target project's `.screentrace/` directory.
 
 ## Prototype and Edit Mode Contract
 

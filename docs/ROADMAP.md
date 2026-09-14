@@ -10,7 +10,7 @@
 - [x] Static React route, navigation, and API-literal extraction
 - [x] Generated, standalone interactive report
 - [x] Prototype Model and non-destructive Edit Overlay contracts
-- [x] `analyze`, `--output`, `--serve`, and `serve` CLI workflows
+- [x] Simple CLI workflows: `analyze`, `open`, and `export`, all using `<target>/.screentrace`
 - [x] Shared JSP/JSPF/Tiles contribution parser
 - [x] Struts 1 Action Mapping, ActionForm, forward, and Spring XML Action-bean resolution
 - [x] Spring MVC XML Controller, `InternalResourceViewResolver`, Tiles view, and Spring URL tag resolution
