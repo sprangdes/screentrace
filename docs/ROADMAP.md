@@ -1,6 +1,6 @@
 # ScreenTrace Implementation Roadmap
 
-> Current POC direction (2026-09-11): Spring Boot plus React static analysis is the first milestone. Struts is deferred. The executable pipeline is `scanner -> spring adapter -> framework-neutral Application Graph JSON -> standalone report -> CLI`.
+> Current POC direction (2026-09-14): Spring Boot/React and server-rendered JSP analysis share the same framework-neutral Application Graph. The executable pipeline is `scanner -> selected Spring and/or Struts adapter -> Application Graph JSON -> standalone report -> CLI`.
 
 ## Spring Boot / React POC
 
@@ -11,6 +11,8 @@
 - [x] Generated, standalone interactive report
 - [x] Prototype Model and non-destructive Edit Overlay contracts
 - [x] `analyze`, `--output`, `--serve`, and `serve` CLI workflows
+- [x] Shared JSP/JSPF/Tiles contribution parser
+- [x] Struts 1 Action Mapping, ActionForm, forward, and Spring XML Action-bean resolution
 - [ ] Expand React JSX/component extraction based on Reservio gaps
 - [ ] Record full Reservio validation results
 

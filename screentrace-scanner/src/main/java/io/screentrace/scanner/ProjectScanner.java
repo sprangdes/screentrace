@@ -34,8 +34,13 @@ public final class ProjectScanner {
     if (files.stream().anyMatch(path -> hasExtension(path, ".html"))) technologies.add("HTML");
     boolean springBoot = files.stream().filter(path -> path.getFileName().toString().equals(POM_FILE)).anyMatch(path -> contains(path, "spring-boot"));
     boolean springMvc = files.stream().filter(path -> path.getFileName().toString().equals(POM_FILE)).anyMatch(path -> contains(path, "spring-webmvc"));
+    boolean spring = files.stream().filter(path -> path.getFileName().toString().equals(POM_FILE)).anyMatch(path -> contains(path, "spring"))
+        || files.stream().filter(path -> hasExtension(path, ".xml")).anyMatch(path -> contains(path, "<beans"));
+    boolean struts = files.stream().filter(path -> path.getFileName().toString().startsWith("struts-config") && hasExtension(path, ".xml")).findAny().isPresent();
     if (springBoot) technologies.add("Spring Boot");
     if (springMvc) technologies.add("Spring MVC");
+    if (spring) technologies.add("Spring");
+    if (struts) technologies.add("Struts 1");
     if (files.stream().anyMatch(path -> hasExtension(path, ".jsp") || hasExtension(path, ".jspf"))) technologies.add("JSP");
     if (files.stream().filter(path -> hasExtension(path, ".xml")).anyMatch(path -> contains(path, "tiles-definitions"))) technologies.add("Tiles");
     return List.copyOf(technologies);
@@ -79,6 +84,14 @@ public final class ProjectScanner {
 
     public List<Path> tilesConfigFiles() {
       return files.stream().filter(path -> hasExtension(path, ".xml") && contains(path, "tiles-definitions")).toList();
+    }
+
+    public List<Path> strutsConfigFiles() {
+      return files.stream().filter(path -> path.getFileName().toString().startsWith("struts-config") && hasExtension(path, ".xml")).toList();
+    }
+
+    public List<Path> springXmlFiles() {
+      return files.stream().filter(path -> hasExtension(path, ".xml") && contains(path, "<beans")).toList();
     }
   }
 }

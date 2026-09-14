@@ -21,6 +21,7 @@
     <module>screentrace-scanner</module>
     <module>screentrace-parser-jsp</module>
     <module>screentrace-adapter-spring</module>
+    <module>screentrace-adapter-struts</module>
     <module>screentrace-report</module>
     <module>screentrace-cli</module>
   </modules>

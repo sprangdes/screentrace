@@ -3,6 +3,9 @@ package io.screentrace.cli;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
 import io.screentrace.adapter.spring.SpringProjectAnalyzer;
+import io.screentrace.adapter.struts.StrutsProjectAnalyzer;
+import io.screentrace.core.ApplicationGraph;
+import io.screentrace.core.ApplicationGraphMerger;
 import io.screentrace.report.ReportGenerator;
 import io.screentrace.report.ReviewResultGenerator;
 import io.screentrace.report.FlowStateGraphAugmenter;
@@ -42,7 +45,8 @@ public final class ScreenTraceCli {
 
   private static void analyze(Parsed parsed) throws IOException, InterruptedException {
     Path output = analysisDirectory(parsed);
-    var graph = new SpringProjectAnalyzer().analyze(new ProjectScanner().scan(parsed.target));
+    var inventory = new ProjectScanner().scan(parsed.target);
+    var graph = analyze(inventory);
     new ReportGenerator().write(graph, output);
     boolean serverRendered = graph.application().technologies().contains("JSP");
     boolean react = graph.application().technologies().contains("React");
@@ -61,6 +65,14 @@ public final class ScreenTraceCli {
         .formatted(parsed.target, String.join(", ", result.application().technologies()), endpoints, screens,
             components, output));
     if (parsed.serve) serve(output.resolve("report"));
+  }
+
+  private static ApplicationGraph analyze(ProjectScanner.ProjectInventory inventory) throws IOException {
+    boolean struts = inventory.technologies().contains("Struts 1");
+    boolean springWeb = inventory.technologies().contains("Spring MVC") || inventory.technologies().contains("Spring Boot");
+    if (struts && springWeb) return ApplicationGraphMerger.merge(new StrutsProjectAnalyzer().analyze(inventory), new SpringProjectAnalyzer().analyze(inventory));
+    if (struts) return new StrutsProjectAnalyzer().analyze(inventory);
+    return new SpringProjectAnalyzer().analyze(inventory);
   }
 
   @SuppressWarnings("java:S4036") // The static JSP renderer intentionally runs in an isolated Node process.

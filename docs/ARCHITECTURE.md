@@ -8,7 +8,7 @@ The current implementation follows two product pipelines: Spring Boot with React
 Target source (read-only) -> scanner -> selected Spring adapter -> ApplicationGraph JSON -> standalone report
 ```
 
-`screentrace-core` has no Spring dependency. `screentrace-scanner` inventories files and technology signals only. `screentrace-parser-jsp` is the shared, framework-neutral parser for JSP, JSPF, literal interactive targets, JSP includes, and Tiles definitions. `screentrace-adapter-spring` consumes that contribution and adds Spring-specific controller and endpoint correlation; Struts will consume the same contribution. It dispatches Spring Boot projects to REST/React analysis and Spring MVC projects to controller, literal view, conventional JSP, form, link, and button analysis. It uses JavaParser for Java and bounded static extraction for markup. For React routes, `screentrace-capture` starts only the target frontend's local Vite process, fulfills API requests with isolated mock responses, freezes the rendered DOM/CSS/resources to `static-preview/`, then stops Vite; it never starts the target Spring Boot backend. The capture process can explore supported multi-step forms using internally generated data. It emits `flow-states.json`; `FlowStateGraphAugmenter` adds the reached states and their button transitions to the Application Graph with `INFERRED` confidence and a synthetic `#step-n` identity, preserving the source route separately. `screentrace-report` reads only `application-graph.json` and static report artifacts in the browser. `screentrace-cli` writes output to `<target>/.screentrace` unless `--output` is supplied and hosts the report independently on port 8088.
+`screentrace-core` has no Spring dependency. `screentrace-scanner` inventories files and technology signals only. `screentrace-parser-jsp` is the shared, framework-neutral parser for JSP, JSPF, literal interactive targets, JSP includes, and Tiles definitions. `screentrace-adapter-spring` consumes that contribution and adds Spring-specific controller and endpoint correlation. `screentrace-adapter-struts` consumes the same contribution, resolves Struts 1 Action mappings, ActionForms, local/global forwards, and Spring XML-managed Action beans. A project with Struts and annotation-based Spring MVC/Boot combines both contributions through the core graph merger; a classic Struts + Spring XML project is resolved directly by the Struts adapter. For React routes, `screentrace-capture` starts only the target frontend's local Vite process, fulfills API requests with isolated mock responses, freezes the rendered DOM/CSS/resources to `static-preview/`, then stops Vite; it never starts the target Spring Boot backend. The capture process can explore supported multi-step forms using internally generated data. It emits `flow-states.json`; `FlowStateGraphAugmenter` adds the reached states and their button transitions to the Application Graph with `INFERRED` confidence and a synthetic `#step-n` identity, preserving the source route separately. `screentrace-report` reads only `application-graph.json` and static report artifacts in the browser. `screentrace-cli` writes output to `<target>/.screentrace` unless `--output` is supplied and hosts the report independently on port 8088.
 
 ## Prototype and Edit Mode
 
@@ -158,6 +158,16 @@ Responsibilities:
 - extract JSP include relationships
 - parse Tiles definitions without loading external entities
 - emit framework-neutral `JspAnalysis`; do not resolve routes or handlers
+
+### screentrace-adapter-struts
+
+Responsibilities:
+
+- parse every `struts-config*.xml` module
+- resolve Action Mapping, ActionForm, input page, local forward, and global forward
+- resolve Struts Action bean IDs against Spring XML bean classes when available
+- correlate shared JSP interactions with Struts request paths, including `.do` aliases
+- emit only framework-neutral Application Graph nodes and edges
 
 ### screentrace-analyzer
 
