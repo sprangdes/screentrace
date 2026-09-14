@@ -47,4 +47,10 @@ class ScreenTraceCliTest {
     assertTrue(ScreenTraceCli.hasMutationToken("session-token", "session-token"));
     assertFalse(ScreenTraceCli.hasMutationToken("wrong-token", "session-token"));
   }
+
+  @Test void rejectsRemovedCaptureCommandAndOptions() {
+    assertThrows(IllegalArgumentException.class, () -> ScreenTraceCli.main(new String[] {"capture"}));
+    assertThrows(IllegalArgumentException.class, () -> ScreenTraceCli.main(new String[] {"analyze", "--capture"}));
+    assertThrows(IllegalArgumentException.class, () -> ScreenTraceCli.main(new String[] {"analyze", "--capture-url", "http://localhost"}));
+  }
 }

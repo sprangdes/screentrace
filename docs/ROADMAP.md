@@ -17,6 +17,7 @@
 - [x] Report reads consolidated Graph, Prototype, and Preview contracts
 - [x] Regression fixtures: Struts, Struts + Spring, Spring MVC JSP, Spring Boot JSP
 - [x] Fixture report parity: Screen Explorer, Flow View, Page View, Component Trace, Review/Edit Mode
+- [x] Analysis automatically generates previews; standalone capture command removed
 - [ ] Expand React JSX/component extraction based on Reservio gaps
 - [ ] Record full Reservio validation results
 

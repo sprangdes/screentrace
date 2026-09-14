@@ -66,7 +66,7 @@ cd ..
 ./bin/screentrace analyze /絕對路徑/目標專案 --output /tmp/screentrace-output
 ```
 
-Spring Boot / React 專案需要目標專案的 `frontend/node_modules/vite` 已安裝，分析時會自動產生靜態預覽；`--capture` 可保留作為明確重新擷取指令。
+Spring Boot / React 專案需要目標專案的 `frontend/node_modules/vite` 已安裝；分析時會自動產生靜態預覽。
 
 ## 啟動互動報表
 
