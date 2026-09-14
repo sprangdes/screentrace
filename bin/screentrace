@@ -90,6 +90,29 @@ ensure_runtime() {
 
 ensure_runtime
 base_dir="$(cd "$(dirname "$0")/.." && pwd)"
+
+ensure_browser_renderer() {
+  local renderer_dir="$base_dir/screentrace-capture"
+  if [[ ! -x "$renderer_dir/node_modules/.bin/playwright" ]]; then
+    echo "Installing ScreenTrace browser renderer..."
+    (cd "$renderer_dir" && npm ci --no-audit --no-fund)
+  fi
+  if ! (cd "$renderer_dir" && npx playwright install --list 2>/dev/null | grep -q chromium); then
+    echo "Installing Chromium for JSP previews..."
+    (cd "$renderer_dir" && npx playwright install chromium)
+  fi
+}
+
+ensure_browser_renderer
 jar="$base_dir/screentrace-cli/target/screentrace-cli-0.1.0-SNAPSHOT.jar"
-if [[ ! -f "$jar" ]]; then (cd "$base_dir" && mvn -q -DskipTests package); fi
+needs_build=false
+if [[ ! -f "$jar" ]]; then
+  needs_build=true
+elif find "$base_dir" -path '*/target' -prune -o -path '*/node_modules' -prune -o \( -name '*.java' -o -name 'pom.xml' \) -newer "$jar" -print -quit | grep -q .; then
+  needs_build=true
+fi
+if [[ "$needs_build" == true ]]; then
+  echo "Building updated ScreenTrace..."
+  (cd "$base_dir" && mvn -q -DskipTests package)
+fi
 exec java -jar "$jar" "$@"

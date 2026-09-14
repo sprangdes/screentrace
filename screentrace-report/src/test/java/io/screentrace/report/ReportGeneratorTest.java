@@ -32,14 +32,20 @@ class ReportGeneratorTest {
             new Relationship("navigates", EdgeType.NAVIGATES_TO, component.id(), target.id(), Confidence.CONFIRMED, null)), List.of());
     Files.createDirectories(output.resolve("static-preview"));
     Files.writeString(output.resolve("static-preview/manifest.json"), "{\"screen:orders\":\"static-preview/orders.html\"}");
+    Files.createDirectories(output.resolve("screenshots"));
+    Files.writeString(output.resolve("screenshots/manifest.json"), "{\"screen:orders\":\"screenshots/orders.png\"}");
+    Files.writeString(output.resolve("screenshots/interactions.json"), "{\"screen:orders\":{\"width\":1440,\"height\":900,\"items\":[{\"id\":\"static-component-0\",\"type\":\"BUTTON\",\"label\":\"Next\",\"target\":\"/done\",\"targetScreenId\":\"screen:done\",\"bounds\":{\"x\":1,\"y\":2,\"width\":3,\"height\":4},\"css\":{\"color\":\"red\"}}]}}");
 
     new ReportGenerator().write(graph, output);
 
     JsonNode preview = json.readTree(output.resolve("preview-model.json").toFile());
     assertEquals("static-preview/orders.html", preview.path("screens").get(1).path("staticDocument").asText());
+    assertEquals("screenshots/orders.png", preview.path("screens").get(1).path("screenshot").asText());
     assertEquals("screen:done", preview.path("components").get(0).path("targetScreenId").asText());
     String report = Files.readString(output.resolve("report/index.html"));
     assertTrue(report.contains("/preview-model.json"));
     assertFalse(report.contains("/static-preview/manifest.json"));
+    assertTrue(report.contains("thumbnailFor=screen=>previewScreens[screen.id]?.screenshot"));
+    assertTrue(report.contains("screenshots/static-"));
   }
 }
