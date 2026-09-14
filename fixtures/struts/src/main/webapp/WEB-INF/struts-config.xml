@@ -1,0 +1,8 @@
+<struts-config>
+  <form-beans><form-bean name="searchForm" type="fixture.SearchForm"/></form-beans>
+  <action-mappings>
+    <action path="/orders/search" type="fixture.OrderSearchAction" name="searchForm">
+      <forward name="success" path="/WEB-INF/jsp/orders.jsp"/>
+    </action>
+  </action-mappings>
+</struts-config>

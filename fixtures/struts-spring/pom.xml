@@ -1,0 +1,1 @@
+<project><modelVersion>4.0.0</modelVersion><groupId>fixture</groupId><artifactId>struts-spring</artifactId><version>1</version><dependencies><dependency><artifactId>struts-core</artifactId></dependency><dependency><artifactId>spring-context</artifactId></dependency></dependencies></project>

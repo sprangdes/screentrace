@@ -15,6 +15,7 @@
 - [x] Struts 1 Action Mapping, ActionForm, forward, and Spring XML Action-bean resolution
 - [x] Spring MVC XML Controller, `InternalResourceViewResolver`, Tiles view, and Spring URL tag resolution
 - [x] Report reads consolidated Graph, Prototype, and Preview contracts
+- [x] Regression fixtures: Struts, Struts + Spring, Spring MVC JSP, Spring Boot JSP
 - [ ] Expand React JSX/component extraction based on Reservio gaps
 - [ ] Record full Reservio validation results
 

@@ -1,0 +1,1 @@
+<project><modelVersion>4.0.0</modelVersion><groupId>fixture</groupId><artifactId>spring-boot-jsp</artifactId><version>1</version><dependencies><dependency><artifactId>spring-boot-starter-web</artifactId></dependency></dependencies></project>

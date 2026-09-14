@@ -1,0 +1,1 @@
+<struts-config><action-mappings><action path="/accounts/find" type="accountFindAction"><forward name="success" path="/WEB-INF/jsp/accounts.jsp"/></action></action-mappings></struts-config>
