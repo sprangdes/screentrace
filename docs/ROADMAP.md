@@ -1,6 +1,6 @@
 # ScreenTrace Implementation Roadmap
 
-> Current POC direction (2026-09-11): Spring Boot plus React static analysis is the first milestone. Struts is deferred. The executable pipeline is `scanner -> spring adapter -> framework-neutral Application Graph JSON -> standalone report -> CLI`.
+> Current POC direction (2026-09-14): server-rendered JSP analysis uses a framework-neutral Application Graph. The executable pipeline is `scanner -> selected Spring and/or Struts adapter -> Application Graph JSON -> standalone report -> CLI`.
 
 ## Spring Boot / React POC
 
@@ -10,7 +10,15 @@
 - [x] Static React route, navigation, and API-literal extraction
 - [x] Generated, standalone interactive report
 - [x] Prototype Model and non-destructive Edit Overlay contracts
-- [x] `analyze`, `--output`, `--serve`, and `serve` CLI workflows
+- [x] Simple CLI workflows: `analyze`, `open`, and `export`, all using `<target>/.screentrace`
+- [x] Shared JSP/JSPF/Tiles contribution parser
+- [x] Struts 1 Action Mapping, ActionForm, forward, and Spring XML Action-bean resolution
+- [x] Spring MVC XML Controller, `InternalResourceViewResolver`, Tiles view, and Spring URL tag resolution
+- [x] Report reads consolidated Graph, Prototype, and Preview contracts
+- [x] Regression fixtures: Struts, Struts + Spring, Spring MVC JSP, Spring Boot JSP
+- [x] Fixture report parity: Screen Explorer, Flow View, Page View, Component Trace, Review/Edit Mode
+- [x] Analysis automatically generates previews; standalone capture command removed
+- [x] Remove Playwright screenshot and runtime-capture dependencies
 - [ ] Expand React JSX/component extraction based on Reservio gaps
 - [ ] Record full Reservio validation results
 
@@ -264,6 +272,9 @@ Goal: prove that the Application Graph is framework-neutral.
 - [x] Resolve literal returned view names
 - [x] Resolve literal `ModelAndView` views
 - [x] Resolve conventional JSP views
+- [x] Parse XML Controller and `SimpleUrlHandlerMapping`
+- [x] Resolve `InternalResourceViewResolver` JSP paths and Tiles definition views
+- [x] Resolve literal `<spring:url>` variables used by JSP interactions
 
 ### Exit Criteria
 

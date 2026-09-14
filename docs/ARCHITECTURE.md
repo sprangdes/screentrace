@@ -2,13 +2,13 @@
 
 ## Current POC implementation
 
-The current implementation follows two product pipelines: Spring Boot with React, and annotation-based Spring MVC with JSP.
+The current implementation analyzes server-rendered JSP applications using Struts 1, Spring MVC, Spring Boot, or their supported combinations.
 
 ```text
 Target source (read-only) -> scanner -> selected Spring adapter -> ApplicationGraph JSON -> standalone report
 ```
 
-`screentrace-core` has no Spring dependency. `screentrace-scanner` inventories files and technology signals only. `screentrace-adapter-spring` dispatches Spring Boot projects to REST/React analysis and Spring MVC projects to controller, literal view, conventional JSP, form, link, and button analysis. It uses JavaParser for Java and bounded static extraction for markup. For React routes, `screentrace-capture` starts only the target frontend's local Vite process, fulfills API requests with isolated mock responses, freezes the rendered DOM/CSS/resources to `static-preview/`, then stops Vite; it never starts the target Spring Boot backend. The capture process can explore supported multi-step forms using internally generated data. It emits `flow-states.json`; `FlowStateGraphAugmenter` adds the reached states and their button transitions to the Application Graph with `INFERRED` confidence and a synthetic `#step-n` identity, preserving the source route separately. `screentrace-report` reads only `application-graph.json` and static report artifacts in the browser. `screentrace-cli` writes output to `<target>/.screentrace` unless `--output` is supplied and hosts the report independently on port 8088.
+`screentrace-core` has no Spring dependency. `screentrace-scanner` inventories files and technology signals only. `screentrace-parser-jsp` is the shared, framework-neutral parser for JSP, JSPF, literal interactive targets, JSP includes, Tiles definitions, and literal Spring URL-tag variables. `screentrace-adapter-spring` consumes that contribution and adds annotation and XML Controller endpoint correlation, `SimpleUrlHandlerMapping`, `InternalResourceViewResolver`, and Tiles view resolution. `screentrace-adapter-struts` consumes the same contribution, resolves Struts 1 Action mappings, ActionForms, local/global forwards, and Spring XML-managed Action beans. A project with Struts and annotation-based Spring MVC/Boot combines both contributions through the core graph merger; a classic Struts + Spring XML project is resolved directly by the Struts adapter. The static JSP renderer expands supported local markup and resources into `static-preview/` without starting the target application or a browser. `screentrace-report` reads only the Application Graph, Prototype, and Preview contracts (plus the user-owned edit overlay) in the browser. `screentrace-cli` always writes output to `<target>/.screentrace` and hosts the report independently on port 8088.
 
 ## Prototype and Edit Mode
 
@@ -17,10 +17,11 @@ The report emits three independent, durable contracts:
 ```text
 application-graph.json   source-derived relationships and evidence
 prototype-model.json     editable visual baseline projected from the graph
+preview-model.json       static documents and graph-derived component trace data
 edit-overlay.json        user-owned target-state operations
 ```
 
-`edit-overlay.json` is initialized once and never overwritten by later analyses. Operations (`HIDE`, `UPDATE`, `MOVE`, `ADD`) target stable prototype component IDs. Runtime screenshots are optional visual references under `screenshots/`; they are not the editable model.
+`edit-overlay.json` is initialized once and never overwritten by later analyses. Operations (`HIDE`, `UPDATE`, `MOVE`, `ADD`) target stable prototype component IDs.
 
 ## 1. Architectural Goal
 
@@ -149,6 +150,26 @@ VueParser
 JavaScriptParser
 ```
 
+### screentrace-parser-jsp
+
+Responsibilities:
+
+- discover JSP screens and JSPF fragments
+- extract literal HTML, Spring tag, and Struts tag interactions
+- extract JSP include relationships
+- parse Tiles definitions without loading external entities
+- emit framework-neutral `JspAnalysis`; do not resolve routes or handlers
+
+### screentrace-adapter-struts
+
+Responsibilities:
+
+- parse every `struts-config*.xml` module
+- resolve Action Mapping, ActionForm, input page, local forward, and global forward
+- resolve Struts Action bean IDs against Spring XML bean classes when available
+- correlate shared JSP interactions with Struts request paths, including `.do` aliases
+- emit only framework-neutral Application Graph nodes and edges
+
 ### screentrace-analyzer
 
 Responsibilities:
@@ -202,6 +223,14 @@ The UI must not contain framework-specific analysis logic.
 
 The Application Graph is the canonical representation of an analyzed system.
 
+### 4.1 Schema contract and compatibility
+
+`application-graph.json` is versioned. New analyses emit schema version `2.0`; consumers must also accept explicit version `1.0` and versionless legacy JSON. Versionless JSON is normalized to `2.0` when read.
+
+Schema 2 preserves schema-1 fields (`source`, `confidence`) and constructors. It adds an `evidence` collection to nodes, relationships, and diagnostics so multiple source assertions can support one discovered relationship. Each evidence item records source location, parser, resolution status, and optional detail. This keeps existing report output readable while allowing Struts, Spring, JSP, and Tiles adapters to contribute independently.
+
+The graph remains framework-neutral. Framework identifiers belong in evidence/parser metadata or node attributes, never in node or edge type names.
+
 ### Example nodes
 
 ```text
@@ -212,6 +241,9 @@ HANDLER
 ENDPOINT
 VIEW
 SOURCE_ARTIFACT
+FORM_MODEL
+TEMPLATE_FRAGMENT
+INTEGRATION
 ```
 
 ### Example edges
@@ -225,6 +257,9 @@ HANDLED_BY
 NAVIGATES_TO
 DEFINED_IN
 FORWARDS_TO
+INCLUDES
+BINDS_TO
+DECLARED_BY
 ```
 
 Example:

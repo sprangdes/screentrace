@@ -21,4 +21,33 @@ class GraphIntegrityValidatorTest {
     var graph = new ApplicationGraph(new Application("sample", "/sample", List.of()), List.of(screen, next, button), List.of(new Relationship("contains", EdgeType.CONTAINS, "screen", "button", Confidence.CONFIRMED, null), new Relationship("navigation", EdgeType.NAVIGATES_TO, "button", "next", Confidence.CONFIRMED, null)), List.of());
     assertThrows(IllegalStateException.class, () -> GraphIntegrityValidator.validate(graph));
   }
+
+  @Test void acceptsCrossFrameworkGraphRelationships() {
+    GraphNode screen = new GraphNode("screen", NodeType.SCREEN, "Search", Map.of("route", "/search"), null, Confidence.CONFIRMED);
+    GraphNode form = new GraphNode("form", NodeType.COMPONENT, "searchForm", Map.of(), null, Confidence.CONFIRMED);
+    GraphNode formModel = new GraphNode("formModel", NodeType.FORM_MODEL, "SearchForm", Map.of(), null, Confidence.CONFIRMED);
+    GraphNode endpoint = new GraphNode("endpoint", NodeType.ENDPOINT, "POST /search", Map.of(), null, Confidence.CONFIRMED);
+    GraphNode action = new GraphNode("handler", NodeType.HANDLER, "SearchAction.execute", Map.of(), null, Confidence.CONFIRMED);
+    GraphNode integration = new GraphNode("integration", NodeType.INTEGRATION, "Customer SOAP", Map.of(), null, Confidence.CONFIRMED);
+    GraphNode view = new GraphNode("view", NodeType.VIEW, "search-result", Map.of(), null, Confidence.CONFIRMED);
+    var graph = new ApplicationGraph(new Application("sample", "/sample", List.of("Struts", "Spring")),
+        List.of(screen, form, formModel, endpoint, action, integration, view),
+        List.of(new Relationship("contains", EdgeType.CONTAINS, "screen", "form", Confidence.CONFIRMED, null),
+            new Relationship("binds", EdgeType.BINDS_TO, "form", "formModel", Confidence.CONFIRMED, null),
+            new Relationship("triggers", EdgeType.TRIGGERS, "form", "endpoint", Confidence.CONFIRMED, null),
+            new Relationship("handled", EdgeType.HANDLED_BY, "endpoint", "handler", Confidence.CONFIRMED, null),
+            new Relationship("calls", EdgeType.CALLS, "handler", "integration", Confidence.CONFIRMED, null),
+            new Relationship("forward", EdgeType.FORWARDS_TO, "handler", "view", Confidence.CONFIRMED, null)), List.of());
+
+    assertDoesNotThrow(() -> GraphIntegrityValidator.validate(graph));
+  }
+
+  @Test void rejectsInvalidTypedRelationship() {
+    GraphNode screen = new GraphNode("screen", NodeType.SCREEN, "Search", Map.of("route", "/search"), null, Confidence.CONFIRMED);
+    GraphNode integration = new GraphNode("integration", NodeType.INTEGRATION, "Customer SOAP", Map.of(), null, Confidence.CONFIRMED);
+    var graph = new ApplicationGraph(new Application("sample", "/sample", List.of()), List.of(screen, integration),
+        List.of(new Relationship("bad", EdgeType.HANDLED_BY, "screen", "integration", Confidence.CONFIRMED, null)), List.of());
+
+    assertThrows(IllegalStateException.class, () -> GraphIntegrityValidator.validate(graph));
+  }
 }

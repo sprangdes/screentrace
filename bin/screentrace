@@ -1,10 +1,95 @@
 #!/usr/bin/env bash
 set -euo pipefail
+
+required_java=17
+required_maven=3.9
+required_node=18
+
+version_at_least() {
+  local actual="$1" required="$2" actual_part required_part index
+  local IFS='.'
+  local -a actual_parts required_parts
+  IFS='.' read -r -a actual_parts <<< "$actual"
+  IFS='.' read -r -a required_parts <<< "$required"
+  for index in 0 1 2; do
+    actual_part="${actual_parts[index]:-0}"
+    required_part="${required_parts[index]:-0}"
+    ((10#$actual_part > 10#$required_part)) && return 0
+    ((10#$actual_part < 10#$required_part)) && return 1
+  done
+  return 0
+}
+
+java_major_version() {
+  local version
+  version="$(java -version 2>&1 | sed -n '1s/.*version "\([^"]*\)".*/\1/p')"
+  version="${version#1.}"
+  printf '%s\n' "${version%%[^0-9]*}"
+}
+
+maven_version() {
+  mvn -version 2>/dev/null | awk 'NR == 1 { print $3 }'
+}
+
+node_major_version() {
+  node --version 2>/dev/null | sed 's/^v//' | cut -d. -f1
+}
+
+needs_java() {
+  command -v java >/dev/null 2>&1 && version_at_least "$(java_major_version)" "$required_java"
+}
+
+needs_maven() {
+  command -v mvn >/dev/null 2>&1 && version_at_least "$(maven_version)" "$required_maven"
+}
+
+needs_node() {
+  command -v node >/dev/null 2>&1 && version_at_least "$(node_major_version)" "$required_node"
+}
+
+setup_homebrew() {
+  if command -v brew >/dev/null 2>&1; then
+    brew_bin="$(command -v brew)"
+  else
+    if [[ "$(uname -s)" != "Darwin" ]]; then
+      echo "ScreenTrace needs Java ${required_java}+, Maven ${required_maven}+, and Node.js ${required_node}+." >&2
+      echo "Automatic environment setup currently supports macOS only." >&2
+      exit 1
+    fi
+    echo "Homebrew is required to install the ScreenTrace runtime. Installing Homebrew..."
+    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+    if [[ -x /opt/homebrew/bin/brew ]]; then
+      brew_bin=/opt/homebrew/bin/brew
+    elif [[ -x /usr/local/bin/brew ]]; then
+      brew_bin=/usr/local/bin/brew
+    else
+      echo "Homebrew installation finished without an available brew command." >&2
+      exit 1
+    fi
+  fi
+  eval "$(\"$brew_bin\" shellenv)"
+}
+
+ensure_runtime() {
+  local formulae=()
+  needs_java || formulae+=(openjdk@17)
+  needs_maven || formulae+=(maven)
+  needs_node || formulae+=(node@18)
+  ((${#formulae[@]} == 0)) && return
+
+  setup_homebrew
+  echo "Installing ScreenTrace runtime: ${formulae[*]}"
+  brew install "${formulae[@]}"
+  export PATH="$(brew --prefix openjdk@17)/bin:$(brew --prefix node@18)/bin:$PATH"
+
+  if ! needs_java || ! needs_maven || ! needs_node; then
+    echo "Unable to prepare Java ${required_java}+, Maven ${required_maven}+, and Node.js ${required_node}+ automatically." >&2
+    exit 1
+  fi
+}
+
+ensure_runtime
 base_dir="$(cd "$(dirname "$0")/.." && pwd)"
 jar="$base_dir/screentrace-cli/target/screentrace-cli-0.1.0-SNAPSHOT.jar"
-capture_dir="$base_dir/screentrace-capture"
 if [[ ! -f "$jar" ]]; then (cd "$base_dir" && mvn -q -DskipTests package); fi
-if [[ ! -d "$capture_dir/node_modules/playwright" ]]; then
-  (cd "$capture_dir" && npm install && npx playwright install chromium)
-fi
 exec java -jar "$jar" "$@"

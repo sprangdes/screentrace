@@ -1,48 +1,26 @@
 # ScreenTrace
 
-ScreenTrace 會分析 Web 專案的畫面、路由與可互動元件，產生可瀏覽的 Screen flow、靜態頁面、按鈕資訊與確認結果。Spring MVC/JSP 不會啟動目標專案；Playwright 只會對靜態渲染的 HTML 產生 All screens 縮圖。Spring Boot/React 會在隔離的 Vite 與 mock API 環境中渲染路由，產生不含 React script 的靜態頁面與縮圖，不會啟動 Spring Boot 後端；支援的多步驟表單會使用內建合成資料自動擷取後續流程狀態。
+ScreenTrace 會分析伺服端渲染 JSP 專案的畫面、路由與可互動元件，產生可瀏覽的 Screen flow、靜態頁面、按鈕資訊與確認結果；不會啟動或修改目標專案。
 
-目前支援 Spring Boot + React，以及 annotation-based Spring MVC + JSP 專案；產生的資料與報表都寫入被分析專案的 `.screentrace/`，不會修改原始程式碼。
+目前支援 Struts 1、Struts + Spring、Spring MVC JSP、Spring Boot JSP 專案；產生的資料與報表都寫入被分析專案的 `.screentrace/`，不會修改原始程式碼。
 
-Spring MVC / JSP 會展開可解析的 JSP Tag、CSS 與本地資源；Spring Boot / React 會凍結隔離渲染後的 DOM、CSS 與本地資源。兩者都直接產生報表載入的靜態 HTML：
+ScreenTrace 會展開可解析的 JSP Tag、CSS 與本地資源，產生報表載入的靜態 HTML。
 
-```bash
-java -jar screentrace-cli/target/screentrace-cli-0.1.0-SNAPSHOT.jar analyze /path/to/project --serve
-```
+## 初次執行
 
-ScreenTrace 只擷取可靜態解析的 `GET`／`ANY` MVC endpoint；含路徑參數的 endpoint 會保留在 `.screentrace/screenshots/capture-errors.json`，不會猜測測試資料。
-
-## 系統需求
-
-- Java 17 以上
-- Maven 3.9 以上
-- Node.js 18 以上與 npm
-- Chromium（Playwright 安裝時會下載）
-
-在 macOS 可確認版本：
+在 macOS 的終端機進入 ScreenTrace 專案根目錄後，直接執行分析指令：
 
 ```bash
-java -version
-mvn -version
-node -v
-npm -v
+./bin/screentrace analyze /絕對路徑/目標專案
 ```
 
-## 第一次使用
+腳本會自動檢查 Java 17+、Maven 3.9+ 與 Node.js 18+；缺少或版本不足時，會透過 Homebrew 安裝。若尚未安裝 Homebrew，腳本也會先依 Homebrew 官方安裝程序完成安裝。初次執行需要網路連線，且 Homebrew 可能要求輸入 macOS 管理者密碼。
 
-在 ScreenTrace 專案根目錄執行：
+## CLI 指令
 
-```bash
-mvn clean verify
-cd screentrace-capture
-npm install
-npx playwright install chromium
-cd ..
-```
+所有分析資料與確認結果固定寫入目標專案的 `.screentrace/`。CLI 不提供自訂輸出位置。
 
-也可直接執行 `bin/screentrace`。若 CLI JAR 或 Playwright 尚未安裝，腳本會自動建置與安裝。
-
-## 分析專案
+### 分析專案並開啟報表
 
 ```bash
 ./bin/screentrace analyze /絕對路徑/目標專案
@@ -54,26 +32,14 @@ cd ..
 /絕對路徑/目標專案/.screentrace/
 ```
 
-可在分析後立刻啟動報表：
+分析完成後會自動開啟 `http://localhost:8088`。JSP 專案會同時產生靜態預覽。
+
+### 開啟報表
+
+若專案已分析完成，可不重新掃描，直接啟動報表：
 
 ```bash
-./bin/screentrace analyze /絕對路徑/目標專案 --serve
-```
-
-或指定自訂分析輸出目錄：
-
-```bash
-./bin/screentrace analyze /絕對路徑/目標專案 --output /tmp/screentrace-output
-```
-
-Spring Boot / React 專案需要目標專案的 `frontend/node_modules/vite` 已安裝，分析時會自動產生靜態預覽；`--capture` 可保留作為明確重新擷取指令。
-
-## 啟動互動報表
-
-若專案已分析完成，可不重新掃描與截圖，直接啟動報表：
-
-```bash
-./bin/screentrace serve /絕對路徑/目標專案
+./bin/screentrace open /絕對路徑/目標專案
 ```
 
 瀏覽器開啟：
@@ -82,7 +48,7 @@ Spring Boot / React 專案需要目標專案的 `frontend/node_modules/vite` 已
 http://localhost:8088
 ```
 
-若顯示 `Address already in use`，代表已有 ScreenTrace server 使用 8088。可直接重新整理既有的 `http://localhost:8088`；若剛更新 CLI 功能，請先停止舊 server（終端機按 `Ctrl+C`）再重新執行 `serve`。
+若顯示 `Address already in use`，代表已有 ScreenTrace server 使用 8088。可直接重新整理既有的 `http://localhost:8088`；若剛更新 CLI 功能，請先停止舊 server（終端機按 `Ctrl+C`）再重新執行 `open`。
 
 ## 報表操作
 
@@ -106,17 +72,15 @@ http://localhost:8088
 - 滑鼠移到畫面、右側 To 項目或關聯按鈕時，對應畫面與關聯線會同步高亮。
 - 單擊畫布空白處可回到 All screens。
 - 右下角可調整畫布縮放；可拖曳畫布瀏覽關聯。
-- 雙擊畫面卡片可開啟其完整長截圖。
+- 雙擊畫面卡片可開啟其靜態 Page view。
 
 ### Page view
 
-Page view 顯示 Playwright 擷取的完整長截圖。
+Page view 顯示由 JSP 原始碼轉換的靜態 HTML。
 
-- 截圖上的可見按鈕與連結會以可點擊熱區標示。
-- 單擊熱區會在右欄開啟 Button Detail。
-- 雙擊具備已解析目標的熱區，會直接前往目標畫面。
-- 右側 Page Detail 的 To 與 Button 項目，和畫面上的熱區會同步 hover 高亮。
-- Button Detail 顯示元件 ID、元件類型與文字、目標路徑，以及 Playwright 擷取的 CSS 屬性。
+- 單擊可解析按鈕或連結會在右欄開啟 Button Detail。
+- 雙擊具備已解析目標的元件，會直接前往目標畫面。
+- Button Detail 顯示元件 ID、元件類型、文字與目標路徑。
 
 ## 確認模式
 
@@ -157,9 +121,9 @@ Page view 顯示 Playwright 擷取的完整長截圖。
 review-result.json
 ```
 
-### 從指令匯出
+### 下載確認功能結果
 
-不需要重新分析或截圖：
+不需要重新分析：
 
 ```bash
 ./bin/screentrace export /絕對路徑/目標專案
@@ -171,20 +135,13 @@ review-result.json
 /絕對路徑/目標專案/.screentrace/review-result.json
 ```
 
-指定輸出檔案：
-
-```bash
-./bin/screentrace export /絕對路徑/目標專案 \
-  --output /絕對路徑/review-result.json
-```
-
 輸出內容包含：
 
 - 專案名稱與分析技術
 - 匯出時間
 - 畫面與按鈕的保留／移除／未確認統計
 - 每個畫面的 graph ID、路由、名稱、來源檔案與行號
-- 每個按鈕或連結的 runtime ID、類型、文字、目標路徑、確認決策與 CSS
+- 每個按鈕或連結的 graph ID、類型、文字、目標路徑與確認決策
 
 AI 應以 `REMOVE` 作為可移除範圍、以 `KEEP` 作為必須保留範圍；`UNDECIDED` 表示尚未取得客戶決策，不應自行移除。
 
@@ -194,24 +151,21 @@ AI 應以 `REMOVE` 作為可移除範圍、以 `KEEP` 作為必須保留範圍�
 .screentrace/
 ├── application-graph.json       # 靜態分析出的標準 Application Graph
 ├── prototype-model.json         # 原型畫面與元件基準資料
+├── preview-model.json           # 預覽畫面與可見元件的統一資料
 ├── edit-overlay.json            # 使用者確認與編輯決策
 ├── review-result.json           # 匯出給 AI 的確認結果
 ├── report/
 │   └── index.html               # 互動報表
 ├── static-preview/
 │   ├── manifest.json            # Screen ID 與靜態頁面對應
-│   └── *.html                   # JSP 或 React 凍結後的靜態頁面
-└── screenshots/
-    ├── manifest.json            # Screen ID 與截圖檔案對應
-    ├── interactions.json        # 可見按鈕／連結、位置與 CSS
-    └── *.png                    # Playwright 擷取的完整長截圖
+│   └── *.html                   # JSP 轉換後的靜態頁面
 ```
 
 ## 疑難排解
 
 ### 報表空白或沒有畫面
 
-先重新執行分析，並確認終端機列出 `Captured /...`：
+先重新執行分析：
 
 ```bash
 ./bin/screentrace analyze /絕對路徑/目標專案
@@ -219,28 +173,15 @@ AI 應以 `REMOVE` 作為可移除範圍、以 `KEEP` 作為必須保留範圍�
 
 再啟動或重新整理報表。
 
-### 只有少數截圖
-
-ScreenTrace 只會擷取靜態路由分析可發現且 Playwright 可直接開啟的畫面。需要登入、資料前置條件或動態產生的頁面可能無法完整呈現，仍會保留靜態分析到的畫面關係。
-
 ### UI 匯出失敗
 
 重新啟動最新 server：
 
 ```bash
-./bin/screentrace serve /絕對路徑/目標專案
+./bin/screentrace open /絕對路徑/目標專案
 ```
 
 再重新開啟 `http://localhost:8088`。也可改用 `screentrace export` 指令直接產生 JSON。
-
-### Playwright 或 Chromium 安裝失敗
-
-在 `screentrace-capture/` 下重新安裝：
-
-```bash
-npm install
-npx playwright install chromium
-```
 
 ## 開發與驗證
 
@@ -248,4 +189,4 @@ npx playwright install chromium
 mvn clean verify
 ```
 
-分析與截圖的產物是執行結果，應維持在被分析專案的 `.screentrace/`，不應提交到 ScreenTrace 原始碼版本庫。
+分析產物是執行結果，應維持在被分析專案的 `.screentrace/`，不應提交到 ScreenTrace 原始碼版本庫。

@@ -1,2 +1,6 @@
 # Maven build outputs
 **/target/
+**/node_modules/
+
+# IntelliJ IDEA workspace files
+.idea/

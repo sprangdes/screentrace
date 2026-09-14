@@ -1,0 +1,1 @@
+<beans><bean id="accountFindAction" class="fixture.AccountFindAction"/></beans>

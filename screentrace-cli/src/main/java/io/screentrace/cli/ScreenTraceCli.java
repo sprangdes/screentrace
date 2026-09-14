@@ -3,9 +3,11 @@ package io.screentrace.cli;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
 import io.screentrace.adapter.spring.SpringProjectAnalyzer;
+import io.screentrace.adapter.struts.StrutsProjectAnalyzer;
+import io.screentrace.core.ApplicationGraph;
+import io.screentrace.core.ApplicationGraphMerger;
 import io.screentrace.report.ReportGenerator;
 import io.screentrace.report.ReviewResultGenerator;
-import io.screentrace.report.FlowStateGraphAugmenter;
 import io.screentrace.scanner.ProjectScanner;
 import java.awt.Desktop;
 import java.io.ByteArrayOutputStream;
@@ -34,25 +36,21 @@ public final class ScreenTraceCli {
     String command = args.length == 0 ? "analyze" : args[0];
     Parsed parsed = Parsed.of(Arrays.copyOfRange(args, 1, args.length));
     if (command.equals("analyze")) analyze(parsed);
-    else if (command.equals("capture")) capture(parsed);
     else if (command.equals("export")) export(parsed);
-    else if (command.equals("serve")) serve(analysisDirectory(parsed).resolve("report"));
-    else throw new IllegalArgumentException("Usage: screentrace analyze [project] [--output directory] [--capture] [--capture-url url] [--serve] | screentrace capture [project] [--output directory] [--capture-url url] | screentrace serve [project] | screentrace export [project] [--output file]");
+    else if (command.equals("open")) serve(analysisDirectory(parsed.target).resolve("report"));
+    else throw new IllegalArgumentException("Usage: screentrace analyze [project] | screentrace open [project] | screentrace export [project]");
   }
 
   private static void analyze(Parsed parsed) throws IOException, InterruptedException {
-    Path output = analysisDirectory(parsed);
-    var graph = new SpringProjectAnalyzer().analyze(new ProjectScanner().scan(parsed.target));
+    Path output = analysisDirectory(parsed.target);
+    var inventory = new ProjectScanner().scan(parsed.target);
+    var graph = analyze(inventory);
     new ReportGenerator().write(graph, output);
     boolean serverRendered = graph.application().technologies().contains("JSP");
-    boolean react = graph.application().technologies().contains("React");
-    if (serverRendered) renderStaticJsp(parsed.target, output);
-    else if (react) {
-      renderStaticReact(parsed.target, output);
-      graph = new FlowStateGraphAugmenter().augment(graph, output);
+    if (serverRendered) {
+      renderStaticJsp(parsed.target, output);
       new ReportGenerator().write(graph, output);
     }
-    if (parsed.capture && !serverRendered && !react) capture(new Parsed(parsed.target, output, false, false, parsed.captureUrl));
     var result = graph;
     long screens = result.nodes().stream().filter(node -> node.type().name().equals("SCREEN")).count();
     long endpoints = result.nodes().stream().filter(node -> node.type().name().equals("ENDPOINT")).count();
@@ -60,7 +58,15 @@ public final class ScreenTraceCli {
     LOGGER.info(() -> "ScreenTrace%n%nAnalyzing:%n  %s%n%nDetected framework:%n  %s%n%nAnalysis result:%n  Endpoints: %d%n  Screens: %d%n  Components: %d%n%nGenerated:%n  %s%n"
         .formatted(parsed.target, String.join(", ", result.application().technologies()), endpoints, screens,
             components, output));
-    if (parsed.serve) serve(output.resolve("report"));
+    serve(output.resolve("report"));
+  }
+
+  private static ApplicationGraph analyze(ProjectScanner.ProjectInventory inventory) throws IOException {
+    boolean struts = inventory.technologies().contains("Struts 1");
+    boolean springWeb = inventory.technologies().contains("Spring MVC") || inventory.technologies().contains("Spring Boot");
+    if (struts && springWeb) return ApplicationGraphMerger.merge(new StrutsProjectAnalyzer().analyze(inventory), new SpringProjectAnalyzer().analyze(inventory));
+    if (struts) return new StrutsProjectAnalyzer().analyze(inventory);
+    return new SpringProjectAnalyzer().analyze(inventory);
   }
 
   @SuppressWarnings("java:S4036") // The static JSP renderer intentionally runs in an isolated Node process.
@@ -69,32 +75,11 @@ public final class ScreenTraceCli {
     if (process.waitFor() != 0) LOGGER.warning("Static JSP preview could not be rendered; source-derived fallback preview remains available.");
   }
 
-  @SuppressWarnings("java:S4036") // React is rendered only through an isolated Vite process with mocked API responses.
-  private static void renderStaticReact(Path target, Path output) throws IOException, InterruptedException {
-    Process process = new ProcessBuilder("node", Path.of("screentrace-capture/capture.mjs").toAbsolutePath().toString(), target.toString(), output.toString()).inheritIO().start();
-    if (process.waitFor() != 0) LOGGER.warning("Static React preview could not be rendered; screenshot and source-derived fallbacks remain available.");
-  }
-
   private static void export(Parsed parsed) throws IOException {
     Path analysis = parsed.target.resolve(ANALYSIS_DIRECTORY);
-    Path destination = parsed.output == null ? analysis.resolve("review-result.json") : parsed.output;
+    Path destination = analysis.resolve("review-result.json");
     new ReviewResultGenerator().write(analysis, destination);
     LOGGER.info(() -> "Review result exported:\n  " + destination);
-  }
-
-  @SuppressWarnings("java:S4036") // Runtime capture intentionally uses the user's Node runtime, as documented by the CLI contract.
-  private static void capture(Parsed parsed) throws IOException, InterruptedException {
-    Path output = analysisDirectory(parsed);
-    boolean serverRendered = new ProjectScanner().scan(parsed.target).technologies().contains("JSP");
-    if (serverRendered) {
-      renderStaticJsp(parsed.target, output);
-      LOGGER.info(() -> "Generated static JSP previews: " + output.resolve("static-preview"));
-      return;
-    }
-    String script = "screentrace-capture/capture.mjs";
-    Process process = new ProcessBuilder("node", Path.of(script).toAbsolutePath().toString(), parsed.target.toString(), output.toString(), parsed.captureUrl).inheritIO().start();
-    if (process.waitFor() != 0) throw new IllegalStateException("Runtime capture failed.");
-    LOGGER.info(() -> "Generated static React previews: " + output.resolve("static-preview"));
   }
 
   private static void serve(Path report) throws IOException {
@@ -204,8 +189,7 @@ public final class ScreenTraceCli {
 
   static Path staticFile(String uri, Path report, Path analysis) {
     if (uri.equals("/")) return report.resolve(INDEX_FILE);
-    if (uri.equals("/application-graph.json") || uri.equals("/prototype-model.json")) return resolveWithin(analysis, uri.substring(1));
-    if (uri.startsWith("/screenshots/")) return resolveWithin(analysis.resolve("screenshots"), uri.substring("/screenshots/".length()));
+    if (uri.equals("/application-graph.json") || uri.equals("/prototype-model.json") || uri.equals("/preview-model.json")) return resolveWithin(analysis, uri.substring(1));
     if (uri.startsWith("/static-preview/")) return resolveWithin(analysis.resolve("static-preview"), uri.substring("/static-preview/".length()));
     return resolveWithin(report, uri.substring(1));
   }
@@ -268,39 +252,18 @@ public final class ScreenTraceCli {
 
   static final class RequestTooLargeException extends IOException { }
 
-  private static Path analysisDirectory(Parsed parsed) {
-    return parsed.output == null ? parsed.target.resolve(ANALYSIS_DIRECTORY) : parsed.output;
+  private static Path analysisDirectory(Path target) {
+    return target.resolve(ANALYSIS_DIRECTORY);
   }
 
-  private record Parsed(Path target, Path output, boolean serve, boolean capture, String captureUrl) {
+  private record Parsed(Path target) {
     static Parsed of(String[] arguments) {
       Path target = Path.of(".").toAbsolutePath().normalize();
-      Path output = null;
-      boolean serve = false;
-      boolean capture = false;
-      String captureUrl = "http://127.0.0.1:8080";
-      int index = 0;
-      while (index < arguments.length) {
-        if (arguments[index].equals("--serve")) serve = true;
-        else if (arguments[index].equals("--capture")) capture = true;
-        else if (arguments[index].equals("--capture-url")) captureUrl = captureUrl(arguments, ++index);
-        else if (arguments[index].equals("--output")) output = outputDirectory(arguments, ++index);
-        else target = Path.of(arguments[index]).toAbsolutePath().normalize();
-        index++;
+      for (String argument : arguments) {
+        if (argument.startsWith("--")) throw new IllegalArgumentException("Unknown option: " + argument);
+        target = Path.of(argument).toAbsolutePath().normalize();
       }
-      return new Parsed(target, output, serve, capture, captureUrl);
-    }
-
-    private static Path outputDirectory(String[] arguments, int index) {
-      if (index >= arguments.length) throw new IllegalArgumentException("Missing directory after --output");
-      return Path.of(arguments[index]).toAbsolutePath().normalize();
-    }
-
-    private static String captureUrl(String[] arguments, int index) {
-      if (index >= arguments.length) throw new IllegalArgumentException("Missing URL after --capture-url");
-      String value = arguments[index];
-      if (!value.startsWith("http://") && !value.startsWith("https://")) throw new IllegalArgumentException("Capture URL must use http:// or https://");
-      return value.replaceAll("/$", "");
+      return new Parsed(target);
     }
   }
 }

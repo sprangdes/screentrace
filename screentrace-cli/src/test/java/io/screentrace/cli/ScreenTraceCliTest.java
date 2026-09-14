@@ -12,23 +12,17 @@ class ScreenTraceCliTest {
     Path root = Files.createTempDirectory("screentrace-cli-test");
     Path report = Files.createDirectories(root.resolve("report"));
     Path analysis = Files.createDirectories(root.resolve("analysis"));
-    Path screenshots = Files.createDirectories(analysis.resolve("screenshots"));
     Path outside = root.resolve("secret.txt");
     Files.writeString(outside, "secret");
     Files.writeString(report.resolve("index.html"), "report");
     Files.writeString(analysis.resolve("application-graph.json"), "{}");
-    Files.writeString(screenshots.resolve("screen.png"), "png");
+    Files.writeString(analysis.resolve("preview-model.json"), "{}");
 
     assertEquals(report.resolve("index.html"), ScreenTraceCli.staticFile("/", report, analysis));
     assertEquals(analysis.resolve("application-graph.json"), ScreenTraceCli.staticFile("/application-graph.json", report, analysis));
-    assertEquals(screenshots.resolve("screen.png"), ScreenTraceCli.staticFile("/screenshots/screen.png", report, analysis));
+    assertEquals(analysis.resolve("preview-model.json"), ScreenTraceCli.staticFile("/preview-model.json", report, analysis));
     assertNull(ScreenTraceCli.staticFile("/../secret.txt", report, analysis));
-    assertNull(ScreenTraceCli.staticFile("/screenshots/../../secret.txt", report, analysis));
-
-    Path link = screenshots.resolve("outside-link");
     try {
-      Files.createSymbolicLink(link, outside);
-      assertNull(ScreenTraceCli.staticFile("/screenshots/outside-link", report, analysis));
       Files.createSymbolicLink(analysis.resolve("prototype-model.json"), outside);
       assertNull(ScreenTraceCli.staticFile("/prototype-model.json", report, analysis));
     } catch (UnsupportedOperationException ignored) {
@@ -44,5 +38,13 @@ class ScreenTraceCliTest {
     assertTrue(ScreenTraceCli.REPORT_ADDRESS.isLoopbackAddress());
     assertTrue(ScreenTraceCli.hasMutationToken("session-token", "session-token"));
     assertFalse(ScreenTraceCli.hasMutationToken("wrong-token", "session-token"));
+  }
+
+  @Test void onlyAcceptsProjectPathWithoutOptions() {
+    assertThrows(IllegalArgumentException.class, () -> ScreenTraceCli.main(new String[] {"capture"}));
+    assertThrows(IllegalArgumentException.class, () -> ScreenTraceCli.main(new String[] {"serve"}));
+    assertThrows(IllegalArgumentException.class, () -> ScreenTraceCli.main(new String[] {"analyze", "--serve"}));
+    assertThrows(IllegalArgumentException.class, () -> ScreenTraceCli.main(new String[] {"analyze", "--output", "/tmp/output"}));
+    assertThrows(IllegalArgumentException.class, () -> ScreenTraceCli.main(new String[] {"export", "--output", "/tmp/result.json"}));
   }
 }
