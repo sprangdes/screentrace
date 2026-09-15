@@ -11,11 +11,15 @@ final class MarkupTag {
   private final String name;
   private final Map<String, String> attributes;
   private final int line;
+  private final int end;
+  private final boolean closing;
 
-  private MarkupTag(String name, Map<String, String> attributes, int line) {
+  private MarkupTag(String name, Map<String, String> attributes, int line, int end, boolean closing) {
     this.name = name;
     this.attributes = attributes;
     this.line = line;
+    this.end = end;
+    this.closing = closing;
   }
 
   static List<MarkupTag> scan(String source) {
@@ -24,7 +28,7 @@ final class MarkupTag {
       int end = endOfTag(source, start);
       if (end < 0) break;
       String body = source.substring(start + 1, end).trim();
-      MarkupTag tag = parse(body, line(source, start));
+      MarkupTag tag = parse(body, line(source, start), end);
       if (tag != null) tags.add(tag);
       start = end;
     }
@@ -33,6 +37,8 @@ final class MarkupTag {
 
   String name() { return name; }
   int line() { return line; }
+  int end() { return end; }
+  boolean closing() { return closing; }
   String attribute(String name) { return attributes.get(name.toLowerCase(Locale.ROOT)); }
 
   private static int endOfTag(String source, int start) {
@@ -47,15 +53,17 @@ final class MarkupTag {
     return -1;
   }
 
-  private static MarkupTag parse(String body, int line) {
+  private static MarkupTag parse(String body, int line, int end) {
     if (body.startsWith("%@")) {
       body = "@" + body.substring(2).trim().replaceFirst("%$", "");
     }
-    if (body.isBlank() || body.startsWith("/") || body.startsWith("!") || body.startsWith("%")) return null;
+    if (body.isBlank() || body.startsWith("!") || body.startsWith("%")) return null;
+    boolean closing = body.startsWith("/");
+    if (closing) body = body.substring(1).trim();
     int split = 0;
     while (split < body.length() && !Character.isWhitespace(body.charAt(split)) && body.charAt(split) != '/') split++;
     String name = body.substring(0, split);
-    return new MarkupTag(name, attributes(body.substring(split)), line);
+    return new MarkupTag(name, attributes(body.substring(split)), line, end, closing);
   }
 
   private static Map<String, String> attributes(String body) {

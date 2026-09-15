@@ -225,11 +225,13 @@ The Application Graph is the canonical representation of an analyzed system.
 
 ### 4.1 Schema contract and compatibility
 
-`application-graph.json` is versioned. New analyses emit schema version `2.0`; consumers must also accept explicit version `1.0` and versionless legacy JSON. Versionless JSON is normalized to `2.0` when read.
+`application-graph.json` is versioned. New analyses emit schema version `2.1`; consumers must also accept explicit versions `1.0` and `2.0`, and versionless legacy JSON. Versionless JSON is normalized to `2.1` when read.
 
 Schema 2 preserves schema-1 fields (`source`, `confidence`) and constructors. It adds an `evidence` collection to nodes, relationships, and diagnostics so multiple source assertions can support one discovered relationship. Each evidence item records source location, parser, resolution status, and optional detail. This keeps existing report output readable while allowing Struts, Spring, JSP, and Tiles adapters to contribute independently.
 
 The graph remains framework-neutral. Framework identifiers belong in evidence/parser metadata or node attributes, never in node or edge type names.
+
+Schema 2.1 adds `apiContracts`, keyed by `ENDPOINT` ID. A contract records the statically discovered request parameters/body and response status/body, including field type, location, source location, and confidence. `SCREEN -> CALLS -> ENDPOINT` represents an API invoked during page load; `COMPONENT -> TRIGGERS -> ENDPOINT` represents an API invoked by an interactive component. An absent or unresolved contract is never synthesized from runtime assumptions.
 
 ### Example nodes
 

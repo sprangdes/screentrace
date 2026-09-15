@@ -19,10 +19,14 @@ public final class ApplicationGraphMerger {
     Map<String, ApplicationGraph.Diagnostic> diagnostics = new TreeMap<>();
     first.diagnostics().forEach(item -> diagnostics.put(item.message() + item.source(), item));
     second.diagnostics().forEach(item -> diagnostics.putIfAbsent(item.message() + item.source(), item));
+    Map<String, ApplicationGraph.ApiContract> apiContracts = new TreeMap<>();
+    first.apiContracts().forEach(contract -> apiContracts.put(contract.endpointId(), contract));
+    second.apiContracts().forEach(contract -> apiContracts.putIfAbsent(contract.endpointId(), contract));
     Set<String> technologies = new TreeSet<>(first.application().technologies());
     technologies.addAll(second.application().technologies());
     return new ApplicationGraph(new ApplicationGraph.Application(first.application().name(), first.application().path(), List.copyOf(technologies)),
-        List.copyOf(nodes.values()), List.copyOf(relationships.values()), List.copyOf(diagnostics.values()));
+        List.copyOf(nodes.values()), List.copyOf(relationships.values()), List.copyOf(diagnostics.values()),
+        List.copyOf(apiContracts.values()), ApplicationGraph.CURRENT_SCHEMA_VERSION);
   }
 
   private static ApplicationGraph.GraphNode mergeNode(ApplicationGraph.GraphNode left, ApplicationGraph.GraphNode right) {

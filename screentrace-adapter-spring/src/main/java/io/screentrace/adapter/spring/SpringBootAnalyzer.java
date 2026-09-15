@@ -48,7 +48,7 @@ public final class SpringBootAnalyzer {
     private static final List<String> IMPORT_SUFFIXES = List.of(".tsx", ".jsx", ".ts", ".js", "/index.tsx");
 
     public ApplicationGraph analyze(ProjectInventory inventory) throws IOException {
-        AnalysisState state = new AnalysisState();
+        AnalysisState state = new AnalysisState(inventory.root(), inventory.javaFiles());
         for (Path file : inventory.javaFiles()) {
             parseController(inventory.root(), file, state);
         }
@@ -58,7 +58,7 @@ public final class SpringBootAnalyzer {
         connectReactGraph(state);
         return new ApplicationGraph(
                 new ApplicationGraph.Application(inventory.root().getFileName().toString(), inventory.root().toString(), inventory.technologies()),
-                state.nodes, state.edges, state.diagnostics);
+                state.nodes, state.edges, state.diagnostics, state.apiContracts, ApplicationGraph.CURRENT_SCHEMA_VERSION);
     }
 
     private void parseController(Path root, Path file, AnalysisState state) {
@@ -107,12 +107,12 @@ public final class SpringBootAnalyzer {
         EndpointContext endpoint = new EndpointContext(handlerId, httpMethod, controller.rest(), redirect, result, source);
         for (String base : controller.bases()) {
             for (String child : methodPaths) {
-                addEndpoint(state, join(base, child), endpoint);
+                addEndpoint(state, join(base, child), endpoint, method, mapping);
             }
         }
     }
 
-    private void addEndpoint(AnalysisState state, String path, EndpointContext endpoint) {
+    private void addEndpoint(AnalysisState state, String path, EndpointContext endpoint, MethodDeclaration method, AnnotationExpr mapping) {
         String label = endpoint.httpMethod() + " " + path;
         String endpointId = ApplicationGraph.id(NodeType.ENDPOINT, label + ":" + endpoint.handlerId());
         Map<String, String> attributes = new TreeMap<>();
@@ -122,6 +122,7 @@ public final class SpringBootAnalyzer {
         addNode(state.nodes, new GraphNode(endpointId, NodeType.ENDPOINT, label, attributes, endpoint.source(), Confidence.CONFIRMED));
         state.endpointByRoute.putIfAbsent(path, endpointId);
         edge(state.edges, EdgeType.HANDLED_BY, endpointId, endpoint.handlerId(), Confidence.CONFIRMED, endpoint.source());
+        if (endpoint.rest()) state.apiContracts.add(state.contracts.contract(endpointId, method, mapping, endpoint.source(), List.of()));
         if (endpoint.rendersScreen()) {
             edge(state.edges, EdgeType.RENDERS, endpoint.handlerId(), screen(endpoint.result(), state.nodes, endpoint.source()), Confidence.CONFIRMED,
                     endpoint.source());
@@ -164,7 +165,37 @@ public final class SpringBootAnalyzer {
     private void addComponents(String text, String relative, AnalysisState state) {
         addComponents(text, relative, LINK_PATTERN, "LINK", NAVIGATION, null, state);
         addComponents(text, relative, NAVIGATE_PATTERN, "BUTTON", NAVIGATION, null, state);
-        addComponents(text, relative, API_PATTERN, "API_CALL", REQUEST, "endpoint", state);
+        addApiCalls(text, relative, state);
+    }
+
+    private void addApiCalls(String text, String relative, AnalysisState state) {
+        Matcher matcher = API_PATTERN.matcher(text);
+        while (matcher.find()) {
+            String target = matcher.group(1);
+            String action = isLoadEffect(text, matcher.start()) ? "PAGE_LOAD" : REQUEST;
+            String label = buttonLabel(text, matcher.start());
+            addComponent(new ComponentContext(relative, text, matcher.start(), label == null ? "API_CALL" : "BUTTON", action,
+                    target, target, label == null ? target : label), state);
+        }
+    }
+
+    private static String buttonLabel(String text, int offset) {
+        int start = text.lastIndexOf("<button", offset);
+        int jsxEnd = start < 0 ? -1 : text.indexOf("}>", start);
+        int end = jsxEnd < 0 ? (start < 0 ? -1 : text.indexOf('>', start)) : jsxEnd + 1;
+        if (start < 0 || end < offset) return null;
+        int close = text.indexOf("</button>", end);
+        if (close < 0) return null;
+        String label = text.substring(end + 1, close).replaceAll("<[^>]+>", "").trim();
+        return label.isEmpty() ? null : label;
+    }
+
+    /** A conservative source-level lifecycle check: calls outside a proved useEffect remain user requests. */
+    private static boolean isLoadEffect(String text, int offset) {
+        int effect = text.lastIndexOf("useEffect", offset);
+        if (effect < 0) return false;
+        int close = text.indexOf("}, []", effect);
+        return close >= offset;
     }
 
     private void addComponents(String text, String relative, Pattern pattern, String type, String action,
@@ -172,14 +203,14 @@ public final class SpringBootAnalyzer {
         Matcher matcher = pattern.matcher(text);
         while (matcher.find()) {
             String target = matcher.group(1);
-            addComponent(new ComponentContext(relative, text, matcher.start(), type, action, target, endpointGroup == null ? null : target), state);
+            addComponent(new ComponentContext(relative, text, matcher.start(), type, action, target, endpointGroup == null ? null : target, target), state);
         }
     }
 
     private void addComponent(ComponentContext component, AnalysisState state) {
         SourceLocation source = new SourceLocation(component.relative(), line(component.text(), component.offset()));
-        String id = ApplicationGraph.id(NodeType.COMPONENT, component.relative() + ":" + source.line() + ":" + component.target());
-        addNode(state.nodes, new GraphNode(id, NodeType.COMPONENT, component.target(),
+        String id = ApplicationGraph.id(NodeType.COMPONENT, component.relative() + ":" + component.offset() + ":" + component.target());
+        addNode(state.nodes, new GraphNode(id, NodeType.COMPONENT, component.label(),
                 Map.of("componentType", component.type(), "action", component.action(), "target", component.target()), source, Confidence.CONFIRMED));
         if (component.endpoint() != null) {
             String endpointId = state.endpointByRoute.get(component.endpoint());
@@ -347,7 +378,11 @@ public final class SpringBootAnalyzer {
             return;
         }
         Set<String> sources = Set.of(value.split("\\|"));
-        for (GraphNode component : state.nodes.stream().filter(node -> isNavigationComponent(node, sources)).toList()) {
+        for (GraphNode component : state.nodes.stream().filter(node -> isScreenComponent(node, sources)).toList()) {
+            if ("PAGE_LOAD".equals(component.attributes().get("action"))) {
+                endpointFor(component, state).ifPresent(endpoint -> edge(state.edges, EdgeType.CALLS, screen.id(), endpoint, Confidence.CONFIRMED, component.source()));
+                continue;
+            }
             edge(state.edges, EdgeType.CONTAINS, screen.id(), component.id(), Confidence.CONFIRMED, component.source());
             GraphNode next = screensByRoute.get(component.attributes().get("target"));
             if (next != null) {
@@ -356,9 +391,13 @@ public final class SpringBootAnalyzer {
         }
     }
 
-    private static boolean isNavigationComponent(GraphNode node, Set<String> sources) {
+    private static java.util.Optional<String> endpointFor(GraphNode component, AnalysisState state) {
+        return state.edges.stream().filter(edge -> edge.type() == EdgeType.TRIGGERS && edge.from().equals(component.id())).map(Relationship::to).findFirst();
+    }
+
+    private static boolean isScreenComponent(GraphNode node, Set<String> sources) {
         return node.type() == NodeType.COMPONENT && node.source() != null && sources.contains(node.source().file())
-                && NAVIGATION.equals(node.attributes().get("action"));
+                && (NAVIGATION.equals(node.attributes().get("action")) || REQUEST.equals(node.attributes().get("action")) || "PAGE_LOAD".equals(node.attributes().get("action")));
     }
 
     private static boolean isController(ClassOrInterfaceDeclaration type) {
@@ -462,6 +501,12 @@ public final class SpringBootAnalyzer {
         private final List<Relationship> edges = new ArrayList<>();
         private final Map<String, String> endpointByRoute = new HashMap<>();
         private final List<Diagnostic> diagnostics = new ArrayList<>();
+        private final List<ApplicationGraph.ApiContract> apiContracts = new ArrayList<>();
+        private final ApiContractExtractor contracts;
+
+        private AnalysisState(Path root, List<Path> javaFiles) {
+            contracts = new ApiContractExtractor(root, javaFiles);
+        }
     }
 
     private record ControllerContext(String typeName, String relative, List<String> bases, boolean rest) {
@@ -480,7 +525,7 @@ public final class SpringBootAnalyzer {
         }
     }
 
-    private record ComponentContext(String relative, String text, int offset, String type, String action, String target, String endpoint) {
+    private record ComponentContext(String relative, String text, int offset, String type, String action, String target, String endpoint, String label) {
     }
 
     private record ImportedComponent(String name, String source) {

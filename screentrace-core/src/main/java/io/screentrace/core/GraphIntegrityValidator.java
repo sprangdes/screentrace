@@ -15,8 +15,22 @@ public final class GraphIntegrityValidator {
     validateSchema(graph, errors);
     Map<String, GraphNode> nodes = validateNodes(graph.nodes(), errors);
     validateRelationships(graph.relationships(), nodes, errors);
+    validateApiContracts(graph.apiContracts(), nodes, errors);
     if (!errors.isEmpty()) {
       throw new IllegalStateException("Application graph validation failed:\n - " + String.join("\n - ", errors));
+    }
+  }
+
+  private static void validateApiContracts(List<ApplicationGraph.ApiContract> contracts,
+                                           Map<String, GraphNode> nodes, List<String> errors) {
+    Set<String> endpointIds = new HashSet<>();
+    for (ApplicationGraph.ApiContract contract : contracts) {
+      GraphNode endpoint = nodes.get(contract.endpointId());
+      if (endpoint == null || endpoint.type() != NodeType.ENDPOINT) {
+        errors.add("API contract references an unknown endpoint: " + contract.endpointId());
+      } else if (!endpointIds.add(contract.endpointId())) {
+        errors.add("Duplicate API contract: " + contract.endpointId());
+      }
     }
   }
 
@@ -87,7 +101,7 @@ public final class GraphIntegrityValidator {
       case INCLUDES -> requireTarget(edge, from, to, Set.of(NodeType.SCREEN, NodeType.VIEW, NodeType.TEMPLATE_FRAGMENT), Set.of(NodeType.VIEW, NodeType.TEMPLATE_FRAGMENT), errors);
       case BINDS_TO -> require(edge, from, to, NodeType.COMPONENT, NodeType.FORM_MODEL, errors);
       case FORWARDS_TO -> requireTarget(edge, from, to, Set.of(NodeType.HANDLER, NodeType.ENDPOINT), Set.of(NodeType.SCREEN, NodeType.VIEW), errors);
-      case CALLS -> requireTarget(edge, from, to, Set.of(NodeType.HANDLER, NodeType.COMPONENT), Set.of(NodeType.ENDPOINT, NodeType.INTEGRATION), errors);
+      case CALLS -> requireTarget(edge, from, to, Set.of(NodeType.SCREEN, NodeType.HANDLER, NodeType.COMPONENT), Set.of(NodeType.ENDPOINT, NodeType.INTEGRATION), errors);
       case DECLARED_BY, DEFINED_IN -> { /* Evidence-bearing provenance is intentionally framework-neutral. */ }
     }
   }

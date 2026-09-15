@@ -301,6 +301,10 @@ ScreenTrace shall eventually render the discovered screens and interactions as a
 
 ScreenTrace shall allow non-destructive modifications to the visual target state.
 
+### FR-013 Page API trace
+
+ScreenTrace shall show APIs relevant to a screen in two groups: APIs called as the page loads and APIs triggered by an interactive component. For statically resolvable Spring APIs, it shall show the request and response contract. Selecting a component-bound API, its component, or its navigation target shall keep the related items highlighted together.
+
 ---
 
 ## 8. Non-Functional Requirements
