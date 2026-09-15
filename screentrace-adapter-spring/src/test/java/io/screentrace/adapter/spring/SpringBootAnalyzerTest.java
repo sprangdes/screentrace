@@ -37,4 +37,32 @@ class SpringBootAnalyzerTest {
                 .filter(node -> node.type() == ApplicationGraph.NodeType.SCREEN)
                 .findFirst().orElseThrow().attributes().get("viewSource"));
     }
+
+    @Test
+    void capturesApiContractAndPageLoadCall() throws Exception {
+        Path root = Files.createTempDirectory("st-api");
+        Path source = root.resolve("src");
+        Files.createDirectories(source.resolve("main/java"));
+        Files.writeString(source.resolve("main/java/Api.java"), """
+            import org.springframework.web.bind.annotation.*;
+            @RestController @RequestMapping("/api") class Api {
+              @GetMapping("/pets") PetResponse[] list(){ return null; }
+              @PostMapping(value="/pets", produces="application/json") PetResponse create(@RequestBody CreatePetRequest request, @RequestParam(required=false) String source){ return null; }
+            }
+            class CreatePetRequest { String name; int age; } class PetResponse { long id; String name; }
+            """);
+        Files.writeString(source.resolve("App.tsx"), "import Home from './Home';\n<Route path=\"/\" element={<Home />} />");
+        Files.writeString(source.resolve("Home.tsx"), "import { useEffect } from 'react'; export function Home(){ useEffect(()=>{ fetch('/api/pets'); }, []); return <button onClick={()=>fetch('/api/pets',{method:'POST'})}>Save</button>; }");
+
+        ApplicationGraph graph = new SpringBootAnalyzer().analyze(new ProjectScanner().scan(root));
+
+        var endpoint = graph.nodes().stream().filter(node -> node.name().equals("POST /api/pets")).findFirst()
+                .orElseThrow(() -> new AssertionError(graph.nodes().toString()));
+        var contract = graph.apiContracts().stream().filter(item -> item.endpointId().equals(endpoint.id())).findFirst().orElseThrow();
+        assertTrue(contract.request().fields().stream().anyMatch(field -> field.name().equals("name") && field.location().equals("BODY")));
+        assertTrue(contract.responses().get(0).fields().stream().anyMatch(field -> field.name().equals("id")));
+        assertTrue(graph.relationships().stream().anyMatch(edge -> edge.type() == ApplicationGraph.EdgeType.CALLS));
+        var save = graph.nodes().stream().filter(node -> node.type() == ApplicationGraph.NodeType.COMPONENT && node.name().equals("Save")).findFirst().orElseThrow();
+        assertTrue(graph.relationships().stream().anyMatch(edge -> edge.type() == ApplicationGraph.EdgeType.TRIGGERS && edge.from().equals(save.id())));
+    }
 }

@@ -47,5 +47,14 @@ class ReportGeneratorTest {
     assertFalse(report.contains("/static-preview/manifest.json"));
     assertTrue(report.contains("thumbnailFor=screen=>previewScreens[screen.id]?.screenshot"));
     assertTrue(report.contains("screenshots/static-"));
+    assertTrue(report.contains("API — 頁面載入時呼叫"));
+    assertTrue(report.contains("API — 由按鈕／元件觸發"));
+    assertTrue(report.contains("API Detail"));
+    assertTrue(report.contains("showApiDetail"));
+    assertTrue(report.contains("returnToButton?'Button Detail':'Page Detail"));
+    assertTrue(report.contains("graphComponentFor"));
+    assertTrue(report.contains("staticComponentFor"));
+    assertTrue(report.contains("selectedEndpoint"));
+    assertTrue(report.contains("linkedComponentKey"));
   }
 }

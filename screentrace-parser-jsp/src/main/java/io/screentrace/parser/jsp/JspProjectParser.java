@@ -52,18 +52,34 @@ public final class JspProjectParser {
     JspAnalysis.ViewKind kind = relative.endsWith(".jspf") ? JspAnalysis.ViewKind.JSPF : JspAnalysis.ViewKind.JSP;
     views.add(new JspAnalysis.View(relative, kind, new SourceLocation(relative, 1)));
     Map<String, String> urls = new HashMap<>();
+    String activeFormTarget = null;
+    String activeFormMethod = null;
     for (MarkupTag tag : MarkupTag.scan(text)) {
       SourceLocation source = new SourceLocation(relative, tag.line());
-      switch (tag.name().toLowerCase(Locale.ROOT)) {
+      String tagName = tag.name().toLowerCase(Locale.ROOT);
+      if (tag.closing()) {
+        if (tagName.equals("form") || tagName.equals("form:form") || tagName.equals("html:form")) {
+          activeFormTarget = null;
+          activeFormMethod = null;
+        }
+        continue;
+      }
+      switch (tagName) {
         case "spring:url" -> registerUrl(tag, urls);
         case "jsp:include", "@include" -> include(relative, target(tag, "page", "file"), source, includes, diagnostics);
-        case "form", "html:form", "form:form" -> interaction(relative, JspAnalysis.InteractionType.FORM, tag,
-            resolvedTarget(target(tag, "action"), urls), method(tag), source, interactions, diagnostics);
+        case "form", "html:form", "form:form" -> {
+          activeFormTarget = resolvedTarget(target(tag, "action"), urls);
+          activeFormMethod = method(tag);
+          interaction(relative, JspAnalysis.InteractionType.FORM, tag, activeFormTarget, activeFormMethod, source, interactions, diagnostics);
+        }
         case "a", "html:link" -> interaction(relative, JspAnalysis.InteractionType.LINK, tag,
             resolvedTarget(target(tag, "href", "page", "action"), urls), "GET", source, interactions, diagnostics);
-        case "button", "input", "html:submit", "html:button", "form:button" -> interaction(relative,
-            JspAnalysis.InteractionType.BUTTON, tag, resolvedTarget(target(tag, "formaction", "action"), urls), null, source,
-            interactions, diagnostics);
+        case "button", "input", "html:submit", "html:button", "form:button" -> {
+          String action = resolvedTarget(target(tag, "formaction", "action"), urls);
+          if (action == null && submitsForm(tag) && activeFormTarget != null) action = activeFormTarget;
+          String label = interactionLabel(tag, text);
+          interaction(relative, JspAnalysis.InteractionType.BUTTON, label, action, activeFormMethod, source, interactions, diagnostics);
+        }
         default -> { }
       }
     }
@@ -77,7 +93,11 @@ public final class JspProjectParser {
 
   private static String resolvedTarget(String target, Map<String, String> urls) {
     if (target == null || !target.startsWith("${") || !target.endsWith("}")) return target;
-    return urls.getOrDefault(target.substring(2, target.length() - 1), target);
+    String expression = target.substring(2, target.length() - 1).trim();
+    String variable = expression;
+    int argumentStart = expression.lastIndexOf('(');
+    if (argumentStart >= 0 && expression.endsWith(")")) variable = expression.substring(argumentStart + 1, expression.length() - 1).trim();
+    return urls.getOrDefault(variable, target);
   }
 
   private static void include(String sourcePath, String target, SourceLocation source, List<JspAnalysis.Include> includes,
@@ -89,9 +109,15 @@ public final class JspProjectParser {
   private static void interaction(String viewPath, JspAnalysis.InteractionType type, MarkupTag tag, String target,
                                   String method, SourceLocation source, List<JspAnalysis.Interaction> interactions,
                                   List<Diagnostic> diagnostics) {
+    interaction(viewPath, type, label(tag), target, method, source, interactions, diagnostics);
+  }
+
+  private static void interaction(String viewPath, JspAnalysis.InteractionType type, String label, String target,
+                                  String method, SourceLocation source, List<JspAnalysis.Interaction> interactions,
+                                  List<Diagnostic> diagnostics) {
     if (target == null) return;
     Confidence confidence = literal(target) ? Confidence.CONFIRMED : Confidence.UNRESOLVED;
-    interactions.add(new JspAnalysis.Interaction(viewPath, type, label(tag), target, method, source, confidence));
+    interactions.add(new JspAnalysis.Interaction(viewPath, type, label, target, method, source, confidence));
     if (confidence == Confidence.UNRESOLVED) diagnostics.add(unresolved("JSP target cannot be resolved statically: " + target, source));
   }
 
@@ -111,6 +137,20 @@ public final class JspProjectParser {
   private static String label(MarkupTag tag) {
     String value = target(tag, "value", "title", "id", "name", "property");
     return value == null || value.isBlank() ? tag.name() : value;
+  }
+
+  private static boolean submitsForm(MarkupTag tag) {
+    String type = tag.attribute("type");
+    return type == null || type.isBlank() || type.equalsIgnoreCase("submit");
+  }
+
+  private static String interactionLabel(MarkupTag tag, String source) {
+    String fallback = label(tag);
+    if (!fallback.equals("button") || !tag.name().equalsIgnoreCase("button")) return fallback;
+    int close = source.indexOf("</button", tag.end());
+    if (close < 0) return fallback;
+    String text = source.substring(tag.end() + 1, close).replaceAll("<[^>]+>", "").strip();
+    return text.isBlank() ? fallback : text;
   }
 
   private static boolean literal(String value) {

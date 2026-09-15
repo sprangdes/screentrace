@@ -45,7 +45,7 @@ public final class SpringMvcAnalyzer {
     private static final Set<String> PATH_NAMES = Set.of("value", "path");
 
     public ApplicationGraph analyze(ProjectInventory inventory) throws IOException {
-        State state = new State(inventory.root());
+        State state = new State(inventory.root(), inventory.javaFiles());
         JspAnalysis jsp = new JspProjectParser().analyze(inventory.root(), inventory.files());
         for (JspAnalysis.View view : jsp.views()) if (view.kind() == JspAnalysis.ViewKind.JSP) addJspScreen(inventory.root().resolve(view.path()), state);
         addJspFragments(jsp, state);
@@ -57,7 +57,7 @@ public final class SpringMvcAnalyzer {
         addJspIncludes(jsp, state);
         state.diagnostics.addAll(jsp.diagnostics());
         return new ApplicationGraph(new ApplicationGraph.Application(inventory.root().getFileName().toString(), inventory.root().toString(), inventory.technologies()),
-                state.nodes, state.edges, state.diagnostics);
+                state.nodes, state.edges, state.diagnostics, state.apiContracts, ApplicationGraph.CURRENT_SCHEMA_VERSION);
     }
 
     private static void discoverExceptionView(ProjectInventory inventory, State state) {
@@ -110,13 +110,14 @@ public final class SpringMvcAnalyzer {
         try {
             for (ClassOrInterfaceDeclaration type : StaticJavaParser.parse(file).findAll(ClassOrInterfaceDeclaration.class)) {
                 AnnotationExpr controller = annotation(type, "Controller");
-                if (controller == null || annotation(type, "RestController") != null) continue;
+                boolean rest = annotation(type, "RestController") != null;
+                if (controller == null && !rest) continue;
                 List<String> bases = paths(annotation(type, "RequestMapping"));
                 if (bases.isEmpty()) bases = List.of("");
                 Map<String, String> constants = viewConstants(type);
                 for (MethodDeclaration method : type.getMethods()) {
                     AnnotationExpr mapping = method.getAnnotations().stream().filter(a -> MAPPINGS.contains(a.getNameAsString())).findFirst().orElse(null);
-                    if (mapping != null) addMapping(type, method, mapping, relative, bases, constants, state);
+                    if (mapping != null) addMapping(type, method, mapping, relative, bases, constants, rest, state);
                 }
             }
         } catch (IOException | RuntimeException exception) {
@@ -124,24 +125,25 @@ public final class SpringMvcAnalyzer {
         }
     }
 
-    private static void addMapping(ClassOrInterfaceDeclaration type, MethodDeclaration method, AnnotationExpr mapping, String relative, List<String> bases, Map<String, String> constants, State state) {
+    private static void addMapping(ClassOrInterfaceDeclaration type, MethodDeclaration method, AnnotationExpr mapping, String relative, List<String> bases, Map<String, String> constants, boolean rest, State state) {
         SourceLocation source = new SourceLocation(relative, method.getBegin().map(p -> p.line).orElse(1));
         String handlerName = type.getNameAsString() + "." + method.getNameAsString() + "()";
         String handlerId = ApplicationGraph.id(NodeType.HANDLER, relative + ":" + handlerName + ":" + source.line());
         addNode(state, new GraphNode(handlerId, NodeType.HANDLER, handlerName, Map.of("class", type.getNameAsString(), "method", method.getNameAsString()), source, Confidence.CONFIRMED));
         List<String> children = paths(mapping);
         if (children.isEmpty()) children = List.of("");
-        List<String> views = returnedViews(method, constants);
+        List<String> views = rest ? List.of() : returnedViews(method, constants);
         for (String base : bases) for (String child : children) {
             String path = join(base, child);
             String endpointId = ApplicationGraph.id(NodeType.ENDPOINT, httpMethod(mapping) + " " + path + ":" + handlerId);
             addNode(state, new GraphNode(endpointId, NodeType.ENDPOINT, httpMethod(mapping) + " " + path,
-                    Map.of("httpMethod", httpMethod(mapping), "path", path, "category", !views.isEmpty() && views.stream().allMatch(view -> view.startsWith("redirect:")) ? "REDIRECT" : "MVC_SCREEN"), source, Confidence.CONFIRMED));
+                    Map.of("httpMethod", httpMethod(mapping), "path", path, "category", rest ? "REST_API" : !views.isEmpty() && views.stream().allMatch(view -> view.startsWith("redirect:")) ? "REDIRECT" : "MVC_SCREEN"), source, Confidence.CONFIRMED));
             state.endpointByPath.putIfAbsent(path, endpointId);
             edge(state, EdgeType.HANDLED_BY, endpointId, handlerId, Confidence.CONFIRMED, source);
+            state.apiContracts.add(state.contracts.contract(endpointId, method, mapping, source, views));
             for (String view : views.stream().filter(view -> !view.startsWith("redirect:")).distinct().toList()) edge(state, EdgeType.RENDERS, handlerId, screenForView(view, source, state), resolvedScreenId(view, state) != null ? Confidence.CONFIRMED : Confidence.INFERRED, source);
-            if (views.isEmpty() && state.defaultExceptionView != null) edge(state, EdgeType.RENDERS, handlerId, screenForView(state.defaultExceptionView, source, state), Confidence.INFERRED, source);
-            if (views.isEmpty()) state.diagnostics.add(new Diagnostic("Handler return view cannot be resolved statically: " + handlerName, Confidence.UNRESOLVED, source));
+            if (!rest && views.isEmpty() && state.defaultExceptionView != null) edge(state, EdgeType.RENDERS, handlerId, screenForView(state.defaultExceptionView, source, state), Confidence.INFERRED, source);
+            if (!rest && views.isEmpty()) state.diagnostics.add(new Diagnostic("Handler return view cannot be resolved statically: " + handlerName, Confidence.UNRESOLVED, source));
         }
     }
 
@@ -380,10 +382,11 @@ public final class SpringMvcAnalyzer {
     private static void edge(State state, EdgeType type, String from, String to, Confidence confidence, SourceLocation source) { String id = ApplicationGraph.id(NodeType.COMPONENT, type + ":" + from + ":" + to); if (state.edges.stream().noneMatch(e -> e.id().equals(id))) state.edges.add(new Relationship(id, type, from, to, confidence, source)); }
     private static final class State {
         private final Path root; private final List<GraphNode> nodes = new ArrayList<>(); private final List<Relationship> edges = new ArrayList<>(); private final List<Diagnostic> diagnostics = new ArrayList<>();
+        private final List<ApplicationGraph.ApiContract> apiContracts = new ArrayList<>(); private final ApiContractExtractor contracts;
         private final Map<String, String> endpointByPath = new HashMap<>(); private final Map<String, String> screensByView = new HashMap<>();
         private final Map<String, String> fragmentsByPath = new HashMap<>(); private final List<ViewResolver> viewResolvers = new ArrayList<>();
         private String defaultExceptionView;
-        private State(Path root) { this.root = root; }
+        private State(Path root, List<Path> javaFiles) { this.root = root; this.contracts = new ApiContractExtractor(root, javaFiles); }
     }
     private record ViewResolver(String prefix, String suffix) { }
 }

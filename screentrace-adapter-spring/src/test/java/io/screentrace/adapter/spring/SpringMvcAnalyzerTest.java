@@ -62,6 +62,24 @@ class SpringMvcAnalyzerTest {
     }
 
     @Test
+    void capturesImplicitModelAttributeRequestAndViewResponse() throws Exception {
+        Path root = Files.createTempDirectory("st-mvc-contract");
+        Path java = root.resolve("OwnerController.java");
+        Files.writeString(java, """
+            import org.springframework.stereotype.*; import org.springframework.web.bind.annotation.*;
+            @Controller class OwnerController { @GetMapping("/owners") String find(Owner owner){ return "owners/list"; } }
+            class Person { String lastName; } class Owner extends Person { String address; }
+            """);
+
+        ApplicationGraph graph = new SpringMvcAnalyzer().analyze(new ProjectScanner().scan(root));
+
+        var endpoint = graph.nodes().stream().filter(node -> node.name().equals("GET /owners")).findFirst().orElseThrow();
+        var contract = graph.apiContracts().stream().filter(item -> item.endpointId().equals(endpoint.id())).findFirst().orElseThrow();
+        assertTrue(contract.request().fields().stream().anyMatch(field -> field.name().equals("lastName") && field.location().equals("QUERY")));
+        assertTrue(contract.responses().get(0).bodyType().contains("owners/list"));
+    }
+
+    @Test
     void resolvesXmlControllerViewResolverTilesAndSpringUrlTag() throws Exception {
         Path root = Files.createTempDirectory("st-mvc-xml");
         Path config = root.resolve("src/main/webapp/WEB-INF/spring-mvc.xml");

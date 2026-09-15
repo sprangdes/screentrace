@@ -21,6 +21,8 @@ class JspProjectParserTest {
         <%@ include file="/WEB-INF/jsp/common/filters.jspf" %>
         <spring:url value="/orders/search" var="searchUrl"/>
         <a href="${searchUrl}">Search</a>
+        <spring:url value="/owners" var="formUrl"/>
+        <form:form action="${fn:escapeXml(formUrl)}" method="get"><button type="submit">Find Owner</button></form:form>
         <form:form action="/orders/search" method="post"><button formaction="/orders/export">Export</button></form:form>
         <html:link page="/orders/history">History</html:link>
         <a href="${dynamicUrl}">Dynamic</a>
@@ -40,6 +42,10 @@ class JspProjectParserTest {
     assertEquals("/WEB-INF/jsp/common/filters.jspf", analysis.includes().get(0).targetPath());
     assertTrue(analysis.interactions().stream().anyMatch(item -> item.target().equals("/orders/search") && item.httpMethod().equals("POST")));
     assertTrue(analysis.interactions().stream().anyMatch(item -> item.target().equals("/orders/search") && item.type() == JspAnalysis.InteractionType.LINK));
+    assertTrue(analysis.interactions().stream().anyMatch(item -> item.target().equals("/owners") && item.type() == JspAnalysis.InteractionType.FORM));
+    assertTrue(analysis.interactions().stream().anyMatch(item -> item.target().equals("/owners")
+        && item.type() == JspAnalysis.InteractionType.BUTTON && item.label().equals("Find Owner")
+        && item.httpMethod().equals("GET")));
     assertTrue(analysis.interactions().stream().anyMatch(item -> item.target().equals("/orders/export")));
     assertTrue(analysis.interactions().stream().anyMatch(item -> item.target().equals("/orders/history")));
     assertTrue(analysis.interactions().stream().anyMatch(item -> item.target().equals("${dynamicUrl}") && item.confidence() == Confidence.UNRESOLVED));

@@ -14,7 +14,7 @@ class ApplicationGraphTest {
     var graph = new ApplicationGraph(new ApplicationGraph.Application("sample", "/sample", List.of("Java")), List.of(new ApplicationGraph.GraphNode(id, ApplicationGraph.NodeType.SCREEN, "a", Map.of(), null, ApplicationGraph.Confidence.CONFIRMED)), List.of(), List.of());
     String serialized = new ObjectMapper().writeValueAsString(graph);
     assertTrue(serialized.contains("CONFIRMED"));
-    assertTrue(serialized.contains("\"schemaVersion\":\"2.0\""));
+    assertTrue(serialized.contains("\"schemaVersion\":\"2.1\""));
   }
 
   @Test void deserializesAnEmptyGraphWhoseEmptyListsWereOmitted() {

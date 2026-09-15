@@ -13,9 +13,9 @@ import java.util.*;
  */
 @JsonInclude(JsonInclude.Include.NON_EMPTY)
 public record ApplicationGraph(Application application, List<GraphNode> nodes, List<Relationship> relationships,
-                               List<Diagnostic> diagnostics, String schemaVersion) {
-  public static final String CURRENT_SCHEMA_VERSION = "2.0";
-  public static final Set<String> SUPPORTED_SCHEMA_VERSIONS = Set.of("1.0", CURRENT_SCHEMA_VERSION);
+                               List<Diagnostic> diagnostics, List<ApiContract> apiContracts, String schemaVersion) {
+  public static final String CURRENT_SCHEMA_VERSION = "2.1";
+  public static final Set<String> SUPPORTED_SCHEMA_VERSIONS = Set.of("1.0", "2.0", CURRENT_SCHEMA_VERSION);
 
   @JsonCreator
   public ApplicationGraph {
@@ -23,12 +23,19 @@ public record ApplicationGraph(Application application, List<GraphNode> nodes, L
     nodes = sorted(nodes);
     relationships = sorted(relationships);
     diagnostics = sorted(diagnostics);
+    apiContracts = sorted(apiContracts);
   }
 
   /** Source-compatible constructor for adapters written against schema 1. */
   public ApplicationGraph(Application application, List<GraphNode> nodes, List<Relationship> relationships,
                           List<Diagnostic> diagnostics) {
-    this(application, nodes, relationships, diagnostics, CURRENT_SCHEMA_VERSION);
+    this(application, nodes, relationships, diagnostics, List.of(), CURRENT_SCHEMA_VERSION);
+  }
+
+  /** Source-compatible constructor for schema 2 producers that do not emit API contracts. */
+  public ApplicationGraph(Application application, List<GraphNode> nodes, List<Relationship> relationships,
+                          List<Diagnostic> diagnostics, String schemaVersion) {
+    this(application, nodes, relationships, diagnostics, List.of(), schemaVersion);
   }
 
   private static String normalizeSchemaVersion(String version) {
@@ -118,6 +125,33 @@ public record ApplicationGraph(Application application, List<GraphNode> nodes, L
   }
 
   public record SourceLocation(String file, int line) { }
+
+  /** Static request/response contract for an {@link NodeType#ENDPOINT}. */
+  public record ApiContract(String endpointId, Request request, List<Response> responses,
+                            SourceLocation source, Confidence confidence) implements Comparable<ApiContract> {
+    public ApiContract {
+      responses = sorted(responses);
+    }
+
+    @Override public int compareTo(ApiContract other) { return endpointId.compareTo(other.endpointId); }
+  }
+
+  public record Request(String contentType, String bodyType, List<Field> fields) {
+    public Request { fields = sorted(fields); }
+  }
+
+  public record Response(String status, String contentType, String bodyType, List<Field> fields,
+                         SourceLocation source, Confidence confidence) implements Comparable<Response> {
+    public Response { fields = sorted(fields); }
+
+    @Override public int compareTo(Response other) { return status.compareTo(other.status); }
+  }
+
+  /** A request parameter or statically discoverable DTO property. */
+  public record Field(String name, String type, String location, boolean required,
+                      SourceLocation source, Confidence confidence) implements Comparable<Field> {
+    @Override public int compareTo(Field other) { return (location + ":" + name).compareTo(other.location + ":" + other.name); }
+  }
 
   public enum NodeType {
     SCREEN, ENDPOINT, HANDLER, COMPONENT, VIEW,
