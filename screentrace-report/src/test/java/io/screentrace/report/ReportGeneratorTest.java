@@ -43,6 +43,11 @@ class ReportGeneratorTest {
     assertEquals("screenshots/orders.png", preview.path("screens").get(1).path("screenshot").asText());
     assertEquals("screen:done", preview.path("components").get(0).path("targetScreenId").asText());
     String report = Files.readString(output.resolve("report/index.html"));
+    String theme = Files.readString(output.resolve("report/technical-clay.css"));
+    assertTrue(report.contains("technical-clay.css"));
+    assertTrue(theme.contains("--color-primary: #6D5CE7"));
+    assertTrue(theme.contains(".map-canvas { background-image"));
+    assertTrue(theme.contains(".content.focused #viewport { background-image: none"));
     assertTrue(report.contains("/preview-model.json"));
     assertFalse(report.contains("/static-preview/manifest.json"));
     assertTrue(report.contains("thumbnailFor=screen=>previewScreens[screen.id]?.screenshot"));

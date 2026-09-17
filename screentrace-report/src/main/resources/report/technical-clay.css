@@ -1,0 +1,121 @@
+/* ScreenTrace Technical Clay: portable, offline report theme. */
+:root {
+  --color-bg: #F5F3FA;
+  --color-surface: rgba(255, 255, 255, .76);
+  --color-surface-strong: #FFFFFF;
+  --color-recessed: #ECE9F2;
+  --color-text: #292632;
+  --color-text-secondary: #656170;
+  --color-text-muted: #817C89;
+  --color-primary: #6D5CE7;
+  --color-primary-light: #8D7CF0;
+  --color-primary-dark: #5546CC;
+  --color-info: #4F8EF7;
+  --color-keep: #16A66A;
+  --color-remove: #E05263;
+  --color-undecided: #D99A2B;
+  --radius-shell: 24px;
+  --radius-card: 20px;
+  --radius-control: 14px;
+  --radius-input: 12px;
+  --radius-small: 8px;
+  --shadow-surface: 10px 10px 24px rgba(116, 106, 135, .12), -8px -8px 20px rgba(255, 255, 255, .78);
+  --shadow-card: 8px 10px 22px rgba(97, 88, 118, .14), -6px -6px 16px rgba(255, 255, 255, .84), inset 1px 1px 2px rgba(255, 255, 255, .75);
+  --shadow-button: 5px 7px 14px rgba(81, 67, 130, .20), -4px -4px 10px rgba(255, 255, 255, .55);
+  --shadow-pressed: inset 4px 4px 9px rgba(111, 103, 126, .16), inset -4px -4px 9px rgba(255, 255, 255, .85);
+  --transition-fast: 160ms;
+  --transition-normal: 220ms;
+}
+
+html, body { background: var(--color-bg) !important; color: var(--color-text) !important; font-family: "DM Sans", ui-sans-serif, system-ui, sans-serif !important; }
+body { background: radial-gradient(circle at 10% 10%, rgba(109, 92, 231, .08), transparent 32%), radial-gradient(circle at 90% 85%, rgba(79, 142, 247, .06), transparent 30%), var(--color-bg) !important; }
+button, input, output { font: inherit; }
+button { min-height: 36px; }
+button:focus-visible, [tabindex]:focus-visible { outline: 3px solid rgba(79, 142, 247, .72) !important; outline-offset: 3px; }
+.shell { padding: 14px; background: transparent !important; }
+header#title { height: 64px !important; padding: 12px 18px !important; border: 0 !important; border-radius: var(--radius-shell) var(--radius-shell) 0 0; color: var(--color-text) !important; background: var(--color-surface) !important; box-shadow: var(--shadow-surface); font-family: Nunito, ui-rounded, system-ui, sans-serif !important; font-size: 20px !important; }
+#title > span { font-weight: 800; letter-spacing: -.02em; }
+#title > button { min-height: 40px; border: 0 !important; border-radius: var(--radius-control) !important; padding: 9px 14px !important; color: #fff !important; background: linear-gradient(135deg, var(--color-primary-light), var(--color-primary-dark)) !important; box-shadow: var(--shadow-button) !important; font-weight: 750 !important; transition: transform var(--transition-fast), box-shadow var(--transition-fast) !important; }
+#title > button:hover { transform: translateY(-2px); }
+#title > button:active { transform: scale(.97); box-shadow: var(--shadow-pressed) !important; }
+.content { height: calc(100vh - 92px) !important; grid-template-columns: minmax(660px, 1fr) 350px !important; border-radius: 0 0 var(--radius-shell) var(--radius-shell); overflow: hidden; background: rgba(245, 243, 250, .62) !important; }
+.content.overview { grid-template-columns: minmax(900px, 1fr) !important; }
+main { background: transparent !important; }
+#viewport { padding: 18px !important; }
+main > #heading, #viewport > #heading { color: var(--color-text) !important; font-family: Nunito, ui-rounded, system-ui, sans-serif !important; font-size: 18px !important; font-weight: 800 !important; }
+.heading-title { color: var(--color-text) !important; }
+h2, h3 { color: var(--color-text) !important; font-family: Nunito, ui-rounded, system-ui, sans-serif !important; }
+.detail { border: 0 !important; border-left: 1px solid rgba(109, 92, 231, .12) !important; padding: 18px !important; color: var(--color-text-secondary) !important; background: var(--color-surface) !important; box-shadow: -10px 0 24px rgba(116, 106, 135, .08) !important; }
+.detail > h2 { color: var(--color-text) !important; border-color: rgba(109, 92, 231, .14) !important; }
+.detail-identifier, .meta { color: var(--color-text-secondary) !important; font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace !important; }
+.detail-section { border: 0 !important; border-radius: var(--radius-input) !important; background: var(--color-recessed) !important; box-shadow: var(--shadow-pressed) !important; }
+.detail-section h3 { color: var(--color-text-muted) !important; }
+.detail-section .link, .link { border: 1px solid rgba(109, 92, 231, .18) !important; border-radius: var(--radius-small) !important; color: var(--color-primary-dark) !important; background: rgba(255, 255, 255, .72) !important; box-shadow: none !important; font-weight: 700 !important; transition: background var(--transition-fast), transform var(--transition-fast) !important; }
+.detail-section .link:hover, .link:hover { color: var(--color-primary-dark) !important; background: #fff !important; transform: translateY(-1px); }
+.back { border: 0 !important; border-radius: var(--radius-control) !important; color: var(--color-primary-dark) !important; background: var(--color-recessed) !important; box-shadow: var(--shadow-pressed) !important; font-weight: 700 !important; }
+.back:hover { background: #e6e2ef !important; }
+.css-properties { border: 0 !important; border-radius: var(--radius-small) !important; background: rgba(255, 255, 255, .6) !important; }
+.css-properties dt, .css-properties dd { border-color: rgba(109, 92, 231, .12) !important; color: var(--color-text-secondary) !important; font-family: "JetBrains Mono", ui-monospace, monospace !important; }
+.css-properties dt { color: var(--color-primary-dark) !important; background: rgba(109, 92, 231, .08) !important; }
+
+/* Dense, IDE-like explorer tree. */
+.folder-browser { border: 0 !important; border-radius: var(--radius-shell) !important; background: var(--color-surface) !important; box-shadow: var(--shadow-surface) !important; }
+.folder-nav { background: rgba(236, 233, 242, .74) !important; border-color: rgba(109, 92, 231, .12) !important; }
+.folder-nav-title { color: var(--color-text) !important; border: 0 !important; }
+.folder-nav-row .folder-nav-item, .folder-screen-item { color: var(--color-text-secondary) !important; }
+.folder-nav-row .folder-nav-item:hover, .folder-screen-item:hover { color: var(--color-text) !important; background: rgba(109, 92, 231, .10) !important; }
+.folder-nav-row .folder-nav-item.active, .folder-screen-item.active { color: var(--color-primary-dark) !important; background: rgba(109, 92, 231, .15) !important; box-shadow: inset 2px 0 var(--color-primary) !important; }
+.folder-toggle { color: var(--color-text-muted) !important; }
+.folder-toggle:hover { color: var(--color-primary-dark) !important; background: rgba(109, 92, 231, .08) !important; }
+.folder-content { background: transparent !important; }
+.breadcrumb { color: var(--color-text-muted) !important; }
+.breadcrumb button { color: var(--color-primary-dark) !important; font-weight: 700 !important; }
+.folder-summary, .browser-section-heading h3 { color: var(--color-text) !important; }
+.screen-section { border-color: rgba(109, 92, 231, .12) !important; }
+.grid-controls { border: 0 !important; border-radius: var(--radius-input) !important; background: var(--color-recessed) !important; box-shadow: var(--shadow-pressed) !important; }
+.grid-controls button { color: var(--color-primary-dark) !important; }
+.grid-controls button:hover:not(:disabled) { border-color: transparent !important; background: rgba(109, 92, 231, .12) !important; color: var(--color-primary-dark) !important; }
+.grid-controls output { color: var(--color-text-secondary) !important; }
+.folder-tile { border: 0 !important; border-radius: 18px !important; color: var(--color-text) !important; background: rgba(255, 255, 255, .65) !important; box-shadow: var(--shadow-card) !important; }
+.folder-tile:hover { border-color: transparent !important; background: #fff !important; transform: translateY(-2px); }
+.folder-tile span { color: var(--color-text-secondary) !important; }
+
+/* Raised screen cards; the screenshot remains the visual anchor. */
+.node { border: 0 !important; border-radius: var(--radius-card) !important; padding: 7px !important; color: var(--color-text) !important; background: var(--color-surface-strong) !important; box-shadow: var(--shadow-card) !important; transition: transform var(--transition-fast), box-shadow var(--transition-fast), opacity var(--transition-fast), filter var(--transition-fast) !important; }
+.node:hover { transform: translateY(-3px); box-shadow: 10px 13px 25px rgba(97, 88, 118, .18), -6px -6px 16px rgba(255, 255, 255, .84) !important; }
+.node.selected { outline: 3px solid var(--color-primary) !important; outline-offset: 2px; }
+.shot { border: 1px solid rgba(41, 38, 50, .12) !important; border-radius: 14px 14px 8px 8px; background: #fff !important; }
+.route { min-height: 58px !important; color: var(--color-text) !important; font-family: "JetBrains Mono", ui-monospace, monospace !important; font-size: 13px !important; font-weight: 650 !important; }
+.flow .node, .map-canvas .node { border: 1px solid rgba(109, 92, 231, .14) !important; }
+.map-canvas { background-image: radial-gradient(rgba(91, 84, 112, .14) 1px, transparent 1px) !important; background-size: 24px 24px !important; }
+.content.focused #viewport { background-image: none !important; }
+.connectors .connector-line { stroke: #817C89 !important; }
+.connectors .connector-line.highlight { stroke: var(--color-info) !important; }
+.focus-caption { color: var(--color-text-secondary) !important; letter-spacing: .08em; text-transform: uppercase; }
+.zoom-controls { border: 0 !important; border-radius: var(--radius-control) !important; background: var(--color-surface-strong) !important; box-shadow: var(--shadow-card) !important; }
+.zoom-controls button, .zoom-controls output { color: var(--color-primary-dark) !important; }
+.zoom-controls output { border-color: rgba(109, 92, 231, .14) !important; color: var(--color-text-secondary) !important; font-family: "JetBrains Mono", ui-monospace, monospace !important; }
+.zoom-controls button:hover { background: rgba(109, 92, 231, .10) !important; }
+.zoom-controls button:active { box-shadow: var(--shadow-pressed) !important; }
+
+/* Page chrome only: no styles leak into the embedded analyzed page. */
+.page { padding: 26px 42px !important; }
+.page-frame { border-radius: var(--radius-card) !important; background: #fff !important; box-shadow: var(--shadow-surface) !important; }
+.hotspot:hover, .hotspot.selected { border-color: var(--color-info) !important; background: rgba(79, 142, 247, .13) !important; }
+.hotspot.linked-highlight { border-color: var(--color-info) !important; background: rgba(79, 142, 247, .18) !important; }
+
+/* The review state is semantic, tactile, and does not depend on colour alone. */
+.review-toolbar { gap: 5px !important; padding: 4px !important; border-radius: var(--radius-input); background: var(--color-recessed); box-shadow: var(--shadow-pressed); }
+.review-toggle, .review-action, .review-status-action { min-height: 38px; border: 0 !important; border-radius: 10px !important; color: var(--color-text-secondary) !important; background: rgba(255, 255, 255, .72) !important; box-shadow: 2px 3px 7px rgba(97, 88, 118, .10) !important; font-weight: 750 !important; }
+.review-toggle.active { color: var(--color-primary-dark) !important; background: rgba(109, 92, 231, .16) !important; }
+.review-action.active-confirmed, .review-status-action.confirmed.selected { color: #fff !important; background: var(--color-keep) !important; box-shadow: var(--shadow-pressed) !important; }
+.review-action.active-removed, .review-status-action.removed.selected { color: #fff !important; background: var(--color-remove) !important; box-shadow: var(--shadow-pressed) !important; }
+.review-action.active-unconfirmed, .review-status-action.unconfirmed.selected { color: #5b4210 !important; background: #f5d99b !important; box-shadow: var(--shadow-pressed) !important; }
+.review-status-action.muted { opacity: .58 !important; }
+.review-confirmed:after { background: rgba(22, 166, 106, .52) !important; }
+.review-removed:after { background: rgba(224, 82, 99, .52) !important; }
+.review-mode .node:hover, .review-mode .hotspot:hover { outline-color: var(--color-undecided) !important; }
+
+@media (max-width: 1050px) { .content { grid-template-columns: minmax(560px, 1fr) 310px !important; } .page { padding: 20px !important; } }
+@media (max-width: 850px) { .shell { padding: 0; } header#title { border-radius: 0; } .content { height: auto !important; min-height: calc(100vh - 64px); } .detail { border-left: 0 !important; border-top: 1px solid rgba(109, 92, 231, .12) !important; } }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; } }
