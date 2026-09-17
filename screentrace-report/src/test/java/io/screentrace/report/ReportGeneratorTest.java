@@ -56,5 +56,7 @@ class ReportGeneratorTest {
     assertTrue(report.contains("staticComponentFor"));
     assertTrue(report.contains("selectedEndpoint"));
     assertTrue(report.contains("linkedComponentKey"));
+    assertTrue(report.contains("screenFlowHistory"));
+    assertTrue(report.contains("returnToPreviousFlow"));
   }
 }
