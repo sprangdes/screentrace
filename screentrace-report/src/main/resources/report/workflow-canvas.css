@@ -42,14 +42,14 @@
   --highlight-green: #22C98A;
   --highlight-green-soft: rgb(34 201 138 / .12);
   --highlight-green-border: #22C98A;
-  --bottom-control-bg: rgb(255 255 255 / .96);
-  --bottom-control-fg: #555A5F;
+  --bottom-control-bg: #FFFFFF;
+  --bottom-control-fg: #3E4348;
   --bottom-control-active-bg: #1B1C1F;
   --bottom-control-active-fg: #FFFFFF;
   --bottom-control-radius: 16px;
   --bottom-control-height: 44px;
   --bottom-control-padding-x: 14px;
-  --bottom-control-shadow: 0 8px 26px rgba(20, 24, 30, .08);
+  --bottom-control-shadow: 0 10px 28px rgba(20, 24, 30, .13), 0 2px 7px rgba(20, 24, 30, .08);
   --bottom-control-hover-bg: #F3F4F4;
   --transition-fast: 180ms ease-out;
 }
@@ -142,20 +142,20 @@ main > #heading, #viewport > #heading { color: var(--color-text) !important; fon
 .connectors .connector-line { stroke: #7C828A !important; stroke-width: 2 !important; }
 .connectors .connector-line.highlight, .connectors .connector-line.relationship-highlight { stroke: var(--highlight-green) !important; stroke-width: 2.5 !important; }
 .focus-caption { color: var(--color-muted) !important; letter-spacing: .08em; text-transform: uppercase; }
-.zoom-controls { border: 0 !important; border-radius: 22px !important; background: rgb(255 255 255 / .94) !important; box-shadow: 0 8px 30px rgba(20, 24, 30, .08) !important; }
-.zoom-controls button, .zoom-controls output { color: #565B60 !important; }
-.zoom-controls output { border-color: rgb(20 24 30 / .06) !important; color: var(--color-muted) !important; font-family: ui-monospace, SFMono-Regular, Menlo, monospace !important; }
-.zoom-controls button:hover { background: #F4F4F6 !important; }
+.zoom-controls { border: 1px solid #D6D9DC !important; border-radius: 22px !important; background: #FFFFFF !important; box-shadow: 0 10px 28px rgba(20, 24, 30, .13), 0 2px 7px rgba(20, 24, 30, .08) !important; }
+.zoom-controls button, .zoom-controls output { color: #3E4348 !important; }
+.zoom-controls output { border-color: #DDE0E3 !important; color: #555B60 !important; font-family: ui-monospace, SFMono-Regular, Menlo, monospace !important; }
+.zoom-controls button:hover { background: #EDEFF1 !important; }
 
 /* Bottom navigation is contextual: a compact view group plus a distinct review mode. */
 .workspace-bottom-controls { position: fixed; z-index: 8; bottom: 22px; left: calc(78px + (100vw - 418px) / 2); display: flex; align-items: center; gap: 12px; transform: translateX(-50%); }
 .workspace-bottom-controls[hidden] { display: none; }
-.mode-bar { display: flex; height: var(--bottom-control-height); align-items: center; gap: 3px; padding: 4px; border-radius: var(--bottom-control-radius); background: var(--bottom-control-bg); box-shadow: var(--bottom-control-shadow); }
+.mode-bar { display: flex; height: var(--bottom-control-height); align-items: center; gap: 3px; padding: 4px; border: 1px solid #D6D9DC; border-radius: var(--bottom-control-radius); background: var(--bottom-control-bg); box-shadow: var(--bottom-control-shadow); }
 .mode-bar button, .review-mode-toggle { display: inline-flex; height: calc(var(--bottom-control-height) - 8px); min-height: 0; align-items: center; gap: 7px; border: 0; border-radius: calc(var(--bottom-control-radius) - 3px); padding: 0 var(--bottom-control-padding-x); color: var(--bottom-control-fg); background: transparent; font-size: 13px; font-weight: 650; cursor: pointer; transition: color var(--transition-fast), background var(--transition-fast), transform var(--transition-fast); }
 .mode-bar button:hover:not(:disabled), .review-mode-toggle:hover { color: var(--color-interactive-hover); background: var(--bottom-control-hover-bg); transform: translateY(-1px); }
 .mode-bar button.active, .review-mode-toggle.active { color: var(--bottom-control-active-fg); background: var(--bottom-control-active-bg); font-weight: 750; }
 .mode-bar button:disabled { cursor: not-allowed; opacity: .42; }
-.review-mode-toggle { height: var(--bottom-control-height); border-radius: var(--bottom-control-radius); background: var(--bottom-control-bg); box-shadow: var(--bottom-control-shadow); }
+.review-mode-toggle { height: var(--bottom-control-height); border: 1px solid #D6D9DC; border-radius: var(--bottom-control-radius); background: var(--bottom-control-bg); box-shadow: var(--bottom-control-shadow); }
 
 /* Every review target uses one compact, click-to-cycle status control. */
 .review-status-chip { display: inline-flex; min-height: 34px; align-items: center; justify-content: center; border: 0; border-radius: 999px; padding: 7px 11px; color: var(--color-undecided-fg); background: var(--color-undecided-bg); box-shadow: var(--shadow-xs); font-size: 12px; font-weight: 750; cursor: pointer; transition: transform var(--transition-fast), box-shadow var(--transition-fast), filter var(--transition-fast); }
