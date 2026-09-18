@@ -162,19 +162,19 @@ main > #heading, #viewport > #heading { color: var(--color-text) !important; fon
 .hotspot:hover, .hotspot.selected { border-color: var(--color-flow) !important; background: rgb(90 174 214 / .13) !important; }
 .hotspot.linked-highlight { border-color: var(--color-flow) !important; background: rgb(90 174 214 / .16) !important; }
 .detail-row.relationship-highlight { box-shadow: inset 0 0 0 2px var(--highlight-green-border) !important; }
-.hotspot.relationship-highlight { border-color: var(--highlight-green-border) !important; background: var(--highlight-green-soft) !important; }
+.hotspot.relationship-highlight { border-color: var(--highlight-green-border) !important; border-radius: var(--radius-row); background: transparent !important; }
 .review-mode .hotspot.relationship-highlight { border-color: var(--highlight-green-border) !important; }
 .hotspot.review-confirmed::after, .hotspot.review-removed::after { content: none !important; background: transparent !important; }
-.review-mode .hotspot.review-unconfirmed, .review-mode .hotspot.review-confirmed, .review-mode .hotspot.review-removed { border-width: 2px !important; border-style: solid !important; }
+.review-mode .hotspot.review-unconfirmed, .review-mode .hotspot.review-confirmed, .review-mode .hotspot.review-removed { border-width: 2px !important; border-style: solid !important; border-radius: var(--radius-row); }
 .review-mode .hotspot.review-unconfirmed { border-color: #E2A233 !important; background: rgb(236 170 54 / .38) !important; }
 .review-mode .hotspot.review-confirmed { border-color: #499F5C !important; background: rgb(73 160 93 / .38) !important; }
 .review-mode .hotspot.review-removed { border-color: #D34B43 !important; background: rgb(211 75 67 / .38) !important; }
 .review-mode .hotspot.relationship-highlight { border-color: var(--highlight-green-border) !important; }
-.review-mode .hotspot:hover { filter: brightness(.97); }
+.review-mode .hotspot:hover { filter: brightness(.88); outline: none !important; }
 
 .review-confirmed:after { background: rgb(47 125 76 / .28) !important; }
 .review-removed:after { background: rgb(183 72 85 / .28) !important; }
-.review-mode .node:hover, .review-mode .hotspot:hover { outline-color: var(--color-undecided-fg) !important; }
+.review-mode .node:hover { outline-color: var(--color-undecided-fg) !important; }
 
 @media (max-width: 1050px) { .content { grid-template-columns: minmax(520px, 1fr) 280px !important; } .workspace-bottom-controls { left: calc(78px + (100vw - 370px) / 2); } .page { padding: 20px !important; } }
 @media (max-width: 850px) { .shell { grid-template-columns: 62px minmax(0, 1fr); } .app-rail { padding: 14px 9px; } .app-chrome { padding-right: 0; } .content { height: auto !important; min-height: calc(100vh - 64px); } .detail { margin: 0; border-radius: 0 !important; } .workspace-bottom-controls { left: calc(62px + (100vw - 62px) / 2); } .mode-bar button span, .review-mode-toggle span { display: none; } }
