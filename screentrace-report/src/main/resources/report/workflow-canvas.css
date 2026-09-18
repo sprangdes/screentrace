@@ -142,10 +142,9 @@ main > #heading, #viewport > #heading { color: var(--color-text) !important; fon
 .connectors .connector-line { stroke: #7C828A !important; stroke-width: 2 !important; }
 .connectors .connector-line.highlight, .connectors .connector-line.relationship-highlight { stroke: var(--highlight-green) !important; stroke-width: 2.5 !important; }
 .focus-caption { color: var(--color-muted) !important; letter-spacing: .08em; text-transform: uppercase; }
-.zoom-controls { border: 1px solid #D6D9DC !important; border-radius: 22px !important; background: #FFFFFF !important; box-shadow: 0 10px 28px rgba(20, 24, 30, .13), 0 2px 7px rgba(20, 24, 30, .08) !important; }
-.zoom-controls button, .zoom-controls output { color: #3E4348 !important; }
-.zoom-controls output { border-color: #DDE0E3 !important; color: #555B60 !important; font-family: ui-monospace, SFMono-Regular, Menlo, monospace !important; }
-.zoom-controls button:hover { background: #EDEFF1 !important; }
+.zoom-controls { gap: 10px; overflow: visible !important; border: 0 !important; border-radius: 0 !important; background: transparent !important; box-shadow: none !important; }
+.zoom-controls button { display: grid; width: 42px; min-width: 42px !important; height: 42px; place-items: center; border: 1px solid #BFC4C9 !important; border-radius: 50% !important; padding: 0 !important; color: #3E4348 !important; background: #FFFFFF !important; box-shadow: 0 6px 16px rgba(20, 24, 30, .12), 0 1px 3px rgba(20, 24, 30, .08) !important; font-size: 21px !important; line-height: 1 !important; }
+.zoom-controls button:hover { border-color: #8F969D !important; background: #EDEFF1 !important; }
 
 /* Bottom navigation is contextual: a compact view group plus a distinct review mode. */
 .workspace-bottom-controls { position: fixed; z-index: 8; bottom: 22px; left: calc(78px + (100vw - 418px) / 2); display: flex; align-items: center; gap: 12px; transform: translateX(-50%); }
