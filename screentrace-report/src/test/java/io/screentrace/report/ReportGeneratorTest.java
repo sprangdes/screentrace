@@ -60,6 +60,7 @@ class ReportGeneratorTest {
     assertTrue(theme.contains("--highlight-green: #22C98A"));
     assertTrue(theme.contains(".review-mode .hotspot.review-unconfirmed"));
     assertTrue(theme.contains("--color-panel: #E9EFEA"));
+    assertTrue(theme.contains("--color-node: #E9EBEE"));
     assertTrue(report.contains("class=\"workspace-bottom-controls\""));
     assertTrue(report.contains("class=\"review-mode-shell\""));
     assertTrue(report.contains("id=\"rail-screen-tree\""));
