@@ -91,16 +91,23 @@ main > #heading, #viewport > #heading { color: var(--color-text) !important; fon
 .css-properties dt, .css-properties dd { border-color: rgb(20 24 30 / .06) !important; color: var(--color-muted) !important; font-family: ui-monospace, SFMono-Regular, Menlo, monospace !important; }
 .css-properties dt { color: var(--color-text-secondary) !important; background: rgb(255 255 255 / .28) !important; }
 
-/* All Screens keeps its dense tree but adopts lightweight spatial objects. */
-.folder-browser { border: 0 !important; border-radius: var(--radius-shell) !important; background: #FFFFFF !important; box-shadow: none !important; }
-.folder-nav { background: #F7F8FA !important; border-color: rgb(20 24 30 / .06) !important; }
-.folder-content { background: #FFFFFF !important; }
-.folder-nav-title, .folder-summary, .browser-section-heading h3 { color: var(--color-text) !important; border: 0 !important; }
-.folder-nav-row .folder-nav-item, .folder-screen-item { color: var(--color-muted) !important; }
+/* All Screens uses the same open canvas language as a focused Screen Flow. */
+.content.overview #viewport { padding: 0 !important; }
+.content.overview .folder-browser { grid-template-columns: minmax(220px, 260px) minmax(0, 1fr) !important; border: 0 !important; border-radius: 0 !important; background: #FFFFFF !important; box-shadow: none !important; }
+.folder-nav { padding: 18px 10px !important; background: #FFFFFF !important; border-right: 1px solid rgb(20 24 30 / .10) !important; }
+.folder-content { padding: 30px 34px !important; background: #FFFFFF !important; }
+.folder-nav-title { margin: 0 8px 12px !important; padding: 0 0 10px !important; border-bottom: 1px solid rgb(20 24 30 / .10) !important; color: var(--color-text) !important; font-size: 13px !important; font-weight: 800 !important; letter-spacing: .08em !important; text-transform: uppercase; }
+.folder-summary, .browser-section-heading h3 { color: var(--color-text) !important; border: 0 !important; }
+.folder-nav-row { height: 32px !important; margin: 1px 0 !important; }
+.folder-nav-row .folder-nav-item, .folder-screen-item { border: 0 !important; border-radius: 6px !important; color: var(--color-muted) !important; font-size: 13px !important; font-weight: 600 !important; }
+.folder-nav-row .folder-nav-item { padding: 6px 8px !important; }
+.folder-screen-item { padding: 6px 8px !important; }
 .folder-nav-row .folder-nav-item:hover, .folder-screen-item:hover { color: var(--color-text) !important; background: #F4F4F6 !important; }
-.folder-nav-row .folder-nav-item.active, .folder-screen-item.active { color: var(--color-text) !important; background: var(--color-selection-bg) !important; box-shadow: inset 3px 0 #A9B1B5 !important; }
-.folder-toggle { color: var(--color-muted) !important; }
+.folder-nav-row .folder-nav-item.active, .folder-screen-item.active { color: var(--color-text) !important; background: #EEF1F0 !important; box-shadow: inset 3px 0 var(--color-text) !important; }
+.folder-toggle { width: 22px !important; height: 32px !important; flex-basis: 22px !important; color: var(--color-muted) !important; }
 .folder-toggle:hover { color: var(--color-text) !important; background: #F4F4F6 !important; box-shadow: none !important; }
+.folder-nav-item.folder:before, .folder-nav-row .folder-nav-item:not(.active):before { filter: grayscale(1) saturate(.2); }
+.folder-screen-item:before { filter: grayscale(1) saturate(.2); }
 .breadcrumb { color: var(--color-muted) !important; }
 .breadcrumb button { color: #555B60 !important; font-weight: 600 !important; }
 .breadcrumb button:last-child { color: var(--color-text) !important; font-weight: 700 !important; }

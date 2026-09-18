@@ -50,6 +50,7 @@ class ReportGeneratorTest {
     assertTrue(theme.contains(".detail-section { margin: 14px"));
     assertTrue(theme.contains(".workspace-bottom-controls"));
     assertTrue(theme.contains(".content.overview .screen-grid .node:hover:not(.selected)"));
+    assertTrue(theme.contains(".content.overview .folder-browser { grid-template-columns: minmax(220px, 260px)"));
     assertTrue(theme.contains("--bottom-control-height: 44px"));
     assertTrue(theme.contains("--highlight-green: #22C98A"));
     assertTrue(theme.contains(".review-mode .hotspot.review-unconfirmed"));
