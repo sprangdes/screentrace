@@ -85,5 +85,6 @@ class ReportGeneratorTest {
     assertTrue(report.contains("linkedComponentKey"));
     assertTrue(report.contains("screenFlowHistory"));
     assertTrue(report.contains("returnToPreviousFlow"));
+    assertFalse(report.contains("isSelected||linkedSelected?' selected':''"));
   }
 }
