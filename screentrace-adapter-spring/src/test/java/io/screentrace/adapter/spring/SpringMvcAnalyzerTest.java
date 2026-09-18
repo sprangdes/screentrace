@@ -111,4 +111,49 @@ class SpringMvcAnalyzerTest {
                 .allMatch(edge -> edge.confidence() == ApplicationGraph.Confidence.CONFIRMED));
         assertTrue(graph.relationships().stream().anyMatch(edge -> edge.type() == ApplicationGraph.EdgeType.TRIGGERS));
     }
+
+    @Test
+    void correlatesXmlViewControllersRelativeDynamicLinksAndCurrentViewSpringForms() throws Exception {
+        Path root = Files.createTempDirectory("st-mvc-static-flow");
+        Path config = root.resolve("src/main/resources/mvc.xml");
+        Path welcome = root.resolve("src/main/webapp/WEB-INF/jsp/welcome.jsp");
+        Path owner = root.resolve("src/main/webapp/WEB-INF/jsp/owners/form.jsp");
+        Path java = root.resolve("src/main/java/OwnerController.java");
+        Files.createDirectories(config.getParent());
+        Files.createDirectories(welcome.getParent());
+        Files.createDirectories(owner.getParent());
+        Files.createDirectories(java.getParent());
+        Files.writeString(root.resolve("pom.xml"), "<project><dependency><artifactId>spring-webmvc</artifactId></dependency></project>");
+        Files.writeString(config, "<beans xmlns:mvc=\"urn:mvc\"><mvc:view-controller path=\"/\" view-name=\"welcome\"/></beans>");
+        Files.writeString(welcome, "<p>Welcome</p>");
+        Files.writeString(owner, "<spring:url value=\"{ownerId}/edit\" var=\"editUrl\"/><a href=\"${fn:escapeXml(editUrl)}\">Edit</a><form:form modelAttribute=\"owner\"><button type=\"submit\">Save</button></form:form><a href=\"/owners/{ownerId}/pets/{petId}/visits/new\">Add Visit</a>");
+        Files.writeString(java, """
+            import org.springframework.stereotype.*; import org.springframework.web.bind.annotation.*;
+            @Controller class OwnerController {
+              @GetMapping("/owners/{ownerId}/edit") String edit(){ return "owners/form"; }
+              @PostMapping("/owners/{ownerId}/edit") String save(){ return "owners/form"; }
+              @GetMapping("/owners/*/pets/{petId}/visits/new") String visit(){ return "owners/form"; }
+              @PostMapping("/owners/{ownerId}/pets/{petId}/visits/new") String createVisit(){ return "owners/form"; }
+              @GetMapping(value="/owners.json", produces="application/json") @ResponseBody String json(){ return "{}"; }
+            }
+            """);
+
+        ApplicationGraph graph = new SpringMvcAnalyzer().analyze(new ProjectScanner().scan(root));
+
+        var home = graph.nodes().stream().filter(node -> node.name().equals("GET /")).findFirst().orElseThrow();
+        assertTrue(graph.relationships().stream().anyMatch(edge -> edge.from().equals(home.id())
+            && edge.type() == ApplicationGraph.EdgeType.HANDLED_BY));
+        var save = graph.nodes().stream().filter(node -> node.type() == ApplicationGraph.NodeType.COMPONENT
+            && "<current-view>".equals(node.attributes().get("target"))
+            && "POST".equals(node.attributes().get("httpMethod"))).findFirst().orElseThrow();
+        assertTrue(graph.relationships().stream().anyMatch(edge -> edge.from().equals(save.id())
+            && edge.type() == ApplicationGraph.EdgeType.TRIGGERS
+            && graph.nodes().stream().anyMatch(node -> node.id().equals(edge.to()) && node.name().equals("POST /owners/{ownerId}/edit"))));
+        var visit = graph.nodes().stream().filter(node -> node.type() == ApplicationGraph.NodeType.COMPONENT
+            && "/owners/{ownerId}/pets/{petId}/visits/new".equals(node.attributes().get("target"))).findFirst().orElseThrow();
+        assertTrue(graph.relationships().stream().anyMatch(edge -> edge.from().equals(visit.id())
+            && edge.type() == ApplicationGraph.EdgeType.TRIGGERS
+            && graph.nodes().stream().anyMatch(node -> node.id().equals(edge.to()) && node.name().equals("GET /owners/*/pets/{petId}/visits/new"))));
+        assertTrue(graph.diagnostics().stream().noneMatch(diagnostic -> diagnostic.message().contains("json()")));
+    }
 }
