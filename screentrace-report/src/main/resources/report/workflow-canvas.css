@@ -164,7 +164,9 @@ main > #heading, #viewport > #heading { color: var(--color-text) !important; fon
 .review-status-chip.status-confirmed { color: var(--color-keep-fg); background: var(--color-keep-bg); }
 .review-status-chip.status-removed { color: var(--color-remove-fg); background: var(--color-remove-bg); }
 .node-review-status { position: absolute; z-index: 4; top: -15px; right: -32px; margin: 0; }
-.detail-review-status { width: 100%; }
+.detail-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0 0 18px; }
+.detail-header > h2 { margin: 0; }
+.detail-header .detail-review-status { flex: 0 0 auto; }
 .review-mode .node:hover { outline-color: var(--color-undecided-fg) !important; }
 
 /* Page chrome only: the analyzed application stays visually untouched. */

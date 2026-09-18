@@ -86,5 +86,8 @@ class ReportGeneratorTest {
     assertTrue(report.contains("screenFlowHistory"));
     assertTrue(report.contains("returnToPreviousFlow"));
     assertFalse(report.contains("isSelected||linkedSelected?' selected':''"));
+    assertTrue(report.contains("function detailHeader(label,component)"));
+    assertTrue(report.contains("detailSection('Page ID')"));
+    assertFalse(report.contains("detailSection('確認狀態')"));
   }
 }
