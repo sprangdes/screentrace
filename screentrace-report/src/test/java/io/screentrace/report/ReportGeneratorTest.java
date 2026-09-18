@@ -56,6 +56,10 @@ class ReportGeneratorTest {
     assertTrue(theme.contains(".review-mode .hotspot.review-unconfirmed"));
     assertTrue(theme.contains("--color-panel: #E9EFEA"));
     assertTrue(report.contains("class=\"workspace-bottom-controls\""));
+    assertTrue(report.contains("id=\"rail-screen-tree\""));
+    assertTrue(report.contains("id=\"rail-screen-structure\""));
+    assertTrue(report.contains("Screen Structure — coming soon"));
+    assertTrue(report.contains(":'Screen Tree'"));
     assertTrue(report.contains("nextReviewStatus"));
     assertTrue(report.contains("data-interaction-id"));
     assertTrue(report.contains("setRelationHighlight"));

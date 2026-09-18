@@ -64,6 +64,9 @@ button:focus-visible, [tabindex]:focus-visible { outline: 2px solid #34383D !imp
 .app-rail button { display: grid; width: 44px; height: 44px; min-height: 44px; place-items: center; border: 0; border-radius: 14px; color: var(--color-nav-icon); background: transparent; font-size: 19px; cursor: pointer; transition: background var(--transition-fast), transform var(--transition-fast); }
 .app-rail button:hover, .app-rail button:focus-visible { background: var(--color-nav-hover); transform: translateY(-1px); }
 .app-rail button:active { background: var(--color-nav-active); transform: scale(.96); }
+.app-rail button.active { color: #fff; background: var(--color-nav-active); box-shadow: inset 0 0 0 1px rgb(255 255 255 / .1); }
+.app-rail button:disabled { color: var(--color-nav-muted); cursor: not-allowed; opacity: .55; }
+.app-rail button:disabled:hover { background: transparent; transform: none; }
 header#title { display: flex; height: 52px !important; align-items: center; justify-content: space-between; padding: 0 18px !important; border: 0 !important; border-radius: var(--radius-shell) var(--radius-shell) 0 0; color: var(--color-text) !important; background: #FFFFFF !important; box-shadow: none !important; font-size: 17px !important; }
 #title > span { font-weight: 800; letter-spacing: -.02em; }
 #title > button { min-height: 38px; border: 0 !important; border-radius: var(--radius-control) !important; padding: 8px 13px !important; color: #fff !important; background: var(--color-text) !important; box-shadow: var(--shadow-xs) !important; font-weight: 700 !important; transition: background var(--transition-fast), transform var(--transition-fast), box-shadow var(--transition-fast) !important; }
