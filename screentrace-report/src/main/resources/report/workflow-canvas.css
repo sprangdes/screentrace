@@ -96,21 +96,28 @@ main > #heading, #viewport > #heading { color: var(--color-text) !important; fon
 
 /* All Screens uses the same open canvas language as a focused Screen Flow. */
 .content.overview #viewport { padding: 0 !important; }
-.content.overview .folder-browser { grid-template-columns: minmax(220px, 260px) minmax(0, 1fr) !important; border: 0 !important; border-radius: 0 !important; background: #FFFFFF !important; box-shadow: none !important; }
-.folder-nav { padding: 18px 10px !important; background: #FFFFFF !important; border-right: 1px solid rgb(20 24 30 / .10) !important; }
+.content.overview .folder-browser { --project-nav-width: 272px; grid-template-columns: minmax(220px, var(--project-nav-width)) 8px minmax(0, 1fr) !important; border: 0 !important; border-radius: 0 !important; background: #FFFFFF !important; box-shadow: none !important; }
+.folder-nav { min-width: 0; padding: 12px 10px 18px !important; overflow: auto !important; background: #FFFFFF !important; border-right: 0 !important; }
 .folder-content { padding: 30px 34px !important; background: #FFFFFF !important; }
-.folder-nav-title { margin: 0 8px 12px !important; padding: 0 0 10px !important; border-bottom: 1px solid rgb(20 24 30 / .10) !important; color: var(--color-text) !important; font-size: 13px !important; font-weight: 800 !important; letter-spacing: .08em !important; text-transform: uppercase; }
+.folder-nav-title { position: sticky; z-index: 2; top: 0; left: 0; width: max-content; min-width: calc(100% - 16px); margin: 0 8px 12px !important; padding: 6px 0 12px !important; border-bottom: 1px solid rgb(20 24 30 / .10) !important; color: #30343A !important; background: #FFFFFF; font-size: 12px !important; font-weight: 800 !important; letter-spacing: .1em !important; text-transform: uppercase; }
 .folder-summary, .browser-section-heading h3 { color: var(--color-text) !important; border: 0 !important; }
-.folder-nav-row { height: 32px !important; margin: 1px 0 !important; }
-.folder-nav-row .folder-nav-item, .folder-screen-item { border: 0 !important; border-radius: 6px !important; color: var(--color-muted) !important; font-size: 13px !important; font-weight: 600 !important; }
-.folder-nav-row .folder-nav-item { padding: 6px 8px !important; }
-.folder-screen-item { padding: 6px 8px !important; }
-.folder-nav-row .folder-nav-item:hover, .folder-screen-item:hover { color: var(--color-text) !important; background: #F4F4F6 !important; }
-.folder-nav-row .folder-nav-item.active, .folder-screen-item.active { color: var(--color-text) !important; background: #EEF1F0 !important; box-shadow: inset 3px 0 var(--color-text) !important; }
-.folder-toggle { width: 22px !important; height: 32px !important; flex-basis: 22px !important; color: var(--color-muted) !important; }
-.folder-toggle:hover { color: var(--color-text) !important; background: #F4F4F6 !important; box-shadow: none !important; }
-.folder-nav-item.folder:before, .folder-nav-row .folder-nav-item:not(.active):before { filter: grayscale(1) saturate(.2); }
-.folder-screen-item:before { filter: grayscale(1) saturate(.2); }
+.folder-nav-row { height: 34px !important; margin: 2px 0 !important; }
+.folder-nav-row .folder-nav-item, .folder-screen-item { border: 0 !important; border-radius: var(--radius-row) !important; color: #50565D !important; font-family: Inter, "DM Sans", ui-sans-serif, system-ui, sans-serif !important; font-size: 13px !important; font-weight: 650 !important; letter-spacing: -.005em; }
+.folder-nav-row .folder-nav-item { padding: 7px 8px !important; }
+.folder-screen-item { padding: 7px 8px !important; }
+.folder-nav-row .folder-nav-item:hover, .folder-screen-item:hover { color: #176B4D !important; background: var(--highlight-green-soft) !important; }
+.folder-nav-row .folder-nav-item.active, .folder-screen-item.active { color: #176B4D !important; background: rgb(34 201 138 / .16) !important; box-shadow: inset 3px 0 var(--highlight-green) !important; }
+.folder-nav-row .folder-nav-item.project-root.active { color: #50565D !important; background: transparent !important; box-shadow: none !important; }
+.folder-toggle { width: 22px !important; height: 34px !important; flex-basis: 22px !important; color: #6D737A !important; }
+.folder-toggle:hover { color: #176B4D !important; background: var(--highlight-green-soft) !important; box-shadow: none !important; }
+.folder-nav-item.folder:before, .folder-nav-row .folder-nav-item:not(.active):before { width: 16px !important; height: 13px !important; margin-right:9px !important; border: 0 !important; border-radius: 3px !important; background: linear-gradient(180deg, #8AAE9B 0 28%, #5D8972 28% 100%) !important; clip-path: polygon(0 24%, 42% 24%, 52% 0, 100% 0, 100% 100%, 0 100%) !important; box-shadow: inset 0 1px rgb(255 255 255 / .45) !important; filter: none !important; }
+.folder-nav-item.project-root:before, .folder-nav-row .folder-nav-item.project-root:not(.active):before { width: 15px !important; height: 15px !important; background: linear-gradient(135deg, #7EAA92, #4D7E65) !important; clip-path: none !important; border-radius: 4px !important; box-shadow: inset 0 0 0 1px rgb(255 255 255 / .4) !important; }
+.folder-screen-item:before { width: 12px !important; height: 15px !important; margin-right: 10px !important; border: 1px solid #75828B !important; border-radius: 3px !important; background: linear-gradient(135deg, transparent 0 6px, #B1B9BF 6px 7px, transparent 7px), linear-gradient(#F8F9F9 0 28%, #E1E5E6 28% 100%) !important; box-shadow: inset 0 -3px #C5CCCF !important; filter: none !important; }
+.folder-nav-row .folder-nav-item:hover:before, .folder-screen-item:hover:before { filter: saturate(1.2) brightness(.88) !important; }
+.folder-resizer { position: relative; z-index: 3; width: 8px; cursor: col-resize; background: #FFFFFF; touch-action: none; }
+.folder-resizer::after { position: absolute; top: 0; bottom: 0; left: 3px; width: 1px; background: rgb(20 24 30 / .12); content: ""; transition: background var(--transition-fast), width var(--transition-fast); }
+.folder-resizer:hover::after, .folder-resizer.dragging::after { left: 2px; width: 3px; background: var(--highlight-green); }
+.folder-tile b::before { display: inline-block; width: 17px; height: 14px; margin-right: 9px; border-radius: 3px; background: linear-gradient(180deg, #8AAE9B 0 28%, #5D8972 28% 100%); clip-path: polygon(0 24%, 42% 24%, 52% 0, 100% 0, 100% 100%, 0 100%); content: ""; vertical-align: -1px; }
 .breadcrumb { color: var(--color-muted) !important; }
 .breadcrumb button { color: #555B60 !important; font-weight: 600 !important; }
 .breadcrumb button:last-child { color: var(--color-text) !important; font-weight: 700 !important; }
