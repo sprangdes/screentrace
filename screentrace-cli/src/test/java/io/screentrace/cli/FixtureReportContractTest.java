@@ -37,7 +37,7 @@ class FixtureReportContractTest {
       assertTrue(report.contains("renderFocusedCanvas"), name); // Flow View
       assertTrue(report.contains("renderPage"), name); // Page View
       assertTrue(report.contains("showDetail"), name); // Component Trace
-      assertTrue(report.contains("reviewToolbar"), name); // Review/Edit Mode
+      assertTrue(report.contains("nextReviewStatus"), name); // Review/Edit Mode
     }
   }
 
