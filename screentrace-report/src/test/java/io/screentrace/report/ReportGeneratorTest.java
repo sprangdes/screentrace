@@ -88,6 +88,8 @@ class ReportGeneratorTest {
     assertFalse(report.contains("isSelected||linkedSelected?' selected':''"));
     assertTrue(report.contains("function detailHeader(label,component)"));
     assertTrue(report.contains("detailSection('Page ID')"));
+    assertTrue(report.contains("detailSection('Page Name')"));
+    assertTrue(report.contains("detailSection('Button Name')"));
     assertFalse(report.contains("detailSection('確認狀態')"));
   }
 }
