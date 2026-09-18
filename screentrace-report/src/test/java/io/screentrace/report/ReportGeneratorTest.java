@@ -57,7 +57,10 @@ class ReportGeneratorTest {
     assertTrue(report.contains("nextReviewStatus"));
     assertTrue(report.contains("data-interaction-id"));
     assertTrue(report.contains("setRelationHighlight"));
-    assertTrue(report.contains("node-review-actions"));
+    assertTrue(report.contains("renderFlow(focusSelection)"));
+    assertTrue(report.contains("renderFocusedCanvas(focusSelection)"));
+    assertTrue(report.contains("reviewStatusControl"));
+    assertTrue(theme.contains(".review-status-chip"));
     assertTrue(theme.contains(".map-canvas { background-color"));
     assertTrue(theme.contains(".content.focused #viewport { background-color: #FFFFFF"));
     assertTrue(report.contains("/preview-model.json"));

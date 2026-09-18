@@ -146,16 +146,14 @@ main > #heading, #viewport > #heading { color: var(--color-text) !important; fon
 .mode-bar button:disabled { cursor: not-allowed; opacity: .42; }
 .review-mode-toggle { height: var(--bottom-control-height); border-radius: var(--bottom-control-radius); background: var(--bottom-control-bg); box-shadow: var(--bottom-control-shadow); }
 
-/* Inline node actions are only present during Screen Flow review. */
-.node-review-actions { display: flex; position: relative; z-index: 4; justify-content: center; gap: 8px; padding: 9px 0 5px; }
-.node-review-action { display: grid; width: 38px; height: 38px; min-height: 38px; place-items: center; border: 0; border-radius: 999px; background: #FFFFFF; box-shadow: var(--shadow-xs); font-size: 18px; font-weight: 750; cursor: pointer; transition: opacity var(--transition-fast), transform var(--transition-fast), box-shadow var(--transition-fast); }
-.node-review-action.keep { color: #5DB36A; }
-.node-review-action.remove { color: #D95548; }
-.node-review-action.undecided { color: #F3A022; }
-.node-review-action.selected { opacity: 1; box-shadow: var(--shadow-sm); }
-.node-review-action.muted { opacity: .35; }
-.node-review-action.muted:hover { opacity: .75; transform: translateY(-1px); }
-.node-review-action:focus-visible { outline-color: var(--color-interactive) !important; }
+/* Every review target uses one compact, click-to-cycle status control. */
+.review-status-chip { display: inline-flex; min-height: 34px; align-items: center; justify-content: center; border: 0; border-radius: 999px; padding: 7px 11px; color: var(--color-undecided-fg); background: var(--color-undecided-bg); box-shadow: var(--shadow-xs); font-size: 12px; font-weight: 750; cursor: pointer; transition: transform var(--transition-fast), box-shadow var(--transition-fast), filter var(--transition-fast); }
+.review-status-chip:hover { box-shadow: var(--shadow-sm); filter: brightness(.98); transform: translateY(-1px); }
+.review-status-chip:active { transform: scale(.98); }
+.review-status-chip.status-confirmed { color: var(--color-keep-fg); background: var(--color-keep-bg); }
+.review-status-chip.status-removed { color: var(--color-remove-fg); background: var(--color-remove-bg); }
+.node-review-status { position: absolute; z-index: 4; top: -15px; right: -32px; margin: 0; }
+.detail-review-status { width: 100%; }
 .review-mode .node:hover { outline-color: var(--color-undecided-fg) !important; }
 
 /* Page chrome only: the analyzed application stays visually untouched. */
@@ -174,15 +172,6 @@ main > #heading, #viewport > #heading { color: var(--color-text) !important; fon
 .review-mode .hotspot.relationship-highlight { border-color: var(--highlight-green-border) !important; }
 .review-mode .hotspot:hover { filter: brightness(.97); }
 
-/* Compact review controls use pale semantic surfaces, never saturated blocks. */
-.review-toolbar { gap: 5px !important; padding: 3px !important; border: 0 !important; border-radius: 18px !important; background: #FFFFFF !important; box-shadow: var(--shadow-xs) !important; }
-.review-toggle, .review-action, .review-status-action { min-height: 36px; border: 0 !important; border-radius: var(--radius-control) !important; color: var(--color-muted) !important; background: #FFFFFF !important; box-shadow: none !important; font-weight: 700 !important; transition: background var(--transition-fast), transform var(--transition-fast) !important; }
-.review-toggle:hover, .review-action:hover, .review-status-action:hover { background: #F4F4F6 !important; transform: translateY(-1px); }
-.review-toggle.active { color: var(--color-interactive) !important; background: var(--color-selection-bg) !important; }
-.review-action.active-confirmed, .review-status-action.confirmed.selected { color: var(--color-keep-fg) !important; background: var(--color-keep-bg) !important; box-shadow: inset 0 0 0 1px rgb(47 125 76 / .12) !important; }
-.review-action.active-removed, .review-status-action.removed.selected { color: var(--color-remove-fg) !important; background: var(--color-remove-bg) !important; box-shadow: inset 0 0 0 1px rgb(183 72 85 / .12) !important; }
-.review-action.active-unconfirmed, .review-status-action.unconfirmed.selected { color: var(--color-undecided-fg) !important; background: var(--color-undecided-bg) !important; box-shadow: inset 0 0 0 1px rgb(149 108 17 / .12) !important; }
-.review-status-action.muted { opacity: .64 !important; }
 .review-confirmed:after { background: rgb(47 125 76 / .28) !important; }
 .review-removed:after { background: rgb(183 72 85 / .28) !important; }
 .review-mode .node:hover, .review-mode .hotspot:hover { outline-color: var(--color-undecided-fg) !important; }
