@@ -118,6 +118,7 @@ main > #heading, #viewport > #heading { color: var(--color-text) !important; fon
 /* Screen Flow is deliberately open: lightweight pastel nodes on a dotted canvas. */
 .node { border: 0 !important; border-radius: var(--radius-node) !important; padding: 10px !important; color: var(--color-text) !important; background: var(--color-node) !important; box-shadow: 0 8px 24px rgba(24, 28, 34, .06) !important; transition: transform var(--transition-fast), box-shadow var(--transition-fast), opacity var(--transition-fast), filter var(--transition-fast) !important; }
 .node:hover { box-shadow: 0 12px 28px rgba(24, 28, 34, .09) !important; transform: translateY(-2px); }
+.content.overview .screen-grid .node:hover:not(.selected) { border: 0 !important; outline: none !important; }
 .node.selected { outline: 2px solid var(--color-interactive) !important; outline-offset: 2px; background: var(--color-node-selected) !important; box-shadow: 0 0 0 2px var(--color-interactive), 0 12px 28px rgba(20, 24, 30, .09) !important; }
 .node.relationship-highlight { outline: 2px solid var(--highlight-green-border) !important; outline-offset: 2px; box-shadow: 0 0 0 3px var(--highlight-green-soft), 0 12px 28px rgba(20, 24, 30, .09) !important; }
 .review-confirmed.node { background: var(--color-keep-bg) !important; }
