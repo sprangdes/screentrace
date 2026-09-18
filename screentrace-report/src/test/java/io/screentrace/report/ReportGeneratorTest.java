@@ -86,10 +86,12 @@ class ReportGeneratorTest {
     assertTrue(report.contains("screenFlowHistory"));
     assertTrue(report.contains("returnToPreviousFlow"));
     assertFalse(report.contains("isSelected||linkedSelected?' selected':''"));
-    assertTrue(report.contains("function detailHeader(label,component)"));
+    assertTrue(report.contains("function detailHeader(label,component,onUpdated)"));
     assertTrue(report.contains("detailSection('Page ID')"));
     assertTrue(report.contains("detailSection('Page Name')"));
     assertTrue(report.contains("detailSection('Button Name')"));
+    assertTrue(report.contains("detailHeader('API Detail',endpoint"));
+    assertTrue(report.contains("detailSection('API Name')"));
     assertFalse(report.contains("detailSection('確認狀態')"));
   }
 }
