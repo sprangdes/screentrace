@@ -51,6 +51,7 @@ class ReportGeneratorTest {
     assertTrue(theme.contains(".detail .meta { color: #555B60"));
     assertTrue(theme.contains(".workspace-bottom-controls"));
     assertTrue(theme.contains(".content.overview .screen-grid .node:hover:not(.selected)"));
+    assertTrue(theme.contains(".node.selected { outline: none !important; background: var(--color-node)"));
     assertTrue(theme.contains(".content.overview .folder-browser { grid-template-columns: minmax(220px, 260px)"));
     assertTrue(theme.contains("--bottom-control-height: 44px"));
     assertTrue(theme.contains("--bottom-control-fg: #3E4348"));
