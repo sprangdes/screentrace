@@ -92,6 +92,8 @@ class ReportGeneratorTest {
     assertTrue(report.contains("detailSection('Button Name')"));
     assertTrue(report.contains("detailHeader('API Detail',endpoint"));
     assertTrue(report.contains("detailSection('API Name')"));
+    assertTrue(report.contains("()=>selectScreenFlow(target),null,false,target.id,component"));
+    assertTrue(report.contains("()=>selectScreenFlow(link.target),null,false,link.target.id,link.component"));
     assertFalse(report.contains("detailSection('確認狀態')"));
   }
 }
