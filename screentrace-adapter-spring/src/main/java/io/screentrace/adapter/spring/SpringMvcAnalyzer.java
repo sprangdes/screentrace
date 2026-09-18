@@ -153,11 +153,13 @@ public final class SpringMvcAnalyzer {
                 String screenId = screenForView(view, source, state);
                 edge(state, EdgeType.RENDERS, handlerId, screenId, resolvedScreenId(view, state) != null ? Confidence.CONFIRMED : Confidence.INFERRED, source);
                 state.endpointsByScreen.computeIfAbsent(screenId, ignored -> new ArrayList<>()).add(endpoint);
+                state.screensByEndpoint.computeIfAbsent(endpointId, ignored -> new ArrayList<>()).add(screenId);
             }
             if (!rest && views.isEmpty() && throwsException(method) && state.defaultExceptionView != null) {
                 String screenId = screenForView(state.defaultExceptionView, source, state);
                 edge(state, EdgeType.RENDERS, handlerId, screenId, Confidence.CONFIRMED, source);
                 state.endpointsByScreen.computeIfAbsent(screenId, ignored -> new ArrayList<>()).add(endpoint);
+                state.screensByEndpoint.computeIfAbsent(endpointId, ignored -> new ArrayList<>()).add(screenId);
             }
             if (!rest && views.isEmpty() && !throwsException(method)) state.diagnostics.add(new Diagnostic("Handler return view cannot be resolved statically: " + handlerName, Confidence.UNRESOLVED, source));
         }
@@ -271,7 +273,11 @@ public final class SpringMvcAnalyzer {
         if (view == null || view.isBlank()) {
             state.diagnostics.add(new Diagnostic("Spring XML controller view cannot be resolved statically: " + beanId, Confidence.UNRESOLVED,
                     source, "SPRING_XML_VIEW_UNRESOLVED", List.of()));
-        } else edge(state, EdgeType.RENDERS, handlerId, screenForView(view, source, state), Confidence.CONFIRMED, source);
+        } else {
+            String screenId = screenForView(view, source, state);
+            edge(state, EdgeType.RENDERS, handlerId, screenId, Confidence.CONFIRMED, source);
+            state.screensByEndpoint.computeIfAbsent(endpointId, ignored -> new ArrayList<>()).add(screenId);
+        }
     }
 
     private static void addXmlViewControllers(Document document, String relative, State state) {
@@ -295,6 +301,7 @@ public final class SpringMvcAnalyzer {
             edge(state, EdgeType.RENDERS, handlerId, screenId, Confidence.CONFIRMED, source);
             state.endpointsByScreen.computeIfAbsent(screenId, ignored -> new ArrayList<>())
                 .add(new EndpointReference(endpointId, path, "GET"));
+            state.screensByEndpoint.computeIfAbsent(endpointId, ignored -> new ArrayList<>()).add(screenId);
         }
     }
 
@@ -365,6 +372,10 @@ public final class SpringMvcAnalyzer {
             if (interaction.confidence() == Confidence.UNRESOLVED) continue;
             for (EndpointMatch match : endpointsFor(interaction, screenId, state)) {
                 edge(state, EdgeType.TRIGGERS, id, match.endpointId(), match.confidence(), interaction.source());
+                List<String> targetScreens = state.screensByEndpoint.getOrDefault(match.endpointId(), List.of()).stream()
+                    .distinct().toList();
+                if (targetScreens.size() == 1) edge(state, EdgeType.NAVIGATES_TO, id, targetScreens.get(0),
+                    Confidence.INFERRED, interaction.source());
             }
             String next = state.screensByView.get(interaction.target());
             if (next != null) edge(state, EdgeType.NAVIGATES_TO, id, next, Confidence.CONFIRMED, interaction.source());
@@ -485,7 +496,8 @@ public final class SpringMvcAnalyzer {
         private final Path root; private final List<GraphNode> nodes = new ArrayList<>(); private final List<Relationship> edges = new ArrayList<>(); private final List<Diagnostic> diagnostics = new ArrayList<>();
         private final List<ApplicationGraph.ApiContract> apiContracts = new ArrayList<>(); private final ApiContractExtractor contracts;
         private final Map<String, String> endpointByPath = new HashMap<>(); private final List<EndpointReference> endpoints = new ArrayList<>();
-        private final Map<String, List<EndpointReference>> endpointsByScreen = new HashMap<>(); private final Map<String, String> screensByView = new HashMap<>();
+        private final Map<String, List<EndpointReference>> endpointsByScreen = new HashMap<>();
+        private final Map<String, List<String>> screensByEndpoint = new HashMap<>(); private final Map<String, String> screensByView = new HashMap<>();
         private final Map<String, String> fragmentsByPath = new HashMap<>(); private final List<ViewResolver> viewResolvers = new ArrayList<>();
         private String defaultExceptionView;
         private State(Path root, List<Path> javaFiles) { this.root = root; this.contracts = new ApiContractExtractor(root, javaFiles); }

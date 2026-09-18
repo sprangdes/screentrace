@@ -124,7 +124,7 @@ public final class GraphIntegrityValidator {
     String target = from.attributes().get("target");
     String route = to.attributes().get("route");
     String view = to.attributes().get("view");
-    if (target != null && !target.equals(route) && !target.equals(view)) {
+    if (edge.confidence() == ApplicationGraph.Confidence.CONFIRMED && target != null && !target.equals(route) && !target.equals(view)) {
       errors.add("Navigation target does not match screen route or view: " + edge.id());
     }
   }

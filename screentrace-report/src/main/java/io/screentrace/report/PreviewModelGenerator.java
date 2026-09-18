@@ -81,6 +81,24 @@ final class PreviewModelGenerator {
   private static String optional(JsonNode node, String name, String fallback) { String value = optional(node, name); return value == null ? fallback : value; }
   private static Map<String, String> css(JsonNode node) { Map<String, String> values = new HashMap<>(); node.fields().forEachRemaining(entry -> values.put(entry.getKey(), entry.getValue().asText())); return values; }
   private record GraphComponent(GraphNode node, String targetScreenId) {
-    boolean matches(String type, String label, String target) { return node.attributes().getOrDefault("componentType", "COMPONENT").equals(type) && node.name().equals(label) && java.util.Objects.equals(node.attributes().get("target"), target); }
+    boolean matches(String type, String label, String target) {
+      if (!node.attributes().getOrDefault("componentType", "COMPONENT").equals(type)) return false;
+      String sourceTarget = node.attributes().get("target");
+      return java.util.Objects.equals(sourceTarget, target)
+          && node.name().equals(label) || routeTemplateMatches(sourceTarget, target);
+    }
+
+    private static boolean routeTemplateMatches(String template, String value) {
+      if (template == null || value == null || !template.startsWith("/") || !value.startsWith("/")) return false;
+      String[] templateSegments = template.replaceFirst("^/", "").split("/");
+      String[] valueSegments = value.replaceFirst("^/", "").split("/");
+      if (templateSegments.length != valueSegments.length) return false;
+      for (int index = 0; index < templateSegments.length; index++) {
+        String expected = templateSegments[index];
+        if (expected.equals("*") || expected.startsWith("{") && expected.endsWith("}")) continue;
+        if (!expected.equals(valueSegments[index])) return false;
+      }
+      return true;
+    }
   }
 }

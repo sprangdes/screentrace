@@ -25,8 +25,8 @@ class ReportGeneratorTest {
 
   @Test void consolidatesCapturedAssetsIntoPreviewContractAndReportReadsOnlyContracts() throws Exception {
     GraphNode screen = new GraphNode("screen:orders", NodeType.SCREEN, "Orders", Map.of("route", "/orders"), null, Confidence.CONFIRMED);
-    GraphNode component = new GraphNode("component:next", NodeType.COMPONENT, "Next", Map.of("componentType", "BUTTON", "target", "/done"), null, Confidence.CONFIRMED);
-    GraphNode target = new GraphNode("screen:done", NodeType.SCREEN, "Done", Map.of("route", "/done"), null, Confidence.CONFIRMED);
+    GraphNode component = new GraphNode("component:next", NodeType.COMPONENT, "Next", Map.of("componentType", "LINK", "target", "/orders/{ownerId}"), null, Confidence.CONFIRMED);
+    GraphNode target = new GraphNode("screen:done", NodeType.SCREEN, "Done", Map.of("route", "/orders/{ownerId}"), null, Confidence.CONFIRMED);
     ApplicationGraph graph = new ApplicationGraph(new ApplicationGraph.Application("sample", "/sample", List.of("JSP")), List.of(screen, component, target),
         List.of(new Relationship("contains", EdgeType.CONTAINS, screen.id(), component.id(), Confidence.CONFIRMED, null),
             new Relationship("navigates", EdgeType.NAVIGATES_TO, component.id(), target.id(), Confidence.CONFIRMED, null)), List.of());
@@ -34,7 +34,7 @@ class ReportGeneratorTest {
     Files.writeString(output.resolve("static-preview/manifest.json"), "{\"screen:orders\":\"static-preview/orders.html\"}");
     Files.createDirectories(output.resolve("screenshots"));
     Files.writeString(output.resolve("screenshots/manifest.json"), "{\"screen:orders\":\"screenshots/orders.png\"}");
-    Files.writeString(output.resolve("screenshots/interactions.json"), "{\"screen:orders\":{\"width\":1440,\"height\":900,\"items\":[{\"id\":\"static-component-0\",\"type\":\"BUTTON\",\"label\":\"Next\",\"target\":\"/done\",\"targetScreenId\":\"screen:done\",\"bounds\":{\"x\":1,\"y\":2,\"width\":3,\"height\":4},\"css\":{\"color\":\"red\"}}]}}");
+    Files.writeString(output.resolve("screenshots/interactions.json"), "{\"screen:orders\":{\"width\":1440,\"height\":900,\"items\":[{\"id\":\"static-component-0\",\"type\":\"LINK\",\"label\":\"Order One\",\"target\":\"/orders/1\",\"bounds\":{\"x\":1,\"y\":2,\"width\":3,\"height\":4},\"css\":{\"color\":\"red\"}}]}}");
 
     new ReportGenerator().write(graph, output);
 
