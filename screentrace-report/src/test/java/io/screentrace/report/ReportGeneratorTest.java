@@ -55,11 +55,12 @@ class ReportGeneratorTest {
     assertTrue(theme.contains("--bottom-control-height: 44px"));
     assertTrue(theme.contains("--bottom-control-fg: #3E4348"));
     assertTrue(theme.contains(".zoom-controls button { display: grid; width: 42px"));
-    assertTrue(theme.contains(".mode-bar { display: flex; height: var(--bottom-control-height); align-items: center; gap: 3px; padding: 4px; border: 1px solid #D6D9DC"));
+    assertTrue(theme.contains(".mode-bar, .review-mode-shell { display: flex; height: var(--bottom-control-height); align-items: center; gap: 3px; padding: 4px; border: 1px solid #D6D9DC"));
     assertTrue(theme.contains("--highlight-green: #22C98A"));
     assertTrue(theme.contains(".review-mode .hotspot.review-unconfirmed"));
     assertTrue(theme.contains("--color-panel: #E9EFEA"));
     assertTrue(report.contains("class=\"workspace-bottom-controls\""));
+    assertTrue(report.contains("class=\"review-mode-shell\""));
     assertTrue(report.contains("id=\"rail-screen-tree\""));
     assertTrue(report.contains("id=\"rail-screen-structure\""));
     assertFalse(report.contains("id=\"zoom-value\""));
