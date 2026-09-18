@@ -82,16 +82,16 @@ main > #heading, #viewport > #heading { color: var(--color-text) !important; fon
 /* The contextual inspector is a single soft drawer, not a stack of heavy cards. */
 .detail { margin: 4px 4px 4px 0; border: 1px solid var(--color-panel-border) !important; border-radius: var(--radius-panel); padding: 20px !important; color: var(--color-muted) !important; background: var(--color-panel) !important; box-shadow: none !important; }
 .detail > h2 { margin-bottom: 16px !important; padding-bottom: 14px !important; border-color: rgb(20 24 30 / .07) !important; color: var(--color-text) !important; font-size: 20px !important; }
-.detail-identifier, .meta { color: var(--color-muted) !important; font-family: ui-monospace, SFMono-Regular, Menlo, monospace !important; }
+.detail-identifier, .detail .meta { color: #555B60 !important; font-family: ui-monospace, SFMono-Regular, Menlo, monospace !important; }
 .detail-section { margin: 14px 0 !important; padding: 0 !important; border: 0 !important; border-radius: 0 !important; background: transparent !important; box-shadow: none !important; }
-.detail-section h3 { margin: 0 0 9px !important; color: var(--color-text-muted, var(--color-muted)) !important; font-size: 14px !important; letter-spacing: 0 !important; text-transform: none !important; }
+.detail-section h3 { margin: 0 0 9px !important; color: var(--color-text-secondary) !important; font-size: 14px !important; letter-spacing: 0 !important; text-transform: none !important; }
 .detail-section .link, .link { margin: 7px 0 0 !important; border: 0 !important; border-radius: var(--radius-row) !important; padding: 10px 12px !important; color: #25292D !important; background: rgb(255 255 255 / .72) !important; box-shadow: var(--shadow-xs) !important; font-size: 14px !important; font-weight: 650 !important; transition: transform var(--transition-fast), box-shadow var(--transition-fast), background var(--transition-fast) !important; }
 .detail-section .link:hover, .link:hover { color: var(--color-interactive-hover) !important; background: #FFFFFF !important; box-shadow: var(--shadow-sm) !important; transform: translateY(-1px); }
 .detail-section .link:active, .link:active { transform: scale(.99); }
 .back { border: 0 !important; border-radius: var(--radius-control) !important; padding: 8px 12px !important; color: var(--color-interactive) !important; background: #FFFFFF !important; box-shadow: var(--shadow-xs) !important; font-weight: 700 !important; transition: transform var(--transition-fast), box-shadow var(--transition-fast) !important; }
 .back:hover { box-shadow: var(--shadow-sm) !important; transform: translateY(-1px); }
 .css-properties { border: 0 !important; border-radius: var(--radius-row) !important; background: rgb(255 255 255 / .52) !important; box-shadow: none !important; }
-.css-properties dt, .css-properties dd { border-color: rgb(20 24 30 / .06) !important; color: var(--color-muted) !important; font-family: ui-monospace, SFMono-Regular, Menlo, monospace !important; }
+.css-properties dt, .css-properties dd { border-color: rgb(20 24 30 / .06) !important; color: #555B60 !important; font-family: ui-monospace, SFMono-Regular, Menlo, monospace !important; }
 .css-properties dt { color: var(--color-text-secondary) !important; background: rgb(255 255 255 / .28) !important; }
 
 /* All Screens uses the same open canvas language as a focused Screen Flow. */
