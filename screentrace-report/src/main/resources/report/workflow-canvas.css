@@ -139,7 +139,7 @@ main > #heading, #viewport > #heading { color: var(--color-text) !important; fon
 .flow .node, .map-canvas .node { border: 0 !important; }
 .map-canvas { background-color: #FFFFFF !important; background-image: radial-gradient(circle, rgb(50 55 60 / .10) 1px, transparent 1px) !important; background-size: 22px 22px !important; }
 .content.focused #viewport { background-color: #FFFFFF !important; background-image: none !important; }
-.connectors .connector-line { stroke: #7C828A !important; stroke-width: 2 !important; }
+.connectors .connector-line { stroke: #7C828A !important; stroke-width: 2 !important; stroke-linecap: round; stroke-linejoin: round; }
 .connectors .connector-line.highlight, .connectors .connector-line.relationship-highlight { stroke: var(--highlight-green) !important; stroke-width: 2.5 !important; }
 .focus-caption { color: var(--color-muted) !important; letter-spacing: .08em; text-transform: uppercase; }
 .zoom-controls { gap: 10px; overflow: visible !important; border: 0 !important; border-radius: 0 !important; background: transparent !important; box-shadow: none !important; }

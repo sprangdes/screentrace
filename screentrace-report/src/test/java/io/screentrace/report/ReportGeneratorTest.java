@@ -77,6 +77,7 @@ class ReportGeneratorTest {
     assertTrue(report.contains("reviewStatusControl"));
     assertTrue(theme.contains(".review-status-chip"));
     assertTrue(theme.contains(".map-canvas { background-color"));
+    assertTrue(theme.contains("stroke-linejoin: round"));
     assertTrue(theme.contains(".content.focused #viewport { background-color: #FFFFFF"));
     assertTrue(report.contains("/preview-model.json"));
     assertFalse(report.contains("/static-preview/manifest.json"));
@@ -93,6 +94,7 @@ class ReportGeneratorTest {
     assertTrue(report.contains("linkedComponentKey"));
     assertTrue(report.contains("screenFlowHistory"));
     assertTrue(report.contains("returnToPreviousFlow"));
+    assertTrue(report.contains("radius=Math.min(18,(y2-y1)/4,Math.abs(x2-x1)/2)"));
     assertFalse(report.contains("isSelected||linkedSelected?' selected':''"));
     assertTrue(report.contains("function detailHeader(label,component,onUpdated)"));
     assertTrue(report.contains("detailSection('Page ID')"));
