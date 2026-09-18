@@ -57,6 +57,7 @@ class ReportGeneratorTest {
     assertTrue(report.contains("nextReviewStatus"));
     assertTrue(report.contains("data-interaction-id"));
     assertTrue(report.contains("setRelationHighlight"));
+    assertTrue(report.contains("card.onmouseenter=()=>{if(selected)setRelationHighlight"));
     assertTrue(report.contains("renderFlow(focusSelection)"));
     assertTrue(report.contains("renderFocusedCanvas(focusSelection)"));
     assertTrue(report.contains("reviewStatusControl"));
