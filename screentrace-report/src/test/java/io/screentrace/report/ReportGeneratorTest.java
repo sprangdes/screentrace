@@ -56,6 +56,7 @@ class ReportGeneratorTest {
     assertTrue(theme.contains(".content.overview .folder-browser.has-resizer"));
     assertTrue(theme.contains("--project-nav-width: 272px"));
     assertTrue(theme.contains(".folder-resizer"));
+    assertTrue(theme.contains("grid-template-columns: var(--project-nav-width) 14px"));
     assertTrue(theme.contains("background: var(--highlight-green-soft) !important"));
     assertTrue(theme.contains(".folder-nav-row .folder-nav-item.project-root.active"));
     assertTrue(theme.contains("--bottom-control-height: 44px"));
@@ -101,7 +102,10 @@ class ReportGeneratorTest {
     assertTrue(report.contains("returnToPreviousFlow"));
     assertTrue(report.contains("radius=Math.min(18,(y2-y1)/4,Math.abs(x2-x1)/2)"));
     assertTrue(report.contains("Resize Project panel"));
-    assertTrue(report.contains("window.screenTraceProjectNavWidth"));
+    assertTrue(report.contains("screentrace-project-nav-width-v2"));
+    assertTrue(report.contains("availableWidth>580"));
+    assertTrue(report.contains("stored===null?NaN:Number(stored)"));
+    assertTrue(report.contains("拖曳調整 Project 欄寬，雙擊還原"));
     assertTrue(report.contains("browser.classList.add('has-resizer')"));
     assertFalse(report.contains("isSelected||linkedSelected?' selected':''"));
     assertTrue(report.contains("function detailHeader(label,component,onUpdated)"));
