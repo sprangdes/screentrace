@@ -96,7 +96,8 @@ main > #heading, #viewport > #heading { color: var(--color-text) !important; fon
 
 /* All Screens uses the same open canvas language as a focused Screen Flow. */
 .content.overview #viewport { padding: 0 !important; }
-.content.overview .folder-browser { --project-nav-width: 272px; grid-template-columns: minmax(220px, var(--project-nav-width)) 8px minmax(0, 1fr) !important; border: 0 !important; border-radius: 0 !important; background: #FFFFFF !important; box-shadow: none !important; }
+.content.overview .folder-browser { --project-nav-width: 272px; grid-template-columns: var(--project-nav-width) minmax(0, 1fr) !important; border: 0 !important; border-radius: 0 !important; background: #FFFFFF !important; box-shadow: none !important; }
+.content.overview .folder-browser.has-resizer { grid-template-columns: var(--project-nav-width) 8px minmax(0, 1fr) !important; }
 .folder-nav { min-width: 0; padding: 12px 10px 18px !important; overflow: auto !important; background: #FFFFFF !important; border-right: 0 !important; }
 .folder-content { padding: 30px 34px !important; background: #FFFFFF !important; }
 .folder-nav-title { position: sticky; z-index: 2; top: 0; left: 0; width: max-content; min-width: calc(100% - 16px); margin: 0 8px 12px !important; padding: 6px 0 12px !important; border-bottom: 1px solid rgb(20 24 30 / .10) !important; color: #30343A !important; background: #FFFFFF; font-size: 12px !important; font-weight: 800 !important; letter-spacing: .1em !important; text-transform: uppercase; }

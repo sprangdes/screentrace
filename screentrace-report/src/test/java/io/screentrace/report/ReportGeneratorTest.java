@@ -52,7 +52,8 @@ class ReportGeneratorTest {
     assertTrue(theme.contains(".workspace-bottom-controls"));
     assertTrue(theme.contains(".content.overview .screen-grid .node:hover:not(.selected)"));
     assertTrue(theme.contains(".node.selected { outline: none !important; background: var(--color-node)"));
-    assertTrue(theme.contains(".content.overview .folder-browser { --project-nav-width: 272px; grid-template-columns: minmax(220px, var(--project-nav-width)) 8px minmax(0, 1fr)"));
+    assertTrue(theme.contains(".content.overview .folder-browser { --project-nav-width: 272px; grid-template-columns: var(--project-nav-width) minmax(0, 1fr)"));
+    assertTrue(theme.contains(".content.overview .folder-browser.has-resizer"));
     assertTrue(theme.contains("--project-nav-width: 272px"));
     assertTrue(theme.contains(".folder-resizer"));
     assertTrue(theme.contains("background: var(--highlight-green-soft) !important"));
@@ -101,6 +102,7 @@ class ReportGeneratorTest {
     assertTrue(report.contains("radius=Math.min(18,(y2-y1)/4,Math.abs(x2-x1)/2)"));
     assertTrue(report.contains("Resize Project panel"));
     assertTrue(report.contains("window.screenTraceProjectNavWidth"));
+    assertTrue(report.contains("browser.classList.add('has-resizer')"));
     assertFalse(report.contains("isSelected||linkedSelected?' selected':''"));
     assertTrue(report.contains("function detailHeader(label,component,onUpdated)"));
     assertTrue(report.contains("detailSection('Page ID')"));
