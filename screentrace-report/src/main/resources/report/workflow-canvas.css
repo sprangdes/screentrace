@@ -98,9 +98,10 @@ main > #heading, #viewport > #heading { color: var(--color-text) !important; fon
 .content.overview #viewport { padding: 0 !important; }
 .content.overview .folder-browser { --project-nav-width: 272px; grid-template-columns: var(--project-nav-width) minmax(0, 1fr) !important; border: 0 !important; border-radius: 0 !important; background: #FFFFFF !important; box-shadow: none !important; }
 .content.overview .folder-browser.has-resizer { grid-template-columns: var(--project-nav-width) 14px minmax(0, 1fr) !important; }
-.folder-nav { min-width: 0; padding: 12px 10px 18px !important; overflow: auto !important; background: #FFFFFF !important; border-right: 0 !important; }
+.folder-nav { min-width: 0; padding: 14px 10px 18px !important; overflow: auto !important; background: #FFFFFF !important; border-right: 0 !important; }
 .folder-content { padding: 30px 34px !important; background: #FFFFFF !important; }
 .folder-nav-title { position: sticky; z-index: 2; top: 0; left: 0; width: max-content; min-width: calc(100% - 16px); margin: 0 8px 12px !important; padding: 6px 0 12px !important; border-bottom: 1px solid rgb(20 24 30 / .10) !important; color: #30343A !important; background: #FFFFFF; font-size: 12px !important; font-weight: 800 !important; letter-spacing: .1em !important; text-transform: uppercase; }
+.folder-nav-title { display: none !important; }
 .folder-summary, .browser-section-heading h3 { color: var(--color-text) !important; border: 0 !important; }
 .folder-nav-row { height: 34px !important; margin: 2px 0 !important; }
 .folder-nav-row .folder-nav-item, .folder-screen-item { border: 0 !important; border-radius: var(--radius-row) !important; color: #50565D !important; font-family: Inter, "DM Sans", ui-sans-serif, system-ui, sans-serif !important; font-size: 13px !important; font-weight: 650 !important; letter-spacing: -.005em; }
