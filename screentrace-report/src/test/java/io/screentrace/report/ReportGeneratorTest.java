@@ -105,7 +105,11 @@ class ReportGeneratorTest {
     assertTrue(report.contains("screentrace-project-nav-width-v2"));
     assertTrue(report.contains("availableWidth>580"));
     assertTrue(report.contains("stored===null?NaN:Number(stored)"));
-    assertTrue(report.contains("拖曳調整 Project 欄寬，雙擊還原"));
+    assertTrue(report.contains("按住左鍵拖曳調整 Project 欄寬，雙擊還原"));
+    assertTrue(report.contains("event.buttons!==1"));
+    assertTrue(report.contains("addDragListeners"));
+    assertTrue(report.contains("window.addEventListener(type,dragEvent,true)"));
+    assertTrue(report.contains("window.removeEventListener(type,dragEvent,true)"));
     assertTrue(report.contains("browser.classList.add('has-resizer')"));
     assertFalse(report.contains("isSelected||linkedSelected?' selected':''"));
     assertTrue(report.contains("function detailHeader(label,component,onUpdated)"));
