@@ -1,4 +1,4 @@
-import { access, cp, mkdir, readFile, writeFile } from 'node:fs/promises';
+import { access, cp, mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
 import { constants } from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -18,16 +18,46 @@ const htmlRoot = path.join(output, 'static-preview');
 const screenshotRoot = path.join(output, 'screenshots');
 await mkdir(htmlRoot, { recursive: true });
 await mkdir(screenshotRoot, { recursive: true });
-if (await exists(path.join(webRoot, 'resources'))) await cp(path.join(webRoot, 'resources'), path.join(htmlRoot, 'assets/resources'), { recursive: true });
 
 async function exists(file) { try { await access(file, constants.R_OK); return true; } catch { return false; } }
 async function text(file) { return readFile(file, 'utf8'); }
+const assetRoots = [
+  [path.join(webRoot, 'resources'), 'resources'], [path.join(webRoot, 'css'), 'css'],
+  [path.join(webRoot, 'js'), 'js'], [path.join(webRoot, 'images'), 'images'],
+  [path.join(target, 'src/main/resources/static'), ''], [path.join(target, 'src/main/resources/public'), '']
+];
+async function copyAssets() {
+  for (const [source, previewPath] of assetRoots) if (await exists(source)) {
+    await cp(source, path.join(htmlRoot, 'assets', previewPath), { recursive: true });
+    await rewriteCssUrls(path.join(htmlRoot, 'assets', previewPath));
+  }
+}
+async function rewriteCssUrls(directory) {
+  for (const entry of await readdir(directory, { withFileTypes: true })) {
+    const file = path.join(directory, entry.name);
+    if (entry.isDirectory()) await rewriteCssUrls(file);
+    else if (entry.isFile() && entry.name.endsWith('.css')) await writeFile(file,
+      (await text(file)).replace(/url\(\s*(["']?)\/(resources|css|js|images)\/([^)'"\s]+)(\1)\s*\)/g,
+        (_, quote, folder, resource, closingQuote) => `url(${quote}${path.relative(path.dirname(file), path.join(htmlRoot, 'assets', folder, resource)).replaceAll(path.sep, '/')}${closingQuote})`));
+  }
+}
+await copyAssets();
 function attrs(source) {
   const values = {};
   for (const match of source.matchAll(/([\w:-]+)\s*=\s*(["'])([\s\S]*?)\2/g)) values[match[1]] = match[3];
   return values;
 }
 function removeDirectives(source) { return source.replace(/<%@[^%]*%>/g, '').replace(/<%--[\s\S]*?--%>/g, ''); }
+async function expandIncludes(source, currentFile, stack = new Set(), depth = 0) {
+  if (depth >= 16) return source;
+  return replaceAsync(source, /<%@\s*include\s+file\s*=\s*(["'])(.*?)\1\s*%>/gi, async match => {
+    const includePath = match[2];
+    const file = includePath.startsWith('/') ? path.join(webRoot, includePath) : path.resolve(path.dirname(currentFile), includePath);
+    if (stack.has(file) || !(await exists(file))) return '';
+    const next = new Set(stack); next.add(file);
+    return expandIncludes(await text(file), file, next, depth + 1);
+  });
+}
 function placeholder(expression) {
   const value = expression.trim();
   const escaped = value.match(/^fn:escapeXml\((.+)\)$/);
@@ -84,8 +114,12 @@ async function replaceAsync(source, expression, mapper) {
   matches.forEach((match, index) => { result += source.slice(cursor, match.index) + replacements[index]; cursor = match.index + match[0].length; });
   return result + source.slice(cursor);
 }
+function rewriteAssetUrls(source) {
+  return source.replace(/\b(href|src)=(['"])\/(resources|css|js|images)\//gi, '$1=$2assets/$3/');
+}
 function htmlControls(source) {
   return source
+    .replace(/<c:url\b[^>]*?\bvalue\s*=\s*(["'])(.*?)\1[^>]*\/>/gi, '$2')
     .replace(/<c:out\b([^>]*)\/>/g, (_, attributeText) => attrs(attributeText).value || attrs(attributeText).default || 'Sample value')
     .replace(/<fmt:formatDate\b([^>]*)\/>/g, (_, attributeText) => attrs(attributeText).value || '2020-05-12')
     .replace(/<spring:url\s+value=["']([^"']+)["'][^>]*\/>/g, '$1')
@@ -99,22 +133,18 @@ function htmlControls(source) {
     .replace(/<\/c:(?:if|when|otherwise|choose|out|set|forEach|remove)>/g, '')
     .replace(/<spring:(?:bind|message)[^>]*>/g, '').replace(/<\/spring:(?:bind|message)>/g, '')
     .replace(/<jsp:(?:body|attribute)[^>]*>/g, '').replace(/<\/jsp:(?:body|attribute)>/g, '')
-    .replace(/<script[\s\S]*?<\/script>/gi, '')
+    .replace(/<script(?![^>]*\bsrc\s*=)[\s\S]*?<\/script>/gi, '')
     .replace(/\s+(?:items|modelAttribute|names)=["'][^"']*["']/g, '');
 }
-function cssLinks(source) {
-  return [...source.matchAll(/<link\b[^>]*\bhref=["']([^"']+\.css)["'][^>]*>/gi)].map(match => match[1]).filter(href => href.includes('/resources/'));
-}
-function localStaticResources(source) {
-  return source.replace(/\bsrc=(["'])(\/resources\/[^"']+)\1/gi, (_, quote, resource) =>
-    `src=${quote}assets${resource}${quote}`);
-}
+function dynamicExpressions(source) { return [...source.matchAll(/\$\{[^}]+}/g)].map(match => match[0]); }
 async function renderJsp(screen) {
   const view = screen.attributes?.view;
   if (!view || !view.endsWith('.jsp')) return null;
   const jsp = path.join(target, view);
   if (!(await exists(jsp))) return null;
-  let source = removeDirectives(await text(jsp));
+  let source = await expandIncludes(await text(jsp), jsp, new Set([jsp]));
+  source = removeDirectives(source);
+  const unresolved = dynamicExpressions(source);
   const custom = source.match(/<jsp:attribute\s+name=["']customScript["'][^>]*>([\s\S]*?)<\/jsp:attribute>/)?.[1] || '';
   source = source.replace(/<jsp:attribute\s+name=["']customScript["'][^>]*>[\s\S]*?<\/jsp:attribute>/g, '');
   source = await expandTags(source, { customScript: custom });
@@ -132,25 +162,23 @@ async function renderJsp(screen) {
     if (attributes.var && value) urls[attributes.var] = value.replace(/\{[^}]+\}/g, '1');
     return '';
   });
-  source = localStaticResources(htmlControls(replaceExpressions(source, urls)));
-  const links = cssLinks(source).map(href => {
-    return `<link rel="stylesheet" href="assets${href}">`;
-  }).join('\n');
-  if (!/<html[\s>]/i.test(source)) source = `<!doctype html><html><head>${links}</head><body>${source}</body></html>`;
-  else source = source.replace(/<\/head>/i, `${links}</head>`);
+  source = rewriteAssetUrls(htmlControls(replaceExpressions(source, urls)));
+  if (!/<html[\s>]/i.test(source)) source = `<!doctype html><html><head></head><body>${source}</body></html>`;
+  source = source.replace(/<html\b[^>]*>\s*<html\b[^>]*>/gi, '<html>').replace(/<\/head>\s*<head\b[^>]*>/gi, '');
   const htmlFile = path.join(htmlRoot, `${screen.id}.html`);
   await writeFile(htmlFile, source);
-  return htmlFile;
+  return { htmlFile, assets: [...source.matchAll(/\b(?:href|src)=["'](assets\/[^"']+)/gi)].map(match => '/' + match[1]), dynamicExpressions: unresolved };
 }
 
-const manifest = {}, screenshots = {}, interactions = {};
+const manifest = {}, screenshots = {}, interactions = {}, reconstruction = {};
 const browser = await chromium.launch({ headless: true });
 const page = await browser.newPage({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1 });
 for (const screen of graph.nodes.filter(node => node.type === 'SCREEN')) {
-  const htmlFile = await renderJsp(screen);
-  if (!htmlFile) continue;
-  manifest[screen.id] = `static-preview/${path.basename(htmlFile)}`;
-  await page.goto(pathToFileURL(htmlFile).href, { waitUntil: 'load' });
+  const rendered = await renderJsp(screen);
+  if (!rendered) continue;
+  manifest[screen.id] = `static-preview/${path.basename(rendered.htmlFile)}`;
+  reconstruction[screen.id] = { view: screen.attributes?.view, assets: rendered.assets, dynamicExpressions: rendered.dynamicExpressions, rendering: { mode: 'reconstructed' } };
+  await page.goto(pathToFileURL(rendered.htmlFile).href, { waitUntil: 'load' });
   const items = await page.locator('a[href], button, input[type="submit"], input[type="button"], form[action]').evaluateAll(items => items.map((item, index) => {
     const box = item.getBoundingClientRect(), style = getComputedStyle(item);
     const form = item.tagName === 'FORM' ? item : item.closest('form');
@@ -174,5 +202,6 @@ for (const screen of graph.nodes.filter(node => node.type === 'SCREEN')) {
 }
 await browser.close();
 await writeFile(path.join(htmlRoot, 'manifest.json'), JSON.stringify(manifest, null, 2));
+await writeFile(path.join(htmlRoot, 'reconstruction.json'), JSON.stringify(reconstruction, null, 2));
 await writeFile(path.join(screenshotRoot, 'manifest.json'), JSON.stringify(screenshots, null, 2));
 await writeFile(path.join(screenshotRoot, 'interactions.json'), JSON.stringify(interactions, null, 2));

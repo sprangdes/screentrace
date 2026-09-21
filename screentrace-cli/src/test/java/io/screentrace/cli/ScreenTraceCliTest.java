@@ -18,12 +18,16 @@ class ScreenTraceCliTest {
     Files.writeString(analysis.resolve("application-graph.json"), "{}");
     Files.writeString(analysis.resolve("preview-model.json"), "{}");
     Path screenshots = Files.createDirectories(analysis.resolve("screenshots"));
+    Path assets = Files.createDirectories(analysis.resolve("static-preview/assets/resources/images"));
     Files.writeString(screenshots.resolve("orders.png"), "image");
+    Files.writeString(assets.resolve("banner.jpg"), "image");
 
     assertEquals(report.resolve("index.html"), ScreenTraceCli.staticFile("/", report, analysis));
     assertEquals(analysis.resolve("application-graph.json"), ScreenTraceCli.staticFile("/application-graph.json", report, analysis));
     assertEquals(analysis.resolve("preview-model.json"), ScreenTraceCli.staticFile("/preview-model.json", report, analysis));
     assertEquals(screenshots.resolve("orders.png"), ScreenTraceCli.staticFile("/screenshots/orders.png", report, analysis));
+    assertEquals(assets.resolve("banner.jpg"), ScreenTraceCli.staticFile("/static-preview/assets/resources/images/banner.jpg", report, analysis));
+    assertNull(ScreenTraceCli.staticFile("/static-preview/assets/../../secret.txt", report, analysis));
     assertNull(ScreenTraceCli.staticFile("/screenshots/../application-graph.json", report, analysis));
     assertNull(ScreenTraceCli.staticFile("/../secret.txt", report, analysis));
     try {

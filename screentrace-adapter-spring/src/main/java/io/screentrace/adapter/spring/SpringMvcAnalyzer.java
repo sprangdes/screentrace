@@ -52,8 +52,9 @@ public final class SpringMvcAnalyzer {
     public ApplicationGraph analyze(ProjectInventory inventory) throws IOException {
         State state = new State(inventory.root(), inventory.javaFiles());
         JspAnalysis jsp = new JspProjectParser().analyze(inventory.root(), inventory.files());
-        for (JspAnalysis.View view : jsp.views()) if (view.kind() == JspAnalysis.ViewKind.JSP) addJspScreen(inventory.root().resolve(view.path()), state);
-        addJspFragments(jsp, state);
+        Set<String> includedViews = includedViewPaths(inventory.root(), jsp);
+        for (JspAnalysis.View view : jsp.views()) if (view.kind() == JspAnalysis.ViewKind.JSP && !includedViews.contains(view.path())) addJspScreen(inventory.root().resolve(view.path()), state);
+        addJspFragments(jsp, includedViews, state);
         addTilesDefinitions(jsp, state);
         discoverExceptionView(inventory, state);
         parseXmlControllers(inventory, state);
@@ -145,7 +146,7 @@ public final class SpringMvcAnalyzer {
             addNode(state, new GraphNode(endpointId, NodeType.ENDPOINT, httpMethod(mapping) + " " + path,
                     Map.of("httpMethod", httpMethod(mapping), "path", path, "category", rest ? "REST_API" : !views.isEmpty() && views.stream().allMatch(view -> view.startsWith("redirect:")) ? "REDIRECT" : "MVC_SCREEN"), source, Confidence.CONFIRMED));
             state.endpointByPath.putIfAbsent(path, endpointId);
-            EndpointReference endpoint = new EndpointReference(endpointId, path, httpMethod(mapping));
+            EndpointReference endpoint = new EndpointReference(endpointId, path, httpMethod(mapping), rest ? "REST_API" : "MVC_SCREEN");
             state.endpoints.add(endpoint);
             edge(state, EdgeType.HANDLED_BY, endpointId, handlerId, Confidence.CONFIRMED, source);
             state.apiContracts.add(state.contracts.contract(endpointId, method, mapping, source, views));
@@ -267,7 +268,7 @@ public final class SpringMvcAnalyzer {
         addNode(state, new GraphNode(endpointId, NodeType.ENDPOINT, "ANY " + path,
                 Map.of("httpMethod", "ANY", "path", path, "category", "MVC_SCREEN"), source, Confidence.CONFIRMED));
         state.endpointByPath.putIfAbsent(path, endpointId);
-        state.endpoints.add(new EndpointReference(endpointId, path, "ANY"));
+        state.endpoints.add(new EndpointReference(endpointId, path, "ANY", "MVC_SCREEN"));
         edge(state, EdgeType.HANDLED_BY, endpointId, handlerId, Confidence.CONFIRMED, source);
         String view = property(bean, "viewName");
         if (view == null || view.isBlank()) {
@@ -295,12 +296,12 @@ public final class SpringMvcAnalyzer {
             addNode(state, new GraphNode(endpointId, NodeType.ENDPOINT, "GET " + path,
                 Map.of("httpMethod", "GET", "path", path, "category", "MVC_SCREEN"), source, Confidence.CONFIRMED));
             state.endpointByPath.putIfAbsent(path, endpointId);
-            state.endpoints.add(new EndpointReference(endpointId, path, "GET"));
+            state.endpoints.add(new EndpointReference(endpointId, path, "GET", "MVC_SCREEN"));
             edge(state, EdgeType.HANDLED_BY, endpointId, handlerId, Confidence.CONFIRMED, source);
             String screenId = screenForView(view, source, state);
             edge(state, EdgeType.RENDERS, handlerId, screenId, Confidence.CONFIRMED, source);
             state.endpointsByScreen.computeIfAbsent(screenId, ignored -> new ArrayList<>())
-                .add(new EndpointReference(endpointId, path, "GET"));
+                .add(new EndpointReference(endpointId, path, "GET", "MVC_SCREEN"));
             state.screensByEndpoint.computeIfAbsent(endpointId, ignored -> new ArrayList<>()).add(screenId);
         }
     }
@@ -338,9 +339,9 @@ public final class SpringMvcAnalyzer {
         return builder.parse(new InputSource(new StringReader(source)));
     }
 
-    private static void addJspFragments(JspAnalysis jsp, State state) {
+    private static void addJspFragments(JspAnalysis jsp, Set<String> includedViews, State state) {
         for (JspAnalysis.View view : jsp.views()) {
-            if (view.kind() != JspAnalysis.ViewKind.JSPF) continue;
+            if (view.kind() != JspAnalysis.ViewKind.JSPF && !includedViews.contains(view.path())) continue;
             String id = ApplicationGraph.id(NodeType.TEMPLATE_FRAGMENT, view.path());
             addNode(state, new GraphNode(id, NodeType.TEMPLATE_FRAGMENT, Path.of(view.path()).getFileName().toString(),
                     Map.of("view", view.path()), view.source(), Confidence.CONFIRMED));
@@ -366,10 +367,11 @@ public final class SpringMvcAnalyzer {
             Map<String, String> attributes = new TreeMap<>();
             attributes.put("componentType", interaction.type().name());
             attributes.put("target", interaction.target());
+            if (!interaction.viewPath().equals(interaction.source().file())) attributes.put("includedBy", interaction.viewPath());
             if (interaction.httpMethod() != null) attributes.put("httpMethod", interaction.httpMethod());
             addNode(state, new GraphNode(id, NodeType.COMPONENT, interaction.label(), attributes, interaction.source(), interaction.confidence()));
             edge(state, EdgeType.CONTAINS, screenId, id, Confidence.CONFIRMED, interaction.source());
-            if (interaction.confidence() == Confidence.UNRESOLVED) continue;
+            if (interaction.confidence() == Confidence.UNRESOLVED || !canTriggerEndpoint(interaction.type())) continue;
             for (EndpointMatch match : endpointsFor(interaction, screenId, state)) {
                 edge(state, EdgeType.TRIGGERS, id, match.endpointId(), match.confidence(), interaction.source());
                 List<String> targetScreens = state.screensByEndpoint.getOrDefault(match.endpointId(), List.of()).stream()
@@ -380,6 +382,11 @@ public final class SpringMvcAnalyzer {
             String next = state.screensByView.get(interaction.target());
             if (next != null) edge(state, EdgeType.NAVIGATES_TO, id, next, Confidence.CONFIRMED, interaction.source());
         }
+    }
+
+    private static boolean canTriggerEndpoint(JspAnalysis.InteractionType type) {
+        return type == JspAnalysis.InteractionType.NAVIGATION || type == JspAnalysis.InteractionType.FORM_SUBMIT
+            || type == JspAnalysis.InteractionType.API_TRIGGER;
     }
 
     private static List<EndpointMatch> endpointsFor(JspAnalysis.Interaction interaction, String screenId, State state) {
@@ -443,6 +450,18 @@ public final class SpringMvcAnalyzer {
         }
     }
 
+    private static Set<String> includedViewPaths(Path root, JspAnalysis jsp) {
+        Set<String> paths = new java.util.HashSet<>();
+        for (JspAnalysis.Include include : jsp.includes()) {
+            Path source = root.resolve(include.sourceViewPath()).getParent();
+            Path candidate = include.targetPath().startsWith("/")
+                ? root.resolve("src/main/webapp" + include.targetPath()) : source.resolve(include.targetPath()).normalize();
+            if (!Files.isRegularFile(candidate) && include.targetPath().startsWith("/")) candidate = root.resolve(include.targetPath().substring(1));
+            if (Files.isRegularFile(candidate)) paths.add(root.relativize(candidate).toString().replace('\\', '/'));
+        }
+        return paths;
+    }
+
     private static java.util.Optional<String> webPath(String path) {
         int marker = path.indexOf("/WEB-INF/");
         return marker < 0 ? java.util.Optional.empty() : java.util.Optional.of(path.substring(marker));
@@ -502,7 +521,7 @@ public final class SpringMvcAnalyzer {
         private String defaultExceptionView;
         private State(Path root, List<Path> javaFiles) { this.root = root; this.contracts = new ApiContractExtractor(root, javaFiles); }
     }
-    private record EndpointReference(String id, String path, String httpMethod) { }
+    private record EndpointReference(String id, String path, String httpMethod, String category) { }
     private record EndpointMatch(String endpointId, Confidence confidence) { }
     private record ViewResolver(String prefix, String suffix) { }
 }

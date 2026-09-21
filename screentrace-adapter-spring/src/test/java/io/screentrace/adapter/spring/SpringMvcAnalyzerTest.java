@@ -113,6 +113,42 @@ class SpringMvcAnalyzerTest {
     }
 
     @Test
+    void keepsIncludedNavigationOnItsRenderedScreenAndDoesNotAttributeUnreferencedApis() throws Exception {
+        Path root = Files.createTempDirectory("st-mvc-home");
+        Path java = root.resolve("src/main/java/HomeController.java");
+        Path home = root.resolve("src/main/webapp/WEB-INF/views/home.jsp");
+        Path header = root.resolve("src/main/webapp/WEB-INF/views/templates/header.jsp");
+        Files.createDirectories(java.getParent());
+        Files.createDirectories(header.getParent());
+        Files.writeString(root.resolve("pom.xml"), "<project><dependency><artifactId>spring-webmvc</artifactId></dependency></project>");
+        Files.writeString(java, """
+            import org.springframework.stereotype.*; import org.springframework.web.bind.annotation.*;
+            @Controller class HomeController {
+              @GetMapping("/") String home(){ return "home"; }
+              @GetMapping("/productList") String products(){ return "productList"; }
+              @GetMapping("/cart/{cartId}") String cart(){ return "cart"; }
+            }
+            """);
+        Files.writeString(home, "<%@include file=\"/WEB-INF/views/templates/header.jsp\"%><a href=\"#myCarousel\" data-slide=\"prev\">Previous</a><a href=\"#\">View details</a>");
+        Files.writeString(header, "<a href=\"<c:url value=\"/productList\"/>\">Products</a>");
+
+        ApplicationGraph graph = new SpringMvcAnalyzer().analyze(new ProjectScanner().scan(root));
+        var homeScreen = graph.nodes().stream().filter(node -> node.type() == ApplicationGraph.NodeType.SCREEN
+            && node.attributes().getOrDefault("view", "").endsWith("home.jsp")).findFirst().orElseThrow();
+        var products = graph.nodes().stream().filter(node -> node.type() == ApplicationGraph.NodeType.COMPONENT
+            && node.name().equals("Products")).findFirst().orElseThrow();
+        assertTrue("NAVIGATION".equals(products.attributes().get("componentType")));
+        assertTrue(graph.relationships().stream().anyMatch(edge -> edge.from().equals(products.id())
+            && edge.type() == ApplicationGraph.EdgeType.NAVIGATES_TO));
+        assertTrue(graph.nodes().stream().noneMatch(node -> node.type() == ApplicationGraph.NodeType.SCREEN
+            && node.attributes().getOrDefault("view", "").endsWith("header.jsp")));
+        assertTrue(graph.relationships().stream().noneMatch(edge -> edge.from().equals(homeScreen.id())
+            && edge.type() == ApplicationGraph.EdgeType.CALLS));
+        assertTrue(graph.relationships().stream().noneMatch(edge -> edge.type() == ApplicationGraph.EdgeType.TRIGGERS
+            && graph.nodes().stream().anyMatch(node -> node.id().equals(edge.to()) && node.name().equals("GET /cart/{cartId}"))));
+    }
+
+    @Test
     void correlatesXmlViewControllersRelativeDynamicLinksAndCurrentViewSpringForms() throws Exception {
         Path root = Files.createTempDirectory("st-mvc-static-flow");
         Path config = root.resolve("src/main/resources/mvc.xml");

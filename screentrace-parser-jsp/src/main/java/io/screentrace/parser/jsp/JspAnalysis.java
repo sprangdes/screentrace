@@ -24,7 +24,10 @@ public record JspAnalysis(List<View> views, List<Interaction> interactions, List
                             String httpMethod, SourceLocation source, Confidence confidence,
                             boolean submitsCurrentView) { }
 
-  public enum InteractionType { FORM, LINK, BUTTON }
+  /** Semantic interaction classification; presentation markup is retained separately by consumers. */
+  public enum InteractionType {
+    NAVIGATION, UI_STATE_CHANGE, API_TRIGGER, FORM_SUBMIT, PLACEHOLDER, ANCHOR, UNKNOWN
+  }
 
   public record Include(String sourceViewPath, String targetPath, SourceLocation source,
                         Confidence confidence) { }
