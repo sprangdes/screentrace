@@ -24,7 +24,9 @@ class JspProjectParserTest {
         <spring:url value="/owners" var="formUrl"/>
         <form:form action="${fn:escapeXml(formUrl)}" method="get"><button type="submit">Find Owner</button></form:form>
         <form:form action="/orders/search" method="post"><button formaction="/orders/export">Export</button></form:form>
+        <form:form modelAttribute="order"><button type="submit">Save</button></form:form>
         <html:link page="/orders/history">History</html:link>
+        <a href="<spring:url value="/orders/export" htmlEscape="true" />">Inline export</a>
         <a href="${dynamicUrl}">Dynamic</a>
         """);
     Files.writeString(fragment, "<input name=\"keyword\"/>");
@@ -48,6 +50,10 @@ class JspProjectParserTest {
         && item.httpMethod().equals("GET")));
     assertTrue(analysis.interactions().stream().anyMatch(item -> item.target().equals("/orders/export")));
     assertTrue(analysis.interactions().stream().anyMatch(item -> item.target().equals("/orders/history")));
+    assertTrue(analysis.interactions().stream().anyMatch(item -> item.target().equals("/orders/export")
+        && item.type() == JspAnalysis.InteractionType.LINK));
+    assertTrue(analysis.interactions().stream().anyMatch(item -> item.submitsCurrentView()
+        && item.target().equals(JspProjectParser.CURRENT_VIEW_TARGET) && item.httpMethod().equals("POST")));
     assertTrue(analysis.interactions().stream().anyMatch(item -> item.target().equals("${dynamicUrl}") && item.confidence() == Confidence.UNRESOLVED));
     assertEquals("orders.search", analysis.tilesDefinitions().get(0).name());
     assertEquals("/WEB-INF/layout.jsp", analysis.tilesDefinitions().get(0).template());

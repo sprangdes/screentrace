@@ -12,6 +12,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import javax.xml.XMLConstants;
 import javax.xml.parsers.DocumentBuilderFactory;
 import org.w3c.dom.Document;
@@ -26,6 +28,9 @@ import org.xml.sax.SAXParseException;
  */
 public final class JspProjectParser {
   private static final String PARSER = "JspProjectParser";
+  public static final String CURRENT_VIEW_TARGET = "<current-view>";
+  private static final Pattern INLINE_SPRING_URL_LINK = Pattern.compile(
+      "(?is)<a\\b.*?\\bhref\\s*=\\s*(['\"])\\s*<spring:url\\b.*?\\bvalue\\s*=\\s*(['\"])([^'\"${}<>]+)\\2.*?/>\\s*\\1");
 
   public JspAnalysis analyze(Path root, List<Path> files) throws IOException {
     List<JspAnalysis.View> views = new ArrayList<>();
@@ -54,6 +59,8 @@ public final class JspProjectParser {
     Map<String, String> urls = new HashMap<>();
     String activeFormTarget = null;
     String activeFormMethod = null;
+    boolean activeFormSubmitsCurrentView = false;
+    inlineSpringUrlLinks(text, relative, interactions, diagnostics);
     for (MarkupTag tag : MarkupTag.scan(text)) {
       SourceLocation source = new SourceLocation(relative, tag.line());
       String tagName = tag.name().toLowerCase(Locale.ROOT);
@@ -61,24 +68,29 @@ public final class JspProjectParser {
         if (tagName.equals("form") || tagName.equals("form:form") || tagName.equals("html:form")) {
           activeFormTarget = null;
           activeFormMethod = null;
+          activeFormSubmitsCurrentView = false;
         }
         continue;
       }
       switch (tagName) {
-        case "spring:url" -> registerUrl(tag, urls);
+        case "spring:url", "c:url" -> registerUrl(tag, urls);
         case "jsp:include", "@include" -> include(relative, target(tag, "page", "file"), source, includes, diagnostics);
         case "form", "html:form", "form:form" -> {
           activeFormTarget = resolvedTarget(target(tag, "action"), urls);
           activeFormMethod = method(tag);
-          interaction(relative, JspAnalysis.InteractionType.FORM, tag, activeFormTarget, activeFormMethod, source, interactions, diagnostics);
+          activeFormSubmitsCurrentView = activeFormTarget == null;
+          interaction(relative, JspAnalysis.InteractionType.FORM, tag, activeFormTarget, activeFormMethod, source,
+              activeFormSubmitsCurrentView, interactions, diagnostics);
         }
         case "a", "html:link" -> interaction(relative, JspAnalysis.InteractionType.LINK, tag,
             resolvedTarget(target(tag, "href", "page", "action"), urls), "GET", source, interactions, diagnostics);
         case "button", "input", "html:submit", "html:button", "form:button" -> {
           String action = resolvedTarget(target(tag, "formaction", "action"), urls);
           if (action == null && submitsForm(tag) && activeFormTarget != null) action = activeFormTarget;
+          boolean submitsCurrentView = action == null && submitsForm(tag) && activeFormSubmitsCurrentView;
           String label = interactionLabel(tag, text);
-          interaction(relative, JspAnalysis.InteractionType.BUTTON, label, action, activeFormMethod, source, interactions, diagnostics);
+          interaction(relative, JspAnalysis.InteractionType.BUTTON, label, action, activeFormMethod, source,
+              submitsCurrentView, interactions, diagnostics);
         }
         default -> { }
       }
@@ -92,12 +104,23 @@ public final class JspProjectParser {
   }
 
   private static String resolvedTarget(String target, Map<String, String> urls) {
+    if (target != null && target.stripLeading().startsWith("<spring:url")) return null;
     if (target == null || !target.startsWith("${") || !target.endsWith("}")) return target;
     String expression = target.substring(2, target.length() - 1).trim();
     String variable = expression;
     int argumentStart = expression.lastIndexOf('(');
     if (argumentStart >= 0 && expression.endsWith(")")) variable = expression.substring(argumentStart + 1, expression.length() - 1).trim();
     return urls.getOrDefault(variable, target);
+  }
+
+  private static void inlineSpringUrlLinks(String text, String viewPath, List<JspAnalysis.Interaction> interactions,
+                                           List<Diagnostic> diagnostics) {
+    Matcher matcher = INLINE_SPRING_URL_LINK.matcher(text);
+    while (matcher.find()) {
+      SourceLocation source = new SourceLocation(viewPath, line(text, matcher.start()));
+      interaction(viewPath, JspAnalysis.InteractionType.LINK, "a", matcher.group(3).trim(), "GET", source,
+          false, interactions, diagnostics);
+    }
   }
 
   private static void include(String sourcePath, String target, SourceLocation source, List<JspAnalysis.Include> includes,
@@ -109,15 +132,23 @@ public final class JspProjectParser {
   private static void interaction(String viewPath, JspAnalysis.InteractionType type, MarkupTag tag, String target,
                                   String method, SourceLocation source, List<JspAnalysis.Interaction> interactions,
                                   List<Diagnostic> diagnostics) {
-    interaction(viewPath, type, label(tag), target, method, source, interactions, diagnostics);
+    interaction(viewPath, type, label(tag), target, method, source, false, interactions, diagnostics);
+  }
+
+  private static void interaction(String viewPath, JspAnalysis.InteractionType type, MarkupTag tag, String target,
+                                  String method, SourceLocation source, boolean submitsCurrentView,
+                                  List<JspAnalysis.Interaction> interactions, List<Diagnostic> diagnostics) {
+    interaction(viewPath, type, label(tag), target, method, source, submitsCurrentView, interactions, diagnostics);
   }
 
   private static void interaction(String viewPath, JspAnalysis.InteractionType type, String label, String target,
-                                  String method, SourceLocation source, List<JspAnalysis.Interaction> interactions,
-                                  List<Diagnostic> diagnostics) {
-    if (target == null) return;
-    Confidence confidence = literal(target) ? Confidence.CONFIRMED : Confidence.UNRESOLVED;
-    interactions.add(new JspAnalysis.Interaction(viewPath, type, label, target, method, source, confidence));
+                                  String method, SourceLocation source, boolean submitsCurrentView,
+                                  List<JspAnalysis.Interaction> interactions, List<Diagnostic> diagnostics) {
+    if (target == null && !submitsCurrentView) return;
+    String resolved = submitsCurrentView ? CURRENT_VIEW_TARGET : target;
+    Confidence confidence = submitsCurrentView ? Confidence.INFERRED : literal(resolved) ? Confidence.CONFIRMED : Confidence.UNRESOLVED;
+    interactions.add(new JspAnalysis.Interaction(viewPath, type, label, resolved, method, source, confidence,
+        submitsCurrentView));
     if (confidence == Confidence.UNRESOLVED) diagnostics.add(unresolved("JSP target cannot be resolved statically: " + target, source));
   }
 
@@ -131,7 +162,8 @@ public final class JspProjectParser {
 
   private static String method(MarkupTag tag) {
     String value = tag.attribute("method");
-    return value == null || value.isBlank() ? "GET" : value.toUpperCase(Locale.ROOT);
+    if (value != null && !value.isBlank()) return value.toUpperCase(Locale.ROOT);
+    return tag.name().equalsIgnoreCase("form:form") ? "POST" : "GET";
   }
 
   private static String label(MarkupTag tag) {
@@ -201,5 +233,11 @@ public final class JspProjectParser {
 
   private static String relative(Path root, Path file) {
     return root.relativize(file).toString().replace('\\', '/');
+  }
+
+  private static int line(String source, int offset) {
+    int line = 1;
+    for (int index = 0; index < offset; index++) if (source.charAt(index) == '\n') line++;
+    return line;
   }
 }

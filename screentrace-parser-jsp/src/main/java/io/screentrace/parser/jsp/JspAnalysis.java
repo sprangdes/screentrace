@@ -21,7 +21,8 @@ public record JspAnalysis(List<View> views, List<Interaction> interactions, List
   public enum ViewKind { JSP, JSPF }
 
   public record Interaction(String viewPath, InteractionType type, String label, String target,
-                            String httpMethod, SourceLocation source, Confidence confidence) { }
+                            String httpMethod, SourceLocation source, Confidence confidence,
+                            boolean submitsCurrentView) { }
 
   public enum InteractionType { FORM, LINK, BUTTON }
 

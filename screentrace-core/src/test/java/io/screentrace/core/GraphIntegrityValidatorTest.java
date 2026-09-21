@@ -22,6 +22,17 @@ class GraphIntegrityValidatorTest {
     assertThrows(IllegalStateException.class, () -> GraphIntegrityValidator.validate(graph));
   }
 
+  @Test void acceptsInferredNavigationDerivedFromAResolvedEndpoint() {
+    GraphNode screen = new GraphNode("screen", NodeType.SCREEN, "owners", Map.of("route", "/owners"), null, Confidence.CONFIRMED);
+    GraphNode detail = new GraphNode("detail", NodeType.SCREEN, "ownerDetails", Map.of("view", "owners/detail.jsp"), null, Confidence.CONFIRMED);
+    GraphNode link = new GraphNode("link", NodeType.COMPONENT, "Owner", Map.of("target", "/owners/{ownerId}"), null, Confidence.CONFIRMED);
+    var graph = new ApplicationGraph(new Application("sample", "/sample", List.of()), List.of(screen, detail, link),
+        List.of(new Relationship("contains", EdgeType.CONTAINS, "screen", "link", Confidence.CONFIRMED, null),
+            new Relationship("navigation", EdgeType.NAVIGATES_TO, "link", "detail", Confidence.INFERRED, null)), List.of());
+
+    assertDoesNotThrow(() -> GraphIntegrityValidator.validate(graph));
+  }
+
   @Test void acceptsCrossFrameworkGraphRelationships() {
     GraphNode screen = new GraphNode("screen", NodeType.SCREEN, "Search", Map.of("route", "/search"), null, Confidence.CONFIRMED);
     GraphNode form = new GraphNode("form", NodeType.COMPONENT, "searchForm", Map.of(), null, Confidence.CONFIRMED);

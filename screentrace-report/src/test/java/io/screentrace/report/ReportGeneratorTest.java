@@ -25,8 +25,8 @@ class ReportGeneratorTest {
 
   @Test void consolidatesCapturedAssetsIntoPreviewContractAndReportReadsOnlyContracts() throws Exception {
     GraphNode screen = new GraphNode("screen:orders", NodeType.SCREEN, "Orders", Map.of("route", "/orders"), null, Confidence.CONFIRMED);
-    GraphNode component = new GraphNode("component:next", NodeType.COMPONENT, "Next", Map.of("componentType", "BUTTON", "target", "/done"), null, Confidence.CONFIRMED);
-    GraphNode target = new GraphNode("screen:done", NodeType.SCREEN, "Done", Map.of("route", "/done"), null, Confidence.CONFIRMED);
+    GraphNode component = new GraphNode("component:next", NodeType.COMPONENT, "Next", Map.of("componentType", "LINK", "target", "/orders/{ownerId}"), null, Confidence.CONFIRMED);
+    GraphNode target = new GraphNode("screen:done", NodeType.SCREEN, "Done", Map.of("route", "/orders/{ownerId}"), null, Confidence.CONFIRMED);
     ApplicationGraph graph = new ApplicationGraph(new ApplicationGraph.Application("sample", "/sample", List.of("JSP")), List.of(screen, component, target),
         List.of(new Relationship("contains", EdgeType.CONTAINS, screen.id(), component.id(), Confidence.CONFIRMED, null),
             new Relationship("navigates", EdgeType.NAVIGATES_TO, component.id(), target.id(), Confidence.CONFIRMED, null)), List.of());
@@ -34,7 +34,7 @@ class ReportGeneratorTest {
     Files.writeString(output.resolve("static-preview/manifest.json"), "{\"screen:orders\":\"static-preview/orders.html\"}");
     Files.createDirectories(output.resolve("screenshots"));
     Files.writeString(output.resolve("screenshots/manifest.json"), "{\"screen:orders\":\"screenshots/orders.png\"}");
-    Files.writeString(output.resolve("screenshots/interactions.json"), "{\"screen:orders\":{\"width\":1440,\"height\":900,\"items\":[{\"id\":\"static-component-0\",\"type\":\"BUTTON\",\"label\":\"Next\",\"target\":\"/done\",\"targetScreenId\":\"screen:done\",\"bounds\":{\"x\":1,\"y\":2,\"width\":3,\"height\":4},\"css\":{\"color\":\"red\"}}]}}");
+    Files.writeString(output.resolve("screenshots/interactions.json"), "{\"screen:orders\":{\"width\":1440,\"height\":900,\"items\":[{\"id\":\"static-component-0\",\"type\":\"LINK\",\"label\":\"Order One\",\"target\":\"/orders/1\",\"bounds\":{\"x\":1,\"y\":2,\"width\":3,\"height\":4},\"css\":{\"color\":\"red\"}}]}}");
 
     new ReportGenerator().write(graph, output);
 
@@ -48,20 +48,43 @@ class ReportGeneratorTest {
     assertTrue(theme.contains("--color-nav: #17181B"));
     assertTrue(theme.contains("--shadow-md:"));
     assertTrue(theme.contains(".detail-section { margin: 14px"));
+    assertTrue(theme.contains(".detail { margin: 4px 4px 22px 0"));
+    assertTrue(theme.contains(".detail .meta { color: #555B60"));
     assertTrue(theme.contains(".workspace-bottom-controls"));
+    assertTrue(theme.contains(".content.overview .screen-grid .node:hover:not(.selected)"));
+    assertTrue(theme.contains(".node.selected { outline: none !important; background: var(--color-node)"));
+    assertTrue(theme.contains(".content.overview .folder-browser { --project-nav-width: 272px; grid-template-columns: var(--project-nav-width) minmax(0, 1fr)"));
+    assertTrue(theme.contains(".content.overview .folder-browser.has-resizer"));
+    assertTrue(theme.contains("--project-nav-width: 272px"));
+    assertTrue(theme.contains(".folder-resizer"));
+    assertTrue(theme.contains("grid-template-columns: var(--project-nav-width) 14px"));
+    assertTrue(theme.contains("background: var(--highlight-green-soft) !important"));
+    assertTrue(theme.contains(".folder-nav-row .folder-nav-item.project-root.active"));
     assertTrue(theme.contains("--bottom-control-height: 44px"));
+    assertTrue(theme.contains("--bottom-control-fg: #3E4348"));
+    assertTrue(theme.contains(".zoom-controls button { display: grid; width: 42px"));
+    assertTrue(theme.contains(".mode-bar, .review-mode-shell { display: flex; height: var(--bottom-control-height); align-items: center; gap: 3px; padding: 4px; border: 1px solid #D6D9DC"));
     assertTrue(theme.contains("--highlight-green: #22C98A"));
     assertTrue(theme.contains(".review-mode .hotspot.review-unconfirmed"));
     assertTrue(theme.contains("--color-panel: #E9EFEA"));
+    assertTrue(theme.contains("--color-node: #E9EBEE"));
     assertTrue(report.contains("class=\"workspace-bottom-controls\""));
+    assertTrue(report.contains("class=\"review-mode-shell\""));
+    assertTrue(report.contains("id=\"rail-screen-tree\""));
+    assertTrue(report.contains("id=\"rail-screen-structure\""));
+    assertFalse(report.contains("id=\"zoom-value\""));
+    assertTrue(report.contains("Screen Structure — coming soon"));
+    assertTrue(report.contains(":'Screen Tree'"));
     assertTrue(report.contains("nextReviewStatus"));
     assertTrue(report.contains("data-interaction-id"));
     assertTrue(report.contains("setRelationHighlight"));
+    assertTrue(report.contains("card.onmouseenter=()=>{if(selected)setRelationHighlight"));
     assertTrue(report.contains("renderFlow(focusSelection)"));
     assertTrue(report.contains("renderFocusedCanvas(focusSelection)"));
     assertTrue(report.contains("reviewStatusControl"));
     assertTrue(theme.contains(".review-status-chip"));
     assertTrue(theme.contains(".map-canvas { background-color"));
+    assertTrue(theme.contains("stroke-linejoin: round"));
     assertTrue(theme.contains(".content.focused #viewport { background-color: #FFFFFF"));
     assertTrue(report.contains("/preview-model.json"));
     assertFalse(report.contains("/static-preview/manifest.json"));
@@ -78,5 +101,26 @@ class ReportGeneratorTest {
     assertTrue(report.contains("linkedComponentKey"));
     assertTrue(report.contains("screenFlowHistory"));
     assertTrue(report.contains("returnToPreviousFlow"));
+    assertTrue(report.contains("radius=Math.min(18,(y2-y1)/4,Math.abs(x2-x1)/2)"));
+    assertTrue(report.contains("Resize Project panel"));
+    assertTrue(report.contains("screentrace-project-nav-width-v2"));
+    assertTrue(report.contains("availableWidth>580"));
+    assertTrue(report.contains("stored===null?NaN:Number(stored)"));
+    assertTrue(report.contains("按住左鍵拖曳調整 Project 欄寬，雙擊還原"));
+    assertTrue(report.contains("event.buttons!==1"));
+    assertTrue(report.contains("addDragListeners"));
+    assertTrue(report.contains("window.addEventListener(type,dragEvent,true)"));
+    assertTrue(report.contains("window.removeEventListener(type,dragEvent,true)"));
+    assertTrue(report.contains("browser.classList.add('has-resizer')"));
+    assertFalse(report.contains("isSelected||linkedSelected?' selected':''"));
+    assertTrue(report.contains("function detailHeader(label,component,onUpdated)"));
+    assertTrue(report.contains("detailSection('Page ID')"));
+    assertTrue(report.contains("detailSection('Page Name')"));
+    assertTrue(report.contains("detailSection('Button Name')"));
+    assertTrue(report.contains("detailHeader('API Detail',endpoint"));
+    assertTrue(report.contains("detailSection('API Name')"));
+    assertTrue(report.contains("()=>selectScreenFlow(target),null,false,target.id,component"));
+    assertTrue(report.contains("()=>selectScreenFlow(link.target),null,false,link.target.id,link.component"));
+    assertFalse(report.contains("detailSection('確認狀態')"));
   }
 }
