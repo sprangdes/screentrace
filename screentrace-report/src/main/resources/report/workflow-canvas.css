@@ -80,7 +80,7 @@ main > #heading, #viewport > #heading { color: var(--color-text) !important; fon
 .heading-title, h2, h3 { color: var(--color-text) !important; font-family: Inter, "DM Sans", ui-sans-serif, system-ui, sans-serif !important; }
 
 /* The contextual inspector is a single soft drawer, not a stack of heavy cards. */
-.detail { margin: 4px 4px 4px 0; border: 1px solid var(--color-panel-border) !important; border-radius: var(--radius-panel); padding: 20px !important; color: var(--color-muted) !important; background: var(--color-panel) !important; box-shadow: none !important; }
+.detail { margin: 4px 4px 22px 0; border: 1px solid var(--color-panel-border) !important; border-radius: var(--radius-panel); padding: 20px !important; color: var(--color-muted) !important; background: var(--color-panel) !important; box-shadow: none !important; }
 .detail > h2 { margin-bottom: 16px !important; padding-bottom: 14px !important; border-color: rgb(20 24 30 / .07) !important; color: var(--color-text) !important; font-size: 20px !important; }
 .detail-identifier, .detail .meta { color: #555B60 !important; font-family: ui-monospace, SFMono-Regular, Menlo, monospace !important; }
 .detail-section { margin: 14px 0 !important; padding: 0 !important; border: 0 !important; border-radius: 0 !important; background: transparent !important; box-shadow: none !important; }

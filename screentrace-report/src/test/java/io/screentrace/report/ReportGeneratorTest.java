@@ -48,6 +48,7 @@ class ReportGeneratorTest {
     assertTrue(theme.contains("--color-nav: #17181B"));
     assertTrue(theme.contains("--shadow-md:"));
     assertTrue(theme.contains(".detail-section { margin: 14px"));
+    assertTrue(theme.contains(".detail { margin: 4px 4px 22px 0"));
     assertTrue(theme.contains(".detail .meta { color: #555B60"));
     assertTrue(theme.contains(".workspace-bottom-controls"));
     assertTrue(theme.contains(".content.overview .screen-grid .node:hover:not(.selected)"));
