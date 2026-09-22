@@ -1,8 +1,9 @@
-import { access, cp, mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
+import { access, cp, mkdir, readFile, readdir, stat, writeFile } from 'node:fs/promises';
 import { constants } from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { chromium } from 'playwright';
+import { deduplicateMappings, discoverSpringResourceMappings } from './spring-resource-mappings.mjs';
 
 const [targetArg, outputArg] = process.argv.slice(2);
 if (!targetArg) throw new Error('Usage: capture-static-jsp.mjs <target-project> [output-directory]');
@@ -21,24 +22,32 @@ await mkdir(screenshotRoot, { recursive: true });
 
 async function exists(file) { try { await access(file, constants.R_OK); return true; } catch { return false; } }
 async function text(file) { return readFile(file, 'utf8'); }
-const assetRoots = [
+const conventionalAssetMappings = [
   [path.join(webRoot, 'resources'), 'resources'], [path.join(webRoot, 'css'), 'css'],
   [path.join(webRoot, 'js'), 'js'], [path.join(webRoot, 'images'), 'images'],
   [path.join(target, 'src/main/resources/static'), ''], [path.join(target, 'src/main/resources/public'), '']
-];
+].map(([sourceDir, assetKey]) => ({ urlPrefix: assetKey ? `/${assetKey}/` : null, assetKey, sourceDir }));
+const resourceMappings = deduplicateMappings([...conventionalAssetMappings,
+  ...await discoverSpringResourceMappings(target, webRoot, readFile)]);
 async function copyAssets() {
-  for (const [source, previewPath] of assetRoots) if (await exists(source)) {
-    await cp(source, path.join(htmlRoot, 'assets', previewPath), { recursive: true });
-    await rewriteCssUrls(path.join(htmlRoot, 'assets', previewPath));
+  for (const mapping of resourceMappings) if (await exists(mapping.sourceDir) && (await stat(mapping.sourceDir)).isDirectory()) {
+    const destination = path.join(htmlRoot, 'assets', mapping.assetKey);
+    await cp(mapping.sourceDir, destination, { recursive: true });
+    await rewriteCssUrls(destination);
   }
 }
+function mappingFor(url) { return resourceMappings.filter(mapping => mapping.urlPrefix && url.startsWith(mapping.urlPrefix)).sort((a, b) => b.urlPrefix.length - a.urlPrefix.length)[0]; }
 async function rewriteCssUrls(directory) {
   for (const entry of await readdir(directory, { withFileTypes: true })) {
     const file = path.join(directory, entry.name);
     if (entry.isDirectory()) await rewriteCssUrls(file);
     else if (entry.isFile() && entry.name.endsWith('.css')) await writeFile(file,
-      (await text(file)).replace(/url\(\s*(["']?)\/(resources|css|js|images)\/([^)'"\s]+)(\1)\s*\)/g,
-        (_, quote, folder, resource, closingQuote) => `url(${quote}${path.relative(path.dirname(file), path.join(htmlRoot, 'assets', folder, resource)).replaceAll(path.sep, '/')}${closingQuote})`));
+      (await text(file)).replace(/url\(\s*(["']?)(\/[^)'"\s]+)(\1)\s*\)/g, (_, quote, url, closingQuote) => {
+        const mapping = mappingFor(url);
+        if (!mapping) return _;
+        const destination = path.join(htmlRoot, 'assets', mapping.assetKey, url.substring(mapping.urlPrefix.length));
+        return `url(${quote}${path.relative(path.dirname(file), destination).replaceAll(path.sep, '/')}${closingQuote})`;
+      }));
   }
 }
 await copyAssets();
@@ -115,7 +124,10 @@ async function replaceAsync(source, expression, mapper) {
   return result + source.slice(cursor);
 }
 function rewriteAssetUrls(source) {
-  return source.replace(/\b(href|src)=(['"])\/(resources|css|js|images)\//gi, '$1=$2assets/$3/');
+  return source.replace(/\b(href|src)=(['"])(\/[^'"]*)/gi, (_, attribute, quote, url) => {
+    const mapping = mappingFor(url);
+    return mapping ? `${attribute}=${quote}assets/${mapping.assetKey}${url.substring(mapping.urlPrefix.length - 1)}` : _;
+  });
 }
 function htmlControls(source) {
   return source
