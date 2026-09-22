@@ -43,20 +43,40 @@ class JspProjectParserTest {
     assertEquals(1, analysis.includes().size());
     assertEquals("/WEB-INF/jsp/common/filters.jspf", analysis.includes().get(0).targetPath());
     assertTrue(analysis.interactions().stream().anyMatch(item -> item.target().equals("/orders/search") && item.httpMethod().equals("POST")));
-    assertTrue(analysis.interactions().stream().anyMatch(item -> item.target().equals("/orders/search") && item.type() == JspAnalysis.InteractionType.LINK));
-    assertTrue(analysis.interactions().stream().anyMatch(item -> item.target().equals("/owners") && item.type() == JspAnalysis.InteractionType.FORM));
+    assertTrue(analysis.interactions().stream().anyMatch(item -> item.target().equals("/orders/search") && item.type() == JspAnalysis.InteractionType.NAVIGATION));
+    assertTrue(analysis.interactions().stream().anyMatch(item -> item.target().equals("/owners") && item.type() == JspAnalysis.InteractionType.FORM_SUBMIT));
     assertTrue(analysis.interactions().stream().anyMatch(item -> item.target().equals("/owners")
-        && item.type() == JspAnalysis.InteractionType.BUTTON && item.label().equals("Find Owner")
+        && item.type() == JspAnalysis.InteractionType.FORM_SUBMIT && item.label().equals("Find Owner")
         && item.httpMethod().equals("GET")));
     assertTrue(analysis.interactions().stream().anyMatch(item -> item.target().equals("/orders/export")));
     assertTrue(analysis.interactions().stream().anyMatch(item -> item.target().equals("/orders/history")));
     assertTrue(analysis.interactions().stream().anyMatch(item -> item.target().equals("/orders/export")
-        && item.type() == JspAnalysis.InteractionType.LINK));
+        && item.type() == JspAnalysis.InteractionType.NAVIGATION));
     assertTrue(analysis.interactions().stream().anyMatch(item -> item.submitsCurrentView()
         && item.target().equals(JspProjectParser.CURRENT_VIEW_TARGET) && item.httpMethod().equals("POST")));
     assertTrue(analysis.interactions().stream().anyMatch(item -> item.target().equals("${dynamicUrl}") && item.confidence() == Confidence.UNRESOLVED));
     assertEquals("orders.search", analysis.tilesDefinitions().get(0).name());
     assertEquals("/WEB-INF/layout.jsp", analysis.tilesDefinitions().get(0).template());
+  }
+
+  @Test void preprocessesJstlUrlsCommentsAndProjectsIncludedNavigationOntoTheScreen() throws Exception {
+    Path root = Files.createTempDirectory("jsp-parser-preprocessing");
+    Path home = root.resolve("src/main/webapp/WEB-INF/views/home.jsp");
+    Path header = root.resolve("src/main/webapp/WEB-INF/views/templates/header.jsp");
+    Files.createDirectories(header.getParent());
+    Files.writeString(home, "<%@include file=\"/WEB-INF/views/templates/header.jsp\"%><img src=\"<c:url value=\"/resources/images/back.jpg\"/>\" alt=\"Slide\"><a href=\"#myCarousel\" data-slide=\"next\">Next</a><a href=\"#\">View details »</a><a href=\"#contact\">Contact</a><%-- <a href=\"/signup\">Sign up</a> --%>");
+    Files.writeString(header, "<a href=\"<c:url value=\"/productList\"/>\">Products</a>");
+
+    JspAnalysis analysis = new JspProjectParser().analyze(root, List.of(home, header));
+
+    assertEquals("<img src=\"/resources/images/back.jpg\" alt=\"Slide\">", JspProjectParser.preprocess("<img src=\"<c:url value=\"/resources/images/back.jpg\"/>\" alt=\"Slide\">"));
+    assertTrue(analysis.interactions().stream().anyMatch(item -> item.viewPath().endsWith("home.jsp")
+        && item.label().equals("Products") && item.target().equals("/productList")
+        && item.type() == JspAnalysis.InteractionType.NAVIGATION && item.source().file().endsWith("header.jsp")));
+    assertTrue(analysis.interactions().stream().anyMatch(item -> item.label().equals("Next") && item.type() == JspAnalysis.InteractionType.UI_STATE_CHANGE));
+    assertTrue(analysis.interactions().stream().anyMatch(item -> item.label().equals("View details »") && item.type() == JspAnalysis.InteractionType.PLACEHOLDER));
+    assertTrue(analysis.interactions().stream().anyMatch(item -> item.label().equals("Contact") && item.type() == JspAnalysis.InteractionType.ANCHOR));
+    assertTrue(analysis.interactions().stream().noneMatch(item -> item.label().equals("Sign up")));
   }
 
   @Test void recordsMalformedTilesAsDiagnosticInsteadOfResolvingIt() throws Exception {

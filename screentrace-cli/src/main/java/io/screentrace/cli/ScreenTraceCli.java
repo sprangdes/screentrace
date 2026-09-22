@@ -335,6 +335,12 @@ public final class ScreenTraceCli {
     if (value.endsWith(".js")) return "text/javascript; charset=utf-8";
     if (value.endsWith(".svg")) return "image/svg+xml";
     if (value.endsWith(".png")) return "image/png";
+    if (value.endsWith(".jpg") || value.endsWith(".jpeg")) return "image/jpeg";
+    if (value.endsWith(".gif")) return "image/gif";
+    if (value.endsWith(".webp")) return "image/webp";
+    if (value.endsWith(".woff")) return "font/woff";
+    if (value.endsWith(".woff2")) return "font/woff2";
+    if (value.endsWith(".ttf")) return "font/ttf";
     return HTML_CONTENT_TYPE;
   }
 
