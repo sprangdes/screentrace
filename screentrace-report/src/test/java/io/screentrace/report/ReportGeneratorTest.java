@@ -27,9 +27,16 @@ class ReportGeneratorTest {
     GraphNode screen = new GraphNode("screen:orders", NodeType.SCREEN, "Orders", Map.of("route", "/orders"), null, Confidence.CONFIRMED);
     GraphNode component = new GraphNode("component:next", NodeType.COMPONENT, "Next", Map.of("componentType", "LINK", "target", "/orders/{ownerId}"), null, Confidence.CONFIRMED);
     GraphNode target = new GraphNode("screen:done", NodeType.SCREEN, "Done", Map.of("route", "/orders/{ownerId}"), null, Confidence.CONFIRMED);
-    ApplicationGraph graph = new ApplicationGraph(new ApplicationGraph.Application("sample", "/sample", List.of("JSP")), List.of(screen, component, target),
+    GraphNode endpoint = new GraphNode("endpoint:orders", NodeType.ENDPOINT, "POST /api/orders", Map.of(), null, Confidence.CONFIRMED);
+    ApplicationGraph graph = new ApplicationGraph(new ApplicationGraph.Application("sample", "/sample", List.of("JSP")), List.of(screen, component, target, endpoint),
         List.of(new Relationship("contains", EdgeType.CONTAINS, screen.id(), component.id(), Confidence.CONFIRMED, null),
-            new Relationship("navigates", EdgeType.NAVIGATES_TO, component.id(), target.id(), Confidence.CONFIRMED, null)), List.of());
+            new Relationship("navigates", EdgeType.NAVIGATES_TO, component.id(), target.id(), Confidence.CONFIRMED, null),
+            new Relationship("triggers", EdgeType.TRIGGERS, component.id(), endpoint.id(), Confidence.CONFIRMED, null),
+            new Relationship("calls", EdgeType.CALLS, screen.id(), endpoint.id(), Confidence.CONFIRMED, null)), List.of(),
+        List.of(new ApplicationGraph.ApiContract(endpoint.id(),
+            new ApplicationGraph.Request("application/json", "OrderRequest", List.of()),
+            List.of(new ApplicationGraph.Response("200", "application/json", "OrderResponse", List.of(), null, Confidence.CONFIRMED)),
+            null, Confidence.CONFIRMED)), ApplicationGraph.CURRENT_SCHEMA_VERSION);
     Files.createDirectories(output.resolve("static-preview"));
     Files.writeString(output.resolve("static-preview/manifest.json"), "{\"screen:orders\":\"static-preview/orders.html\"}");
     Files.createDirectories(output.resolve("screenshots"));
@@ -71,9 +78,31 @@ class ReportGeneratorTest {
     assertTrue(report.contains("class=\"workspace-bottom-controls\""));
     assertTrue(report.contains("class=\"review-mode-shell\""));
     assertTrue(report.contains("id=\"rail-screen-tree\""));
-    assertTrue(report.contains("id=\"rail-screen-structure\""));
+    assertTrue(report.contains("id=\"rail-button-list\""));
+    assertTrue(report.contains("id=\"rail-api-list\""));
+    assertTrue(report.contains("aria-label=\"Screen Tree\""));
+    assertTrue(report.contains("aria-label=\"Interactions\""));
+    assertTrue(report.contains("aria-label=\"API Endpoints\""));
+    assertTrue(report.contains("data-tooltip=\"Screen Tree\""));
+    assertTrue(report.contains("data-tooltip=\"Interactions\""));
+    assertTrue(report.contains("data-tooltip=\"API Endpoints\""));
+    assertTrue(report.contains("<div class=\"rail-mark\" aria-hidden=\"true\">"));
+    assertTrue(report.contains("viewBox=\"0 0 24 24\""));
+    assertTrue(report.contains("stroke-linecap=\"round\""));
+    assertTrue(report.contains("stroke-linejoin=\"round\""));
+    assertTrue(report.contains("heading-title','Interactions'"));
+    assertTrue(report.contains("heading-title','API Endpoints'"));
+    assertFalse(report.contains("aria-label=\"Button List\""));
+    assertFalse(report.contains("aria-label=\"API List\""));
     assertFalse(report.contains("id=\"zoom-value\""));
-    assertTrue(report.contains("Screen Structure — coming soon"));
+    assertFalse(report.contains("Screen Structure — coming soon"));
+    assertTrue(report.contains("function setWorkspace(workspace)"));
+    assertTrue(report.contains("rail.setAttribute('aria-current','page')"));
+    assertTrue(report.contains("function renderButtonInventory()"));
+    assertTrue(report.contains("function renderApiInventory()"));
+    assertTrue(report.contains("function buildInteractionInventory()"));
+    assertTrue(report.contains("function buildApiInventory()"));
+    assertTrue(report.contains("Open in Page View"));
     assertTrue(report.contains(":'Screen Tree'"));
     assertTrue(report.contains("nextReviewStatus"));
     assertTrue(report.contains("data-interaction-id"));
@@ -83,6 +112,8 @@ class ReportGeneratorTest {
     assertTrue(report.contains("renderFocusedCanvas(focusSelection)"));
     assertTrue(report.contains("reviewStatusControl"));
     assertTrue(theme.contains(".review-status-chip"));
+    assertTrue(theme.contains(".app-rail button[data-tooltip]::after"));
+    assertTrue(theme.contains(".app-rail button.active::before"));
     assertTrue(theme.contains(".map-canvas { background-color"));
     assertTrue(theme.contains("stroke-linejoin: round"));
     assertTrue(theme.contains(".content.focused #viewport { background-color: #FFFFFF"));
