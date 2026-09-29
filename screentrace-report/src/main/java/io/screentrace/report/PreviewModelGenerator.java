@@ -7,6 +7,7 @@ import io.screentrace.core.ApplicationGraph.EdgeType;
 import io.screentrace.core.ApplicationGraph.GraphNode;
 import io.screentrace.core.PreviewModel;
 import io.screentrace.core.PrototypeModel;
+import io.screentrace.scanner.SafeProjectFiles;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -20,9 +21,9 @@ final class PreviewModelGenerator {
   private final ObjectMapper json = new ObjectMapper();
 
   PreviewModel generate(ApplicationGraph graph, PrototypeModel prototype, Path output) throws IOException {
-    JsonNode staticDocuments = read(output.resolve("static-preview/manifest.json"));
-    JsonNode screenshots = read(output.resolve("screenshots/manifest.json"));
-    JsonNode interactions = read(output.resolve("screenshots/interactions.json"));
+    JsonNode staticDocuments = read(output, output.resolve("static-preview/manifest.json"));
+    JsonNode screenshots = read(output, output.resolve("screenshots/manifest.json"));
+    JsonNode interactions = read(output, output.resolve("screenshots/interactions.json"));
     Map<String, PrototypeModel.PrototypeScreen> prototypes = new HashMap<>();
     prototype.screens().forEach(screen -> prototypes.put(screen.graphScreenId(), screen));
     Map<String, List<GraphComponent>> graphComponents = graphComponents(graph);
@@ -74,7 +75,10 @@ final class PreviewModelGenerator {
     return result;
   }
 
-  private JsonNode read(Path path) throws IOException { return Files.isRegularFile(path) ? json.readTree(path.toFile()) : json.createObjectNode(); }
+  private JsonNode read(Path root, Path path) throws IOException {
+    if (!Files.exists(path, java.nio.file.LinkOption.NOFOLLOW_LINKS)) return json.createObjectNode();
+    return json.readTree(SafeProjectFiles.readUtf8Limited(root, path, 32L * 1024 * 1024));
+  }
   private static JsonNode interaction(JsonNode interactions, String id, String route) { return interactions.path(id).has("items") ? interactions.path(id) : interactions.path(route); }
   private static String text(JsonNode node, String... keys) { for (String key : keys) { if (key != null && node.hasNonNull(key)) return node.path(key).asText(); } return null; }
   private static String optional(JsonNode node, String name) { return node.hasNonNull(name) ? node.path(name).asText() : null; }

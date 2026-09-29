@@ -2,5 +2,5 @@
   "name": "screentrace-capture",
   "private": true,
   "type": "module",
-  "devDependencies": { "playwright": "1.53.0" }
+  "devDependencies": { "playwright": "1.55.1" }
 }

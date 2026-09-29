@@ -8,6 +8,7 @@ import io.screentrace.core.ApplicationGraph.GraphNode;
 import io.screentrace.core.ApplicationGraph.NodeType;
 import io.screentrace.core.ApplicationGraph.SourceLocation;
 import io.screentrace.core.PreviewModel;
+import io.screentrace.scanner.SafeProjectFiles;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -28,9 +29,9 @@ public final class ReviewResultGenerator {
     private final ObjectMapper json = new ObjectMapper().enable(SerializationFeature.INDENT_OUTPUT);
 
     public Path write(Path analysisOutput, Path destination) throws IOException {
-        ApplicationGraph graph = json.readValue(analysisOutput.resolve("application-graph.json").toFile(), ApplicationGraph.class);
-        PreviewModel preview = json.readValue(analysisOutput.resolve("preview-model.json").toFile(), PreviewModel.class);
-        Map<String, String> decisions = decisions(json.readTree(analysisOutput.resolve("edit-overlay.json").toFile()));
+        ApplicationGraph graph = json.readValue(SafeProjectFiles.readUtf8Limited(analysisOutput, analysisOutput.resolve("application-graph.json"), 32L * 1024 * 1024), ApplicationGraph.class);
+        PreviewModel preview = json.readValue(SafeProjectFiles.readUtf8Limited(analysisOutput, analysisOutput.resolve("preview-model.json"), 32L * 1024 * 1024), PreviewModel.class);
+        Map<String, String> decisions = decisions(json.readTree(SafeProjectFiles.readUtf8Limited(analysisOutput, analysisOutput.resolve("edit-overlay.json"), 2L * 1024 * 1024)));
         ReviewCounts counts = new ReviewCounts();
         List<Map<String, Object>> screens = screens(graph, preview, decisions, counts);
 
@@ -40,7 +41,7 @@ public final class ReviewResultGenerator {
         result.put("application", Map.of("name", graph.application().name(), "technologies", graph.application().technologies()));
         result.put("summary", Map.of("screens", counts.screens(), "components", counts.components()));
         result.put("screens", screens);
-        json.writeValue(destination.toFile(), result);
+        json.writeValue(SafeProjectFiles.requireWritePathWithin(analysisOutput, destination).toFile(), result);
         return destination;
     }
 

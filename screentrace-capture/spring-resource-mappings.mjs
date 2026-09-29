@@ -1,6 +1,7 @@
 import { access, readdir } from 'node:fs/promises';
 import { constants } from 'node:fs';
 import path from 'node:path';
+import { resolveExistingDirectoryWithin, resolveExistingFileWithin } from './safe-files.mjs';
 
 async function exists(directory) {
   try { await access(directory, constants.R_OK); return true; } catch { return false; }
@@ -12,13 +13,18 @@ function attributes(source) {
   return values;
 }
 
-async function files(root) {
-  if (!(await exists(root))) return [];
+async function files(root, projectRoot, depth = 0, budget = { count: 0 }) {
+  if (depth > 64 || budget.count >= 100_000) return [];
+  let safeRoot;
+  try { safeRoot = await resolveExistingDirectoryWithin(projectRoot, root); } catch { return []; }
   const result = [];
-  for (const entry of await readdir(root, { withFileTypes: true })) {
-    const item = path.join(root, entry.name);
-    if (entry.isDirectory()) result.push(...await files(item));
-    else if (entry.isFile() && entry.name.endsWith('.xml')) result.push(item);
+  for (const entry of await readdir(safeRoot, { withFileTypes: true })) {
+    if (++budget.count > 100_000) break;
+    const item = path.join(safeRoot, entry.name);
+    if (entry.isDirectory()) result.push(...await files(item, projectRoot, depth + 1, budget));
+    else if (entry.isFile() && entry.name.endsWith('.xml')) {
+      try { result.push(await resolveExistingFileWithin(projectRoot, item)); } catch { /* symlink and outside files are not read */ }
+    }
   }
   return result;
 }
@@ -35,24 +41,30 @@ function sourceDirectory(target, webRoot, location) {
   return path.resolve(webRoot, value);
 }
 
-function within(root, candidate) {
+async function within(root, candidate) {
   const normalizedRoot = path.resolve(root);
   const normalizedCandidate = path.resolve(candidate);
-  return normalizedCandidate === normalizedRoot || normalizedCandidate.startsWith(normalizedRoot + path.sep);
+  if (normalizedCandidate !== normalizedRoot && !normalizedCandidate.startsWith(normalizedRoot + path.sep)) return false;
+  try {
+    const safe = await resolveExistingDirectoryWithin(root, candidate);
+    const canonicalRoot = await resolveExistingDirectoryWithin(root, root);
+    return safe === canonicalRoot || safe.startsWith(canonicalRoot + path.sep);
+  } catch (error) { return error.code === 'ENOENT'; }
 }
 
 /** Discovers servlet-webapp and classpath locations exposed by Spring MVC resource mappings. */
 export async function discoverSpringResourceMappings(target, webRoot, readFile) {
   const mappings = [];
-  for (const file of await files(path.join(target, 'src/main'))) {
-    const xml = await readFile(file, 'utf8');
+  for (const file of await files(path.join(target, 'src/main'), target)) {
+    let xml;
+    try { xml = await readFile(file, 'utf8'); } catch { continue; }
     for (const tag of xml.matchAll(/<mvc:resources\b([^>]*?)\/?>/gi)) {
       const values = attributes(tag[1]);
       const prefix = values.mapping && mappingPrefix(values.mapping);
       if (!prefix || !values.location) continue;
       for (const location of values.location.split(',')) {
         const sourceDir = sourceDirectory(target, webRoot, location);
-        if (!within(target, sourceDir)) continue;
+        if (!(await within(target, sourceDir))) continue;
         mappings.push({ urlPrefix: prefix, assetKey: prefix.slice(1, -1), sourceDir });
       }
     }

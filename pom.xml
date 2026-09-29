@@ -12,7 +12,7 @@
     <maven.compiler.release>17</maven.compiler.release>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <junit.version>5.10.2</junit.version>
-    <jackson.version>2.17.1</jackson.version>
+    <jackson.version>2.21.7</jackson.version>
     <javaparser.version>3.26.1</javaparser.version>
     <jline.version>3.26.3</jline.version>
   </properties>

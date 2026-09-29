@@ -19,6 +19,7 @@ import io.screentrace.core.ApplicationGraph.NodeType;
 import io.screentrace.core.ApplicationGraph.Relationship;
 import io.screentrace.core.ApplicationGraph.SourceLocation;
 import io.screentrace.scanner.ProjectScanner.ProjectInventory;
+import io.screentrace.scanner.SafeProjectFiles;
 import io.screentrace.parser.jsp.JspAnalysis;
 import io.screentrace.parser.jsp.JspProjectParser;
 import java.io.IOException;
@@ -51,6 +52,7 @@ public final class SpringMvcAnalyzer {
 
     public ApplicationGraph analyze(ProjectInventory inventory) throws IOException {
         State state = new State(inventory.root(), inventory.javaFiles());
+        for (String message : inventory.diagnostics()) state.diagnostics.add(new Diagnostic(message, Confidence.UNRESOLVED, new SourceLocation(".", 1), "SOURCE_LIMIT", List.of()));
         JspAnalysis jsp = new JspProjectParser().analyze(inventory.root(), inventory.files());
         Set<String> includedViews = includedViewPaths(inventory.root(), jsp);
         for (JspAnalysis.View view : jsp.views()) if (view.kind() == JspAnalysis.ViewKind.JSP && !includedViews.contains(view.path())) addJspScreen(inventory.root().resolve(view.path()), state);
@@ -70,7 +72,7 @@ public final class SpringMvcAnalyzer {
         for (Path file : inventory.files()) {
             if (!file.toString().endsWith(".xml")) continue;
             try {
-                String xml = Files.readString(file);
+                String xml = SafeProjectFiles.readUtf8Limited(inventory.root(), file, SafeProjectFiles.MAX_XML_FILE_BYTES);
                 if (!xml.contains("SimpleMappingExceptionResolver")) continue;
                 Matcher value = Pattern.compile("<property\\s+name=[\\\"']defaultErrorView[\\\"']\\s+value=[\\\"']([^\\\"']+)").matcher(xml);
                 if (value.find()) state.defaultExceptionView = value.group(1);
@@ -86,7 +88,7 @@ public final class SpringMvcAnalyzer {
         String id = ApplicationGraph.id(NodeType.SCREEN, relative);
         Map<String, String> attributes = new TreeMap<>();
         attributes.put("view", relative);
-        attributes.put("staticPreview", jspPreview(file));
+        attributes.put("staticPreview", jspPreview(file, state));
         addNode(state, new GraphNode(id, NodeType.SCREEN, file.getFileName().toString().replaceFirst("\\.jsp$", ""),
                 attributes, source, Confidence.CONFIRMED));
         state.screensByView.put(relative, id);
@@ -97,9 +99,9 @@ public final class SpringMvcAnalyzer {
         }
     }
 
-    private static String jspPreview(Path file) {
+    private static String jspPreview(Path file, State state) {
         try {
-            String source = Files.readString(file);
+            String source = SafeProjectFiles.readUtf8Limited(state.root, file, SafeProjectFiles.MAX_SOURCE_FILE_BYTES);
             List<String> items = new ArrayList<>();
             Matcher fields = Pattern.compile("<(?:form:)?(?:input|password|textarea|select)\\b[^>]*(?:path|name)=[\\\"']([^\\\"']+)", Pattern.CASE_INSENSITIVE).matcher(source);
             while (fields.find() && items.size() < 8) items.add("FIELD:" + fields.group(1));
@@ -114,7 +116,7 @@ public final class SpringMvcAnalyzer {
     private static void parseController(Path file, State state) {
         String relative = state.root.relativize(file).toString();
         try {
-            for (ClassOrInterfaceDeclaration type : StaticJavaParser.parse(file).findAll(ClassOrInterfaceDeclaration.class)) {
+            for (ClassOrInterfaceDeclaration type : StaticJavaParser.parse(SafeProjectFiles.readUtf8Limited(state.root, file, SafeProjectFiles.MAX_SOURCE_FILE_BYTES)).findAll(ClassOrInterfaceDeclaration.class)) {
                 AnnotationExpr controller = annotation(type, "Controller");
                 boolean rest = annotation(type, "RestController") != null;
                 if (controller == null && !rest) continue;
@@ -194,7 +196,7 @@ public final class SpringMvcAnalyzer {
         for (Path file : inventory.springXmlFiles()) {
             String relative = state.root.relativize(file).toString().replace('\\', '/');
             try {
-                Document document = xml(Files.readString(file));
+                Document document = xml(SafeProjectFiles.xmlWithoutExternalDoctype(SafeProjectFiles.readUtf8Limited(inventory.root(), file, SafeProjectFiles.MAX_XML_FILE_BYTES)));
                 Map<String, Element> beans = beans(document);
                 addViewResolvers(beans, state);
                 addXmlViewControllers(document, relative, state);
@@ -331,6 +333,11 @@ public final class SpringMvcAnalyzer {
     private static Document xml(String source) throws Exception {
         DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
         factory.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
+        factory.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
+        factory.setFeature("http://xml.org/sax/features/external-general-entities", false);
+        factory.setFeature("http://xml.org/sax/features/external-parameter-entities", false);
+        factory.setFeature("http://apache.org/xml/features/nonvalidating/load-external-dtd", false);
+        factory.setXIncludeAware(false);
         factory.setAttribute(XMLConstants.ACCESS_EXTERNAL_DTD, "");
         factory.setAttribute(XMLConstants.ACCESS_EXTERNAL_SCHEMA, "");
         factory.setExpandEntityReferences(false);
@@ -456,8 +463,8 @@ public final class SpringMvcAnalyzer {
             Path source = root.resolve(include.sourceViewPath()).getParent();
             Path candidate = include.targetPath().startsWith("/")
                 ? root.resolve("src/main/webapp" + include.targetPath()) : source.resolve(include.targetPath()).normalize();
-            if (!Files.isRegularFile(candidate) && include.targetPath().startsWith("/")) candidate = root.resolve(include.targetPath().substring(1));
-            if (Files.isRegularFile(candidate)) paths.add(root.relativize(candidate).toString().replace('\\', '/'));
+            if (!SafeProjectFiles.isSafeRegularFile(root, candidate) && include.targetPath().startsWith("/")) candidate = root.resolve(include.targetPath().substring(1));
+            if (SafeProjectFiles.isSafeRegularFile(root, candidate)) paths.add(root.relativize(candidate.toAbsolutePath().normalize()).toString().replace('\\', '/'));
         }
         return paths;
     }

@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdtemp, mkdir, writeFile } from 'node:fs/promises';
+import { mkdtemp, mkdir, writeFile, symlink } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
@@ -37,5 +37,12 @@ test('keeps supported servlet and classpath locations from a comma-separated map
 
 test('rejects locations that escape the analyzed project', async () => {
   const { root, webRoot } = await fixture('<mvc:resources mapping="/assets/**" location="/WEB-INF/../../../../../../tmp"/>');
+  assert.deepEqual(await discoverSpringResourceMappings(root, webRoot, readFile), []);
+});
+
+test('rejects a resource location symlinked outside the project', async () => {
+  const { root, webRoot } = await fixture('<mvc:resources mapping="/assets/**" location="/linked/"/>');
+  const outside = await mkdtemp(path.join(os.tmpdir(), 'screentrace-resource-outside-'));
+  await symlink(outside, path.join(webRoot, 'linked'));
   assert.deepEqual(await discoverSpringResourceMappings(root, webRoot, readFile), []);
 });

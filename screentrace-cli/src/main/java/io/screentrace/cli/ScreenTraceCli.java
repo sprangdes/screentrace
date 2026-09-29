@@ -9,10 +9,12 @@ import io.screentrace.core.ApplicationGraphMerger;
 import io.screentrace.report.ReportGenerator;
 import io.screentrace.report.ReviewResultGenerator;
 import io.screentrace.scanner.ProjectScanner;
+import io.screentrace.scanner.SafeProjectFiles;
 import java.awt.Desktop;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.URI;
@@ -20,11 +22,16 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
+import java.security.MessageDigest;
+import java.util.Base64;
+import java.nio.charset.StandardCharsets;
 import java.util.logging.Logger;
 
 /** Interactive entry point plus scriptable analyze, report, export, and config commands. */
 public final class ScreenTraceCli {
   static final int MAX_OVERLAY_BYTES = 1_048_576;
+  static final long MAX_SERVED_FILE_BYTES = 64L * 1024 * 1024;
   static final InetAddress REPORT_ADDRESS = InetAddress.getLoopbackAddress();
   private static final String INDEX_FILE = "index.html";
   private static final String JSON_CONTENT_TYPE = "application/json";
@@ -143,6 +150,10 @@ public final class ScreenTraceCli {
   }
 
   private static AnalysisResult analyze(ProjectCatalog.Project project) throws IOException, InterruptedException {
+    Path outputRoot = project.analysisDirectory().getParent();
+    Files.createDirectories(outputRoot);
+    Path safeOutput = SafeProjectFiles.requireWritePathWithin(outputRoot, project.analysisDirectory());
+    Files.createDirectories(safeOutput);
     Path output = project.analysisDirectory();
     var inventory = new ProjectScanner().scan(project.sourceDirectory());
     var graph = analyze(inventory);
@@ -176,7 +187,11 @@ public final class ScreenTraceCli {
   @SuppressWarnings("java:S4036")
   private static void renderStaticJsp(Path target, Path output) throws IOException, InterruptedException {
     Process process = new ProcessBuilder("node", Path.of("screentrace-capture/capture-static-jsp.mjs").toAbsolutePath().toString(), target.toString(), output.toString()).inheritIO().start();
-    if (process.waitFor() != 0) LOGGER.warning("無法建立 JSP 靜態預覽；報表會改用原始碼預覽。");
+    if (!process.waitFor(120, TimeUnit.SECONDS)) {
+      process.destroy();
+      if (!process.waitFor(2, TimeUnit.SECONDS)) process.destroyForcibly();
+      LOGGER.warning("JSP 靜態預覽逾時；報表會改用原始碼預覽。");
+    } else if (process.exitValue() != 0) LOGGER.warning("無法建立 JSP 靜態預覽；報表會改用原始碼預覽。");
   }
 
   private static Path export(ProjectCatalog.Project project) throws IOException {
@@ -215,6 +230,8 @@ public final class ScreenTraceCli {
   }
 
   private static void handleOverlay(HttpExchange exchange, Path overlay, String sessionToken) throws IOException {
+    secure(exchange);
+    if (!validHost(exchange)) { exchange.sendResponseHeaders(403, -1); exchange.close(); return; }
     if (exchange.getRequestMethod().equals("PUT")) {
       if (!authorizedMutation(exchange, sessionToken) || !writeOverlay(exchange, overlay)) return;
       exchange.sendResponseHeaders(204, -1);
@@ -230,6 +247,8 @@ public final class ScreenTraceCli {
   }
 
   private static void handleReviewResult(HttpExchange exchange, Path analysis, Path overlay, String sessionToken) throws IOException {
+    secure(exchange);
+    if (!validHost(exchange)) { exchange.sendResponseHeaders(403, -1); exchange.close(); return; }
     if (!exchange.getRequestMethod().equals("POST")) {
       exchange.sendResponseHeaders(405, -1);
       exchange.close();
@@ -267,6 +286,8 @@ public final class ScreenTraceCli {
   static boolean hasMutationToken(String suppliedToken, String sessionToken) { return sessionToken.equals(suppliedToken); }
 
   private static void serveStatic(HttpExchange exchange, Path report, Path analysis, String sessionToken) throws IOException {
+    secure(exchange);
+    if (!validHost(exchange)) { exchange.sendResponseHeaders(403, -1); exchange.close(); return; }
     Path requested = staticFile(exchange.getRequestURI().getPath(), report, analysis);
     if (requested == null || !Files.isRegularFile(requested)) {
       exchange.sendResponseHeaders(404, -1);
@@ -274,7 +295,9 @@ public final class ScreenTraceCli {
       return;
     }
     if (requested.equals(report.resolve(INDEX_FILE))) {
-      byte[] body = Files.readString(requested).replace("__SCREEN_TRACE_SESSION_TOKEN__", sessionToken).getBytes();
+      if (Files.size(requested) > 16L * 1024 * 1024) { exchange.sendResponseHeaders(413, -1); exchange.close(); return; }
+      byte[] body = Files.readString(requested).replace("__SCREEN_TRACE_SESSION_TOKEN__", sessionToken).getBytes(StandardCharsets.UTF_8);
+      exchange.getResponseHeaders().set("Content-Security-Policy", reportCsp(body));
       exchange.getResponseHeaders().set("Content-Type", HTML_CONTENT_TYPE);
       exchange.sendResponseHeaders(200, body.length);
       exchange.getResponseBody().write(body);
@@ -321,14 +344,48 @@ public final class ScreenTraceCli {
   }
 
   private static void sendFile(HttpExchange exchange, Path file, String contentType) throws IOException {
-    byte[] body = Files.readAllBytes(file);
+    long size = Files.size(file);
+    if (size > MAX_SERVED_FILE_BYTES) { exchange.sendResponseHeaders(413, -1); exchange.close(); return; }
     exchange.getResponseHeaders().set("Content-Type", contentType);
-    exchange.sendResponseHeaders(200, body.length);
-    exchange.getResponseBody().write(body);
-    exchange.close();
+    if (exchange.getRequestURI().getPath().startsWith("/static-preview/")) exchange.getResponseHeaders().set("Content-Security-Policy", previewCsp());
+    exchange.sendResponseHeaders(200, size);
+    try (InputStream input = Files.newInputStream(file); OutputStream response = exchange.getResponseBody()) { input.transferTo(response); }
+    finally { exchange.close(); }
   }
 
-  private static String contentType(Path file) {
+  private static void secure(HttpExchange exchange) {
+    var headers = exchange.getResponseHeaders();
+    headers.set("X-Content-Type-Options", "nosniff");
+    headers.set("Referrer-Policy", "no-referrer");
+    headers.set("Cache-Control", "no-store");
+    headers.set("Content-Security-Policy", previewCsp());
+  }
+
+  static String previewCsp() {
+    return "default-src 'none'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; font-src 'self'; script-src 'none'; connect-src 'none'; frame-src 'none'; object-src 'none'; media-src 'none'; base-uri 'none'; form-action 'none'";
+  }
+
+  static String reportCsp(byte[] html) {
+    String source = new String(html, StandardCharsets.UTF_8);
+    java.util.regex.Matcher scripts = java.util.regex.Pattern.compile("(?is)<script\\b(?![^>]*\\bsrc\\s*=)[^>]*>(.*?)</script\\s*>").matcher(source);
+    List<String> hashes = new java.util.ArrayList<>();
+    try {
+      while (scripts.find()) hashes.add("'sha256-" + Base64.getEncoder().encodeToString(MessageDigest.getInstance("SHA-256").digest(scripts.group(1).getBytes(StandardCharsets.UTF_8))) + "'");
+    } catch (java.security.NoSuchAlgorithmException impossible) { throw new IllegalStateException(impossible); }
+    return "default-src 'self'; script-src 'self' " + String.join(" ", hashes) + "; connect-src 'self'; img-src 'self' data:; frame-src 'self'; object-src 'none'; base-uri 'none'; style-src 'self' 'unsafe-inline'";
+  }
+
+  private static boolean validHost(HttpExchange exchange) {
+    String host = exchange.getRequestHeaders().getFirst("Host");
+    if (host == null || !(host.equalsIgnoreCase("localhost:" + exchange.getLocalAddress().getPort())
+        || host.equals("127.0.0.1:" + exchange.getLocalAddress().getPort())
+        || host.equals("[::1]:" + exchange.getLocalAddress().getPort()))) return false;
+    String origin = exchange.getRequestHeaders().getFirst("Origin");
+    return origin == null || origin.equals("http://localhost:" + exchange.getLocalAddress().getPort())
+        || origin.equals("http://127.0.0.1:" + exchange.getLocalAddress().getPort());
+  }
+
+  static String contentType(Path file) {
     String value = file.toString();
     if (value.endsWith(".json")) return JSON_CONTENT_TYPE;
     if (value.endsWith(".css")) return "text/css; charset=utf-8";
@@ -341,7 +398,8 @@ public final class ScreenTraceCli {
     if (value.endsWith(".woff")) return "font/woff";
     if (value.endsWith(".woff2")) return "font/woff2";
     if (value.endsWith(".ttf")) return "font/ttf";
-    return HTML_CONTENT_TYPE;
+    if (value.endsWith(".html") || value.endsWith(".htm")) return HTML_CONTENT_TYPE;
+    return "application/octet-stream";
   }
 
   private static void openReport(String url) {

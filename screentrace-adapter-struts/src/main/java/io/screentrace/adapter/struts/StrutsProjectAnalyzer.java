@@ -5,6 +5,7 @@ import io.screentrace.core.ApplicationGraph.*;
 import io.screentrace.parser.jsp.JspAnalysis;
 import io.screentrace.parser.jsp.JspProjectParser;
 import io.screentrace.scanner.ProjectScanner.ProjectInventory;
+import io.screentrace.scanner.SafeProjectFiles;
 import java.io.*;
 import java.nio.file.*;
 import java.util.*;
@@ -17,6 +18,7 @@ import org.xml.sax.InputSource;
 public final class StrutsProjectAnalyzer {
   public ApplicationGraph analyze(ProjectInventory inventory) throws IOException {
     State state = new State(inventory.root(), springBeans(inventory));
+    for (String message : inventory.diagnostics()) state.diagnostics.add(new Diagnostic(message, Confidence.UNRESOLVED, new SourceLocation(".", 1), "SOURCE_LIMIT", List.of()));
     JspAnalysis jsp = new JspProjectParser().analyze(inventory.root(), inventory.files());
     addViews(jsp, state);
     for (Path config : inventory.strutsConfigFiles()) parseConfig(config, state);
@@ -50,7 +52,7 @@ public final class StrutsProjectAnalyzer {
   private static void parseConfig(Path config, State state) {
     String relative = relative(state.root, config);
     try {
-      Document document = document(Files.readString(config));
+      Document document = document(SafeProjectFiles.xmlWithoutExternalDoctype(SafeProjectFiles.readUtf8Limited(state.root, config, SafeProjectFiles.MAX_XML_FILE_BYTES)));
       Map<String, String> forms = forms(document, relative, state);
       NodeList actions = document.getElementsByTagName("action");
       for (int index = 0; index < actions.getLength(); index++) addAction((Element) actions.item(index), relative, forms, state);
@@ -144,7 +146,7 @@ public final class StrutsProjectAnalyzer {
   private static Map<String, String> springBeans(ProjectInventory inventory) {
     Map<String, String> beans = new HashMap<>();
     for (Path file : inventory.springXmlFiles()) try {
-      NodeList nodes = document(Files.readString(file)).getElementsByTagName("bean");
+        NodeList nodes = document(SafeProjectFiles.xmlWithoutExternalDoctype(SafeProjectFiles.readUtf8Limited(inventory.root(), file, SafeProjectFiles.MAX_XML_FILE_BYTES))).getElementsByTagName("bean");
       for (int index = 0; index < nodes.getLength(); index++) {
         Element bean = (Element) nodes.item(index);
         if (!bean.getAttribute("id").isBlank() && !bean.getAttribute("class").isBlank()) beans.put(bean.getAttribute("id"), bean.getAttribute("class"));
@@ -156,6 +158,11 @@ public final class StrutsProjectAnalyzer {
   private static Document document(String xml) throws Exception {
     DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
     factory.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
+    factory.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
+    factory.setFeature("http://xml.org/sax/features/external-general-entities", false);
+    factory.setFeature("http://xml.org/sax/features/external-parameter-entities", false);
+    factory.setFeature("http://apache.org/xml/features/nonvalidating/load-external-dtd", false);
+    factory.setXIncludeAware(false);
     factory.setAttribute(XMLConstants.ACCESS_EXTERNAL_DTD, "");
     factory.setAttribute(XMLConstants.ACCESS_EXTERNAL_SCHEMA, "");
     factory.setExpandEntityReferences(false);

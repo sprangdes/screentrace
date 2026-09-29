@@ -10,6 +10,7 @@
   <artifactId>screentrace-report</artifactId>
 
   <dependencies>
+    <dependency><groupId>io.screentrace</groupId><artifactId>screentrace-scanner</artifactId><version>${project.version}</version></dependency>
     <dependency>
       <groupId>io.screentrace</groupId>
       <artifactId>screentrace-core</artifactId>

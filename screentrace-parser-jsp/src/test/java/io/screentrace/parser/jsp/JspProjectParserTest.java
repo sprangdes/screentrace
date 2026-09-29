@@ -89,4 +89,30 @@ class JspProjectParserTest {
     assertTrue(analysis.tilesDefinitions().isEmpty());
     assertTrue(analysis.diagnostics().stream().anyMatch(item -> item.code().equals("JSP_UNRESOLVED")));
   }
+
+  @Test void rejectsIncludesThatResolveOutsideProjectRoot() throws Exception {
+    Path root = Files.createTempDirectory("jsp-include-boundary");
+    Path screen = root.resolve("src/main/webapp/WEB-INF/jsp/a.jsp");
+    Files.createDirectories(screen.getParent());
+    Files.writeString(screen, "<%@ include file=\"../../../../../../outside-secret.txt\" %>");
+    Path secret = root.getParent().resolve("outside-secret.txt");
+    Files.writeString(secret, "SECRET_DO_NOT_READ");
+    try {
+      JspAnalysis result = new JspProjectParser().analyze(root, List.of(screen));
+      assertTrue(result.includes().size() == 1);
+      assertTrue(result.diagnostics().stream().anyMatch(item -> item.message().contains("cannot be found")));
+      assertTrue(result.views().stream().noneMatch(view -> view.path().contains("outside-secret")));
+    } finally { Files.deleteIfExists(secret); }
+  }
+
+  @Test void rejectsInternalDtdEntitiesWithoutExpandingThem() throws Exception {
+    Path root = Files.createTempDirectory("jsp-xml-boundary");
+    Path secret = root.resolve("secret.txt");
+    Path xml = root.resolve("tiles.xml");
+    Files.writeString(secret, "SECRET_XML");
+    Files.writeString(xml, "<!DOCTYPE tiles-definitions [<!ENTITY ext SYSTEM \"" + secret.toUri() + "\">]><tiles-definitions><definition name=\"&ext;\"/></tiles-definitions>");
+    JspAnalysis result = new JspProjectParser().analyze(root, List.of(xml));
+    assertTrue(result.tilesDefinitions().isEmpty());
+    assertTrue(result.diagnostics().stream().anyMatch(item -> item.message().contains("internal DOCTYPE")));
+  }
 }

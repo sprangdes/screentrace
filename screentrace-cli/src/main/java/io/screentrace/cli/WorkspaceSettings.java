@@ -31,12 +31,14 @@ final class WorkspaceSettings {
   }
 
   static WorkspaceSettings load(Path file) throws IOException {
+    if (Files.isSymbolicLink(file)) throw new IOException("ScreenTrace config must not be a symbolic link: " + file);
     StoredSettings stored = new ObjectMapper().readValue(file.toFile(), StoredSettings.class);
     if (stored.projectRoot == null || stored.outputRoot == null) throw new IOException("ScreenTrace settings are incomplete: " + file);
     return new WorkspaceSettings(Path.of(stored.projectRoot), Path.of(stored.outputRoot));
   }
 
   void save(Path file) throws IOException {
+    if (Files.isSymbolicLink(file) || Files.isSymbolicLink(file.getParent())) throw new IOException("ScreenTrace config path must not contain a symbolic link: " + file);
     Files.createDirectories(file.getParent());
     Path temporary = Files.createTempFile(file.getParent(), "config-", ".json");
     new ObjectMapper().enable(SerializationFeature.INDENT_OUTPUT)
