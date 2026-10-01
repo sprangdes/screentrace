@@ -24,11 +24,13 @@ final class MarkupTag {
 
   static List<MarkupTag> scan(String source) {
     List<MarkupTag> tags = new ArrayList<>();
+    int line = 1, lineCursor = 0;
     for (int start = source.indexOf('<'); start >= 0; start = source.indexOf('<', start + 1)) {
       int end = endOfTag(source, start);
       if (end < 0) break;
+      while (lineCursor < start) if (source.charAt(lineCursor++) == '\n') line++;
       String body = source.substring(start + 1, end).trim();
-      MarkupTag tag = parse(body, line(source, start), end);
+      MarkupTag tag = parse(body, line, end);
       if (tag != null) tags.add(tag);
       start = end;
     }
@@ -97,9 +99,4 @@ final class MarkupTag {
     return values;
   }
 
-  private static int line(String source, int offset) {
-    int line = 1;
-    for (int index = 0; index < offset; index++) if (source.charAt(index) == '\n') line++;
-    return line;
-  }
 }

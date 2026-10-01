@@ -3,6 +3,7 @@ package io.screentrace.parser.jsp;
 import io.screentrace.core.ApplicationGraph.Confidence;
 import io.screentrace.core.ApplicationGraph.Diagnostic;
 import io.screentrace.core.ApplicationGraph.SourceLocation;
+import io.screentrace.scanner.SafeProjectFiles;
 import java.io.IOException;
 import java.io.StringReader;
 import java.nio.file.Files;
@@ -42,10 +43,14 @@ public final class JspProjectParser {
     List<Diagnostic> diagnostics = new ArrayList<>();
     for (Path file : files) {
       String name = file.getFileName().toString();
-      if (name.endsWith(".jsp") || name.endsWith(".jspf")) {
-        parseJsp(root, file, views, interactions, includes, diagnostics);
-      } else if (name.endsWith(".xml") && Files.readString(file).contains("tiles-definitions")) {
-        parseTiles(root, file, tilesDefinitions, diagnostics);
+      try {
+        if (name.endsWith(".jsp") || name.endsWith(".jspf")) {
+          parseJsp(root, file, views, interactions, includes, diagnostics);
+        } else if (name.endsWith(".xml") && SafeProjectFiles.readUtf8Limited(root, file, SafeProjectFiles.MAX_XML_FILE_BYTES).contains("tiles-definitions")) {
+          parseTiles(root, file, tilesDefinitions, diagnostics);
+        }
+      } catch (IOException | SecurityException exception) {
+        diagnostics.add(unresolved("Source file was skipped: " + exception.getMessage(), new SourceLocation(relative(root, file), 1)));
       }
     }
     return new JspAnalysis(views, expandIncludedInteractions(root, interactions, includes, diagnostics), includes, tilesDefinitions, diagnostics);
@@ -54,7 +59,7 @@ public final class JspProjectParser {
   private static void parseJsp(Path root, Path file, List<JspAnalysis.View> views,
                                List<JspAnalysis.Interaction> interactions, List<JspAnalysis.Include> includes,
                                List<Diagnostic> diagnostics) throws IOException {
-    String text = preprocess(Files.readString(file));
+    String text = preprocess(SafeProjectFiles.readUtf8Limited(root, file, SafeProjectFiles.MAX_JSP_FILE_BYTES));
     String relative = relative(root, file);
     JspAnalysis.ViewKind kind = relative.endsWith(".jspf") ? JspAnalysis.ViewKind.JSPF : JspAnalysis.ViewKind.JSP;
     views.add(new JspAnalysis.View(relative, kind, new SourceLocation(relative, 1)));
@@ -181,8 +186,12 @@ public final class JspProjectParser {
   private static String resolveInclude(Path root, String sourceView, String target) {
     Path source = root.resolve(sourceView).getParent();
     Path candidate = target.startsWith("/") ? root.resolve("src/main/webapp" + target) : source.resolve(target).normalize();
-    if (!Files.isRegularFile(candidate) && target.startsWith("/")) candidate = root.resolve(target.substring(1));
-    return Files.isRegularFile(candidate) ? relative(root, candidate) : null;
+    if (SafeProjectFiles.isSafeRegularFile(root, candidate)) return relative(root, candidate);
+    if (target.startsWith("/")) {
+      candidate = root.resolve(target.substring(1));
+      if (SafeProjectFiles.isSafeRegularFile(root, candidate)) return relative(root, candidate);
+    }
+    return null;
   }
 
   private static void interaction(String viewPath, JspAnalysis.InteractionType type, MarkupTag tag, String target,
@@ -251,7 +260,7 @@ public final class JspProjectParser {
                                  List<Diagnostic> diagnostics) {
     String relative = relative(root, file);
     try {
-      Document document = secureDocument(Files.readString(file));
+      Document document = secureDocument(SafeProjectFiles.xmlWithoutExternalDoctype(SafeProjectFiles.readUtf8Limited(root, file, SafeProjectFiles.MAX_XML_FILE_BYTES)));
       NodeList nodes = document.getElementsByTagName("definition");
       for (int index = 0; index < nodes.getLength(); index++) {
         Element definition = (Element) nodes.item(index);
@@ -272,6 +281,11 @@ public final class JspProjectParser {
   private static Document secureDocument(String xml) throws Exception {
     DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
     factory.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
+    factory.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
+    factory.setFeature("http://xml.org/sax/features/external-general-entities", false);
+    factory.setFeature("http://xml.org/sax/features/external-parameter-entities", false);
+    factory.setFeature("http://apache.org/xml/features/nonvalidating/load-external-dtd", false);
+    factory.setXIncludeAware(false);
     factory.setAttribute(XMLConstants.ACCESS_EXTERNAL_DTD, "");
     factory.setAttribute(XMLConstants.ACCESS_EXTERNAL_SCHEMA, "");
     factory.setExpandEntityReferences(false);

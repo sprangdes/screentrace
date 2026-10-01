@@ -17,6 +17,7 @@ import io.screentrace.core.ApplicationGraph.NodeType;
 import io.screentrace.core.ApplicationGraph.Relationship;
 import io.screentrace.core.ApplicationGraph.SourceLocation;
 import io.screentrace.scanner.ProjectScanner.ProjectInventory;
+import io.screentrace.scanner.SafeProjectFiles;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -49,6 +50,7 @@ public final class SpringBootAnalyzer {
 
     public ApplicationGraph analyze(ProjectInventory inventory) throws IOException {
         AnalysisState state = new AnalysisState(inventory.root(), inventory.javaFiles());
+        for (String message : inventory.diagnostics()) state.diagnostics.add(new Diagnostic(message, Confidence.UNRESOLVED, new SourceLocation(".", 1), "SOURCE_LIMIT", List.of()));
         for (Path file : inventory.javaFiles()) {
             parseController(inventory.root(), file, state);
         }
@@ -64,7 +66,7 @@ public final class SpringBootAnalyzer {
     private void parseController(Path root, Path file, AnalysisState state) {
         try {
             String relative = root.relativize(file).toString();
-            for (ClassOrInterfaceDeclaration type : StaticJavaParser.parse(file).findAll(ClassOrInterfaceDeclaration.class)) {
+            for (ClassOrInterfaceDeclaration type : StaticJavaParser.parse(SafeProjectFiles.readUtf8Limited(root, file, SafeProjectFiles.MAX_SOURCE_FILE_BYTES)).findAll(ClassOrInterfaceDeclaration.class)) {
                 parseControllerType(type, relative, state);
             }
         } catch (IOException | RuntimeException exception) {
@@ -130,7 +132,7 @@ public final class SpringBootAnalyzer {
     }
 
     private void parseReact(Path root, Path file, AnalysisState state) throws IOException {
-        String text = Files.readString(file);
+        String text = SafeProjectFiles.readUtf8Limited(root, file, SafeProjectFiles.MAX_SOURCE_FILE_BYTES);
         String relative = root.relativize(file).toString();
         Map<String, String> imports = imports(root, file, text);
         addRoutes(root, text, relative, imports, state);
@@ -230,9 +232,12 @@ public final class SpringBootAnalyzer {
             Path base = file.getParent().resolve(imported.source());
             for (String suffix : IMPORT_SUFFIXES) {
                 Path candidate = Path.of(base + suffix);
-                if (Files.exists(candidate)) {
-                    result.put(imported.name(), root.relativize(candidate).toString());
-                    break;
+                if (SafeProjectFiles.isSafeRegularFile(root, candidate)) {
+                    try {
+                        SafeProjectFiles.readUtf8Limited(root, candidate, SafeProjectFiles.MAX_SOURCE_FILE_BYTES);
+                        result.put(imported.name(), root.relativize(candidate.toRealPath()).toString());
+                        break;
+                    } catch (IOException ignored) { /* Oversized or changed imports remain unresolved. */ }
                 }
             }
         }
@@ -340,12 +345,12 @@ public final class SpringBootAnalyzer {
         if (!visited.add(relative)) {
             return visited;
         }
-        Path file = root.resolve(relative);
-        if (!Files.isRegularFile(file)) {
+        Path file = root.resolve(relative).normalize();
+        if (!SafeProjectFiles.isSafeRegularFile(root, file)) {
             return visited;
         }
         try {
-            String text = Files.readString(file);
+            String text = SafeProjectFiles.readUtf8Limited(root, file, SafeProjectFiles.MAX_SOURCE_FILE_BYTES);
             Map<String, String> children = imports(root, file, text);
             Matcher rendered = VIEW_PATTERN.matcher(text);
             while (rendered.find()) {

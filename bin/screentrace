@@ -47,29 +47,6 @@ needs_node() {
   command -v node >/dev/null 2>&1 && version_at_least "$(node_major_version)" "$required_node"
 }
 
-setup_homebrew() {
-  if command -v brew >/dev/null 2>&1; then
-    brew_bin="$(command -v brew)"
-  else
-    if [[ "$(uname -s)" != "Darwin" ]]; then
-      echo "ScreenTrace needs Java ${required_java}+, Maven ${required_maven}+, and Node.js ${required_node}+." >&2
-      echo "Automatic environment setup currently supports macOS only." >&2
-      exit 1
-    fi
-    echo "Homebrew is required to install the ScreenTrace runtime. Installing Homebrew..."
-    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-    if [[ -x /opt/homebrew/bin/brew ]]; then
-      brew_bin=/opt/homebrew/bin/brew
-    elif [[ -x /usr/local/bin/brew ]]; then
-      brew_bin=/usr/local/bin/brew
-    else
-      echo "Homebrew installation finished without an available brew command." >&2
-      exit 1
-    fi
-  fi
-  eval "$(\"$brew_bin\" shellenv)"
-}
-
 ensure_runtime() {
   local formulae=()
   needs_java || formulae+=(openjdk@17)
@@ -77,7 +54,10 @@ ensure_runtime() {
   needs_node || formulae+=(node@18)
   ((${#formulae[@]} == 0)) && return
 
-  setup_homebrew
+  if ! command -v brew >/dev/null 2>&1; then
+    echo "Install Homebrew from https://brew.sh, then run ./bin/screentrace setup." >&2
+    exit 1
+  fi
   echo "Installing ScreenTrace runtime: ${formulae[*]}"
   brew install "${formulae[@]}"
   export PATH="$(brew --prefix openjdk@17)/bin:$(brew --prefix node@18)/bin:$PATH"
@@ -88,14 +68,13 @@ ensure_runtime() {
   fi
 }
 
-ensure_runtime
 base_dir="$(cd "$(dirname "$0")/.." && pwd)"
 
 ensure_browser_renderer() {
   local renderer_dir="$base_dir/screentrace-capture"
   if [[ ! -x "$renderer_dir/node_modules/.bin/playwright" ]]; then
     echo "Installing ScreenTrace browser renderer..."
-    (cd "$renderer_dir" && npm ci --no-audit --no-fund)
+    (cd "$renderer_dir" && npm ci --no-fund)
   fi
   if ! (cd "$renderer_dir" && npx playwright install --list 2>/dev/null | grep -q chromium); then
     echo "Installing Chromium for JSP previews..."
@@ -103,7 +82,30 @@ ensure_browser_renderer() {
   fi
 }
 
-ensure_browser_renderer
+if [[ "${1:-}" == setup ]]; then
+  shift
+  ensure_runtime
+  ensure_browser_renderer
+  echo "ScreenTrace setup complete."
+  exit 0
+fi
+if [[ "${1:-}" == doctor ]]; then
+  missing=0
+  needs_java || { echo "Missing Java ${required_java}+"; missing=1; }
+  needs_maven || { echo "Missing Maven ${required_maven}+"; missing=1; }
+  needs_node || { echo "Missing Node.js ${required_node}+"; missing=1; }
+  [[ -x "$base_dir/screentrace-capture/node_modules/.bin/playwright" ]] || { echo "Missing renderer; run ./bin/screentrace setup"; missing=1; }
+  ((missing == 0)) && echo "ScreenTrace dependencies are ready."
+  exit "$missing"
+fi
+if ! needs_java || ! needs_maven || ! needs_node; then
+  echo "ScreenTrace needs Java ${required_java}+, Maven ${required_maven}+, and Node.js ${required_node}+. Run ./bin/screentrace doctor, then ./bin/screentrace setup." >&2
+  exit 1
+fi
+if [[ ! -x "$base_dir/screentrace-capture/node_modules/.bin/playwright" ]]; then
+  echo "Browser renderer is missing. Run ./bin/screentrace setup." >&2
+  exit 1
+fi
 jar="$base_dir/screentrace-cli/target/screentrace-cli-0.1.0-SNAPSHOT.jar"
 needs_build=false
 if [[ ! -f "$jar" ]]; then

@@ -120,7 +120,8 @@ class ReportGeneratorTest {
     assertTrue(report.contains("/preview-model.json"));
     assertFalse(report.contains("/static-preview/manifest.json"));
     assertTrue(report.contains("thumbnailFor=screen=>previewScreens[screen.id]?.screenshot"));
-    assertTrue(report.contains("embedded.sandbox='allow-scripts'"));
+    assertTrue(report.contains("embedded.setAttribute('sandbox','')"));
+    assertFalse(report.contains("allow-scripts"));
     assertTrue(report.contains("screenshots/static-"));
     assertTrue(report.contains("API — 頁面載入時呼叫"));
     assertTrue(report.contains("API — 由按鈕／元件觸發"));

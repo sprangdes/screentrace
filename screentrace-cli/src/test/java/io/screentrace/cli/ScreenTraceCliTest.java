@@ -56,4 +56,15 @@ class ScreenTraceCliTest {
     assertThrows(IllegalArgumentException.class, () -> ScreenTraceCli.main(new String[] {"analyze", "--output", "/tmp/output"}));
     assertThrows(IllegalArgumentException.class, () -> ScreenTraceCli.main(new String[] {"export", "--output", "/tmp/result.json"}));
   }
+
+  @Test void hardensUntrustedPreviewAndUsesSafeUnknownMimeType() {
+    String preview = ScreenTraceCli.previewCsp();
+    assertTrue(preview.contains("script-src 'none'"));
+    assertTrue(preview.contains("connect-src 'none'"));
+    assertTrue(preview.contains("base-uri 'none'"));
+    String main = ScreenTraceCli.reportCsp("<script>window.x=1</script>".getBytes(java.nio.charset.StandardCharsets.UTF_8));
+    assertTrue(main.contains("sha256-"));
+    assertFalse(main.contains("script-src 'unsafe-inline'"));
+    assertEquals("application/octet-stream", ScreenTraceCli.contentType(Path.of("source.bin")));
+  }
 }

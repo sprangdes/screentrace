@@ -1,6 +1,7 @@
 package io.screentrace.adapter.spring;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.screentrace.core.ApplicationGraph;
@@ -64,5 +65,21 @@ class SpringBootAnalyzerTest {
         assertTrue(graph.relationships().stream().anyMatch(edge -> edge.type() == ApplicationGraph.EdgeType.CALLS));
         var save = graph.nodes().stream().filter(node -> node.type() == ApplicationGraph.NodeType.COMPONENT && node.name().equals("Save")).findFirst().orElseThrow();
         assertTrue(graph.relationships().stream().anyMatch(edge -> edge.type() == ApplicationGraph.EdgeType.TRIGGERS && edge.from().equals(save.id())));
+    }
+
+    @Test
+    void rejectsReactImportThatEscapesTheProjectRoot() throws Exception {
+        Path root = Files.createTempDirectory("st-react-boundary");
+        Path source = root.resolve("src");
+        Files.createDirectories(source);
+        Path secret = root.getParent().resolve("OutsideView.tsx");
+        Files.writeString(secret, "export function Evil(){ return <p>SECRET_OUTSIDE</p>; }");
+        try {
+            Files.writeString(source.resolve("App.tsx"), "import Evil from '../../../../../../OutsideView';\n<Route path=\"/\" element={<Evil />} />");
+            ApplicationGraph graph = new SpringBootAnalyzer().analyze(new ProjectScanner().scan(root));
+            var screen = graph.nodes().stream().filter(node -> node.type() == ApplicationGraph.NodeType.SCREEN).findFirst().orElseThrow();
+            assertEquals("src/App.tsx", screen.attributes().get("viewSource"));
+            assertFalse(screen.attributes().get("viewSources").contains("OutsideView"));
+        } finally { Files.deleteIfExists(secret); }
     }
 }

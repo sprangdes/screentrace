@@ -1,15 +1,17 @@
-import { access, cp, mkdir, readFile, readdir, stat, writeFile } from 'node:fs/promises';
-import { constants } from 'node:fs';
+import { lstat, mkdir, readdir } from 'node:fs/promises';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { chromium } from 'playwright';
 import { deduplicateMappings, discoverSpringResourceMappings } from './spring-resource-mappings.mjs';
+import { assertOutputPathWithin, createDirectoryWithin, readBufferLimited, readUtf8Limited, resolveExistingDirectoryWithin, resolveExistingFileWithin, writeBufferWithin } from './safe-files.mjs';
 
 const [targetArg, outputArg] = process.argv.slice(2);
 if (!targetArg) throw new Error('Usage: capture-static-jsp.mjs <target-project> [output-directory]');
 const target = path.resolve(targetArg);
 const output = path.resolve(outputArg || path.join(target, '.screentrace'));
-const graph = JSON.parse(await readFile(path.join(output, 'application-graph.json'), 'utf8'));
+await resolveExistingDirectoryWithin(target, target);
+const projectRoot = target;
+const graph = JSON.parse(await readUtf8Limited(output, path.join(output, 'application-graph.json'), 16 * 1024 * 1024));
 const endpointByPath = new Map(graph.nodes.filter(node => node.type === 'ENDPOINT').map(node => [node.attributes?.path, node]));
 const handlerByEndpoint = new Map(graph.relationships.filter(edge => edge.type === 'HANDLED_BY').map(edge => [edge.from, edge.to]));
 const screenByHandler = new Map(graph.relationships.filter(edge => edge.type === 'RENDERS').map(edge => [edge.from, edge.to]));
@@ -17,32 +19,55 @@ const webRoot = path.join(target, 'src/main/webapp');
 const tagRoot = path.join(webRoot, 'WEB-INF/tags');
 const htmlRoot = path.join(output, 'static-preview');
 const screenshotRoot = path.join(output, 'screenshots');
-await mkdir(htmlRoot, { recursive: true });
-await mkdir(screenshotRoot, { recursive: true });
-
-async function exists(file) { try { await access(file, constants.R_OK); return true; } catch { return false; } }
-async function text(file) { return readFile(file, 'utf8'); }
+const htmlRootReal = await createDirectoryWithin(output, htmlRoot);
+const screenshotRootReal = await createDirectoryWithin(output, screenshotRoot);
+async function exists(file, root = projectRoot, kind = 'file') {
+  try { return kind === 'directory' ? !!(await resolveExistingDirectoryWithin(root, file)) : !!(await resolveExistingFileWithin(root, file)); }
+  catch { return false; }
+}
+async function text(file) { return readUtf8Limited(projectRoot, file); }
+async function writeOutput(file, content) { await writeBufferWithin(output, file, content); }
+const captureDiagnostics = [];
 const conventionalAssetMappings = [
   [path.join(webRoot, 'resources'), 'resources'], [path.join(webRoot, 'css'), 'css'],
   [path.join(webRoot, 'js'), 'js'], [path.join(webRoot, 'images'), 'images'],
   [path.join(target, 'src/main/resources/static'), ''], [path.join(target, 'src/main/resources/public'), '']
 ].map(([sourceDir, assetKey]) => ({ urlPrefix: assetKey ? `/${assetKey}/` : null, assetKey, sourceDir }));
 const resourceMappings = deduplicateMappings([...conventionalAssetMappings,
-  ...await discoverSpringResourceMappings(target, webRoot, readFile)]);
+  ...await discoverSpringResourceMappings(target, webRoot, file => readUtf8Limited(projectRoot, file, 4 * 1024 * 1024))]);
 async function copyAssets() {
-  for (const mapping of resourceMappings) if (await exists(mapping.sourceDir) && (await stat(mapping.sourceDir)).isDirectory()) {
-    const destination = path.join(htmlRoot, 'assets', mapping.assetKey);
-    await cp(mapping.sourceDir, destination, { recursive: true });
+  for (const mapping of resourceMappings) if (await exists(mapping.sourceDir, projectRoot, 'directory')) {
+    const source = await resolveExistingDirectoryWithin(projectRoot, mapping.sourceDir);
+    const destination = await assertOutputPathWithin(output, path.join(htmlRootReal, 'assets', mapping.assetKey));
+    await copyDirectory(source, destination, 0);
     await rewriteCssUrls(destination);
   }
 }
+async function copyDirectory(source, destination, depth) {
+  if (depth > 64) { captureDiagnostics.push(`Asset directory depth limit reached: ${source}`); return; }
+  await mkdir(await assertOutputPathWithin(output, destination), { recursive: true });
+  for (const entry of await readdir(source, { withFileTypes: true })) {
+    if (++assetBudget.files > 100_000) { captureDiagnostics.push('Asset file count limit reached; remaining assets skipped.'); return; }
+    const from = path.join(source, entry.name), to = await assertOutputPathWithin(output, path.join(destination, entry.name));
+    const info = await lstat(from);
+    if (info.isSymbolicLink()) { captureDiagnostics.push(`Symbolic link asset skipped: ${path.relative(projectRoot, from)}`); continue; }
+    if (info.isDirectory()) await copyDirectory(from, to, depth + 1);
+    else if (info.isFile() && info.size <= 8 * 1024 * 1024 && assetBudget.bytes + info.size <= 1024 * 1024 * 1024) {
+      const content = await readBufferLimited(projectRoot, from, Math.min(8 * 1024 * 1024, 1024 * 1024 * 1024 - assetBudget.bytes));
+      assetBudget.bytes += content.byteLength;
+      await writeBufferWithin(output, to, content);
+    } else if (info.isFile()) captureDiagnostics.push(`Asset byte limit reached; skipped ${path.relative(projectRoot, from)}.`);
+  }
+}
+const assetBudget = { files: 0, bytes: 0 };
 function mappingFor(url) { return resourceMappings.filter(mapping => mapping.urlPrefix && url.startsWith(mapping.urlPrefix)).sort((a, b) => b.urlPrefix.length - a.urlPrefix.length)[0]; }
 async function rewriteCssUrls(directory) {
   for (const entry of await readdir(directory, { withFileTypes: true })) {
-    const file = path.join(directory, entry.name);
+    const file = await assertOutputPathWithin(output, path.join(directory, entry.name));
+    if (entry.isSymbolicLink()) continue;
     if (entry.isDirectory()) await rewriteCssUrls(file);
-    else if (entry.isFile() && entry.name.endsWith('.css')) await writeFile(file,
-      (await text(file)).replace(/url\(\s*(["']?)(\/[^)'"\s]+)(\1)\s*\)/g, (_, quote, url, closingQuote) => {
+    else if (entry.isFile() && entry.name.endsWith('.css')) await writeOutput(file,
+      (await readUtf8Limited(output, file, 8 * 1024 * 1024)).replace(/url\(\s*(["']?)(\/[^)'"\s]+)(\1)\s*\)/g, (_, quote, url, closingQuote) => {
         const mapping = mappingFor(url);
         if (!mapping) return _;
         const destination = path.join(htmlRoot, 'assets', mapping.assetKey, url.substring(mapping.urlPrefix.length));
@@ -62,7 +87,7 @@ async function expandIncludes(source, currentFile, stack = new Set(), depth = 0)
   return replaceAsync(source, /<%@\s*include\s+file\s*=\s*(["'])(.*?)\1\s*%>/gi, async match => {
     const includePath = match[2];
     const file = includePath.startsWith('/') ? path.join(webRoot, includePath) : path.resolve(path.dirname(currentFile), includePath);
-    if (stack.has(file) || !(await exists(file))) return '';
+    if (stack.has(file) || !(await exists(file, webRoot))) return '';
     const next = new Set(stack); next.add(file);
     return expandIncludes(await text(file), file, next, depth + 1);
   });
@@ -145,7 +170,15 @@ function htmlControls(source) {
     .replace(/<\/c:(?:if|when|otherwise|choose|out|set|forEach|remove)>/g, '')
     .replace(/<spring:(?:bind|message)[^>]*>/g, '').replace(/<\/spring:(?:bind|message)>/g, '')
     .replace(/<jsp:(?:body|attribute)[^>]*>/g, '').replace(/<\/jsp:(?:body|attribute)>/g, '')
-    .replace(/<script(?![^>]*\bsrc\s*=)[\s\S]*?<\/script>/gi, '')
+    .replace(/<script\b[\s\S]*?<\/script\s*>/gi, '')
+    .replace(/<(?:iframe|object|embed|base)\b[^>]*>[\s\S]*?<\/(?:iframe|object|embed)\s*>/gi, '')
+    .replace(/<(?:iframe|object|embed|base)\b[^>]*\/?>/gi, '')
+    .replace(/<meta\b(?=[^>]*http-equiv\s*=\s*["']?refresh)[^>]*>/gi, '')
+    .replace(/\s+on[a-z]+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, '')
+    .replace(/\s+(href|src|action|formaction|xlink:href)\s*=\s*(["'])\s*(?:javascript:|file:|https?:|data:text\/html)[\s\S]*?\2/gi, '')
+    .replace(/@import\s+(?:url\()?\s*["']?[^;)]*(?:https?:|file:)[^;)]*;?/gi, '')
+    .replace(/url\(\s*["']?(?:https?:|file:)[^)]*\)/gi, 'none')
+    .replace(/<head([^>]*)>/i, '<head$1><meta http-equiv="Content-Security-Policy" content="default-src \'none\'; img-src file: data:; style-src file: \'unsafe-inline\'; font-src file:; script-src \'none\'; connect-src \'none\'; frame-src \'none\'; object-src \'none\'; base-uri \'none\'; form-action \'none\'">')
     .replace(/\s+(?:items|modelAttribute|names)=["'][^"']*["']/g, '');
 }
 function dynamicExpressions(source) { return [...source.matchAll(/\$\{[^}]+}/g)].map(match => match[0]); }
@@ -177,20 +210,39 @@ async function renderJsp(screen) {
   source = rewriteAssetUrls(htmlControls(replaceExpressions(source, urls)));
   if (!/<html[\s>]/i.test(source)) source = `<!doctype html><html><head></head><body>${source}</body></html>`;
   source = source.replace(/<html\b[^>]*>\s*<html\b[^>]*>/gi, '<html>').replace(/<\/head>\s*<head\b[^>]*>/gi, '');
-  const htmlFile = path.join(htmlRoot, `${screen.id}.html`);
-  await writeFile(htmlFile, source);
+  source = source.replace(/<script\b[\s\S]*?<\/script\s*>/gi, '').replace(/\son[a-z]+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, '');
+  const htmlFile = await assertOutputPathWithin(output, path.join(htmlRootReal, `${screen.id.replace(/[^a-z0-9-]/gi, '_')}.html`));
+  await writeOutput(htmlFile, source);
   return { htmlFile, assets: [...source.matchAll(/\b(?:href|src)=["'](assets\/[^"']+)/gi)].map(match => '/' + match[1]), dynamicExpressions: unresolved };
 }
 
 const manifest = {}, screenshots = {}, interactions = {}, reconstruction = {};
+const allScreens = graph.nodes.filter(node => node.type === 'SCREEN');
+if (allScreens.length > 500) captureDiagnostics.push(`Maximum of 500 screens reached; skipped ${allScreens.length - 500} screens.`);
+const screens = allScreens.slice(0, 500);
 const browser = await chromium.launch({ headless: true });
-const page = await browser.newPage({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1 });
-for (const screen of graph.nodes.filter(node => node.type === 'SCREEN')) {
+try {
+const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1, javaScriptEnabled: false });
+await context.route('**/*', async route => {
+  const url = route.request().url();
+  if (!url.startsWith('file:')) return route.abort('blockedbyclient');
+  try {
+    const local = await resolveExistingFileWithin(htmlRootReal, new URL(url).pathname);
+    return local.startsWith(htmlRootReal + path.sep) || local === htmlRootReal ? route.continue() : route.abort('blockedbyclient');
+  } catch { return route.abort('blockedbyclient'); }
+});
+const page = await context.newPage();
+page.setDefaultNavigationTimeout(5_000);
+page.setDefaultTimeout(3_000);
+for (const screen of screens) {
+  try {
   const rendered = await renderJsp(screen);
   if (!rendered) continue;
   manifest[screen.id] = `static-preview/${path.basename(rendered.htmlFile)}`;
   reconstruction[screen.id] = { view: screen.attributes?.view, assets: rendered.assets, dynamicExpressions: rendered.dynamicExpressions, rendering: { mode: 'reconstructed' } };
-  await page.goto(pathToFileURL(rendered.htmlFile).href, { waitUntil: 'load' });
+  await page.goto(pathToFileURL(rendered.htmlFile).href, { waitUntil: 'domcontentloaded', timeout: 5_000 });
+  const elementCount = await page.locator('*').count();
+  if (elementCount > 50_000) throw new Error(`Rendered page element limit exceeded: ${elementCount}`);
   const items = await page.locator('a[href], button, input[type="submit"], input[type="button"], form[action]').evaluateAll(items => items.map((item, index) => {
     const box = item.getBoundingClientRect(), style = getComputedStyle(item);
     const form = item.tagName === 'FORM' ? item : item.closest('form');
@@ -207,13 +259,23 @@ for (const screen of graph.nodes.filter(node => node.type === 'SCREEN')) {
     const targetScreenId = handler && screenByHandler.get(handler);
     if (targetScreenId) item.targetScreenId = targetScreenId;
   }
-  interactions[screen.id] = { width: await page.evaluate(() => document.documentElement.scrollWidth), height: await page.evaluate(() => document.documentElement.scrollHeight), items };
+  const dimensions = await page.evaluate(() => ({ width: document.documentElement.scrollWidth, height: document.documentElement.scrollHeight }));
+  const width = Math.min(4096, Math.max(1, dimensions.width));
+  const height = Math.min(16384, Math.max(1, dimensions.height), Math.floor(16_000_000 / width));
+  interactions[screen.id] = { width, height, items };
   const file = `static-${screen.id.replace(/[^a-z0-9-]/gi, '_')}.png`;
-  await page.screenshot({ path: path.join(screenshotRoot, file), fullPage: true });
+  const screenshot = await page.screenshot({ timeout: 5_000, clip: { x: 0, y: 0, width, height }, animations: 'disabled' });
+  await writeBufferWithin(output, path.join(screenshotRootReal, file), screenshot);
   screenshots[screen.id] = `screenshots/${file}`;
+  } catch (error) {
+    reconstruction[screen.id] = { view: screen.attributes?.view, rendering: { mode: 'skipped', diagnostic: String(error?.message || error) } };
+  }
 }
-await browser.close();
-await writeFile(path.join(htmlRoot, 'manifest.json'), JSON.stringify(manifest, null, 2));
-await writeFile(path.join(htmlRoot, 'reconstruction.json'), JSON.stringify(reconstruction, null, 2));
-await writeFile(path.join(screenshotRoot, 'manifest.json'), JSON.stringify(screenshots, null, 2));
-await writeFile(path.join(screenshotRoot, 'interactions.json'), JSON.stringify(interactions, null, 2));
+} finally {
+  await browser.close();
+}
+await writeOutput(path.join(htmlRoot, 'manifest.json'), JSON.stringify(manifest, null, 2));
+await writeOutput(path.join(htmlRoot, 'reconstruction.json'), JSON.stringify(reconstruction, null, 2));
+await writeOutput(path.join(screenshotRoot, 'manifest.json'), JSON.stringify(screenshots, null, 2));
+await writeOutput(path.join(screenshotRoot, 'interactions.json'), JSON.stringify(interactions, null, 2));
+await writeOutput(path.join(htmlRoot, 'diagnostics.json'), JSON.stringify(captureDiagnostics, null, 2));

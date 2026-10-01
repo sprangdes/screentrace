@@ -72,7 +72,7 @@ function Ensure-BrowserRenderer {
   try {
     if (-not (Test-Path $playwright)) {
       Write-Host 'Installing ScreenTrace browser renderer...'
-      & npm ci --no-audit --no-fund
+      & npm ci --no-fund
       if ($LASTEXITCODE -ne 0) { throw 'Unable to install the ScreenTrace browser renderer.' }
     }
     $installed = & npx playwright install --list 2>$null
@@ -98,8 +98,28 @@ function Test-BuildRequired([string]$jar) {
     Select-Object -First 1)
 }
 
-Ensure-Runtime
-Ensure-BrowserRenderer
+$cliArgs = $args
+if ($args.Count -gt 0 -and $args[0] -eq 'setup') {
+  $cliArgs = @($args | Select-Object -Skip 1)
+  Ensure-Runtime
+  Ensure-BrowserRenderer
+  Write-Host 'ScreenTrace setup complete.'
+  exit 0
+}
+if ($args.Count -gt 0 -and $args[0] -eq 'doctor') {
+  $missing = @()
+  if ((Get-JavaMajorVersion) -lt $requiredJava) { $missing += "Java $requiredJava+" }
+  if ((Get-MavenVersion) -lt $requiredMaven) { $missing += "Maven $requiredMaven+" }
+  if ((Get-NodeMajorVersion) -lt $requiredNode) { $missing += "Node.js $requiredNode+" }
+  if (-not (Test-Path (Join-Path $baseDir 'screentrace-capture/node_modules/.bin/playwright.cmd'))) { $missing += 'Playwright renderer (run .\bin\screentrace.ps1 setup)' }
+  if ($missing.Count) { $missing | ForEach-Object { Write-Host "Missing $_" }; exit 1 }
+  Write-Host 'ScreenTrace dependencies are ready.'
+  exit 0
+}
+if ((Get-JavaMajorVersion) -lt $requiredJava -or (Get-MavenVersion) -lt $requiredMaven -or (Get-NodeMajorVersion) -lt $requiredNode) {
+  throw "ScreenTrace needs Java $requiredJava+, Maven $requiredMaven+, and Node.js $requiredNode+. Run .\bin\screentrace.ps1 doctor, then .\bin\screentrace.ps1 setup."
+}
+if (-not (Test-Path (Join-Path $baseDir 'screentrace-capture/node_modules/.bin/playwright.cmd'))) { throw 'Browser renderer is missing. Run .\bin\screentrace.ps1 setup.' }
 
 $jar = Join-Path $baseDir 'screentrace-cli\\target\\screentrace-cli-0.1.0-SNAPSHOT.jar'
 if (Test-BuildRequired $jar) {
@@ -113,5 +133,5 @@ if (Test-BuildRequired $jar) {
   }
 }
 
-& java -jar $jar @args
+& java -jar $jar @cliArgs
 exit $LASTEXITCODE

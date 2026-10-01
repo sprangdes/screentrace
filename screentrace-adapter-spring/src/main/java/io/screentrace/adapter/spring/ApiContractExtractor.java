@@ -17,6 +17,7 @@ import io.screentrace.core.ApplicationGraph.Response;
 import io.screentrace.core.ApplicationGraph.SourceLocation;
 import java.io.IOException;
 import java.nio.file.Path;
+import io.screentrace.scanner.SafeProjectFiles;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -64,7 +65,7 @@ final class ApiContractExtractor {
   private void index(Path root, Path file) {
     try {
       String relative = root.relativize(file).toString();
-      var unit = StaticJavaParser.parse(file);
+      var unit = StaticJavaParser.parse(SafeProjectFiles.readUtf8Limited(root, file, SafeProjectFiles.MAX_SOURCE_FILE_BYTES));
       for (ClassOrInterfaceDeclaration type : unit.findAll(ClassOrInterfaceDeclaration.class)) {
         List<Field> fields = new ArrayList<>();
         for (var declaration : type.getFields()) for (VariableDeclarator variable : declaration.getVariables()) {

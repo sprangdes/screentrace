@@ -3,6 +3,7 @@ package io.screentrace.core;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import java.util.*;
+import java.nio.charset.StandardCharsets;
 
 /**
  * Framework-neutral, deterministic contract between analysis adapters and graph consumers.
@@ -53,7 +54,7 @@ public record ApplicationGraph(Application application, List<GraphNode> nodes, L
   }
 
   public static String id(NodeType type, String key) {
-    return type.name().toLowerCase(Locale.ROOT) + ":" + UUID.nameUUIDFromBytes(key.getBytes()).toString();
+    return type.name().toLowerCase(Locale.ROOT) + ":" + UUID.nameUUIDFromBytes(key.getBytes(StandardCharsets.UTF_8)).toString();
   }
 
   public record Application(String name, String path, List<String> technologies) {
