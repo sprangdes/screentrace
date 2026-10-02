@@ -12,6 +12,7 @@ permissions:
 jobs:
   dependency-audit:
     runs-on: ubuntu-latest
+    timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -19,12 +20,44 @@ jobs:
           distribution: temurin
           java-version: '17'
           cache: maven
+      - name: Build and test Java modules
+        run: mvn -B clean verify
+      - name: Set vulnerability cache date
+        id: cache-date
+        run: echo "day=$(date -u +%Y-%m-%d)" >> "$GITHUB_OUTPUT"
+      - name: Cache vulnerability database
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/dependency-check-data
+          # Isolate the scanner's database schema from previous plugin versions.
+          key: ${{ runner.os }}-dependency-check-12.2.2-${{ steps.cache-date.outputs.day }}
+          restore-keys: |
+            ${{ runner.os }}-dependency-check-12.2.2-
+      - name: Audit Java dependencies
+        env:
+          DEPENDENCY_CHECK_DATA: ${{ runner.temp }}/dependency-check-data
+        run: mvn -B org.owasp:dependency-check-maven:aggregate -DdataDirectory="$DEPENDENCY_CHECK_DATA"
+      - name: Upload dependency audit reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: java-dependency-audit
+          path: |
+            target/dependency-check-report.html
+            target/dependency-check-report.json
+          if-no-files-found: warn
+
+  node-dependency-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: npm
           cache-dependency-path: screentrace-capture/package-lock.json
-      - name: Audit Java dependencies
-        run: mvn -B org.owasp:dependency-check-maven:12.1.0:aggregate -DfailBuildOnCVSS=7
+      - name: Install Node dependencies
+        run: npm --prefix screentrace-capture ci
       - name: Audit Node dependencies
-        run: npm --prefix screentrace-capture ci && npm --prefix screentrace-capture audit --audit-level=high
+        run: npm --prefix screentrace-capture audit --audit-level=high

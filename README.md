@@ -277,3 +277,25 @@ mvn clean verify
 ```
 
 分析產物是執行結果，應維持在設定的分析結果根目錄，不應提交到 ScreenTrace 原始碼版本庫。
+
+### 依賴安全檢查
+
+GitHub Actions 的 `Security checks` 在 push、PR 與每週排程執行。Java 與 Node 使用獨立 job，因此其中一項失敗不會跳過另一項。
+
+- Java：先建置與測試，再使用 Dependency-Check 12.2.2 掃描；CVSS ≥ 7 或掃描錯誤仍會使檢查失敗。
+- Node：依 lockfile 安裝依賴，再執行 `npm audit --audit-level=high`。
+- NVD 資料使用官方公開 JSON 2.0 檔案，不需要 API Key；漏洞資料庫使用每日快取，並依掃描器版本隔離；升級掃描器時也要更新 workflow 的快取版本。
+- Java 掃描報告以 `java-dependency-audit` artifact 保存，掃描失敗時也會嘗試上傳。
+
+本機可重跑：
+
+```bash
+mvn clean verify
+mvn org.owasp:dependency-check-maven:aggregate -DdataDirectory=/tmp/screentrace-dependency-check-12.2.2
+npm --prefix screentrace-capture ci
+npm --prefix screentrace-capture audit --audit-level=high
+```
+
+掃描設定集中在根目錄 `pom.xml`，不會自動附加到一般 `mvn verify`。新版掃描器不可沿用不相容的舊資料庫；上例使用獨立資料目錄，避免改動已有快取。
+
+首次下載完整 NVD 資料仍可能較慢，後續會使用快取並更新變更資料。Sonatype OSS Index 需要另行認證；未提供認證時，新版工具會略過該額外資料來源，NVD 掃描仍執行。

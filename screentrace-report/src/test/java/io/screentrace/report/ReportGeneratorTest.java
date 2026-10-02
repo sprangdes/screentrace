@@ -59,7 +59,7 @@ class ReportGeneratorTest {
     assertTrue(theme.contains(".detail .meta { color: #555B60"));
     assertTrue(theme.contains(".workspace-bottom-controls"));
     assertTrue(theme.contains(".content.overview .screen-grid .node:hover:not(.selected)"));
-    assertTrue(theme.contains(".node.selected { outline: none !important; background: var(--color-node)"));
+    assertTrue(theme.contains(".node.selected { outline: 2px solid var(--highlight-green) !important; outline-offset: 3px; background: var(--color-node)"));
     assertTrue(theme.contains(".content.overview .folder-browser { --project-nav-width: 272px; grid-template-columns: var(--project-nav-width) minmax(0, 1fr)"));
     assertTrue(theme.contains(".content.overview .folder-browser.has-resizer"));
     assertTrue(theme.contains("--project-nav-width: 272px"));
@@ -71,10 +71,10 @@ class ReportGeneratorTest {
     assertTrue(theme.contains("--bottom-control-fg: #3E4348"));
     assertTrue(theme.contains(".zoom-controls button { display: grid; width: 42px"));
     assertTrue(theme.contains(".mode-bar, .review-mode-shell { display: flex; height: var(--bottom-control-height); align-items: center; gap: 3px; padding: 4px; border: 1px solid #D6D9DC"));
-    assertTrue(theme.contains("--highlight-green: #22C98A"));
+    assertTrue(theme.contains("--highlight-green: #167D67"));
     assertTrue(theme.contains(".review-mode .hotspot.review-unconfirmed"));
-    assertTrue(theme.contains("--color-panel: #E9EFEA"));
-    assertTrue(theme.contains("--color-node: #E9EBEE"));
+    assertTrue(theme.contains("--color-panel: #F0F3EE"));
+    assertTrue(theme.contains("--color-node: #F0F2ED"));
     assertTrue(report.contains("class=\"workspace-bottom-controls\""));
     assertTrue(report.contains("class=\"review-mode-shell\""));
     assertTrue(report.contains("id=\"rail-screen-tree\""));
