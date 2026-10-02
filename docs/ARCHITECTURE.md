@@ -81,7 +81,7 @@ screentrace-parser-jsp ──→ screentrace-adapter-struts
                          工作區 / 指令 / localhost 報表
 ```
 
-JavaScript AST 分析模組與單一 HTML 檢視器尚未建立，分別由 WP4、WP7 新增。目前報表仍需 CLI 的 localhost 伺服器；「standalone」表示工具獨立於目標專案建置，不代表現有報表已符合單一離線 HTML 的驗收。
+JavaScript AST 分析模組 screentrace-js 已建立（WP4 增量一）；單一 HTML 檢視器由 WP7 新增。目前報表仍需 CLI 的 localhost 伺服器；「standalone」表示工具獨立於目標專案建置，不代表現有報表已符合單一離線 HTML 的驗收。
 
 ## 3. 模組責任
 
@@ -135,7 +135,7 @@ Node 模組，使用 Playwright 1.55.1；靜態化 JSP、展開支援的標記�
 
 ### 後續工作包指定的新模組（規劃中）
 
-- `screentrace-js`：WP4 JavaScript AST 分析，名稱可依 ADR 調整。
+- `screentrace-js`：已建立的 Node 模組，Acorn / acorn-loose AST 與容錯診斷；ADR 0007 記錄釘選與 JSON 邊界。
 - `screentrace-viewer`：WP7 TypeScript + esbuild 離線檢視器。
 - `review-md`：WP8 瀏覽器與 Node 共用匯出邏輯，名稱可依 ADR 調整。
 

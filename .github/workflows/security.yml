@@ -56,8 +56,16 @@ jobs:
         with:
           node-version: '22'
           cache: npm
-          cache-dependency-path: screentrace-capture/package-lock.json
+          cache-dependency-path: |
+            screentrace-capture/package-lock.json
+            screentrace-js/package-lock.json
       - name: Install Node dependencies
         run: npm --prefix screentrace-capture ci
       - name: Audit Node dependencies
         run: npm --prefix screentrace-capture audit --audit-level=high
+      - name: Install JavaScript parser dependencies
+        run: npm --prefix screentrace-js ci --ignore-scripts
+      - name: Test JavaScript parser
+        run: npm --prefix screentrace-js test
+      - name: Audit JavaScript parser dependencies
+        run: npm --prefix screentrace-js audit --audit-level=high
