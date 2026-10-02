@@ -10,6 +10,7 @@
   <artifactId>screentrace-parser-jsp</artifactId>
 
   <dependencies>
+    <dependency><groupId>com.github.javaparser</groupId><artifactId>javaparser-core</artifactId></dependency>
     <dependency><groupId>io.screentrace</groupId><artifactId>screentrace-scanner</artifactId><version>${project.version}</version></dependency>
     <dependency>
       <groupId>io.screentrace</groupId>

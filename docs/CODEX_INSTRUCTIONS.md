@@ -1,6 +1,6 @@
 # ScreenTrace 調整指示(給 Codex)
 
-- 文件版本:1.2(2026-10-03;依 OQ-002 決定修訂 WP3 第 8 點,變更見第 11 節)
+- 文件版本:1.3(2026-10-03;依 OQ-003 決定補充 WP4 第 2 點,變更見第 11 節)
 - 建議放置位置:`docs/CODEX_INSTRUCTIONS.md`,並在 `AGENTS.md` 第 10 節的閱讀清單加入本文件
 - 對照基準:`sprangdes/screentrace` main(含 review-result v2 匯出的版本)
 
@@ -204,6 +204,8 @@
 **要求**
 1. **技術**:新增獨立 Node 模組(例如 `screentrace-js`),使用成熟的 JS 解析器(如 acorn 或 @babel/parser,擇一並在 ADR 說明),輸出供 Java adapter 讀取的 JSON。支援 ES5 至現行語法與 `type="module"`;語法錯誤採容錯模式並產生診斷,不得中斷整體分析。
 2. **來源範圍**:JSP 內 inline script、`<script src>`(解析為專案內檔案,含經 `c:url` / `spring:url` / `${ctx}` 的路徑)、事件屬性運算式、`javascript:` URL。
+   - OQ-003 例外僅用於找出要分析的 JS 檔案：script src 開頭是單一變數（如 `${ctx}`）或 `${pageContext.request.contextPath}`／`${pageContext.servletContext.contextPath}`，且整個專案原始碼沒有將該變數定義為其他值時，可將剩餘路徑比對 web root（src/main/webapp、WebContent 等）內實際檔案。恰好一個符合標 INFERRED；多個符合標 AMBIGUOUS、全部列出且不得擇一；無符合 UNRESOLVED 並診斷。保留原始運算式與比對證據。
+   - 來源有 c:set 等定義時依定義處證據解析；定義與不透明部署前綴假設矛盾時 UNRESOLVED。變數在中間、完整 URL（http://、//）、多個變數串接不適用，一律 UNRESOLVED。本例外不得套用到 JS 內 API URL；API URL context path 留給 WP5。
 3. **第三方函式庫**:依檔名與檔頭標記辨識(jQuery、Bootstrap、jQuery UI、jquery.validate、select2、日期選擇器等),**不分析其內部**,改以內建的 API 對照表(資料檔 + 測試)理解其公開 API。未知函式庫的呼叫記為 `UNKNOWN_CALL`,保留被呼叫者文字。
 4. **必須辨識的行為**:
    - 導頁:`location.href`、`location.assign/replace`、`window.location`、`history.pushState`、`window.open`、`form.submit()`
@@ -481,6 +483,8 @@ migration_target:
 ---
 
 ## 11. 修訂紀錄
+
+- 1.3:依 OQ-003 決定補充 WP4 第 2 點的 script src 不透明 context 前綴例外與排除邊界；單一／多個／無候選分別 INFERRED／AMBIGUOUS／UNRESOLVED，保留原文與證據，不套用於 API URL，既有斷言不變。
 
 - 1.2:依 OQ-002 方案 B 修訂 WP3 第 8 點,允許有同來源常值定義、使用前且無重新賦值與作用域證據的 URL 變數例外;保留原始運算式、定義位置與路徑樣板,排除未知函式、跨檔案變數、c:set 與 param 值解析,既有測試斷言不變。
 - 1.1:檢核來源層級改為 `MARKUP` / `CLIENT` / `SERVER`(OQ-001);API 狀態推導的元件決策改用 (`screenId`, `componentId`) 複合鍵;新增 WP4 第 11 點、WP5 第 7 點、WP8 規則 7。
