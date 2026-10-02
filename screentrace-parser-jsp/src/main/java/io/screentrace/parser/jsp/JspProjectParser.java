@@ -41,11 +41,12 @@ public final class JspProjectParser {
     List<JspAnalysis.Include> includes = new ArrayList<>();
     List<JspAnalysis.TilesDefinition> tilesDefinitions = new ArrayList<>();
     List<Diagnostic> diagnostics = new ArrayList<>();
+    Map<String, MarkupAnalysis> markup = new java.util.TreeMap<>();
     for (Path file : files) {
       String name = file.getFileName().toString();
       try {
-        if (name.endsWith(".jsp") || name.endsWith(".jspf")) {
-          parseJsp(root, file, views, interactions, includes, diagnostics);
+        if (name.endsWith(".jsp") || name.endsWith(".jspf") || name.endsWith(".html") || name.endsWith(".htm")) {
+          parseJsp(root, file, views, interactions, includes, diagnostics, markup);
         } else if (name.endsWith(".xml") && SafeProjectFiles.readUtf8Limited(root, file, SafeProjectFiles.MAX_XML_FILE_BYTES).contains("tiles-definitions")) {
           parseTiles(root, file, tilesDefinitions, diagnostics);
         }
@@ -53,21 +54,22 @@ public final class JspProjectParser {
         diagnostics.add(unresolved("Source file was skipped: " + exception.getMessage(), new SourceLocation(relative(root, file), 1)));
       }
     }
-    return new JspAnalysis(views, expandIncludedInteractions(root, interactions, includes, diagnostics), includes, tilesDefinitions, diagnostics);
+    return new JspAnalysis(views, expandIncludedInteractions(root, interactions, includes, diagnostics), includes, tilesDefinitions, diagnostics, markup);
   }
 
   private static void parseJsp(Path root, Path file, List<JspAnalysis.View> views,
                                List<JspAnalysis.Interaction> interactions, List<JspAnalysis.Include> includes,
-                               List<Diagnostic> diagnostics) throws IOException {
-    String text = preprocess(SafeProjectFiles.readUtf8Limited(root, file, SafeProjectFiles.MAX_JSP_FILE_BYTES));
+                               List<Diagnostic> diagnostics, Map<String, MarkupAnalysis> markup) throws IOException {
+    String text = SafeProjectFiles.readUtf8Limited(root, file, SafeProjectFiles.MAX_JSP_FILE_BYTES);
     String relative = relative(root, file);
-    JspAnalysis.ViewKind kind = relative.endsWith(".jspf") ? JspAnalysis.ViewKind.JSPF : JspAnalysis.ViewKind.JSP;
+    markup.put(relative, MarkupAnalysis.parse(relative, text));
+    JspAnalysis.ViewKind kind = relative.endsWith(".jspf") ? JspAnalysis.ViewKind.JSPF : relative.endsWith(".jsp") ? JspAnalysis.ViewKind.JSP : JspAnalysis.ViewKind.HTML;
     views.add(new JspAnalysis.View(relative, kind, new SourceLocation(relative, 1)));
     Map<String, String> urls = new HashMap<>();
     String activeFormTarget = null;
     String activeFormMethod = null;
     boolean activeFormSubmitsCurrentView = false;
-    inlineSpringUrlLinks(text, relative, interactions, diagnostics);
+
     for (MarkupTag tag : MarkupTag.scan(text)) {
       SourceLocation source = new SourceLocation(relative, tag.line());
       String tagName = tag.name().toLowerCase(Locale.ROOT);
@@ -115,7 +117,11 @@ public final class JspProjectParser {
   }
 
   private static String resolvedTarget(String target, Map<String, String> urls) {
-    if (target != null && target.stripLeading().startsWith("<spring:url")) return null;
+    if (target != null && (target.stripLeading().startsWith("<spring:url") || target.stripLeading().startsWith("<c:url"))) {
+      List<MarkupTag> nested = MarkupTag.scan(target);
+      if (nested.size() == 1 && literal(nested.get(0).attribute("value"))) return nested.get(0).attribute("value");
+      return target;
+    }
     if (target == null || !target.startsWith("${") || !target.endsWith("}")) return target;
     String expression = target.substring(2, target.length() - 1).trim();
     String variable = expression;

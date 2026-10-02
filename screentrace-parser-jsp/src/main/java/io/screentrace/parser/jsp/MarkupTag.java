@@ -67,11 +67,24 @@ public final class MarkupTag {
     for (int index = start + 1; index < source.length(); index++) {
       char current = source.charAt(index);
       if (quote != 0) {
+        if (current == '<' && (source.startsWith("<%", index) || source.startsWith("<", index))) {
+          int nested = nestedEnd(source, index);
+          if (nested >= 0) { index = nested; continue; }
+        }
         if (current == quote) quote = 0;
       } else if (current == '\'' || current == '"') quote = current;
       else if (current == '>') return index;
     }
     return -1;
+  }
+
+  private static int nestedEnd(String source, int start) {
+    if (source.startsWith("<%", start)) {
+      int end = source.indexOf("%>", start + 2);
+      return end < 0 ? -1 : end + 1;
+    }
+    if (start + 1 >= source.length() || !Character.isLetter(source.charAt(start + 1))) return -1;
+    return endOfTag(source, start);
   }
 
   private static MarkupTag parse(String body, int line, int end) {
@@ -96,7 +109,7 @@ public final class MarkupTag {
       if (nameStart == index) break;
       String name = body.substring(nameStart, index).toLowerCase(Locale.ROOT);
       while (index < body.length() && Character.isWhitespace(body.charAt(index))) index++;
-      if (index >= body.length() || body.charAt(index) != '=') continue;
+      if (index >= body.length() || body.charAt(index) != '=') { values.put(name, ""); continue; }
       index++;
       while (index < body.length() && Character.isWhitespace(body.charAt(index))) index++;
       if (index >= body.length()) break;
@@ -105,12 +118,18 @@ public final class MarkupTag {
       int valueEnd;
       if (quote == '\'' || quote == '"') {
         valueStart = ++index;
-        while (index < body.length() && body.charAt(index) != quote) index++;
+        while (index < body.length() && body.charAt(index) != quote) {
+          if (body.charAt(index) == '<') {
+            int nested = nestedEnd(body, index);
+            if (nested >= 0) { index = nested + 1; continue; }
+          }
+          index++;
+        }
         valueEnd = index;
         if (index < body.length()) index++;
       } else {
         valueStart = index;
-        while (index < body.length() && !Character.isWhitespace(body.charAt(index)) && body.charAt(index) != '/') index++;
+        while (index < body.length() && !Character.isWhitespace(body.charAt(index))) index++;
         valueEnd = index;
       }
       values.put(name, body.substring(valueStart, valueEnd));

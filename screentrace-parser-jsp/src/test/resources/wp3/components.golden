@@ -1,0 +1,17 @@
+5|form:form|FORM||false
+6|input|TEXT_INPUT|${visible}|false
+7|form:input|TEXT_INPUT|${flag}|false
+7|html:password|TEXT_INPUT|c:otherwise{}|false
+8|select|MULTI_SELECT||true
+9|textarea|TEXTAREA|logic:present{name=order}|false
+10|input|CHECKBOX|logic:notPresent{name=order}|false
+11|input|RADIO|logic:equal{name=order, property=state, value=open}|false
+12|input|DATE_PICKER||false
+13|select|SELECT||false
+13|input|FILE_INPUT||false
+13|input|SUBMIT||false
+13|button|BUTTON||false
+14|a|LINK||false
+14|input|OTHER||false
+14|table|TABLE||false
+16|dialog|MODAL||false

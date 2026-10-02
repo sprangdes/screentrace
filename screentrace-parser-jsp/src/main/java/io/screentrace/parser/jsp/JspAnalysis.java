@@ -7,18 +7,25 @@ import java.util.List;
 
 /** Framework-neutral, deterministic contribution extracted from JSP-family source artifacts. */
 public record JspAnalysis(List<View> views, List<Interaction> interactions, List<Include> includes,
-                          List<TilesDefinition> tilesDefinitions, List<Diagnostic> diagnostics) {
+                          List<TilesDefinition> tilesDefinitions, List<Diagnostic> diagnostics,
+                          java.util.Map<String, MarkupAnalysis> markup) {
   public JspAnalysis {
     views = List.copyOf(views);
     interactions = List.copyOf(interactions);
     includes = List.copyOf(includes);
     tilesDefinitions = List.copyOf(tilesDefinitions);
     diagnostics = List.copyOf(diagnostics);
+    markup = java.util.Collections.unmodifiableMap(new java.util.TreeMap<>(markup));
+  }
+
+  public JspAnalysis(List<View> views, List<Interaction> interactions, List<Include> includes,
+                     List<TilesDefinition> tilesDefinitions, List<Diagnostic> diagnostics) {
+    this(views, interactions, includes, tilesDefinitions, diagnostics, java.util.Map.of());
   }
 
   public record View(String path, ViewKind kind, SourceLocation source) { }
 
-  public enum ViewKind { JSP, JSPF }
+  public enum ViewKind { JSP, JSPF, HTML }
 
   public record Interaction(String viewPath, InteractionType type, String label, String target,
                             String httpMethod, SourceLocation source, Confidence confidence,

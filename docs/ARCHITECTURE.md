@@ -514,3 +514,9 @@ When trade-offs occur, prioritize in this order:
 4. Testability
 5. Performance
 6. UI polish
+
+### WP3 首批標記解析貢獻（進行中）
+
+`JspAnalysis.markup` 依來源相對路徑提供 `MarkupAnalysis`，涵蓋 JSP/JSPF/HTML：元件種類與穩定 ID、原始屬性、行號、條件原文、迴圈、表單與欄位名稱、事件運算式、MARKUP 檢核與彈窗行為。未知表單模型／欄位綁定保留 UNRESOLVED，交由 adapter 以模型證據解析。舊建構子維持來源相容。主解析路徑直接掃描原始文字，忽略註解與 scriptlet；不再以移除字串的預處理改變行號。`preprocess` 僅為既有相容 API，不作為解析入口。
+
+此批尚未接入 adapter 的完整 Application Graph；WP3 的圖整合、include／Tiles 投影與完整 golden 驗收仍未完成。WP4、WP5 尚未開始。
