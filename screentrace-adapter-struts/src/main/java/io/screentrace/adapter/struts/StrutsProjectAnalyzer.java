@@ -34,7 +34,7 @@ public final class StrutsProjectAnalyzer {
     addInteractions(jsp,state);
     parseValidation(state);
     parseActionForms(state);
-    return state.graph();
+    return io.screentrace.parser.jsp.MarkupGraphContribution.enrich(state.graph(),jsp);
   }
   private static void addView(JspAnalysis.View view,State state) {
     String viewId=ApplicationGraph.id(NodeType.VIEW,view.path());
@@ -46,6 +46,18 @@ public final class StrutsProjectAnalyzer {
       indexView(state.screens,view.path(),id);
     }
   }
+  private static void collectFormProperties(String className,State state,Map<String,String> properties,List<AnalysisEvidence> proof,Set<String> seen) {
+    if(className==null||!seen.add(className))return;var type=state.types.get(className);if(type==null)return;
+    String parent=type.parent();int separator=type.name().lastIndexOf('.');
+    if(!parent.contains(".")&&separator>=0&&state.types.containsKey(type.name().substring(0,separator+1)+parent))parent=type.name().substring(0,separator+1)+parent;
+    collectFormProperties(parent,state,properties,proof,seen);
+    for(var field:type.declaration().getFields()) for(var variable:field.getVariables()) properties.putIfAbsent("field."+variable.getNameAsString()+".type",variable.getType().asString());
+    for(var method:type.declaration().getMethods()) if(method.isPublic()&&method.getParameters().isEmpty()&&method.getNameAsString().startsWith("get")&&method.getNameAsString().length()>3) {
+      String raw=method.getNameAsString().substring(3);properties.put("field."+java.beans.Introspector.decapitalize(raw)+".type",method.getType().asString());
+    }
+    proof.addAll(evidence(type.source(),Confidence.CONFIRMED,"ActionForm 欄位宣告："+className));
+  }
+
   private static void parseConfig(Path config,State state) {
     String path=relative(state,config);
     try {
@@ -56,6 +68,9 @@ public final class StrutsProjectAnalyzer {
         Map<String,String> attrs=new TreeMap<>(StrutsSources.attributes(form));attrs.put("class",form.getAttribute("type"));
         for(Element property:StrutsSources.elements(form,"form-property")) for(var attribute:StrutsSources.attributes(property).entrySet()) attrs.put("field."+property.getAttribute("name")+"."+attribute.getKey(),attribute.getValue());
         addNode(state,id,NodeType.FORM_MODEL,name,attrs,StrutsSources.source(path,form),Confidence.CONFIRMED);
+        var model=state.nodes.get(id);var properties=new TreeMap<>(model.attributes());var proof=new ArrayList<>(model.evidence());
+        collectFormProperties(properties.get("class"),state,properties,proof,new HashSet<>());
+        state.nodes.put(id,new GraphNode(model.id(),model.type(),model.name(),properties,model.source(),model.confidence(),proof));
         state.forms.put(module+":"+name,id);
       }
       Map<String,String> global=new TreeMap<>();
@@ -176,6 +191,8 @@ public final class StrutsProjectAnalyzer {
           if(target!=null) attrs.put("target",target);
           String occurrenceKey=name+new TreeMap<>(tag.attributes());int occurrence=occurrences.merge(occurrenceKey,1,Integer::sum)-1;
           String id=StableGraphIds.component(path,kind,identityAttributes(tag,name),occurrence);
+          var resolved=jsp.interactions().stream().filter(i->id.equals(i.componentId())).findFirst();
+          if(resolved.isPresent()&&!resolved.get().submitsCurrentView()) {target=resolved.get().target();attrs.put("target",target);if(resolved.get().originalExpression()!=null)attrs.put("originalExpression",resolved.get().originalExpression());}
           if(kind==ComponentKind.FORM) formGroup=id;
           String label=first(tag,"value","title","id","name","property");if(label==null) label=name;
           controls.add(new Control(id,label,attrs,target,source,first(tag,"property","name"),first(tag,"value"),formGroup));
@@ -277,24 +294,7 @@ public final class StrutsProjectAnalyzer {
     return methods.size()==1?methods.iterator().next():null;
   }
   private static ComponentKind kind(String name,MarkupTag tag) {
-    return switch(name) {
-      case "html:form","form","form:form" -> ComponentKind.FORM;
-      case "html:text","html:password" -> ComponentKind.TEXT_INPUT;
-      case "html:textarea","textarea" -> ComponentKind.TEXTAREA;
-      case "html:select","select" -> tag.attribute("multiple")!=null?ComponentKind.MULTI_SELECT:ComponentKind.SELECT;
-      case "html:checkbox" -> ComponentKind.CHECKBOX;
-      case "html:multibox" -> ComponentKind.MULTI_SELECT;
-      case "html:radio" -> ComponentKind.RADIO;
-      case "html:file" -> ComponentKind.FILE_INPUT;
-      case "html:hidden" -> ComponentKind.OTHER;
-      case "html:submit","html:cancel" -> ComponentKind.SUBMIT;
-      case "html:button","html:reset","button" -> ComponentKind.BUTTON;
-      case "html:link","a" -> ComponentKind.LINK;
-      case "input" -> switch(Objects.toString(tag.attribute("type"),"text").toLowerCase(Locale.ROOT)) {
-        case "submit" -> ComponentKind.SUBMIT;case "button","reset" -> ComponentKind.BUTTON;case "checkbox" -> ComponentKind.CHECKBOX;case "radio" -> ComponentKind.RADIO;case "file" -> ComponentKind.FILE_INPUT;case "date" -> ComponentKind.DATE_PICKER;case "hidden" -> ComponentKind.OTHER;default -> ComponentKind.TEXT_INPUT;
-      };
-      default -> null;
-    };
+    return io.screentrace.parser.jsp.MarkupAnalysis.kind(name,tag.attributes());
   }
   private static void parseValidation(State state) {
     Map<String,Map<String,String>> definitions=new TreeMap<>();

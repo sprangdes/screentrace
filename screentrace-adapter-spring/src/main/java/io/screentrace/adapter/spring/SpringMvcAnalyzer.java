@@ -22,6 +22,7 @@ import io.screentrace.scanner.ProjectScanner.ProjectInventory;
 import io.screentrace.scanner.SafeProjectFiles;
 import io.screentrace.parser.jsp.JspAnalysis;
 import io.screentrace.parser.jsp.JspProjectParser;
+import io.screentrace.parser.jsp.MarkupGraphContribution;
 import java.io.IOException;
 import java.io.StringReader;
 import java.nio.file.Files;
@@ -55,7 +56,7 @@ public final class SpringMvcAnalyzer {
         for (String message : inventory.diagnostics()) state.diagnostics.add(new Diagnostic(message, Confidence.UNRESOLVED, new SourceLocation(".", 1), "SOURCE_LIMIT", List.of()));
         JspAnalysis jsp = new JspProjectParser().analyze(inventory.root(), inventory.files());
         Set<String> includedViews = includedViewPaths(inventory.root(), jsp);
-        for (JspAnalysis.View view : jsp.views()) if (view.kind() == JspAnalysis.ViewKind.JSP && !includedViews.contains(view.path())) addJspScreen(inventory.root().resolve(view.path()), state);
+        for (JspAnalysis.View view : jsp.views()) if (view.kind() != JspAnalysis.ViewKind.JSPF && !includedViews.contains(view.path())) addJspScreen(inventory.root().resolve(view.path()), state);
         addJspFragments(jsp, includedViews, state);
         addTilesDefinitions(jsp, state);
         discoverExceptionView(inventory, state);
@@ -64,8 +65,11 @@ public final class SpringMvcAnalyzer {
         addJspInteractions(jsp, state);
         addJspIncludes(jsp, state);
         state.diagnostics.addAll(jsp.diagnostics());
-        return new ApplicationGraph(new ApplicationGraph.Application(inventory.root().getFileName().toString(), inventory.root().toString(), inventory.technologies()),
+        ApplicationGraph graph = new ApplicationGraph(new ApplicationGraph.Application(inventory.root().getFileName().toString(), inventory.root().toString(), inventory.technologies()),
                 state.nodes, state.edges, state.diagnostics, state.apiContracts, ApplicationGraph.CURRENT_SCHEMA_VERSION);
+        graph=MarkupGraphContribution.enrich(graph,jsp);
+        graph=SpringFormBindings.bind(graph,inventory);
+        return MarkupGraphContribution.enrich(graph,jsp);
     }
 
     private static void discoverExceptionView(ProjectInventory inventory, State state) {
@@ -370,13 +374,14 @@ public final class SpringMvcAnalyzer {
         for (JspAnalysis.Interaction interaction : jsp.interactions()) {
             String screenId = state.screensByView.get(interaction.viewPath());
             if (screenId == null) continue;
-            String id = ApplicationGraph.id(NodeType.COMPONENT, interaction.viewPath() + ":" + interaction.source().line() + ":" + interaction.target());
+            String id = interaction.componentId()!=null?interaction.componentId():ApplicationGraph.id(NodeType.COMPONENT, interaction.viewPath() + ":" + interaction.source().line() + ":" + interaction.target());
             Map<String, String> attributes = new TreeMap<>();
             attributes.put("componentType", interaction.type().name());
             attributes.put("target", interaction.target());
+            if(interaction.originalExpression()!=null)attributes.put("originalExpression",interaction.originalExpression());
             if (!interaction.viewPath().equals(interaction.source().file())) attributes.put("includedBy", interaction.viewPath());
             if (interaction.httpMethod() != null) attributes.put("httpMethod", interaction.httpMethod());
-            addNode(state, new GraphNode(id, NodeType.COMPONENT, interaction.label(), attributes, interaction.source(), interaction.confidence()));
+            addNode(state, new GraphNode(id, NodeType.COMPONENT, interaction.label(), attributes, interaction.source(), interaction.confidence(), interactionEvidence(interaction)));
             edge(state, EdgeType.CONTAINS, screenId, id, Confidence.CONFIRMED, interaction.source());
             if (interaction.confidence() == Confidence.UNRESOLVED || !canTriggerEndpoint(interaction.type())) continue;
             for (EndpointMatch match : endpointsFor(interaction, screenId, state)) {
@@ -389,6 +394,11 @@ public final class SpringMvcAnalyzer {
             String next = state.screensByView.get(interaction.target());
             if (next != null) edge(state, EdgeType.NAVIGATES_TO, id, next, Confidence.CONFIRMED, interaction.source());
         }
+    }
+
+    private static List<ApplicationGraph.AnalysisEvidence> interactionEvidence(JspAnalysis.Interaction interaction) {
+        List<ApplicationGraph.AnalysisEvidence> proof=new ArrayList<>(interaction.definitionEvidence());
+        proof.add(new ApplicationGraph.AnalysisEvidence(interaction.source(),"JspProjectParser",interaction.confidence().resolutionStatus(),"原始運算式："+interaction.originalExpression()));return proof;
     }
 
     private static boolean canTriggerEndpoint(JspAnalysis.InteractionType type) {
@@ -516,8 +526,14 @@ public final class SpringMvcAnalyzer {
         return views;
     }
     private static String join(String base, String child) { String path = (base + "/" + child).replaceAll("/{2,}", "/"); return path.isEmpty() ? "/" : path.startsWith("/") ? path : "/" + path; }
-    private static void addNode(State state, GraphNode node) { if (state.nodes.stream().noneMatch(n -> n.id().equals(node.id()))) state.nodes.add(node); }
-    private static void edge(State state, EdgeType type, String from, String to, Confidence confidence, SourceLocation source) { String id = ApplicationGraph.id(NodeType.COMPONENT, type + ":" + from + ":" + to); if (state.edges.stream().noneMatch(e -> e.id().equals(id))) state.edges.add(new Relationship(id, type, from, to, confidence, source)); }
+    private static void addNode(State state, GraphNode node) {
+        if(state.nodes.stream().noneMatch(n->n.id().equals(node.id()))) {
+            List<ApplicationGraph.AnalysisEvidence> proof=node.evidence().stream().map(e->Set.of("UNKNOWN","LEGACY").contains(e.parser())?
+                new ApplicationGraph.AnalysisEvidence(e.source(),"SpringMvcAnalyzer",e.resolution(),e.detail()):e).toList();
+            state.nodes.add(new GraphNode(node.id(),node.type(),node.name(),node.attributes(),node.source(),node.confidence(),proof));
+        }
+    }
+    private static void edge(State state, EdgeType type, String from, String to, Confidence confidence, SourceLocation source) { String id = ApplicationGraph.id(NodeType.COMPONENT, type + ":" + from + ":" + to); if (state.edges.stream().noneMatch(e -> e.id().equals(id))) state.edges.add(new Relationship(id,type,from,to,confidence,source,List.of(new ApplicationGraph.AnalysisEvidence(source,"SpringMvcAnalyzer",confidence.resolutionStatus(),null)))); }
     private static final class State {
         private final Path root; private final List<GraphNode> nodes = new ArrayList<>(); private final List<Relationship> edges = new ArrayList<>(); private final List<Diagnostic> diagnostics = new ArrayList<>();
         private final List<ApplicationGraph.ApiContract> apiContracts = new ArrayList<>(); private final ApiContractExtractor contracts;

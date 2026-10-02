@@ -46,13 +46,13 @@ public record MarkupAnalysis(List<Component> components, List<Event> events,
         String field = first(attrs,"path","property","name");
         components.add(new Component(id,kind,tag,attrs,source,guard,repeated,form,model,field,Confidence.UNRESOLVED));
         for (var attribute : new TreeMap<>(attrs).entrySet()) if (attribute.getKey().startsWith("on") && attribute.getKey().length()>2) {
-          events.add(new Event(id,attribute.getKey().substring(2),attribute.getValue(),source));
+          events.add(new Event(id,attribute.getKey().substring(2),attribute.getValue(),new SourceLocation(path,token.attributeLine(attribute.getKey()))));
         }
         for (String name : List.of("required","pattern","min","max","minlength","maxlength")) if (attrs.containsKey(name)) {
-          rule(rules,path,id,name,attrs.get(name),source);
+          rule(rules,path,id,name,attrs.get(name),new SourceLocation(path,token.attributeLine(name)));
         }
         String type = attrs.get("type");
-        if (Set.of("email","url","number","date").contains(Objects.toString(type,"").toLowerCase(Locale.ROOT))) rule(rules,path,id,type.toLowerCase(Locale.ROOT),type,source);
+        if (Set.of("email","url","number","date").contains(Objects.toString(type,"").toLowerCase(Locale.ROOT))) rule(rules,path,id,type.toLowerCase(Locale.ROOT),type,new SourceLocation(path,token.attributeLine("type")));
       }
       boolean selfClosing = token.end()>0 && text.charAt(token.end()-1)=='/';
       if (!selfClosing && !VOID.contains(tag) && !tag.startsWith("@")) {
@@ -69,7 +69,8 @@ public record MarkupAnalysis(List<Component> components, List<Event> events,
     }
     return new MarkupAnalysis(components,events,rules,behaviors);
   }
-  private static String condition(MarkupTag tag) {
+  static boolean isConditional(String tag) { return CONDITIONS.contains(tag.toLowerCase(Locale.ROOT)); }
+  static String condition(MarkupTag tag) {
     if (tag.attribute("test") != null) return tag.attribute("test");
     return tag.name() + new TreeMap<>(tag.attributes());
   }
@@ -81,19 +82,22 @@ public record MarkupAnalysis(List<Component> components, List<Event> events,
   static boolean dynamic(String value) { return value != null && (value.contains("${") || value.contains("#{") || value.contains("<%")); }
   static AnalysisEvidence evidence(SourceLocation source,Confidence confidence,String detail) { return new AnalysisEvidence(source,"JspMarkupParser",ResolutionStatus.valueOf(confidence.name()),detail); }
   private static String first(Map<String,String> attrs,String... keys) { for(String key:keys) if(attrs.containsKey(key)) return attrs.get(key); return null; }
-  static ComponentKind kind(String tag, Map<String,String> attrs) {
+  public static ComponentKind kind(String tag, Map<String,String> attrs) {
     if (tag.equals("dialog") || "dialog".equals(attrs.get("role")) || Arrays.asList(Objects.toString(attrs.get("class"),"").split("\\s+")).contains("modal")) return ComponentKind.MODAL;
     String local = tag.contains(":")?tag.substring(tag.indexOf(':')+1):tag;
     if (tag.contains(":") && !(tag.startsWith("html:")||tag.startsWith("form:"))) return attrs.keySet().stream().anyMatch(k->k.startsWith("on"))?ComponentKind.OTHER:null;
     return switch (local) {
       case "form" -> ComponentKind.FORM;
       case "a", "link" -> tag.equals("link")?null:ComponentKind.LINK;
-      case "button", "cancel", "reset" -> "submit".equals(attrs.get("type"))?ComponentKind.SUBMIT:ComponentKind.BUTTON;
-      case "submit" -> ComponentKind.SUBMIT;
+      case "button", "reset" -> "submit".equals(attrs.get("type"))?ComponentKind.SUBMIT:ComponentKind.BUTTON;
+      case "submit", "cancel" -> ComponentKind.SUBMIT;
       case "text", "password", "input" -> inputKind(attrs);
       case "textarea" -> ComponentKind.TEXTAREA;
-      case "select" -> attrs.containsKey("multiple")?ComponentKind.MULTI_SELECT:ComponentKind.SELECT;
-      case "checkbox", "checkboxes", "multibox" -> ComponentKind.CHECKBOX;
+      case "select" -> dynamic(attrs.get("multiple"))?ComponentKind.OTHER:
+          tag.contains(":")&&"false".equalsIgnoreCase(attrs.get("multiple"))?ComponentKind.SELECT:
+          attrs.containsKey("multiple")?ComponentKind.MULTI_SELECT:ComponentKind.SELECT;
+      case "checkbox" -> ComponentKind.CHECKBOX;
+      case "checkboxes", "multibox" -> ComponentKind.MULTI_SELECT;
       case "radio", "radiobutton", "radiobuttons" -> ComponentKind.RADIO;
       case "file" -> ComponentKind.FILE_INPUT;
       case "hidden" -> ComponentKind.OTHER;
@@ -102,6 +106,7 @@ public record MarkupAnalysis(List<Component> components, List<Event> events,
     };
   }
   private static ComponentKind inputKind(Map<String,String> attrs) {
+    if(dynamic(attrs.get("type")))return ComponentKind.OTHER;
     return switch(Objects.toString(attrs.get("type"),"text").toLowerCase(Locale.ROOT)) {
       case "button", "reset" -> ComponentKind.BUTTON;
       case "submit", "image" -> ComponentKind.SUBMIT;

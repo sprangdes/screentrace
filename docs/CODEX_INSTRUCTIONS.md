@@ -1,6 +1,6 @@
 # ScreenTrace 調整指示(給 Codex)
 
-- 文件版本:1.1(2026-10-02;依 OQ-001 決定與 M1 抽查修訂,變更見第 11 節)
+- 文件版本:1.2(2026-10-03;依 OQ-002 決定修訂 WP3 第 8 點,變更見第 11 節)
 - 建議放置位置:`docs/CODEX_INSTRUCTIONS.md`,並在 `AGENTS.md` 第 10 節的閱讀清單加入本文件
 - 對照基準:`sprangdes/screentrace` main(含 review-result v2 匯出的版本)
 
@@ -187,7 +187,13 @@
 5. **彈窗標記**:`data-toggle="modal"` / `data-bs-toggle="modal"` 與其目標、`class="modal"`、`role="dialog"`、`<dialog>` → `MODAL` 元件,並與觸發它的元件建立行為關聯。
 6. **表單綁定**:`name` / `path` / `property` 與表單模型(Spring model attribute、Struts form-bean)的欄位對應(解析不到則 `UNRESOLVED`)。
 7. 事件屬性(`onclick`、`onchange`、`onsubmit` 等)的內容交給 WP4 解析,WP3 只負責擷取與位置。
-8. 目標為運算式(EL / scriptlet)者保持 `UNRESOLVED` 並保留運算式原文,不得猜值。
+8. 目標為運算式(EL / scriptlet)者保持 `UNRESOLVED` 並保留運算式原文,僅下列例外可靜態解析:
+   - 變數由同一 JSP 來源內的 `c:url` / `spring:url` 定義,且 `value` 為不含 EL 的字面字串。
+   - 變數在使用點之前定義、無重新賦值、作用域可證明(不得在互斥條件分支中以不同值定義)。
+   - 使用處為純變數 `${var}`,或 `${fn:escapeXml(var)}`。
+   - `value` 字面字串中的 `{name}` 路徑佔位符保留為樣板,`spring:param` / `c:param` 的值不解析。
+   - 解析結果須保留原始運算式與定義處證據(檔案、行號)。其他 EL、scriptlet、未知函式(含其他 `fn:*`)、include 內定義的跨檔案變數、`c:set` 一律 `UNRESOLVED`,不得把未知函式當作透明包裝。
+   - 不得修改任何既有測試斷言。若現行信心等級與本規則衝突,依 §0.3 停止再提問。
 
 **驗收**:fixture 涵蓋每種元件與標籤組合、每種控制流程、巢狀 include;解析結果以 golden 檔比對。
 
@@ -476,5 +482,6 @@ migration_target:
 
 ## 11. 修訂紀錄
 
+- 1.2:依 OQ-002 方案 B 修訂 WP3 第 8 點,允許有同來源常值定義、使用前且無重新賦值與作用域證據的 URL 變數例外;保留原始運算式、定義位置與路徑樣板,排除未知函式、跨檔案變數、c:set 與 param 值解析,既有測試斷言不變。
 - 1.1:檢核來源層級改為 `MARKUP` / `CLIENT` / `SERVER`(OQ-001);API 狀態推導的元件決策改用 (`screenId`, `componentId`) 複合鍵;新增 WP4 第 11 點、WP5 第 7 點、WP8 規則 7。
 - 1.0:初版。

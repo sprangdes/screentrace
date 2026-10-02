@@ -29,7 +29,19 @@ public record JspAnalysis(List<View> views, List<Interaction> interactions, List
 
   public record Interaction(String viewPath, InteractionType type, String label, String target,
                             String httpMethod, SourceLocation source, Confidence confidence,
-                            boolean submitsCurrentView) { }
+                            boolean submitsCurrentView, String originalExpression,
+                            List<io.screentrace.core.ApplicationGraph.AnalysisEvidence> definitionEvidence, String componentId) {
+    public Interaction(String viewPath, InteractionType type, String label, String target,
+                       String httpMethod, SourceLocation source, Confidence confidence, boolean submitsCurrentView,
+                       String originalExpression, List<io.screentrace.core.ApplicationGraph.AnalysisEvidence> definitionEvidence) {
+      this(viewPath,type,label,target,httpMethod,source,confidence,submitsCurrentView,originalExpression,definitionEvidence,null);
+    }
+    public Interaction { definitionEvidence = List.copyOf(definitionEvidence); }
+    public Interaction(String viewPath, InteractionType type, String label, String target,
+                       String httpMethod, SourceLocation source, Confidence confidence, boolean submitsCurrentView) {
+      this(viewPath,type,label,target,httpMethod,source,confidence,submitsCurrentView,target,List.of());
+    }
+  }
 
   /** Semantic interaction classification; presentation markup is retained separately by consumers. */
   public enum InteractionType {
@@ -37,11 +49,21 @@ public record JspAnalysis(List<View> views, List<Interaction> interactions, List
   }
 
   public record Include(String sourceViewPath, String targetPath, SourceLocation source,
-                        Confidence confidence) { }
+                        Confidence confidence, String guard, boolean repeated) {
+    public Include(String sourceViewPath,String targetPath,SourceLocation source,Confidence confidence,String guard) {
+      this(sourceViewPath,targetPath,source,confidence,guard,false);
+    }
+    public Include(String sourceViewPath,String targetPath,SourceLocation source,Confidence confidence) {
+      this(sourceViewPath,targetPath,source,confidence,null);
+    }
+  }
 
   public record TilesDefinition(String name, String template, List<TilesAttribute> attributes,
-                                SourceLocation source) {
+                                SourceLocation source, String parent) {
     public TilesDefinition { attributes = List.copyOf(attributes); }
+    public TilesDefinition(String name,String template,List<TilesAttribute> attributes,SourceLocation source) {
+      this(name,template,attributes,source,"");
+    }
   }
 
   public record TilesAttribute(String name, String value) { }

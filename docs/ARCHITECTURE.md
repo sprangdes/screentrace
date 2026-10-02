@@ -515,8 +515,14 @@ When trade-offs occur, prioritize in this order:
 5. Performance
 6. UI polish
 
-### WP3 首批標記解析貢獻（進行中）
+### WP3 標記與圖貢獻
 
-`JspAnalysis.markup` 依來源相對路徑提供 `MarkupAnalysis`，涵蓋 JSP/JSPF/HTML：元件種類與穩定 ID、原始屬性、行號、條件原文、迴圈、表單與欄位名稱、事件運算式、MARKUP 檢核與彈窗行為。未知表單模型／欄位綁定保留 UNRESOLVED，交由 adapter 以模型證據解析。舊建構子維持來源相容。主解析路徑直接掃描原始文字，忽略註解與 scriptlet；不再以移除字串的預處理改變行號。`preprocess` 僅為既有相容 API，不作為解析入口。
+`JspAnalysis.markup` 按來源相對路徑提供 `MarkupAnalysis`，涵蓋 JSP/JSPF/HTML：元件種類、穩定 ID、原始屬性、行號、條件原文、迴圈、表單／欄位、事件運算式、MARKUP 檢核與彈窗行為。事件／檢核來源使用屬性實際行號。主解析直接掃描原始文字，忽略註解、scriptlet、script/style 與 EL 字串中的假標籤，保留真實行號；`preprocess` 僅保留既有相容 API，不作為解析入口。
 
-此批尚未接入 adapter 的完整 Application Graph；WP3 的圖整合、include／Tiles 投影與完整 golden 驗收仍未完成。WP4、WP5 尚未開始。
+`UrlVariableResolver` 僅實作 v1.2 WP3.8 指定的同來源 URL 常值例外。Interaction 保留 `originalExpression`、`definitionEvidence` 及 `componentId`，投影至 include 使用者時不改寫定義來源。來源字串 CONFIRMED 與後端路由對應信心分開；{name} 保留樣板，param 不解析，未知函式不作透明包裝。見 ADR 0005。
+
+`MarkupGraphContribution` 將元件、MARKUP 規則、檢核／彈窗／導覽／表單行為整合到 canonical graph，遞迴展開 directive／jsp include、Tiles insert／put、定義參照與繼承。共享片段維持同一 component ID、各畫面 CONTAINS 所有權，包含位置的條件與 repeated 證據保留於所有權邊；元件 conditional／repeated 為任一使用處存在此性質的標記，詳情以該畫面的邊證據為準。
+
+Spring 只在來源中的正式 `@ModelAttribute`、名稱、類別、欄位可唯一證明時綁定；同名非 Spring 註解、缺少／多個型別等保留 UNRESOLVED。Struts 以 action 對應的 form-bean、Dyna 屬性或可解析 ActionForm 欄位／getter 來源建立 BINDS_TO。未證明的欄位保留 `bindingStatus=UNRESOLVED`。已發現元件的存在性、kind、目標、模型綁定各自記錄信心，既有 UNRESOLVED 元件信心不升級。
+
+WP3 未引入相依；Spring 輸出仍保留既有 schema 2.1 相容路徑，Struts 為 2.2。所有 adapter 統一為 2.2 與移除混合降版屬 WP5，尚未宣稱完成。WP4／WP5 未開始，WP6 未開始。
