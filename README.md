@@ -6,6 +6,10 @@ ScreenTrace 會分析伺服端渲染 JSP 專案的畫面、路由與可互動元
 
 ScreenTrace 會展開可解析的 JSP Tag、CSS 與本地資源，並以 Playwright Chromium 渲染靜態 HTML，產生畫面截圖與可見元件位置。JSP 的動態清單、明細與欄位會填入合成示範資料；不會啟動目標專案或連線其資料庫。
 
+## 調整進度
+
+新需求與已確認決策見 [REQUIREMENTS.md](docs/REQUIREMENTS.md)，工作包與驗收順序見 [ROADMAP.md](docs/ROADMAP.md)。目前仍使用 localhost 報表與 review JSON v2；單一離線 HTML、md 匯出與元件庫匯入尚未完成。
+
 ## 初次執行
 
 ### macOS
@@ -170,7 +174,7 @@ Page view 顯示由 JSP 原始碼轉換的靜態 HTML；Screen Explorer 與 Scre
 
 ## 匯出確認結果
 
-確認完成後可產生提供 AI 使用的結構化 JSON。輸出會列出所有畫面與可見互動元件，並給出 `KEEP`、`REMOVE` 或 `UNDECIDED` 決策。
+確認完成後可產生提供 AI 使用的 version-2 結構化 JSON。輸出會列出所有畫面與可見互動元件，並給出 `KEEP`、`REMOVE` 或 `UNDECIDED` 決策。
 
 ### 從 UI 匯出
 
@@ -209,6 +213,9 @@ Windows：
 - 畫面與按鈕的保留／移除／未確認統計
 - 每個畫面的 graph ID、路由、名稱、來源檔案與行號
 - 每個按鈕或連結的 graph ID、類型、文字、目標路徑與確認決策
+- 圖中既有的 API 契約、呼叫來源、直接導覽與預覽 metadata；目前不推導 API 移除狀態
+
+完整欄位、缺值與相容性規則見 [REVIEW_RESULT_CONTRACT.md](docs/REVIEW_RESULT_CONTRACT.md)。
 
 AI 應以 `REMOVE` 作為可移除範圍、以 `KEEP` 作為必須保留範圍；`UNDECIDED` 表示尚未取得客戶決策，不應自行移除。
 
