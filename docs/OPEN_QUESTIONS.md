@@ -8,5 +8,5 @@
 - 可選方案 A：core 使用通用來源層級（例如 markup、client、server），指定框架層級放 evidence；需調整 WP1 §4 的核心欄位定義。
 - 可選方案 B：需求方明確允許 ValidationRule 來源層級作為 C4 的例外，保留附件指定列舉。
 - 影響範圍：WP1 模型與 schema、WP2/WP3/WP4/WP5 檢核解析、WP7 檢視器、WP8 md 契約。
-- 狀態：待需求方決定；WP1 暫停，WP2 不先建立依賴未決模型的實作。
-- 決定：尚未提供。
+- 狀態：已處理（2026-10-02）；WP1 可繼續。
+- 決定：需求方選擇「core 使用通用來源層級，框架名稱放 evidence」。採用 MARKUP / CLIENT / SERVER，框架來源保留於 evidence.detail，見 ADR 0002。

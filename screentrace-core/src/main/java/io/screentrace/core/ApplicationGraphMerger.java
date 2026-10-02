@@ -26,7 +26,21 @@ public final class ApplicationGraphMerger {
     technologies.addAll(second.application().technologies());
     return new ApplicationGraph(new ApplicationGraph.Application(first.application().name(), first.application().path(), List.copyOf(technologies)),
         List.copyOf(nodes.values()), List.copyOf(relationships.values()), List.copyOf(diagnostics.values()),
-        List.copyOf(apiContracts.values()), ApplicationGraph.CURRENT_SCHEMA_VERSION);
+        List.copyOf(apiContracts.values()),
+        first.schemaVersion().equals(ApplicationGraph.BEHAVIOR_SCHEMA_VERSION) || second.schemaVersion().equals(ApplicationGraph.BEHAVIOR_SCHEMA_VERSION)
+            ? ApplicationGraph.BEHAVIOR_SCHEMA_VERSION : ApplicationGraph.CURRENT_SCHEMA_VERSION,
+        mergeItems(first.behaviors(), second.behaviors(), ApplicationGraph.Behavior::id),
+        mergeItems(first.validationRules(), second.validationRules(), ApplicationGraph.ValidationRule::id));
+  }
+
+  private static <T> List<T> mergeItems(List<T> first, List<T> second, java.util.function.Function<T, String> id) {
+    Map<String, T> result = new TreeMap<>();
+    for (T value : first) result.put(id.apply(value), value);
+    for (T value : second) {
+      T existing = result.putIfAbsent(id.apply(value), value);
+      if (existing != null && !existing.equals(value)) throw new IllegalArgumentException("Conflicting contribution: " + id.apply(value));
+    }
+    return List.copyOf(result.values());
   }
 
   private static ApplicationGraph.GraphNode mergeNode(ApplicationGraph.GraphNode left, ApplicationGraph.GraphNode right) {

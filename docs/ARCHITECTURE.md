@@ -87,7 +87,7 @@ JavaScript AST 分析模組與單一 HTML 檢視器尚未建立，分別由 WP4�
 
 ### screentrace-core
 
-框架中立的 Application Graph、evidence、resolution、API contract、graph merger、完整性驗證，以及 Prototype、Preview、Edit Overlay 契約。現行 schemaVersion 為 `2.1`；WP1 尚未完成，不能把已有版本欄位視為完整行為模型。
+框架中立的 Application Graph、evidence、resolution、API contract、graph merger、完整性驗證，以及 Prototype、Preview、Edit Overlay 契約。現行 schemaVersion 為 `2.1`；新增嚴格行為 schema `2.2`；既有 producers 與相容讀取仍保留 `2.1`。
 
 ### screentrace-scanner
 
@@ -154,6 +154,16 @@ Schema 2 preserves schema-1 fields (`source`, `confidence`) and constructors. It
 The graph remains framework-neutral. Framework identifiers belong in evidence/parser metadata or node attributes, never in node or edge type names.
 
 Schema 2.1 adds `apiContracts`, keyed by `ENDPOINT` ID. A contract records the statically discovered request parameters/body and response status/body, including field type, location, source location, and confidence. `SCREEN -> CALLS -> ENDPOINT` represents an API invoked during page load; `COMPONENT -> TRIGGERS -> ENDPOINT` represents an API invoked by an interactive component. An absent or unresolved contract is never synthesized from runtime assumptions.
+
+### 4.2 WP1 行為與檢核 schema 2.2
+
+新增 `behaviors` / `validationRules`（皆依 ID 排序）。schema 2.2 節點與邊必須具來源相對路徑/行號、解析器名稱與解析狀態；COMPONENT 的 attributes.kind 必須是 BUTTON、LINK、SUBMIT、TEXT_INPUT、TEXTAREA、SELECT、CHECKBOX、RADIO、DATE_PICKER、FILE_INPUT、MULTI_SELECT、FORM、MODAL、TABLE、OTHER。
+
+Behavior 欄位為 id、triggerId、event、type、targetId、guard、parentId、expression、evidence。type 包含 NAVIGATE、SUBMIT_FORM、CALL_API、OPEN_DIALOG、VALIDATE、UI_STATE_CHANGE、SELECT_CHANGE、UNKNOWN。guard / expression 保留原文；父行為可提供回呼觸發來源。targetId 缺值表示無靜態已知目標，不捏造節點。
+
+ValidationRule 欄位為 id、kind、fields、message、layer、parameters、evidence。layer 只用 MARKUP / CLIENT / SERVER；需求方指定框架語意保留於 evidence.detail（OQ-001 已決定）。validator 拒絕不合法引用、缺證據、kind 以及父循環。
+
+`StableGraphIds` 定義不含行號與絕對路徑的鍵與 matched / orphaned / new 比對。`ApiUsage.derive(graph, decisions)` 共用純函式輸出 IN_USE / REMOVABLE / UNREFERENCED 與排序 callers；畫面 REMOVE 或元件 REMOVE 才算移除來源。KEEP / UNDECIDED 皆保留；未偵測 caller 不授權移除。規則與相容策略見 [ADR 0002](adr/0002-behavior-model-and-stable-ids.md)。
 
 ### Example nodes
 

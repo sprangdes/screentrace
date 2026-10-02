@@ -5,7 +5,7 @@
 | 工作包 | 範圍 | 狀態 |
 |---|---|---|
 | WP0 | 基線、需求原文、架構與文件整理 | 文件與基線已完成；既有 report-design 測試前置條件未滿足，見 BASELINE |
-| WP1 | 行為與檢核模型、穩定 ID、API 使用狀態 | 暫停：OQ-001 的硬性約束衝突待需求方決定 |
+| WP1 | 行為與檢核模型、穩定 ID、API 使用狀態 | 模型、嚴格 schema 2.2、穩定鍵與 API 推導已實作；OQ-001 已決定 |
 | WP2 | Struts 1.x、Dispatch、Validator、Tiles、拒絕 Struts 2 | 未開始；依賴 WP1 的檢核模型 |
 | WP3 | JSP / HTML 元件、控制流程、檢核、事件來源 | 未開始 |
 | WP4 | JavaScript AST、事件與函式追蹤 | 未開始 |
@@ -18,7 +18,7 @@
 
 | 里程碑 | 工作包 | 狀態 |
 |---|---|---|
-| M1 | WP0、WP1、WP2 | 未完成；WP1 依 §0.3 停止，見 OPEN_QUESTIONS |
+| M1 | WP0、WP1、WP2 | 進行中；WP0/WP1 已提交後進入 WP2 |
 | M2 | WP3、WP4、WP5 | 等待 M1 驗收確認 |
 | M3 | WP6、WP7、WP8 | 等待 M2 驗收確認 |
 | M4 | WP9、WP10 | 等待 M3 驗收確認；最終驗收 |
