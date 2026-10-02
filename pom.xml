@@ -14,7 +14,8 @@
     <junit.version>5.10.2</junit.version>
     <jackson.version>2.21.7</jackson.version>
     <javaparser.version>3.26.1</javaparser.version>
-    <jline.version>3.26.3</jline.version>
+    <jline.version>3.30.14</jline.version>
+    <dependency-check.nvd-datafeed-url>https://nvd.nist.gov/feeds/json/cve/2.0/nvdcve-2.0-{0}.json.gz</dependency-check.nvd-datafeed-url>
   </properties>
 
   <modules>
@@ -56,6 +57,20 @@
   <build>
     <pluginManagement>
       <plugins>
+        <plugin>
+          <groupId>org.owasp</groupId>
+          <artifactId>dependency-check-maven</artifactId>
+          <version>12.2.2</version>
+          <configuration>
+            <failBuildOnCVSS>7</failBuildOnCVSS>
+            <failOnError>true</failOnError>
+            <nvdDatafeedUrl>${dependency-check.nvd-datafeed-url}</nvdDatafeedUrl>
+            <formats>
+              <format>HTML</format>
+              <format>JSON</format>
+            </formats>
+          </configuration>
+        </plugin>
         <plugin>
           <artifactId>maven-surefire-plugin</artifactId>
           <version>3.2.5</version>
