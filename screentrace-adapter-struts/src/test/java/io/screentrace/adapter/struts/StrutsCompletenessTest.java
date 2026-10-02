@@ -158,4 +158,8 @@ class StrutsCompletenessTest {
     assertFalse(analyze().nodes().isEmpty());
     assertFalse(analyze().diagnostics().stream().anyMatch(d->d.code().equals("UNSUPPORTED_FRAMEWORK")));
   }
+  @Test void doesNotConfirmAnExecuteMethodAbsentFromSource() throws Exception {
+    base();file("struts-config-missing-class.xml","<struts-config><action-mappings><action path=\"/missing\" type=\"sample.MissingAction\"/></action-mappings></struts-config>");
+    assertEquals(Confidence.INFERRED,analyze().nodes().stream().filter(n->n.name().equals("sample.MissingAction.execute()")).findFirst().orElseThrow().confidence());
+  }
 }

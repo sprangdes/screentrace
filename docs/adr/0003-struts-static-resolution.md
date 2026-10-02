@@ -19,6 +19,7 @@
 - web.xml 的 config/module init-param 對應到 Struts 模組前綴。重複路由保留所有 HANDLED_BY 候選與 DUPLICATE_ROUTE 診斷，元件觸發關係保持 AMBIGUOUS。
 - DispatchAction 的 parameter 由 URL query、該元件 property/value 或同一表單的 hidden 欄位取得；MappingDispatchAction 用 mapping parameter；LookupDispatchAction 僅接受 AST 字串常值 key/method 與已配置 message-resources 的唯一靜態值。不同表單、未配置資源、條件式 map.put、動態值或多個方法候選不推測。
 - 呼叫到的實際方法必須是 public、回傳 ActionForward、具備 ActionMapping / ActionForm / HttpServletRequest / HttpServletResponse 四參數；可沿專案內確定的父類別追蹤，方法 source 指向宣告處。Dispatch 專用 endpoint 以 method parameter/value 納入穩定鍵，原始 route 保留在 path；沒有 servlet-mapping 證據的預設 .do 別名僅標 INFERRED，不升級為 CONFIRMED。
+- class 原始碼不存在或沒有可證明的 execute 方法時，既有 execute 命名僅標 INFERRED，不把 XML 配置類別升級成已證明的方法。
 - `mapping.findForward` 的字串常值解析可能的 forward；非常值保留 STRUTS_FORWARD_EXPRESSION。ActionForm.validate 的 ActionErrors.add 無條件欄位規則標 INFERRED；條件、迴圈、try 或 lambda 中的檢核保持未解析，不推導規則。
 - Validator XML 保留 depends、參數、訊息 key 與 validator-rules 定義；缺定義不捏造內建規則，保留 UNRESOLVED。框架來源在 evidence.detail（STRUTS_VALIDATOR / ACTION_FORM），核心 layer 為 SERVER。
 - Tiles extends 合併父設定並保留子覆寫，建立 template/put-attribute/put 與巢狀定義的 INCLUDES；循環、重複或未知目標保留診斷。

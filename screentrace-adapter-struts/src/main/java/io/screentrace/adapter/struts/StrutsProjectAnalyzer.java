@@ -82,7 +82,8 @@ public final class StrutsProjectAnalyzer {
         var source=StrutsSources.source(path,action);Map<String,String> attrs=new TreeMap<>(StrutsSources.attributes(action));attrs.put("actionType",type);attrs.put("module",module);
         String handlerId=ApplicationGraph.id(NodeType.HANDLER,path+":"+route);
         String family=dispatchFamily(type,state,new HashSet<>());
-        Confidence status=family.isBlank()?(type.isBlank()?Confidence.UNRESOLVED:Confidence.CONFIRMED):Confidence.UNRESOLVED;
+        boolean executeProven=state.types.containsKey(type)&&state.types.get(type).declaration().getMethodsByName("execute").stream().anyMatch(StrutsProjectAnalyzer::validDispatchSignature);
+        Confidence status=family.isBlank()?(type.isBlank()?Confidence.UNRESOLVED:executeProven?Confidence.CONFIRMED:Confidence.INFERRED):Confidence.UNRESOLVED;
         if(!family.isBlank()) attrs.put("dispatchFamily",family);
         addNode(state,handlerId,NodeType.HANDLER,type.isBlank()?"未解析的處理器":type+(family.isBlank()?".execute()":".<dispatch>()"),attrs,source,status);
         String formId=state.forms.get(module+":"+action.getAttribute("name"));
