@@ -1,6 +1,6 @@
 # ScreenTrace 調整指示(給 Codex)
 
-- 文件版本:1.0(2026-10-02)
+- 文件版本:1.1(2026-10-02;依 OQ-001 決定與 M1 抽查修訂,變更見第 11 節)
 - 建議放置位置:`docs/CODEX_INSTRUCTIONS.md`,並在 `AGENTS.md` 第 10 節的閱讀清單加入本文件
 - 對照基準:`sprangdes/screentrace` main(含 review-result v2 匯出的版本)
 
@@ -148,11 +148,11 @@
    - 條件(guard):例如 `c:if`、JS `if` 的條件文字(原文保留)
    - 父行為:例如 ajax `success` 回呼內的 `location.href` 是該 ajax 行為的子行為
    - 證據:`source`、解析器、解析狀態
-4. 新增**檢核規則(ValidationRule)**概念:規則種類(required、pattern、length、range、email、custom…)、作用欄位、錯誤訊息(若可靜態得知)、來源層級(`HTML5` / `JS` / `STRUTS_VALIDATOR` / `ACTION_FORM` / `BEAN_VALIDATION` / `CUSTOM_VALIDATOR`)、證據。
+4. 新增**檢核規則(ValidationRule)**概念:規則種類(required、pattern、length、range、email、custom…)、作用欄位、錯誤訊息(若可靜態得知)、來源層級(`MARKUP` / `CLIENT` / `SERVER`;框架名稱只放 `evidence.detail`,不進 core 分類)、證據。
 5. 節點 / 邊的具體命名由你決定,但 MUST 遵守 C4,並在 `docs/adr/` 與 `ARCHITECTURE.md` 完整記載。既有的 `TRIGGERS`、`NAVIGATES_TO`、`CALLS` 語意不得改變(可作為由行為推導的簡化關係保留)。
 6. **ID 規則**(C9):定義並文件化各類 ID 的產生演算法;提供「舊 ID 清單 vs 新分析」的比對函式,回傳 `matched` / `orphaned`(舊標記找不到對應)/ `new`。
 7. 提供**API 使用狀態推導函式**(純函式,位於 core,檢視器與 md 匯出共用):
-   - 輸入:圖 + 需求方決策集合
+   - 輸入:圖 + 需求方決策集合。**決策鍵**:畫面決策以 `screenId`;元件決策以 (`screenId`, `componentId`) 複合鍵(同一元件可出現在多個畫面,各畫面獨立決策,不得以單一 `componentId` 跨畫面套用)
    - 呼叫來源(caller)= 呼叫該 API 的 (畫面) 或 (畫面, 元件/行為)
    - 輸出狀態(見 9.5 規則):`IN_USE` / `REMOVABLE` / `UNREFERENCED`
 
@@ -166,7 +166,7 @@
 1. **框架偵測**:偵測到 Struts 2(`struts.xml`、`org.apache.struts2` 相依或套件、`.action` 副檔名搭配 `struts2-core`)時,產生診斷 `UNSUPPORTED_FRAMEWORK`(說明僅支援 Struts 1.x),且**不得**進行部分分析並輸出看似完整的結果。
 2. `struts-config.xml`:action mapping 完整屬性(`path`、`type`、`name`、`scope`、`validate`、`input`、`parameter`)、`global-forwards`、`global-exceptions`、`form-bean`(含 `DynaActionForm` 的 `form-property`)、`plug-in`(Validator、Tiles)、多模組設定檔。
 3. **DispatchAction 系列**(`DispatchAction`、`LookupDispatchAction`、`MappingDispatchAction`):依 `parameter` 屬性與 JSP 中對應的請求參數 / 按鈕 `property`,解析出實際呼叫的 Action 方法;解析不到時保持 `UNRESOLVED`。
-4. **Struts Validator**:解析 `validation.xml` 與 `validator-rules.xml`,把每個 form 的欄位規則轉為 `ValidationRule`(`STRUTS_VALIDATOR`)。
+4. **Struts Validator**:解析 `validation.xml` 與 `validator-rules.xml`,把每個 form 的欄位規則轉為 `ValidationRule`(`SERVER`,`evidence.detail` 記錄 Struts Validator)。
 5. `ActionForm.validate()`:以 Java 原始碼解析找出 `ActionErrors.add(...)` 所涉及的欄位(**SHOULD**,信心 `INFERRED`;條件式無法確定時不得推論)。
 6. `mapping.findForward("name")`:以字串常值靜態解析可能的 forward 目標;非常值保持 `UNRESOLVED`。
 7. Tiles:`extends`、巢狀定義、`put-attribute` 與 JSP 的 `tiles:insert` / `tiles:put` 組合出的畫面。
@@ -182,7 +182,7 @@
 **要求**
 1. 以容錯的標記掃描取代零散的 regex 判斷;保留行號;正確處理 scriptlet、EL、自訂標籤、註解、`<%@ include %>`、`jsp:include`、Tiles。
 2. 辨識所有元件 `kind`(WP1 第 2 點),涵蓋純 HTML5、Spring `form:*`、Struts `html:*`、JSTL 產生的元素。
-3. **HTML5 內建檢核**屬性(`required`、`pattern`、`min`、`max`、`minlength`、`maxlength`、`type=email/url/number/date`…)轉為 `ValidationRule`(`HTML5`)。
+3. **HTML5 內建檢核**屬性(`required`、`pattern`、`min`、`max`、`minlength`、`maxlength`、`type=email/url/number/date`…)轉為 `ValidationRule`(`MARKUP`)。
 4. **控制流程**(`c:if`、`c:choose/when/otherwise`、`c:forEach`、`logic:present/notPresent/equal`…):其內元件須標記 `conditional=true` 與條件文字原文;迴圈內元件標記 `repeated=true`。
 5. **彈窗標記**:`data-toggle="modal"` / `data-bs-toggle="modal"` 與其目標、`class="modal"`、`role="dialog"`、`<dialog>` → `MODAL` 元件,並與觸發它的元件建立行為關聯。
 6. **表單綁定**:`name` / `path` / `property` 與表單模型(Spring model attribute、Struts form-bean)的欄位對應(解析不到則 `UNRESOLVED`)。
@@ -203,7 +203,7 @@
    - 導頁:`location.href`、`location.assign/replace`、`window.location`、`history.pushState`、`window.open`、`form.submit()`
    - API 呼叫:`$.ajax`、`$.get`、`$.post`、`$.getJSON`、`.load()`、`fetch`、`XMLHttpRequest`、`axios`(如專案有使用)
    - 彈窗:`alert`、`confirm`、`prompt`、Bootstrap modal、jQuery UI dialog、自訂 dialog 函式
-   - 檢核:jquery.validate 設定、自訂 `validate*()` 函式中對欄位的檢查與訊息、`setCustomValidity`
+   - 檢核:jquery.validate 設定、自訂 `validate*()` 函式中對欄位的檢查與訊息、`setCustomValidity`(層級為 `CLIENT`)
    - UI 狀態:`show/hide/toggle`、`addClass/removeClass`、分頁籤、折疊
    - 欄位連動:`change` 事件中載入下拉選項、改變其他欄位
 5. **事件綁定解析**:`$(selector).on/click/change/submit/...`、委派事件(`on('click', child, fn)`)、`addEventListener`、`onclick=` 屬性。選擇器 MUST 對 JSP 靜態 DOM 解析(`#id`、`.class`、`[name=…]`、標籤、後代關係、`this`),比對到的元件建立行為關聯;比對不到或為動態產生元素者記為 `UNRESOLVED` 並保留選擇器原文。
@@ -212,6 +212,7 @@
 8. **請求內容**:盡可能擷取 HTTP 方法、URL、資料欄位名稱(`data: {a: …}`、`serialize()` 對應表單欄位)。
 9. **限制**:單檔大小上限沿用 `SafeProjectFiles` 規範;minified 的專案自有 JS 照常解析;超過上限者產生診斷,不得靜默略過。
 10. 渲染階段(WP6)仍 MUST 移除 `<script>` 並維持 JS 關閉;分析與渲染完全分離。
+11. **呼叫來源不得遺失**:頁面載入時(`ready` / `load` / 內嵌立即執行)的 API 呼叫,觸發者記為**畫面**;事件綁定解析失敗者記為 `UNRESOLVED` 的呼叫來源並保留選擇器原文。MUST NOT 因找不到觸發元件而丟棄行為(否則 API 會被誤標為「未被使用」)。
 
 **驗收**:每一種行為、選擇器、委派、跨函式追蹤、值解析各至少一個 fixture;對抗性測試(`eval`、動態屬性存取 `obj[x]`、字串由使用者輸入組成)全部落在 `UNRESOLVED`,且分析器**不執行**目標程式碼(測試以內含副作用探針的 JS 驗證探針未被觸發)。
 
@@ -227,8 +228,9 @@
 2. **Context path**:Spring Boot 讀 `server.servlet.context-path`(properties / yml);WAR 專案無法由原始碼得知時,讀取工作區設定檔中的明確設定;**沒有就不假設**,並在診斷中說明。
 3. WP4 的 API 行為與 WP3 的表單送出,經對應引擎產生 `CALLS` / `TRIGGERS` 與行為結果指向。
 4. **API 契約**:沿用 `ApiContractExtractor`;補上 `@RestController` / `@ResponseBody` / `ResponseEntity` 端點(可能沒有任何畫面對應)、Struts action 端點。
-5. **Spring 檢核**:`@Valid` / `@Validated` 參數、Bean Validation 約束(`javax.validation` 與 `jakarta.validation` 的常用約束)、自訂 `Validator`、`@InitBinder`,轉為 `ValidationRule` 並連結到欄位與端點。若需引入 Java 解析函式庫,依 C8 於 ADR 說明。
+5. **Spring 檢核**:`@Valid` / `@Validated` 參數、Bean Validation 約束(`javax.validation` 與 `jakarta.validation` 的常用約束)、自訂 `Validator`、`@InitBinder`,轉為 `ValidationRule` 並連結到欄位與端點。若需引入 Java 解析函式庫,依 C8 於 ADR 說明。層級為 `SERVER`,`evidence.detail` 記錄 Bean Validation / Validator / `@InitBinder` 來源。
 6. 端點資料需能支援 API 頁:方法、路徑、處理類別#方法、請求 / 回應欄位、檢核規則、信心、來源。
+7. **schema 退場**:WP5 完成時,所有 adapter MUST 輸出 schema 2.2;移除「混合輸出降為 2.1」的路徑,2.1 僅保留讀取歷史資料。
 
 **驗收**:fixture 涵蓋精確 / 樣板 / 副檔名映射 / 歧義 / 方法不符 / 無 context path;每種結果的信心等級正確。
 
@@ -351,6 +353,7 @@ migration_target:
    - 樣式只輸出於 §9 去重表,元件列以 `styleId` 參照。
 5. **匯入**:檢視器能解析附錄 A 還原決策;格式不符時顯示錯誤並不改動目前決策。
 6. md 內嵌的 review state 以 ID 為鍵(C9);MUST 包含 `analysis_fingerprint`,匯入時指紋不同要提示「分析結果已變更」並進入 orphan 檢查。
+7. **未被使用的旁註**:若圖中存在目標無法解析(`UNRESOLVED` / `AMBIGUOUS`)的 API 呼叫,§4 的 `UNREFERENCED` 項目須註明「另有 N 個未解析呼叫,可能指向此 API」,並於 §8 列出這些呼叫。
 
 **驗收**:golden 檔測試(固定 fixture → 固定 md);匯出 → 匯入 → 再匯出,內容(除 `generated_at`)位元組相同;惡意字串跳脫測試;orphan 流程測試。
 
@@ -467,3 +470,11 @@ migration_target:
 - 解析真實元件庫的原始格式(Angular 套件、Storybook、型別定義),待需求方提供格式後另開工作包。
 - CSS 偽類狀態(hover / focus / disabled)、響應式斷點、CSS 規則來源追溯。
 - 多人協作、帳號權限。
+
+
+---
+
+## 11. 修訂紀錄
+
+- 1.1:檢核來源層級改為 `MARKUP` / `CLIENT` / `SERVER`(OQ-001);API 狀態推導的元件決策改用 (`screenId`, `componentId`) 複合鍵;新增 WP4 第 11 點、WP5 第 7 點、WP8 規則 7。
+- 1.0:初版。

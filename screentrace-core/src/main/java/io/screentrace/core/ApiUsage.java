@@ -8,6 +8,8 @@ public final class ApiUsage {
   private ApiUsage() { }
   public enum Decision { KEEP, REMOVE, UNDECIDED }
   public enum Status { IN_USE, REMOVABLE, UNREFERENCED }
+  /** Component decisions belong to one rendered screen, even for shared include components. */
+  public record ComponentKey(String screenId, String componentId) { }
   public record Caller(String screenId,String componentId,String behaviorId) implements Comparable<Caller> {
     @Override public int compareTo(Caller other) {
       int result=screenId.compareTo(other.screenId);
@@ -17,7 +19,7 @@ public final class ApiUsage {
     }
   }
   public record Usage(Status status,List<Caller> callers) { }
-  public static Map<String,Usage> derive(ApplicationGraph graph,Map<String,Decision> decisions) {
+  public static Map<String,Usage> derive(ApplicationGraph graph,Map<String,Decision> screenDecisions,Map<ComponentKey,Decision> componentDecisions) {
     Map<String,GraphNode> nodes=new HashMap<>();graph.nodes().forEach(node->nodes.put(node.id(),node));
     Map<String,Set<String>> owners=new TreeMap<>();
     graph.relationships().stream().filter(e->e.type()==EdgeType.CONTAINS && nodes.containsKey(e.from()) && nodes.get(e.from()).type()==NodeType.SCREEN)
@@ -41,7 +43,7 @@ public final class ApiUsage {
     }
     Map<String,Usage> result=new TreeMap<>();
     callers.forEach((id,values)->{
-      boolean removed=!values.isEmpty()&&values.stream().allMatch(c->decisions.get(c.screenId())==Decision.REMOVE || c.componentId()!=null&&decisions.get(c.componentId())==Decision.REMOVE);
+      boolean removed=!values.isEmpty()&&values.stream().allMatch(c->screenDecisions.get(c.screenId())==Decision.REMOVE || c.componentId()!=null&&componentDecisions.get(new ComponentKey(c.screenId(),c.componentId()))==Decision.REMOVE);
       result.put(id,new Usage(values.isEmpty()?Status.UNREFERENCED:removed?Status.REMOVABLE:Status.IN_USE,List.copyOf(values)));
     });
     return Collections.unmodifiableMap(result);

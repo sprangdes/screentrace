@@ -1,11 +1,11 @@
 # ScreenTrace 工作包路線圖
 
-依 [CODEX_INSTRUCTIONS.md](CODEX_INSTRUCTIONS.md) 1.0（2026-10-02）與 [REQUIREMENTS.md](REQUIREMENTS.md) 執行。過去 POC 已有功能不等同新驗收完成；基線見 [BASELINE.md](BASELINE.md)。每個工作包獨立提交，每個里程碑結束後等待需求方確認。
+依 [CODEX_INSTRUCTIONS.md](CODEX_INSTRUCTIONS.md) 1.1（2026-10-02）與 [REQUIREMENTS.md](REQUIREMENTS.md) 執行。過去 POC 已有功能不等同新驗收完成；基線見 [BASELINE.md](BASELINE.md)。每個工作包獨立提交，每個里程碑結束後等待需求方確認。
 
 | 工作包 | 範圍 | 狀態 |
 |---|---|---|
 | WP0 | 基線、需求原文、架構與文件整理 | 完成；原始失敗與後續補足的報表測試實測皆保留於 BASELINE |
-| WP1 | 行為與檢核模型、穩定 ID、API 使用狀態 | 完成；schema 2.2、穩定鍵、API 推導，OQ-001 已決定 |
+| WP1 | 行為與檢核模型、穩定 ID、API 使用狀態 | 完成；schema 2.2、穩定鍵、依 (screenId, componentId) 決策的 API 推導，OQ-001 已決定 |
 | WP2 | Struts 1.x、Dispatch、Validator、Tiles、拒絕 Struts 2 | 實作與本機驗證完成；遠端 CI 尚未執行 |
 | WP3 | JSP / HTML 元件、控制流程、檢核、事件來源 | 未開始 |
 | WP4 | JavaScript AST、事件與函式追蹤 | 未開始 |

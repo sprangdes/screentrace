@@ -163,7 +163,7 @@ Behavior 欄位為 id、triggerId、event、type、targetId、guard、parentId�
 
 ValidationRule 欄位為 id、kind、fields、message、layer、parameters、evidence。layer 只用 MARKUP / CLIENT / SERVER；需求方指定框架語意保留於 evidence.detail（OQ-001 已決定）。validator 拒絕不合法引用、缺證據、kind 以及父循環。
 
-`StableGraphIds` 定義不含行號與絕對路徑的鍵與 matched / orphaned / new 比對。`ApiUsage.derive(graph, decisions)` 共用純函式輸出 IN_USE / REMOVABLE / UNREFERENCED 與排序 callers；畫面 REMOVE 或元件 REMOVE 才算移除來源。KEEP / UNDECIDED 皆保留；未偵測 caller 不授權移除。規則與相容策略見 [ADR 0002](adr/0002-behavior-model-and-stable-ids.md)。
+`StableGraphIds` 定義不含行號與絕對路徑的鍵與 matched / orphaned / new 比對。`ApiUsage.derive(graph, screenDecisions, componentDecisions)` 共用純函式輸出 IN_USE / REMOVABLE / UNREFERENCED 與排序 callers；畫面決策以 screenId 為鍵，元件決策以 ComponentKey(screenId, componentId) 為鍵；共用元件在不同畫面各自決策。畫面 REMOVE 或該畫面的元件 REMOVE 才算移除來源。KEEP / UNDECIDED 皆保留；未偵測 caller 不授權移除。規則與相容策略見 [ADR 0002](adr/0002-behavior-model-and-stable-ids.md)。
 
 ### Example nodes
 
