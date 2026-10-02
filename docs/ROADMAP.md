@@ -7,7 +7,7 @@
 | WP0 | 基線、需求原文、架構與文件整理 | 完成；原始失敗與後續補足的報表測試實測皆保留於 BASELINE |
 | WP1 | 行為與檢核模型、穩定 ID、API 使用狀態 | 完成；schema 2.2、穩定鍵、依 (screenId, componentId) 決策的 API 推導，OQ-001 已決定 |
 | WP2 | Struts 1.x、Dispatch、Validator、Tiles、拒絕 Struts 2 | 完成；遠端 CI 全綠（e8139dd） |
-| WP3 | JSP / HTML 元件、控制流程、檢核、事件來源 | 完整實作與本機驗證完成；OQ-002 已處理，等待本次遠端 CI |
+| WP3 | JSP / HTML 元件、控制流程、檢核、事件來源 | 完成；OQ-002 已處理，132 個 Java 測試與遠端 CI 全綠，見 reports/M2.md |
 | WP4 | JavaScript AST、事件與函式追蹤 | 未開始 |
 | WP5 | URL 對應、API 契約、Spring 檢核 | 未開始 |
 | WP6 | 靜態預覽、完整元素樣式、條件標記 | 未開始 |
@@ -19,7 +19,7 @@
 | 里程碑 | 工作包 | 狀態 |
 |---|---|---|
 | M1 | WP0、WP1、WP2 | 完成；需求方已授權進入 M2，遠端 CI 全綠，見 reports/M1.md |
-| M2 | WP3、WP4、WP5 | WP3 完整實作等待遠端 CI；依需求方指示於 WP3 全綠後停止回報，WP4／WP5 未開始 |
+| M2 | WP3、WP4、WP5 | WP3 完成且遠端 CI 全綠；依需求方指示停止回報，WP4／WP5 未開始 |
 | M3 | WP6、WP7、WP8 | 等待 M2 驗收確認 |
 | M4 | WP9、WP10 | 等待 M3 驗收確認；最終驗收 |
 
