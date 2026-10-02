@@ -12,16 +12,19 @@ Target source (read-only) -> scanner -> selected Spring adapter -> ApplicationGr
 
 ## Prototype and Edit Mode
 
-The report emits three independent, durable contracts:
+The report uses independent, durable contracts:
 
 ```text
 application-graph.json   source-derived relationships and evidence
 prototype-model.json     editable visual baseline projected from the graph
 preview-model.json       static documents and graph-derived component trace data
 edit-overlay.json        user-owned target-state operations
+review-result.json       version-2 review decisions and migration metadata (on export)
 ```
 
 `edit-overlay.json` is initialized once and never overwritten by later analyses. Operations (`HIDE`, `UPDATE`, `MOVE`, `ADD`) target stable prototype component IDs.
+
+CLI and authenticated browser exports share `ReviewResultGenerator`. The version-2 review contract combines decisions with graph-derived API contracts, direct navigation, source locations, and existing preview metadata. It never re-parses target source or assigns review decisions to APIs. See [Review result contract](REVIEW_RESULT_CONTRACT.md) for schema, provenance, missing-data behavior, and ordering.
 
 ## 1. Architectural Goal
 
