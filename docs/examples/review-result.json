@@ -1,0 +1,173 @@
+{
+  "apis" : [ {
+    "calledByScreens" : [ "screen:orders" ],
+    "confidence" : "INFERRED",
+    "id" : "endpoint:load",
+    "method" : "GET",
+    "name" : "GET /api/orders",
+    "path" : "/api/orders",
+    "request" : {
+      "fields" : [ ]
+    },
+    "responses" : [ ],
+    "triggeredByComponents" : [ ]
+  }, {
+    "calledByScreens" : [ ],
+    "confidence" : "CONFIRMED",
+    "id" : "endpoint:submit",
+    "method" : "POST",
+    "name" : "POST /api/orders",
+    "path" : "/api/orders",
+    "request" : {
+      "bodyType" : "OrderRequest",
+      "contentType" : "application/json",
+      "fields" : [ {
+        "confidence" : "CONFIRMED",
+        "location" : "body",
+        "name" : "orderId",
+        "required" : true,
+        "source" : {
+          "file" : "src/main/java/example/OrderRequest.java",
+          "line" : 3
+        },
+        "type" : "Long"
+      } ]
+    },
+    "responses" : [ {
+      "bodyType" : "OrderResponse",
+      "confidence" : "CONFIRMED",
+      "contentType" : "application/json",
+      "fields" : [ ],
+      "source" : {
+        "file" : "src/main/java/example/OrderController.java",
+        "line" : 52
+      },
+      "status" : "201"
+    } ],
+    "source" : {
+      "file" : "src/main/java/example/OrderController.java",
+      "line" : 52
+    },
+    "triggeredByComponents" : [ {
+      "componentId" : "static-1",
+      "screenId" : "screen:orders"
+    } ]
+  }, {
+    "calledByScreens" : [ ],
+    "id" : "endpoint:unknown",
+    "name" : "unresolved",
+    "responses" : [ ],
+    "triggeredByComponents" : [ {
+      "graphComponentId" : "component:uncaptured",
+      "screenId" : "screen:orders"
+    } ]
+  } ],
+  "application" : {
+    "name" : "sample",
+    "technologies" : [ "JSP", "Spring MVC" ]
+  },
+  "generatedAt" : "2026-10-02T03:21:26.395673Z",
+  "navigation" : [ {
+    "fromScreenId" : "screen:detail",
+    "toScreenId" : "screen:next"
+  }, {
+    "componentId" : "static-1",
+    "fromScreenId" : "screen:orders",
+    "graphComponentId" : "component:submit",
+    "label" : "送出",
+    "target" : "/orders/submit",
+    "toScreenId" : "screen:detail"
+  } ],
+  "screens" : [ {
+    "components" : [ ],
+    "decision" : "REMOVE",
+    "id" : "screen:detail",
+    "name" : "Detail",
+    "outgoingScreens" : [ "screen:next" ],
+    "pageApis" : [ ],
+    "route" : "/detail",
+    "source" : {
+      "file" : "src/main/webapp/orders.jsp",
+      "line" : 1
+    }
+  }, {
+    "components" : [ ],
+    "decision" : "UNDECIDED",
+    "id" : "screen:next",
+    "name" : "Next",
+    "outgoingScreens" : [ ],
+    "pageApis" : [ ],
+    "route" : "/next"
+  }, {
+    "components" : [ {
+      "bounds" : {
+        "x" : 120,
+        "y" : 350,
+        "width" : 100,
+        "height" : 36
+      },
+      "css" : {
+        "color" : "red",
+        "display" : "block"
+      },
+      "decision" : "KEEP",
+      "graphComponentId" : "component:submit",
+      "id" : "static-1",
+      "label" : "送出",
+      "source" : {
+        "file" : "src/main/webapp/orders.jsp",
+        "line" : 87
+      },
+      "target" : "/orders/submit",
+      "targetScreenId" : "screen:detail",
+      "triggeredApis" : [ "endpoint:submit" ],
+      "type" : "BUTTON"
+    }, {
+      "css" : { },
+      "decision" : "REMOVE",
+      "id" : "static-2",
+      "label" : "查看",
+      "triggeredApis" : [ ],
+      "type" : "LINK"
+    }, {
+      "css" : { },
+      "decision" : "UNDECIDED",
+      "id" : "static-3",
+      "label" : "姓名",
+      "triggeredApis" : [ ],
+      "type" : "INPUT"
+    } ],
+    "decision" : "KEEP",
+    "id" : "screen:orders",
+    "name" : "Orders",
+    "outgoingScreens" : [ "screen:detail" ],
+    "pageApis" : [ "endpoint:load" ],
+    "preview" : {
+      "height" : 900,
+      "screenshot" : "screenshots/orders.png",
+      "staticDocument" : "static-preview/orders.html",
+      "width" : 1440
+    },
+    "route" : "/orders",
+    "source" : {
+      "file" : "src/main/webapp/orders.jsp",
+      "line" : 1
+    }
+  } ],
+  "summary" : {
+    "apis" : {
+      "total" : 3
+    },
+    "components" : {
+      "keep" : 1,
+      "remove" : 1,
+      "undecided" : 1
+    },
+    "screens" : {
+      "keep" : 1,
+      "remove" : 1,
+      "undecided" : 1
+    }
+  },
+  "version" : "2"
+}
