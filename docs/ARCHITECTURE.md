@@ -526,3 +526,7 @@ When trade-offs occur, prioritize in this order:
 Spring 只在來源中的正式 `@ModelAttribute`、名稱、類別、欄位及表單提交／畫面 rendering 處理器作用域可唯一證明時綁定；同名非 Spring 註解、缺少／多個型別等保留 UNRESOLVED。Struts 以 action 對應的 form-bean、Dyna 屬性或可解析 ActionForm 欄位／getter 來源建立 BINDS_TO。未證明的欄位保留 `bindingStatus=UNRESOLVED`。已發現元件的存在性、kind、目標、模型綁定各自記錄信心，既有 UNRESOLVED 元件信心不升級。
 
 WP3 未引入相依；Spring 輸出仍保留既有 schema 2.1 相容路徑，Struts 為 2.2。所有 adapter 統一為 2.2 與移除混合降版屬 WP5，尚未宣稱完成。WP4／WP5 未開始，WP6 未開始。
+
+### WP4 增量三
+
+screentrace-js 以 api-table.json 公開 API 表理解第三方呼叫，識別檔名／開頭註解後跳過第三方內部；未知呼叫保留 UNKNOWN_CALL。bindings 對 Java 原始 DOM 的靜態選擇器解析，analyzer 輸出導頁／API／彈窗／CLIENT 規則／UI／欄位狀態與來源 JSON。載入來源使用畫面 ID，綁定失敗的事件仍保留 selector 原文與 UNRESOLVED 來源；Java 圖貢獻及追蹤於最後增量整合。見 ADR 0008／0009，script src 例外依 v1.3，不用於 API URL。

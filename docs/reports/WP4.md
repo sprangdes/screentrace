@@ -33,3 +33,7 @@
 增量一的解析器／診斷／probe／路徑與大小測試通過；事件、語意、追蹤、值與 Java 圖整合等待後續增量。WP4 尚未完成。
 
 增量二：Node 選擇器／綁定測試先因缺 bindings.mjs 失敗、Java 來源測試先因缺 ScriptSources 編譯失敗，再實作；7 個 Node 測試與 136 個 Java 測試通過。新增 ADR 0008，文件更新 v1.3。
+
+增量二提交 `20a6b6d4fddff4f797cac00fd42bd257a2a200dd` 已推送，[遠端 CI 全綠](https://github.com/sprangdes/screentrace/actions/runs/37078464909)。capture 四個自動測試檔案再次合計 14 個通過。
+
+增量三：新增 9 個語意測試，首次缺 analyzer.mjs 失敗；Bootstrap/onload、HTTP 動態 method 額外反例先失敗後修正。JS 合計 16 測試通過，Java 136 測試通過。表格 JSON 字串跳脫曾有編譯前錯誤，修正資料跳脫後通過；未修改測試斷言。設計見 [ADR 0009](../adr/0009-javascript-public-api-semantics.md)。

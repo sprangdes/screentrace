@@ -8,7 +8,7 @@
 | WP1 | 行為與檢核模型、穩定 ID、API 使用狀態 | 完成；schema 2.2、穩定鍵、依 (screenId, componentId) 決策的 API 推導，OQ-001 已決定 |
 | WP2 | Struts 1.x、Dispatch、Validator、Tiles、拒絕 Struts 2 | 完成；遠端 CI 全綠（e8139dd） |
 | WP3 | JSP / HTML 元件、控制流程、檢核、事件來源 | 完成；OQ-002 已處理，132 個 Java 測試與遠端 CI 全綠，見 reports/M2.md |
-| WP4 | JavaScript AST、事件與函式追蹤 | 增量一全綠；OQ-003 已處理（v1.3），增量二來源／事件完成待遠端 CI |
+| WP4 | JavaScript AST、事件與函式追蹤 | 增量一全綠；OQ-003 已處理（v1.3），增量二來源／事件全綠；增量三語意完成待遠端 CI |
 | WP5 | URL 對應、API 契約、Spring 檢核 | 未開始 |
 | WP6 | 靜態預覽、完整元素樣式、條件標記 | 未開始 |
 | WP7 | 單一 HTML、Screen Map、API 頁、review | 未開始 |

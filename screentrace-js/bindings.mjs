@@ -61,7 +61,7 @@ export function bindings(unit,dom=[]) {
   if(['FunctionDeclaration','FunctionExpression','ArrowFunctionExpression'].includes(node.type))return;
   if(node.type==='CallExpression'&&node.callee.type==='MemberExpression'&&!node.callee.computed) {
    const method=node.callee.property.name,args=node.arguments;
-   if(['on','click','change','submit','blur','focus','input','keydown','keyup','addEventListener'].includes(method)) {
+   if(['on','click','change','submit','blur','focus','input','keydown','keyup','addEventListener'].includes(method) && args.length) {
     let selector=selectorOf(node.callee.object,code),event=['on','addEventListener'].includes(method)?args[0]?.value:method;
     const delegated=method==='on'&&args[1]?.type==='Literal'&&typeof args[1].value==='string';
     if(delegated)selector=selector+' '+args[1].value;
