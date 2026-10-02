@@ -7,7 +7,7 @@ import java.util.Locale;
 import java.util.Map;
 
 /** Minimal quote-aware JSP markup tokenizer for element names and literal attributes. */
-final class MarkupTag {
+public final class MarkupTag {
   private final String name;
   private final Map<String, String> attributes;
   private final int line;
@@ -22,10 +22,23 @@ final class MarkupTag {
     this.closing = closing;
   }
 
-  static List<MarkupTag> scan(String source) {
+  public static List<MarkupTag> scan(String source) {
     List<MarkupTag> tags = new ArrayList<>();
     int line = 1, lineCursor = 0;
     for (int start = source.indexOf('<'); start >= 0; start = source.indexOf('<', start + 1)) {
+      if (source.startsWith("<!--", start) || source.startsWith("<%--", start)) {
+        String delimiter = source.startsWith("<!--", start) ? "-->" : "--%>";
+        int close = source.indexOf(delimiter, start + 4);
+        if (close < 0) break;
+        start = close + delimiter.length() - 1;
+        continue;
+      }
+      if (source.startsWith("<%", start) && !source.startsWith("<%@", start)) {
+        int close = source.indexOf("%>", start + 2);
+        if (close < 0) break;
+        start = close + 1;
+        continue;
+      }
       int end = endOfTag(source, start);
       if (end < 0) break;
       while (lineCursor < start) if (source.charAt(lineCursor++) == '\n') line++;
@@ -33,15 +46,21 @@ final class MarkupTag {
       MarkupTag tag = parse(body, line, end);
       if (tag != null) tags.add(tag);
       start = end;
+      if (tag != null && !tag.closing() && (tag.name().equalsIgnoreCase("script") || tag.name().equalsIgnoreCase("style"))) {
+        int close = source.toLowerCase(Locale.ROOT).indexOf("</" + tag.name().toLowerCase(Locale.ROOT), end + 1);
+        if (close < 0) break;
+        start = close - 1;
+      }
     }
     return tags;
   }
 
-  String name() { return name; }
-  int line() { return line; }
-  int end() { return end; }
-  boolean closing() { return closing; }
-  String attribute(String name) { return attributes.get(name.toLowerCase(Locale.ROOT)); }
+  public String name() { return name; }
+  public int line() { return line; }
+  public int end() { return end; }
+  public boolean closing() { return closing; }
+  public Map<String, String> attributes() { return Map.copyOf(attributes); }
+  public String attribute(String name) { return attributes.get(name.toLowerCase(Locale.ROOT)); }
 
   private static int endOfTag(String source, int start) {
     char quote = 0;

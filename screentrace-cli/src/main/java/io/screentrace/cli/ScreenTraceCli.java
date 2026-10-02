@@ -177,6 +177,8 @@ public final class ScreenTraceCli {
   }
 
   private static ApplicationGraph analyze(ProjectScanner.ProjectInventory inventory) throws IOException {
+    var unsupported = io.screentrace.adapter.struts.StrutsFrameworkDetector.unsupported(inventory);
+    if (unsupported.isPresent()) throw new IOException(unsupported.get().code() + ": " + unsupported.get().message());
     boolean struts = inventory.technologies().contains("Struts 1");
     boolean springWeb = inventory.technologies().contains("Spring MVC") || inventory.technologies().contains("Spring Boot");
     if (struts && springWeb) return ApplicationGraphMerger.merge(new StrutsProjectAnalyzer().analyze(inventory), new SpringProjectAnalyzer().analyze(inventory));

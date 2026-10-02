@@ -55,3 +55,15 @@ node --test screentrace-capture/docs-baseline.test.mjs
 ```
 
 四項通過，失敗 0、略過 0。既有測試與 runtime 未修改，無新增相依。文件驗證不取代後續 WP1/WP2 的模型與解析驗收。
+
+## WP0 後續補足報表測試前置條件
+
+以 ScreenTrace 自身的 ProjectScanner、StrutsProjectAnalyzer、ReportGenerator 生成 `fixtures/struts` 的報表至 `/tmp/screentrace-m1-report`，capture 只渲染靜態化 HTML 且 JS 關閉，再以 Python HTTP server 將工具報表提供在 loopback。沒有啟動 fixture 應用。
+
+```bash
+node screentrace-capture/capture-static-jsp.mjs fixtures/struts /tmp/screentrace-m1-report
+python3 -m http.server 18765 --bind 127.0.0.1 --directory /tmp/screentrace-m1-report
+node screentrace-capture/report-design.test.mjs http://127.0.0.1:18765/report/index.html
+```
+
+退出碼 `0`；1440、1024、768、390、320px 五種寬度全數通過：layout、touch、modes、review cycle、search、keyboard、reduced motion，無 browser runtime error。UI 測試執行的是本工具生成的報表程式，目標專案 JS 不執行。原始基線的兩項失敗仍保留於前文，不回寫成成功。

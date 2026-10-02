@@ -64,7 +64,7 @@ public final class GraphIntegrityValidator {
         GraphNode target = nodes.get(behavior.targetId());
         boolean valid = behavior.type() != null && switch (behavior.type()) {
           case VALIDATE -> rules.containsKey(behavior.targetId());
-          case NAVIGATE -> target != null && target.type() == NodeType.SCREEN;
+          case NAVIGATE -> target != null && Set.of(NodeType.SCREEN, NodeType.ENDPOINT).contains(target.type());
           case CALL_API, SUBMIT_FORM -> target != null && target.type() == NodeType.ENDPOINT;
           case OPEN_DIALOG -> target != null && target.type() == NodeType.COMPONENT && "MODAL".equals(target.attributes().get("kind"));
           default -> target != null || rules.containsKey(behavior.targetId());

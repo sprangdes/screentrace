@@ -2,7 +2,7 @@
 
 ScreenTrace 會分析伺服端渲染 JSP 專案的畫面、路由與可互動元件，產生可瀏覽的 Screen flow、靜態頁面、按鈕資訊與確認結果；不會啟動或修改目標專案。
 
-目前支援 Struts 1、Struts + Spring、Spring MVC JSP、Spring Boot JSP 專案；產生的資料與報表都寫入設定的分析結果根目錄，不會修改原始程式碼。
+目前支援 Struts 1、Struts + Spring、Spring MVC JSP、Spring Boot JSP 專案；偵測到 Struts 2 會以 `UNSUPPORTED_FRAMEWORK` 拒絕分析；產生的資料與報表都寫入設定的分析結果根目錄，不會修改原始程式碼。
 
 ScreenTrace 會展開可解析的 JSP Tag、CSS 與本地資源，並以 Playwright Chromium 渲染靜態 HTML，產生畫面截圖與可見元件位置。JSP 的動態清單、明細與欄位會填入合成示範資料；不會啟動目標專案或連線其資料庫。
 

@@ -103,7 +103,7 @@ JavaScript AST 分析模組與單一 HTML 檢視器尚未建立，分別由 WP4�
 
 ### screentrace-adapter-struts
 
-解析 Struts 1 設定、Action Mapping、ActionForm、local/global forward，以及 Spring XML-managed Action；消費共用 JSP contribution 後建立圖關係。DispatchAction、Validator 與 Struts 2 明確拒絕的完整驗收屬於 WP2，尚未完成。
+解析 Struts 1 設定、Action Mapping、ActionForm、local/global forward，以及 Spring XML-managed Action；消費共用 JSP contribution 後建立圖關係。WP2 新增具真實行號的設定、Dyna form-property、plugins/exceptions、多模組前綴、Dispatch/Lookup/Mapping 方法解析、Validator / ActionForm 檢核、Tiles 繼承與巢狀 include，以及 Struts 2 的完整拒絕。新 Struts 圖使用 schema 2.2；詳細規則與未解析界線見 [ADR 0003](adr/0003-struts-static-resolution.md)。
 
 ### screentrace-report
 
@@ -218,7 +218,7 @@ SCREEN:result
 
 ## 5. Evidence Model
 
-目前模型可接受缺 evidence 的舊資料；附件 C2 要求新的節點、邊、行為與檢核規則具有來源行號、解析器與解析狀態。嚴格驗證與相容性處理屬於 WP1，尚未完成。
+目前模型可接受缺 evidence 的舊資料；附件 C2 要求新的節點、邊、行為與檢核規則具有來源行號、解析器與解析狀態。WP1 已實作 schema 2.2 的嚴格驗證，歷史 schema 仍走相容路徑；尚未遷移的 adapter 不會被宣稱符合嚴格版本。
 
 Suggested structure:
 

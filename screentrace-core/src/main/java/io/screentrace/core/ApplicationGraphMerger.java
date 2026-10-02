@@ -27,7 +27,7 @@ public final class ApplicationGraphMerger {
     return new ApplicationGraph(new ApplicationGraph.Application(first.application().name(), first.application().path(), List.copyOf(technologies)),
         List.copyOf(nodes.values()), List.copyOf(relationships.values()), List.copyOf(diagnostics.values()),
         List.copyOf(apiContracts.values()),
-        first.schemaVersion().equals(ApplicationGraph.BEHAVIOR_SCHEMA_VERSION) || second.schemaVersion().equals(ApplicationGraph.BEHAVIOR_SCHEMA_VERSION)
+        first.schemaVersion().equals(ApplicationGraph.BEHAVIOR_SCHEMA_VERSION) && second.schemaVersion().equals(ApplicationGraph.BEHAVIOR_SCHEMA_VERSION)
             ? ApplicationGraph.BEHAVIOR_SCHEMA_VERSION : ApplicationGraph.CURRENT_SCHEMA_VERSION,
         mergeItems(first.behaviors(), second.behaviors(), ApplicationGraph.Behavior::id),
         mergeItems(first.validationRules(), second.validationRules(), ApplicationGraph.ValidationRule::id));
