@@ -62,7 +62,7 @@ public final class MarkupGraphContribution {
       behaviors.put(id,new Behavior(id,trigger,event,type,target,nodes.get(trigger).attributes().get("guard"),null,expression,proof));
     }
     // Fields bind only to a model whose identity and property are backed by adapter evidence.
-    for(var markup:jsp.markup().values()) for(var c:markup.components()) if(c.field()!=null&&c.kind()!=ComponentKind.FORM&&c.formId()!=null) {
+    for(var markup:jsp.markup().values()) for(var c:markup.components()) if(c.field()!=null&&isModelField(c)&&c.formId()!=null) {
       List<GraphNode> models=edges.values().stream().filter(e->e.type()==EdgeType.BINDS_TO&&e.from().equals(c.formId()))
           .map(e->nodes.get(e.to())).filter(Objects::nonNull).filter(n->n.type()==NodeType.FORM_MODEL).distinct().toList();
       if(models.size()!=1) continue;var model=models.get(0);
@@ -73,6 +73,14 @@ public final class MarkupGraphContribution {
       putEdge(edges,EdgeType.BINDS_TO,c.id(),model.id(),c.source(),"欄位："+property,proof);
     }
     return new ApplicationGraph(graph.application(),List.copyOf(nodes.values()),List.copyOf(edges.values()),graph.diagnostics(),graph.apiContracts(),graph.schemaVersion(),List.copyOf(behaviors.values()),List.copyOf(rules.values()));
+  }
+  private static boolean isModelField(MarkupAnalysis.Component c) {
+    if (!c.tag().contains(":") && c.attributes().containsKey("form")) return false;
+    return switch(c.kind()) {
+      case TEXT_INPUT, TEXTAREA, SELECT, CHECKBOX, RADIO, DATE_PICKER, FILE_INPUT, MULTI_SELECT, BUTTON, SUBMIT -> true;
+      case OTHER -> Set.of("input", "hidden", "select").contains(c.tag().substring(c.tag().lastIndexOf(':')+1));
+      default -> false;
+    };
   }
   private static void collectGraphIncludes(String id,ApplicationGraph graph,Map<String,GraphNode> nodes,Set<String> paths,Set<String> seen) {
     if(!seen.add(id))return;

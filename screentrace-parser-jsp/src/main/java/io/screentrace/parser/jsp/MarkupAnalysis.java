@@ -17,7 +17,7 @@ public record MarkupAnalysis(List<Component> components, List<Event> events,
     public Component { attributes = Collections.unmodifiableMap(new TreeMap<>(attributes)); }
   }
   public record Event(String componentId, String event, String expression, SourceLocation source) { }
-  private record Scope(String tag, String guard, boolean repeated, String formId, String model) { }
+  private record Scope(String tag, String guard, boolean repeated, String formId, String model, String nestedPath) { }
   private static final Set<String> VOID = Set.of("input", "img", "br", "hr", "meta", "link", "area", "base", "col", "embed", "param", "source", "track", "wbr");
   private static final Set<String> CONDITIONS = Set.of("c:if", "c:when", "c:otherwise", "logic:present", "logic:notpresent", "logic:equal", "logic:notequal", "logic:empty", "logic:notempty", "logic:greaterthan", "logic:lessthan");
 
@@ -34,8 +34,11 @@ public record MarkupAnalysis(List<Component> components, List<Event> events,
       var attrs = token.attributes(); var source = new SourceLocation(path, token.line());
       String guard = stack.stream().map(Scope::guard).filter(Objects::nonNull).reduce((a,b) -> a + " && " + b).orElse(null);
       boolean repeated = stack.stream().anyMatch(Scope::repeated);
-      String form = null, model = null;
-      for (Scope scope : stack) if (scope.formId() != null) { form = scope.formId(); model = scope.model(); }
+      String form = null, model = null, nestedPath = "";
+      for (Scope scope : stack) {
+        if (scope.formId() != null) { form = scope.formId(); model = scope.model(); nestedPath = ""; }
+        if (scope.nestedPath() != null && !scope.nestedPath().isEmpty()) nestedPath += scope.nestedPath() + (scope.nestedPath().endsWith(".") ? "" : ".");
+      }
       String condition = CONDITIONS.contains(tag) ? condition(token) : null;
       ComponentKind kind = kind(tag, attrs);
       if (kind != null) {
@@ -44,6 +47,7 @@ public record MarkupAnalysis(List<Component> components, List<Event> events,
         String id = StableGraphIds.component(path, kind, identity, occurrences.merge(occurrenceKey,1,Integer::sum)-1);
         if (kind == ComponentKind.FORM) { form = id; model = first(attrs,"modelattribute","commandname","name"); }
         String field = first(attrs,"path","property","name");
+        if (tag.startsWith("form:") && attrs.containsKey("path") && field != null) field = nestedPath + field;
         components.add(new Component(id,kind,tag,attrs,source,guard,repeated,form,model,field,Confidence.UNRESOLVED));
         for (var attribute : new TreeMap<>(attrs).entrySet()) if (attribute.getKey().startsWith("on") && attribute.getKey().length()>2) {
           events.add(new Event(id,attribute.getKey().substring(2),attribute.getValue(),new SourceLocation(path,token.attributeLine(attribute.getKey()))));
@@ -56,7 +60,7 @@ public record MarkupAnalysis(List<Component> components, List<Event> events,
       }
       boolean selfClosing = token.end()>0 && text.charAt(token.end()-1)=='/';
       if (!selfClosing && !VOID.contains(tag) && !tag.startsWith("@")) {
-        stack.add(new Scope(tag,condition,tag.equals("c:foreach") || tag.equals("logic:iterate"),kind==ComponentKind.FORM?form:null,kind==ComponentKind.FORM?model:null));
+        stack.add(new Scope(tag,condition,tag.equals("c:foreach") || tag.equals("logic:iterate"),kind==ComponentKind.FORM?form:null,kind==ComponentKind.FORM?model:null,tag.equals("spring:nestedpath")?attrs.get("path"):null));
       }
     }
     for (Component component : components) {

@@ -56,4 +56,15 @@ class MarkupIntegrationTest {
     assertTrue(graph.nodes().stream().filter(n->"email".equals(n.attributes().get("path"))).allMatch(n->"UNRESOLVED".equals(n.attributes().get("bindingStatus"))));
   }
 
+  @Test void anchorNamesAndUnresolvedNestedPathsDoNotBecomeModelFields() throws Exception {
+    Path root=Files.createTempDirectory("spring-field-role"),jsp=root.resolve("src/main/webapp/WEB-INF/jsp/form.jsp"),java=root.resolve("src/main/java/Controller.java");
+    Files.createDirectories(jsp.getParent());Files.createDirectories(java.getParent());
+    Files.writeString(jsp,"<form:form modelAttribute='order'><a name='email' href='/form'>Link</a><spring:nestedPath path='owner'><form:input path='email'/></spring:nestedPath><input name='email' form='unknownForm'/></form:form>");
+    Files.writeString(java,"import org.springframework.stereotype.Controller; import org.springframework.web.bind.annotation.*; @Controller class Controller { @GetMapping(\"/form\") String form(@ModelAttribute(\"order\") Order order){return \"form\";} } class Order { String email; }");
+    var graph=new SpringMvcAnalyzer().analyze(new ProjectScanner().scan(root));
+    assertTrue(graph.nodes().stream().filter(n->n.type()==NodeType.COMPONENT&&n.type()!=NodeType.FORM_MODEL&&("email".equals(n.attributes().get("name"))||"email".equals(n.attributes().get("path"))))
+        .allMatch(n->"UNRESOLVED".equals(n.attributes().get("bindingStatus"))));
+    assertTrue(graph.nodes().stream().anyMatch(n->"owner.email".equals(n.attributes().get("field"))));
+  }
+
 }

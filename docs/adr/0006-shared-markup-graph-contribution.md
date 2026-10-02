@@ -25,3 +25,5 @@ Spring 模型候選另須有本表單已證明的提交處理器，或本表單�
 同 Controller 的 ModelAttribute 方法只有在不帶路由 mapping 時才作為 provider；帶 mapping 的方法只可證明其自身的處理器作用域。
 
 提交路由只能為該處理器的 ModelAttribute 參數證明請求欄位模型，不能將方法的回傳模型當成請求模型；回傳模型仍需畫面 rendering 來源證據。
+
+僅可證明的表單資料控制項參與欄位綁定，錨點名稱不作模型欄位；Spring nestedPath 合併到欄位路徑，無對應 DTO 屬性則保持 UNRESOLVED。HTML 控制項明示 form 所有者但未證明其關聯時，不沿用詞法外層表單模型。
