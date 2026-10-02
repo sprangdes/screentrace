@@ -523,6 +523,6 @@ When trade-offs occur, prioritize in this order:
 
 `MarkupGraphContribution` 將元件、MARKUP 規則、檢核／彈窗／導覽／表單行為整合到 canonical graph，遞迴展開 directive／jsp include、Tiles insert／put、定義參照與繼承。共享片段維持同一 component ID、各畫面 CONTAINS 所有權，包含位置的條件與 repeated 證據保留於所有權邊；元件 conditional／repeated 為任一使用處存在此性質的標記，詳情以該畫面的邊證據為準。
 
-Spring 只在來源中的正式 `@ModelAttribute`、名稱、類別、欄位可唯一證明時綁定；同名非 Spring 註解、缺少／多個型別等保留 UNRESOLVED。Struts 以 action 對應的 form-bean、Dyna 屬性或可解析 ActionForm 欄位／getter 來源建立 BINDS_TO。未證明的欄位保留 `bindingStatus=UNRESOLVED`。已發現元件的存在性、kind、目標、模型綁定各自記錄信心，既有 UNRESOLVED 元件信心不升級。
+Spring 只在來源中的正式 `@ModelAttribute`、名稱、類別、欄位及表單提交／畫面 rendering 處理器作用域可唯一證明時綁定；同名非 Spring 註解、缺少／多個型別等保留 UNRESOLVED。Struts 以 action 對應的 form-bean、Dyna 屬性或可解析 ActionForm 欄位／getter 來源建立 BINDS_TO。未證明的欄位保留 `bindingStatus=UNRESOLVED`。已發現元件的存在性、kind、目標、模型綁定各自記錄信心，既有 UNRESOLVED 元件信心不升級。
 
 WP3 未引入相依；Spring 輸出仍保留既有 schema 2.1 相容路徑，Struts 為 2.2。所有 adapter 統一為 2.2 與移除混合降版屬 WP5，尚未宣稱完成。WP4／WP5 未開始，WP6 未開始。
