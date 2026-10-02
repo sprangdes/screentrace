@@ -79,4 +79,9 @@ class UrlVariableBoundaryTest {
     unresolved("<c:url var='url' value='/a'/><c:url var='${name}' value='/b'/><a href='${url}'>Items</a>","${url}");
   }
 
+  @Test void definitionMustBeCompleteBeforeItsUse() throws Exception {
+    unresolved("<c:url var='url' value='/a'><a href='${url}'>Items</a></c:url>","${url}");
+    assertEquals("/a",link("<c:url var='url' value='/a'><c:param name='id' value='${id}'/></c:url><a href='${url}'>Items</a>").target());
+  }
+
 }

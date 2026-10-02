@@ -21,3 +21,7 @@ Spring／Struts 各自建立互動元件，Spring 舊 ID 依行號且共享 incl
 沒有新增相依，既有測試斷言不變。完整元件與規則、來源 JSON／標籤矩陣 golden、重排／無關註解 ID、include／Tiles、模型綁定反例均有測試。歷史 schema 讀取與新分析輸出統一由 WP5 完成，不在 WP3 提前改變既有相容路徑。
 
 Spring 模型候選另須有本表單已證明的提交處理器，或本表單所有畫面所有者的已證明 rendering 處理器；provider 限同來源 Controller。不同畫面的同名模型不得以全域名稱相同直接綁定。無處理器／rendering 證據時保留 UNRESOLVED。
+
+同 Controller 的 ModelAttribute 方法只有在不帶路由 mapping 時才作為 provider；帶 mapping 的方法只可證明其自身的處理器作用域。
+
+提交路由只能為該處理器的 ModelAttribute 參數證明請求欄位模型，不能將方法的回傳模型當成請求模型；回傳模型仍需畫面 rendering 來源證據。

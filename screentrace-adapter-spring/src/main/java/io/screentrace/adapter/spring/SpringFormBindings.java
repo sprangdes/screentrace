@@ -12,7 +12,7 @@ import java.util.*;
 /** Resolves model-attribute names only from source declarations; no target classes are loaded. */
 final class SpringFormBindings {
   private record Type(ClassOrInterfaceDeclaration node,String path) { }
-  private record Model(String name,String type,SourceLocation source,String ownerClass,String method,int methodLine,boolean provider) { }
+  private record Model(String name,String type,SourceLocation source,String ownerClass,String method,int methodLine,boolean provider,boolean requestParameter) { }
   static ApplicationGraph bind(ApplicationGraph graph,ProjectInventory inventory) {
     Map<String,List<Type>> types=new TreeMap<>();List<Model> models=new ArrayList<>();List<Diagnostic> diagnostics=new ArrayList<>(graph.diagnostics());
     for(var file:inventory.javaFiles()) {
@@ -49,14 +49,14 @@ final class SpringFormBindings {
   private static Model model(String name,String type,SourceLocation source,com.github.javaparser.ast.Node declaration) {
     var method=declaration instanceof MethodDeclaration m?m:declaration.findAncestor(MethodDeclaration.class).orElse(null);
     String owner=declaration.findAncestor(ClassOrInterfaceDeclaration.class).map(ClassOrInterfaceDeclaration::getNameAsString).orElse("");
-    return new Model(name,type,source,owner,method==null?"":method.getNameAsString(),method==null?-1:method.getBegin().map(p->p.line).orElse(-1),declaration instanceof MethodDeclaration);
+    return new Model(name,type,source,owner,method==null?"":method.getNameAsString(),method==null?-1:method.getBegin().map(p->p.line).orElse(-1),declaration instanceof MethodDeclaration&&method.getAnnotations().stream().noneMatch(a->Set.of("RequestMapping","GetMapping","PostMapping","PutMapping","DeleteMapping","PatchMapping").contains(a.getName().getIdentifier())),declaration instanceof Parameter);
   }
   private static boolean appliesTo(Model model,GraphNode form,ApplicationGraph graph) {
     Set<String> handlers=new HashSet<>();
     for(var node:graph.nodes()) if(node.type()==NodeType.HANDLER&&node.source().file().equals(model.source().file())
         &&model.ownerClass().equals(node.attributes().get("class"))&&(model.provider()||(model.method().equals(node.attributes().get("method"))&&node.source().line()==model.methodLine())))handlers.add(node.id());
     if(handlers.isEmpty())return false;
-    for(var submit:graph.relationships()) if(submit.type()==EdgeType.TRIGGERS&&submit.from().equals(form.id())&&submit.confidence()==Confidence.CONFIRMED)
+    for(var submit:graph.relationships()) if(model.requestParameter()&&submit.type()==EdgeType.TRIGGERS&&submit.from().equals(form.id())&&submit.confidence()==Confidence.CONFIRMED)
       if(graph.relationships().stream().anyMatch(e->e.type()==EdgeType.HANDLED_BY&&e.from().equals(submit.to())&&handlers.contains(e.to())&&e.confidence()==Confidence.CONFIRMED))return true;
     Set<String> owners=new HashSet<>();graph.relationships().stream().filter(e->e.type()==EdgeType.CONTAINS&&e.to().equals(form.id())).forEach(e->owners.add(e.from()));
     return !owners.isEmpty()&&owners.stream().allMatch(owner->graph.relationships().stream().anyMatch(e->e.type()==EdgeType.RENDERS&&handlers.contains(e.from())&&e.to().equals(owner)&&e.confidence()==Confidence.CONFIRMED));

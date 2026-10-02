@@ -38,4 +38,22 @@ class MarkupIntegrationTest {
     assertTrue(graph.nodes().stream().filter(n->"email".equals(n.attributes().get("path"))).allMatch(n->"UNRESOLVED".equals(n.attributes().get("bindingStatus"))));
   }
 
+  @Test void aMappedModelAttributeMethodIsNotAGlobalProviderForOtherRoutes() throws Exception {
+    Path root=Files.createTempDirectory("spring-model-provider"),jsp=root.resolve("src/main/webapp/WEB-INF/jsp/form.jsp"),java=root.resolve("src/main/java/Controller.java");
+    Files.createDirectories(jsp.getParent());Files.createDirectories(java.getParent());
+    Files.writeString(jsp,"<form:form modelAttribute='order'><form:input path='email'/></form:form>");
+    Files.writeString(java,"import org.springframework.stereotype.Controller; import org.springframework.web.bind.annotation.*; @Controller class Controller { @GetMapping(\"/data\") @ModelAttribute(\"order\") Order data(){return new Order();} @GetMapping(\"/form\") String form(){return \"form\";} } class Order { String email; }");
+    var graph=new SpringMvcAnalyzer().analyze(new ProjectScanner().scan(root));
+    assertTrue(graph.nodes().stream().filter(n->"email".equals(n.attributes().get("path"))).allMatch(n->"UNRESOLVED".equals(n.attributes().get("bindingStatus"))));
+  }
+
+  @Test void aReturnedModelDoesNotProveRequestFieldBindingForTheSubmittingForm() throws Exception {
+    Path root=Files.createTempDirectory("spring-model-return"),jsp=root.resolve("src/main/webapp/WEB-INF/jsp/form.jsp"),java=root.resolve("src/main/java/Controller.java");
+    Files.createDirectories(jsp.getParent());Files.createDirectories(java.getParent());
+    Files.writeString(jsp,"<form:form modelAttribute='order' action='/data' method='get'><form:input path='email'/></form:form>");
+    Files.writeString(java,"import org.springframework.stereotype.Controller; import org.springframework.web.bind.annotation.*; @Controller class Controller { @GetMapping(\"/data\") @ModelAttribute(\"order\") Order data(){return new Order();} @GetMapping(\"/form\") String form(){return \"form\";} } class Order { String email; }");
+    var graph=new SpringMvcAnalyzer().analyze(new ProjectScanner().scan(root));
+    assertTrue(graph.nodes().stream().filter(n->"email".equals(n.attributes().get("path"))).allMatch(n->"UNRESOLVED".equals(n.attributes().get("bindingStatus"))));
+  }
+
 }

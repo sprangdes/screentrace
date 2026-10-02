@@ -22,7 +22,8 @@ public final class UrlVariableResolver {
   }
   public UrlVariableResolver(String path,String text,Set<String> includedWrites) {
     this.path=path;writes.addAll(includedWrites);unknownWrite=includedWrites.contains("*");List<Scope> stack=new ArrayList<>();
-    for(MarkupTag tag:MarkupTag.scan(text)) {
+    List<MarkupTag> tokens=MarkupTag.scan(text);Map<Integer,Integer> completed=completedDefinitions(tokens,text);
+    for(MarkupTag tag:tokens) {
       String name=tag.name().toLowerCase(Locale.ROOT);
       if(tag.closing()) {
         for(int i=stack.size()-1;i>=0;i--) if(stack.get(i).tag().equals(name)) {stack.subList(i,stack.size()).clear();break;}
@@ -33,7 +34,7 @@ public final class UrlVariableResolver {
         String value=tag.attribute("value"), declaredScope=tag.attribute("scope");
         if(MarkupAnalysis.dynamic(tag.attribute("var")))unknownWrite=true;
         boolean valid=value!=null&&!MarkupAnalysis.dynamic(value) && (declaredScope==null||declaredScope.equals("page")) && stack.stream().noneMatch(Scope::loop);
-        definitions.computeIfAbsent(tag.attribute("var"),k->new ArrayList<>()).add(new Definition(value,tag.end(),new SourceLocation(path,tag.line()),scope,valid));
+        definitions.computeIfAbsent(tag.attribute("var"),k->new ArrayList<>()).add(new Definition(value,completed.getOrDefault(tag.end(),Integer.MAX_VALUE),new SourceLocation(path,tag.line()),scope,valid));
       } else if(tag.attribute("var")!=null || name.equals("c:remove")) {
         String variable=name.equals("c:remove")?tag.attribute("var"):tag.attribute("var");
         if(variable==null||MarkupAnalysis.dynamic(variable)) unknownWrite=true; else writes.add(variable);
@@ -47,6 +48,17 @@ public final class UrlVariableResolver {
     String withoutComments=text.replaceAll("(?s)<%--.*?--%>","");
     for(int i=withoutComments.indexOf("<%");i>=0;i=withoutComments.indexOf("<%",i+2))
       if(!withoutComments.startsWith("<%@",i)) unknownWrite=true;
+  }
+  private static Map<Integer,Integer> completedDefinitions(List<MarkupTag> tokens,String text) {
+    Map<Integer,Integer> completed=new HashMap<>();List<MarkupTag> open=new ArrayList<>();
+    for(var tag:tokens) if(Set.of("c:url","spring:url").contains(tag.name().toLowerCase(Locale.ROOT))) {
+      if(tag.closing()) {
+        for(int i=open.size()-1;i>=0;i--) if(open.get(i).name().equalsIgnoreCase(tag.name())) {
+          completed.put(open.get(i).end(),tag.end());open.subList(i,open.size()).clear();break;
+        }
+      } else if(text.charAt(tag.end()-1)=='/')completed.put(tag.end(),tag.end());else open.add(tag);
+    }
+    return completed;
   }
   public Resolution resolve(String raw,MarkupTag use) {
     if(raw==null) return new Resolution(null,null,List.of());
