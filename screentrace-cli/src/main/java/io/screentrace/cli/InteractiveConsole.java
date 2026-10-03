@@ -83,7 +83,7 @@ final class InteractiveConsole implements AutoCloseable {
     }
   }
 
-  void waitForReportClose(String url) throws IOException {
+  void waitForMenuReturn(String url) throws IOException {
     Attributes original = terminal.enterRawMode();
     List<String> panel = reportPanelLines(url);
     try {
@@ -218,7 +218,7 @@ final class InteractiveConsole implements AutoCloseable {
   }
 
   private List<String> reportPanelLines(String url) {
-    String instruction = "q / Esc 關閉報表並返回功能選單";
+    String instruction = "q / Esc 返回功能選單（HTML 報表可繼續使用）";
     return completionPanelLines("報表已開啟", List.of(url), instruction);
   }
 

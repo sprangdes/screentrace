@@ -8,7 +8,7 @@ ScreenTrace 會展開可解析的 JSP Tag、CSS 與本地資源，並以 Playwri
 
 ## 調整進度
 
-新需求與已確認決策見 [REQUIREMENTS.md](docs/REQUIREMENTS.md)，工作包與驗收順序見 [ROADMAP.md](docs/ROADMAP.md)。目前仍使用 localhost 報表與 review JSON v2；單一離線 HTML、md 匯出與元件庫匯入尚未完成。
+新需求與已確認決策見 [REQUIREMENTS.md](docs/REQUIREMENTS.md)，工作包與驗收順序見 [ROADMAP.md](docs/ROADMAP.md)。WP7 已改為單一離線 HTML（Screen Map、API 頁、review 暫存）。md 匯出／匯入與 JSON 匯出退場屬 WP8；元件庫匯入屬 WP9，尚未開始。
 
 ## 初次執行
 
@@ -73,7 +73,7 @@ Windows：
 /project/ocp/analyze/專案名稱/
 ```
 
-分析完成後會自動開啟報表，並顯示本機網址。JSP／HTML 畫面會同時產生重建預覽、渲染截圖、所有元素位置與去重 computed style，保留條件原文、動態運算式及最多 320px 的內嵌縮圖。預覽會標示「示意畫面:動態資料為範例值」及超量診斷。報表開啟期間，在 CLI 按 Esc 可只關閉 localhost 報表並回到功能選單。
+分析完成後會自動以 file:// 開啟 report/screentrace-report.html。JSP／HTML 畫面會同時產生重建預覽、渲染截圖、所有元素位置與去重 computed style，保留條件原文、動態運算式及最多 320px 的內嵌縮圖。預覽會標示「示意畫面:動態資料為範例值」及超量診斷。在 CLI 按 Esc 返回功能選單；已開啟的 HTML 仍可使用，不啟動 localhost 伺服器。
 
 ### 開啟報表
 
@@ -91,7 +91,7 @@ Windows：
 .\bin\screentrace.cmd
 ```
 
-在選單中選擇「開啟報表」與目標專案。每個報表會自動使用可用的本機連接埠。
+在選單中選擇「開啟報表」與目標專案。報表為單一 HTML，可搬移後直接開啟，不依賴分析資料夾、網路或本機服務。
 
 也可用於自動化：
 
@@ -229,7 +229,7 @@ AI 應以 `REMOVE` 作為可移除範圍、以 `KEEP` 作為必須保留範圍�
 ├── edit-overlay.json            # 使用者確認與編輯決策
 ├── review-result.json           # 匯出給 AI 的確認結果
 ├── report/
-│   └── index.html               # 互動報表
+│   └── screentrace-report.html  # 單檔離線檢視器
 ├── static-preview/
 │   ├── manifest.json            # Screen ID 與靜態頁面對應
 │   └── *.html                   # JSP 轉換後的靜態頁面
@@ -280,6 +280,8 @@ Windows：
 ## 開發與驗證
 
 ```bash
+npm --prefix screentrace-viewer ci --ignore-scripts
+npm --prefix screentrace-viewer run build
 mvn clean verify
 ```
 
@@ -330,7 +332,7 @@ WP5 的 WAR context path 可在 `~/.screentrace/config.json` 加入 `contextPath
 node screentrace-capture/capture-static-jsp.mjs <target-project> <analysis-directory> --preview-v2
 ```
 
-每畫面的警告上限可用 `--style-element-limit=50000`、`--style-byte-limit=16777216` 調整；超量產生診斷，完整元素／樣式保留。安全路徑、來源檔大小與截圖硬限制仍生效，失敗明確標記。預設舊 capture 入口僅供將於 WP7 移除的歷史流程；不執行目標 JSP、Java 或 JavaScript。契約與限制見 [ADR 0018](docs/adr/0018-complete-reconstructed-preview.md)。
+每畫面的警告上限可用 `--style-element-limit=50000`、`--style-byte-limit=16777216` 調整；超量產生診斷，完整元素／樣式保留。安全路徑、來源檔大小與截圖硬限制仍生效，失敗明確標記。預設舊 capture 入口保留為歷史工具；正式 CLI 使用完整模式並執行 pack-preview 靜態封裝；不執行目標 JSP、Java 或 JavaScript。契約與限制見 [ADR 0018](docs/adr/0018-complete-reconstructed-preview.md)。
 
 ### 單檔檢視器建置（WP7）
 
@@ -342,4 +344,6 @@ npm --prefix screentrace-viewer test
 node --test screentrace-viewer/test/*.e2e.mjs
 ```
 
-新入口 `SingleHtmlReportGenerator.generate` 只接受嚴格 schema 2.2，注入圖、預覽、內嵌文件與 manifest，產出 `report/screentrace-report.html` 及實際 bytes 的 `report-size.json`；超過 100 MB 只警告。單檔以 `file://` 開啟，沒有執行期 npm 相依。A–D 與舊 CLI 報表並存，E 才切換正式 CLI 並移除舊碼。設定 `ST_BROWSERS=chromium,firefox,webkit` 可執行三引擎測試，須先安裝對應 Playwright 瀏覽器。
+新入口 `SingleHtmlReportGenerator.generate` 只接受嚴格 schema 2.2，注入圖、預覽、內嵌文件與 manifest，產出 `report/screentrace-report.html` 及實際 bytes 的 `report-size.json`；超過 100 MB 只警告。單檔以 `file://` 開啟，沒有執行期 npm 相依。CLI 已切換 SingleHtmlAnalysisWriter；舊 ReportGenerator、localhost 與 POST 端點已移除。設定 `ST_BROWSERS=chromium,firefox,webkit` 可執行三引擎測試，須先安裝對應 Playwright 瀏覽器。
+
+確認模式的決策自動暫存在應用名稱＋分析指紋的 localStorage；拒絕存取時只警告。複合鍵契約見 [REVIEW_STATE_CONTRACT](docs/REVIEW_STATE_CONTRACT.md)。既有 CLI JSON export 仍為歷史入口至 WP8，不讀取新檢視器的 localStorage；新 review 決策目前以同一瀏覽器暫存保存。

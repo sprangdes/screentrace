@@ -5,10 +5,10 @@
 The current implementation analyzes server-rendered JSP applications using Struts 1, Spring MVC, Spring Boot, or their supported combinations.
 
 ```text
-Target source (read-only) -> scanner -> selected Spring and/or Struts adapter -> ApplicationGraph JSON -> localhost report
+Target source (read-only) -> scanner -> selected Spring and/or Struts adapter -> ApplicationGraph JSON -> embedded standalone HTML
 ```
 
-`screentrace-core` has no Spring dependency. `screentrace-scanner` inventories files and technology signals only. `screentrace-parser-jsp` is the shared, framework-neutral parser for JSP, JSPF, literal interactive targets, JSP includes, Tiles definitions, and literal Spring URL-tag variables. `screentrace-adapter-spring` consumes that contribution and adds annotation and XML Controller endpoint correlation, `SimpleUrlHandlerMapping`, `InternalResourceViewResolver`, and Tiles view resolution. `screentrace-adapter-struts` consumes the same contribution, resolves Struts 1 Action mappings, ActionForms, local/global forwards, and Spring XML-managed Action beans. A project with Struts and annotation-based Spring MVC/Boot combines both contributions through the core graph merger; a classic Struts + Spring XML project is resolved directly by the Struts adapter. The static JSP renderer expands supported local markup and resources into `static-preview/`; Playwright Chromium then captures each rendered page, all DOM elements, deduplicated computed-style differences and graph-component correspondence without starting the target application. `screentrace-report` reads only the Application Graph, Prototype, and Preview contracts (plus the user-owned edit overlay) in the browser. `screentrace-cli` persists the workspace configuration in `~/.screentrace/config.json`, writes each result to `<output-root>/<project-name>/`, and hosts every report on an available loopback port.
+`screentrace-core` has no Spring dependency. `screentrace-scanner` inventories files and technology signals only. `screentrace-parser-jsp` is the shared, framework-neutral parser for JSP, JSPF, literal interactive targets, JSP includes, Tiles definitions, and literal Spring URL-tag variables. `screentrace-adapter-spring` consumes that contribution and adds annotation and XML Controller endpoint correlation, `SimpleUrlHandlerMapping`, `InternalResourceViewResolver`, and Tiles view resolution. `screentrace-adapter-struts` consumes the same contribution, resolves Struts 1 Action mappings, ActionForms, local/global forwards, and Spring XML-managed Action beans. A project with Struts and annotation-based Spring MVC/Boot combines both contributions through the core graph merger; a classic Struts + Spring XML project is resolved directly by the Struts adapter. The static JSP renderer expands supported local markup and resources into `static-preview/`; Playwright Chromium then captures each rendered page, all DOM elements, deduplicated computed-style differences and graph-component correspondence without starting the target application. `screentrace-report` strictly validates schema 2.2 and injects Graph, Preview, asset dictionaries and manifest into a compiled `screentrace-viewer` template. `screentrace-cli` persists the workspace configuration in `~/.screentrace/config.json`, writes each result to `<output-root>/<project-name>/`, and opens the single report HTML with file://; no report server runs.
 
 ## Prototype and Edit Mode
 
@@ -24,7 +24,7 @@ review-result.json       version-2 review decisions and migration metadata (on e
 
 `edit-overlay.json` is initialized once and never overwritten by later analyses. Operations (`HIDE`, `UPDATE`, `MOVE`, `ADD`) target stable prototype component IDs.
 
-CLI and authenticated browser exports share `ReviewResultGenerator`. The version-2 review contract combines decisions with graph-derived API contracts, direct navigation, source locations, and existing preview metadata. It never re-parses target source or assigns review decisions to APIs. See [Review result contract](REVIEW_RESULT_CONTRACT.md) for schema, provenance, missing-data behavior, and ordering.
+The historical CLI JSON export uses `ReviewResultGenerator` until WP8; its authenticated browser POST endpoint has been removed. The new viewer stores composite decisions in localStorage and does not consume the historical overlay. The version-2 review contract combines decisions with graph-derived API contracts, direct navigation, source locations, and existing preview metadata. It never re-parses target source or assigns review decisions to APIs. See [Review result contract](REVIEW_RESULT_CONTRACT.md) for schema, provenance, missing-data behavior, and ordering.
 
 ## 1. Architectural Goal
 
@@ -78,10 +78,10 @@ screentrace-parser-jsp ──→ screentrace-adapter-struts
                          靜態 HTML / Chromium 截圖
                                     ↓
                          screentrace-cli
-                         工作區 / 指令 / localhost 報表
+                         工作區 / 指令 / file:// 單檔 HTML
 ```
 
-JavaScript AST 分析模組 screentrace-js 已建立（WP4 增量一）；單一 HTML 檢視器由 WP7 新增。目前報表仍需 CLI 的 localhost 伺服器；「standalone」表示工具獨立於目標專案建置，不代表現有報表已符合單一離線 HTML 的驗收。
+JavaScript AST 分析模組 screentrace-js 已建立（WP4 增量一）；單一 HTML 檢視器由 WP7 新增。WP7 單檔可離線直接開啟；圖／預覽／CSS／圖片／字型與 bundle 全部內嵌，沒有 localhost 或 fetch 相對資源。
 
 ## 3. 模組責任
 
@@ -107,7 +107,7 @@ JavaScript AST 分析模組 screentrace-js 已建立（WP4 增量一）；單一
 
 ### screentrace-report
 
-產生圖、Prototype、Preview、靜態報表與 version-2 review JSON。現行 HTML/JS/CSS 內嵌於 `ReportGenerator`；WP7 將以獨立檢視器取代，WP8 將以 md 匯出取代 JSON。
+SingleHtmlAnalysisWriter 彙整嚴格圖／Preview 與靜態封裝；SingleHtmlReportGenerator 只注入資料並驗證建置雜湊。舊 ReportGenerator／PreviewModelGenerator／樣式資源已於 WP7 E 移除。ReviewResultGenerator 歷史 JSON 入口保留至 WP8。
 
 ### screentrace-cli
 
@@ -127,11 +127,11 @@ Node 模組，使用 Playwright 1.55.1；靜態化 JSP、展開支援的標記�
 
 ### screentrace-server（規劃中）
 
-未建立獨立 REST server。現有 localhost HTTP server 位於 CLI，WP7 要求移除報表伺服器，並非承諾新增此模組。
+未建立獨立 REST server。原 CLI localhost HTTP server 已於 WP7 E 移除，沒有新增此模組。
 
 ### screentrace-ui（規劃中）
 
-未建立此模組；目前 UI 位於 report。WP7 指定新增的名稱是 `screentrace-viewer`。
+未建立此模組；正式 UI 位於 screentrace-viewer。WP7 指定新增的名稱是 `screentrace-viewer`。
 
 ### 後續工作包指定的新模組（規劃中）
 
@@ -549,8 +549,8 @@ UrlGraphContribution 對 canonical API／表單請求套用共用引擎，保留
 
 ### WP5 增量四與歷史入口
 
-所有 adapter／CLI 新分析回傳 2.2 並通過 requireAnalysis。合併嚴格 2.2 輸入／輸出均驗證；混合版本與缺證據 2.2 拒絕，兩份 2.1 僅回傳明確標示的歷史圖，不升版。相同行為的證據合併、不同結果不擇一，CLI 再執行共用 URL 配對。現有 ReportGenerator／ReviewResultGenerator 為 Deprecated 歷史入口，2.1 輸出有版本／證據限制；WP7／WP8 新程式只接受嚴格 2.2，並隨舊碼移除舊入口與測試。見 ADR 0015／0016。
+所有 adapter／CLI 新分析回傳 2.2 並通過 requireAnalysis。合併嚴格 2.2 輸入／輸出均驗證；混合版本與缺證據 2.2 拒絕，兩份 2.1 僅回傳明確標示的歷史圖，不升版。相同行為的證據合併、不同結果不擇一，CLI 再執行共用 URL 配對。ReportGenerator 歷史入口與原測試已於 WP7 E 移除；ReviewResultGenerator 保留 Deprecated 歷史入口至 WP8，2.1 輸出有版本／證據限制；新檢視器／共用 review 模組只接受嚴格 2.2。見 ADR 0015／0016。
 
 ### screentrace-viewer
 
-WP7 新單檔檢視器；TypeScript 7.0.2／esbuild 0.28.2 僅建置期，執行期無 UI 框架。Java SingleHtmlReportGenerator 嚴格 2.2，僅注入資料並驗證建置 script 雜湊。單檔 file:// 不 fetch 任何資源；CSP style-src unsafe-inline 依 v1.5 授權，script-src 僅雜湊，srcdoc sandbox 不含 allow-scripts。舊 ReportGenerator 與 server 於增量 E 才移除。
+WP7 新單檔檢視器；TypeScript 7.0.2／esbuild 0.28.2 僅建置期，執行期無 UI 框架。Java SingleHtmlReportGenerator 嚴格 2.2，僅注入資料並驗證建置 script 雜湊。單檔 file:// 不 fetch 任何資源；CSP style-src unsafe-inline 依 v1.5 授權，script-src 僅雜湊，srcdoc sandbox 不含 allow-scripts。E 已移除舊 ReportGenerator 與 server。B 自製 SCC 分層；C srcdoc 及全部樣式／來源面板；D review 共用模組；E API 頁。資料／版本契約見 REVIEW_STATE_CONTRACT，設計見 ADR 0019–0021。

@@ -3,7 +3,8 @@ import {element,text} from './text';
 import {indexGraph} from './map';
 import {canvas,fileTree} from './canvas';
 import {focusRelation} from './relations';
-import {screenPanel,elementDetail} from './details';
+import {apiPage} from './api-page';
+import {screenPanel,elementDetail,apiDetail} from './details';
 import {previewDocument,previewElement} from './preview';
 import {emptyReview,loadReview,saveReview,screenDecision,componentDecision,effectiveComponent,setScreen,setComponent,statistics,markableComponents,conflicts,StorageLike} from './shared/review';
 import {decisionControl,decisionLabel} from './review-ui';
@@ -16,6 +17,7 @@ try {
  nav.setAttribute('aria-label','主要導覽');panel.append(element('h2',text.info));
  const screens=element('button',text.screens),apis=element('button',text.apis),overview=element('button',text.overview),files=element('button',text.files),search=element('input');
  search.type='text';search.setAttribute('aria-label',text.search);search.placeholder=text.search;nav.append(screens,apis,overview,files,search);
+ const diagnostics=[...(graph.diagnostics||[]),...(payload.preview.diagnostics||[]),...(Array.isArray(payload.manifest.diagnostics)?payload.manifest.diagnostics:[])];if(diagnostics.length){const box=element('details',undefined,'analysis-diagnostics');const codes=diagnostics.map(d=>typeof d==='object'&&d?String((d as {code?:string}).code||''):String(d));box.append(element('summary',`${text.diagnostics} (${diagnostics.length}) ${codes.join(' / ')}`),element('pre',JSON.stringify(diagnostics,null,2)));nav.append(box);}
  let mode='overview',current:string|undefined;const history:string[]=[];
  let storage:StorageLike|undefined;try{storage=window.localStorage;}catch{}const restored=loadReview(storage,graph,payload.fingerprint);let reviewState=restored.state,review=false;
  const warning=element('p',restored.warning,'storage-warning'),stats=element('div',undefined,'review-statistics'),conflictList=element('div',undefined,'conflicts');nav.append(warning,stats,conflictList);
@@ -39,6 +41,7 @@ try {
   screenPanel(panel,index,payload,id,focus);if(review){const section=element('section',undefined,'component-decisions');section.append(element('h3',text.components));for(const key of markableComponents(graph).filter(k=>k.screenId===id)){const effective=effectiveComponent(reviewState,id,key.componentId);if(filter.value!=='ALL'&&effective!==filter.value)continue;const entry=element('div',undefined,'component-review');entry.append(decisionControl(index.nodes.get(key.componentId)!.name,componentDecision(reviewState,id,key.componentId),value=>{reviewState=setComponent(reviewState,id,key.componentId,value);changed();},undefined,key.componentId));if(effective==='INHERITED_REMOVE')entry.append(element('span',text.inherited));section.append(entry);}panel.append(section);}summaries();
  };
  const show=()=>{current=undefined;const options={visible:review&&filter.value!=='ALL'?new Set(index.screens.filter(s=>screenDecision(reviewState,s.id)===filter.value).map(s=>s.id)):undefined,decorate:review?decorate:undefined};main.replaceChildren(mode==='files'?fileTree(index,search.value,focus,options):canvas(index,payload,search.value,focus,options));panel.replaceChildren(element('h2',text.info));};
+ apis.onclick=()=>{current=undefined;main.replaceChildren(apiPage(index,reviewState,id=>apiDetail(panel,index,id,()=>panel.replaceChildren(element('h2',text.info)),focus)));panel.replaceChildren(element('h2',text.info));};
  overview.onclick=()=>{mode='overview';show();};files.onclick=()=>{mode='files';show();};screens.onclick=show;search.oninput=show;toggle.onchange=()=>{review=toggle.checked;summaries();if(current)focus(current);else show();};filter.onchange=()=>{if(current)focus(current);else show();};
  summaries();show();shell.append(nav,main,panel);root.replaceChildren(shell);root.dataset.ready='true';
 } catch(error){root.replaceChildren(element('p',String(error)));root.dataset.error='true';}

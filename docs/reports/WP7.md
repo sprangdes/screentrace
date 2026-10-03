@@ -8,7 +8,7 @@
 
 新增建置、注入與安全測試；既有斷言未修改。實際 bytes 大小報告及 >100 MB 警告閾值有測試。無未決需求。B–E 尚未開始；A 推送後取得遠端全綠才進入 B。
 
-A gate：`9d54f1a`，[遠端全綠](https://github.com/sprangdes/screentrace/actions/runs/37101737010)，三引擎安全测试、npm audit、Dependency-Check 通過。
+A gate：`9d54f1a`，[遠端全綠](https://github.com/sprangdes/screentrace/actions/runs/37101737010)，三引擎安全測試、npm audit、Dependency-Check 通過。
 
 ## B 總覽畫布與檔案結構
 
@@ -32,4 +32,20 @@ C 最終 gate：`62bcd38`，[遠端全綠](https://github.com/sprangdes/screentr
 
 共用 shared/review.ts 定義格式 v1、schema 2.2 與巢狀 `(screenId, componentId)` 字典；契約見 [REVIEW_STATE_CONTRACT](../REVIEW_STATE_CONTRACT.md)。明確三態、有效隨畫面移除、統計、畫面／元件篩選、衝突警告及應用＋圖指紋 localStorage。未知 ID 保存；非法／失敗暫存僅警告；不突變圖與元件決策。WP8 的 md 功能未實作。
 
-先失敗：共享模組不存在、兩項 E2E 缺 review checkbox。最終 8 項 unit（含 162 組 API 狀態、prototype／非法資料測試）、8 項 Chromium E2E、3 項 Java 注入測試通過；既有斷言未修改。E2E 同一共用元件在兩個畫面各有不同決策，画面 REMOVE 後元件 KEEP 保留，重新開啟還原，localStorage 拒絕仍可操作。
+先失敗：共享模組不存在、兩項 E2E 缺 review checkbox。最終 8 項 unit（含 162 組 API 狀態、prototype／非法資料測試）、8 項 Chromium E2E、3 項 Java 注入測試通過；既有斷言未修改。E2E 同一共用元件在兩個畫面各有不同決策，畫面 REMOVE 後元件 KEEP 保留，重新開啟還原，localStorage 拒絕仍可操作。
+
+D gate：`712ff12`，[遠端全綠](https://github.com/sprangdes/screentrace/actions/runs/37103503638)。
+
+## E API 頁與移除舊碼
+
+新增 API 表格／方法／路徑／處理器／狀態／來源數量、搜尋／篩選／排序，依畫面分組的 caller 可跳轉並高亮元件；UNREFERENCED 固定靜態分析限制文案，不給 API 決策。SingleHtmlAnalysisWriter 串接嚴格圖、WP6 Preview、靜態 pack 資源到單檔；CLI 開啟 file://。移除舊 ReportGenerator／PreviewModelGenerator／workflow-canvas.css、localhost／HTTP POST／PUT 與 token、obsolete 測試。保留長期 core／adapter／安全 Reader 斷言；完整退場清單見 [ADR 0021](../adr/0021-retire-historical-viewer.md)。
+
+先失敗：API 頁沒有資料列；Java 缺新 Writer／舊 server 尚在；CLI 以模組工作目錄找不到 capture 工具；兩平台 launcher 未建置 viewer。依失敗修正後：199 Java、viewer 12 unit、14 Chromium E2E、33 capture／文件與 40 JS parser tests 全通過。實際 >100 MB HTML 仍寫完整檔與警告，非只測閾值。惡意 API path／行為 JS 原文以 textContent 展示，不觸發探針或外部請求。500／5,000／3,000 fixture 初次渲染 188.8 ms、縮放中位數 <1 ms（本機）；遠端仍強制 ≤3 秒。
+
+正式 CLI 新分析輸出 2.2 並嚴格驗證；新 viewer／共用 review 不接受 2.1。歷史 JSON export 尚保留至 WP8，不讀新 localStorage；沒有 md 匯出／匯入或元件庫匯入。PowerShell 原始碼與順序有測試，但本機 macOS 未執行 Windows launcher。無新增未決需求。最終 push／CI gate 完成後於 WP7 停止。
+
+E 補足：歧義行為的全部候選於詳情缺漏（新增測試先失敗），新增完整 evidence 顯示，不擇一；畫面 evidence 也保留 Tiles 等定義來源。
+
+E 正式 CSS 同樣以 data URI 雜湊字典去重（先缺新入口而 unit 失敗，再實作）；srcdoc 解析巢狀資源，CSP style-src 僅增加本地 data:，沒有放寬 script-src。C 的 inline serializer 舊 fixture 入口依 OQ-006 通則保留原斷言，正式 CLI 明確使用新入口，有 static／unit／E2E 證明。
+
+E 保留 ProductionSchemaTest 混合 Spring／Struts 分析的原 fixture 與全部分析斷言，只移除已退場 ReportGenerator 的報表尾段。API 未綁定 click 來源顯示為未解析而非載入時，直接 CALLS／TRIGGERS 顯示實際 source 檔案＋行號。全域分析／預覽／資源診斷以安全文字呈現。

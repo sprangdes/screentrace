@@ -22,7 +22,7 @@ public final class SingleHtmlReportGenerator {
     var data=new TreeMap<String,Object>();data.put("graph",graph);data.put("preview",preview);data.put("documents",new TreeMap<>(documents));data.put("manifest",new TreeMap<>(manifest));
     data.put("fingerprint",HexFormat.of().formatHex(digest(json.writeValueAsString(graph))));
     String encoded=json.writeValueAsString(data).replace("<","\\u003c").replace("\u2028","\\u2028").replace("\u2029","\\u2029");
-    String csp="default-src 'none'; script-src 'sha256-"+hash+"'; style-src 'unsafe-inline'; img-src data:; font-src data:; connect-src 'none'; frame-src 'self' data:; object-src 'none'; base-uri 'none'; form-action 'none'";
+    String csp="default-src 'none'; script-src 'sha256-"+hash+"'; style-src 'unsafe-inline' data:; img-src data:; font-src data:; connect-src 'none'; frame-src 'self' data:; object-src 'none'; base-uri 'none'; form-action 'none'";
     String html=resource("template.html").replace("<!--ST_CSP-->",csp).replace("<!--ST_STYLE-->",resource("viewer.css")).replace("<!--ST_DATA-->",encoded).replace("<!--ST_SCRIPT-->",script);
     Files.createDirectories(output);Path directory=SafeProjectFiles.requireWritePathWithin(output,output.resolve("report"));Files.createDirectories(directory);
     Path file=SafeProjectFiles.requireWritePathWithin(output,directory.resolve("screentrace-report.html"));Files.writeString(file,html,StandardCharsets.UTF_8);

@@ -1,41 +1,23 @@
 package io.screentrace.cli;
 
-import com.sun.net.httpserver.HttpExchange;
-import com.sun.net.httpserver.HttpServer;
 import io.screentrace.adapter.spring.SpringProjectAnalyzer;
 import io.screentrace.adapter.struts.StrutsProjectAnalyzer;
 import io.screentrace.core.ApplicationGraph;
 import io.screentrace.core.ApplicationGraphMerger;
-import io.screentrace.report.ReportGenerator;
+import io.screentrace.report.SingleHtmlAnalysisWriter;
 import io.screentrace.report.ReviewResultGenerator;
 import io.screentrace.scanner.ProjectScanner;
 import io.screentrace.scanner.SafeProjectFiles;
 import java.awt.Desktop;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
-import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
-import java.util.UUID;
 import java.util.concurrent.TimeUnit;
-import java.security.MessageDigest;
-import java.util.Base64;
-import java.nio.charset.StandardCharsets;
 import java.util.logging.Logger;
 
 /** Interactive entry point plus scriptable analyze, report, export, and config commands. */
 public final class ScreenTraceCli {
-  static final int MAX_OVERLAY_BYTES = 1_048_576;
-  static final long MAX_SERVED_FILE_BYTES = 64L * 1024 * 1024;
-  static final InetAddress REPORT_ADDRESS = InetAddress.getLoopbackAddress();
-  private static final String INDEX_FILE = "index.html";
-  private static final String JSON_CONTENT_TYPE = "application/json";
-  private static final String HTML_CONTENT_TYPE = "text/html; charset=utf-8";
   private static final Logger LOGGER = Logger.getLogger(ScreenTraceCli.class.getName());
 
   public static void main(String[] args) throws IOException, InterruptedException {
@@ -59,9 +41,9 @@ public final class ScreenTraceCli {
       if (command.action() == Action.ANALYZE) {
         AnalysisResult result = analyze(project,settings);
         logAnalysis(result);
-        serve(result.report());
+        openReport(result.report());
       }
-      else if (command.action() == Action.REPORT) serve(project.analysisDirectory().resolve("report"));
+      else if (command.action() == Action.REPORT) openReport(new SingleHtmlAnalysisWriter().generate(project.analysisDirectory()).path());
       else logExport(export(project));
     }
   }
@@ -95,11 +77,10 @@ public final class ScreenTraceCli {
             result.components(), result.output());
         report = result.report();
       } else {
-        report = project.analysisDirectory().resolve("report");
+        report = new SingleHtmlAnalysisWriter().generate(project.analysisDirectory()).path();
       }
-      try (RunningReport running = startReport(report)) {
-        console.waitForReportClose(running.url());
-      }
+      openReport(report);
+      console.waitForMenuReturn(report.toUri().toString());
     }
   }
 
@@ -157,15 +138,18 @@ public final class ScreenTraceCli {
     Path output = project.analysisDirectory();
     var inventory = new ProjectScanner().scan(project.sourceDirectory()).withContextPaths(settings.contextPathsFor(project.sourceDirectory()),settings.contextPathsLine());
     var graph = io.screentrace.core.GraphIntegrityValidator.requireAnalysis(analyze(inventory));
-    new ReportGenerator().write(graph, output);
-    if (graph.application().technologies().contains("JSP")) {
+    var writer = new SingleHtmlAnalysisWriter();
+    writer.prepare(graph, output);
+    if (graph.application().technologies().contains("JSP") || graph.nodes().stream().anyMatch(n -> n.type() == ApplicationGraph.NodeType.SCREEN && n.attributes().getOrDefault("view", "").endsWith(".html"))) {
       renderStaticJsp(project.sourceDirectory(), output);
-      new ReportGenerator().write(graph, output);
+      packPreview(output);
     }
+    var report = writer.generate(graph, output);
+    if (report.warning()) LOGGER.warning("單一 HTML 超過 100 MB，仍完整產出：" + report.bytes() + " bytes");
     long screens = graph.nodes().stream().filter(node -> node.type().name().equals("SCREEN")).count();
     long endpoints = graph.nodes().stream().filter(node -> node.type().name().equals("ENDPOINT")).count();
     long components = graph.nodes().stream().filter(node -> node.type().name().equals("COMPONENT")).count();
-    return new AnalysisResult(output.resolve("report"), project.name(), graph.application().technologies(), endpoints,
+    return new AnalysisResult(report.path(), project.name(), graph.application().technologies(), endpoints,
         screens, components, output);
   }
 
@@ -188,12 +172,12 @@ public final class ScreenTraceCli {
 
   @SuppressWarnings("java:S4036")
   private static void renderStaticJsp(Path target, Path output) throws IOException, InterruptedException {
-    Process process = new ProcessBuilder("node", Path.of("screentrace-capture/capture-static-jsp.mjs").toAbsolutePath().toString(), target.toString(), output.toString(), "--preview-v2").inheritIO().start();
+    Process process = new ProcessBuilder("node", captureTool("capture-static-jsp.mjs").toString(), target.toString(), output.toString(), "--preview-v2").inheritIO().start();
     if (!process.waitFor(120, TimeUnit.SECONDS)) {
       process.destroy();
       if (!process.waitFor(2, TimeUnit.SECONDS)) process.destroyForcibly();
-      LOGGER.warning("JSP 靜態預覽逾時；報表會改用原始碼預覽。");
-    } else if (process.exitValue() != 0) LOGGER.warning("無法建立 JSP 靜態預覽；報表會改用原始碼預覽。");
+      LOGGER.warning("JSP 靜態預覽逾時；未取得預覽的畫面將明確標記。");
+    } else if (process.exitValue() != 0) LOGGER.warning("無法建立 JSP 靜態預覽；未取得預覽的畫面將明確標記。");
   }
 
   private static Path export(ProjectCatalog.Project project) throws IOException {
@@ -206,213 +190,34 @@ public final class ScreenTraceCli {
     LOGGER.info(() -> "確認功能結果已匯出：\n  " + destination);
   }
 
-  private static void serve(Path report) throws IOException {
-    RunningReport running = startReport(report);
-    LOGGER.info("ScreenTrace report running at:\n\n" + running.url());
-  }
-
-  private static RunningReport startReport(Path report) throws IOException {
-    if (!Files.isDirectory(report)) throw new IllegalArgumentException("找不到報表：" + report);
-    HttpServer server = HttpServer.create(new InetSocketAddress(REPORT_ADDRESS, 0), 0);
-    int port = server.getAddress().getPort();
-    Path analysis = report.getParent();
-    Path overlay = analysis.resolve("edit-overlay.json");
-    String sessionToken = UUID.randomUUID().toString();
-    server.createContext("/edit-overlay.json", exchange -> handleOverlay(exchange, overlay, sessionToken));
-    server.createContext("/review-result.json", exchange -> handleReviewResult(exchange, analysis, overlay, sessionToken));
-    server.createContext("/", exchange -> serveStatic(exchange, report, analysis, sessionToken));
-    server.start();
-    String url = "http://localhost:" + port;
-    openReport(url);
-    return new RunningReport(server, url);
-  }
-
-  private record RunningReport(HttpServer server, String url) implements AutoCloseable {
-    @Override public void close() { server.stop(0); }
-  }
-
-  private static void handleOverlay(HttpExchange exchange, Path overlay, String sessionToken) throws IOException {
-    secure(exchange);
-    if (!validHost(exchange)) { exchange.sendResponseHeaders(403, -1); exchange.close(); return; }
-    if (exchange.getRequestMethod().equals("PUT")) {
-      if (!authorizedMutation(exchange, sessionToken) || !writeOverlay(exchange, overlay)) return;
-      exchange.sendResponseHeaders(204, -1);
-      exchange.close();
-      return;
+  private static Path captureTool(String name) throws IOException {
+    for (Path root = Path.of("").toAbsolutePath(); root != null; root = root.getParent()) {
+      Path tool = root.resolve("screentrace-capture").resolve(name);
+      if (Files.isRegularFile(tool)) return SafeProjectFiles.requireExistingRegularFileWithin(root, tool);
     }
-    if (!exchange.getRequestMethod().equals("GET") || Files.isSymbolicLink(overlay)) {
-      exchange.sendResponseHeaders(exchange.getRequestMethod().equals("GET") ? 404 : 405, -1);
-      exchange.close();
-      return;
-    }
-    sendFile(exchange, overlay, JSON_CONTENT_TYPE);
+    throw new IOException("找不到預覽工具：" + name);
   }
 
-  private static void handleReviewResult(HttpExchange exchange, Path analysis, Path overlay, String sessionToken) throws IOException {
-    secure(exchange);
-    if (!validHost(exchange)) { exchange.sendResponseHeaders(403, -1); exchange.close(); return; }
-    if (!exchange.getRequestMethod().equals("POST")) {
-      exchange.sendResponseHeaders(405, -1);
-      exchange.close();
-      return;
+  private static void packPreview(Path output) throws IOException, InterruptedException {
+    if (!Files.exists(output.resolve("static-preview/manifest.json"))) return;
+    Process process = new ProcessBuilder("node", captureTool("pack-preview.mjs").toString(), output.toString()).inheritIO().start();
+    if (!process.waitFor(120, TimeUnit.SECONDS)) {
+      process.destroy();
+      if (!process.waitFor(2, TimeUnit.SECONDS)) process.destroyForcibly();
+      throw new IOException("預覽資源封裝逾時");
     }
-    if (!authorizedMutation(exchange, sessionToken) || !writeOverlay(exchange, overlay)) return;
-    Path result = new ReviewResultGenerator().write(analysis, analysis.resolve("review-result.json"));
-    exchange.getResponseHeaders().set("Content-Disposition", "attachment; filename=review-result.json");
-    sendFile(exchange, result, JSON_CONTENT_TYPE);
+    if (process.exitValue() != 0) throw new IOException("預覽資源封裝失敗");
   }
 
-  private static boolean writeOverlay(HttpExchange exchange, Path overlay) throws IOException {
+  private static void openReport(Path file) throws IOException {
+    Path safe = SafeProjectFiles.requireExistingRegularFileWithin(file.getParent(), file);
+    LOGGER.info("單一 HTML 報表：" + safe.toUri());
     try {
-      if (Files.isSymbolicLink(overlay)) {
-        exchange.sendResponseHeaders(404, -1);
-        exchange.close();
-        return false;
-      }
-      Files.write(overlay, readLimited(exchange.getRequestBody()));
-      return true;
-    } catch (RequestTooLargeException ignored) {
-      exchange.sendResponseHeaders(413, -1);
-      exchange.close();
-      return false;
-    }
-  }
-
-  private static boolean authorizedMutation(HttpExchange exchange, String sessionToken) throws IOException {
-    if (hasMutationToken(exchange.getRequestHeaders().getFirst("X-ScreenTrace-Token"), sessionToken)) return true;
-    exchange.sendResponseHeaders(403, -1);
-    exchange.close();
-    return false;
-  }
-
-  static boolean hasMutationToken(String suppliedToken, String sessionToken) { return sessionToken.equals(suppliedToken); }
-
-  private static void serveStatic(HttpExchange exchange, Path report, Path analysis, String sessionToken) throws IOException {
-    secure(exchange);
-    if (!validHost(exchange)) { exchange.sendResponseHeaders(403, -1); exchange.close(); return; }
-    Path requested = staticFile(exchange.getRequestURI().getPath(), report, analysis);
-    if (requested == null || !Files.isRegularFile(requested)) {
-      exchange.sendResponseHeaders(404, -1);
-      exchange.close();
-      return;
-    }
-    if (requested.equals(report.resolve(INDEX_FILE))) {
-      if (Files.size(requested) > 16L * 1024 * 1024) { exchange.sendResponseHeaders(413, -1); exchange.close(); return; }
-      byte[] body = Files.readString(requested).replace("__SCREEN_TRACE_SESSION_TOKEN__", sessionToken).getBytes(StandardCharsets.UTF_8);
-      exchange.getResponseHeaders().set("Content-Security-Policy", reportCsp(body));
-      exchange.getResponseHeaders().set("Content-Type", HTML_CONTENT_TYPE);
-      exchange.sendResponseHeaders(200, body.length);
-      exchange.getResponseBody().write(body);
-      exchange.close();
-      return;
-    }
-    sendFile(exchange, requested, contentType(requested));
-  }
-
-  static Path staticFile(String uri, Path report, Path analysis) {
-    if (uri.equals("/")) return report.resolve(INDEX_FILE);
-    if (uri.equals("/application-graph.json") || uri.equals("/prototype-model.json") || uri.equals("/preview-model.json")) return resolveWithin(analysis, uri.substring(1));
-    if (uri.startsWith("/static-preview/")) return resolveWithin(analysis.resolve("static-preview"), uri.substring("/static-preview/".length()));
-    if (uri.startsWith("/screenshots/")) return resolveWithin(analysis.resolve("screenshots"), uri.substring("/screenshots/".length()));
-    return resolveWithin(report, uri.substring(1));
-  }
-
-  static Path resolveWithin(Path root, String relativePath) {
-    Path normalizedRoot = root.toAbsolutePath().normalize();
-    Path resolved = normalizedRoot.resolve(relativePath).normalize();
-    if (!resolved.startsWith(normalizedRoot)) return null;
-    try {
-      if (!Files.exists(resolved)) return resolved;
-      Path realRoot = normalizedRoot.toRealPath();
-      Path realResolved = resolved.toRealPath();
-      return realResolved.startsWith(realRoot) ? resolved : null;
-    } catch (IOException | SecurityException ignored) {
-      return null;
-    }
-  }
-
-  static byte[] readLimited(InputStream input) throws IOException {
-    try (input; ByteArrayOutputStream output = new ByteArrayOutputStream()) {
-      byte[] buffer = new byte[8192];
-      long total = 0;
-      int read;
-      while ((read = input.read(buffer)) != -1) {
-        total += read;
-        if (total > MAX_OVERLAY_BYTES) throw new RequestTooLargeException();
-        output.write(buffer, 0, read);
-      }
-      return output.toByteArray();
-    }
-  }
-
-  private static void sendFile(HttpExchange exchange, Path file, String contentType) throws IOException {
-    long size = Files.size(file);
-    if (size > MAX_SERVED_FILE_BYTES) { exchange.sendResponseHeaders(413, -1); exchange.close(); return; }
-    exchange.getResponseHeaders().set("Content-Type", contentType);
-    if (exchange.getRequestURI().getPath().startsWith("/static-preview/")) exchange.getResponseHeaders().set("Content-Security-Policy", previewCsp());
-    exchange.sendResponseHeaders(200, size);
-    try (InputStream input = Files.newInputStream(file); OutputStream response = exchange.getResponseBody()) { input.transferTo(response); }
-    finally { exchange.close(); }
-  }
-
-  private static void secure(HttpExchange exchange) {
-    var headers = exchange.getResponseHeaders();
-    headers.set("X-Content-Type-Options", "nosniff");
-    headers.set("Referrer-Policy", "no-referrer");
-    headers.set("Cache-Control", "no-store");
-    headers.set("Content-Security-Policy", previewCsp());
-  }
-
-  static String previewCsp() {
-    return "default-src 'none'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; font-src 'self'; script-src 'none'; connect-src 'none'; frame-src 'none'; object-src 'none'; media-src 'none'; base-uri 'none'; form-action 'none'";
-  }
-
-  static String reportCsp(byte[] html) {
-    String source = new String(html, StandardCharsets.UTF_8);
-    java.util.regex.Matcher scripts = java.util.regex.Pattern.compile("(?is)<script\\b(?![^>]*\\bsrc\\s*=)[^>]*>(.*?)</script\\s*>").matcher(source);
-    List<String> hashes = new java.util.ArrayList<>();
-    try {
-      while (scripts.find()) hashes.add("'sha256-" + Base64.getEncoder().encodeToString(MessageDigest.getInstance("SHA-256").digest(scripts.group(1).getBytes(StandardCharsets.UTF_8))) + "'");
-    } catch (java.security.NoSuchAlgorithmException impossible) { throw new IllegalStateException(impossible); }
-    return "default-src 'self'; script-src 'self' " + String.join(" ", hashes) + "; connect-src 'self'; img-src 'self' data:; frame-src 'self'; object-src 'none'; base-uri 'none'; style-src 'self' 'unsafe-inline'";
-  }
-
-  private static boolean validHost(HttpExchange exchange) {
-    String host = exchange.getRequestHeaders().getFirst("Host");
-    if (host == null || !(host.equalsIgnoreCase("localhost:" + exchange.getLocalAddress().getPort())
-        || host.equals("127.0.0.1:" + exchange.getLocalAddress().getPort())
-        || host.equals("[::1]:" + exchange.getLocalAddress().getPort()))) return false;
-    String origin = exchange.getRequestHeaders().getFirst("Origin");
-    return origin == null || origin.equals("http://localhost:" + exchange.getLocalAddress().getPort())
-        || origin.equals("http://127.0.0.1:" + exchange.getLocalAddress().getPort());
-  }
-
-  static String contentType(Path file) {
-    String value = file.toString();
-    if (value.endsWith(".json")) return JSON_CONTENT_TYPE;
-    if (value.endsWith(".css")) return "text/css; charset=utf-8";
-    if (value.endsWith(".js")) return "text/javascript; charset=utf-8";
-    if (value.endsWith(".svg")) return "image/svg+xml";
-    if (value.endsWith(".png")) return "image/png";
-    if (value.endsWith(".jpg") || value.endsWith(".jpeg")) return "image/jpeg";
-    if (value.endsWith(".gif")) return "image/gif";
-    if (value.endsWith(".webp")) return "image/webp";
-    if (value.endsWith(".woff")) return "font/woff";
-    if (value.endsWith(".woff2")) return "font/woff2";
-    if (value.endsWith(".ttf")) return "font/ttf";
-    if (value.endsWith(".html") || value.endsWith(".htm")) return HTML_CONTENT_TYPE;
-    return "application/octet-stream";
-  }
-
-  private static void openReport(String url) {
-    try {
-      if (Desktop.isDesktopSupported()) Desktop.getDesktop().browse(URI.create(url));
+      if (Desktop.isDesktopSupported()) Desktop.getDesktop().browse(safe.toUri());
     } catch (IOException ignored) {
-      // Opening a browser is best effort and must not prevent report serving.
+      LOGGER.info("瀏覽器無法自動開啟，請直接開啟上述 HTML 檔案。");
     }
   }
-
-  static final class RequestTooLargeException extends IOException { }
 
   private record Command(Action action, String projectName) {
     static Command parse(String[] arguments) {

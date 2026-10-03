@@ -20,4 +20,10 @@ class SingleHtmlReportGeneratorTest {
  }
  @Test void refusesHistoricalGraphBeforeWriting() throws Exception {var dir=Files.createTempDirectory("single-report-reject");var error=assertThrows(IllegalArgumentException.class,()->new SingleHtmlReportGenerator().generate(graph("2.1"),new PreviewModel("1",List.of(),List.of()),Map.of(),Map.of(),dir));assertTrue(error.getMessage().contains("2.2"));assertFalse(Files.exists(dir.resolve("report")));}
  @Test void sizeWarningDoesNotRejectLargeOutput(){assertFalse(SingleHtmlReportGenerator.sizeWarning(100_000_000));assertTrue(SingleHtmlReportGenerator.sizeWarning(100_000_001));}
+ @Test void actualHtmlOverOneHundredMegabytesIsWrittenAndOnlyWarns() throws Exception {
+  var root=Files.createTempDirectory("viewer-large-output");
+  try {var output=new SingleHtmlReportGenerator().generate(graph("2.2"),new PreviewModel("2",List.of(),List.of()),Map.of(),Map.of("largeFixture","x".repeat(100_000_001)),root);
+   assertTrue(output.warning());assertTrue(output.bytes()>100_000_000);assertEquals(Files.size(output.path()),output.bytes());assertTrue(Files.readString(root.resolve("report-size.json")).contains("超過 100 MB"));
+  } finally {try(var files=Files.walk(root)){for(var file:files.sorted(Comparator.reverseOrder()).toList())Files.delete(file);}}
+ }
 }

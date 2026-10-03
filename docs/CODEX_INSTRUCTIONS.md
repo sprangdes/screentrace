@@ -116,7 +116,7 @@
 - **C3 決定性**:同一份原始碼輸入,輸出(圖、HTML、md)MUST 位元組相同,僅 `generatedAt` 可不同。所有集合 MUST 有明確排序。
 - **C4 框架隔離**:`core` 的圖模型 MUST NOT 出現框架名稱;框架專屬語意只放在 adapter 與 evidence。
 - **C5 不可信輸入**:目標專案的所有文字(標籤、URL、路徑、JS 字串、CSS)都視為不可信。輸出 HTML MUST 僅以 `textContent` / 屬性 API 寫入,MUST NOT 使用 `innerHTML` 拼接目標內容;預覽 iframe MUST 使用 `sandbox`(不含 `allow-scripts`)。
-- **C6 輸出 HTML 的 CSP**:單一 HTML MUST 內含 CSP `<meta>`:`default-src 'none'`,`script-src` 以**建置時計算的 SHA-256 雜湊**指定(不得使用 `'unsafe-inline'`),style-src 允許 `'unsafe-inline'`（srcdoc 繼承外層 CSP）；圖片與字型限 `data:`;MUST NOT 引用任何遠端資源或 CDN。
+- **C6 輸出 HTML 的 CSP**:單一 HTML MUST 內含 CSP `<meta>`:`default-src 'none'`,`script-src` 以**建置時計算的 SHA-256 雜湊**指定(不得使用 `'unsafe-inline'`),style-src 允許 `'unsafe-inline'`（srcdoc 繼承外層 CSP）與本地內嵌樣式表 `data:`；圖片與字型限 `data:`;MUST NOT 引用任何遠端資源或 CDN。
 - **C7 路徑安全**:沿用 `SafeProjectFiles` 與 `safe-files.mjs` 的路徑限制、檔案大小上限、寫入範圍限制;新增的讀寫一律走同一套。
 - **C8 相依套件**:新增相依 MUST 釘選版本、確認授權相容、通過 CI 的 npm audit 與 Dependency-Check;每個新相依 MUST 在 ADR 說明必要性。
 - **C9 穩定 ID**:畫面、元件、行為、API 的 ID MUST 由穩定鍵(路由、來源路徑、元素種類、屬性、同類出現序)決定,重新分析後 ID 不得無故改變(review 標記靠它保存,見 WP1)。

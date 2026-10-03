@@ -1,6 +1,6 @@
-import {Graph,Node,requireGraph} from './contracts';
+import {Graph,Node,Behavior,requireGraph} from './contracts';
 export interface Relation {from:string;to:string;triggers:string[];behaviorIds:string[]}
-export interface Index {graph:Graph;nodes:Map<string,Node>;screens:Node[];owners:Map<string,string[]>;routes:Map<string,string[]>;relations:Relation[]}
+export interface Index {graph:Graph;nodes:Map<string,Node>;screens:Node[];owners:Map<string,string[]>;routes:Map<string,string[]>;relations:Relation[];behaviors:Map<string,Behavior>}
 const order=(a:string,b:string)=>a<b?-1:a>b?1:0;
 export function indexGraph(input:Graph):Index {
  const graph=requireGraph(input),nodes=new Map(graph.nodes.map(n=>[n.id,n])),screens=graph.nodes.filter(n=>n.type==='SCREEN').sort((a,b)=>order(a.id,b.id));
@@ -16,7 +16,7 @@ export function indexGraph(input:Graph):Index {
  const behaviors=new Map((graph.behaviors||[]).map(b=>[b.id,b]));
  for(const b of behaviors.values())if(b.targetId&&['NAVIGATE','SUBMIT_FORM'].includes(b.type)){let parent=b;const seen=new Set<string>();while(!parent.triggerId&&parent.parentId&&behaviors.has(parent.parentId)&&!seen.has(parent.id)){seen.add(parent.id);parent=behaviors.get(parent.parentId)!;}if(parent.triggerId)add(parent.triggerId,b.targetId,b.id);}
  const relations=[...pairs.values()].sort((a,b)=>order(a.from,b.from)||order(a.to,b.to));for(const r of relations){r.triggers=[...new Set(r.triggers)].sort(order);r.behaviorIds=[...new Set(r.behaviorIds)].sort(order);}
- return {graph,nodes,screens,owners,routes:new Map([...routes].map(([id,set])=>[id,[...set].sort(order)])),relations};
+ return {graph,nodes,screens,owners,routes:new Map([...routes].map(([id,set])=>[id,[...set].sort(order)])),relations,behaviors};
 }
 export interface Position {x:number;y:number}
 /** Tarjan SCC condensation, then stable longest-path layers; cycles occupy one layer. */

@@ -1,4 +1,6 @@
-# ScreenTrace 介面設計與自檢
+# ScreenTrace 歷史介面設計與自檢
+
+本文記錄 WP7 前的 localhost 舊檢視器。WP7 E 已移除該程式與 report-design.test.mjs，不遷移舊測試；新 file:// 自動驗證見 screentrace-viewer/test/*.e2e.mjs 與 reports/WP7.md。
 
 ## 設計基準
 

@@ -48,7 +48,7 @@ final class ProjectCatalog {
     return regular(analysis.resolve("application-graph.json"))
         && regular(analysis.resolve("prototype-model.json"))
         && regular(analysis.resolve("preview-model.json"))
-        && regular(analysis.resolve("report/index.html"));
+        && (regular(analysis.resolve("report/screentrace-report.html")) || regular(analysis.resolve("report/index.html")));
   }
 
   private static boolean regular(Path path) {

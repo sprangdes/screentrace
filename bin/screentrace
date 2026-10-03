@@ -119,11 +119,12 @@ jar="$base_dir/screentrace-cli/target/screentrace-cli-0.1.0-SNAPSHOT.jar"
 needs_build=false
 if [[ ! -f "$jar" ]]; then
   needs_build=true
-elif find "$base_dir" -path '*/target' -prune -o -path '*/node_modules' -prune -o \( -name '*.java' -o -name 'pom.xml' \) -newer "$jar" -print -quit | grep -q .; then
+elif find "$base_dir" -path '*/target' -prune -o -path '*/node_modules' -prune -o \( -name '*.java' -o -name 'pom.xml' -o -name '*.ts' -o -name '*.css' -o -name '*.html' -o -name 'build.mjs' -o -name 'package-lock.json' \) -newer "$jar" -print -quit | grep -q .; then
   needs_build=true
 fi
 if [[ "$needs_build" == true ]]; then
   echo "Building updated ScreenTrace..."
+  (cd "$base_dir/screentrace-viewer" && npm ci --ignore-scripts --no-fund && npm run build)
   (cd "$base_dir" && mvn -q -DskipTests package)
 fi
 exec java "-Dscreentrace.js.module=$base_dir/screentrace-js/cli.mjs" -jar "$jar" "$@"

@@ -16,7 +16,7 @@ interface ReviewState {
 
 `screenDecisions[screenId]` 與 `componentDecisions[screenId][componentId]` 為明確決策。缺值等於 UNDECIDED；以巢狀字典表示複合鍵，ID 不串接、不假設分隔符，也不存取繼承屬性。標記對象為全部畫面、BUTTON／LINK／SUBMIT，以及有 graph 行為／導頁／API／表單觸發的其他元件；共用元件各 owner 是獨立決策。
 
-`setScreen`／`setComponent` 回傳新狀態，不突變輸入。畫面 REMOVE 不改寫其元件；`effectiveComponent` 顯示 INHERITED_REMOVE（隨畫面移除），不寫入字典。統計分別計算明確三態，另列隨畫面移除數量。總覽／檔案树依畫面明確狀態篩選；聚焦元件依有效狀態篩選。保留元件導向移除畫面列警告，不自動修正。
+`setScreen`／`setComponent` 回傳新狀態，不突變輸入。畫面 REMOVE 不改寫其元件；`effectiveComponent` 顯示 INHERITED_REMOVE（隨畫面移除），不寫入字典。統計分別計算明確三態，另列隨畫面移除數量。總覽／檔案樹依畫面明確狀態篩選；聚焦元件依有效狀態篩選。保留元件導向移除畫面列警告，不自動修正。
 
 API 使用狀態依 R-API-1–6 推導；載入時／未解析 selector 的畫面來源不可遺失，回呼從父行為追蹤。元件來源依其 `(screenId, componentId)` 或畫面 REMOVE 視為移除；無來源為 UNREFERENCED，不授權移除。
 

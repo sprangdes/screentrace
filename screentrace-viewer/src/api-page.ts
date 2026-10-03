@@ -1,0 +1,13 @@
+import {Index} from './map';import {ReviewState,deriveApiUsage} from './shared/review';import {element,text} from './text';
+export function apiPage(index:Index,state:ReviewState,onDetail:(id:string)=>void):HTMLElement {
+ const root=element('section',undefined,'api-page');root.append(element('h2',text.apis),element('p',text.external,'notice'));
+ const search=element('input');search.type='text';search.setAttribute('aria-label',text.apiSearch);search.placeholder=text.apiSearch;
+ const filter=element('select');filter.setAttribute('aria-label',text.apiFilter);const labels={IN_USE:text.inUse,REMOVABLE:text.removable,UNREFERENCED:text.unreferenced};
+ for(const value of ['ALL','IN_USE','REMOVABLE','UNREFERENCED']as const){const option=element('option',value==='ALL'?text.all:labels[value]);option.value=value;filter.append(option);}
+ const table=element('table'),head=element('thead'),body=element('tbody'),heading=element('tr');let sort='method',ascending=true;
+ for(const [key,label]of [['method',text.method],['path',text.path],['handler',text.handlers],['status',text.status],['callers',text.callerCount]]){const th=element('th'),button=element('button',label);button.setAttribute('aria-label',`${text.sortBy}${label}${text.sortSuffix}`);button.onclick=()=>{ascending=sort===key?!ascending:true;sort=key;render();};th.append(button);heading.append(th);}
+ head.append(heading);table.append(head,body);root.append(search,filter,table);
+ const usage=deriveApiUsage(index.graph,state),records=index.graph.nodes.filter(n=>n.type==='ENDPOINT').map(n=>({id:n.id,method:n.attributes.httpMethod||n.attributes.method||'ANY',path:n.attributes.path||n.attributes.route||n.name,handler:(index.graph.relationships||[]).filter(e=>e.type==='HANDLED_BY'&&e.from===n.id).map(e=>index.nodes.get(e.to)?.name||e.to).sort().join('\n'),status:usage.get(n.id)!.status,callers:usage.get(n.id)!.callers.length}));
+ const render=()=>{const query=search.value.toLowerCase();const rows=records.filter(r=>(filter.value==='ALL'||r.status===filter.value)&&[r.method,r.path,r.handler,labels[r.status]].some(v=>v.toLowerCase().includes(query))).sort((a,b)=>{const av=a[sort as keyof typeof a],bv=b[sort as keyof typeof b];const comparison=av<bv?-1:av>bv?1:a.id<b.id?-1:a.id>b.id?1:0;return ascending?comparison:-comparison;});body.replaceChildren();for(const r of rows){const tr=element('tr',undefined,'api-row');tr.dataset.apiRow=r.id;tr.append(element('td',r.method));const path=element('td'),button=element('button',r.path);button.onclick=()=>onDetail(r.id);path.append(button);tr.append(path,element('td',r.handler||text.noHandler),element('td',labels[r.status]),element('td',String(r.callers)));body.append(tr);}};
+ search.oninput=render;filter.onchange=render;render();return root;
+}

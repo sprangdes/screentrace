@@ -13,14 +13,5 @@ class PreviewCaptureReaderTest {
  @Test void loadsCompletePreviewMetadataAndPreservesUnmappedElements() throws Exception {var baseline=new PreviewModel("1",List.of(new PreviewModel.PreviewScreen("screen","static-preview/page.html",null,1440,900)),List.of());var result=new PreviewCaptureReader().read(graph("2.2"),baseline,output());assertEquals("2",result.version());assertEquals("reconstructed",result.screens().get(0).rendering().mode());assertEquals(List.of("${name}"),result.screens().get(0).dynamicExpressions());assertTrue(result.screens().get(0).thumbnail().startsWith("data:image/png;base64,"));assertEquals(1,result.elements().size());var element=result.elements().get(0);assertEquals("screen",element.graphScreenId());assertEquals("body>span[1]",element.path());assertEquals(1.25,element.bounds().x());assertNull(element.graphComponentId());assertEquals(List.of("${allowed}"),element.conditions());assertEquals("red",result.styles().get(element.styleId()).get("color"));assertEquals("black",result.defaults().get(element.defaultId()).get("color"));assertEquals("STYLE_ELEMENT_LIMIT",result.diagnostics().get(0).code());assertEquals(1,result.screens().get(0).diagnostics().size());}
  @Test void modernPreviewReaderRejectsHistoricalGraphs() throws Exception {var root=output();var error=assertThrows(IllegalArgumentException.class,()->new PreviewCaptureReader().read(graph("2.1"),new PreviewModel("1",List.of(),List.of()),root));assertTrue(error.getMessage().contains("2.2"));assertTrue(error.getMessage().contains("2.1"));}
  @Test void rejectsDanglingStyleReferenceRatherThanDroppingElement() throws Exception {var root=output();var file=root.resolve("static-preview/element-styles.json");Files.writeString(file,Files.readString(file).replace("\"styleId\":\"style:x\"","\"styleId\":\"missing\""));assertThrows(java.io.IOException.class,()->new PreviewCaptureReader().read(graph("2.2"),new PreviewModel("1",List.of(),List.of()),root));}
- @Test void reportUsesPreviewContractForReconstructionNoticeDiagnosticsAndAllElementConditions() throws Exception {
-   var root=output();new ReportGenerator().write(graph("2.2"),root);
-   var html=Files.readString(root.resolve("report/index.html"));
-   assertTrue(html.contains("示意畫面:動態資料為範例值"));
-   assertTrue(html.contains("preview.elements"));
-   assertTrue(html.contains("screenPreview.diagnostics"));
-   assertTrue(html.contains("item.conditions"));
-   var data=new com.fasterxml.jackson.databind.ObjectMapper().readTree(root.resolve("preview-model.json").toFile());
-   assertEquals("2",data.path("version").asText());assertEquals(1,data.path("elements").size());
- }
+
 }

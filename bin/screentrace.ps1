@@ -103,7 +103,7 @@ function Test-BuildRequired([string]$jar) {
   return $null -ne (Get-ChildItem $baseDir -Recurse -File |
     Where-Object {
       $_.FullName -notmatch '[\\/](target|node_modules)[\\/]' -and
-      ($_.Name -eq 'pom.xml' -or $_.Extension -eq '.java') -and
+      ($_.Name -in @('pom.xml','build.mjs','package-lock.json') -or $_.Extension -in @('.java','.ts','.css','.html')) -and
       $_.LastWriteTimeUtc -gt $jarTime
     } |
     Select-Object -First 1)
@@ -138,6 +138,13 @@ Ensure-JsParser
 $jar = Join-Path $baseDir 'screentrace-cli\\target\\screentrace-cli-0.1.0-SNAPSHOT.jar'
 if (Test-BuildRequired $jar) {
   Write-Host 'Building updated ScreenTrace...'
+  Push-Location (Join-Path $baseDir 'screentrace-viewer')
+  try {
+    & npm ci --ignore-scripts --no-fund
+    if ($LASTEXITCODE -ne 0) { throw 'Unable to install the viewer build dependencies.' }
+    & npm run build
+    if ($LASTEXITCODE -ne 0) { throw 'Unable to build the standalone viewer.' }
+  } finally { Pop-Location }
   Push-Location $baseDir
   try {
     & mvn -q -DskipTests package

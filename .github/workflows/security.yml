@@ -29,12 +29,12 @@ jobs:
         run: |
           npm --prefix screentrace-viewer ci --ignore-scripts
           npm --prefix screentrace-viewer run build
-      - name: Build and test Java modules
-        run: mvn -B clean verify
       - name: Install viewer test browsers
         run: |
           npm --prefix screentrace-capture ci
           npm exec --prefix screentrace-capture -- playwright install --with-deps chromium firefox webkit
+      - name: Build and test Java modules
+        run: mvn -B clean verify
       - name: Test file viewer in all engines
         env:
           ST_BROWSERS: chromium,firefox,webkit
