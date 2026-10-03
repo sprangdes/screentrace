@@ -25,15 +25,15 @@ OQ-004／005／006 已處理，文件 v1.4。WP6 未開始。
 
 ## 3. 測試與結果
 
-WP5 新增 50 個 Java 測試：增量一 11、二 16、三 12、四 11。原 WP4 的 147 個合計為 **197**，0 failure／error／skip。
+WP5 新增 51 個 Java 測試：增量一 11、二 16、三 12、四 12。原 WP4 的 147 個合計為 **198**，0 failure／error／skip。
 
-- `mvn -q verify`：197 個通過。
+- `mvn -q verify`：198 個通過。
 - `npm --prefix screentrace-js test`：40 個通過。
 - `node --test screentrace-capture/{docs-baseline,safe-files,spring-resource-mappings,capture-static-jsp.security}.test.mjs`（實際以四個檔名執行）：14 個通過，含文件原文 4 個。首次 Chromium 遭 macOS sandbox MachPort 權限阻擋而 1 failure；用相同測試在允許 Chromium 啟動的權限重跑後 14 個全綠，未改測試。
 - `npm --prefix screentrace-js audit --audit-level=high`、capture 同指令：均 0 vulnerabilities。
-- `git diff --check` 通過；追蹤中的既有測試無任何 diff，連 schema 字串也未更動。
+- `git diff --check` 通過；本增量既有測試來源檔無 diff；全部 WP5 既有 fixture／斷言均未更動，連 schema 字串也未更動。
 
-先失敗紀錄：增量一缺少引擎／設定 API 編譯失敗；增量二 API／表單五項失敗，工作區證據與 reserved／隱私反例先失敗；增量三 Spring 5 failure／1 error、Struts 1 failure／1 error，DTO 歧義、groups 與動態 message 追加反例失敗。增量四 core 3 failure、CLI 2 failure、歷史報表／匯出 2 failure；兩份歷史圖標示測試 1 error，混合流程暴露行為重複貢獻及暫時 API 未清理。各項保留斷言修正後全綠。
+先失敗紀錄：增量一缺少引擎／設定 API 編譯失敗；增量二 API／表單五項失敗，工作區證據與 reserved／隱私反例先失敗；增量三 Spring 5 failure／1 error、Struts 1 failure／1 error，DTO 歧義、groups 與動態 message 追加反例失敗。增量四 core 3 failure、CLI 2 failure、歷史報表／匯出 2 failure；兩份歷史圖標示測試 1 error，混合流程暴露行為重複貢獻及暫時 API 未清理。各項保留斷言修正後全綠。最後遠端首次執行新增靜態檢查因 JavaParser 未自設 Java 17 而 1 error；補足測試設定，不改斷言。追加拒絕 Struts 2 圖的隱私測試先 1 failure，將同一隱私處理套到拒絕回傳路徑後通過。
 
 前三增量遠端 Java／Node 測試、npm audit、Dependency-Check 均 success；最後增量待遠端確認，尚不以較早 CI 代替。
 

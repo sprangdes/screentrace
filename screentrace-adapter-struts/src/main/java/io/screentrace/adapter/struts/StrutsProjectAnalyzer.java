@@ -20,7 +20,7 @@ public final class StrutsProjectAnalyzer {
     State state=new State(inventory);
     inventory=state.inventory;
     var unsupported=StrutsFrameworkDetector.unsupported(inventory);
-    if(unsupported.isPresent()) {state.diagnostics.add(unsupported.get());return GraphIntegrityValidator.requireAnalysis(state.graph());}
+    if(unsupported.isPresent()) {state.diagnostics.add(unsupported.get());return GraphIntegrityValidator.requireAnalysis(UrlGraphContribution.hidePrivateLocations(state.graph()));}
     for(String message:inventory.diagnostics()) state.diagnostics.add(StrutsSources.diagnostic(message,".",1,"SOURCE_LIMIT"));
     state.types.putAll(StrutsSources.javaTypes(inventory,state.diagnostics));
     readSpringBeans(state);

@@ -21,3 +21,5 @@ ReportGenerator、ReviewResultGenerator 標 @Deprecated，註解明定分別在 
 依新增通則，預定後續工作包取代的舊程式不投資測試遷移，先用標示明確的相容入口維持行為；只有需放寬長期保留程式斷言的衝突才再停問。移除歷史報表／JSON 入口與原測試，分別列為 WP7／WP8 驗收。
 
 本次**既有測試、fixture、斷言修改清單：無**，包含任何 schema 版本字串均未修改。新增 SchemaProductionTest、ProductionSchemaTest、HistoricalSchemaEntryTest；先確認拒絕／標示／版本／淘汰標記測試失敗，再實作。完整測試亦發現混合行為重複貢獻與暫時 API 未清理，保留所有斷言並修正。無新增相依。
+
+CI 首次發現新增靜態測試未自設 Java 17，受執行順序影響；補測試設定而不改斷言。拒絕 Struts 2 的 adapter 回傳仍使用同一隱私處理，追加測試先確認家目錄洩漏再修正。
