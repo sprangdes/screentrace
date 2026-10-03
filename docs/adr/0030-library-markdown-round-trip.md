@@ -15,3 +15,5 @@ manifest 多行 usage 用可見 \n，所有資料用共用 projectText 的 code 
 C7 補足：manifest 輸入／索引／內容檔與寫入統一走 SafeProjectFiles。新增 readBytesLimited 保留同一防 symlink／逃逸／大小界線，原 readUtf8Limited 委派而不改既有文字行為；摘要直接對原 bytes，不以文字解碼重編改變來源。新增 CLI symlink 反例先失敗後修正，既有 scanner／CLI 斷言不變。
 
 v1／無覆寫匯入仍按目前 manifest 正規化暫存 key，已選用時不能退回未帶摘要的 key。首次綁定時讀取同指紋的舊 WP8 key 並保留畫面決策，再經同一分區。新增舊決策遷移與無覆寫 digest key 反例先失敗後修正。
+
+公開 homepage／docsUrl 是資料、不發出請求；隱私檢查排除 HTTP(S) URL token 的一般路徑判斷，避免 https:/ 或 URL 的 /home/ 被誤認為本機路徑。實際家目錄字串仍對完整原文拒絕，URL 外的磁碟路徑仍拒絕。新增公開文件 URL／Windows 本機路徑反例先失敗後修正，不更改既有斷言。

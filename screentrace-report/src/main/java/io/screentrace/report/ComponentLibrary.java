@@ -18,6 +18,15 @@ public record ComponentLibrary(JsonNode manifest,String sha256) {
    checkPrivacy(data,"$");return new ComponentLibrary(data,HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(bytes)));
   }catch(IllegalArgumentException e){throw e;}catch(Exception e){throw new IllegalArgumentException("manifest JSON 解析／驗證失敗");}
  }
- private static void checkPrivacy(JsonNode node,String path){if(node.isTextual()){String s=node.asText(),home=System.getProperty("user.home","");if((!home.isEmpty()&&s.contains(home))||s.matches("(?s).*(?:/Users/|/home/|file:/|[A-Za-z]:[\\\\/]).*"))throw new IllegalArgumentException(path+": 不允許本機絕對路徑／家目錄");}else if(node.isObject())node.fields().forEachRemaining(e->{checkPrivacy(new com.fasterxml.jackson.databind.node.TextNode(e.getKey()),"$");checkPrivacy(e.getValue(),path+"."+e.getKey());});else if(node.isArray())for(int i=0;i<node.size();i++)checkPrivacy(node.get(i),path+"["+i+"]");}
+ private static void checkPrivacy(JsonNode node,String path){
+  if(node.isTextual()){
+   String s=node.asText(),home=System.getProperty("user.home","");
+   // Public documentation URLs are data; their path segments are not local paths.
+   String nonUrls=s.replaceAll("https?://[^\\s\"'<>]+","[URL]");
+   if((!home.isEmpty()&&s.contains(home))||nonUrls.matches("(?s).*(?:/Users/|/home/|file:/|(?<![A-Za-z0-9])[A-Za-z]:[\\\\/]).*"))
+    throw new IllegalArgumentException(path+": 不允許本機絕對路徑／家目錄");
+  }else if(node.isObject())node.fields().forEachRemaining(e->{checkPrivacy(new com.fasterxml.jackson.databind.node.TextNode(e.getKey()),"$");checkPrivacy(e.getValue(),path+"."+e.getKey());});
+  else if(node.isArray())for(int i=0;i<node.size();i++)checkPrivacy(node.get(i),path+"["+i+"]");
+ }
  public String label(){return manifest.path("library").path("name").asText()+"@"+manifest.path("library").path("version").asText();}
 }

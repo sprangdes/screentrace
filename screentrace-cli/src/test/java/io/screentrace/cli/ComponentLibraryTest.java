@@ -17,4 +17,6 @@ class ComponentLibraryTest {
 
  @Test void priorityMustBeExactlyRepresentableForDeterministicJavaScriptMatching() throws Exception {var json=new ObjectMapper();var data=json.readTree(sample());((com.fasterxml.jackson.databind.node.ObjectNode)data.path("components").get(0).path("matches").get(0)).put("priority",9007199254740992L);assertTrue(assertThrows(IllegalArgumentException.class,()->ComponentLibrary.validate(json.writeValueAsBytes(data))).getMessage().contains("priority"));}
 
+ @Test void publicDocumentationUrlsAreAllowedWithoutBeingMistakenForLocalDrivePaths() throws Exception {var json=new ObjectMapper();var data=json.readTree(sample());((com.fasterxml.jackson.databind.node.ObjectNode)data.path("library")).put("homepage","https://example.invalid/sample/home/docs");((com.fasterxml.jackson.databind.node.ObjectNode)data.path("components").get(0)).put("docsUrl","http://example.invalid/sample/docs");assertNotNull(ComponentLibrary.validate(json.writeValueAsBytes(data)));((com.fasterxml.jackson.databind.node.ObjectNode)data.path("components").get(0)).put("docsUrl","C:/Users/Private/docs");assertThrows(IllegalArgumentException.class,()->ComponentLibrary.validate(json.writeValueAsBytes(data)));}
+
 }

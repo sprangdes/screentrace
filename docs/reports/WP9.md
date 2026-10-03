@@ -30,7 +30,7 @@ component_library 選用時列名稱@版本＋完整 SHA-256，未選用保持 n
 
 4 項 md unit、1 項舊決策遷移 unit、每引擎 1 項下載／清暫存／匯入／外庫隔離／再匯出／回原庫 E2E、2 項 Java symlink／priority 反例均先失敗後通過。A/B 共用 ID 不誤套用、A/B/A 恢復、未知 owner 保留、反引號／換行／隱形 screen／component／library ID lossless、v1/v2 位元組相同、SHA 修改偵測、orphan 不改 API／§6。v1 golden 與原斷言完全不變。
 
-C7 統一 SafeProjectFiles 的原始 bytes 邊界（不改 readUtf8 行為）；priority Schema／runtime 限安全整數避免假同分。最終本機：197 Java（0 failure/error/skip）、38 viewer unit、27 Chromium／WebKit E2E、4 文件基線全通過；TypeScript／esbuild 成功。500 screens／5,000 components／3,000 navigations 首繪 163.4 ms，zoom median 1 ms，未放寬既有 3 秒門檻。詳見 [ADR 0030](../adr/0030-library-markdown-round-trip.md)。
+C7 統一 SafeProjectFiles 的原始 bytes 邊界（不改 readUtf8 行為）；priority Schema／runtime 限安全整數避免假同分。最終本機：198 Java（0 failure/error/skip）、38 viewer unit、27 Chromium／WebKit E2E、4 文件基線全通過；TypeScript／esbuild 成功。500 screens／5,000 components／3,000 navigations 首繪 163.4 ms，zoom median 1 ms，未放寬既有 3 秒門檻。詳見 [ADR 0030](../adr/0030-library-markdown-round-trip.md)。
 
 ## 完成定義對照
 
@@ -55,10 +55,12 @@ C7 統一 SafeProjectFiles 的原始 bytes 邊界（不改 readUtf8 行為）；
 | 3 viewer／覆寫／可逆分區 | b7365a6 | [全綠](https://github.com/sprangdes/screentrace/actions/runs/37131391711) |
 | 4 md／契約／安全邊界 | 3f4f1dc | [全綠](https://github.com/sprangdes/screentrace/actions/runs/37133986791) |
 
-遠端最終：197 Java、38 viewer unit、33 Chromium／Firefox／WebKit E2E、33 capture／文件、40 JS parser 全通過；三組 npm audit 0 漏洞、Dependency-Check 通過。500／5,000／3,000 首繪 676.7 ms、zoom median 2 ms；3 秒門檻不變。
+增量四遠端：197 Java、38 viewer unit、33 Chromium／Firefox／WebKit E2E、33 capture／文件、40 JS parser 全通過；三組 npm audit 0 漏洞、Dependency-Check 通過。500／5,000／3,000 首繪 676.7 ms、zoom median 2 ms；3 秒門檻不變。
 
 驗證指令：npm --prefix screentrace-viewer run build；node --test screentrace-viewer/test/*.test.mjs；mvn clean verify；ST_BROWSERS=chromium,firefox,webkit node --test screentrace-viewer/test/*.e2e.mjs；既有 security.yml 三組 npm audit 與 OWASP aggregate。所有新增反例失敗紀錄與對應修正列於各增量。
 
 主要檔案：component-library.schema.json／sample、CLI LibraryStore／LibraryCommands、report ComponentLibrary／SingleHtml 注入、shared/library／review／review-md、library-ui／details／main、新 unit／Java／三引擎 E2E、SafeProjectFiles raw bytes 邊界、兩契約／README／ARCHITECTURE／ROADMAP／OQ／ADR。未刪除舊測試，既有斷言與 aceb923 兩份 v1 golden 差異為零。
+
+收尾補強：公開文件 URL 的隱私檢查誤判，新增回歸測試先失敗後修正；HTTP(S) URL 不當成本機磁碟路徑，實際家目錄原文與本機路徑仍拒絕。新增測試後 Java 共 198 項；既有斷言與兩份 v1 golden 不變。
 
 WP9 全部驗收項目通過；OQ-009／010 已處理，無未決問題。已停止，WP10 未開始。
