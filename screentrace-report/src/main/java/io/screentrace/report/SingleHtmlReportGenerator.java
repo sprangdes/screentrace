@@ -16,10 +16,14 @@ public final class SingleHtmlReportGenerator {
   public record Output(Path path,long bytes,boolean warning) {}
   public static boolean sizeWarning(long bytes){return bytes>100_000_000;}
   public Output generate(ApplicationGraph graph,PreviewModel preview,Map<String,String> documents,Map<String,Object> manifest,Path output) throws IOException {
+    return generate(graph,preview,documents,manifest,output,null);
+  }
+  public Output generate(ApplicationGraph graph,PreviewModel preview,Map<String,String> documents,Map<String,Object> manifest,Path output,ComponentLibrary library) throws IOException {
     GraphIntegrityValidator.requireAnalysis(graph);
     String script=resource("viewer.js"),hash=resource("viewer.sha256").trim();
     if(!hash.equals(Base64.getEncoder().encodeToString(digest(script))))throw new IOException("Viewer bundle hash mismatch; rebuild screentrace-viewer");
     var data=new TreeMap<String,Object>();data.put("graph",graph);data.put("preview",preview);data.put("documents",new TreeMap<>(documents));data.put("manifest",new TreeMap<>(manifest));
+    if(library!=null){ComponentLibrary.validate(json.writeValueAsBytes(library.manifest()));if(!library.sha256().matches("[a-f0-9]{64}"))throw new IllegalArgumentException("manifest_sha256 格式錯誤");data.put("componentLibrary",library);}
     data.put("toolVersion",resource("viewer.version").trim());
     data.put("fingerprint",HexFormat.of().formatHex(digest(json.writeValueAsString(graph))));
     String encoded=json.writeValueAsString(data).replace("<","\\u003c").replace("\u2028","\\u2028").replace("\u2029","\\u2029");

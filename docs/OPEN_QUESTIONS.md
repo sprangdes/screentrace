@@ -83,3 +83,11 @@
 - 可選方案 B：省略 --project 的匯入同時設為工作區預設元件庫；未明確綁定的專案採此預設，專案明確綁定優先。library list 列儲存項目、預設與專案綁定。
 - 影響範圍：WP9 增量一的 import／list 與工作區儲存契約、HTML 唯一元件庫選用，以及後續 viewer／md 的 component_library；不涉及 WP10。
 - 狀態：已處理（2026-10-03）；採方案 A，附明確儲存／綁定提示、解除綁定、內容 SHA-256 定址、同版本衝突 --replace、受影響專案提示、暫存摘要隔離與舊覆寫 orphan。見 v1.9 WP9 與 ADR 0027。
+
+## OQ-010 — 舊元件庫覆寫 orphan 的 md 還原契約
+
+- 情境：OQ-009 要求元件庫摘要改變後，舊覆寫成為 orphan，不得靜默套用。WP9 指定 format_version 2 的 component_overrides 為 screenId → componentId → 元件庫元件 ID，檔頭記目前選用 manifest 的摘要。若 A／B 兩份 manifest 共用同一元件 ID，舊 A 覆寫匯入 B 後必須隔離；再次匯出時若僅保留原 ID 並寫 B 檔頭，還原將無法知道該覆寫原屬 A，可能誤套用。若不輸出舊覆寫，則 md 無法完整還原 orphan。原規格沒有定義這些 orphan 是否要進機器附錄、或允許新增來源摘要欄位。
+- 可選方案 A：format_version 2 增加 orphan_component_overrides，列 screenId、componentId、libraryComponentId、manifest_sha256（原來源）。component_overrides 僅包含目前 manifest 的有效覆寫。匯入保留 orphan 並提示，不自動轉為有效覆寫；有有效覆寫或 orphan 覆寫採 v2，兩者皆無維持 v1。機器區仍僅有還原所需 ID／摘要，沿用嚴格跳脫、最後區塊與完整性雜湊；v1 golden 不變。
+- 可選方案 B：機器附錄只保存目前 manifest 的有效 component_overrides；舊覆寫僅保留於瀏覽器暫存並在介面／md 正文列 orphan，明確警告 md 不含舊覆寫的還原資料。重新匯入該 md 不還原這些 orphan。
+- 影響範圍：增量三的覆寫／localStorage orphan 資料模型，以及增量四的 format_version 2 已知欄位、SHA／匯出匯入往返、REVIEW_STATE_CONTRACT／REVIEW_MD_CONTRACT。WP9 增量一／二已完成並遠端全綠，不涉及 WP10。
+- 狀態：已處理（2026-10-03）；採 A，v2 增 orphan_component_overrides，保存 ID／完整小寫來源摘要；有效／orphan 可逆重新分區（含 A/B/A），未知圖 ID 保留、foreign orphan 不套用也不改 API／涵蓋率，正文僅 §7 數量分類。v1 拒絕 v2 欄位；同一模組服務 localStorage／md，SHA 覆蓋新欄位。見 ADR 0029、REVIEW_STATE_CONTRACT／REVIEW_MD_CONTRACT。

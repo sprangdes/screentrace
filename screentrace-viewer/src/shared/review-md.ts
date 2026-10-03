@@ -16,8 +16,8 @@ const order=(a:string,b:string)=>a<b?-1:a>b?1:0;
 const invisible=/[\u200b-\u200f\u2060-\u2064\ufeff\ufe00-\ufe0f\u{e0100}-\u{e01ef}\u{e0000}-\u{e007f}]/u;
 const visible=(s:string)=>s.replace(/[\x00-\x1f\x7f-\x9f\u202a-\u202e\u2066-\u2069\u2028\u2029\u200b-\u200f\u2060-\u2064\ufeff\ufe00-\ufe0f\u{e0100}-\u{e01ef}\u{e0000}-\u{e007f}]/gu,c=>invisible.test(c)?'\\u{'+c.codePointAt(0)!.toString(16)+'}':'\\u'+c.charCodeAt(0).toString(16).padStart(4,'0'));
 /** All project-derived display cells use this one isolation boundary. */
-export function projectText(value:unknown,source?:Source):string {
- if(value===undefined||value===null||value==='')return '—';let raw=visible(String(value));if(/data:[^\s)]*;base64,/i.test(raw))raw='（已省略內嵌資源）';const chars=Array.from(raw);if(chars.length>300)raw=chars.slice(0,300).join('')+`…(已截斷,完整內容見 ${visible(source?.file||'—')}:${source?.line||'—'})`;
+export function projectText(value:unknown,source?:Source,reference?:string):string {
+ if(value===undefined||value===null||value==='')return '—';let raw=visible(String(value));if(/data:[^\s)]*;base64,/i.test(raw))raw='（已省略內嵌資源）';const chars=Array.from(raw);if(chars.length>300)raw=chars.slice(0,300).join('')+`…(已截斷,完整內容見 ${reference===undefined?visible(source?.file||'—')+':'+(source?.line||'—'):visible(reference)})`;
  raw=raw.replaceAll('|','\\|');const runs=raw.match(/`+/g)||[],fence='`'.repeat(Math.max(0,...runs.map(s=>s.length))+1);return `${fence} ${raw} ${fence}`;
 }
 export function canonicalJson(value:unknown):string {if(Array.isArray(value))return '['+value.map(canonicalJson).join(',')+']';if(value&&typeof value==='object')return '{'+Object.keys(value).sort(order).map(k=>JSON.stringify(k)+':'+canonicalJson((value as Record<string,unknown>)[k])).join(',')+'}';return JSON.stringify(value);}

@@ -11,6 +11,9 @@ interface ReviewState {
   fingerprint: string;
   screenDecisions: Record<string, 'UNDECIDED' | 'KEEP' | 'REMOVE'>;
   componentDecisions: Record<string, Record<string, 'UNDECIDED' | 'KEEP' | 'REMOVE'>>;
+  manifest_sha256?: string; // currently selected manifest, lowercase SHA-256
+  component_overrides?: Record<string, Record<string, string>>;
+  orphan_component_overrides?: Array<{screenId: string; componentId: string; libraryComponentId: string; manifest_sha256: string}>;
 }
 ```
 
@@ -22,4 +25,10 @@ API 使用狀態依 R-API-1–6 推導；載入時／未解析 selector 的畫�
 
 localStorage 鍵為 `screentrace:review:v1:<encodeURIComponent(application)>:<fingerprint>`。指紋來自排序鍵的分析圖 JSON SHA-256。讀取需 format／version／schema／application／fingerprint 相符，決策限三態；非法或存取失敗顯示警告並保留操作能力。儲存失敗不刪當前記憶體決策。未知 ID 不丟棄；還原模組保留，WP8 匯入層據圖列 orphan 清單。
 
-本輪只有自動暫存；md 匯出／匯入及 JSON 匯出退場屬 WP8，未實作。
+WP8 已支援 md 匯出／匯入且 JSON 匯出退場。WP9 OQ-010：覆寫資料使用與附錄相同的 component_overrides／orphan_component_overrides，當前來源由 manifest_sha256 標識；格式 version 1 為瀏覽器容器版本，md format_version 1／2 由是否有覆寫決定。
+
+partitionOverrides 是唯一分區邏輯：把全部覆寫收集為帶來源摘要的 ID record，按 (screenId, componentId, manifest_sha256) 去重；相同來源鍵衝突拒絕。摘要等於目前、元件庫 ID 有效且圖 owner 相符者有效，其餘 orphan。換回來源庫／圖 ID 可恢復，不丟棄。每個 record 只含 ID 與 64 碼小寫摘要，未知鍵拒絕。API 推導／kind 涵蓋率不讀覆寫。有效覆寫只在 KEEP 畫面展示；setOverride 只允許 KEEP 並驗證 owner／元件庫 ID。
+
+選用庫時暫存鍵加 :<manifest_sha256>；無庫沿用舊鍵。另以同分析指紋 :library-transfer 保存完整共用模型供 A/B/A／解除綁定轉移，讀取後一律經上述分區；不直接套用前庫資料。未知 ID／外庫覆寫列 orphan 提示，不靜默套用。暫存失敗不影響記憶體狀態。
+
+md 雙格式契約見 REVIEW_MD_CONTRACT；有效／orphan ID 同時可逆還原，v1 golden 不變。

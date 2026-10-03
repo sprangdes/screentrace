@@ -43,7 +43,7 @@ public final class ScreenTraceCli {
         logAnalysis(result);
         openReport(result.report());
       }
-      else if (command.action() == Action.REPORT) openReport(new SingleHtmlAnalysisWriter().generate(project.analysisDirectory()).path());
+      else if (command.action() == Action.REPORT) openReport(new SingleHtmlAnalysisWriter().generate(project.analysisDirectory(),new LibraryStore(WorkspaceSettings.defaultFile().getParent()).selected(project.name())).path());
     }
   }
 
@@ -72,7 +72,7 @@ public final class ScreenTraceCli {
             result.components(), result.output());
         report = result.report();
       } else {
-        report = new SingleHtmlAnalysisWriter().generate(project.analysisDirectory()).path();
+        report = new SingleHtmlAnalysisWriter().generate(project.analysisDirectory(),new LibraryStore(WorkspaceSettings.defaultFile().getParent()).selected(project.name())).path();
       }
       openReport(report);
       console.waitForMenuReturn(report.toUri().toString());
@@ -139,7 +139,7 @@ public final class ScreenTraceCli {
       renderStaticJsp(project.sourceDirectory(), output);
       packPreview(output);
     }
-    var report = writer.generate(graph, output);
+    var report = writer.generate(graph, output,new LibraryStore(WorkspaceSettings.defaultFile().getParent()).selected(project.name()));
     if (report.warning()) LOGGER.warning("單一 HTML 超過 100 MB，仍完整產出：" + report.bytes() + " bytes");
     long screens = graph.nodes().stream().filter(node -> node.type().name().equals("SCREEN")).count();
     long endpoints = graph.nodes().stream().filter(node -> node.type().name().equals("ENDPOINT")).count();

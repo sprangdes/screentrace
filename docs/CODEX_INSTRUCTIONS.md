@@ -413,6 +413,8 @@ migration_target:
 8. 沒有手動覆寫的 md format_version 維持 1，aceb923 後兩份 golden 不變；有覆寫採 2，增加 component_overrides（screenId → componentId → 元件庫元件 ID），匯入同時接受 1／2。沿用最後區塊、SHA 與 Unicode 隔離；component_library 記名稱@版本及完整內容 SHA-256，§6 列涵蓋率、未對應與全數歧義。未選用時 none／未匯入元件庫。
 9. OQ-009 採 A：省略 --project 僅儲存並提示「已儲存,尚未綁定任何專案;使用 --project <名稱> 綁定」；明確 --project 綁定唯一元件庫，重複綁定更換，library unbind --project 解除。library list 列所有名稱@版本、摘要前 12 碼與專案綁定。儲存鍵為名稱@版本加內容 SHA-256；同版本異內容預設拒絕並列摘要差異，僅 --replace 可更換，提示受影響專案重產報表。review 暫存鍵納入 manifest SHA-256，變更後舊覆寫列 orphan 並提示，不靜默套用。HTML 只嵌選用一份；HTML／md／CLI 不含儲存路徑或家目錄。
 
+10. OQ-010 A：v2 增 orphan_component_overrides，每筆 screenId／componentId／libraryComponentId／manifest_sha256（64 碼小寫十六進位）。component_overrides 僅目前有效覆寫；任一分區有資料才 v2，皆無維持 v1，v1 拒絕 v2 專屬欄位。全部覆寫依原來源摘要與目前庫／圖 ID 重新分區，換回原庫恢復有效；未知 ID 保留並列 orphan。foreign orphan 不影響建議／涵蓋率／API，正文不列內容，§7 只列數量分類。暫存／md 共用模型與分區，state_sha256 涵蓋新增欄位，未知欄位／錯誤摘要格式拒絕。
+
 **驗收**:schema 驗證測試(合法 / 非法);比對測試(優先序、歧義、無符合);涵蓋率報表測試;CLI 錯誤訊息測試。
 
 ---
@@ -513,7 +515,7 @@ migration_target:
 
 ## 11. 修訂紀錄
 
-- 1.9:WP9 依最新授權採 Schema 驗證、決定性比對、必要覆寫、雙格式 review state 與不可信 manifest 隔離；OQ-009 A 明定顯式專案綁定／解除、內容定址、版本衝突 --replace、摘要識別與變更 orphan。
+- 1.9:WP9 依最新授權採 Schema 驗證、決定性比對、必要覆寫、雙格式 review state 與不可信 manifest 隔離；OQ-009 A 明定顯式專案綁定／解除、內容定址、版本衝突 --replace、摘要識別與變更 orphan；OQ-010 A 明定 v2 orphan 來源摘要、可逆分區、機器完整還原、正文僅計數與共用模型。
 - 1.8:WP8 驗收後擴充零寬／格式、變體選擇器與 Unicode 標籤字元隔離；正文 code span 不轉換 &、<、>，保留條件忠實度；選取檔案硬上限降至 64 MiB。授權僅更新受影響的契約／兩份 golden／實體斷言，其他斷言不變；WP9 待確認。
 - 1.7:依 OQ-008 授權 YAML／附錄 A 完整值例外、嚴格 Unicode 跳脫、還原所需欄位白名單、末尾最後區塊、損毀 SHA-256、JSON 上限及 orphan 保存；§8.2 第 8 條擴及機器區。
 

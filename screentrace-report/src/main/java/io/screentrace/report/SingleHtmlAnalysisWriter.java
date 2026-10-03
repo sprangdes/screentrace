@@ -20,16 +20,18 @@ public final class SingleHtmlAnalysisWriter {
     write(output, "prototype-model.json", new PrototypeModelGenerator().generate(graph));
 
   }
-  public SingleHtmlReportGenerator.Output generate(Path output) throws IOException {
+  public SingleHtmlReportGenerator.Output generate(Path output) throws IOException {return generate(output,null);}
+  public SingleHtmlReportGenerator.Output generate(Path output,ComponentLibrary library) throws IOException {
     var data = json.readTree(SafeProjectFiles.readUtf8Limited(output, output.resolve("application-graph.json"),
         SafeProjectFiles.MAX_PROJECT_TOTAL_BYTES));
     String version = data.path("schemaVersion").asText("未設定");
     if (!ApplicationGraph.BEHAVIOR_SCHEMA_VERSION.equals(version))
       throw new IllegalArgumentException("檢視器只接受 schema 2.2，收到 " + version);
     var graph = json.treeToValue(data, ApplicationGraph.class);
-    return generate(graph, output);
+    return generate(graph, output,library);
   }
-  public SingleHtmlReportGenerator.Output generate(ApplicationGraph graph, Path output) throws IOException {
+  public SingleHtmlReportGenerator.Output generate(ApplicationGraph graph, Path output) throws IOException {return generate(graph,output,null);}
+  public SingleHtmlReportGenerator.Output generate(ApplicationGraph graph,Path output,ComponentLibrary library) throws IOException {
     prepare(graph, output);
     var screens = new ArrayList<PreviewScreen>();
     Map<String,String> documents = new TreeMap<>();
@@ -53,7 +55,7 @@ public final class SingleHtmlAnalysisWriter {
       manifest.put("diagnostics", json.convertValue(packed.path("diagnostics"), List.class));
     }
     write(output, "preview-model.json", preview);
-    return new SingleHtmlReportGenerator().generate(graph, preview, documents, manifest, output);
+    return new SingleHtmlReportGenerator().generate(graph, preview, documents, manifest, output,library);
   }
   private com.fasterxml.jackson.databind.JsonNode read(Path root, String file) throws IOException {
     return json.readTree(SafeProjectFiles.readUtf8Limited(root, root.resolve(file), SafeProjectFiles.MAX_PROJECT_TOTAL_BYTES));

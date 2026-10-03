@@ -13,7 +13,7 @@
 | WP6 | 靜態預覽、完整元素樣式、條件標記 | 完成；6d557d6 遠端全綠，203 Java／40 JS／30 capture；見 reports/M3.md |
 | WP7 | 單一 HTML、Screen Map、API 頁、review | 完成；A–E 逐增量推送並遠端全綠，見 reports/WP7.md |
 | WP8 | review md 匯出與還原、移除 JSON 匯出 | 完成；A／B／C 逐增量遠端全綠，md 往返三引擎通過；OQ-007／008 已處理；驗收後 v1.8 Unicode／code span／64 MiB 補強，見 reports/WP8.md |
-| WP9 | 元件庫 manifest、驗證與決定性比對 | 執行中；依四增量逐次遠端 CI gate；OQ-009 A 已決定 |
+| WP9 | 元件庫 manifest、驗證與決定性比對 | 執行中；一／二遠端全綠，三覆寫與 OQ-010 可逆分區完成待 gate，四 md 待接入；見 reports/WP9.md |
 | WP10 | 合成 fixture、整合測試、CI、使用文件 | 未開始 |
 
 | 里程碑 | 工作包 | 狀態 |
