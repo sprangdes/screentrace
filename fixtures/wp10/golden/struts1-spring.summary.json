@@ -1,0 +1,60 @@
+{
+  "screens": 7,
+  "components_by_kind": {
+    "BUTTON": 16,
+    "CHECKBOX": 3,
+    "DATE_PICKER": 1,
+    "FILE_INPUT": 2,
+    "FORM": 5,
+    "LINK": 13,
+    "MODAL": 2,
+    "MULTI_SELECT": 3,
+    "OTHER": 3,
+    "RADIO": 4,
+    "SELECT": 3,
+    "SUBMIT": 6,
+    "TABLE": 1,
+    "TEXTAREA": 3,
+    "TEXT_INPUT": 10
+  },
+  "behaviors_by_type": {
+    "CALL_API": 61,
+    "NAVIGATE": 24,
+    "OPEN_DIALOG": 29,
+    "SELECT_CHANGE": 3,
+    "SUBMIT_FORM": 16,
+    "UI_STATE_CHANGE": 20,
+    "UNKNOWN": 27,
+    "VALIDATE": 32
+  },
+  "apis": {
+    "total": 40,
+    "by_status": {
+      "IN_USE": 27,
+      "REMOVABLE": 0,
+      "UNREFERENCED": 13
+    }
+  },
+  "validation_rules_by_layer": {
+    "CLIENT": 11,
+    "MARKUP": 10,
+    "SERVER": 25
+  },
+  "diagnostics_by_code": {
+    "ACTION_FORM_CONDITION_UNRESOLVED": 1,
+    "ANALYSIS_DIAGNOSTIC": 3,
+    "JSP_UNRESOLVED": 11,
+    "JS_CALL_CYCLE": 1,
+    "JS_DEPTH_LIMIT": 1,
+    "JS_SCRIPT_REFERENCE": 11,
+    "JS_SYNTAX_ERROR": 1,
+    "STRUTS_DISPATCH_UNRESOLVED": 2,
+    "STRUTS_FORWARD_EXPRESSION": 1,
+    "STRUTS_FORWARD_UNRESOLVED": 1,
+    "STRUTS_ROUTE_UNRESOLVED": 4,
+    "STRUTS_TARGET_UNRESOLVED": 11,
+    "UNKNOWN_CALL": 4,
+    "URL_METHOD_MISMATCH": 7,
+    "URL_UNRESOLVED": 11
+  }
+}

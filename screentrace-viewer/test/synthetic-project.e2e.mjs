@@ -5,6 +5,7 @@ import {fileURLToPath, pathToFileURL} from 'node:url';
 import path from 'node:path';
 import {chromium, firefox, webkit} from '../../screentrace-capture/node_modules/playwright/index.mjs';
 import {generateMarkdown} from '../dist/review-md.mjs';
+import {analysisSummary, assertSummary} from './analysis-summary.mjs';
 
 const root = fileURLToPath(new URL('../../', import.meta.url));
 const families = ['struts1', 'struts1-spring', 'spring-mvc-jsp', 'spring-boot-jsp'];
@@ -24,6 +25,9 @@ test('real source fixtures produce identical graph, packed HTML and shared-modul
         assert.deepEqual(a.data, b.data, family);
         assert.equal(a.data.graph.schemaVersion, '2.2');
         assert.match(a.data.componentLibrary.sha256, /^[a-f0-9]{64}$/);
+        const golden = JSON.parse(await readFile(path.join(root, 'fixtures/wp10/golden', family + '.summary.json'), 'utf8'));
+        assertSummary(golden, analysisSummary(a.data), family + '.first');
+        assertSummary(golden, analysisSummary(b.data), family + '.second');
         const state = {format: 'screentrace-review', version: 1, schemaVersion: '2.2', application: a.data.graph.application.name, fingerprint: a.data.fingerprint, screenDecisions: {}, componentDecisions: {}};
         const first = await generateMarkdown(a.data, state, {generatedAt: '2026-01-01T00:00:00Z'});
         const second = await generateMarkdown(b.data, state, {generatedAt: '2026-01-02T00:00:00Z'});

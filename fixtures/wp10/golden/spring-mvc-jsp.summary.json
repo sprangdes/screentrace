@@ -1,0 +1,53 @@
+{
+  "screens": 1,
+  "components_by_kind": {
+    "BUTTON": 6,
+    "CHECKBOX": 2,
+    "DATE_PICKER": 1,
+    "FILE_INPUT": 1,
+    "FORM": 2,
+    "LINK": 12,
+    "MODAL": 2,
+    "MULTI_SELECT": 2,
+    "OTHER": 2,
+    "RADIO": 3,
+    "SELECT": 2,
+    "SUBMIT": 2,
+    "TABLE": 1,
+    "TEXTAREA": 2,
+    "TEXT_INPUT": 7
+  },
+  "behaviors_by_type": {
+    "CALL_API": 34,
+    "NAVIGATE": 18,
+    "OPEN_DIALOG": 23,
+    "SELECT_CHANGE": 2,
+    "SUBMIT_FORM": 5,
+    "UI_STATE_CHANGE": 11,
+    "UNKNOWN": 6,
+    "VALIDATE": 19
+  },
+  "apis": {
+    "total": 27,
+    "by_status": {
+      "IN_USE": 22,
+      "REMOVABLE": 0,
+      "UNREFERENCED": 5
+    }
+  },
+  "validation_rules_by_layer": {
+    "CLIENT": 8,
+    "MARKUP": 10,
+    "SERVER": 22
+  },
+  "diagnostics_by_code": {
+    "JSP_UNRESOLVED": 11,
+    "JS_CALL_CYCLE": 1,
+    "JS_DEPTH_LIMIT": 1,
+    "JS_SCRIPT_REFERENCE": 11,
+    "JS_SYNTAX_ERROR": 1,
+    "UNKNOWN_CALL": 4,
+    "URL_METHOD_MISMATCH": 4,
+    "URL_UNRESOLVED": 9
+  }
+}
