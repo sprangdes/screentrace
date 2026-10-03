@@ -16,4 +16,6 @@ c70e7c6：ProductionSchemaTest 保留混合分析原斷言，增加實際 applic
 
 先失敗：三個流程與容量 E2E 等待缺少的 download／檔案控制逾時。新增 md-controls，Blob 本地下載、選取檔案匯入；格式／損毀／截斷不改目前決策，成功才更新並保存。指紋改變／未知複合鍵完整保存，列 orphan 與分析結果已變更。輸入檔案沿用 1 GiB 工具安全硬界線，JSON 仍 32 MiB；不解析網路資源。
 
-本機 Chromium／WebKit 全套 22 E2E（含新 md 7 項）通過；三引擎於遠端為全套 26 E2E（新 md 10 項）。逐引擎標記→匯出→清除 localStorage→匯入→再匯出，generated_at 外位元組相同；未知 ID 保留、損毀拒絕、實際 >5 MB 完整下載與警告通過。200 Java、22 unit 通過；既有斷言未修改。B gate 待推送；C／WP9 未開始。
+本機 Chromium／WebKit 全套 22 E2E（含新 md 7 項）通過；三引擎於遠端為全套 26 E2E（新 md 10 項）。逐引擎標記→匯出→清除 localStorage→匯入→再匯出，generated_at 外位元組相同；未知 ID 保留、損毀拒絕、實際 >5 MB 完整下載與警告通過。200 Java、22 unit 通過；既有斷言未修改。B 首輪 f18eae3 [遠端全綠](https://github.com/sprangdes/screentrace/actions/runs/37116287520)；C／WP9 未開始。
+
+B 邊界補足：新增字串／regex 內的 function／分號與物件方法／模板插值函式本體反例，先失敗。改用 Acorn 8.18.0 MIT（ADR 0024，新增釘選 lock）解析 AST、迭代檢查，不執行目標文字；保持允許的文字，省略真正函式／敘述式。24 unit、200 Java、22 Chromium／WebKit E2E、npm audit 0 通過；首次渲染 160.6 ms，縮放中位數 <1 ms。本補足仍屬 B，最終 gate 待推送，通過後才進 C。

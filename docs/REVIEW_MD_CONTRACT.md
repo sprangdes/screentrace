@@ -1,6 +1,6 @@
 # Review md 契約 v1（WP8／指示文件 v1.7）
 
-瀏覽器與 Node 共用 screentrace-viewer/src/shared/review-md.ts；建置另產出 dist/review-md.mjs，可在 Node 22+ 直接 import。無 DOM／檔案／網路相依；輸入為嚴格 schema 2.2 Graph、Preview、分析指紋及 shared/review v1 狀態。歷史／缺證據／不合法引用明確拒絕，不升版。
+瀏覽器與 Node 共用 screentrace-viewer/src/shared/review-md.ts；建置另產出 dist/review-md.mjs，可在 Node 22+ 直接 import。無 DOM／檔案／網路相依（純 Acorn AST parser 釘選 8.18.0，ADR 0024）；輸入為嚴格 schema 2.2 Graph、Preview、分析指紋及 shared/review v1 狀態。歷史／缺證據／不合法引用明確拒絕，不升版。
 
 ## 固定檔頭
 
@@ -26,7 +26,7 @@ API 依 ID 排序；共用 deriveApiUsage 推導三態，不另寫判定。呼�
 
 所有專案衍生值只在表格 code span；圍欄比最長反引號序列多一個，兩端加空格。控制字元（含 C0／C1）、換行、雙向控制與 U+2028／2029 改可見 Unicode 跳脫；HTML 符號變實體，表格分隔符改反斜線跳脫。每段在可見控制字元轉換後按 Unicode code point 取前 300，再加固定「…(已截斷,完整內容見 <檔案>:<行號>)」。標記不計入 300；來源缺值「—」。反引號圍欄與 Markdown 編碼不計入資料字元數。
 
-允許標籤、路由、guard、UNRESOLVED 目標／選擇器、檢核欄位／訊息；來源與圖身分／契約欄位按上述欄位投影。禁止完整檔案／函式本體／敘述式／原始 HTML／圖片資料；遇到明確函式／敘述式特徵的 expression，顯示省略標記與來源，不逐段分割來繞過限制。內嵌 base64 資源以固定省略標記替換。
+允許標籤、路由、guard、UNRESOLVED 目標／選擇器、檢核欄位／訊息；來源與圖身分／契約欄位按上述欄位投影。禁止完整檔案／函式本體／敘述式／原始 HTML／圖片資料；由 Acorn AST 證明包含 statement／declaration／函式本體的 expression，顯示省略標記與來源，不逐段分割來繞過限制。內嵌 base64 資源以固定省略標記替換。
 
 evidence.detail 自由文字從不複製；僅接受結構化白名單鍵解析器名稱、框架來源標籤、設定鍵、候選值、採用值。既有 UrlResolution 的完整固定鍵值格式可投影為這些鍵。AcornStaticAnalyzer 的結構化 selector 僅用於 UNRESOLVED 綁定選擇器欄位，不搬運 expression／函式本體／其他 detail。無法明確歸入白名單就省略，原證據留圖中。
 

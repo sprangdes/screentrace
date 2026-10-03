@@ -1,3 +1,4 @@
+import {parseExpressionAt} from 'acorn';
 import {Payload,Source,Evidence,Behavior,Node,Rule} from '../contracts';
 import {strictGraph} from './strict-graph';
 import {indexGraph} from '../map';
@@ -30,7 +31,27 @@ const resolution=(b:Behavior)=>[...new Set(b.evidence?.map(e=>e.resolution)||[])
 export function evidenceFields(e:Evidence):[string,string][] {const result:[string,string][]=[['解析器名稱',e.parser]];const d=e.detail;if(!d)return result;try{const obj=JSON.parse(d);if(obj&&typeof obj==='object'&&!Array.isArray(obj))for(const key of ['框架來源標籤','設定鍵','候選值','採用值'])if(Object.hasOwn(obj,key)&&typeof obj[key]==='string')result.push([key,obj[key]]);}catch{if(/^(?:設定鍵=[^；]*；候選值=[^；]*；採用值=[^；]*|來源=未設定；候選值=\[\]；採用值=未設定)$/.test(d))for(const part of d.split('；')){const [key,...value]=part.split('=');if(['設定鍵','候選值','採用值'].includes(key))result.push([key,value.join('=')]);}}return result;}
 function contextPaths(payload:Payload):{value:string;source:string}[]{const all:Evidence[]=[];for(const n of payload.graph.nodes)all.push(...(n.evidence||[]) as Evidence[]);for(const e of payload.graph.relationships||[])all.push(...((e as unknown as {evidence?:Evidence[]}).evidence||[]));for(const b of payload.graph.behaviors||[])all.push(...(b.evidence||[]));const rows=new Map<string,{value:string;source:string}>();for(const e of all)if(e.parser==='UrlResolution'){const fields=new Map(evidenceFields(e)),value=fields.get('採用值');if(value){const source=value==='未設定'?'未設定':e.source?.file.startsWith('workspace:')?'workspace 設定':'server.servlet.context-path';const row={value,source};rows.set(canonicalJson(row),row);}}return [...rows.values()].sort((a,b)=>order(a.source,b.source)||order(a.value,b.value));}
 function unresolvedSelector(b:Behavior):string|undefined {for(const e of b.evidence||[])if(e.parser==='AcornStaticAnalyzer'&&['UNRESOLVED','AMBIGUOUS'].includes(e.resolution)&&e.detail){try{const data=JSON.parse(e.detail);if(data&&typeof data.selector==='string')return data.selector;}catch{}}return undefined;}
-function fragment(value:string|undefined,source?:Source):string {if(value&&(/\bfunction\b|=>\s*\{|;/.test(value)))return projectText(`（完整敘述式／函式本體已省略；來源 ${source?.file||'—'}:${source?.line||'—'}）`,source);return projectText(value,source);}
+/** Export redaction only: inspect lexical boundaries outside literal data, never execute code. */
+function forbiddenFragment(value:string):boolean {
+ const el=value.trim().startsWith('${')&&value.trim().endsWith('}');const expression=el?value.trim().slice(2,-1):value;
+ try{const ast=parseExpressionAt(expression,0,{ecmaVersion:'latest'});const tail=expression.slice(ast.end).replace(/\/\*[\s\S]*?\*\/|\/\/[^\n\r]*/g,'').trim();if(tail)return true;
+  const pending:unknown[]=[ast];while(pending.length){const item=pending.pop();if(!item||typeof item!=='object')continue;const node=item as Record<string,unknown>;if(typeof node.type==='string'&&(node.type.endsWith('Statement')||node.type.endsWith('Declaration')))return true;for(const value of Object.values(node))if(Array.isArray(value))pending.push(...value);else if(value&&typeof value==='object')pending.push(value);}return false;
+ }catch{/* Non-JS template guards retain their literal data, with lexical redaction as a fallback. */}
+ if(/^(?:return|throw|var|let|const|class|import|export|for|while|switch|try|do|debugger)\b/.test(expression.trim()))return true;
+ let operand=true;
+ for(let i=0;i<value.length;){const c=value[i];if(/\s/.test(c)){i++;continue;}
+  if(c==='"'||c==="'"||c==='`'){const quote=c;i++;while(i<value.length){if(value[i]==='\\'){i+=2;continue;}if(value[i++]===quote)break;}operand=false;continue;}
+  if(c==='/'&&value[i+1]==='/'){i+=2;while(i<value.length&&!/[\r\n]/.test(value[i]))i++;continue;}
+  if(c==='/'&&value[i+1]==='*'){const end=value.indexOf('*/',i+2);i=end<0?value.length:end+2;continue;}
+  if(c==='/'&&operand){i++;let bracket=false;while(i<value.length){if(value[i]==='\\'){i+=2;continue;}if(value[i]==='[')bracket=true;if(value[i]===']')bracket=false;if(value[i++]==='/'&&!bracket)break;}while(/[a-z]/i.test(value[i]||'')&&i<value.length)i++;operand=false;continue;}
+  if(c===';')return true;
+  if(value.slice(i,i+2)==='=>'){let next=i+2;while(/\s/.test(value[next]||'')&&next<value.length)next++;if(value[next]==='{')return true;i+=2;operand=true;continue;}
+  if(/[A-Za-z_$]/.test(c)){let end=i+1;while(/[\w$]/.test(value[end]||'')&&end<value.length)end++;const word=value.slice(i,end);if(word==='function'&&/^(?:\s*\*?\s*[\w$]*)?\s*\(/.test(value.slice(end)))return true;i=end;operand=false;continue;}
+  operand=/[([{=,:!&|?+*%<>-]/.test(c);i++;
+ }
+ return false;
+}
+function fragment(value:string|undefined,source?:Source):string {if(value&&forbiddenFragment(value))return projectText(`（完整敘述式／函式本體已省略；來源 ${source?.file||'—'}:${source?.line||'—'}）`,source);return projectText(value,source);}
 interface MachineState {format_version:1;analysis_fingerprint:string;screen_decisions:Record<string,string>;component_decisions:Record<string,Record<string,string>>}
 const toMachine=(state:ReviewState):MachineState=>({format_version:1,analysis_fingerprint:state.fingerprint,screen_decisions:state.screenDecisions,component_decisions:state.componentDecisions});
 function contractRows(value:unknown,source?:Source,prefix=''):string[][] {if(!value||typeof value!=='object')return [];const rows:string[][]=[];for(const [key,v]of Object.entries((Array.isArray(value)?[...value].sort((a,b)=>order(canonicalJson(a),canonicalJson(b))):value) as Record<string,unknown>).sort(([a],[b])=>order(a,b))){if(['source','confidence'].includes(key))continue;if(!['request','responses','contentType','bodyType','fields','name','type','location','required','status'].includes(key)&&!/^\d+$/.test(key))continue;if(v&&typeof v==='object')rows.push(...contractRows(v,source,prefix+key+'.'));else rows.push([projectText(prefix+key,source),projectText(v,source)]);}return rows;}
