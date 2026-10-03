@@ -22,8 +22,12 @@ B 邊界補足：新增字串／regex 內的 function／分號與物件方法／
 
 ## C 移除舊碼
 
-新增 3 項 Java 退場測試先失敗後實作。移除 ReviewResultGenerator／13 項原測試、CLI export／互動選項／helper、舊契約與範例；停止初始化只供舊入口的 overlay，不刪使用者已有檔案。StandaloneViewerTest 只移除 obsolete export 尾段、準確改名；新 schema／HTML／CSP 及其他長期分析斷言全保留（ADR 0025）。README／ARCHITECTURE／ROADMAP 更新。最終 gate 待推送；未進 WP9。
+新增 3 項 Java 退場測試先失敗後實作。移除 ReviewResultGenerator／13 項原測試、CLI export／互動選項／helper、舊契約與範例；停止初始化只供舊入口的 overlay，不刪使用者已有檔案。StandaloneViewerTest 只移除 obsolete export 尾段、準確改名；新 schema／HTML／CSP 及其他長期分析斷言全保留（ADR 0025）。README／ARCHITECTURE／ROADMAP 更新。C 36b000b [遠端全綠](https://github.com/sprangdes/screentrace/actions/runs/37117621145)，未進 WP9。
 
 C 補足：元件存在的 CONFIRMED 不可掩蓋其 AMBIGUOUS 綁定證據；新增反例先失敗，§8 列 aggregate 與所有證據狀態。原兩份 golden、原斷言完全不變。clean verify 190 Java；單元測試 25 項通過。
 
 C 最終本機結果：190 Java、25 unit、22 Chromium／WebKit E2E 全通過；首次渲染 206.9 ms、縮放中位數 1 ms。遠端 gate 通過後本輪停止，未啟動 WP9。
+
+C 授權補足：新增 bundle MIT notice 斷言先失敗後實作；browser／Node artifact 保留完整 Acorn 授權，加入後再計算 CSP hash。總 unit 為 26。
+
+C gate：36b000b895cf69fd1f75d4df51a23768d4bf943f，[遠端全綠](https://github.com/sprangdes/screentrace/actions/runs/37117621145)。190 Java／26 三引擎 E2E／33 capture／40 parser／npm audit／Dependency-Check 通過；首次渲染 726.9 ms、縮放中位數 3 ms。MIT notice 與 gate 回報同一補足提交；本輪於全部推送檢查通過後停止，不進 WP9。

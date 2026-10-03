@@ -17,3 +17,7 @@ EL 整段 ${...} 可解析內部；非 JS 模板 guard 不冒充 JavaScript，�
 ## 後果
 
 增加 bundle 容量；仍接受同一 100 MB HTML／5 MB md 警告與 3 秒效能驗收。能保留含 function／分號的字串資料而拒絕真正方法／模板插值函式本體，不用正規表示式充當 JS 主要解析器。
+
+## 分發授權
+
+瀏覽器與 Node 共用 bundle 都附完整 Acorn MIT LICENSE notice；新建置測試先失敗再補足。CSP hash 在加入 notice 後計算，Java 仍驗證完整 script 的同一摘要。工具授權文字不是目標專案文字。
