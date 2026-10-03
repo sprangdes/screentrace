@@ -542,3 +542,7 @@ UrlResolution 為 Spring／Struts 的共用 URL 引擎，保留全部候選及�
 ### WP5 增量二
 
 UrlGraphContribution 對 canonical API／表單請求套用共用引擎，保留全部候選、方法診斷及載入／失敗綁定來源。唯一結果連端點，多候選 targetId=null 並建立全部歧義關聯。workspace context 證據使用 workspace:config.json 與設定鍵行號，detail 只有鍵／候選／採用值；reserved 目標名稱被 scanner／safe read 拒絕。圖輸出前遮蔽使用者家目錄文字，工作區真實設定路徑不進圖。見 ADR 0012／0013 與 OQ-004；契約／SERVER 檢核及 schema 退場待後續增量。
+
+### WP5 增量三
+
+共用 ApiContractExtractor 以來源 DTO 擷取欄位（含 getter／record／繼承），正式 import 唯一解析；無唯一型別時列出全部候選並標 AMBIGUOUS。Spring 辨識純後端 ResponseBody／ResponseEntity，Struts ActionContracts 擷取 ActionForm、getParameter 常值與設定 forward。SpringServerValidation 以 JavaParser AST 擷取正式 javax／jakarta constraints、Valid／Validated、InitBinder 與可解析 Validator，不執行目標程式；SERVER 規則用穩定 ID，endpointIds／validationRuleIds 保持雙向對照，fields 同時保留欄位與對應元件 ID。動態 groups／message 保留原文與 UNRESOLVED；循環與未證明註冊有診斷。見 ADR 0014。

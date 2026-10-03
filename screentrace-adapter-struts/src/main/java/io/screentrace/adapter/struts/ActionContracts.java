@@ -1,0 +1,25 @@
+package io.screentrace.adapter.struts;
+import io.screentrace.core.*;
+import io.screentrace.core.ApplicationGraph.*;
+import io.screentrace.scanner.ProjectScanner.ProjectInventory;
+import io.screentrace.parser.jsp.ApiContractExtractor;
+import com.github.javaparser.ast.expr.MethodCallExpr;
+import java.util.*;
+
+/** Declared form and literal request/forward contracts; never executes an Action. */
+final class ActionContracts {
+ static ApplicationGraph enrich(ApplicationGraph graph,ProjectInventory inventory){List<Diagnostic> diagnostics=new ArrayList<>(graph.diagnostics());var types=StrutsSources.javaTypes(inventory,diagnostics);var extractor=new ApiContractExtractor(inventory.root(),inventory.javaFiles());Map<String,GraphNode> nodes=new TreeMap<>();graph.nodes().forEach(n->nodes.put(n.id(),n));List<ApiContract> contracts=new ArrayList<>(graph.apiContracts());
+  for(var endpoint:graph.nodes())if(endpoint.type()==NodeType.ENDPOINT&&"ACTION".equals(endpoint.attributes().get("category"))||endpoint.type()==NodeType.ENDPOINT&&endpoint.attributes().containsKey("parameterValue")){
+   List<GraphNode> handlers=graph.relationships().stream().filter(e->e.type()==EdgeType.HANDLED_BY&&e.from().equals(endpoint.id())).map(e->nodes.get(e.to())).filter(Objects::nonNull).toList();List<Field> fields=new ArrayList<>();List<Response> responses=new ArrayList<>();List<String> bodyTypes=new ArrayList<>();boolean known=false;
+   for(var handler:handlers){String name=handler.attributes().getOrDefault("class",handler.attributes().get("type"));var type=name==null?null:types.get(name);String method=handler.attributes().getOrDefault("method","execute");
+    for(var declaration:graph.relationships())if(declaration.type()==EdgeType.DECLARED_BY&&declaration.from().equals(handler.id())){var form=nodes.get(declaration.to());if(form!=null&&form.type()==NodeType.FORM_MODEL){String body=form.attributes().get("class");if(body!=null){bodyTypes.add(body);fields.addAll(extractor.fieldsFor(body,"BODY",false));}for(var attribute:form.attributes().entrySet())if(attribute.getKey().startsWith("field.")&&attribute.getKey().endsWith(".type")){String field=attribute.getKey().substring(6,attribute.getKey().length()-5);if(fields.stream().noneMatch(f->f.name().equals(field)))fields.add(new Field(field,attribute.getValue(),"BODY",false,form.source(),Confidence.CONFIRMED));}}}
+    if(type!=null)for(var declaration:type.declaration().getMethodsByName(method)){known=true;var requests=declaration.getParameters().stream().filter(p->p.getTypeAsString().endsWith("HttpServletRequest")).map(p->p.getNameAsString()).toList();for(var call:declaration.findAll(MethodCallExpr.class))if(call.getNameAsString().equals("getParameter")&&call.getArguments().size()==1&&call.getArgument(0).isStringLiteralExpr()&&call.getScope().map(scope->requests.contains(scope.toString())).orElse(false))fields.add(new Field(call.getArgument(0).asStringLiteralExpr().asString(),"String","QUERY",false,new SourceLocation(type.source().file(),call.getBegin().map(p->p.line).orElse(1)),Confidence.CONFIRMED));}
+    for(var config:inventory.strutsConfigFiles())if(inventory.root().relativize(config).toString().replace('\\','/').equals(handler.source().file()))try{String file=handler.source().file();var document=StrutsSources.xml(io.screentrace.scanner.SafeProjectFiles.readUtf8Limited(inventory.root(),config,io.screentrace.scanner.SafeProjectFiles.MAX_XML_FILE_BYTES));for(var action:StrutsSources.elements(document,"action"))if(action.getAttribute("path").equals(handler.attributes().get("path")))for(var forward:StrutsSources.elements(action,"forward")){String target=forward.getAttribute("path");if(!target.isBlank())responses.add(new Response("UNKNOWN",target.endsWith(".jsp")?"text/html":null,"VIEW: "+target,List.of(),StrutsSources.source(file,forward),StrutsSources.literal(target)?Confidence.INFERRED:Confidence.UNRESOLVED));}}catch(Exception ignored){}
+    for(var edge:graph.relationships())if(Set.of(EdgeType.FORWARDS_TO,EdgeType.RENDERS).contains(edge.type())&&edge.from().equals(handler.id())){var screen=nodes.get(edge.to());if(screen!=null)responses.add(new Response("UNKNOWN","text/html","VIEW: "+screen.attributes().getOrDefault("view",screen.name()),List.of(),edge.source(),Confidence.INFERRED));}
+   }
+   if(responses.isEmpty())responses.add(new Response("UNKNOWN",null,"UNRESOLVED",List.of(),endpoint.source(),Confidence.UNRESOLVED));Confidence confidence=handlers.size()>1?Confidence.AMBIGUOUS:known?Confidence.CONFIRMED:Confidence.UNRESOLVED;
+   contracts.add(new ApiContract(endpoint.id(),new Request(bodyTypes.isEmpty()?null:"application/x-www-form-urlencoded",bodyTypes.isEmpty()?null:String.join(" | ",new TreeSet<>(bodyTypes)),fields.stream().distinct().toList()),responses.stream().distinct().toList(),endpoint.source(),confidence));
+  }
+  return new ApplicationGraph(graph.application(),graph.nodes(),graph.relationships(),diagnostics.stream().distinct().toList(),contracts,graph.schemaVersion(),graph.behaviors(),graph.validationRules());
+ }
+}

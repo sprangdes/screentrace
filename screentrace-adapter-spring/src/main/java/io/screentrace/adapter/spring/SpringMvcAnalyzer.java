@@ -69,7 +69,7 @@ public final class SpringMvcAnalyzer {
                 state.nodes, state.edges, state.diagnostics, state.apiContracts, ApplicationGraph.CURRENT_SCHEMA_VERSION);
         graph=MarkupGraphContribution.enrich(graph,jsp);
         graph=SpringFormBindings.bind(graph,inventory);
-        return io.screentrace.parser.jsp.UrlGraphContribution.enrich(io.screentrace.parser.jsp.JavaScriptGraphContribution.enrich(MarkupGraphContribution.enrich(graph,jsp),inventory),inventory);
+        return SpringServerValidation.enrich(io.screentrace.parser.jsp.UrlGraphContribution.enrich(io.screentrace.parser.jsp.JavaScriptGraphContribution.enrich(MarkupGraphContribution.enrich(graph,jsp),inventory),inventory),inventory);
     }
 
     private static void discoverExceptionView(ProjectInventory inventory, State state) {
@@ -130,7 +130,7 @@ public final class SpringMvcAnalyzer {
                 for (MethodDeclaration method : type.getMethods()) {
                     AnnotationExpr mapping = method.getAnnotations().stream().filter(a -> MAPPINGS.contains(a.getNameAsString())).findFirst().orElse(null);
                     if (mapping != null) addMapping(type, method, mapping, relative, bases, constants,
-                        rest || annotation(method, "ResponseBody") != null, state);
+                        rest || annotation(type,"ResponseBody")!=null || annotation(method, "ResponseBody") != null || method.getType().isClassOrInterfaceType()&&method.getType().asClassOrInterfaceType().getNameAsString().equals("ResponseEntity"), state);
                 }
             }
         } catch (IOException | RuntimeException exception) {

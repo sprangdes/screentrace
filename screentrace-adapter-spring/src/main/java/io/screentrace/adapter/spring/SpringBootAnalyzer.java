@@ -58,9 +58,10 @@ public final class SpringBootAnalyzer {
             parseReact(inventory.root(), file, state);
         }
         connectReactGraph(state);
-        return new ApplicationGraph(
+        ApplicationGraph graph=new ApplicationGraph(
                 new ApplicationGraph.Application(inventory.root().getFileName().toString(), inventory.root().toString(), inventory.technologies()),
                 state.nodes, state.edges, state.diagnostics, state.apiContracts, ApplicationGraph.CURRENT_SCHEMA_VERSION);
+        return SpringServerValidation.enrich(io.screentrace.parser.jsp.UrlGraphContribution.enrich(graph,inventory),inventory);
     }
 
     private void parseController(Path root, Path file, AnalysisState state) {
@@ -79,7 +80,7 @@ public final class SpringBootAnalyzer {
         if (!isController(type)) {
             return;
         }
-        boolean rest = annotation(type, "RestController") != null;
+        boolean rest = annotation(type, "RestController") != null || annotation(type,"ResponseBody")!=null;
         List<String> bases = paths(annotation(type, REQUEST_MAPPING));
         if (bases.isEmpty()) {
             bases = List.of("");
@@ -106,7 +107,7 @@ public final class SpringBootAnalyzer {
 
         String result = returnLiteral(method);
         boolean redirect = result != null && result.startsWith("redirect:");
-        EndpointContext endpoint = new EndpointContext(handlerId, httpMethod, controller.rest(), redirect, result, source);
+        EndpointContext endpoint = new EndpointContext(handlerId, httpMethod, controller.rest()||annotation(method,"ResponseBody")!=null||method.getType().isClassOrInterfaceType()&&method.getType().asClassOrInterfaceType().getNameAsString().equals("ResponseEntity"), redirect, result, source);
         for (String base : controller.bases()) {
             for (String child : methodPaths) {
                 addEndpoint(state, join(base, child), endpoint, method, mapping);

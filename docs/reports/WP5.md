@@ -2,7 +2,7 @@
 
 ## 1. 工作包與提交
 
-限定 WP5，四增量依序為 URL／context、行為對應、契約／SERVER 檢核、schema 2.2。每次遠端 CI 全綠後才繼續。增量一 `51c9575386d8d51e295716b0542f858ec23b2e91` 已推送，[遠端 CI 全綠](https://github.com/sprangdes/screentrace/actions/runs/37087105170)；OQ-004 已處理，增量二待遠端 CI；WP6 未開始。
+限定 WP5，四增量依序為 URL／context、行為對應、契約／SERVER 檢核、schema 2.2。每次遠端 CI 全綠後才繼續。增量一 `51c9575386d8d51e295716b0542f858ec23b2e91` 已推送，[遠端 CI 全綠](https://github.com/sprangdes/screentrace/actions/runs/37087105170)；OQ-004 已處理，增量二 `bb66bb4136ef86447d161acc280eb046a5c75adb` 已推送，[遠端 CI 全綠](https://github.com/sprangdes/screentrace/actions/runs/37089180710)；增量三本機通過，待推送確認；WP6 未開始。
 
 ## 2. 主要檔案
 
@@ -14,13 +14,17 @@ UrlResolution.java、UrlResolutionTest.java；工作區設定及 CLI／ProjectIn
 
 增量二新增 UrlGraphIntegrationTest 五項測試，先跑全部五項失敗；另外 WorkspaceContextEvidenceTest 一項失敗，確認外部設定證據在 2.2 驗證遭拒。上述失敗測試現已通過；OQ-004 邊界測試先確認不合法命名空間接受、目標名稱冒充及設定路徑洩漏的失敗，再實作。圖內家目錄洩漏另先失敗後修正；曾遇 null detail 引發新測試錯誤，補充端點證據 detail 後通過。未修改任何既有斷言。
 
-增量二新增 16 個 Java 測試，合計 174 個通過；40 JS、4 docs-baseline 通過，npm audit 0。涵蓋保留命名空間正反例、reserved 目標讀取拒絕、設定鍵行號、序列化隱私、不同設定的證據、API／表單對應、歧義全列、方法不符、未知／重新賦值 context、Struts 副檔名與未知 method。增量二遠端 CI 待推送確認。
+增量二新增 16 個 Java 測試，合計 174 個通過；40 JS、4 docs-baseline 通過，npm audit 0。涵蓋保留命名空間正反例、reserved 目標讀取拒絕、設定鍵行號、序列化隱私、不同設定的證據、API／表單對應、歧義全列、方法不符、未知／重新賦值 context、Struts 副檔名與未知 method。增量二遠端 CI 已全綠。
+
+增量三新增 12 個 Java 測試（Spring 10、Struts 2），合計 186 個通過。首次執行缺少 API／SERVER 規則造成 5 failure、1 error，Struts 1 failure、1 error；DTO 多候選與 groups／動態 message 反例先失敗後修正。完整驗證曾發現既有 null action type 與 forward 契約缺漏，保留既有斷言並修正。`mvn -q verify` 全綠；未修改既有測試。
 
 ## 4. 設計決策
 
 [ADR 0011](../adr/0011-url-resolution-context-and-yaml.md)：共用引擎、全部候選、設定證據與 SnakeYAML 2.4（Apache-2.0）安全解析。
 
 [ADR 0012](../adr/0012-workspace-evidence-namespace-and-privacy.md)：工作區來源、隱私與行號；[ADR 0013](../adr/0013-request-behavior-endpoint-correlation.md)：canonical 行為、全部端點候選與來源保留。
+
+[ADR 0014](../adr/0014-server-contracts-and-validation.md)：共用 DTO 契約與來源型別選取、SERVER 規則／端點／欄位連結及靜態邊界，無新增相依。
 
 ## 5. 與指示文件的差異
 
@@ -32,4 +36,4 @@ UrlResolution.java、UrlResolutionTest.java；工作區設定及 CLI／ProjectIn
 
 ## 7. 驗收對照
 
-WP5.1／2 的共用引擎與設定 fixtures 通過本機測試；WP5.3 圖接入與 OQ-004 正反例已通過本機測試；契約、SERVER 規則、schema 2.2 尚待後續增量。WP5 未完成；增量二遠端全綠後才進入增量三，WP6 不開始。
+WP5.1／2 的共用引擎與設定 fixtures 通過本機測試；WP5.3 圖接入與 OQ-004 正反例已通過本機測試；WP5.4／5／6 的 API 契約、SERVER 規則與欄位／端點連結已通過本機測試；schema 2.2 尚待增量四。WP5 未完成；增量三遠端全綠後才進入增量四，WP6 不開始。
