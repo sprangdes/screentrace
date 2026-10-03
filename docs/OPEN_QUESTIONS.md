@@ -57,3 +57,21 @@
 - 影響範圍：WP5 增量四、ReportGenerator／ReviewResultGenerator 與其 fixture；core 舊斷言不受變更，WP6 不涉及。
 - 狀態：已處理（2026-10-03）；需求方採方案 B。
 - 決定：舊 ReportGenerator／ReviewResultGenerator 為 Deprecated 歷史相容入口，分別於 WP7／WP8 隨原測試移除；2.1 輸出列版本與歷史證據限制。只有新檢視器注入、md 匯出及新共用模組強制 2.2。CLI 實際分析餵入 2.2，既有 fixture／成功行為／斷言均不改。新增 §0 通則：預定取代的舊碼優先相容而不遷移測試，以 ADR 記錄，不再因同類衝突停問；長期程式需放寬斷言才停止。見 ADR 0016。
+
+
+## OQ-007 — WP8 條件／未解析運算式與禁止輸出原始碼的邊界
+
+- 情境：WP8 §3 的元件與行為表須含「條件」，§8 須列 UNRESOLVED／AMBIGUOUS 與來源；WP1 的 guard 要保留原文，現行圖的 guard、expression、evidence.detail 可能包含 JS／EL／scriptlet 的來源片段。WP8 §4 及需求方本輪安全要求同時明定「不得輸出原始碼、HTML 或 base64 圖片」。第 9 節未界定短條件／未解析運算式是否屬禁止的原始碼內容。Markdown 跳脫可防止注入，但不會消除其原始碼資訊。
+- 可選方案 A：允許經 Markdown／HTML 跳脫的短條件及未解析運算式作為分析中繼資料；仍禁止完整原始碼檔案、原始 HTML、base64 圖片。需需求方界定允許片段及 evidence.detail 的範圍。
+- 可選方案 B：禁止匯出任何程式／模板運算式原文；條件／未解析項目只列存在標記、ID、類型、信心、來源檔案與行號，evidence.detail 中的原文不匯出。
+- 影響範圍：WP8 共用 md 契約、條件欄位、§8 限制清單、惡意字串測試與 golden fixture；不改動圖／現有檢視器的原文保存。
+- 狀態：已處理（2026-10-03）；需求方採方案 A，限定允許標籤／路由／guard／UNRESOLVED 目標及選擇器／檢核文字；禁止完整檔案／函式／敘述式／原始 HTML／base64 與自由 detail。300 字元可見截斷、code span／控制字元隔離及固定警語見 v1.6、ADR 0022。WP7 前置修正 c70e7c6 已推送，[遠端 CI 全綠](https://github.com/sprangdes/screentrace/actions/runs/37113334292)。未進入 WP9。
+
+
+## OQ-008 — WP8 機器讀取區與 code span／長度限制
+
+- 情境：OQ-007 明定所有專案衍生文字 MUST 在 code span，每段最多 300 字元並標示截斷。WP8 固定契約的 YAML application／technologies 與附錄 A JSON review state 含應用名稱及原始 screenId／componentId；現行 review contract 依完整名稱／ID 驗證和還原。若機器讀取區也加 Markdown code span 或截斷，值不再是原始名稱／ID，無法滿足完整還原與往返位元組相等；第 9 節未定義例外。
+- 可選方案 A：code span／300 字元限制適用正文展示；YAML 與附錄 A 的機器值保留完整，採嚴格 JSON 字串／Unicode 跳脫，禁止注入新行／圍欄，解析為資料。需需求方明確授權機器區例外。
+- 可選方案 B：機器區也適用 code span／300 字元；另修訂機器契約與 ID 還原方式，避免不可逆截斷。
+- 影響範圍：WP8 REVIEW_MD_CONTRACT、檔頭、附錄 A、長 ID／名稱 fixture、匯入與完整往返；現有 review 複合鍵斷言不改。
+- 狀態：未處理（2026-10-03）；依 §0.3 停止 WP8 實作，已提出問題，未自行決定例外；WP9 未開始。
