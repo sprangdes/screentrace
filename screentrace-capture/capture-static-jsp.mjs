@@ -239,6 +239,7 @@ async function renderJsp(screen) {
   if (!/<html[\s>]/i.test(source)) source = `<!doctype html><html><head></head><body>${source}</body></html>`;
   source = source.replace(/<html\b[^>]*>\s*<html\b[^>]*>/gi, '<html>').replace(/<\/head>\s*<head\b[^>]*>/gi, '');
   source = source.replace(/<script\b[\s\S]*?<\/script\s*>/gi, '').replace(/\son[a-z]+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, '');
+  if(previewV2){if(!/<head[\s>]/i.test(source))source=source.replace(/<html\b[^>]*>/i,'$&<head></head>');source=source.replace(/<head([^>]*)>/i,"<head$1><style data-st-preview-freeze>*,*::before,*::after{animation-play-state:paused!important;transition:none!important;caret-color:transparent!important}</style>");}
   const htmlFile = await assertOutputPathWithin(output, path.join(htmlRootReal, `${screen.id.replace(/[^a-z0-9-]/gi, '_')}.html`));
   await writeOutput(htmlFile, source);
   return { htmlFile, assets: [...source.matchAll(/\b(?:href|src)=["'](assets\/[^"']+)/gi)].map(match => '/' + match[1]), dynamicExpressions: previewV2?[...new Set([...unresolved,...previewExpressions,...expressionList(source)])]:unresolved };

@@ -13,6 +13,8 @@ DOM 加入工具保留的 source 與 component metadata，原始碼同名屬性�
 
 `preview-markup.mjs` 以 quote-aware token scanner 處理 markup，raw script/style 與註解不能偽造條件。所有 c:if／c:choose 分支保留，data-st-condition 包含原始條件與 otherwise 的否定語意；EL 的括號／引號與 scriptlet 原文以詞彙掃描保留。範例值經 HTML attribute/text escaping；只產生重建畫面，不執行 JSP、Java 或 JS。本地 tagdir 僅採 JSP 宣告，include 與資源沿用安全讀寫、循環／深度限制。
 
+為固定擷取時間，完整模式的工具 HTML 以受信任 CSS 暫停動畫於初始狀態、停用轉場與游標閃爍。這些規則同時存在於實際重建 HTML，因此 captured computed style 可完整往返；不以等待隨機動畫時間或放寬斷言處理。首次 Ubuntu CI 的動畫完整資料相等測試失敗，保留原斷言補此靜態化規則。
+
 ## 契約與限制
 
 `static-preview/element-styles.json` version 2／schemaVersion 2.2 含 screens、styles、defaults、diagnostics。Java PreviewModel version 2 增加完整 elements、styles、defaults、diagnostics；每個 screen 增加 rendering、dynamicExpressions、thumbnail、diagnostics。元素 DOM 次序保留；字典以明確鍵排序並不可變。
