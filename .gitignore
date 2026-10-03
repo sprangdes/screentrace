@@ -5,3 +5,6 @@
 # IntelliJ IDEA workspace files
 .idea/
 *.iml
+
+# Generated standalone viewer bundle
+screentrace-viewer/dist/

@@ -1,0 +1,8 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {chromium,firefox,webkit} from '../../screentrace-capture/node_modules/playwright/index.mjs';
+import path from 'node:path';
+import {pathToFileURL,fileURLToPath} from 'node:url';
+const file=pathToFileURL(path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../screentrace-report/target/viewer-fixtures/report/screentrace-report.html')).href;
+const browsers=process.env.ST_BROWSERS?.split(',')||['chromium'];
+for(const name of browsers)test(`${name}: file report preserves malicious text, blocks preview script, makes no external requests`,async()=>{const browser=await ({chromium,firefox,webkit}[name]).launch({timeout:30000});try{const page=await browser.newPage();const requests=[];page.on('request',r=>{if(!r.url().startsWith('file:')&&!r.url().startsWith('data:'))requests.push(r.url());});await page.goto(file);await page.waitForSelector('[data-ready="true"]');assert.equal(await page.evaluate(()=>globalThis.targetProbe),undefined);assert.match(await page.locator('[data-screen="screen"]').innerText(),/<script>globalThis.targetProbe=1/);await page.locator('[data-screen="screen"]').click();const frame=page.locator('iframe');assert.doesNotMatch(await frame.getAttribute('sandbox'),/allow-scripts/);await page.frameLocator('iframe').locator('button').waitFor();assert.equal(await page.evaluate(()=>globalThis.targetProbe),undefined);assert.deepEqual(requests,[]);assert.match(await page.locator('meta[http-equiv="Content-Security-Policy"]').getAttribute('content'),/script-src 'sha256-/);}finally{await browser.close();}});

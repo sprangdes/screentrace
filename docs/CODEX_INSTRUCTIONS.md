@@ -1,6 +1,6 @@
 # ScreenTrace 調整指示(給 Codex)
 
-- 文件版本:1.4(2026-10-03;依 WP5 授權與 OQ-004 決定補充 context、schema 斷言與工作區證據隱私,變更見第 11 節)
+- 文件版本:1.5(2026-10-03;依 WP7 授權修訂 CSP，變更見第 11 節)
 - 建議放置位置:`docs/CODEX_INSTRUCTIONS.md`,並在 `AGENTS.md` 第 10 節的閱讀清單加入本文件
 - 對照基準:`sprangdes/screentrace` main(含 review-result v2 匯出的版本)
 
@@ -116,7 +116,7 @@
 - **C3 決定性**:同一份原始碼輸入,輸出(圖、HTML、md)MUST 位元組相同,僅 `generatedAt` 可不同。所有集合 MUST 有明確排序。
 - **C4 框架隔離**:`core` 的圖模型 MUST NOT 出現框架名稱;框架專屬語意只放在 adapter 與 evidence。
 - **C5 不可信輸入**:目標專案的所有文字(標籤、URL、路徑、JS 字串、CSS)都視為不可信。輸出 HTML MUST 僅以 `textContent` / 屬性 API 寫入,MUST NOT 使用 `innerHTML` 拼接目標內容;預覽 iframe MUST 使用 `sandbox`(不含 `allow-scripts`)。
-- **C6 輸出 HTML 的 CSP**:單一 HTML MUST 內含 CSP `<meta>`:`default-src 'none'`,`script-src` 以**建置時計算的 SHA-256 雜湊**指定(不得使用 `'unsafe-inline'`),樣式與圖片限於 `data:` 與雜湊/nonce 允許項;MUST NOT 引用任何遠端資源或 CDN。
+- **C6 輸出 HTML 的 CSP**:單一 HTML MUST 內含 CSP `<meta>`:`default-src 'none'`,`script-src` 以**建置時計算的 SHA-256 雜湊**指定(不得使用 `'unsafe-inline'`),style-src 允許 `'unsafe-inline'`（srcdoc 繼承外層 CSP）；圖片與字型限 `data:`;MUST NOT 引用任何遠端資源或 CDN。
 - **C7 路徑安全**:沿用 `SafeProjectFiles` 與 `safe-files.mjs` 的路徑限制、檔案大小上限、寫入範圍限制;新增的讀寫一律走同一套。
 - **C8 相依套件**:新增相依 MUST 釘選版本、確認授權相容、通過 CI 的 npm audit 與 Dependency-Check;每個新相依 MUST 在 ADR 說明必要性。
 - **C9 穩定 ID**:畫面、元件、行為、API 的 ID MUST 由穩定鍵(路由、來源路徑、元素種類、屬性、同類出現序)決定,重新分析後 ID 不得無故改變(review 標記靠它保存,見 WP1)。
@@ -320,7 +320,7 @@ H. 品質
    - 鍵盤可操作、焦點可見;文案集中管理(繁體中文)。
    - 效能(初始目標,須實測並回報):合成資料 500 畫面 / 5,000 元件 / 3,000 條關聯,首次渲染 ≤ 3 秒,縮放 / 平移維持流暢;不可達時回報數據,不得自行放寬。
 
-**驗收**:Playwright 端到端測試,以 `file://` 開啟建置後的單一 HTML,涵蓋 B~H 每一項行為;安全測試(含惡意字串的畫面標籤 / URL / JS 字串不會執行,以探針驗證);CSP 驗證(無 `unsafe-inline`、無遠端請求)。
+**驗收**:Playwright 端到端測試,以 `file://` 開啟建置後的單一 HTML,涵蓋 B~H 每一項行為;安全測試(含惡意字串的畫面標籤 / URL / JS 字串不會執行,以探針驗證);CSP 驗證(script-src 無 `unsafe-inline`，style-src 依 v1.5 允許 `unsafe-inline`、無遠端請求)。
 
 ---
 
@@ -496,6 +496,8 @@ migration_target:
 ---
 
 ## 11. 修訂紀錄
+
+- 1.5:依需求方 WP7 決定，script-src 僅建置時 SHA-256，不允許 unsafe-inline；style-src 允許 unsafe-inline 供 srcdoc 繼承。iframe sandbox 不含 allow-scripts；TypeScript／esbuild 僅建置期、無執行期 UI 框架。WP7 依 A–E 增量、先失敗測試／遠端 CI gate 逐一完成，E 才移除舊碼，不進入 WP8。
 
 - 1.4:依 WP5 授權僅允許 schema 版本字串斷言 2.1 → 2.2 並逐處記錄 ADR；明定 JS API context 必須可證明且實際值有明確設定。依 OQ-004 採工作區來源命名空間、單純檔名嚴格驗證、目標檔保留名稱拒絕、設定鍵行號與證據隱私；圖內不含真實設定檔路徑／家目錄，context 來源與採用值可區分。
 

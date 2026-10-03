@@ -25,8 +25,20 @@ jobs:
           node-version: '22'
       - name: Install AST dependencies for Java integration tests
         run: npm --prefix screentrace-js ci --ignore-scripts
+      - name: Build standalone viewer
+        run: |
+          npm --prefix screentrace-viewer ci --ignore-scripts
+          npm --prefix screentrace-viewer run build
       - name: Build and test Java modules
         run: mvn -B clean verify
+      - name: Install viewer test browsers
+        run: |
+          npm --prefix screentrace-capture ci
+          npm exec --prefix screentrace-capture -- playwright install --with-deps chromium firefox webkit
+      - name: Test file viewer in all engines
+        env:
+          ST_BROWSERS: chromium,firefox,webkit
+        run: node --test screentrace-viewer/test/*.e2e.mjs
       - name: Set vulnerability cache date
         id: cache-date
         run: echo "day=$(date -u +%Y-%m-%d)" >> "$GITHUB_OUTPUT"
@@ -64,6 +76,7 @@ jobs:
           cache-dependency-path: |
             screentrace-capture/package-lock.json
             screentrace-js/package-lock.json
+            screentrace-viewer/package-lock.json
       - name: Install Node dependencies
         run: npm --prefix screentrace-capture ci
       - name: Install Chromium for static reconstruction tests
@@ -72,6 +85,12 @@ jobs:
         run: node --test screentrace-capture/docs-baseline.test.mjs screentrace-capture/safe-files.test.mjs screentrace-capture/spring-resource-mappings.test.mjs screentrace-capture/capture-static-jsp.security.test.mjs screentrace-capture/preview-markup.test.mjs screentrace-capture/preview-v2.test.mjs
       - name: Audit Node dependencies
         run: npm --prefix screentrace-capture audit --audit-level=high
+      - name: Test and audit standalone viewer build
+        run: |
+          npm --prefix screentrace-viewer ci --ignore-scripts
+          npm --prefix screentrace-viewer run build
+          npm --prefix screentrace-viewer test
+          npm --prefix screentrace-viewer audit --audit-level=high
       - name: Install JavaScript parser dependencies
         run: npm --prefix screentrace-js ci --ignore-scripts
       - name: Test JavaScript parser

@@ -22,4 +22,5 @@
       <scope>test</scope>
     </dependency>
   </dependencies>
+  <build><resources><resource><directory>src/main/resources</directory></resource><resource><directory>../screentrace-viewer/dist</directory><targetPath>viewer</targetPath></resource></resources></build>
 </project>

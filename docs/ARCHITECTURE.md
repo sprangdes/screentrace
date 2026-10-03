@@ -550,3 +550,7 @@ UrlGraphContribution 對 canonical API／表單請求套用共用引擎，保留
 ### WP5 增量四與歷史入口
 
 所有 adapter／CLI 新分析回傳 2.2 並通過 requireAnalysis。合併嚴格 2.2 輸入／輸出均驗證；混合版本與缺證據 2.2 拒絕，兩份 2.1 僅回傳明確標示的歷史圖，不升版。相同行為的證據合併、不同結果不擇一，CLI 再執行共用 URL 配對。現有 ReportGenerator／ReviewResultGenerator 為 Deprecated 歷史入口，2.1 輸出有版本／證據限制；WP7／WP8 新程式只接受嚴格 2.2，並隨舊碼移除舊入口與測試。見 ADR 0015／0016。
+
+### screentrace-viewer
+
+WP7 新單檔檢視器；TypeScript 7.0.2／esbuild 0.28.2 僅建置期，執行期無 UI 框架。Java SingleHtmlReportGenerator 嚴格 2.2，僅注入資料並驗證建置 script 雜湊。單檔 file:// 不 fetch 任何資源；CSP style-src unsafe-inline 依 v1.5 授權，script-src 僅雜湊，srcdoc sandbox 不含 allow-scripts。舊 ReportGenerator 與 server 於增量 E 才移除。

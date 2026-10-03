@@ -331,3 +331,15 @@ node screentrace-capture/capture-static-jsp.mjs <target-project> <analysis-direc
 ```
 
 每畫面的警告上限可用 `--style-element-limit=50000`、`--style-byte-limit=16777216` 調整；超量產生診斷，完整元素／樣式保留。安全路徑、來源檔大小與截圖硬限制仍生效，失敗明確標記。預設舊 capture 入口僅供將於 WP7 移除的歷史流程；不執行目標 JSP、Java 或 JavaScript。契約與限制見 [ADR 0018](docs/adr/0018-complete-reconstructed-preview.md)。
+
+### 單檔檢視器建置（WP7）
+
+```bash
+npm --prefix screentrace-viewer ci --ignore-scripts
+npm --prefix screentrace-viewer run build
+mvn clean verify
+npm --prefix screentrace-viewer test
+node --test screentrace-viewer/test/*.e2e.mjs
+```
+
+新入口 `SingleHtmlReportGenerator.generate` 只接受嚴格 schema 2.2，注入圖、預覽、內嵌文件與 manifest，產出 `report/screentrace-report.html` 及實際 bytes 的 `report-size.json`；超過 100 MB 只警告。單檔以 `file://` 開啟，沒有執行期 npm 相依。A–D 與舊 CLI 報表並存，E 才切換正式 CLI 並移除舊碼。設定 `ST_BROWSERS=chromium,firefox,webkit` 可執行三引擎測試，須先安裝對應 Playwright 瀏覽器。
