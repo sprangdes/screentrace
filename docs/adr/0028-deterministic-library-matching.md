@@ -9,3 +9,5 @@
 涵蓋率以 canonical COMPONENT ID 每種 kind 各計一次（共享片段不因多畫面重複計數），分 MATCH／NONE／AMBIGUOUS。每個畫面仍可依複合鍵獨立覆寫，覆寫不改原始比對涵蓋率。所有排序採明確 UTF-16 字串次序；圖與 manifest 排列反轉不影響結果。
 
 3 項新增測試：priority／特異度／全數歧義／NONE／反轉排序、缺資料失敗與既有來源標籤投影、覆蓋矛盾／重複條件與涵蓋率。無新增相依；既有斷言與 md golden 不變。
+
+增量四補足：priority 的 Schema 範圍明定為 JavaScript 安全整數 ±9,007,199,254,740,991，runtime 同樣拒絕非安全整數；避免 JSON 數值讀取失真造成假同分。新增超界 priority Schema 反例先失敗後通過，原斷言不變。

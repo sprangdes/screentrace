@@ -254,3 +254,20 @@ node --test screentrace-viewer/test/*.e2e.mjs
 新入口 `SingleHtmlReportGenerator.generate` 只接受嚴格 schema 2.2，注入圖、預覽、內嵌文件與 manifest，產出 `report/screentrace-report.html` 及實際 bytes 的 `report-size.json`；超過 100 MB 只警告。單檔以 `file://` 開啟，沒有執行期 npm 相依。CLI 已切換 SingleHtmlAnalysisWriter；舊 ReportGenerator、localhost 與 POST 端點已移除。設定 `ST_BROWSERS=chromium,firefox,webkit` 可執行三引擎測試，須先安裝對應 Playwright 瀏覽器。
 
 確認模式的決策自動暫存在應用名稱＋分析指紋的 localStorage；拒絕存取時只警告。複合鍵契約見 [REVIEW_STATE_CONTRACT](docs/REVIEW_STATE_CONTRACT.md)。md 匯出／匯入共用模組見 [REVIEW_MD_CONTRACT](docs/REVIEW_MD_CONTRACT.md)；決策可用單一 md 跨瀏覽器還原。
+
+### 元件庫 manifest（WP9）
+
+使用 [虛構 sample manifest](docs/examples/component-library.sample.json) 與 [JSON Schema](docs/schemas/component-library.schema.json)；不解析真實 Angular 套件／Storybook。
+
+```text
+screentrace library validate component-library.sample.json
+screentrace library import component-library.sample.json
+screentrace library import component-library.sample.json --project example-project
+screentrace library list
+screentrace library import component-library.sample.json --project example-project --replace
+screentrace library unbind --project example-project
+```
+
+未指定 project 只儲存、不選用。相同名稱@版本異內容需明確 --replace，已綁定專案更換後重新執行 report；解除後顯示「未匯入元件庫」。list 列摘要與綁定，不列工作區路徑。
+
+元件詳情顯示自動候選／屬性與事件對照；確認模式下 KEEP 畫面的元件可手動覆寫，共用元件按畫面獨立保存。md 帶入選用庫名稱@版本與摘要，舊庫覆寫隔離為 orphan，換回原庫恢復。決策與覆寫透過單一 md 還原，詳細欄位與隔離規則見 [Review md 契約](docs/REVIEW_MD_CONTRACT.md)。

@@ -12,7 +12,7 @@ function field(node:Node,key:string):string[]{
 }
 /** Exact predicates only. Unavailable facts are errors, never invented defaults. */
 export function matchLibrary(graph:Graph,library:Library):LibraryResult {
- requireGraph(graph);const matches:Record<string,LibraryMatch>=Object.create(null),counts=new Map<string,{kind:string;matched:number;unmatched:number;ambiguous:number}>();
+ requireGraph(graph);for(const c of library.manifest.components)for(const rule of c.matches)if(!Number.isSafeInteger(rule.priority))throw Error('matches.priority 必須為安全整數');const matches:Record<string,LibraryMatch>=Object.create(null),counts=new Map<string,{kind:string;matched:number;unmatched:number;ambiguous:number}>();
  for(const node of [...graph.nodes].filter(n=>n.type==='COMPONENT').sort((a,b)=>order(a.id,b.id))){
   const kind=node.attributes.kind;if(!kind)throw Error(`圖缺少 kind；元件 ${node.id}，須確認 manifest matches 所需資訊`);
   const candidates:{component:LibraryComponent;priority:number;specificity:number}[]=[];

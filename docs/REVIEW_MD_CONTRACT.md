@@ -36,7 +36,7 @@ evidence.detail 自由文字從不複製；僅接受結構化白名單鍵解析�
 
 機器區保留完整名稱／ID，不套用 code span／300 上限。每字串 JSON 序列化，再 Unicode 跳脫反引號、<、>、&、C0／C1 控制、換行、雙向控制 U+202A–202E／U+2066–2069、U+2028／2029；另跳脫正文新增集合（零寬／格式、變體選擇器、Unicode 標籤字元），正規表示式使用 u 旗標。所有新增字元轉成 JSON 合法的 UTF-16 \uXXXX，非 BMP 使用兩個代理對跳脫；不得使用 JSON 不接受的 \u{XXXXX}。不得改變字面反斜線序列。
 
-附錄固定資訊字串 json screentrace-review-state，只產生一個末尾區塊。已知鍵：format_version（1）、analysis_fingerprint、screen_decisions、component_decisions、state_sha256。component_decisions 是 screenId → componentId → 決策巢狀字典，完整保存未知 ID；不含 application、標籤、條件、訊息、URL 或任何證據。WP9 元件庫覆寫尚未啟用，本版本不接受額外欄位。
+附錄固定資訊字串 json screentrace-review-state，只產生一個末尾區塊。共同已知鍵：format_version（1 或 2）、analysis_fingerprint、screen_decisions、component_decisions、state_sha256。component_decisions 是 screenId → componentId → 決策巢狀字典，完整保存未知 ID；不含 application、標籤、條件、訊息、URL 或任何證據。v1 不接受 v2 專屬欄位；v2 必須另含 component_overrides 與 orphan_component_overrides，其他未知欄位拒絕。
 
 state_sha256 對排除自身的狀態物件正規化 JSON（所有物件鍵遞迴排序，原始值 JSON 編碼、無空白）UTF-8 求 SHA-256；與機器顯示用 Unicode 加強跳脫分開。摘要僅偵測損毀，不宣稱防竄改。
 
@@ -49,3 +49,19 @@ state_sha256 對排除自身的狀態物件正規化 JSON（所有物件鍵遞�
 單一 md，LF 換行、末尾 LF。超過 5,000,000 UTF-8 bytes 在檢視器警告，不截斷。JSON import 的硬上限與正文匯出警告不同。檢視器對選取檔案硬上限 64 MiB（67,108,864 bytes）；大於上限於 File.text() 前明確失敗，不改目前決策。等於上限可讀取，但仍受附錄 JSON 32 MiB 限制。
 
 generateMarkdown(payload, state, options) 回傳 Promise<string>；importMarkdown(md, payload) 回傳 state、orphans、changed。sha256／canonicalJson／machineJson／projectText 可獨立測試；golden 固定 generatedAt 和 toolVersion。瀏覽器只讀使用者選取檔案，不讀網路資源。
+
+## WP9／OQ-010：元件庫與覆寫（v1.9）
+
+未選用時 migration_target.component_library 保持雙引號 none，正文 §6 保持「未匯入元件庫」，原兩份 v1 golden 位元組不變。選用時 component_library 為單行 JSON 相容物件，只有 name_version（名稱@版本）與 manifest_sha256（完整 64 碼小寫十六進位）兩個雙引號字串。不列工作區路徑。v2 匯入只讀檔頭首個 --- 區塊中的唯一 component_library，不從正文猜測。有效覆寫原來源摘要取此檔頭；foreign record 自帶原摘要。
+
+component_overrides：screenId → componentId → 元件庫元件 ID，只含目前來源摘要相符、圖 owner／元件庫 ID 有效的覆寫。orphan_component_overrides 為陣列，每筆精確只有 screenId、componentId、libraryComponentId、manifest_sha256；全部必須為非空 ID 字串與 64 碼小寫摘要，未知／缺鍵、錯型別、錯摘要格式拒絕。外庫與未知圖 ID 均保留，不把不可信欄位搬進自由文字。
+
+任一分區有資料才輸出 format_version 2；皆無輸出 1（即使已選用庫）。v2 兩個新欄位皆必要，可為空字典／陣列；v1 出現任一新欄位拒絕。state_sha256 對除自身外所有已知狀態欄位的正規化 JSON 計算，包含兩個新欄位與每筆 orphan 來源摘要；檔頭仍是元資料，不宣稱整份文件防竄改。
+
+唯一 partitionOverrides 與瀏覽器暫存共用，收集有效與 orphan，按原來源摘要對目前庫／圖重新分區；A/B/A 恢復有效，不重新標記。相同 source／screenId／componentId 有衝突值拒絕，不擇一。未知圖 ID 保留並列入 import orphan 清單；所有 ID／摘要機器跳脫、最後區塊、大小與 SHA 規則沿用。匯入完整驗證後才更新決策。
+
+§6 涵蓋率由原始決定性比對計算（不讀覆寫），每種 canonical kind 依 MATCH／NONE／AMBIGUOUS 計數；列未對應及全數歧義候選。元件列與有效 KEEP 畫面覆寫可替換建議；§6 顯示目前使用候選的名稱／selector／category／status／description、inputs／outputs／slots／usage／docsUrl，以及有效手動對照。foreign orphan 完全不作建議、不影響 API 與涵蓋率，也不在正文列其內容；§7 僅數量分類：「N 筆覆寫的來源元件庫與目前不同,未套用」；同來源未知圖／庫 ID 另列數量。
+
+manifest 文字同正文隔離（code span、300、控制／隱形可見化），多行 usage 特別以 \n 可見化再套用單行規則，截斷標記指向名稱@版本。只以文字列 URL，不產生網路請求、HTML 或圖片。固定 README／sample 虛構範例不代表任何真實元件庫。
+
+比對 priority 須為 Schema 驗證的 JavaScript 安全整數；拒絕可能失真的 JSON 數值，不把不同分數讀成假同分。

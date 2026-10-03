@@ -62,6 +62,11 @@ public final class SafeProjectFiles {
   }
 
   public static String readUtf8Limited(Path root, Path file, long maxBytes) throws IOException {
+    return new String(readBytesLimited(root,file,maxBytes),StandardCharsets.UTF_8);
+  }
+
+  /** Same path and size boundary, preserving original bytes for content digests. */
+  public static byte[] readBytesLimited(Path root,Path file,long maxBytes) throws IOException {
     Path safe = requireExistingRegularFileWithin(root, file);
     if (Files.size(safe) > maxBytes) throw new IOException("Source file exceeds limit of " + maxBytes + " bytes: " + file);
     try (var input = Files.newInputStream(safe, LinkOption.NOFOLLOW_LINKS); var output = new ByteArrayOutputStream((int) Math.min(Files.size(safe), 64 * 1024))) {
@@ -73,7 +78,7 @@ public final class SafeProjectFiles {
         if (total > maxBytes) throw new IOException("Source file grew beyond limit of " + maxBytes + " bytes: " + file);
         output.write(buffer, 0, count);
       }
-      return output.toString(StandardCharsets.UTF_8);
+      return output.toByteArray();
     }
   }
 

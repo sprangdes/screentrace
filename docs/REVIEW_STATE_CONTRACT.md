@@ -32,3 +32,5 @@ partitionOverrides 是唯一分區邏輯：把全部覆寫收集為帶來源摘�
 選用庫時暫存鍵加 :<manifest_sha256>；無庫沿用舊鍵。另以同分析指紋 :library-transfer 保存完整共用模型供 A/B/A／解除綁定轉移，讀取後一律經上述分區；不直接套用前庫資料。未知 ID／外庫覆寫列 orphan 提示，不靜默套用。暫存失敗不影響記憶體狀態。
 
 md 雙格式契約見 REVIEW_MD_CONTRACT；有效／orphan ID 同時可逆還原，v1 golden 不變。
+
+首次選用元件庫可讀同指紋的舊 WP8 key，保留決策後立即經共用分區；v1 md 匯入即使沒有覆寫，也正規化到目前 manifest 摘要 key。不得因匯入 v1 而退回未含摘要的暫存 key。

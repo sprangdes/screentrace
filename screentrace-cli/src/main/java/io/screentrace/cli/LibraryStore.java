@@ -1,6 +1,7 @@
 package io.screentrace.cli;
 
 import io.screentrace.report.ComponentLibrary;
+import io.screentrace.scanner.SafeProjectFiles;
 import com.fasterxml.jackson.databind.*;
 import com.fasterxml.jackson.databind.node.*;
 import java.nio.file.*;
@@ -9,17 +10,18 @@ import java.io.*;
 
 /** Content-addressed workspace storage; paths never enter messages or payloads. */
 final class LibraryStore {
- private final Path root;
+ private final Path root,workspace;
  private final ObjectMapper json=new ObjectMapper();
- LibraryStore(Path workspace){root=workspace.resolve("libraries");}
+ LibraryStore(Path workspace){this.workspace=workspace.toAbsolutePath().normalize();root=this.workspace.resolve("libraries");}
  private ObjectNode index() throws IOException {
+  Files.createDirectories(workspace);SafeProjectFiles.requireWritePathWithin(workspace,root);
   if(Files.isSymbolicLink(root)||Files.isSymbolicLink(root.resolve("index.json")))throw new IOException("元件庫儲存不可使用符號連結");
   if(!Files.exists(root.resolve("index.json"))){var empty=json.createObjectNode();empty.set("entries",json.createObjectNode());empty.set("bindings",json.createObjectNode());return empty;}
-  return (ObjectNode)json.readTree(root.resolve("index.json").toFile());
+  return (ObjectNode)json.readTree(SafeProjectFiles.readBytesLimited(workspace,root.resolve("index.json"),SafeProjectFiles.MAX_SOURCE_FILE_BYTES));
  }
  private void save(ObjectNode index) throws IOException {
-  Files.createDirectories(root);Path tmp=Files.createTempFile(root,"index-",".tmp");
-  json.writeValue(tmp.toFile(),index);Files.move(tmp,root.resolve("index.json"),StandardCopyOption.REPLACE_EXISTING,StandardCopyOption.ATOMIC_MOVE);
+  Files.createDirectories(SafeProjectFiles.requireWritePathWithin(workspace,root));Path tmp=Files.createTempFile(root,"index-",".tmp");
+  json.writeValue(SafeProjectFiles.requireWritePathWithin(workspace,tmp).toFile(),index);Files.move(tmp,SafeProjectFiles.requireWritePathWithin(workspace,root.resolve("index.json")),StandardCopyOption.REPLACE_EXISTING,StandardCopyOption.ATOMIC_MOVE);
  }
  String importManifest(byte[] bytes,String project,boolean replace) throws IOException {
   var library=ComponentLibrary.validate(bytes);var index=index();
@@ -32,7 +34,7 @@ final class LibraryStore {
    if(!replace)throw new IllegalArgumentException("同名稱@版本內容衝突：已儲存 SHA-256 "+String.join(",",conflicts)+"；匯入 SHA-256 "+hash+"；使用 --replace 明確更換");
   }
   if(replace)bindings.fields().forEachRemaining(e->{if(!e.getValue().asText().equals(key)&&entries.path(e.getValue().asText()).path("label").asText().equals(label))affected.add(e.getKey());});
-  Files.createDirectories(root);Path file=root.resolve(hash+".json");
+  Files.createDirectories(SafeProjectFiles.requireWritePathWithin(workspace,root));Path file=SafeProjectFiles.requireWritePathWithin(workspace,root.resolve(hash+".json"));
   if(Files.isSymbolicLink(file))throw new IOException("元件庫儲存不可使用符號連結");
   Files.write(file,bytes);entries.set(key,json.createObjectNode().put("label",label).put("sha256",hash));
   for(String bound:affected)bindings.put(bound,key);
@@ -46,7 +48,7 @@ final class LibraryStore {
   var entry=index.path("entries").path(key);String hash=entry.path("sha256").asText(),label=entry.path("label").asText();
   if(!hash.matches("[a-f0-9]{64}"))throw new IOException("元件庫索引無效");
   var file=root.resolve(hash+".json");if(Files.isSymbolicLink(file)||Files.size(file)>ComponentLibrary.MAX_BYTES)throw new IOException("元件庫儲存無效");
-  var library=ComponentLibrary.validate(Files.readAllBytes(file));
+  var library=ComponentLibrary.validate(SafeProjectFiles.readBytesLimited(workspace,file,ComponentLibrary.MAX_BYTES));
   if(!library.sha256().equals(hash)||!library.label().equals(label))throw new IOException("元件庫內容摘要不符");return library;
  }
  String list() throws IOException {

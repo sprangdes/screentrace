@@ -557,3 +557,7 @@ WP7 新單檔檢視器；TypeScript 7.0.2／esbuild 0.28.2 僅建置期，執行
 ### WP8 本地 review md
 
 shared/review-md 與 strict-graph 供瀏覽器／Node 共用，建置同時提供 ESM artifact。Acorn 8.18.0 MIT 只解析輸出運算式的內容邊界，不執行。md-controls 以 Blob 下載和檔案選擇器讀本地內容；通過最後附錄／已知鍵／決策／大小／SHA 驗證後才原子更新目前狀態。指紋不同／orphan 保留決策並提示，不猜測改名。正文／機器區隔離、格式、排序與容量見 REVIEW_MD_CONTRACT、ADR 0022–0025；元件庫覆寫留 WP9，尚未開始。
+
+### WP9 元件庫選用與覆寫
+
+CLI LibraryStore／LibraryCommands 使用工作區內容 SHA-256 定址、專案明確綁定／解除與 --replace；ComponentLibrary 在 report 邊界以打包的 draft 2020-12 Schema 驗證，不改 core。Java analyze／report 只注入選用 manifest 與摘要；viewer／Node 共用 library 精確比對／kind 涵蓋率與 review 可逆來源分區。外庫覆寫保留 orphan，不參與有效建議／API。md 動態 v1/v2 與同一分區往返，契約見 REVIEW_STATE_CONTRACT／REVIEW_MD_CONTRACT；設計 ADR 0027–0030。WP10 未開始。
