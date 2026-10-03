@@ -26,23 +26,28 @@ public final class GraphIntegrityValidator {
   private static void validateStrictEvidence(ApplicationGraph graph, List<String> errors) {
     for (GraphNode node : graph.nodes()) {
       requireEvidence(node.id(), node.evidence(), errors);
+      if(node.source()!=null&&!validSource(node.source().file()))errors.add("Invalid node source: "+node.id());
       if (node.type() == NodeType.COMPONENT) {
         try { ApplicationGraph.ComponentKind.valueOf(node.attributes().getOrDefault("kind", "")); }
         catch (IllegalArgumentException invalid) { errors.add("Missing or invalid component kind: " + node.id()); }
       }
     }
-    for (Relationship edge : graph.relationships()) requireEvidence(edge.id(), edge.evidence(), errors);
+    for (Relationship edge : graph.relationships()) {requireEvidence(edge.id(), edge.evidence(), errors);if(edge.source()!=null&&!validSource(edge.source().file()))errors.add("Invalid relationship source: "+edge.id());}
   }
 
   private static void requireEvidence(String owner, List<ApplicationGraph.AnalysisEvidence> evidence, List<String> errors) {
     if (evidence.isEmpty()) errors.add("Missing evidence: " + owner);
     for (var item : evidence) {
-      if (item.source() == null || item.source().file() == null || item.source().file().isBlank() || item.source().line() < 1
-          || item.source().file().startsWith("/") || item.source().file().matches("^[A-Za-z]:.*")
-          || Arrays.asList(item.source().file().replace('\\', '/').split("/")).contains("..")) errors.add("Missing or invalid source: " + owner);
+      if (item.source() == null || item.source().line()<1 || !validSource(item.source().file())) errors.add("Missing or invalid source: " + owner);
       if (item.parser() == null || item.parser().isBlank() || Set.of("UNKNOWN", "LEGACY").contains(item.parser())) errors.add("Missing parser: " + owner);
       if (item.resolution() == null) errors.add("Missing resolution: " + owner);
     }
+  }
+
+  private static boolean validSource(String file) {
+    if(file==null||file.isBlank()||file.contains(".."))return false;
+    if(file.startsWith("workspace:")){String name=file.substring("workspace:".length());return !name.isBlank()&&!name.contains("/")&&!name.contains("\\")&&!name.contains(":");}
+    return !file.startsWith("/")&&!file.startsWith("\\")&&!file.startsWith("~")&&!file.contains(":");
   }
 
   private static void validateBehaviors(ApplicationGraph graph, Map<String, GraphNode> nodes, List<String> errors) {

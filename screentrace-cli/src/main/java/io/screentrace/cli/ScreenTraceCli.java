@@ -155,7 +155,7 @@ public final class ScreenTraceCli {
     Path safeOutput = SafeProjectFiles.requireWritePathWithin(outputRoot, project.analysisDirectory());
     Files.createDirectories(safeOutput);
     Path output = project.analysisDirectory();
-    var inventory = new ProjectScanner().scan(project.sourceDirectory()).withContextPaths(settings.contextPathsFor(project.sourceDirectory()),WorkspaceSettings.defaultFile().toString());
+    var inventory = new ProjectScanner().scan(project.sourceDirectory()).withContextPaths(settings.contextPathsFor(project.sourceDirectory()),settings.contextPathsLine());
     var graph = analyze(inventory);
     new ReportGenerator().write(graph, output);
     if (graph.application().technologies().contains("JSP")) {
@@ -181,7 +181,7 @@ public final class ScreenTraceCli {
     if (unsupported.isPresent()) throw new IOException(unsupported.get().code() + ": " + unsupported.get().message());
     boolean struts = inventory.technologies().contains("Struts 1");
     boolean springWeb = inventory.technologies().contains("Spring MVC") || inventory.technologies().contains("Spring Boot");
-    if (struts && springWeb) return ApplicationGraphMerger.merge(new StrutsProjectAnalyzer().analyze(inventory), new SpringProjectAnalyzer().analyze(inventory));
+    if (struts && springWeb) return io.screentrace.parser.jsp.UrlGraphContribution.enrich(ApplicationGraphMerger.merge(new StrutsProjectAnalyzer().analyze(inventory), new SpringProjectAnalyzer().analyze(inventory)),inventory);
     if (struts) return new StrutsProjectAnalyzer().analyze(inventory);
     return new SpringProjectAnalyzer().analyze(inventory);
   }

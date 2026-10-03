@@ -30,6 +30,7 @@ public final class ProjectScanner {
           return FileVisitResult.TERMINATE;
         }
         Path relative = root.relativize(dir);
+        if(!dir.equals(root)&&dir.getFileName().toString().startsWith("workspace:")){diagnostics.add("Reserved workspace evidence directory skipped");return FileVisitResult.SKIP_SUBTREE;}
         if (relative.getNameCount() > SafeProjectFiles.MAX_DIRECTORY_DEPTH) {
           diagnostics.add("Maximum project directory depth exceeded; skipped " + relative);
           return FileVisitResult.SKIP_SUBTREE;
@@ -43,6 +44,7 @@ public final class ProjectScanner {
           diagnostics.add("Maximum project entry count exceeded; remaining paths skipped");
           return FileVisitResult.TERMINATE;
         }
+        if(file.getFileName().toString().startsWith("workspace:")){diagnostics.add("Reserved workspace evidence name skipped");return FileVisitResult.CONTINUE;}
         if (attrs.isSymbolicLink() || !attrs.isRegularFile()) {
           if (attrs.isSymbolicLink()) diagnostics.add("Symbolic link skipped: " + root.relativize(file));
           return FileVisitResult.CONTINUE;
@@ -104,11 +106,12 @@ public final class ProjectScanner {
     catch (IOException | SecurityException ignored) { return false; }
   }
 
-  public record ProjectInventory(Path root, List<Path> files, List<String> technologies, List<String> diagnostics,List<String> contextPaths,String contextSettingsFile) {
-    public ProjectInventory(Path root,List<Path> files,List<String> technologies,List<String> diagnostics){this(root,files,technologies,diagnostics,List.of(),".");}
-    public ProjectInventory withContextPaths(List<String> values,String source){return new ProjectInventory(root,files,technologies,diagnostics,values,source);}
+  public record ProjectInventory(Path root, List<Path> files, List<String> technologies, List<String> diagnostics,List<String> contextPaths,String contextSettingsFile,int contextSettingsLine) {
+    public ProjectInventory(Path root,List<Path> files,List<String> technologies,List<String> diagnostics){this(root,files,technologies,diagnostics,List.of(),".",1);}
+    public ProjectInventory withContextPaths(List<String> values,String source){return withContextPaths(values,1);}
+    public ProjectInventory withContextPaths(List<String> values,int line){return new ProjectInventory(root,files,technologies,diagnostics,values,"workspace:config.json",Math.max(1,line));}
     public ProjectInventory(Path root, List<Path> files, List<String> technologies) { this(root, files, technologies, List.of()); }
-    public ProjectInventory { files = List.copyOf(files); technologies = List.copyOf(technologies); diagnostics = List.copyOf(diagnostics); contextPaths=List.copyOf(contextPaths); }
+    public ProjectInventory { files = List.copyOf(files); technologies = List.copyOf(technologies); diagnostics = List.copyOf(diagnostics); contextPaths=List.copyOf(contextPaths); contextSettingsFile=contextPaths.isEmpty()?".":"workspace:config.json"; }
     public List<Path> javaFiles() { return files.stream().filter(path -> hasExtension(path, ".java")).toList(); }
     public List<Path> reactFiles() { return files.stream().filter(path -> hasExtension(path, ".tsx") || hasExtension(path, ".jsx")).toList(); }
     public List<Path> jspFiles() { return files.stream().filter(path -> hasExtension(path, ".jsp")).toList(); }

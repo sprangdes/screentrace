@@ -20,7 +20,7 @@ public final class UrlResolution {
  }
  public record Result(Confidence confidence,List<String> candidates,List<String> paths,List<String> diagnostics,List<AnalysisEvidence> evidence) { }
  public static Context context(ProjectInventory inventory,List<ContextValue> workspace) {
-  List<ContextValue> values=new ArrayList<>();List<String> diagnostics=new ArrayList<>();for(var value:workspace)add(values,diagnostics,value.value(),value.source().file(),value.source().line());for(String value:inventory.contextPaths())add(values,diagnostics,value,inventory.contextSettingsFile(),1);
+  List<ContextValue> values=new ArrayList<>();List<String> diagnostics=new ArrayList<>();for(var value:workspace)add(values,diagnostics,value.value(),value.source().file(),value.source().line());for(String value:inventory.contextPaths())add(values,diagnostics,value,inventory.contextSettingsFile(),inventory.contextSettingsLine());
   for(var file:inventory.files()) {
    String name=file.getFileName().toString();if(!name.matches("application(?:-[^.]+)?\\.(?:properties|ya?ml)"))continue;
    String relative=inventory.root().relativize(file).toString().replace('\\','/');
@@ -38,20 +38,23 @@ public final class UrlResolution {
  public static Result resolve(String raw,String method,Context context,List<Endpoint> endpoints,boolean provenContext){return resolve(raw,method,context,endpoints,List.of(),provenContext);}
  public static Result resolve(String raw,String method,Context context,List<Endpoint> endpoints,List<String> extensionMappings,boolean provenContext) {
   TreeSet<String> paths=new TreeSet<>(),candidates=new TreeSet<>(),diagnostics=new TreeSet<>(context.diagnostics());List<AnalysisEvidence> evidence=new ArrayList<>();
+  String allValues=context.values().stream().map(ContextValue::value).distinct().sorted().toList().toString();
+  for(var v:context.values())evidence.add(new AnalysisEvidence(v.source(),"UrlResolution",ResolutionStatus.CONFIRMED,"設定鍵="+(v.source().file().startsWith("workspace:")?"contextPaths":"server.servlet.context-path")+"；候選值="+allValues+"；採用值="+(context.values().stream().map(ContextValue::value).distinct().count()>1?"未定（多候選）":v.value())));
+  if(context.values().isEmpty())evidence.add(new AnalysisEvidence(new SourceLocation(".",1),"UrlResolution",ResolutionStatus.UNRESOLVED,"來源=未設定；候選值=[]；採用值=未設定"));
   var contexts=context.values().stream().map(ContextValue::value).distinct().toList();if(contexts.isEmpty())diagnostics.add("CONTEXT_PATH_UNSPECIFIED");
   if(raw==null||raw.startsWith("//")||raw.matches("^[A-Za-z][A-Za-z0-9+.-]*:.*")||raw.contains("<%"))return result(Confidence.UNRESOLVED,candidates,paths,diagnostics,evidence);
   String path=raw.split("[?#]",2)[0].replaceAll("(?i);jsessionid=[^/;]*","");
   if(path.startsWith("${"))path=path.replaceFirst("^\\$\\{","{");
-  if(path.startsWith("{")){int end=path.indexOf('}');if(!provenContext||end<0||contexts.isEmpty())return result(Confidence.UNRESOLVED,candidates,paths,diagnostics,evidence);path=path.substring(end+1);for(var value:context.values())evidence.add(new AnalysisEvidence(value.source(),"UrlResolution",ResolutionStatus.CONFIRMED,"context path："+value.value()));paths.add(path);}
-  else {if(contexts.isEmpty())paths.add(path);for(var value:context.values()){String prefix=value.value();paths.add(!prefix.isEmpty()&&(path.equals(prefix)||path.startsWith(prefix+"/"))?path.substring(prefix.length()):path);evidence.add(new AnalysisEvidence(value.source(),"UrlResolution",ResolutionStatus.CONFIRMED,"context path："+prefix));}}
+  if(path.startsWith("{")){int end=path.indexOf('}');if(!provenContext||end<0||contexts.isEmpty())return result(Confidence.UNRESOLVED,candidates,paths,diagnostics,evidence);path=path.substring(end+1);paths.add(path);}
+  else {if(contexts.isEmpty())paths.add(path);for(var value:context.values()){String prefix=value.value();paths.add(!prefix.isEmpty()&&(path.equals(prefix)||path.startsWith(prefix+"/"))?path.substring(prefix.length()):path);}}
   if(paths.stream().anyMatch(p->!p.startsWith("/")||Arrays.asList(p.split("/")).contains("..")||p.contains("\\")))return result(Confidence.UNRESOLVED,new TreeSet<>(),paths,diagnostics,evidence);
   boolean inferred=false,pathMatched=false;
-  for(String normalized:paths)for(Endpoint endpoint:endpoints){int match=match(normalized.isEmpty()?"/":normalized,endpoint.path(),extensionMappings);if(match==0)continue;pathMatched=true;if(!compatible(method==null?"GET":method,endpoint.method()))continue;candidates.add(endpoint.id());inferred|=match==1;evidence.addAll(endpoint.evidence());}
+  for(String normalized:paths)for(Endpoint endpoint:endpoints){int match=match(normalized.isEmpty()?"/":normalized,endpoint.path(),extensionMappings);if(match==0)continue;pathMatched=true;if(!compatible(method==null?"GET":method,endpoint.method()))continue;candidates.add(endpoint.id());inferred|=match==1;for(var proof:endpoint.evidence())evidence.add(proof.detail()==null?new AnalysisEvidence(proof.source(),proof.parser(),proof.resolution(),"對應端點="+endpoint.id()):proof);}
   if(candidates.isEmpty())diagnostics.add(pathMatched?"URL_METHOD_MISMATCH":"URL_UNRESOLVED");
   Confidence confidence=candidates.isEmpty()?Confidence.UNRESOLVED:candidates.size()>1||contexts.size()>1?Confidence.AMBIGUOUS:inferred?Confidence.INFERRED:Confidence.CONFIRMED;
   return result(confidence,candidates,paths,diagnostics,evidence);
  }
  private static Result result(Confidence confidence,Set<String> candidates,Set<String> paths,Set<String> diagnostics,List<AnalysisEvidence> evidence){return new Result(confidence,List.copyOf(candidates),List.copyOf(paths),List.copyOf(diagnostics),evidence.stream().distinct().sorted().toList());}
- private static boolean compatible(String requested,String actual){return "ANY".equals(actual)||Objects.equals(requested,actual)||Arrays.asList(Objects.toString(actual,"").split("[,| ]+")).contains(requested);}
+ private static boolean compatible(String requested,String actual){return !"UNKNOWN".equals(requested)&&("ANY".equals(actual)||Objects.equals(requested,actual)||Arrays.asList(Objects.toString(actual,"").split("[,| ]+")).contains(requested));}
  private static int match(String path,String endpoint,List<String> extensions){if(path.equals(endpoint))return path.contains("{")||path.contains("*")?1:2;StringBuilder regex=new StringBuilder("^");for(int i=0;i<endpoint.length();i++){char c=endpoint.charAt(i);if(c=='{'){int end=endpoint.indexOf('}',i);if(end<0)return 0;regex.append("[^/]+");i=end;}else if(c=='*'){if(i+1<endpoint.length()&&endpoint.charAt(i+1)=='*'){regex.append(".*");i++;}else regex.append("[^/]*");}else regex.append(Pattern.quote(String.valueOf(c)));}if(path.matches(regex.append('$').toString()))return 1;for(String mapping:extensions)if(mapping.startsWith("*.")&&path.endsWith(mapping.substring(1))&&path.substring(0,path.length()-mapping.length()+1).equals(endpoint))return 1;return 0;}
 }

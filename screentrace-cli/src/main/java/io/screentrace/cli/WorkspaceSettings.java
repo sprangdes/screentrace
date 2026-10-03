@@ -10,6 +10,7 @@ import java.nio.file.StandardCopyOption;
 
 /** User-owned workspace locations, persisted outside analyzed source projects. */
 final class WorkspaceSettings {
+  private int contextPathsLine=1;
   private final Path projectRoot;
   private final Path outputRoot;
   private final java.util.Map<String,java.util.List<String>> contextPaths;
@@ -34,6 +35,8 @@ final class WorkspaceSettings {
     return outputRoot;
   }
 
+  int contextPathsLine() {return contextPathsLine;}
+
   java.util.Map<String,java.util.List<String>> contextPaths() { return contextPaths; }
 
   java.util.List<String> contextPathsFor(Path project) { return contextPaths.getOrDefault(project.toAbsolutePath().normalize().toString(),java.util.List.of()); }
@@ -46,7 +49,9 @@ final class WorkspaceSettings {
     if (Files.isSymbolicLink(file)) throw new IOException("ScreenTrace config must not be a symbolic link: " + file);
     StoredSettings stored = new ObjectMapper().readValue(file.toFile(), StoredSettings.class);
     if (stored.projectRoot == null || stored.outputRoot == null) throw new IOException("ScreenTrace settings are incomplete: " + file);
-    return new WorkspaceSettings(Path.of(stored.projectRoot), Path.of(stored.outputRoot),stored.contextPaths==null?java.util.Map.of():stored.contextPaths);
+    var settings=new WorkspaceSettings(Path.of(stored.projectRoot), Path.of(stored.outputRoot),stored.contextPaths==null?java.util.Map.of():stored.contextPaths);
+    try(var parser=new ObjectMapper().getFactory().createParser(file.toFile())){while(parser.nextToken()!=null)if(parser.currentToken()==com.fasterxml.jackson.core.JsonToken.FIELD_NAME&&"contextPaths".equals(parser.currentName())){settings.contextPathsLine=(int)parser.currentTokenLocation().getLineNr();break;}}
+    return settings;
   }
 
   void save(Path file) throws IOException {

@@ -69,7 +69,7 @@ public final class SpringMvcAnalyzer {
                 state.nodes, state.edges, state.diagnostics, state.apiContracts, ApplicationGraph.CURRENT_SCHEMA_VERSION);
         graph=MarkupGraphContribution.enrich(graph,jsp);
         graph=SpringFormBindings.bind(graph,inventory);
-        return io.screentrace.parser.jsp.JavaScriptGraphContribution.enrich(MarkupGraphContribution.enrich(graph,jsp),inventory);
+        return io.screentrace.parser.jsp.UrlGraphContribution.enrich(io.screentrace.parser.jsp.JavaScriptGraphContribution.enrich(MarkupGraphContribution.enrich(graph,jsp),inventory),inventory);
     }
 
     private static void discoverExceptionView(ProjectInventory inventory, State state) {

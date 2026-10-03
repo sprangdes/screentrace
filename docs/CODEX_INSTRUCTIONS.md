@@ -1,6 +1,6 @@
 # ScreenTrace 調整指示(給 Codex)
 
-- 文件版本:1.3(2026-10-03;依 OQ-003 決定補充 WP4 第 2 點,變更見第 11 節)
+- 文件版本:1.4(2026-10-03;依 WP5 授權與 OQ-004 決定補充 context、schema 斷言與工作區證據隱私,變更見第 11 節)
 - 建議放置位置:`docs/CODEX_INSTRUCTIONS.md`,並在 `AGENTS.md` 第 10 節的閱讀清單加入本文件
 - 對照基準:`sprangdes/screentrace` main(含 review-result v2 匯出的版本)
 
@@ -33,6 +33,7 @@
 ### 0.4 一律禁止
 
 - 為了讓測試通過而修改、刪除或放寬既有測試斷言(新增行為造成的合理變更須在 ADR 說明)。
+- WP5 schema 退場的明確例外：僅允許將既有測試中 schema 版本字串斷言 2.1 改為 2.2，逐處在 ADR 列出原因；其他任何斷言不得修改或放寬。
 - 以 LLM 或任何機率式方法取代確定性分析。
 - 在輸出中捏造證據、補上無法由原始碼確認的值,或把 `UNRESOLVED` / `AMBIGUOUS` 升級為 `CONFIRMED`。
 - 硬編碼特定範例專案(例如 PetClinic)的路徑、類別名或畫面名。
@@ -106,6 +107,8 @@
 
 - **C1 純靜態**:MUST NOT 啟動目標專案、執行目標專案的任何程式碼(JSP、JS、Java)、連資料庫、發出網路請求。解析 JS 只能用 AST;MUST NOT 對目標程式碼使用 `eval`、`Function`、`vm`、`require`。Playwright 只能渲染「本工具產生的靜態化 HTML」,且維持 JavaScript 關閉。
 - **C2 證據與信心**:每個節點、邊、行為、檢核規則 MUST 帶 `source`(專案相對路徑 + 行號)、解析器名稱、解析狀態(`CONFIRMED` / `INFERRED` / `AMBIGUOUS` / `UNRESOLVED`)。無法確定就保持 `UNRESOLVED` 並保留原始運算式文字。
+  - OQ-004：工作區設定證據使用保留命名空間 `workspace:config.json`，行號為設定鍵所在行，取不到為 1。validator 只接受 `workspace:` 加單純檔名（不含 `/`、`\`、`..`）；其他命名空間、專案外／絕對／逃逸來源仍拒絕。目標專案中名稱以 `workspace:` 開頭的檔案不得成為來源。
+  - 圖內任何位置不得出現真實設定檔絕對路徑或使用者家目錄；工作區 evidence.detail 只含設定鍵、候選值與採用值。實際採用的 context 值與來源（`workspace:config.json`、`server.servlet.context-path` 或「未設定」）須見於對應 evidence。
 - **C3 決定性**:同一份原始碼輸入,輸出(圖、HTML、md)MUST 位元組相同,僅 `generatedAt` 可不同。所有集合 MUST 有明確排序。
 - **C4 框架隔離**:`core` 的圖模型 MUST NOT 出現框架名稱;框架專屬語意只放在 adapter 與 evidence。
 - **C5 不可信輸入**:目標專案的所有文字(標籤、URL、路徑、JS 字串、CSS)都視為不可信。輸出 HTML MUST 僅以 `textContent` / 屬性 API 寫入,MUST NOT 使用 `innerHTML` 拼接目標內容;預覽 iframe MUST 使用 `sandbox`(不含 `allow-scripts`)。
@@ -234,6 +237,7 @@
    - 比對:精確 → `CONFIRMED`;路徑樣板(`{var}`、`*`、`**`)或副檔名映射(`*.do`、`*.action`)→ `INFERRED`;多個候選 → `AMBIGUOUS`(列出全部候選,不得擇一)。
    - HTTP 方法:取自 JS / 表單,缺省為 GET;方法與端點不符則不建立關聯並產生診斷。
 2. **Context path**:Spring Boot 讀 `server.servlet.context-path`(properties / yml);WAR 專案無法由原始碼得知時,讀取工作區設定檔中的明確設定;**沒有就不假設**,並在診斷中說明。
+   - JS API URL 的 context 前綴只在其為標準 pageContext contextPath 或來源可證明定義時剝除，實際值以 properties／yml 或工作區明確設定為準；沒有不假設，多候選 AMBIGUOUS 全列，未知前綴 UNRESOLVED。
 3. WP4 的 API 行為與 WP3 的表單送出,經對應引擎產生 `CALLS` / `TRIGGERS` 與行為結果指向。
 4. **API 契約**:沿用 `ApiContractExtractor`;補上 `@RestController` / `@ResponseBody` / `ResponseEntity` 端點(可能沒有任何畫面對應)、Struts action 端點。
 5. **Spring 檢核**:`@Valid` / `@Validated` 參數、Bean Validation 約束(`javax.validation` 與 `jakarta.validation` 的常用約束)、自訂 `Validator`、`@InitBinder`,轉為 `ValidationRule` 並連結到欄位與端點。若需引入 Java 解析函式庫,依 C8 於 ADR 說明。層級為 `SERVER`,`evidence.detail` 記錄 Bean Validation / Validator / `@InitBinder` 來源。
@@ -483,6 +487,8 @@ migration_target:
 ---
 
 ## 11. 修訂紀錄
+
+- 1.4:依 WP5 授權僅允許 schema 版本字串斷言 2.1 → 2.2 並逐處記錄 ADR；明定 JS API context 必須可證明且實際值有明確設定。依 OQ-004 採工作區來源命名空間、單純檔名嚴格驗證、目標檔保留名稱拒絕、設定鍵行號與證據隱私；圖內不含真實設定檔路徑／家目錄，context 來源與採用值可區分。
 
 - 1.3:依 OQ-003 決定補充 WP4 第 2 點的 script src 不透明 context 前綴例外與排除邊界；單一／多個／無候選分別 INFERRED／AMBIGUOUS／UNRESOLVED，保留原文與證據，不套用於 API URL，既有斷言不變。
 

@@ -21,6 +21,7 @@ public final class SafeProjectFiles {
   public static Path canonicalRoot(Path root) throws IOException { return root.toRealPath(); }
 
   public static Path requireExistingRegularFileWithin(Path root, Path candidate) throws IOException {
+    for(Path part:root.toAbsolutePath().normalize().relativize(candidate.toAbsolutePath().normalize()))if(part.toString().startsWith("workspace:"))throw new IOException("Reserved workspace evidence name is not a target source");
     Path canonicalRoot = canonicalRoot(root);
     Path lexicalRoot = root.toAbsolutePath().normalize();
     Path absolute = candidate.toAbsolutePath().normalize();

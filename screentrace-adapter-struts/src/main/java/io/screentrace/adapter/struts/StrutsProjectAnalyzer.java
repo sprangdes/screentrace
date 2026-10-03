@@ -34,7 +34,7 @@ public final class StrutsProjectAnalyzer {
     addInteractions(jsp,state);
     parseValidation(state);
     parseActionForms(state);
-    return JavaScriptGraphContribution.enrich(MarkupGraphContribution.enrich(state.graph(),jsp),inventory);
+    return io.screentrace.parser.jsp.UrlGraphContribution.enrich(JavaScriptGraphContribution.enrich(MarkupGraphContribution.enrich(state.graph(),jsp),inventory),inventory);
   }
   private static void addView(JspAnalysis.View view,State state) {
     String viewId=ApplicationGraph.id(NodeType.VIEW,view.path());
@@ -439,7 +439,7 @@ public final class StrutsProjectAnalyzer {
     final Map<String,String> screens=new TreeMap<>(),viewIds=new TreeMap<>(),tileViewIds=new TreeMap<>(),beans=new TreeMap<>(),forms=new TreeMap<>();
     final Set<String> ambiguousTiles=new TreeSet<>();
     final Map<String,List<Mapping>> routes=new TreeMap<>();final Map<String,StrutsSources.JavaType> types=new TreeMap<>();final Map<String,Set<String>> messages=new TreeMap<>();
-    State(ProjectInventory inventory) {this.inventory=new ProjectInventory(inventory.root(),inventory.files().stream().sorted().toList(),inventory.technologies().stream().sorted().toList(),inventory.diagnostics().stream().sorted().toList());}
+    State(ProjectInventory inventory) {this.inventory=new ProjectInventory(inventory.root(),inventory.files().stream().sorted().toList(),inventory.technologies().stream().sorted().toList(),inventory.diagnostics().stream().sorted().toList(),inventory.contextPaths(),inventory.contextSettingsFile(),inventory.contextSettingsLine());}
     ApplicationGraph graph() {return new ApplicationGraph(new Application(inventory.root().getFileName().toString(),inventory.root().toString(),inventory.technologies()),List.copyOf(nodes.values()),List.copyOf(edges.values()),diagnostics,List.of(),ApplicationGraph.BEHAVIOR_SCHEMA_VERSION,List.copyOf(behaviors.values()),List.copyOf(rules.values()));}
   }
 }

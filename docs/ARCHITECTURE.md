@@ -538,3 +538,7 @@ script src 的不透明 context 前綴依 v1.3／OQ-003，僅用於定位來源�
 ### WP5 增量一
 
 UrlResolution 為 Spring／Struts 的共用 URL 引擎，保留全部候選及信心、方法不符與 context 診斷。設定以 Properties／安全 SnakeYAML 2.4 解析，工作區 contextPaths 以專案絕對路徑為鍵、候選陣列為值，透過 ProjectInventory 傳入；無設定不推測。見 ADR 0011。圖關聯接入、契約與 SERVER 檢核、schema 退場依序在後續增量實作。
+
+### WP5 增量二
+
+UrlGraphContribution 對 canonical API／表單請求套用共用引擎，保留全部候選、方法診斷及載入／失敗綁定來源。唯一結果連端點，多候選 targetId=null 並建立全部歧義關聯。workspace context 證據使用 workspace:config.json 與設定鍵行號，detail 只有鍵／候選／採用值；reserved 目標名稱被 scanner／safe read 拒絕。圖輸出前遮蔽使用者家目錄文字，工作區真實設定路徑不進圖。見 ADR 0012／0013 與 OQ-004；契約／SERVER 檢核及 schema 退場待後續增量。
