@@ -2,7 +2,7 @@
 
 ## 1. 工作包與提交
 
-限定 WP5，四增量依序為 URL／context、行為對應、契約／SERVER 檢核、schema 2.2。每次遠端 CI 全綠後才繼續。增量一 `51c9575386d8d51e295716b0542f858ec23b2e91` 已推送，[遠端 CI 全綠](https://github.com/sprangdes/screentrace/actions/runs/37087105170)；OQ-004 已處理，增量二 `bb66bb4136ef86447d161acc280eb046a5c75adb` 已推送，[遠端 CI 全綠](https://github.com/sprangdes/screentrace/actions/runs/37089180710)；增量三 `385578a521698e41f50a542667f3bd812528f703` 已推送，[遠端 CI 全綠](https://github.com/sprangdes/screentrace/actions/runs/37090565187)；增量四因 OQ-005 停止；WP6 未開始。
+限定 WP5，四增量依序為 URL／context、行為對應、契約／SERVER 檢核、schema 2.2。每次遠端 CI 全綠後才繼續。增量一 `51c9575386d8d51e295716b0542f858ec23b2e91` 已推送，[遠端 CI 全綠](https://github.com/sprangdes/screentrace/actions/runs/37087105170)；OQ-004 已處理，增量二 `bb66bb4136ef86447d161acc280eb046a5c75adb` 已推送，[遠端 CI 全綠](https://github.com/sprangdes/screentrace/actions/runs/37089180710)；增量三 `385578a521698e41f50a542667f3bd812528f703` 已推送，[遠端 CI 全綠](https://github.com/sprangdes/screentrace/actions/runs/37090565187)；增量四因 OQ-006 停止（OQ-005 已處理）；WP6 未開始。
 
 ## 2. 主要檔案
 
@@ -38,4 +38,6 @@ OQ-005 未決：schema 退場是否包含 core 舊版相容建構子／缺版本
 
 ## 7. 驗收對照
 
-WP5.1／2 的共用引擎與設定 fixtures 通過本機測試；WP5.3 圖接入與 OQ-004 正反例已通過本機測試；WP5.4／5／6 的 API 契約、SERVER 規則與欄位／端點連結已通過本機測試；schema 2.2 尚待增量四。增量三遠端 Java／Node 建置、npm audit、Dependency-Check 全綠。WP5 未完成；增量四因 OQ-005 停止，WP6 未開始。
+WP5.1／2 的共用引擎與設定 fixtures 通過本機測試；WP5.3 圖接入與 OQ-004 正反例已通過本機測試；WP5.4／5／6 的 API 契約、SERVER 規則與欄位／端點連結已通過本機測試；schema 2.2 尚待增量四。增量三遠端 Java／Node 建置、npm audit、Dependency-Check 全綠。WP5 未完成；增量四因 OQ-006 停止（OQ-005 已處理），WP6 未開始。
+
+OQ-005 已依方案 A 附加限制記錄於 ADR 0015／v1.4；core 既有斷言不變。OQ-006 待決：報表／匯出既有 2.1 成功 fixture 與新限制衝突，需額外授權 fixture 遷移，或修訂歷史入口限制。未改程式／測試，未進入 WP6。

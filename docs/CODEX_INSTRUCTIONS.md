@@ -243,6 +243,7 @@
 5. **Spring 檢核**:`@Valid` / `@Validated` 參數、Bean Validation 約束(`javax.validation` 與 `jakarta.validation` 的常用約束)、自訂 `Validator`、`@InitBinder`,轉為 `ValidationRule` 並連結到欄位與端點。若需引入 Java 解析函式庫,依 C8 於 ADR 說明。層級為 `SERVER`,`evidence.detail` 記錄 Bean Validation / Validator / `@InitBinder` 來源。
 6. 端點資料需能支援 API 頁:方法、路徑、處理類別#方法、請求 / 回應欄位、檢核規則、信心、來源。
 7. **schema 退場**:WP5 完成時,所有 adapter MUST 輸出 schema 2.2;移除「混合輸出降為 2.1」的路徑,2.1 僅保留讀取歷史資料。
+   - OQ-005：core 舊版相容建構子與缺版本的 2.1 預設僅供歷史資料／既有 fixture，須 @Deprecated 並註解限制；正式程式碼不得呼叫舊建構子。新分析的 adapter／合併器／CLI 均須輸出嚴格 2.2；合併拒絕 2.1 或缺證據輸入，不靜默升版。報表與後續匯出只接受 2.2，否則清楚失敗。core 既有歷史斷言不變。
 
 **驗收**:fixture 涵蓋精確 / 樣板 / 副檔名映射 / 歧義 / 方法不符 / 無 context path;每種結果的信心等級正確。
 
@@ -495,3 +496,4 @@ migration_target:
 - 1.2:依 OQ-002 方案 B 修訂 WP3 第 8 點,允許有同來源常值定義、使用前且無重新賦值與作用域證據的 URL 變數例外;保留原始運算式、定義位置與路徑樣板,排除未知函式、跨檔案變數、c:set 與 param 值解析,既有測試斷言不變。
 - 1.1:檢核來源層級改為 `MARKUP` / `CLIENT` / `SERVER`(OQ-001);API 狀態推導的元件決策改用 (`screenId`, `componentId`) 複合鍵;新增 WP4 第 11 點、WP5 第 7 點、WP8 規則 7。
 - 1.0:初版。
+- v1.4 補充（OQ-005，2026-10-03）：限定歷史相容 API、淘汰標記與技術債；新分析／合併嚴格 2.2，拒絕歷史合併及非 2.2 報表／匯出。

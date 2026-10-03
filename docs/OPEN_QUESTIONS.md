@@ -46,4 +46,13 @@
 - 可選方案 A：core 保留舊版相容建構子與缺版本歷史 JSON 的 2.1 預設，限歷史資料／既有 fixture；所有 adapter 與合併輸出一律 2.2，既有斷言不變。在 ADR 明定相容 API 不供新分析使用。
 - 可選方案 B：新建圖預設一律 2.2，缺版本歷史資料另走 2.1；需求方另授權受影響測試改用明確歷史版本的 fixture 建構方式及版本期望（超出單純 2.1 → 2.2 字串變更），逐處 ADR 記錄；其餘斷言與嚴格驗證不變。
 - 影響範圍：WP5 增量四、ApplicationGraph 的建構／讀取相容契約、core 歷史測試、所有 adapter 與 merger；不涉及 WP6。
-- 狀態：待需求方決定（2026-10-03）。依 §0.3 停止 WP5；增量三 385578a 已推送且 CI 全綠，schema 增量尚未修改程式或既有測試，未自行選擇方案。
+- 狀態：已處理（2026-10-03）；需求方採方案 A，附歷史 API 淘汰標記、新分析／合併／CLI 嚴格 2.2、拒絕歷史圖合併與報表／匯出輸入限制。
+- 決定：舊建構子及缺版本預設保留為歷史相容專用，@Deprecated 與註解限制用途；正式來源不得呼叫舊建構子。合併拒絕 2.1 或不符合嚴格證據的輸入，不靜默升版。報表／後續匯出拒絕非 2.2。core 既有歷史斷言不變；遷移後移除舊建構子列技術債。見 ADR 0015；實作因下列 OQ-006 暫停。
+
+## OQ-006 — 報表／匯出限制與既有歷史 fixture 成功測試
+
+- 情境：OQ-005 最新決定要求報表與後續匯出輸入 MUST 為 2.2，非 2.2 清楚失敗。既有 ReportGeneratorTest.consolidatesCapturedAssetsIntoPreviewContractAndReportReadsOnlyContracts（第 28–45 行）建立 CURRENT_SCHEMA_VERSION=2.1 圖並呼叫 ReportGenerator.write，之後斷言輸出成功；其節點／邊 source=null，元件缺 kind，不符合 2.2 嚴格驗證。既有 ReviewResultGeneratorTest 的 fixture（第 290 行）、其他 2.1 圖及 CURRENT_SCHEMA_VERSION 圖也要求匯出成功。既有測試除 schema 版本字串外不得修改，而僅改成 2.2 無法補足嚴格報表 fixture 的來源。
+- 可選方案 A：需求方額外授權僅遷移報表／匯出測試 fixture 為明確 2.2，補足真實測試來源、解析器 evidence、元件 kind；既有斷言全部不變，每處 fixture 修改於 ADR 列出。core 歷史相容測試一律不變。
+- 可選方案 B：保留原有 2.1 報表／匯出成功 fixture，需求方另明確授權歷史相容入口，修訂最新的報表／匯出輸入限制。
+- 影響範圍：WP5 增量四、ReportGenerator／ReviewResultGenerator 與其 fixture；core 舊斷言不受變更，WP6 不涉及。
+- 狀態：待需求方決定（2026-10-03）；依 §0.3 停止 WP5。只有文件更新，尚未修改正式程式或既有測試，未繞過版本限制或放寬嚴格驗證。

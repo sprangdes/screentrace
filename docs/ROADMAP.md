@@ -9,7 +9,7 @@
 | WP2 | Struts 1.x、Dispatch、Validator、Tiles、拒絕 Struts 2 | 完成；遠端 CI 全綠（e8139dd） |
 | WP3 | JSP / HTML 元件、控制流程、檢核、事件來源 | 完成；OQ-002 已處理，132 個 Java 測試與遠端 CI 全綠，見 reports/M2.md |
 | WP4 | JavaScript AST、事件與函式追蹤 | 完成；四個增量皆遠端全綠，40 JS／147 Java 通過；OQ-003 已處理（v1.3），見 reports/WP4.md |
-| WP5 | URL 對應、API 契約、Spring 檢核 | 增量一 URL／context 遠端全綠（51c9575）；OQ-004 已處理；增量二來源隱私／圖對應遠端全綠（bb66bb4）；增量三契約／SERVER 遠端全綠（385578a）；增量四因 OQ-005 停止 |
+| WP5 | URL 對應、API 契約、Spring 檢核 | 增量一 URL／context 遠端全綠（51c9575）；OQ-004 已處理；增量二來源隱私／圖對應遠端全綠（bb66bb4）；增量三契約／SERVER 遠端全綠（385578a）；增量四因 OQ-006 停止（OQ-005 已處理） |
 | WP6 | 靜態預覽、完整元素樣式、條件標記 | 未開始 |
 | WP7 | 單一 HTML、Screen Map、API 頁、review | 未開始 |
 | WP8 | review md 匯出與還原、移除 JSON 匯出 | 未開始 |
@@ -19,7 +19,7 @@
 | 里程碑 | 工作包 | 狀態 |
 |---|---|---|
 | M1 | WP0、WP1、WP2 | 完成；需求方已授權進入 M2，遠端 CI 全綠，見 reports/M1.md |
-| M2 | WP3、WP4、WP5 | WP3 驗收通過；WP4 完成且遠端全綠，WP4 驗收通過；WP5 增量一全綠，OQ-004 已處理，增量二遠端全綠；增量三遠端全綠，增量四因 OQ-005 停止 |
+| M2 | WP3、WP4、WP5 | WP3 驗收通過；WP4 完成且遠端全綠，WP4 驗收通過；WP5 增量一全綠，OQ-004 已處理，增量二遠端全綠；增量三遠端全綠，增量四因 OQ-006 停止（OQ-005 已處理） |
 | M3 | WP6、WP7、WP8 | 等待 M2 驗收確認 |
 | M4 | WP9、WP10 | 等待 M3 驗收確認；最終驗收 |
 
@@ -31,3 +31,7 @@
 - JSP 靜態預覽、Chromium 截圖、互動元件位置、localhost 報表與 review JSON v2。
 
 這些能力仍有附件 §3 列出的落差。WP3／WP4 已完成本次要求的標記與 JavaScript 靜態分析；後端對應、單一離線 HTML、md 匯出、元件庫匯入仍依後續工作包驗收。不啟動或修改被分析專案，不產生遷移程式碼。
+
+## 技術債
+
+- OQ-005：待既有歷史測試遷移後移除 ApplicationGraph 舊版相容建構子；目前只供讀取歷史資料與既有 fixture，正式分析不得使用。
