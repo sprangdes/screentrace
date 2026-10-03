@@ -11,7 +11,7 @@
 | WP4 | JavaScript AST、事件與函式追蹤 | 完成；四個增量皆遠端全綠，40 JS／147 Java 通過；OQ-003 已處理（v1.3），見 reports/WP4.md |
 | WP5 | URL 對應、API 契約、Spring 檢核 | 增量一 URL／context 遠端全綠（51c9575）；OQ-004 已處理；增量二來源隱私／圖對應遠端全綠（bb66bb4）；增量三契約／SERVER 遠端全綠（385578a）；OQ-005／006 已處理；增量四最終 b7b51b9 遠端全綠，WP5 完成 |
 | WP6 | 靜態預覽、完整元素樣式、條件標記 | 完成；6d557d6 遠端全綠，203 Java／40 JS／30 capture；見 reports/M3.md |
-| WP7 | 單一 HTML、Screen Map、API 頁、review | A–D 遠端全綠；E API 頁／舊碼退場實作完成，待最終 CI gate，見 reports/WP7.md |
+| WP7 | 單一 HTML、Screen Map、API 頁、review | 完成；A–E 逐增量推送並遠端全綠，見 reports/WP7.md |
 | WP8 | review md 匯出與還原、移除 JSON 匯出 | 未開始 |
 | WP9 | 元件庫 manifest、驗證與決定性比對 | 未開始 |
 | WP10 | 合成 fixture、整合測試、CI、使用文件 | 未開始 |
@@ -20,7 +20,7 @@
 |---|---|---|
 | M1 | WP0、WP1、WP2 | 完成；需求方已授權進入 M2，遠端 CI 全綠，見 reports/M1.md |
 | M2 | WP3、WP4、WP5 | 完成；三工作包均遠端全綠，最終 WP5 b7b51b9；需求方已驗收並授權進入 M3 |
-| M3 | WP6、WP7、WP8 | WP6 已驗收；第二輪 WP7 A–E，完成後停止，不進入 WP8 |
+| M3 | WP6、WP7、WP8 | WP6 已驗收；第二輪 WP7 已完成／遠端全綠並停止；WP8 未開始 |
 | M4 | WP9、WP10 | 等待 M3 驗收確認；最終驗收 |
 
 ## 本次調整前的既有能力

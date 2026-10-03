@@ -42,10 +42,12 @@ D gate：`712ff12`，[遠端全綠](https://github.com/sprangdes/screentrace/act
 
 先失敗：API 頁沒有資料列；Java 缺新 Writer／舊 server 尚在；CLI 以模組工作目錄找不到 capture 工具；兩平台 launcher 未建置 viewer。依失敗修正後：199 Java、viewer 12 unit、14 Chromium E2E、33 capture／文件與 40 JS parser tests 全通過。實際 >100 MB HTML 仍寫完整檔與警告，非只測閾值。惡意 API path／行為 JS 原文以 textContent 展示，不觸發探針或外部請求。500／5,000／3,000 fixture 初次渲染 188.8 ms、縮放中位數 <1 ms（本機）；遠端仍強制 ≤3 秒。
 
-正式 CLI 新分析輸出 2.2 並嚴格驗證；新 viewer／共用 review 不接受 2.1。歷史 JSON export 尚保留至 WP8，不讀新 localStorage；沒有 md 匯出／匯入或元件庫匯入。PowerShell 原始碼與順序有測試，但本機 macOS 未執行 Windows launcher。無新增未決需求。最終 push／CI gate 完成後於 WP7 停止。
+正式 CLI 新分析輸出 2.2 並嚴格驗證；新 viewer／共用 review 不接受 2.1。歷史 JSON export 尚保留至 WP8，不讀新 localStorage；沒有 md 匯出／匯入或元件庫匯入。PowerShell 原始碼與順序有測試，但本機 macOS 未執行 Windows launcher。無新增未決需求。最終 push／CI gate 已完成，於 WP7 停止。
 
 E 補足：歧義行為的全部候選於詳情缺漏（新增測試先失敗），新增完整 evidence 顯示，不擇一；畫面 evidence 也保留 Tiles 等定義來源。
 
 E 正式 CSS 同樣以 data URI 雜湊字典去重（先缺新入口而 unit 失敗，再實作）；srcdoc 解析巢狀資源，CSP style-src 僅增加本地 data:，沒有放寬 script-src。C 的 inline serializer 舊 fixture 入口依 OQ-006 通則保留原斷言，正式 CLI 明確使用新入口，有 static／unit／E2E 證明。
 
 E 保留 ProductionSchemaTest 混合 Spring／Struts 分析的原 fixture 與全部分析斷言，只移除已退場 ReportGenerator 的報表尾段。API 未綁定 click 來源顯示為未解析而非載入時，直接 CALLS／TRIGGERS 顯示實際 source 檔案＋行號。全域分析／預覽／資源診斷以安全文字呈現。
+
+E gate：`152de7a69e3eba78f4b87759a44e5242156b3333`，[遠端全綠](https://github.com/sprangdes/screentrace/actions/runs/37107885581)。199 Java／12 unit／16 三引擎 E2E／33 capture／40 parser tests、三模組 npm audit 與 Dependency-Check 全通過。遠端首次渲染 **778.4 ms**、20 次縮放中位數 **3 ms**；未放寬 3 秒斷言。A–E 全部完成並逐增量 gate，WP7 於此停止，不進入 WP8。
