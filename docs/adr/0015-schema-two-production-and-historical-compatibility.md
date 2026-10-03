@@ -16,4 +16,4 @@ ApplicationGraphTest、GraphIntegrityValidatorTest 等既有斷言維持。ROADM
 
 OQ-005／006 均已處理。已按歷史相容專用與新分析嚴格門檻實作；舊報表／匯出入口及 WP7／WP8 移除義務見 ADR 0016，未更動既有 fixture 或放寬驗證。
 
-本次沒有更新任何測試或斷言；若另獲 fixture 遷移授權，須逐處列出修改與原因。
+本次沒有更新任何既有測試或斷言；若另獲 fixture 遷移授權，須逐處列出修改與原因。
