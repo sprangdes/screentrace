@@ -71,3 +71,5 @@ export function convertControls(source) {
   if(t.selfClosing&&!['input','img'].includes(tag))text=text.replace(/\/\s*>$/,`></${tag}>`);return text;
  }).join('');
 }
+
+export {attributes as markupAttributes};

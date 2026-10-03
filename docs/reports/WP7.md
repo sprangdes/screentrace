@@ -15,3 +15,11 @@ A gate：`9d54f1a`，[遠端全綠](https://github.com/sprangdes/screentrace/act
 新增 map.ts（保留共用元件所有畫面來源、處理器路由、SCC 循環保護與決定性分層）與 canvas.ts（所有畫面／關聯、鍵盤與拖曳平移縮放、檔案樹與搜尋高亮）。無新增相依；未變更既有斷言。失敗證據：map 模組缺少、畫布卡片與關聯不存在；實作後 unit 4 tests、Java 注入 3 tests、Chromium E2E 3 tests 全通過。
 
 效能 fixture：500 畫面／5,000 元件／3,000 導頁關聯，另有 5,000 CONTAINS；初次渲染約 77 ms（本機 Chromium）；20 次縮放按鍵中位數 <1 ms。實測受平台影響，CI 仍強制 3,000 ms 上限。檔案樹保留全部畫面；URL 樣板、單星／雙星、副檔名與子字串測試通過；循環圖及輸入順序反轉布局相同。
+
+B gate：`68e260b`，[遠端全綠](https://github.com/sprangdes/screentrace/actions/runs/37102325727)。
+
+## C 聚焦、關聯線與右側面板
+
+新增 details／relations／preview／usage TypeScript 模組；全部目標文字使用 textContent。畫面聚焦／關聯 tooltip（10 項＋其餘數量）／返回、API 與各類行為詳情、預覽任意元素樣式／條件／來源／候選，呼叫來源保留載入、共用元件、未綁定與回呼。新增 pack-preview 工具：靜態 CSS import、圖片／字型雜湊字典、外部／越界資源停用及診斷，E 切換 CLI 時串接。
+
+先失敗：封裝模組缺少；右側缺載入時資訊。最終 viewer unit 5 tests、Chromium file:// E2E 5 tests、封裝 3 tests、Java 注入 3 tests 通過；沒有修改既有測試斷言。新測試中的繁體「畫」文案拼字校正，測試意義與行為未變。安全 fixture CSS／圖片內嵌成功，對外與相對請求 0、腳本探針未觸發。首次渲染 130.1 ms，20 次縮放中位數 1 ms（本機 Chromium）。設計見 [ADR 0020](../adr/0020-viewer-projection-and-preview-pack.md)。無新增相依或未決需求。
