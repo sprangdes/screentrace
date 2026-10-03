@@ -20,7 +20,7 @@ public final class StrutsProjectAnalyzer {
     State state=new State(inventory);
     inventory=state.inventory;
     var unsupported=StrutsFrameworkDetector.unsupported(inventory);
-    if(unsupported.isPresent()) {state.diagnostics.add(unsupported.get());return state.graph();}
+    if(unsupported.isPresent()) {state.diagnostics.add(unsupported.get());return GraphIntegrityValidator.requireAnalysis(state.graph());}
     for(String message:inventory.diagnostics()) state.diagnostics.add(StrutsSources.diagnostic(message,".",1,"SOURCE_LIMIT"));
     state.types.putAll(StrutsSources.javaTypes(inventory,state.diagnostics));
     readSpringBeans(state);
@@ -34,7 +34,7 @@ public final class StrutsProjectAnalyzer {
     addInteractions(jsp,state);
     parseValidation(state);
     parseActionForms(state);
-    return io.screentrace.parser.jsp.UrlGraphContribution.enrich(JavaScriptGraphContribution.enrich(MarkupGraphContribution.enrich(ActionContracts.enrich(state.graph(),inventory),jsp),inventory),inventory);
+    return GraphIntegrityValidator.requireAnalysis(io.screentrace.parser.jsp.UrlGraphContribution.enrich(JavaScriptGraphContribution.enrich(MarkupGraphContribution.enrich(ActionContracts.enrich(state.graph(),inventory),jsp),inventory),inventory));
   }
   private static void addView(JspAnalysis.View view,State state) {
     String viewId=ApplicationGraph.id(NodeType.VIEW,view.path());

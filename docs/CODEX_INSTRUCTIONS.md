@@ -39,7 +39,11 @@
 - 硬編碼特定範例專案(例如 PetClinic)的路徑、類別名或畫面名。
 - 修改被分析的目標專案(一律唯讀)。
 
-### 0.5 工作方式
+### 0.5 舊程式與測試的相容通則（OQ-006）
+
+對預定在後續工作包移除或取代的舊程式碼，不投資遷移其測試；優先以明確標示的歷史相容入口保持原行為，記錄 ADR，同類衝突不再停止詢問。只有會讓長期保留的程式碼放寬斷言時，仍依 §0.3 停止。
+
+### 0.6 工作方式
 
 - 依第 6 節的里程碑順序進行,**每個里程碑結束時停止並提交回報**(格式見第 7 節),等待確認後再進入下一個里程碑。
 - 每個工作包:先寫失敗的測試 → 實作 → 全部測試通過 → 更新文件。
@@ -243,7 +247,7 @@
 5. **Spring 檢核**:`@Valid` / `@Validated` 參數、Bean Validation 約束(`javax.validation` 與 `jakarta.validation` 的常用約束)、自訂 `Validator`、`@InitBinder`,轉為 `ValidationRule` 並連結到欄位與端點。若需引入 Java 解析函式庫,依 C8 於 ADR 說明。層級為 `SERVER`,`evidence.detail` 記錄 Bean Validation / Validator / `@InitBinder` 來源。
 6. 端點資料需能支援 API 頁:方法、路徑、處理類別#方法、請求 / 回應欄位、檢核規則、信心、來源。
 7. **schema 退場**:WP5 完成時,所有 adapter MUST 輸出 schema 2.2;移除「混合輸出降為 2.1」的路徑,2.1 僅保留讀取歷史資料。
-   - OQ-005：core 舊版相容建構子與缺版本的 2.1 預設僅供歷史資料／既有 fixture，須 @Deprecated 並註解限制；正式程式碼不得呼叫舊建構子。新分析的 adapter／合併器／CLI 均須輸出嚴格 2.2；合併拒絕 2.1 或缺證據輸入，不靜默升版。報表與後續匯出只接受 2.2，否則清楚失敗。core 既有歷史斷言不變。
+   - OQ-005：core 舊版相容建構子與缺版本的 2.1 預設僅供歷史資料／既有 fixture，須 @Deprecated 並註解限制；正式程式碼不得呼叫舊建構子。新分析的 adapter／合併器／CLI 均須輸出嚴格 2.2；混合版本與缺證據的 2.2 合併拒絕；兩份 2.1 僅能明確標歷史資料並維持 2.1，不靜默升版。所有新寫的 WP7 檢視器資料注入、WP8 md 匯出及其共用模組只接受 2.2，否則清楚失敗。依 OQ-006，既有 ReportGenerator／ReviewResultGenerator 保留 Deprecated 歷史入口，2.1 輸出須列版本與「歷史資料,未經 2.2 證據驗證」；原 fixture／斷言不變，分別於 WP7／WP8 移除。core 既有歷史斷言不變。
 
 **驗收**:fixture 涵蓋精確 / 樣板 / 副檔名映射 / 歧義 / 方法不符 / 無 context path;每種結果的信心等級正確。
 
@@ -265,6 +269,8 @@
 ---
 
 ### WP7 單一 HTML 檢視器(Screen Map、API 頁、review 模式)
+
+**OQ-006 新增驗收**：新資料注入及共用模組只接受嚴格 schema 2.2；其他版本清楚失敗。ReportGenerator 歷史入口與既有測試須隨舊程式碼一併移除。
 
 **架構要求**
 1. 新增前端模組 `screentrace-viewer/`(TypeScript + esbuild;不使用 UI 框架,除非 ADR 證明必要)。**移除** `ReportGenerator.java` 內的整段內嵌 HTML / JS / 樣式注入。
@@ -319,6 +325,8 @@ H. 品質
 ---
 
 ### WP8 review md 匯出(取代 JSON)
+
+**OQ-006 新增驗收**：新 md 匯出及共用模組只接受嚴格 schema 2.2；其他版本清楚失敗。ReviewResultGenerator 歷史入口與既有測試須隨舊程式碼一併移除。
 
 **要求**
 1. **移除**:`ReviewResultGenerator`、`docs/REVIEW_RESULT_CONTRACT.md`、`docs/examples/review-result.json`、CLI `export` 指令、相關測試(`ReviewResultGeneratorTest`、`ReviewExportContractTest`);同步更新 README。
@@ -496,4 +504,4 @@ migration_target:
 - 1.2:依 OQ-002 方案 B 修訂 WP3 第 8 點,允許有同來源常值定義、使用前且無重新賦值與作用域證據的 URL 變數例外;保留原始運算式、定義位置與路徑樣板,排除未知函式、跨檔案變數、c:set 與 param 值解析,既有測試斷言不變。
 - 1.1:檢核來源層級改為 `MARKUP` / `CLIENT` / `SERVER`(OQ-001);API 狀態推導的元件決策改用 (`screenId`, `componentId`) 複合鍵;新增 WP4 第 11 點、WP5 第 7 點、WP8 規則 7。
 - 1.0:初版。
-- v1.4 補充（OQ-005，2026-10-03）：限定歷史相容 API、淘汰標記與技術債；新分析／合併嚴格 2.2，拒絕歷史合併及非 2.2 報表／匯出。
+- v1.4 補充（OQ-005，2026-10-03）：限定歷史相容 API、淘汰標記與技術債；新分析／合併嚴格 2.2；歷史圖不靜默升版。依 OQ-006 保留明確標示的舊報表／JSON 匯出歷史入口，既有測試不遷移，WP7／WP8 新程式強制 2.2 並移除舊入口／測試；新增 §0 相容通則。

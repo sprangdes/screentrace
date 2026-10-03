@@ -156,7 +156,7 @@ public final class ScreenTraceCli {
     Files.createDirectories(safeOutput);
     Path output = project.analysisDirectory();
     var inventory = new ProjectScanner().scan(project.sourceDirectory()).withContextPaths(settings.contextPathsFor(project.sourceDirectory()),settings.contextPathsLine());
-    var graph = analyze(inventory);
+    var graph = io.screentrace.core.GraphIntegrityValidator.requireAnalysis(analyze(inventory));
     new ReportGenerator().write(graph, output);
     if (graph.application().technologies().contains("JSP")) {
       renderStaticJsp(project.sourceDirectory(), output);

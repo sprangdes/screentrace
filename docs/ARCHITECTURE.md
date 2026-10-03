@@ -87,7 +87,7 @@ JavaScript AST 分析模組 screentrace-js 已建立（WP4 增量一）；單一
 
 ### screentrace-core
 
-框架中立的 Application Graph、evidence、resolution、API contract、graph merger、完整性驗證，以及 Prototype、Preview、Edit Overlay 契約。現行 schemaVersion 為 `2.1`；新增嚴格行為 schema `2.2`；既有 producers 與相容讀取仍保留 `2.1`。
+框架中立的 Application Graph、evidence、resolution、API contract、graph merger、完整性驗證，以及 Prototype、Preview、Edit Overlay 契約。新分析 schemaVersion 一律 `2.2` 並嚴格驗證；`2.1` 僅供歷史相容資料／fixture。舊建構子與預設標 Deprecated，正式來源禁止使用。
 
 ### screentrace-scanner
 
@@ -147,7 +147,7 @@ The Application Graph is the canonical representation of an analyzed system.
 
 ### 4.1 Schema contract and compatibility
 
-`application-graph.json` is versioned. New analyses emit schema version `2.1`; consumers must also accept explicit versions `1.0` and `2.0`, and versionless legacy JSON. Versionless JSON is normalized to `2.1` when read.
+`application-graph.json` is versioned. New analyses emit strict schema version `2.2`. Historical reading accepts versions `1.0`, `2.0`, `2.1` and versionless legacy JSON; versionless JSON keeps the historical `2.1` default. Historical data cannot silently become `2.2`.
 
 Schema 2 preserves schema-1 fields (`source`, `confidence`) and constructors. It adds an `evidence` collection to nodes, relationships, and diagnostics so multiple source assertions can support one discovered relationship. Each evidence item records source location, parser, resolution status, and optional detail. This keeps existing report output readable while allowing Struts, Spring, JSP, and Tiles adapters to contribute independently.
 
@@ -218,7 +218,7 @@ SCREEN:result
 
 ## 5. Evidence Model
 
-目前模型可接受缺 evidence 的舊資料；附件 C2 要求新的節點、邊、行為與檢核規則具有來源行號、解析器與解析狀態。WP1 已實作 schema 2.2 的嚴格驗證，歷史 schema 仍走相容路徑；尚未遷移的 adapter 不會被宣稱符合嚴格版本。
+目前模型可接受缺 evidence 的舊資料；附件 C2 要求新的節點、邊、行為與檢核規則具有來源行號、解析器與解析狀態。WP1 已實作 schema 2.2 的嚴格驗證，歷史 schema 仍走相容路徑；所有 adapter 已遷移至嚴格 2.2；歷史 API 不供新分析使用。
 
 Suggested structure:
 
@@ -546,3 +546,7 @@ UrlGraphContribution 對 canonical API／表單請求套用共用引擎，保留
 ### WP5 增量三
 
 共用 ApiContractExtractor 以來源 DTO 擷取欄位（含 getter／record／繼承），正式 import 唯一解析；無唯一型別時列出全部候選並標 AMBIGUOUS。Spring 辨識純後端 ResponseBody／ResponseEntity，Struts ActionContracts 擷取 ActionForm、getParameter 常值與設定 forward。SpringServerValidation 以 JavaParser AST 擷取正式 javax／jakarta constraints、Valid／Validated、InitBinder 與可解析 Validator，不執行目標程式；SERVER 規則用穩定 ID，endpointIds／validationRuleIds 保持雙向對照，fields 同時保留欄位與對應元件 ID。動態 groups／message 保留原文與 UNRESOLVED；循環與未證明註冊有診斷。見 ADR 0014。
+
+### WP5 增量四與歷史入口
+
+所有 adapter／CLI 新分析回傳 2.2 並通過 requireAnalysis。合併嚴格 2.2 輸入／輸出均驗證；混合版本與缺證據 2.2 拒絕，兩份 2.1 僅回傳明確標示的歷史圖，不升版。相同行為的證據合併、不同結果不擇一，CLI 再執行共用 URL 配對。現有 ReportGenerator／ReviewResultGenerator 為 Deprecated 歷史入口，2.1 輸出有版本／證據限制；WP7／WP8 新程式只接受嚴格 2.2，並隨舊碼移除舊入口與測試。見 ADR 0015／0016。

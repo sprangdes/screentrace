@@ -66,10 +66,10 @@ public final class SpringMvcAnalyzer {
         addJspIncludes(jsp, state);
         state.diagnostics.addAll(jsp.diagnostics());
         ApplicationGraph graph = new ApplicationGraph(new ApplicationGraph.Application(inventory.root().getFileName().toString(), inventory.root().toString(), inventory.technologies()),
-                state.nodes, state.edges, state.diagnostics, state.apiContracts, ApplicationGraph.CURRENT_SCHEMA_VERSION);
+                state.nodes, state.edges, state.diagnostics, state.apiContracts, ApplicationGraph.BEHAVIOR_SCHEMA_VERSION, List.of(), List.of());
         graph=MarkupGraphContribution.enrich(graph,jsp);
         graph=SpringFormBindings.bind(graph,inventory);
-        return SpringServerValidation.enrich(io.screentrace.parser.jsp.UrlGraphContribution.enrich(io.screentrace.parser.jsp.JavaScriptGraphContribution.enrich(MarkupGraphContribution.enrich(graph,jsp),inventory),inventory),inventory);
+        return io.screentrace.core.GraphIntegrityValidator.requireAnalysis(SpringServerValidation.enrich(io.screentrace.parser.jsp.UrlGraphContribution.enrich(io.screentrace.parser.jsp.JavaScriptGraphContribution.enrich(MarkupGraphContribution.enrich(graph,jsp),inventory),inventory),inventory));
     }
 
     private static void discoverExceptionView(ProjectInventory inventory, State state) {

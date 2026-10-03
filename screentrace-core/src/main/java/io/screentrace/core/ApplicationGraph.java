@@ -16,6 +16,8 @@ import java.nio.charset.StandardCharsets;
 public record ApplicationGraph(Application application, List<GraphNode> nodes, List<Relationship> relationships,
                                List<Diagnostic> diagnostics, List<ApiContract> apiContracts, String schemaVersion,
                                List<Behavior> behaviors, List<ValidationRule> validationRules) {
+  /** Historical missing-version default only; new analyses must use BEHAVIOR_SCHEMA_VERSION. */
+  @Deprecated
   public static final String CURRENT_SCHEMA_VERSION = "2.1";
   public static final String BEHAVIOR_SCHEMA_VERSION = "2.2";
   public static final Set<String> SUPPORTED_SCHEMA_VERSIONS = Set.of("1.0", "2.0", CURRENT_SCHEMA_VERSION, BEHAVIOR_SCHEMA_VERSION);
@@ -31,24 +33,29 @@ public record ApplicationGraph(Application application, List<GraphNode> nodes, L
     validationRules = sorted(validationRules);
   }
 
-  /** Compatibility constructor for existing schema-2.1 producers. */
+  /** Historical data/fixture compatibility only. New analysis must use the full schema-2.2 constructor. */
+  @Deprecated
   public ApplicationGraph(Application application, List<GraphNode> nodes, List<Relationship> relationships,
                           List<Diagnostic> diagnostics, List<ApiContract> apiContracts, String schemaVersion) {
     this(application, nodes, relationships, diagnostics, apiContracts, schemaVersion, List.of(), List.of());
   }
 
-  /** Source-compatible constructor for adapters written against schema 1. */
+  /** Historical data/fixture compatibility only; never use for new adapter output. */
+  @Deprecated
   public ApplicationGraph(Application application, List<GraphNode> nodes, List<Relationship> relationships,
                           List<Diagnostic> diagnostics) {
     this(application, nodes, relationships, diagnostics, List.of(), CURRENT_SCHEMA_VERSION);
   }
 
-  /** Source-compatible constructor for schema 2 producers that do not emit API contracts. */
+  /** Historical data/fixture compatibility only; never use for new adapter output. */
+  @Deprecated
   public ApplicationGraph(Application application, List<GraphNode> nodes, List<Relationship> relationships,
                           List<Diagnostic> diagnostics, String schemaVersion) {
     this(application, nodes, relationships, diagnostics, List.of(), schemaVersion);
   }
 
+  /** Missing versions are interpreted only as historical data, never as strict schema 2.2. */
+  @Deprecated
   private static String normalizeSchemaVersion(String version) {
     String value = version == null || version.isBlank() ? CURRENT_SCHEMA_VERSION : version;
     if (!SUPPORTED_SCHEMA_VERSIONS.contains(value)) {

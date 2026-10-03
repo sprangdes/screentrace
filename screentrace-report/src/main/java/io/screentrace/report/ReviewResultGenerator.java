@@ -25,6 +25,8 @@ import java.util.TreeMap;
 import java.util.TreeSet;
 
 /** Exports user review decisions in a deterministic, AI-consumable JSON contract. */
+/** Historical JSON export entry; remove with its fixtures in WP8. New md export must require strict 2.2. */
+@Deprecated
 public final class ReviewResultGenerator {
     private static final String KEEP = "KEEP";
     private static final String REMOVE = "REMOVE";
@@ -42,6 +44,9 @@ public final class ReviewResultGenerator {
         List<Map<String, Object>> apis = apis(index);
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("version", "2");
+        result.put("analysisSchemaVersion", graph.schemaVersion());
+        if (!ApplicationGraph.BEHAVIOR_SCHEMA_VERSION.equals(graph.schemaVersion()))
+            result.put("evidenceValidation", "歷史資料,未經 2.2 證據驗證");
         result.put("generatedAt", Instant.now().toString());
         result.put("application", Map.of("name", graph.application().name(), "technologies", graph.application().technologies()));
         result.put("summary", Map.of("screens", counts.screens(), "components", counts.components(), "apis", Map.of("total", apis.size())));

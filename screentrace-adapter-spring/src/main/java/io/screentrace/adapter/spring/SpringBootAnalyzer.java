@@ -60,8 +60,8 @@ public final class SpringBootAnalyzer {
         connectReactGraph(state);
         ApplicationGraph graph=new ApplicationGraph(
                 new ApplicationGraph.Application(inventory.root().getFileName().toString(), inventory.root().toString(), inventory.technologies()),
-                state.nodes, state.edges, state.diagnostics, state.apiContracts, ApplicationGraph.CURRENT_SCHEMA_VERSION);
-        return SpringServerValidation.enrich(io.screentrace.parser.jsp.UrlGraphContribution.enrich(graph,inventory),inventory);
+                state.nodes, state.edges, state.diagnostics, state.apiContracts, ApplicationGraph.BEHAVIOR_SCHEMA_VERSION, List.of(), List.of());
+        return io.screentrace.core.GraphIntegrityValidator.requireAnalysis(SpringServerValidation.enrich(io.screentrace.parser.jsp.UrlGraphContribution.enrich(graph,inventory),inventory));
     }
 
     private void parseController(Path root, Path file, AnalysisState state) {
@@ -431,14 +431,19 @@ public final class SpringBootAnalyzer {
 
     private static void addNode(List<GraphNode> nodes, GraphNode node) {
         if (nodes.stream().noneMatch(existing -> existing.id().equals(node.id()))) {
-            nodes.add(node);
+            var attributes = new TreeMap<>(node.attributes());
+            if (node.type() == NodeType.COMPONENT && !attributes.containsKey("kind"))
+                attributes.put("kind", "LINK".equals(attributes.get("componentType")) ? "LINK" : "OTHER");
+            var proof = node.evidence().stream().map(item -> "LEGACY".equals(item.parser())
+                ? new ApplicationGraph.AnalysisEvidence(item.source(), "SpringBootAnalyzer", item.resolution(), item.detail()) : item).toList();
+            nodes.add(new GraphNode(node.id(),node.type(),node.name(),attributes,node.source(),node.confidence(),proof));
         }
     }
 
     private static void edge(List<Relationship> edges, EdgeType type, String from, String to, Confidence confidence, SourceLocation source) {
         String id = ApplicationGraph.id(NodeType.COMPONENT, type + ":" + from + ":" + to);
         if (edges.stream().noneMatch(existing -> existing.id().equals(id))) {
-            edges.add(new Relationship(id, type, from, to, confidence, source));
+            edges.add(new Relationship(id, type, from, to, confidence, source, List.of(new ApplicationGraph.AnalysisEvidence(source,"SpringBootAnalyzer",confidence.resolutionStatus(),null))));
         }
     }
 

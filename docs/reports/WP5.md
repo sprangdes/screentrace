@@ -1,43 +1,80 @@
-# WP5 回報（增量進行中）
+# WP5 回報（實作完成，增量四待遠端 CI）
 
 ## 1. 工作包與提交
 
-限定 WP5，四增量依序為 URL／context、行為對應、契約／SERVER 檢核、schema 2.2。每次遠端 CI 全綠後才繼續。增量一 `51c9575386d8d51e295716b0542f858ec23b2e91` 已推送，[遠端 CI 全綠](https://github.com/sprangdes/screentrace/actions/runs/37087105170)；OQ-004 已處理，增量二 `bb66bb4136ef86447d161acc280eb046a5c75adb` 已推送，[遠端 CI 全綠](https://github.com/sprangdes/screentrace/actions/runs/37089180710)；增量三 `385578a521698e41f50a542667f3bd812528f703` 已推送，[遠端 CI 全綠](https://github.com/sprangdes/screentrace/actions/runs/37090565187)；增量四因 OQ-006 停止（OQ-005 已處理）；WP6 未開始。
+限定 WP5；每個增量先寫失敗測試，前一增量遠端 CI 全綠才繼續。
+
+| 增量 | 提交 | 遠端驗證 |
+|---|---|---|
+| 一：URL／context | 51c9575386d8d51e295716b0542f858ec23b2e91 | [CI 全綠](https://github.com/sprangdes/screentrace/actions/runs/37087105170) |
+| 二：行為對應／來源隱私 | bb66bb4136ef86447d161acc280eb046a5c75adb | [CI 全綠](https://github.com/sprangdes/screentrace/actions/runs/37089180710) |
+| 三：API 契約／SERVER 檢核 | 385578a521698e41f50a542667f3bd812528f703 | [CI 全綠](https://github.com/sprangdes/screentrace/actions/runs/37090565187) |
+| 四：嚴格 2.2／歷史入口 | 本次提交 | 待推送確認 |
+
+OQ-004／005／006 已處理，文件 v1.4。WP6 未開始。
 
 ## 2. 主要檔案
 
-UrlResolution.java、UrlResolutionTest.java；工作區設定及 CLI／ProjectInventory 的明確 context 候選傳遞，parser 模組加入釘選安全 YAML 相依，更新 README／架構／路線圖。
+- 共用 parser：UrlResolution、UrlGraphContribution、ApiContractExtractor；ScriptSources 的可證明 context 別名。
+- adapter：SpringMvcAnalyzer／SpringBootAnalyzer、SpringServerValidation、StrutsProjectAnalyzer／ActionContracts。
+- core：ApplicationGraph 的歷史專用 Deprecated API、GraphIntegrityValidator.requireAnalysis、ApplicationGraphMerger 的嚴格輸入／歷史標示／行為證據合併。
+- scanner／CLI：ProjectInventory、SafeProjectFiles、ProjectScanner、WorkspaceSettings、ScreenTraceCli；設定鍵行號、reserved 名稱與正式分析版本門檻。
+- 舊報表：Deprecated ReportGenerator／ReviewResultGenerator，歷史輸出列出 schema 與證據限制；原 fixture／斷言不變。
+- 新測試：UrlResolutionTest、UrlGraphIntegrationTest、UrlLinkingTest、WorkspaceContextEvidenceTest／WorkspaceEvidenceNamespaceTest、ServerContractValidationTest、ActionContractTest、SchemaProductionTest、ProductionSchemaTest、HistoricalSchemaEntryTest 等。
+- 文件：v1.4、ADR 0011–0016、OPEN_QUESTIONS、ARCHITECTURE、ROADMAP、WP5／M2 回報；無刪除既有測試。
 
 ## 3. 測試與結果
 
-增量一新增 10 個 URL 測試及 1 個工作區測試，均先確認編譯失敗（缺實作／新設定介面）再實作。`mvn -q verify`：158 個 Java 測試通過；原本 147 個測試斷言完整保留。URL fixtures 涵蓋精確、模板、星號、副檔名、全候選、方法不符、無設定、已證明／未知 context、外部 URL、安全 YAML 與 properties。40 項 JS 測試、4 項 docs-baseline 測試通過，npm audit 0；遠端 npm audit 與 Dependency-Check 全數 success。
+WP5 新增 50 個 Java 測試：增量一 11、二 16、三 12、四 11。原 WP4 的 147 個合計為 **197**，0 failure／error／skip。
 
-增量二新增 UrlGraphIntegrationTest 五項測試，先跑全部五項失敗；另外 WorkspaceContextEvidenceTest 一項失敗，確認外部設定證據在 2.2 驗證遭拒。上述失敗測試現已通過；OQ-004 邊界測試先確認不合法命名空間接受、目標名稱冒充及設定路徑洩漏的失敗，再實作。圖內家目錄洩漏另先失敗後修正；曾遇 null detail 引發新測試錯誤，補充端點證據 detail 後通過。未修改任何既有斷言。
+- `mvn -q verify`：197 個通過。
+- `npm --prefix screentrace-js test`：40 個通過。
+- `node --test screentrace-capture/{docs-baseline,safe-files,spring-resource-mappings,capture-static-jsp.security}.test.mjs`（實際以四個檔名執行）：14 個通過，含文件原文 4 個。首次 Chromium 遭 macOS sandbox MachPort 權限阻擋而 1 failure；用相同測試在允許 Chromium 啟動的權限重跑後 14 個全綠，未改測試。
+- `npm --prefix screentrace-js audit --audit-level=high`、capture 同指令：均 0 vulnerabilities。
+- `git diff --check` 通過；追蹤中的既有測試無任何 diff，連 schema 字串也未更動。
 
-增量二新增 16 個 Java 測試，合計 174 個通過；40 JS、4 docs-baseline 通過，npm audit 0。涵蓋保留命名空間正反例、reserved 目標讀取拒絕、設定鍵行號、序列化隱私、不同設定的證據、API／表單對應、歧義全列、方法不符、未知／重新賦值 context、Struts 副檔名與未知 method。增量二遠端 CI 已全綠。
+先失敗紀錄：增量一缺少引擎／設定 API 編譯失敗；增量二 API／表單五項失敗，工作區證據與 reserved／隱私反例先失敗；增量三 Spring 5 failure／1 error、Struts 1 failure／1 error，DTO 歧義、groups 與動態 message 追加反例失敗。增量四 core 3 failure、CLI 2 failure、歷史報表／匯出 2 failure；兩份歷史圖標示測試 1 error，混合流程暴露行為重複貢獻及暫時 API 未清理。各項保留斷言修正後全綠。
 
-增量三新增 12 個 Java 測試（Spring 10、Struts 2），合計 186 個通過。首次執行缺少 API／SERVER 規則造成 5 failure、1 error，Struts 1 failure、1 error；DTO 多候選與 groups／動態 message 反例先失敗後修正。完整驗證曾發現既有 null action type 與 forward 契約缺漏，保留既有斷言並修正。`mvn -q verify` 全綠；未修改既有測試。
+前三增量遠端 Java／Node 測試、npm audit、Dependency-Check 均 success；最後增量待遠端確認，尚不以較早 CI 代替。
 
 ## 4. 設計決策
 
-[ADR 0011](../adr/0011-url-resolution-context-and-yaml.md)：共用引擎、全部候選、設定證據與 SnakeYAML 2.4（Apache-2.0）安全解析。
+- [ADR 0011](../adr/0011-url-resolution-context-and-yaml.md)：共用 URL、全候選、明確 context；SnakeYAML 2.4 釘選、安全 constructor、Apache-2.0。
+- [ADR 0012](../adr/0012-workspace-evidence-namespace-and-privacy.md)：workspace:config.json、鍵行號、reserved 來源與隱私。
+- [ADR 0013](../adr/0013-request-behavior-endpoint-correlation.md)：canonical API／表單行為、全部候選、載入與失敗綁定來源。
+- [ADR 0014](../adr/0014-server-contracts-and-validation.md)：共享 DTO、Struts 契約、正式 SERVER 註解／Validator 與端點／欄位連結。
+- [ADR 0015](../adr/0015-schema-two-production-and-historical-compatibility.md)：OQ-005、歷史 core API、嚴格新分析、不靜默升版。
+- [ADR 0016](../adr/0016-historical-report-entries-and-schema-retirement.md)：OQ-006、舊入口／測試保留與 WP7／WP8 移除、新資料門檻、混合行為合併。既有測試／fixture／斷言修改清單：**無**。
 
-[ADR 0012](../adr/0012-workspace-evidence-namespace-and-privacy.md)：工作區來源、隱私與行號；[ADR 0013](../adr/0013-request-behavior-endpoint-correlation.md)：canonical 行為、全部端點候選與來源保留。
+## 5. 與指示文件的差異及理由
 
-[ADR 0014](../adr/0014-server-contracts-and-validation.md)：共用 DTO 契約與來源型別選取、SERVER 規則／端點／欄位連結及靜態邊界，無新增相依。
-
-## 5. 與指示文件的差異
-
-依需求方新增授權，最後增量僅允許既有 schema 版本字串 2.1 → 2.2 斷言更新，逐處列入 ADR；其餘斷言不變。JS API context 只剝除可證明前綴並使用明確實際設定，未知不猜測。依 OQ-004 最新指示，本增量已更新文件 v1.4。
+僅需求方明確授權的 v1.4 修訂：JS API context 必須可證明且有明確實際設定；OQ-004 namespace／隱私；OQ-005 core 歷史預設專用；OQ-006 舊報表／JSON 匯出相容入口與不遷移待移除測試的通則。全部已寫入文件與 ADR，無自行選擇未決方案。
 
 ## 6. 開放問題與風險
 
-[OQ-004](../OPEN_QUESTIONS.md) 已處理：採方案 A 加來源與隱私限制，文件 v1.4、ADR 0012。引擎未決定啟用的 Spring profile，不執行環境插值；全部明確值為候選。沒有 context 設定產生診斷，不能從 WAR 名稱推測。
+OQ-004／005／006 均已處理，沒有未決 WP5 問題。無設定的 context 不猜 WAR 名稱；多個 profile／workspace 值皆為候選，不選啟用 profile，不執行環境插值。動態 URL／未知 method 保留 UNRESOLVED。無法解析的群組、動態 message、Validator DI／註冊與型別維持原文／診斷，不載入或執行目標 Java／JS／JSP。
 
-OQ-005 未決：schema 退場是否包含 core 舊版相容建構子／缺版本預設，與保留既有 LEGACY／無來源／kind 的驗證斷言存在範圍衝突。已依 §0.3 停止，schema 增量未修改程式或測試，未放寬嚴格驗證。選項與影響見 [開放問題](../OPEN_QUESTIONS.md#oq-005--schema-退場與-core-歷史相容建構子預設版本)。
+歷史 core 建構子待原測試遷移後移除；舊 ReportGenerator 與原測試於 WP7 移除、ReviewResultGenerator 與原測試於 WP8 移除，已列驗收／技術債。未實作 WP7／WP8。Windows launcher、人工 report-design 未執行，沿用 WP4 限制。
 
-## 7. 驗收對照
+## 7. 驗收逐項對照
 
-WP5.1／2 的共用引擎與設定 fixtures 通過本機測試；WP5.3 圖接入與 OQ-004 正反例已通過本機測試；WP5.4／5／6 的 API 契約、SERVER 規則與欄位／端點連結已通過本機測試；schema 2.2 尚待增量四。增量三遠端 Java／Node 建置、npm audit、Dependency-Check 全綠。WP5 未完成；增量四因 OQ-006 停止（OQ-005 已處理），WP6 未開始。
+| 條款 | 狀態／證據 |
+|---|---|
+| WP5.1 | 本機通過：精確 CONFIRMED、模板／星號／副檔名 INFERRED、多候選 AMBIGUOUS 全列、方法不符無後端關聯、query／fragment／session 正規化 |
+| WP5.2／OQ-004 | 本機通過：properties／安全 YAML／明確 workspace 候選；未知不假設；設定值與來源證據、行號、namespace 正反例、reserved 目標拒絕、圖序列化無家目錄 |
+| WP5.3 | 本機通過：API／表單 CALLS／TRIGGERS、載入與失敗綁定／回呼來源保留、唯一結果與歧義全候選、Struts mapping 與混合分析 |
+| WP5.4 | 本機通過：MVC／Boot 純後端 RestController／ResponseBody／ResponseEntity、DTO 欄位／import／全候選、Struts ActionForm／getParameter／forward 契約 |
+| WP5.5 | 本機通過：javax／jakarta、Valid／Validated、常用 constraints、繼承／getter／record／cascade、自訂 Validator／InitBinder、SERVER、循環／偽註解／groups 反例 |
+| WP5.6 | 本機通過：方法／路徑／handler／欄位／契約信心來源；規則 endpointIds 與端點 validationRuleIds、表單欄位元件連結 |
+| WP5.7／OQ-005／006 | 本機通過：全部 adapter／合併／CLI 嚴格 2.2；混合歷史拒絕，兩份 2.1 明確歷史、不升版；正式來源不呼叫舊建構子；CLI 實際圖餵給歷史入口為 2.2，僅兩個 Deprecated 報表 write 入口 |
+| C1 | 通過：AST／安全文字讀取，不執行目標程式；既有 JS 副作用探針與靜態化安全測試全綠 |
+| C2 | 通過：新分析嚴格證據，來源／解析器／狀態／原文；歷史入口清楚限制，不偽造證據 |
+| C3 | 通過：排序／穩定貢獻、重複分析位元組／相等測試保留且通過 |
+| C4 | 通過：core 無新框架模型名稱，框架語意在 adapter／evidence |
+| C5／C6 | 既有安全測試通過；新 HTML 單檔／CSP 完整實作仍屬 WP7，WP5 不宣稱已完成 WP7 |
+| C7 | 通過：SafeProjectFiles／大小限制／安全 XML／YAML；reserved 工作區命名空間不替目標檔放寬限制 |
+| C8 | 前三增量遠端通過；新相依僅 SnakeYAML 2.4（ADR／釘選／授權）；增量四本機 npm audit 0，最終 Dependency-Check 待 CI |
+| C9 | 通過：穩定行為與檢核鍵，不以規則行號建 ID；既有重排／空白測試均通過 |
+| C10 | 通過：新文件／診斷繁體中文，程式碼／資料鍵英文 |
 
-OQ-005 已依方案 A 附加限制記錄於 ADR 0015／v1.4；core 既有斷言不變。OQ-006 待決：報表／匯出既有 2.1 成功 fixture 與新限制衝突，需額外授權 fixture 遷移，或修訂歷史入口限制。未改程式／測試，未進入 WP6。
+本機完成，最後遠端 gate 尚待確認；WP6 未開始。

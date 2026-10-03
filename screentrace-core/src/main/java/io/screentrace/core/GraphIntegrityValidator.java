@@ -10,6 +10,14 @@ import java.util.*;
 public final class GraphIntegrityValidator {
   private GraphIntegrityValidator() { }
 
+  /** Gate for newly analyzed graphs; historical consumers use validate explicitly. */
+  public static ApplicationGraph requireAnalysis(ApplicationGraph graph) {
+    if (!ApplicationGraph.BEHAVIOR_SCHEMA_VERSION.equals(graph.schemaVersion()))
+      throw new IllegalArgumentException("新分析需要 schema 2.2，收到 schema " + graph.schemaVersion() + "；歷史資料不得靜默升版");
+    validate(graph);
+    return graph;
+  }
+
   public static void validate(ApplicationGraph graph) {
     List<String> errors = new ArrayList<>();
     validateSchema(graph, errors);

@@ -317,3 +317,7 @@ npm --prefix screentrace-capture audit --audit-level=high
 JS API request 節點保存來源方法、URL、資料欄位，backendStatus 為 UNRESOLVED；後端 URL／context path 配對是尚未開始的 WP5，不能把 WP4 的 request 節點當成已證明的後端 handler。script src context 前綴例外見 v1.3 與 ADR 0008，不套用到 API URL。
 
 WP5 的 WAR context path 可在 `~/.screentrace/config.json` 加入 `contextPaths`，鍵為專案絕對路徑，值為明確候選陣列，例如 `"contextPaths": {"/workspace/shop": ["/shop"]}`。未設定不推測部署路徑；多個不同候選保留歧義。Spring Boot properties／YAML 的 `server.servlet.context-path` 亦保留來源證據。
+
+### WP5 schema 與 context
+
+新分析的 Struts／Spring／混合圖一律 schema 2.2，嚴格驗證來源證據。URL 配對與明確 context 候選保留全部歧義；API 契約與 SERVER 規則附來源。core 舊版 API 與舊報表／JSON 匯出僅歷史相容，列出證據限制；移除義務見 [ADR 0015](docs/adr/0015-schema-two-production-and-historical-compatibility.md)、[ADR 0016](docs/adr/0016-historical-report-entries-and-schema-retirement.md)。WP5 完整測試與 CI 見 [回報](docs/reports/WP5.md)。

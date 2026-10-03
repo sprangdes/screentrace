@@ -14,6 +14,8 @@ import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.List;
 
+/** Historical 2.1 compatibility entry; remove with its fixtures in WP7. New viewer injection must require strict 2.2. */
+@Deprecated
 public final class ReportGenerator {
   private final ObjectMapper json = new ObjectMapper().enable(SerializationFeature.INDENT_OUTPUT);
 
@@ -30,7 +32,11 @@ public final class ReportGenerator {
     Path overlay = SafeProjectFiles.requireWritePathWithin(outputRoot, outputRoot.resolve("edit-overlay.json"));
     if (!Files.exists(overlay, java.nio.file.LinkOption.NOFOLLOW_LINKS)) writeJson(outputRoot, overlay, new EditOverlay("1", List.of()));
     copyAsset("report/workflow-canvas.css", SafeProjectFiles.requireWritePathWithin(outputRoot, reportDirectory.resolve("workflow-canvas.css")));
-    Files.writeString(SafeProjectFiles.requireWritePathWithin(outputRoot, reportDirectory.resolve("index.html")), HTML);
+    String html = HTML;
+    if (!ApplicationGraph.BEHAVIOR_SCHEMA_VERSION.equals(graph.schemaVersion()))
+      html = html.replace("</title>", "</title><meta name=\"screentrace-analysis-schema\" content=\"" + graph.schemaVersion() + "\">")
+          .replace("<header", "<p role=\"status\">schema " + graph.schemaVersion() + "：歷史資料,未經 2.2 證據驗證</p><header");
+    Files.writeString(SafeProjectFiles.requireWritePathWithin(outputRoot, reportDirectory.resolve("index.html")), html);
     return output.resolve("report/index.html");
   }
 
