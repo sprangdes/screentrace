@@ -13,10 +13,17 @@ public record ComponentLibrary(JsonNode manifest,String sha256) {
    var mapper=new ObjectMapper(com.fasterxml.jackson.core.JsonFactory.builder().enable(StreamReadFeature.STRICT_DUPLICATE_DETECTION).build());var data=mapper.readTree(bytes);
    checkPrivacy(data,"$");
    var schema=JsonSchemaFactory.getInstance(SpecVersion.VersionFlag.V202012).getSchema(mapper.readTree(in));
-   var errors=schema.validate(data);if(!errors.isEmpty())throw new IllegalArgumentException(errors.stream().map(Object::toString).sorted().reduce((a,b)->a+"; "+b).orElse("無效 manifest"));
+   var errors=schema.validate(data);if(!errors.isEmpty())throw new IllegalArgumentException(errors.stream().map(ComponentLibrary::validationError).sorted().reduce((a,b)->a+"; "+b).orElse("無效 manifest"));
    Set<String> ids=new HashSet<>();for(var c:data.path("components"))if(!ids.add(c.path("id").asText()))throw new IllegalArgumentException("$.components: 元件 ID 重複");
    checkPrivacy(data,"$");return new ComponentLibrary(data,HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(bytes)));
   }catch(IllegalArgumentException e){throw e;}catch(Exception e){throw new IllegalArgumentException("manifest JSON 解析／驗證失敗");}
+ }
+ private static String validationError(ValidationMessage error){
+  return switch(error.getType()){
+   case "maxLength" -> error.getInstanceLocation()+": 長度不得超過 "+error.getSchemaNode().asInt()+" 個字元 (maxLength)";
+   case "maxItems" -> error.getInstanceLocation()+": 項目不得超過 "+error.getSchemaNode().asInt()+" 筆 (maxItems)";
+   default -> error.toString();
+  };
  }
  private static void checkPrivacy(JsonNode node,String path){
   if(node.isTextual()){

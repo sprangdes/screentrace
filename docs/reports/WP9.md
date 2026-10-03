@@ -64,3 +64,9 @@ C7 統一 SafeProjectFiles 的原始 bytes 邊界（不改 readUtf8 行為）；
 收尾補強：公開文件 URL 的隱私檢查誤判，新增回歸測試先失敗後修正；HTTP(S) URL 不當成本機磁碟路徑，實際家目錄原文與本機路徑仍拒絕。新增測試後 Java 共 198 項；既有斷言與兩份 v1 golden 不變。
 
 WP9 全部驗收項目通過；OQ-009／010 已處理，無未決問題。已停止，WP10 未開始。
+
+## 驗收後補強：manifest 欄位與集合上限（2026-10-04）
+
+新增 Schema maxLength 200（library.name／version、元件 id／name／selector／category）、maxLength 4,000（所有 description／usage）、maxItems 200（每元件 inputs／outputs／slots／matches）。錯誤訊息保留欄位路徑，顯示上限而不回顯過長文字。詳細決定見 [ADR 0031](../adr/0031-component-library-field-bounds.md)。
+
+三項新增 Java 測試先失敗後修正，覆蓋每個欄位與集合的合法邊界／超限、Unicode code point、虛構範例 CLI 驗證、validate／import 診斷與失敗不儲存。mvn verify：201 tests，0 failure／error／skip。既有斷言與兩份 v1 golden 不變；無新相依，文件維持 v1.9。WP10 未開始。

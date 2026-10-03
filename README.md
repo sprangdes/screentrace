@@ -268,6 +268,8 @@ screentrace library import component-library.sample.json --project example-proje
 screentrace library unbind --project example-project
 ```
 
+manifest 的 library.name／version、元件 id／name／selector／category 最多 200 個 Unicode 字元；description（含輸入／輸出／slot）與 usage 最多 4,000 個字元。每個元件 inputs／outputs／slots／matches 各最多 200 筆；超限拒絕並指出欄位路徑與上限。
+
 未指定 project 只儲存、不選用。相同名稱@版本異內容需明確 --replace，已綁定專案更換後重新執行 report；解除後顯示「未匯入元件庫」。list 列摘要與綁定，不列工作區路徑。
 
 元件詳情顯示自動候選／屬性與事件對照；確認模式下 KEEP 畫面的元件可手動覆寫，共用元件按畫面獨立保存。md 帶入選用庫名稱@版本與摘要，舊庫覆寫隔離為 orphan，換回原庫恢復。決策與覆寫透過單一 md 還原，詳細欄位與隔離規則見 [Review md 契約](docs/REVIEW_MD_CONTRACT.md)。
