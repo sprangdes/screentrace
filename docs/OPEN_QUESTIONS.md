@@ -38,3 +38,12 @@
 - 實測：新增 WorkspaceContextEvidenceTest，明確 workspace `/shop` 可解析到 `/api`，但帶原設定檔證據的 schema 2.2 graph 驗證失敗 `Missing or invalid source: api`；1 test／1 failure／0 errors。無修改既有斷言。
 - 狀態：已處理（2026-10-03）；需求方採方案 A 並附隱私／來源邊界限制，WP5 增量二可繼續。
 - 決定：固定 workspace:config.json、設定鍵所在行（未知為 1）；只接受單純檔名，目標 reserved 名稱拒絕；圖不含真實設定檔路徑／使用者家目錄；detail 只含鍵、候選及採用值，context 來源與採用值必須可從輸出區分。見 ADR 0012、文件 v1.4。
+
+## OQ-005 — schema 退場與 core 歷史相容建構子／預設版本
+
+- 情境：WP5.7 明定所有 adapter 輸出 2.2、移除混合降為 2.1，且「2.1 僅保留讀取歷史資料」。目前 CURRENT_SCHEMA_VERSION=2.1 同時用於缺版本 JSON 讀取與舊版相容建構子。可將退場限於分析輸出而保留相容 API，或解讀成任何新建圖都不得預設 2.1。第 9 節沒有此範圍的預設解讀。
+- 既有斷言：ApplicationGraphTest.upgradesSchemaOneJsonWithoutLosingLegacyTraceability（第 36／38／39 行）要求缺版本 JSON 的版本等於 CURRENT_SCHEMA_VERSION、parser=LEGACY、通過驗證；GraphIntegrityValidatorTest.acceptsResolvedScreenNavigation／acceptsInferredNavigationDerivedFromAResolvedEndpoint／acceptsCrossFrameworkGraphRelationships 以舊建構子建立無來源／kind 的圖，要求通過驗證。若直接將 CURRENT_SCHEMA_VERSION 改為 2.2，這些要求將與既有 2.2 嚴格證據驗證衝突；改為接受缺證據的 2.2 會放寬驗證，禁止。
+- 可選方案 A：core 保留舊版相容建構子與缺版本歷史 JSON 的 2.1 預設，限歷史資料／既有 fixture；所有 adapter 與合併輸出一律 2.2，既有斷言不變。在 ADR 明定相容 API 不供新分析使用。
+- 可選方案 B：新建圖預設一律 2.2，缺版本歷史資料另走 2.1；需求方另授權受影響測試改用明確歷史版本的 fixture 建構方式及版本期望（超出單純 2.1 → 2.2 字串變更），逐處 ADR 記錄；其餘斷言與嚴格驗證不變。
+- 影響範圍：WP5 增量四、ApplicationGraph 的建構／讀取相容契約、core 歷史測試、所有 adapter 與 merger；不涉及 WP6。
+- 狀態：待需求方決定（2026-10-03）。依 §0.3 停止 WP5；增量三 385578a 已推送且 CI 全綠，schema 增量尚未修改程式或既有測試，未自行選擇方案。

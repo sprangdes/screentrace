@@ -2,7 +2,7 @@
 
 ## 1. 工作包與提交
 
-限定 WP5，四增量依序為 URL／context、行為對應、契約／SERVER 檢核、schema 2.2。每次遠端 CI 全綠後才繼續。增量一 `51c9575386d8d51e295716b0542f858ec23b2e91` 已推送，[遠端 CI 全綠](https://github.com/sprangdes/screentrace/actions/runs/37087105170)；OQ-004 已處理，增量二 `bb66bb4136ef86447d161acc280eb046a5c75adb` 已推送，[遠端 CI 全綠](https://github.com/sprangdes/screentrace/actions/runs/37089180710)；增量三本機通過，待推送確認；WP6 未開始。
+限定 WP5，四增量依序為 URL／context、行為對應、契約／SERVER 檢核、schema 2.2。每次遠端 CI 全綠後才繼續。增量一 `51c9575386d8d51e295716b0542f858ec23b2e91` 已推送，[遠端 CI 全綠](https://github.com/sprangdes/screentrace/actions/runs/37087105170)；OQ-004 已處理，增量二 `bb66bb4136ef86447d161acc280eb046a5c75adb` 已推送，[遠端 CI 全綠](https://github.com/sprangdes/screentrace/actions/runs/37089180710)；增量三 `385578a521698e41f50a542667f3bd812528f703` 已推送，[遠端 CI 全綠](https://github.com/sprangdes/screentrace/actions/runs/37090565187)；增量四因 OQ-005 停止；WP6 未開始。
 
 ## 2. 主要檔案
 
@@ -34,6 +34,8 @@ UrlResolution.java、UrlResolutionTest.java；工作區設定及 CLI／ProjectIn
 
 [OQ-004](../OPEN_QUESTIONS.md) 已處理：採方案 A 加來源與隱私限制，文件 v1.4、ADR 0012。引擎未決定啟用的 Spring profile，不執行環境插值；全部明確值為候選。沒有 context 設定產生診斷，不能從 WAR 名稱推測。
 
+OQ-005 未決：schema 退場是否包含 core 舊版相容建構子／缺版本預設，與保留既有 LEGACY／無來源／kind 的驗證斷言存在範圍衝突。已依 §0.3 停止，schema 增量未修改程式或測試，未放寬嚴格驗證。選項與影響見 [開放問題](../OPEN_QUESTIONS.md#oq-005--schema-退場與-core-歷史相容建構子預設版本)。
+
 ## 7. 驗收對照
 
-WP5.1／2 的共用引擎與設定 fixtures 通過本機測試；WP5.3 圖接入與 OQ-004 正反例已通過本機測試；WP5.4／5／6 的 API 契約、SERVER 規則與欄位／端點連結已通過本機測試；schema 2.2 尚待增量四。WP5 未完成；增量三遠端全綠後才進入增量四，WP6 不開始。
+WP5.1／2 的共用引擎與設定 fixtures 通過本機測試；WP5.3 圖接入與 OQ-004 正反例已通過本機測試；WP5.4／5／6 的 API 契約、SERVER 規則與欄位／端點連結已通過本機測試；schema 2.2 尚待增量四。增量三遠端 Java／Node 建置、npm audit、Dependency-Check 全綠。WP5 未完成；增量四因 OQ-005 停止，WP6 未開始。
