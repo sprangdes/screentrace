@@ -26,4 +26,5 @@ class SingleHtmlReportGeneratorTest {
    assertTrue(output.warning());assertTrue(output.bytes()>100_000_000);assertEquals(Files.size(output.path()),output.bytes());assertTrue(Files.readString(root.resolve("report-size.json")).contains("超過 100 MB"));
   } finally {try(var files=Files.walk(root)){for(var file:files.sorted(Comparator.reverseOrder()).toList())Files.delete(file);}}
  }
+ @Test void injectsBuildToolVersionForMarkdownHeader() throws Exception {var root=Files.createTempDirectory("viewer-tool-version");var result=new SingleHtmlReportGenerator().generate(graph("2.2"),new PreviewModel("2",List.of(),List.of()),Map.of(),Map.of(),root);var html=Files.readString(result.path());var match=java.util.regex.Pattern.compile("<script id=\"st-data\" type=\"application/json\">(.*?)</script>",java.util.regex.Pattern.DOTALL).matcher(html);assertTrue(match.find());assertEquals("0.1.0-SNAPSHOT",new com.fasterxml.jackson.databind.ObjectMapper().readTree(match.group(1)).path("toolVersion").asText());}
 }
