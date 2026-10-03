@@ -1,4 +1,4 @@
-# Review md 契約 v1（WP8／指示文件 v1.7）
+# Review md 契約 v1（WP8／指示文件 v1.8）
 
 瀏覽器與 Node 共用 screentrace-viewer/src/shared/review-md.ts；建置另產出 dist/review-md.mjs，可在 Node 22+ 直接 import。無 DOM／檔案／網路相依（純 Acorn AST parser 釘選 8.18.0，ADR 0024）；輸入為嚴格 schema 2.2 Graph、Preview、分析指紋及 shared/review v1 狀態。歷史／缺證據／不合法引用明確拒絕，不升版。
 
@@ -24,7 +24,9 @@ API 依 ID 排序；共用 deriveApiUsage 推導三態，不另寫判定。呼�
 
 ## 正文隔離（OQ-007）
 
-所有專案衍生值只在表格 code span；圍欄比最長反引號序列多一個，兩端加空格。控制字元（含 C0／C1）、換行、雙向控制與 U+2028／2029 改可見 Unicode 跳脫；HTML 符號變實體，表格分隔符改反斜線跳脫。每段在可見控制字元轉換後按 Unicode code point 取前 300，再加固定「…(已截斷,完整內容見 <檔案>:<行號>)」。標記不計入 300；來源缺值「—」。反引號圍欄與 Markdown 編碼不計入資料字元數。
+所有專案衍生值只在表格 code span；圍欄比最長反引號序列多一個，兩端加空格。控制字元（含 C0／C1）、換行、雙向控制與 U+2028／2029 改可見 Unicode 跳脫；code span 內 &、<、> 保留原字元，不轉換 HTML 實體（內容不會被解讀為 HTML）；表格分隔符改反斜線跳脫。每段在可見控制字元轉換後按 Unicode code point 取前 300，再加固定「…(已截斷,完整內容見 <檔案>:<行號>)」。標記不計入 300；來源缺值「—」。反引號圍欄與 Markdown 編碼不計入資料字元數。
+
+新增跳脫集合：U+200B–200F、U+2060–2064、U+FEFF、U+FE00–FE0F、U+E0100–E01EF、U+E0000–E007F。正規表示式使用 u 旗標，新增字元顯示為 \u{XXXXX}（小寫十六進位 code point）；既有控制與雙向字元的 \uXXXX 格式不變。
 
 允許標籤、路由、guard、UNRESOLVED 目標／選擇器、檢核欄位／訊息；來源與圖身分／契約欄位按上述欄位投影。禁止完整檔案／函式本體／敘述式／原始 HTML／圖片資料；由 Acorn AST 證明包含 statement／declaration／函式本體的 expression，顯示省略標記與來源，不逐段分割來繞過限制。內嵌 base64 資源以固定省略標記替換。
 
@@ -32,7 +34,7 @@ evidence.detail 自由文字從不複製；僅接受結構化白名單鍵解析�
 
 ## 機器區（OQ-008）
 
-機器區保留完整名稱／ID，不套用 code span／300 上限。每字串 JSON 序列化，再 Unicode 跳脫反引號、<、>、&、C0／C1 控制、換行、雙向控制 U+202A–202E／U+2066–2069、U+2028／2029；不得改變字面反斜線序列。
+機器區保留完整名稱／ID，不套用 code span／300 上限。每字串 JSON 序列化，再 Unicode 跳脫反引號、<、>、&、C0／C1 控制、換行、雙向控制 U+202A–202E／U+2066–2069、U+2028／2029；另跳脫正文新增集合（零寬／格式、變體選擇器、Unicode 標籤字元），正規表示式使用 u 旗標。所有新增字元轉成 JSON 合法的 UTF-16 \uXXXX，非 BMP 使用兩個代理對跳脫；不得使用 JSON 不接受的 \u{XXXXX}。不得改變字面反斜線序列。
 
 附錄固定資訊字串 json screentrace-review-state，只產生一個末尾區塊。已知鍵：format_version（1）、analysis_fingerprint、screen_decisions、component_decisions、state_sha256。component_decisions 是 screenId → componentId → 決策巢狀字典，完整保存未知 ID；不含 application、標籤、條件、訊息、URL 或任何證據。WP9 元件庫覆寫尚未啟用，本版本不接受額外欄位。
 
@@ -44,6 +46,6 @@ state_sha256 對排除自身的狀態物件正規化 JSON（所有物件鍵遞�
 
 ## 容量與 API
 
-單一 md，LF 換行、末尾 LF。超過 5,000,000 UTF-8 bytes 在檢視器警告，不截斷。JSON import 的硬上限與正文匯出警告不同。檢視器對選取檔案另採既有工具 1 GiB 安全界線；超限明確失敗。
+單一 md，LF 換行、末尾 LF。超過 5,000,000 UTF-8 bytes 在檢視器警告，不截斷。JSON import 的硬上限與正文匯出警告不同。檢視器對選取檔案硬上限 64 MiB（67,108,864 bytes）；大於上限於 File.text() 前明確失敗，不改目前決策。等於上限可讀取，但仍受附錄 JSON 32 MiB 限制。
 
 generateMarkdown(payload, state, options) 回傳 Promise<string>；importMarkdown(md, payload) 回傳 state、orphans、changed。sha256／canonicalJson／machineJson／projectText 可獨立測試；golden 固定 generatedAt 和 toolVersion。瀏覽器只讀使用者選取檔案，不讀網路資源。

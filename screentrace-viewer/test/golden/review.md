@@ -53,7 +53,7 @@ migration_target:
 
 | id | kind | 標籤 | 事件 | 行為類型 | 結果指向 | 條件 | 決策 | 建議元件 | styleId | 來源 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| ` shared ` | ` BUTTON ` | ` 共用按鈕 ` | ` click ` | ` CALL_API ` | ` ep ` | ` allowed &amp;&amp; !locked ` | REMOVE | 未匯入元件庫 | ` style-used ` | ` web/shared.js:3 ` |
+| ` shared ` | ` BUTTON ` | ` 共用按鈕 ` | ` click ` | ` CALL_API ` | ` ep ` | ` count < max && total > min ` | REMOVE | 未匯入元件庫 | ` style-used ` | ` web/shared.js:3 ` |
 | ` unbound ` | — | 載入時／未解析來源 | ` click ` | ` CALL_API ` | ` ${unknownUrl} ` | — | — | 未匯入元件庫 | — | ` web/shared.js:9 ` |
 
 #### 檢核規則

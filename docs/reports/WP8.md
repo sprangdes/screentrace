@@ -31,3 +31,11 @@ C 最終本機結果：190 Java、25 unit、22 Chromium／WebKit E2E 全通過�
 C 授權補足：新增 bundle MIT notice 斷言先失敗後實作；browser／Node artifact 保留完整 Acorn 授權，加入後再計算 CSP hash。總 unit 為 26。
 
 C gate：36b000b895cf69fd1f75d4df51a23768d4bf943f，[遠端全綠](https://github.com/sprangdes/screentrace/actions/runs/37117621145)。190 Java／26 三引擎 E2E／33 capture／40 parser／npm audit／Dependency-Check 通過；首次渲染 726.9 ms、縮放中位數 3 ms。MIT notice 與 gate 回報同一補足提交；本輪於全部推送檢查通過後停止，不進 WP9。
+
+## 驗收後 v1.8 補強（WP9 前）
+
+正文與機器區擴充零寬／格式、變體選擇器、Unicode 標籤字元；正文以 \u{XXXXX} 可見化，機器區以合法 UTF-16 代理對保留原值。正文 code span 保留 <、>、&&，不轉換 HTML 實體；既有管線／控制／反引號／300 字元邊界不變。選取檔案上限改為 64 MiB，超限於讀取前失敗且不改決策。契約、兩份 golden、指示文件 v1.8、ADR 0026 同步更新。
+
+先失敗：新增 Unicode／比較條件測試與受授權的惡意 code span 斷言顯示缺口；實際 64 MiB + 1 byte 檔案到達 File.text 探針，證明舊上限不足。實作後新增集合每一 code point 均驗證正文 braced Unicode／機器 UTF-16／解碼原值；含標籤、guard、完整應用名稱、實際元件 ID／複合鍵及 orphan ID 的圖與狀態往返位元組相同。超限檔案零讀取，等於上限可到達讀取入口，兩者錯誤均保留 KEEP。既有惡意／偽造區塊／損毀摘要測試保持有效；只修改受契約修訂影響的角括號禁止子條件，其他既有斷言不變。
+
+本機驗證：190 Java、28 viewer unit、23 Chromium／WebKit E2E、4 文件基線測試全通過；TypeScript／esbuild 建置通過，viewer npm audit 0 漏洞。遠端 Actions 執行三引擎、npm audit 與 Dependency-Check，gate 以本次推送提交為準。此補強完成後停止，WP9 未開始。
