@@ -34,7 +34,7 @@ public final class StrutsProjectAnalyzer {
     addInteractions(jsp,state);
     parseValidation(state);
     parseActionForms(state);
-    return io.screentrace.parser.jsp.MarkupGraphContribution.enrich(state.graph(),jsp);
+    return JavaScriptGraphContribution.enrich(MarkupGraphContribution.enrich(state.graph(),jsp),inventory);
   }
   private static void addView(JspAnalysis.View view,State state) {
     String viewId=ApplicationGraph.id(NodeType.VIEW,view.path());

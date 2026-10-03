@@ -54,4 +54,23 @@ class ApiUsageTest {
     assertEquals(4,result.get("api").callers().size());
     assertEquals(ApiUsage.Status.REMOVABLE,ApiUsage.derive(rich,Map.of("s2",ApiUsage.Decision.REMOVE),Map.of(new ApiUsage.ComponentKey("s1","c"),ApiUsage.Decision.REMOVE,new ApiUsage.ComponentKey("s2","c"),ApiUsage.Decision.KEEP)).get("api").status());
   }
+  @Test void pageLoadApiBehaviorCannotBeUnreferencedOrRemovedByComponentDecisions() {
+    var proof=List.of(new AnalysisEvidence(new SourceLocation("page.jsp",1),"AcornStaticAnalyzer",ResolutionStatus.CONFIRMED,"ready API"));
+    var graph=new ApplicationGraph(new Application("sample",".",List.of()),List.of(node("screen",NodeType.SCREEN),node("api",NodeType.ENDPOINT)),List.of(),List.of(),List.of(),"2.1",List.of(new Behavior("load","screen","ready",BehaviorType.CALL_API,"api",null,null,"fetch('/api')",proof)),List.of());
+    assertEquals(ApiUsage.Status.IN_USE,ApiUsage.derive(graph,Map.of(),Map.of(new ApiUsage.ComponentKey("screen","missing"),ApiUsage.Decision.REMOVE)).get("api").status());
+    assertEquals(ApiUsage.Status.REMOVABLE,ApiUsage.derive(graph,Map.of("screen",ApiUsage.Decision.REMOVE),Map.of()).get("api").status());
+    assertEquals(1,ApiUsage.derive(graph,Map.of(),Map.of()).get("api").callers().size());
+  }
+  @Test void unresolvedEventBindingRetainsKnownScreenCallerAndApiUsage() {
+    var proof=List.of(new AnalysisEvidence(new SourceLocation("app.js",4),"AcornStaticAnalyzer",ResolutionStatus.UNRESOLVED,"selector 原文：#missing"));
+    var graph=new ApplicationGraph(new Application("sample",".",List.of()),List.of(node("screen",NodeType.SCREEN),node("api",NodeType.ENDPOINT)),List.of(),List.of(),List.of(),"2.1",List.of(new Behavior("failed","screen","click",BehaviorType.CALL_API,"api",null,null,"fetch('/api')",proof)),List.of());
+    var usage=ApiUsage.derive(graph,Map.of(),Map.of()).get("api");
+    assertEquals(ApiUsage.Status.IN_USE,usage.status());assertEquals("failed",usage.callers().get(0).behaviorId());assertEquals("screen",usage.callers().get(0).screenId());assertNull(usage.callers().get(0).componentId());
+    assertEquals(ResolutionStatus.UNRESOLVED,graph.behaviors().get(0).evidence().get(0).resolution());assertTrue(graph.behaviors().get(0).evidence().get(0).detail().contains("#missing"));
+  }
+  @Test void simplifiedScreenEdgeDoesNotDuplicateItsCanonicalLoadBehavior() {
+    var proof=List.of(new AnalysisEvidence(new SourceLocation("page.jsp",1),"AcornStaticAnalyzer",ResolutionStatus.CONFIRMED,"fetch"));
+    var graph=new ApplicationGraph(new Application("sample",".",List.of()),List.of(node("screen",NodeType.SCREEN),node("api",NodeType.ENDPOINT)),List.of(edge("load-edge",EdgeType.CALLS,"screen","api")),List.of(),List.of(),"2.1",List.of(new Behavior("load","screen","load",BehaviorType.CALL_API,"api",null,null,"fetch('/api')",proof)),List.of());
+    assertEquals(1,ApiUsage.derive(graph,Map.of(),Map.of()).get("api").callers().size());
+  }
 }

@@ -1,8 +1,74 @@
 {
-  "jquery":{"file":"(?:^|/)jquery(?:[.-][0-9][^/]*)?(?:\\.min)?\\.js$","header":"jQuery v?\\d|jQuery JavaScript Library","apis":{"ajax":"CALL_API","get":"CALL_API","post":"CALL_API","getJSON":"CALL_API","load":"CALL_API","show":"UI_STATE_CHANGE","hide":"UI_STATE_CHANGE","toggle":"UI_STATE_CHANGE","addClass":"UI_STATE_CHANGE","removeClass":"UI_STATE_CHANGE","toggleClass":"UI_STATE_CHANGE","val":"SELECT_CHANGE","html":"SELECT_CHANGE","append":"SELECT_CHANGE"}},
-  "bootstrap":{"file":"bootstrap(?:\\.bundle)?(?:\\.min)?\\.js$","header":"Bootstrap v?\\d|Bootstrap","apis":{"modal":"OPEN_DIALOG","tab":"UI_STATE_CHANGE","collapse":"UI_STATE_CHANGE"}},
-  "jquery-ui":{"file":"jquery-ui(?:\\.min)?\\.js$","header":"jQuery UI","apis":{"dialog":"OPEN_DIALOG","datepicker":"UI_STATE_CHANGE"}},
-  "jquery.validate":{"file":"jquery[.-]validate(?:\\.min)?\\.js$","header":"jQuery Validation|jquery.validate","apis":{"validate":"VALIDATE","valid":"VALIDATE","rules":"VALIDATE"}},
-  "select2":{"file":"select2(?:\\.full)?(?:\\.min)?\\.js$","header":"Select2","apis":{"select2":"UI_STATE_CHANGE"}},
-  "datepicker":{"file":"(?:bootstrap-)?datepicker(?:\\.min)?\\.js$","header":"Datepicker|DatePicker","apis":{"datepicker":"UI_STATE_CHANGE"}}
+  "jquery": {
+    "file": "(?:^|/)jquery(?:[.-][0-9][^/]*)?(?:\\.min)?\\.js$",
+    "header": "jQuery v?\\d|jQuery JavaScript Library",
+    "apis": {
+      "ajax": "CALL_API",
+      "get": "CALL_API",
+      "post": "CALL_API",
+      "getJSON": "CALL_API",
+      "load": "CALL_API",
+      "show": "UI_STATE_CHANGE",
+      "hide": "UI_STATE_CHANGE",
+      "toggle": "UI_STATE_CHANGE",
+      "addClass": "UI_STATE_CHANGE",
+      "removeClass": "UI_STATE_CHANGE",
+      "toggleClass": "UI_STATE_CHANGE",
+      "val": "SELECT_CHANGE",
+      "html": "SELECT_CHANGE",
+      "append": "SELECT_CHANGE"
+    }
+  },
+  "bootstrap": {
+    "file": "bootstrap(?:\\.bundle)?(?:\\.min)?\\.js$",
+    "header": "Bootstrap v?\\d|Bootstrap",
+    "apis": {
+      "modal": "OPEN_DIALOG",
+      "tab": "UI_STATE_CHANGE",
+      "collapse": "UI_STATE_CHANGE"
+    },
+    "operations": {
+      "modal": {
+        "hide": "UI_STATE_CHANGE",
+        "toggle": "UI_STATE_CHANGE"
+      }
+    }
+  },
+  "jquery-ui": {
+    "file": "jquery-ui(?:\\.min)?\\.js$",
+    "header": "jQuery UI",
+    "apis": {
+      "dialog": "OPEN_DIALOG",
+      "datepicker": "UI_STATE_CHANGE"
+    },
+    "operations": {
+      "dialog": {
+        "close": "UI_STATE_CHANGE",
+        "destroy": "UI_STATE_CHANGE"
+      }
+    }
+  },
+  "jquery.validate": {
+    "file": "jquery[.-]validate(?:\\.min)?\\.js$",
+    "header": "jQuery Validation|jquery.validate",
+    "apis": {
+      "validate": "VALIDATE",
+      "valid": "VALIDATE",
+      "rules": "VALIDATE"
+    }
+  },
+  "select2": {
+    "file": "select2(?:\\.full)?(?:\\.min)?\\.js$",
+    "header": "Select2",
+    "apis": {
+      "select2": "UI_STATE_CHANGE"
+    }
+  },
+  "datepicker": {
+    "file": "(?:bootstrap-)?datepicker(?:\\.min)?\\.js$",
+    "header": "Datepicker|DatePicker",
+    "apis": {
+      "datepicker": "UI_STATE_CHANGE"
+    }
+  }
 }

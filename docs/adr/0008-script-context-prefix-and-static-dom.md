@@ -21,3 +21,5 @@ Java 以既有 MarkupTag 提供原始靜態 DOM／事件／script 來源，Node 
 ## 後果
 
 加上來源與反例測試，保留原文、定義證據、全部候選與實際檔案位置。scope 無法證明時不使用定義。所有新增讀取沿用 SafeProjectFiles，未執行目標 Java／JS。原有測試斷言不變。
+
+Java 整合補充：標準 context path 的本地 c:set 別名保留定義證據；Java model／request 定義（含 @ModelAttribute）參與矛盾檢查。靜態普通 DOM 容器只有被事件匹配時才投影為 OTHER 元件；條件／迴圈來源保留，動態元素不提升信心。

@@ -154,7 +154,7 @@ public final class JspProjectParser {
     return guards;
   }
 
-  private static java.util.Set<String> includedWrites(Path root,String path,String text,java.util.Set<String> visited) {
+  static java.util.Set<String> includedWrites(Path root,String path,String text,java.util.Set<String> visited) {
     java.util.Set<String> result=new java.util.HashSet<>();
     if(!visited.add(path)||visited.size()>SafeProjectFiles.MAX_DIRECTORY_DEPTH) return java.util.Set.of("*");
     for(MarkupTag tag:MarkupTag.scan(text)) if(!tag.closing() && java.util.Set.of("@include","jsp:include").contains(tag.name().toLowerCase(Locale.ROOT))) {

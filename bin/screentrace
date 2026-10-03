@@ -70,6 +70,12 @@ ensure_runtime() {
 
 base_dir="$(cd "$(dirname "$0")/.." && pwd)"
 
+ensure_js_parser() {
+  if [[ ! -f "$base_dir/screentrace-js/node_modules/acorn/package.json" || ! -f "$base_dir/screentrace-js/node_modules/acorn-loose/package.json" ]]; then
+    (cd "$base_dir/screentrace-js" && npm ci --ignore-scripts --no-fund)
+  fi
+}
+
 ensure_browser_renderer() {
   local renderer_dir="$base_dir/screentrace-capture"
   if [[ ! -x "$renderer_dir/node_modules/.bin/playwright" ]]; then
@@ -86,6 +92,7 @@ if [[ "${1:-}" == setup ]]; then
   shift
   ensure_runtime
   ensure_browser_renderer
+  ensure_js_parser
   echo "ScreenTrace setup complete."
   exit 0
 fi
@@ -95,6 +102,7 @@ if [[ "${1:-}" == doctor ]]; then
   needs_maven || { echo "Missing Maven ${required_maven}+"; missing=1; }
   needs_node || { echo "Missing Node.js ${required_node}+"; missing=1; }
   [[ -x "$base_dir/screentrace-capture/node_modules/.bin/playwright" ]] || { echo "Missing renderer; run ./bin/screentrace setup"; missing=1; }
+  [[ -f "$base_dir/screentrace-js/node_modules/acorn/package.json" && -f "$base_dir/screentrace-js/node_modules/acorn-loose/package.json" ]] || { echo "Missing JavaScript parser; run ./bin/screentrace setup"; missing=1; }
   ((missing == 0)) && echo "ScreenTrace dependencies are ready."
   exit "$missing"
 fi
@@ -106,6 +114,7 @@ if [[ ! -x "$base_dir/screentrace-capture/node_modules/.bin/playwright" ]]; then
   echo "Browser renderer is missing. Run ./bin/screentrace setup." >&2
   exit 1
 fi
+ensure_js_parser
 jar="$base_dir/screentrace-cli/target/screentrace-cli-0.1.0-SNAPSHOT.jar"
 needs_build=false
 if [[ ! -f "$jar" ]]; then
@@ -117,4 +126,4 @@ if [[ "$needs_build" == true ]]; then
   echo "Building updated ScreenTrace..."
   (cd "$base_dir" && mvn -q -DskipTests package)
 fi
-exec java -jar "$jar" "$@"
+exec java "-Dscreentrace.js.module=$base_dir/screentrace-js/cli.mjs" -jar "$jar" "$@"

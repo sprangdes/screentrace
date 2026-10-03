@@ -65,6 +65,17 @@ function Ensure-Runtime {
   }
 }
 
+function Ensure-JsParser {
+  $parserDir = Join-Path $baseDir 'screentrace-js'
+  if (-not (Test-Path (Join-Path $parserDir 'node_modules/acorn/package.json')) -or -not (Test-Path (Join-Path $parserDir 'node_modules/acorn-loose/package.json'))) {
+    Push-Location $parserDir
+    try {
+      & npm ci --ignore-scripts --no-fund
+      if ($LASTEXITCODE -ne 0) { throw 'Unable to install the JavaScript parser.' }
+    } finally { Pop-Location }
+  }
+}
+
 function Ensure-BrowserRenderer {
   $rendererDir = Join-Path $baseDir 'screentrace-capture'
   $playwright = Join-Path $rendererDir 'node_modules\\.bin\\playwright.cmd'
@@ -103,6 +114,7 @@ if ($args.Count -gt 0 -and $args[0] -eq 'setup') {
   $cliArgs = @($args | Select-Object -Skip 1)
   Ensure-Runtime
   Ensure-BrowserRenderer
+  Ensure-JsParser
   Write-Host 'ScreenTrace setup complete.'
   exit 0
 }
@@ -112,6 +124,7 @@ if ($args.Count -gt 0 -and $args[0] -eq 'doctor') {
   if ((Get-MavenVersion) -lt $requiredMaven) { $missing += "Maven $requiredMaven+" }
   if ((Get-NodeMajorVersion) -lt $requiredNode) { $missing += "Node.js $requiredNode+" }
   if (-not (Test-Path (Join-Path $baseDir 'screentrace-capture/node_modules/.bin/playwright.cmd'))) { $missing += 'Playwright renderer (run .\bin\screentrace.ps1 setup)' }
+  if (-not (Test-Path (Join-Path $baseDir 'screentrace-js/node_modules/acorn/package.json')) -or -not (Test-Path (Join-Path $baseDir 'screentrace-js/node_modules/acorn-loose/package.json'))) { $missing += 'JavaScript parser (run setup)' }
   if ($missing.Count) { $missing | ForEach-Object { Write-Host "Missing $_" }; exit 1 }
   Write-Host 'ScreenTrace dependencies are ready.'
   exit 0
@@ -121,6 +134,7 @@ if ((Get-JavaMajorVersion) -lt $requiredJava -or (Get-MavenVersion) -lt $require
 }
 if (-not (Test-Path (Join-Path $baseDir 'screentrace-capture/node_modules/.bin/playwright.cmd'))) { throw 'Browser renderer is missing. Run .\bin\screentrace.ps1 setup.' }
 
+Ensure-JsParser
 $jar = Join-Path $baseDir 'screentrace-cli\\target\\screentrace-cli-0.1.0-SNAPSHOT.jar'
 if (Test-BuildRequired $jar) {
   Write-Host 'Building updated ScreenTrace...'
@@ -133,5 +147,5 @@ if (Test-BuildRequired $jar) {
   }
 }
 
-& java -jar $jar @cliArgs
+& java "-Dscreentrace.js.module=$(Join-Path $baseDir 'screentrace-js/cli.mjs')" -jar $jar @cliArgs
 exit $LASTEXITCODE

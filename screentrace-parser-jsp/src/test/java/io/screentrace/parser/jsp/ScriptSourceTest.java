@@ -36,4 +36,11 @@ class ScriptSourceTest {
     var result=ScriptSources.collect(new ProjectScanner().scan(root));assertEquals(5,result.scripts().size());
     assertEquals("CONFIRMED",result.references().get(0).status());assertTrue(result.scripts().stream().anyMatch(s->s.module()));assertTrue(result.scripts().stream().anyMatch(s->s.event().equals("click")));assertTrue(result.scripts().stream().anyMatch(s->s.code().equals("save()")));
   }
+  @Test void explicitStandardContextAliasAndBackendContradictionHaveSourceEvidence() throws Exception {
+    var alias=project("<c:set var='ctx' value='${pageContext.request.contextPath}'/><script src='${ctx}/js/app.js'></script>","src/main/webapp/js/app.js");
+    var known=ScriptSources.collect(new ProjectScanner().scan(alias));assertEquals(1,known.scripts().size());assertEquals("INFERRED",known.scripts().get(0).status());assertTrue(known.scripts().get(0).evidence().stream().anyMatch(e->e.detail().contains("context path 定義")));
+    var conflict=project("<script src='${ctx}/js/app.js'></script>","src/main/webapp/js/app.js");
+    var java=conflict.resolve("src/main/java/Controller.java");Files.createDirectories(java.getParent());Files.writeString(java,"class Controller { @ModelAttribute(\"ctx\") String ctx(){return \"/other\";} }");
+    var unknown=ScriptSources.collect(new ProjectScanner().scan(conflict));assertTrue(unknown.scripts().isEmpty());assertEquals("UNRESOLVED",unknown.references().get(0).status());assertTrue(unknown.references().get(0).evidence().stream().anyMatch(e->e.source().file().endsWith("Controller.java")));
+  }
 }

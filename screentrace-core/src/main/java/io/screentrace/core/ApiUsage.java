@@ -29,7 +29,7 @@ public final class ApiUsage {
     for(Relationship edge:graph.relationships()) if(callers.containsKey(edge.to()) && (edge.type()==EdgeType.CALLS||edge.type()==EdgeType.TRIGGERS)) {
       GraphNode from=nodes.get(edge.from());
       if(from==null) continue;
-      if(from.type()==NodeType.SCREEN) callers.get(edge.to()).add(new Caller(from.id(),null,null));
+      if(from.type()==NodeType.SCREEN && graph.behaviors().stream().noneMatch(b -> b.type()==BehaviorType.CALL_API && from.id().equals(b.triggerId()) && edge.to().equals(b.targetId()))) callers.get(edge.to()).add(new Caller(from.id(),null,null));
       if(from.type()==NodeType.COMPONENT && graph.behaviors().stream().noneMatch(b -> b.type()==BehaviorType.CALL_API && from.id().equals(b.triggerId()) && edge.to().equals(b.targetId())))
         for(String screen:owners.getOrDefault(from.id(),Set.of())) callers.get(edge.to()).add(new Caller(screen,from.id(),null));
     }

@@ -299,6 +299,9 @@ GitHub Actions 的 `Security checks` 在 push、PR 與每週排程執行。Java 
 ```bash
 mvn clean verify
 mvn org.owasp:dependency-check-maven:aggregate -DdataDirectory=/tmp/screentrace-dependency-check-12.2.2
+npm --prefix screentrace-js ci --ignore-scripts
+npm --prefix screentrace-js test
+npm --prefix screentrace-js audit --audit-level=high
 npm --prefix screentrace-capture ci
 npm --prefix screentrace-capture audit --audit-level=high
 ```
@@ -306,3 +309,9 @@ npm --prefix screentrace-capture audit --audit-level=high
 掃描設定集中在根目錄 `pom.xml`，不會自動附加到一般 `mvn verify`。新版掃描器不可沿用不相容的舊資料庫；上例使用獨立資料目錄，避免改動已有快取。
 
 首次下載完整 NVD 資料仍可能較慢，後續會使用快取並更新變更資料。Sonatype OSS Index 需要另行認證；未提供認證時，新版工具會略過該額外資料來源，NVD 掃描仍執行。
+
+### JavaScript 靜態分析（WP4）
+
+分析 inline／外部 script、module 的本地相對 import、事件屬性與 javascript: URL，使用釘選 Acorn AST，不執行目標程式。setup／啟動腳本準備 screentrace-js 相依；直接跑 Maven 前先 `npm --prefix screentrace-js ci --ignore-scripts`。事件／呼叫／CLIENT 檢核進入 Application Graph，未知選擇器與動態值保留 UNRESOLVED。追蹤深度預設 10，Java 可用 `-Dscreentrace.js.maxDepth=5` 設定；Node JSON 以 maxDepth 設定。
+
+JS API request 節點保存來源方法、URL、資料欄位，backendStatus 為 UNRESOLVED；後端 URL／context path 配對是尚未開始的 WP5，不能把 WP4 的 request 節點當成已證明的後端 handler。script src context 前綴例外見 v1.3 與 ADR 0008，不套用到 API URL。

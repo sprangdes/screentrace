@@ -20,6 +20,11 @@ jobs:
           distribution: temurin
           java-version: '17'
           cache: maven
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install AST dependencies for Java integration tests
+        run: npm --prefix screentrace-js ci --ignore-scripts
       - name: Build and test Java modules
         run: mvn -B clean verify
       - name: Set vulnerability cache date

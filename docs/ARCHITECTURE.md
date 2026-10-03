@@ -525,8 +525,12 @@ When trade-offs occur, prioritize in this order:
 
 Spring 只在來源中的正式 `@ModelAttribute`、名稱、類別、欄位及表單提交／畫面 rendering 處理器作用域可唯一證明時綁定；同名非 Spring 註解、缺少／多個型別等保留 UNRESOLVED。Struts 以 action 對應的 form-bean、Dyna 屬性或可解析 ActionForm 欄位／getter 來源建立 BINDS_TO。未證明的欄位保留 `bindingStatus=UNRESOLVED`。已發現元件的存在性、kind、目標、模型綁定各自記錄信心，既有 UNRESOLVED 元件信心不升級。
 
-WP3 未引入相依；Spring 輸出仍保留既有 schema 2.1 相容路徑，Struts 為 2.2。所有 adapter 統一為 2.2 與移除混合降版屬 WP5，尚未宣稱完成。WP4／WP5 未開始，WP6 未開始。
+WP3 未引入相依；Spring 輸出仍保留既有 schema 2.1 相容路徑，Struts 為 2.2。所有 adapter 統一為 2.2 與移除混合降版屬 WP5，尚未宣稱完成。WP4 已加入靜態 JavaScript 貢獻（見下節）；WP5／WP6 未開始。
 
-### WP4 增量三
+### WP4 靜態 JavaScript 貢獻
 
-screentrace-js 以 api-table.json 公開 API 表理解第三方呼叫，識別檔名／開頭註解後跳過第三方內部；未知呼叫保留 UNKNOWN_CALL。bindings 對 Java 原始 DOM 的靜態選擇器解析，analyzer 輸出導頁／API／彈窗／CLIENT 規則／UI／欄位狀態與來源 JSON。載入來源使用畫面 ID，綁定失敗的事件仍保留 selector 原文與 UNRESOLVED 來源；Java 圖貢獻及追蹤於最後增量整合。見 ADR 0008／0009，script src 例外依 v1.3，不用於 API URL。
+獨立 screentrace-js 模組以 Acorn／acorn-loose AST 解析，bindings 對 ScriptSources 的原始靜態 DOM 解析事件，api-table.json 識別公開第三方 API 並略過其內部。values 提供抽象值，modules 只解析安全的本地相對 import；analyzer 追蹤函式及回呼，預設深度 10、循環保護，所有失敗保留來源與診斷。
+
+JavaScriptGraphContribution 以 JSON 邊界整合 Spring／Struts adapter 的 inline script、src、事件屬性、javascript URL 及 include 使用者。載入來源使用畫面 ID；失敗綁定保留 selector／UNRESOLVED 呼叫來源。CLIENT 規則、父子行為、HTTP method／URL／資料欄位、條件與呼叫鏈進入 canonical graph。已解析的前端請求建立 backendStatus=UNRESOLVED 的描述節點，後端匹配與統一 schema 2.2 屬 WP5。ApiUsage 對 canonical 行為與簡化邊去重。見 ADR 0007–0010。
+
+script src 的不透明 context 前綴依 v1.3／OQ-003，僅用於定位來源檔案；API URL 不套用該例外。相同來源可證明的單次常值定義附 evidence；未知 API context 部分保留樣板。目標程式不執行，渲染仍移除 script 並關閉 JavaScript。
