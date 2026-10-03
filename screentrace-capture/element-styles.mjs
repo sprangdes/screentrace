@@ -25,7 +25,7 @@ export async function collectElementStyles(page,context,graph,screenId,options=c
  if(graph.schemaVersion!=='2.2')throw new Error(`預覽樣式只接受 schema 2.2，收到 ${graph.schemaVersion??'未設定'}`);
  const raw=await page.locator('html,body,body *').evaluateAll(nodes=>nodes.filter(n=>!['SCRIPT','STYLE'].includes(n.tagName)&&!n.closest('script,style')).map(n=>{
   const css=getComputedStyle(n),box=n.getBoundingClientRect();
-  let visibleText='';const textStack=[n];while(textStack.length){const node=textStack.pop();if(node.nodeType===3)visibleText+=node.nodeValue;else if(!['HEAD','SCRIPT','STYLE'].includes(node.nodeName))textStack.push(...[...node.childNodes].reverse());}
+  let visibleText='';const textStack=[n];while(textStack.length){const node=textStack.pop();if(node.nodeType===3)visibleText+=node.nodeValue;else if(!['HEAD','SCRIPT','STYLE'].includes(node.nodeName.toUpperCase()))textStack.push(...[...node.childNodes].reverse());}
   const step=e=>`${e.localName}[${[...e.parentElement.children].filter(s=>s.localName===e.localName).indexOf(e)+1}]`;
   const parts=[];let current=n;while(current&&current!==document.body&&current!==document.documentElement){parts.unshift(step(current));current=current.parentElement;}
   const path=n===document.documentElement?'html':n===document.body?'body':`body>${parts.join('>')}`;
