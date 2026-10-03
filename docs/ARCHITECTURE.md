@@ -556,8 +556,16 @@ WP7 新單檔檢視器；TypeScript 7.0.2／esbuild 0.28.2 僅建置期，執行
 
 ### WP8 本地 review md
 
-shared/review-md 與 strict-graph 供瀏覽器／Node 共用，建置同時提供 ESM artifact。Acorn 8.18.0 MIT 只解析輸出運算式的內容邊界，不執行。md-controls 以 Blob 下載和檔案選擇器讀本地內容；通過最後附錄／已知鍵／決策／大小／SHA 驗證後才原子更新目前狀態。指紋不同／orphan 保留決策並提示，不猜測改名。正文／機器區隔離、格式、排序與容量見 REVIEW_MD_CONTRACT、ADR 0022–0025；元件庫覆寫留 WP9，尚未開始。
+shared/review-md 與 strict-graph 供瀏覽器／Node 共用，建置同時提供 ESM artifact。Acorn 8.18.0 MIT 只解析輸出運算式的內容邊界，不執行。md-controls 以 Blob 下載和檔案選擇器讀本地內容；通過最後附錄／已知鍵／決策／大小／SHA 驗證後才原子更新目前狀態。指紋不同／orphan 保留決策並提示，不猜測改名。正文／機器區隔離、格式、排序與容量見 REVIEW_MD_CONTRACT、ADR 0022–0025；元件庫覆寫已於 WP9 接入同一共用狀態模型。
 
 ### WP9 元件庫選用與覆寫
 
-CLI LibraryStore／LibraryCommands 使用工作區內容 SHA-256 定址、專案明確綁定／解除與 --replace；ComponentLibrary 在 report 邊界以打包的 draft 2020-12 Schema 驗證，不改 core。Java analyze／report 只注入選用 manifest 與摘要；viewer／Node 共用 library 精確比對／kind 涵蓋率與 review 可逆來源分區。外庫覆寫保留 orphan，不參與有效建議／API。md 動態 v1/v2 與同一分區往返，契約見 REVIEW_STATE_CONTRACT／REVIEW_MD_CONTRACT；設計 ADR 0027–0030。WP10 未開始。
+CLI LibraryStore／LibraryCommands 使用工作區內容 SHA-256 定址、專案明確綁定／解除與 --replace；ComponentLibrary 在 report 邊界以打包的 draft 2020-12 Schema 驗證，不改 core。Java analyze／report 只注入選用 manifest 與摘要；viewer／Node 共用 library 精確比對／kind 涵蓋率與 review 可逆來源分區。外庫覆寫保留 orphan，不參與有效建議／API。md 動態 v1/v2 與同一分區往返，契約見 REVIEW_STATE_CONTRACT／REVIEW_MD_CONTRACT；設計 ADR 0027–0031。WP10 合成整合驗證見下節。
+
+### WP10 合成來源與整合驗證
+
+fixtures/wp10 是自行撰寫的 source-only 分析資料，不是 Maven 模組或可啟動系統。coverage.json 以要求編號、檔案及原始 token 清單覆蓋 WP2–WP5。CLI 測試透過現有 analyze 入口使用隔離來源／工作區，綁定虛構 manifest，兩次經 adapter／嚴格 2.2／capture／pack／SingleHtmlAnalysisWriter，保存實際產物供 Node 使用；沒有替換 payload 的測試捷徑。每份目標來源分析前後 SHA-256 相同。
+
+screentrace-viewer/test/synthetic-project.e2e.mjs 直接讀取 Java 產物，Node md 決定性與 Chromium／Firefox／WebKit file:// 標記、覆寫、下載、清暫存、匯入還原共用正式資料與模組。預覽比較限定同次測試的相同 Chromium／viewport／字型環境；沒有跨環境圖片 golden。完整圖／預覽／HTML 不忽略任何欄位，md 只正規化 generated_at。
+
+本輪只含 fixture、決定性、E2E、USER_GUIDE／README／架構文件；既有 security.yml 已涵蓋新增 Java 與 *.e2e.mjs，不修改 CI、效能、格式化或相容入口。決定見 ADR 0032；使用步驟與實際合成報表截圖位置見 USER_GUIDE。

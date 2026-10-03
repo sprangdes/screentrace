@@ -1,0 +1,1 @@
+package synthetic; class ManagedAction extends Action {public ActionForward execute(ActionMapping mapping,ActionForm form,HttpServletRequest request,HttpServletResponse response){return mapping.findForward("ok");}}

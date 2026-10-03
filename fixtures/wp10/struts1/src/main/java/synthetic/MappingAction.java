@@ -1,0 +1,1 @@
+package synthetic; class MappingAction extends MappingDispatchAction { public ActionForward save(ActionMapping mapping,ActionForm form,HttpServletRequest request,HttpServletResponse response){return mapping.findForward("ok");} }

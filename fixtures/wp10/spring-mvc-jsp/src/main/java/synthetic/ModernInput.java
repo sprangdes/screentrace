@@ -1,0 +1,1 @@
+package synthetic;import jakarta.validation.constraints.*;class ModernInput {@NotBlank String city;@NotEmpty String code;@Email String email;@Pattern(regexp="[A-Z]+") String upper;@Positive int positive;@PositiveOrZero int zero;@Negative int negative;@NegativeOrZero int nonpositive;@PastOrPresent java.util.Date before;@FutureOrPresent java.util.Date after;}

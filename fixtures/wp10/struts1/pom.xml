@@ -1,0 +1,1 @@
+<project><modelVersion>4.0.0</modelVersion><groupId>synthetic</groupId><artifactId>struts1</artifactId><version>1-sample</version><dependencies><dependency><artifactId>struts-core</artifactId></dependency></dependencies></project>

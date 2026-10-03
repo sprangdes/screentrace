@@ -1,0 +1,1 @@
+<form-validation><formset><form name="editForm"><field property="email" depends="required,minlength"><msg name="required" key="email.required"/><var><var-name>minlength</var-name><var-value>2</var-value></var></field></form></formset></form-validation>

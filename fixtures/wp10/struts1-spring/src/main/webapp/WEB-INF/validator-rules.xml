@@ -1,0 +1,1 @@
+<form-validation><global><validator name="required" classname="synthetic.Rules" method="check"/><validator name="minlength" classname="synthetic.Rules" method="length"/></global></form-validation>

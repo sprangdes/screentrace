@@ -1,0 +1,1 @@
+package synthetic; import org.springframework.stereotype.Controller;import org.springframework.web.bind.annotation.*; @Controller class BodyController {@GetMapping("/api/text") @ResponseBody String text(){return "synthetic";}}

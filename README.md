@@ -8,7 +8,7 @@ ScreenTrace 會展開可解析的 JSP Tag、CSS 與本地資源，並以 Playwri
 
 ## 調整進度
 
-新需求與已確認決策見 [REQUIREMENTS.md](docs/REQUIREMENTS.md)，工作包與驗收順序見 [ROADMAP.md](docs/ROADMAP.md)。WP7 單一離線 HTML 提供 Screen Map、API 與 review；WP8 提供 md 匯出／匯入，JSON 匯出已退場。元件庫匯入屬 WP9，尚未開始。
+新需求與已確認決策見 [REQUIREMENTS.md](docs/REQUIREMENTS.md)，工作包與驗收順序見 [ROADMAP.md](docs/ROADMAP.md)。WP7 單一離線 HTML 提供 Screen Map、API 與 review；WP8 提供 md 匯出／匯入，JSON 匯出已退場。WP9 提供 manifest 匯入、決定性比對與手動覆寫。需求方操作步驟與截圖位置見 [使用指南](docs/USER_GUIDE.md)。
 
 ## 初次執行
 
@@ -126,7 +126,7 @@ Windows：
 
 使用「匯入 md」選取本機檔案，還原末尾附錄的完整決策。指紋不同／未知 ID 提示「分析結果已變更」並列 orphan，未知複合鍵完整保留。格式／損毀／截斷／上限錯誤不改目前決策；SHA-256 僅檢查損毀，不防惡意重算摘要。匯入不讀取網路資源。
 
-格式、排序、安全與容量見 [REVIEW_MD_CONTRACT](docs/REVIEW_MD_CONTRACT.md)。元件庫尚未匯入，WP9 未開始。
+格式、排序、安全與容量見 [REVIEW_MD_CONTRACT](docs/REVIEW_MD_CONTRACT.md)。元件庫選用與覆寫見下方 WP9 說明與 [使用指南](docs/USER_GUIDE.md)。
 
 ## 分析產物說明
 
@@ -273,3 +273,15 @@ manifest 的 library.name／version、元件 id／name／selector／category 最
 未指定 project 只儲存、不選用。相同名稱@版本異內容需明確 --replace，已綁定專案更換後重新執行 report；解除後顯示「未匯入元件庫」。list 列摘要與綁定，不列工作區路徑。
 
 元件詳情顯示自動候選／屬性與事件對照；確認模式下 KEEP 畫面的元件可手動覆寫，共用元件按畫面獨立保存。md 帶入選用庫名稱@版本與摘要，舊庫覆寫隔離為 orphan，換回原庫恢復。決策與覆寫透過單一 md 還原，詳細欄位與隔離規則見 [Review md 契約](docs/REVIEW_MD_CONTRACT.md)。
+
+### 合成專案整合驗證（WP10）
+
+[五類自行撰寫的 fixture](fixtures/wp10/README.md) 與 [WP2–WP5 語法清單](fixtures/wp10/coverage.json) 不建置、不啟動目標服務。Java 的 SyntheticProjectIntegrationTest 在隔離工作區執行四類 fixture 的真實 analyze／capture／pack／report 兩次，逐 bytes 比對圖、同環境預覽與單一 HTML；Struts 2 只驗證拒絕。Node 共用 md 與三引擎 E2E 讀取這些實際產物，涵蓋元件庫選用、覆寫、下載、清除暫存及匯入還原。
+
+```bash
+npm --prefix screentrace-viewer run build
+mvn verify
+ST_BROWSERS=chromium,firefox,webkit node --test screentrace-viewer/test/*.e2e.mjs
+```
+
+E2E 依賴前一步 Java 生成的 `screentrace-cli/target/wp10-fixtures`；預覽決定性只在同一次測試的相同瀏覽器／字型環境比較，不把跨作業系統截圖混為同一基線。既有 CI 已依此順序執行，不增加效能調校、格式化或相容清理工作。

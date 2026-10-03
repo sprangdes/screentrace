@@ -1,0 +1,1 @@
+package synthetic; class ApiAction extends Action {public ActionForward execute(ActionMapping mapping,ActionForm form,HttpServletRequest request,HttpServletResponse response){String id=request.getParameter("id");return mapping.findForward("ok");}}

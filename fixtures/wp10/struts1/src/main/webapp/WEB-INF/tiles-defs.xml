@@ -1,0 +1,1 @@
+<tiles-definitions><definition name="base" path="/WEB-INF/views/layout.jsp"><put name="body" value="/WEB-INF/views/page.jsp"/></definition><definition name="child" extends="base"/><definition name="nested" path="/WEB-INF/views/page.jsp"/><definition name="outer" extends="child"><put-attribute name="nested" value="nested"/></definition></tiles-definitions>
