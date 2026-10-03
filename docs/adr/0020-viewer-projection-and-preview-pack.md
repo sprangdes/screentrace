@@ -9,3 +9,5 @@ capture 新增工具 pack-preview（沿用 quote-aware markup scanner，CSS lexi
 面板以 textContent 呈現所有來源文字；iframe 僅 allow-same-origin，父頁自有 click listener 讀 WP6 路徑與字典，未配對不猜元件，多候選完整呈現。API caller 依 Java ApiUsage 同一規則保存載入時、未綁定來源、共用元件及回呼父行為。review 的有效狀態於 D 另建共用模組。
 
 測試：純模組／file:// 端到端，實際 CSS／圖片 data URI、探針不觸發、無外部或相對資源請求、聚焦／tooltip／面板／樣式點擊；500／5,000／3,000 fixture 強制 3 秒。沒有執行期 UI 相依；封裝亦無新增 npm 相依。
+
+WP7 D：review 狀態獨立於圖、schema 2.2 與格式 v1；複合鍵採巢狀字典，避免 ID 分隔符與 prototype 汙染。screen REMOVE 僅推導有效顯示，明確元件決策不突變。localStorage 失敗僅警告。共用來源／使用狀態模組按 Java ApiUsage 規則與 162 組狀態組合驗證；詳見 [review 契約](../REVIEW_STATE_CONTRACT.md)，WP8 重用此結構。

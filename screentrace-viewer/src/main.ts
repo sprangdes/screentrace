@@ -5,6 +5,8 @@ import {canvas,fileTree} from './canvas';
 import {focusRelation} from './relations';
 import {screenPanel,elementDetail} from './details';
 import {previewDocument,previewElement} from './preview';
+import {emptyReview,loadReview,saveReview,screenDecision,componentDecision,effectiveComponent,setScreen,setComponent,statistics,markableComponents,conflicts,StorageLike} from './shared/review';
+import {decisionControl,decisionLabel} from './review-ui';
 const root=document.querySelector<HTMLDivElement>('#app')!;
 try {
  const payload=JSON.parse(document.querySelector('#st-data')!.textContent!) as Payload;
@@ -15,10 +17,17 @@ try {
  const screens=element('button',text.screens),apis=element('button',text.apis),overview=element('button',text.overview),files=element('button',text.files),search=element('input');
  search.type='text';search.setAttribute('aria-label',text.search);search.placeholder=text.search;nav.append(screens,apis,overview,files,search);
  let mode='overview',current:string|undefined;const history:string[]=[];
+ let storage:StorageLike|undefined;try{storage=window.localStorage;}catch{}const restored=loadReview(storage,graph,payload.fingerprint);let reviewState=restored.state,review=false;
+ const warning=element('p',restored.warning,'storage-warning'),stats=element('div',undefined,'review-statistics'),conflictList=element('div',undefined,'conflicts');nav.append(warning,stats,conflictList);
+ const toggleLabel=element('label',text.review),toggle=element('input');toggle.type='checkbox';toggle.setAttribute('aria-label',text.review);toggleLabel.prepend(toggle);nav.append(toggleLabel);
+ const filter=element('select');filter.setAttribute('aria-label',text.stateFilter);for(const value of ['ALL','UNDECIDED','KEEP','REMOVE','INHERITED_REMOVE']){const option=element('option',value==='ALL'?text.all:decisionLabel(value as 'KEEP'));option.value=value;filter.append(option);}nav.append(filter);
+ const summaries=()=>{stats.hidden=conflictList.hidden=!review;const counts=statistics(graph,reviewState);stats.replaceChildren(element('h3',text.statistics));for(const [label,values]of [[text.screens,counts.screens],[text.components,counts.components]]as const)stats.append(element('p',`${label} ${text.undecided}: ${values.UNDECIDED} ${text.keep}: ${values.KEEP} ${text.remove}: ${values.REMOVE}`));stats.append(element('p',`${text.inherited}: ${counts.inherited}`));conflictList.replaceChildren(element('h3',text.conflicts));for(const c of conflicts(graph,reviewState))conflictList.append(element('p',`${index.nodes.get(c.screenId)?.name}: ${index.nodes.get(c.componentId)?.name} → ${index.nodes.get(c.targetScreenId)?.name}`));};
+ const changed=()=>{const failure=saveReview(storage,reviewState);if(failure)warning.textContent=failure;summaries();if(current)focus(current);else show();};
+ const decorate=(id:string,parent:HTMLElement)=>parent.append(decisionControl(text.screenDecision,screenDecision(reviewState,id),value=>{reviewState=setScreen(reviewState,id,value);changed();},id));
  const focus=(id:string,component?:string,push=true)=>{
   if(current&&current!==id&&push)history.push(current);current=id;
   const screen=index.nodes.get(id)!;main.replaceChildren(element('h2',screen.name));
-  const back=element('button',text.back);back.disabled=!history.length;back.onclick=()=>{const previous=history.pop();if(previous)focus(previous,undefined,false);};main.append(back,element('p',text.notice,'notice'));
+  const back=element('button',text.back);back.disabled=!history.length;back.onclick=()=>{const previous=history.pop();if(previous)focus(previous,undefined,false);};main.append(back,element('p',text.notice,'notice'));if(review)decorate(id,main);
   const metadata=payload.preview.screens?.find(s=>s.graphScreenId===id);if(metadata?.dynamicExpressions?.length)main.append(element('pre',metadata.dynamicExpressions.join('\n')));
   if(metadata?.rendering?.mode==='skipped')main.append(element('p',metadata.rendering.diagnostic||text.noPreview));
   const frame=element('iframe');frame.setAttribute('sandbox','allow-same-origin');frame.title=screen.name;
@@ -27,9 +36,9 @@ try {
   };
   frame.srcdoc=previewDocument(payload,id);const preview=element('section',undefined,'preview');preview.append(frame);
   const layout=element('div',undefined,'focus-layout'),neighbors=element('section',undefined,'focus-neighbors');neighbors.setAttribute('aria-label',text.related);for(const r of index.relations.filter(r=>r.from===id))neighbors.append(focusRelation(index,payload,r,focus));layout.append(preview,neighbors);main.append(layout);
-  screenPanel(panel,index,payload,id,focus);
+  screenPanel(panel,index,payload,id,focus);if(review){const section=element('section',undefined,'component-decisions');section.append(element('h3',text.components));for(const key of markableComponents(graph).filter(k=>k.screenId===id)){const effective=effectiveComponent(reviewState,id,key.componentId);if(filter.value!=='ALL'&&effective!==filter.value)continue;const entry=element('div',undefined,'component-review');entry.append(decisionControl(index.nodes.get(key.componentId)!.name,componentDecision(reviewState,id,key.componentId),value=>{reviewState=setComponent(reviewState,id,key.componentId,value);changed();},undefined,key.componentId));if(effective==='INHERITED_REMOVE')entry.append(element('span',text.inherited));section.append(entry);}panel.append(section);}summaries();
  };
- const show=()=>{current=undefined;main.replaceChildren(mode==='files'?fileTree(index,search.value,focus):canvas(index,payload,search.value,focus));panel.replaceChildren(element('h2',text.info));};
- overview.onclick=()=>{mode='overview';show();};files.onclick=()=>{mode='files';show();};screens.onclick=show;search.oninput=show;
- show();shell.append(nav,main,panel);root.replaceChildren(shell);root.dataset.ready='true';
+ const show=()=>{current=undefined;const options={visible:review&&filter.value!=='ALL'?new Set(index.screens.filter(s=>screenDecision(reviewState,s.id)===filter.value).map(s=>s.id)):undefined,decorate:review?decorate:undefined};main.replaceChildren(mode==='files'?fileTree(index,search.value,focus,options):canvas(index,payload,search.value,focus,options));panel.replaceChildren(element('h2',text.info));};
+ overview.onclick=()=>{mode='overview';show();};files.onclick=()=>{mode='files';show();};screens.onclick=show;search.oninput=show;toggle.onchange=()=>{review=toggle.checked;summaries();if(current)focus(current);else show();};filter.onchange=()=>{if(current)focus(current);else show();};
+ summaries();show();shell.append(nav,main,panel);root.replaceChildren(shell);root.dataset.ready='true';
 } catch(error){root.replaceChildren(element('p',String(error)));root.dataset.error='true';}

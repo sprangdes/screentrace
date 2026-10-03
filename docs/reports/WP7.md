@@ -25,3 +25,11 @@ B gate：`68e260b`，[遠端全綠](https://github.com/sprangdes/screentrace/act
 先失敗：封裝模組缺少；右側缺載入時資訊。最終 viewer unit 5 tests、Chromium file:// E2E 5 tests、封裝 3 tests、Java 注入 3 tests 通過；沒有修改既有測試斷言。新測試中的繁體「畫」文案拼字校正，測試意義與行為未變。安全 fixture CSS／圖片內嵌成功，對外與相對請求 0、腳本探針未觸發。首次渲染 130.1 ms，20 次縮放中位數 1 ms（本機 Chromium）。設計見 [ADR 0020](../adr/0020-viewer-projection-and-preview-pack.md)。無新增相依或未決需求。
 
 C 補足：純 MARKUP 檢核缺集中畫面列表的新 E2E 先逾時失敗；面板合併同畫面元件、載入／元件 API 的檢核規則且按 ID 去重後，6 項 E2E 全通過。原本成功斷言全數保留。
+
+C 最終 gate：`62bcd38`，[遠端全綠](https://github.com/sprangdes/screentrace/actions/runs/37103040228)。B 遠端效能實測 327.9 ms、縮放中位數 1 ms。
+
+## D Review 模式
+
+共用 shared/review.ts 定義格式 v1、schema 2.2 與巢狀 `(screenId, componentId)` 字典；契約見 [REVIEW_STATE_CONTRACT](../REVIEW_STATE_CONTRACT.md)。明確三態、有效隨畫面移除、統計、畫面／元件篩選、衝突警告及應用＋圖指紋 localStorage。未知 ID 保存；非法／失敗暫存僅警告；不突變圖與元件決策。WP8 的 md 功能未實作。
+
+先失敗：共享模組不存在、兩項 E2E 缺 review checkbox。最終 8 項 unit（含 162 組 API 狀態、prototype／非法資料測試）、8 項 Chromium E2E、3 項 Java 注入測試通過；既有斷言未修改。E2E 同一共用元件在兩個畫面各有不同決策，画面 REMOVE 後元件 KEEP 保留，重新開啟還原，localStorage 拒絕仍可操作。
