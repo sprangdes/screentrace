@@ -9,7 +9,7 @@
 | WP2 | Struts 1.x、Dispatch、Validator、Tiles、拒絕 Struts 2 | 完成；遠端 CI 全綠（e8139dd） |
 | WP3 | JSP / HTML 元件、控制流程、檢核、事件來源 | 完成；OQ-002 已處理，132 個 Java 測試與遠端 CI 全綠，見 reports/M2.md |
 | WP4 | JavaScript AST、事件與函式追蹤 | 完成；四個增量皆遠端全綠，40 JS／147 Java 通過；OQ-003 已處理（v1.3），見 reports/WP4.md |
-| WP5 | URL 對應、API 契約、Spring 檢核 | 增量一 URL 引擎與 context 本機驗證通過，待遠端 CI |
+| WP5 | URL 對應、API 契約、Spring 檢核 | 增量一 URL／context 遠端全綠（51c9575）；增量二依 §0.3 停止，OQ-004 未決 |
 | WP6 | 靜態預覽、完整元素樣式、條件標記 | 未開始 |
 | WP7 | 單一 HTML、Screen Map、API 頁、review | 未開始 |
 | WP8 | review md 匯出與還原、移除 JSON 匯出 | 未開始 |
@@ -19,7 +19,7 @@
 | 里程碑 | 工作包 | 狀態 |
 |---|---|---|
 | M1 | WP0、WP1、WP2 | 完成；需求方已授權進入 M2，遠端 CI 全綠，見 reports/M1.md |
-| M2 | WP3、WP4、WP5 | WP3 驗收通過；WP4 完成且遠端全綠，WP4 驗收通過；WP5 增量一進行中 |
+| M2 | WP3、WP4、WP5 | WP3 驗收通過；WP4 完成且遠端全綠，WP4 驗收通過；WP5 增量一全綠，增量二因 OQ-004 停止 |
 | M3 | WP6、WP7、WP8 | 等待 M2 驗收確認 |
 | M4 | WP9、WP10 | 等待 M3 驗收確認；最終驗收 |
 

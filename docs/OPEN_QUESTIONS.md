@@ -28,3 +28,12 @@
 - 影響範圍：WP4 來源收集、外部 JS AST、事件來源完整性與測試；WP5 context path／URL 配對不提前實作。
 - 狀態：已處理（2026-10-03）；需求方選受限制的 B，WP4 可繼續。
 - 決定：僅 script src 開頭單一變數或標準 context path 寫法且沒有矛盾定義時按 web root 比對；單一 INFERRED、多個 AMBIGUOUS 全列、無符合 UNRESOLVED。c:set 等定義依來源證據處理；中間變數、完整 URL、多變數等走 A；API URL 不套用。ADR 0008、v1.3 與成功／反例測試記錄完整邊界。
+
+## OQ-004 — WP5 工作區 context 設定的來源證據
+
+- 情境：WP5.2 要求讀取工作區設定的明確 context path，C2 要求 source 使用「專案相對路徑 + 行號」。工作區檔案 `~/.screentrace/config.json` 位於被分析專案之外，不能如實表示為專案相對來源；GraphIntegrityValidator.requireEvidence（schema 2.2）明確拒絕絕對路徑及 `..`。增量一已將真實工作區設定檔路徑傳入 ContextValue，增量二接入 canonical graph 時遭到此硬性限制。
+- 可選方案 A：明確允許工作區來源命名空間，例如 `workspace:config.json`，evidence.detail 保留真實設定檔路徑、設定鍵、候選與值；target source 仍使用專案相對路徑。需在 ADR／v1.4 明定此非 target 來源表示。
+- 可選方案 B：擴充 SourceLocation 的來源種類，僅工作區設定證據允許專案外絕對路徑；target source 的路徑限制維持。需定義新欄位相容性與驗證規則。
+- 影響範圍：WP5 context 設定證據、URL 對應關聯、所有 adapter 的 schema 2.2 嚴格驗證、後續報表證據呈現。既有測試除 schema 版本字串外不得修改。
+- 實測：新增 WorkspaceContextEvidenceTest，明確 workspace `/shop` 可解析到 `/api`，但帶原設定檔證據的 schema 2.2 graph 驗證失敗 `Missing or invalid source: api`；1 test／1 failure／0 errors。無修改既有斷言。
+- 狀態：未決（2026-10-03）；依 §0.3 停止 WP5 增量二，不自行選擇來源表示。增量一 51c9575 已推送且遠端 CI 全綠。
