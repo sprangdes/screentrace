@@ -14,14 +14,14 @@
 | WP7 | 單一 HTML、Screen Map、API 頁、review | 完成；A–E 逐增量推送並遠端全綠，見 reports/WP7.md |
 | WP8 | review md 匯出與還原、移除 JSON 匯出 | 完成；A／B／C 逐增量遠端全綠，md 往返三引擎通過；OQ-007／008 已處理；驗收後 v1.8 Unicode／code span／64 MiB 補強，見 reports/WP8.md |
 | WP9 | 元件庫 manifest、驗證與決定性比對 | 完成；四增量皆遠端全綠，OQ-009／010 已處理；Schema 補強後 201 Java／38 unit／33 三引擎 E2E；見 reports/WP9.md |
-| WP10 | 限定合成 fixture、決定性、完整 E2E、使用文件 | 四項實作與本機驗證完成，遠端 gate 見 reports/M4.md；不做效能／格式化／相容清理 |
+| WP10 | 限定合成 fixture、決定性、完整 E2E、使用文件 | 完成；17dd801 遠端全綠，204 Java／46 三引擎 E2E；見 reports/M4.md，不做效能／格式化／相容清理 |
 
 | 里程碑 | 工作包 | 狀態 |
 |---|---|---|
 | M1 | WP0、WP1、WP2 | 完成；需求方已授權進入 M2，遠端 CI 全綠，見 reports/M1.md |
 | M2 | WP3、WP4、WP5 | 完成；三工作包均遠端全綠，最終 WP5 b7b51b9；需求方已驗收並授權進入 M3 |
 | M3 | WP6、WP7、WP8 | 完成；WP6／WP7／WP8 與 v1.8 補強已驗收 |
-| M4 | WP9、WP10 | WP9 已驗收；WP10 本輪僅授權四項，實作完成，遠端 gate 與驗收見 reports/M4.md |
+| M4 | WP9、WP10 | WP9 已驗收；限定 WP10 四項完成且遠端全綠，停止等待驗收；見 reports/M4.md |
 
 ## 本次調整前的既有能力
 
