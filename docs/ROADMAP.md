@@ -12,7 +12,7 @@
 | WP5 | URL 對應、API 契約、Spring 檢核 | 增量一 URL／context 遠端全綠（51c9575）；OQ-004 已處理；增量二來源隱私／圖對應遠端全綠（bb66bb4）；增量三契約／SERVER 遠端全綠（385578a）；OQ-005／006 已處理；增量四最終 b7b51b9 遠端全綠，WP5 完成 |
 | WP6 | 靜態預覽、完整元素樣式、條件標記 | 完成；6d557d6 遠端全綠，203 Java／40 JS／30 capture；見 reports/M3.md |
 | WP7 | 單一 HTML、Screen Map、API 頁、review | 完成；A–E 逐增量推送並遠端全綠，見 reports/WP7.md |
-| WP8 | review md 匯出與還原、移除 JSON 匯出 | 增量 A 共用模組／契約實作，待遠端 gate；OQ-007／008 已處理 |
+| WP8 | review md 匯出與還原、移除 JSON 匯出 | 增量 A 遠端全綠；B 匯出／匯入通過本機 Chromium／WebKit，待遠端 gate；OQ-007／008 已處理 |
 | WP9 | 元件庫 manifest、驗證與決定性比對 | 未開始 |
 | WP10 | 合成 fixture、整合測試、CI、使用文件 | 未開始 |
 

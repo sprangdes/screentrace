@@ -44,6 +44,6 @@ state_sha256 對排除自身的狀態物件正規化 JSON（所有物件鍵遞�
 
 ## 容量與 API
 
-單一 md，LF 換行、末尾 LF。超過 5,000,000 UTF-8 bytes 在檢視器警告，不截斷。JSON import 的硬上限與正文匯出警告不同。
+單一 md，LF 換行、末尾 LF。超過 5,000,000 UTF-8 bytes 在檢視器警告，不截斷。JSON import 的硬上限與正文匯出警告不同。檢視器對選取檔案另採既有工具 1 GiB 安全界線；超限明確失敗。
 
 generateMarkdown(payload, state, options) 回傳 Promise<string>；importMarkdown(md, payload) 回傳 state、orphans、changed。sha256／canonicalJson／machineJson／projectText 可獨立測試；golden 固定 generatedAt 和 toolVersion。瀏覽器只讀使用者選取檔案，不讀網路資源。

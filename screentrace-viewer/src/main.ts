@@ -4,6 +4,7 @@ import {indexGraph} from './map';
 import {canvas,fileTree} from './canvas';
 import {focusRelation} from './relations';
 import {apiPage} from './api-page';
+import {mdControls} from './md-controls';
 import {screenPanel,elementDetail,apiDetail} from './details';
 import {previewDocument,previewElement} from './preview';
 import {emptyReview,loadReview,saveReview,screenDecision,componentDecision,effectiveComponent,setScreen,setComponent,statistics,markableComponents,conflicts,StorageLike} from './shared/review';
@@ -25,6 +26,7 @@ try {
  const filter=element('select');filter.setAttribute('aria-label',text.stateFilter);for(const value of ['ALL','UNDECIDED','KEEP','REMOVE','INHERITED_REMOVE']){const option=element('option',value==='ALL'?text.all:decisionLabel(value as 'KEEP'));option.value=value;filter.append(option);}nav.append(filter);
  const summaries=()=>{stats.hidden=conflictList.hidden=!review;const counts=statistics(graph,reviewState);stats.replaceChildren(element('h3',text.statistics));for(const [label,values]of [[text.screens,counts.screens],[text.components,counts.components]]as const)stats.append(element('p',`${label} ${text.undecided}: ${values.UNDECIDED} ${text.keep}: ${values.KEEP} ${text.remove}: ${values.REMOVE}`));stats.append(element('p',`${text.inherited}: ${counts.inherited}`));conflictList.replaceChildren(element('h3',text.conflicts));for(const c of conflicts(graph,reviewState))conflictList.append(element('p',`${index.nodes.get(c.screenId)?.name}: ${index.nodes.get(c.componentId)?.name} → ${index.nodes.get(c.targetScreenId)?.name}`));};
  const changed=()=>{const failure=saveReview(storage,reviewState);if(failure)warning.textContent=failure;summaries();if(current)focus(current);else show();};
+ nav.append(mdControls(payload,()=>reviewState,state=>{reviewState=state;changed();}));
  const decorate=(id:string,parent:HTMLElement)=>parent.append(decisionControl(text.screenDecision,screenDecision(reviewState,id),value=>{reviewState=setScreen(reviewState,id,value);changed();},id));
  const focus=(id:string,component?:string,push=true)=>{
   if(current&&current!==id&&push)history.push(current);current=id;
