@@ -534,3 +534,7 @@ WP3 未引入相依；Spring 輸出仍保留既有 schema 2.1 相容路徑，Str
 JavaScriptGraphContribution 以 JSON 邊界整合 Spring／Struts adapter 的 inline script、src、事件屬性、javascript URL 及 include 使用者。載入來源使用畫面 ID；失敗綁定保留 selector／UNRESOLVED 呼叫來源。CLIENT 規則、父子行為、HTTP method／URL／資料欄位、條件與呼叫鏈進入 canonical graph。已解析的前端請求建立 backendStatus=UNRESOLVED 的描述節點，後端匹配與統一 schema 2.2 屬 WP5。ApiUsage 對 canonical 行為與簡化邊去重。見 ADR 0007–0010。
 
 script src 的不透明 context 前綴依 v1.3／OQ-003，僅用於定位來源檔案；API URL 不套用該例外。相同來源可證明的單次常值定義附 evidence；未知 API context 部分保留樣板。目標程式不執行，渲染仍移除 script 並關閉 JavaScript。
+
+### WP5 增量一
+
+UrlResolution 為 Spring／Struts 的共用 URL 引擎，保留全部候選及信心、方法不符與 context 診斷。設定以 Properties／安全 SnakeYAML 2.4 解析，工作區 contextPaths 以專案絕對路徑為鍵、候選陣列為值，透過 ProjectInventory 傳入；無設定不推測。見 ADR 0011。圖關聯接入、契約與 SERVER 檢核、schema 退場依序在後續增量實作。

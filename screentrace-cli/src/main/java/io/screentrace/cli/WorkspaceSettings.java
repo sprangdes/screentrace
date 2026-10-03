@@ -12,8 +12,16 @@ import java.nio.file.StandardCopyOption;
 final class WorkspaceSettings {
   private final Path projectRoot;
   private final Path outputRoot;
+  private final java.util.Map<String,java.util.List<String>> contextPaths;
 
   WorkspaceSettings(Path projectRoot, Path outputRoot) {
+    this(projectRoot,outputRoot,java.util.Map.of());
+  }
+
+  WorkspaceSettings(Path projectRoot,Path outputRoot,java.util.Map<String,java.util.List<String>> contextPaths) {
+    var normalized=new java.util.TreeMap<String,java.util.List<String>>();
+    contextPaths.forEach((project,values)->normalized.put(Path.of(project).toAbsolutePath().normalize().toString(),values.stream().distinct().sorted().toList()));
+    this.contextPaths=java.util.Collections.unmodifiableMap(normalized);
     this.projectRoot = projectRoot.toAbsolutePath().normalize();
     this.outputRoot = outputRoot.toAbsolutePath().normalize();
   }
@@ -26,6 +34,10 @@ final class WorkspaceSettings {
     return outputRoot;
   }
 
+  java.util.Map<String,java.util.List<String>> contextPaths() { return contextPaths; }
+
+  java.util.List<String> contextPathsFor(Path project) { return contextPaths.getOrDefault(project.toAbsolutePath().normalize().toString(),java.util.List.of()); }
+
   static Path defaultFile() {
     return Path.of(System.getProperty("user.home"), ".screentrace", "config.json");
   }
@@ -34,7 +46,7 @@ final class WorkspaceSettings {
     if (Files.isSymbolicLink(file)) throw new IOException("ScreenTrace config must not be a symbolic link: " + file);
     StoredSettings stored = new ObjectMapper().readValue(file.toFile(), StoredSettings.class);
     if (stored.projectRoot == null || stored.outputRoot == null) throw new IOException("ScreenTrace settings are incomplete: " + file);
-    return new WorkspaceSettings(Path.of(stored.projectRoot), Path.of(stored.outputRoot));
+    return new WorkspaceSettings(Path.of(stored.projectRoot), Path.of(stored.outputRoot),stored.contextPaths==null?java.util.Map.of():stored.contextPaths);
   }
 
   void save(Path file) throws IOException {
@@ -42,7 +54,7 @@ final class WorkspaceSettings {
     Files.createDirectories(file.getParent());
     Path temporary = Files.createTempFile(file.getParent(), "config-", ".json");
     new ObjectMapper().enable(SerializationFeature.INDENT_OUTPUT)
-        .writeValue(temporary.toFile(), new StoredSettings(projectRoot.toString(), outputRoot.toString()));
+        .writeValue(temporary.toFile(), new StoredSettings(projectRoot.toString(), outputRoot.toString(),contextPaths));
     try {
       Files.move(temporary, file, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
     } catch (AtomicMoveNotSupportedException ignored) {
@@ -53,11 +65,13 @@ final class WorkspaceSettings {
   private static final class StoredSettings {
     public String projectRoot;
     public String outputRoot;
+    public java.util.Map<String,java.util.List<String>> contextPaths;
 
     @SuppressWarnings("unused")
     public StoredSettings() { }
 
-    private StoredSettings(String projectRoot, String outputRoot) {
+    private StoredSettings(String projectRoot, String outputRoot,java.util.Map<String,java.util.List<String>> contextPaths) {
+      this.contextPaths=contextPaths;
       this.projectRoot = projectRoot;
       this.outputRoot = outputRoot;
     }

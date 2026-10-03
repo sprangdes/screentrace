@@ -57,7 +57,7 @@ public final class ScreenTraceCli {
         return;
       }
       if (command.action() == Action.ANALYZE) {
-        AnalysisResult result = analyze(project);
+        AnalysisResult result = analyze(project,settings);
         logAnalysis(result);
         serve(result.report());
       }
@@ -90,7 +90,7 @@ public final class ScreenTraceCli {
       }
       Path report;
       if (action == Action.ANALYZE) {
-        AnalysisResult result = analyze(project);
+        AnalysisResult result = analyze(project,settings);
         console.showAnalysisComplete(result.project(), result.technologies(), result.endpoints(), result.screens(),
             result.components(), result.output());
         report = result.report();
@@ -116,7 +116,7 @@ public final class ScreenTraceCli {
     Path projectRoot = console.existingDirectory("所有專案的根目錄", projectDefault);
     Path outputDefault = current == null ? projectRoot.resolve("analyze") : current.outputRoot();
     Path outputRoot = console.outputDirectory("分析結果根目錄", outputDefault);
-    WorkspaceSettings settings = new WorkspaceSettings(projectRoot, outputRoot);
+    WorkspaceSettings settings = new WorkspaceSettings(projectRoot, outputRoot,current==null?java.util.Map.of():current.contextPaths());
     settings.save(WorkspaceSettings.defaultFile());
     LOGGER.info(() -> "設定已儲存：\n  專案根目錄：" + settings.projectRoot() + "\n  輸出根目錄：" + settings.outputRoot());
     return settings;
@@ -149,13 +149,13 @@ public final class ScreenTraceCli {
     return choice.project();
   }
 
-  private static AnalysisResult analyze(ProjectCatalog.Project project) throws IOException, InterruptedException {
+  private static AnalysisResult analyze(ProjectCatalog.Project project,WorkspaceSettings settings) throws IOException, InterruptedException {
     Path outputRoot = project.analysisDirectory().getParent();
     Files.createDirectories(outputRoot);
     Path safeOutput = SafeProjectFiles.requireWritePathWithin(outputRoot, project.analysisDirectory());
     Files.createDirectories(safeOutput);
     Path output = project.analysisDirectory();
-    var inventory = new ProjectScanner().scan(project.sourceDirectory());
+    var inventory = new ProjectScanner().scan(project.sourceDirectory()).withContextPaths(settings.contextPathsFor(project.sourceDirectory()),WorkspaceSettings.defaultFile().toString());
     var graph = analyze(inventory);
     new ReportGenerator().write(graph, output);
     if (graph.application().technologies().contains("JSP")) {

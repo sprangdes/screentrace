@@ -104,9 +104,11 @@ public final class ProjectScanner {
     catch (IOException | SecurityException ignored) { return false; }
   }
 
-  public record ProjectInventory(Path root, List<Path> files, List<String> technologies, List<String> diagnostics) {
+  public record ProjectInventory(Path root, List<Path> files, List<String> technologies, List<String> diagnostics,List<String> contextPaths,String contextSettingsFile) {
+    public ProjectInventory(Path root,List<Path> files,List<String> technologies,List<String> diagnostics){this(root,files,technologies,diagnostics,List.of(),".");}
+    public ProjectInventory withContextPaths(List<String> values,String source){return new ProjectInventory(root,files,technologies,diagnostics,values,source);}
     public ProjectInventory(Path root, List<Path> files, List<String> technologies) { this(root, files, technologies, List.of()); }
-    public ProjectInventory { files = List.copyOf(files); technologies = List.copyOf(technologies); diagnostics = List.copyOf(diagnostics); }
+    public ProjectInventory { files = List.copyOf(files); technologies = List.copyOf(technologies); diagnostics = List.copyOf(diagnostics); contextPaths=List.copyOf(contextPaths); }
     public List<Path> javaFiles() { return files.stream().filter(path -> hasExtension(path, ".java")).toList(); }
     public List<Path> reactFiles() { return files.stream().filter(path -> hasExtension(path, ".tsx") || hasExtension(path, ".jsx")).toList(); }
     public List<Path> jspFiles() { return files.stream().filter(path -> hasExtension(path, ".jsp")).toList(); }

@@ -19,4 +19,12 @@ class WorkspaceSettingsTest {
     assertEquals(root.resolve("projects"), loaded.projectRoot());
     assertEquals(root.resolve("output"), loaded.outputRoot());
   }
+  @Test void persistsExplicitPerProjectContextCandidatesWithoutGuessing() throws Exception {
+    Path file=root.resolve("settings/config.json");
+    var project=root.resolve("projects/shop");
+    var settings=new WorkspaceSettings(root.resolve("projects"),root.resolve("output"),java.util.Map.of(project.toString(),java.util.List.of("/shop","/alternate")));
+    settings.save(file);var loaded=WorkspaceSettings.load(file);
+    assertEquals(java.util.List.of("/alternate","/shop"),loaded.contextPathsFor(project));
+    assertEquals(java.util.List.of(),loaded.contextPathsFor(root.resolve("projects/unknown")));
+  }
 }
