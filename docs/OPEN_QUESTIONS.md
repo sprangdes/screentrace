@@ -75,3 +75,11 @@
 - 可選方案 B：機器區也適用 code span／300 字元；另修訂機器契約與 ID 還原方式，避免不可逆截斷。
 - 影響範圍：WP8 REVIEW_MD_CONTRACT、檔頭、附錄 A、長 ID／名稱 fixture、匯入與完整往返；現有 review 複合鍵斷言不改。
 - 狀態：已處理（2026-10-03）；需求方採方案 A（方案 1），附完整機器值、雙引號／Unicode 跳脫、還原欄位白名單、最後末尾區塊、SHA-256 損毀檢查、JSON 上限／嚴格三態／orphan 保存及往返測試限制。見 v1.7、ADR 0023；WP8 可繼續，WP9 未開始。
+
+## OQ-009 — 未指定 project 的元件庫匯入與選用範圍
+
+- 情境：WP9.2 指定 library import <manifest> [--project <name>]，但未定義省略 --project 時是否只儲存、或同時成為工作區所有未綁定專案的預設元件庫。最新決定要求單一 HTML 只嵌入被選用的一份，但沒有選用預設；第 9 節沒有對應解讀。現有 WorkspaceSettings 沒有元件庫選用設定，CLI analyze 與 report 亦無 library 參數。兩種行為會產生不同 HTML／md，不能自行選擇。
+- 可選方案 A：省略 --project 僅驗證並儲存 manifest，不自動選用；library import <manifest> --project <name> 明確綁定該專案唯一元件庫。未綁定專案維持 none。library list 列儲存項目與專案綁定。
+- 可選方案 B：省略 --project 的匯入同時設為工作區預設元件庫；未明確綁定的專案採此預設，專案明確綁定優先。library list 列儲存項目、預設與專案綁定。
+- 影響範圍：WP9 增量一的 import／list 與工作區儲存契約、HTML 唯一元件庫選用，以及後續 viewer／md 的 component_library；不涉及 WP10。
+- 狀態：已處理（2026-10-03）；採方案 A，附明確儲存／綁定提示、解除綁定、內容 SHA-256 定址、同版本衝突 --replace、受影響專案提示、暫存摘要隔離與舊覆寫 orphan。見 v1.9 WP9 與 ADR 0027。

@@ -10,6 +10,7 @@
   <artifactId>screentrace-report</artifactId>
 
   <dependencies>
+    <dependency><groupId>com.networknt</groupId><artifactId>json-schema-validator</artifactId><version>1.5.9</version></dependency>
     <dependency><groupId>io.screentrace</groupId><artifactId>screentrace-scanner</artifactId><version>${project.version}</version></dependency>
     <dependency>
       <groupId>io.screentrace</groupId>
@@ -22,5 +23,5 @@
       <scope>test</scope>
     </dependency>
   </dependencies>
-  <build><resources><resource><directory>src/main/resources</directory></resource><resource><directory>../screentrace-viewer/dist</directory><targetPath>viewer</targetPath></resource></resources></build>
+  <build><resources><resource><directory>../docs/schemas</directory><targetPath>schemas</targetPath><includes><include>component-library.schema.json</include></includes></resource><resource><directory>src/main/resources</directory></resource><resource><directory>../screentrace-viewer/dist</directory><targetPath>viewer</targetPath></resource></resources></build>
 </project>

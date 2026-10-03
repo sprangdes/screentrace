@@ -1,0 +1,43 @@
+{
+  "schemaVersion": "1",
+  "library": {
+    "name": "Sample Controls",
+    "version": "1.0-sample"
+  },
+  "components": [
+    {
+      "id": "sample-button",
+      "name": "Sample button",
+      "category": "sample",
+      "description": "Sample Library: fictional example only; not a real library.",
+      "status": "stable",
+      "selector": "sample-button",
+      "inputs": [
+        {
+          "name": "disabled",
+          "type": "boolean",
+          "required": false,
+          "mapsFromAttribute": "disabled"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "pressed",
+          "mapsFromEvent": "click"
+        }
+      ],
+      "slots": [
+        {
+          "name": "label"
+        }
+      ],
+      "usage": "<sample-button>Example</sample-button>\n<!-- fictional sample -->",
+      "matches": [
+        {
+          "kind": "BUTTON",
+          "priority": 10
+        }
+      ]
+    }
+  ]
+}

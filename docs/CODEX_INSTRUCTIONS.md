@@ -1,6 +1,6 @@
 # ScreenTrace 調整指示(給 Codex)
 
-- 文件版本:1.8(2026-10-03;WP8 驗收後 Unicode 隔離、正文忠實度與匯入上限補強，變更見第 11 節)
+- 文件版本:1.9(2026-10-03;WP9 元件庫與 OQ-009，變更見第 11 節)
 - 建議放置位置:`docs/CODEX_INSTRUCTIONS.md`,並在 `AGENTS.md` 第 10 節的閱讀清單加入本文件
 - 對照基準:`sprangdes/screentrace` main(含 review-result v2 匯出的版本)
 
@@ -405,8 +405,13 @@ migration_target:
      - `matches[]`:比對規則,`{ kind?, tag?, attributes?, priority }`,其中 `tag` 可寫原始標籤(如 `html:text`、`form:select`、`button`)
 2. CLI:`screentrace library import <manifest> [--project <name>]`、`library validate <manifest>`、`library list`。驗證失敗須指出欄位路徑與原因。匯入的 manifest 儲存於工作區,並嵌入單一 HTML。
 3. **比對引擎**(決定性,無模糊 / 機率比對):依 `matches[]` 的條件與 `priority`、規則特異度排序;同分多筆 → 標 `AMBIGUOUS` 並全數列出;無符合 → `NONE`。輸出涵蓋率(每種 `kind` 已對應 / 未對應數量)。
-4. 檢視器:在元件詳情顯示「建議元件」、屬性對應提示(依 `mapsFromAttribute` / `mapsFromEvent`)、未對應者顯示「無對應元件」。**SHOULD**:review 模式下允許手動指定覆寫,覆寫結果進入 review state 與 md。
+4. 檢視器:在元件詳情顯示「建議元件」、屬性對應提示(依 `mapsFromAttribute` / `mapsFromEvent`)、未對應者顯示「無對應元件」。**MUST**:review 模式下對 KEEP 畫面的元件允許手動指定覆寫,覆寫結果進入 review state 與 md。
 5. md(WP8)§6 與元件列的「建議元件」欄使用本工作包結果;未匯入元件庫時該章節標示「未匯入元件庫」。
+
+6. manifest 為不可信資料，正文沿用 code span／300 字元／可見控制與隱形字元隔離；usage 多行以可見 \n 轉單行，超限來源指向名稱@版本。不捏造真實元件庫，所有 fixture 為標明 sample 的虛構資料。
+7. 匯入大小上限 5 MiB、元件上限 2,000，未知欄位按 Schema 拒絕並列路徑；比對只使用既有 kind、屬性與已記錄的框架來源標籤，不在 core 加框架名。缺少所需圖資訊依 §0.3 停止。priority／特異度排序須決定性，同分全列 AMBIGUOUS，涵蓋率列每種 kind 的已對應／未對應／歧義。
+8. 沒有手動覆寫的 md format_version 維持 1，aceb923 後兩份 golden 不變；有覆寫採 2，增加 component_overrides（screenId → componentId → 元件庫元件 ID），匯入同時接受 1／2。沿用最後區塊、SHA 與 Unicode 隔離；component_library 記名稱@版本及完整內容 SHA-256，§6 列涵蓋率、未對應與全數歧義。未選用時 none／未匯入元件庫。
+9. OQ-009 採 A：省略 --project 僅儲存並提示「已儲存,尚未綁定任何專案;使用 --project <名稱> 綁定」；明確 --project 綁定唯一元件庫，重複綁定更換，library unbind --project 解除。library list 列所有名稱@版本、摘要前 12 碼與專案綁定。儲存鍵為名稱@版本加內容 SHA-256；同版本異內容預設拒絕並列摘要差異，僅 --replace 可更換，提示受影響專案重產報表。review 暫存鍵納入 manifest SHA-256，變更後舊覆寫列 orphan 並提示，不靜默套用。HTML 只嵌選用一份；HTML／md／CLI 不含儲存路徑或家目錄。
 
 **驗收**:schema 驗證測試(合法 / 非法);比對測試(優先序、歧義、無符合);涵蓋率報表測試;CLI 錯誤訊息測試。
 
@@ -508,6 +513,7 @@ migration_target:
 
 ## 11. 修訂紀錄
 
+- 1.9:WP9 依最新授權採 Schema 驗證、決定性比對、必要覆寫、雙格式 review state 與不可信 manifest 隔離；OQ-009 A 明定顯式專案綁定／解除、內容定址、版本衝突 --replace、摘要識別與變更 orphan。
 - 1.8:WP8 驗收後擴充零寬／格式、變體選擇器與 Unicode 標籤字元隔離；正文 code span 不轉換 &、<、>，保留條件忠實度；選取檔案硬上限降至 64 MiB。授權僅更新受影響的契約／兩份 golden／實體斷言，其他斷言不變；WP9 待確認。
 - 1.7:依 OQ-008 授權 YAML／附錄 A 完整值例外、嚴格 Unicode 跳脫、還原所需欄位白名單、末尾最後區塊、損毀 SHA-256、JSON 上限及 orphan 保存；§8.2 第 8 條擴及機器區。
 
@@ -517,9 +523,10 @@ migration_target:
 
 - 1.4:依 WP5 授權僅允許 schema 版本字串斷言 2.1 → 2.2 並逐處記錄 ADR；明定 JS API context 必須可證明且實際值有明確設定。依 OQ-004 採工作區來源命名空間、單純檔名嚴格驗證、目標檔保留名稱拒絕、設定鍵行號與證據隱私；圖內不含真實設定檔路徑／家目錄，context 來源與採用值可區分。
 
+- v1.4 補充（OQ-005，2026-10-03）：限定歷史相容 API、淘汰標記與技術債；新分析／合併嚴格 2.2；歷史圖不靜默升版。依 OQ-006 保留明確標示的舊報表／JSON 匯出歷史入口，既有測試不遷移，WP7／WP8 新程式強制 2.2 並移除舊入口／測試；新增 §0 相容通則。
+
 - 1.3:依 OQ-003 決定補充 WP4 第 2 點的 script src 不透明 context 前綴例外與排除邊界；單一／多個／無候選分別 INFERRED／AMBIGUOUS／UNRESOLVED，保留原文與證據，不套用於 API URL，既有斷言不變。
 
 - 1.2:依 OQ-002 方案 B 修訂 WP3 第 8 點,允許有同來源常值定義、使用前且無重新賦值與作用域證據的 URL 變數例外;保留原始運算式、定義位置與路徑樣板,排除未知函式、跨檔案變數、c:set 與 param 值解析,既有測試斷言不變。
 - 1.1:檢核來源層級改為 `MARKUP` / `CLIENT` / `SERVER`(OQ-001);API 狀態推導的元件決策改用 (`screenId`, `componentId`) 複合鍵;新增 WP4 第 11 點、WP5 第 7 點、WP8 規則 7。
 - 1.0:初版。
-- v1.4 補充（OQ-005，2026-10-03）：限定歷史相容 API、淘汰標記與技術債；新分析／合併嚴格 2.2；歷史圖不靜默升版。依 OQ-006 保留明確標示的舊報表／JSON 匯出歷史入口，既有測試不遷移，WP7／WP8 新程式強制 2.2 並移除舊入口／測試；新增 §0 相容通則。

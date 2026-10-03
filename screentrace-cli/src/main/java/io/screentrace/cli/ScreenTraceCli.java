@@ -20,6 +20,7 @@ public final class ScreenTraceCli {
   private static final Logger LOGGER = Logger.getLogger(ScreenTraceCli.class.getName());
 
   public static void main(String[] args) throws IOException, InterruptedException {
+    if(args.length>0&&args[0].equals("library")){System.out.println(LibraryCommands.run(args,WorkspaceSettings.defaultFile().getParent()));return;}
     Command command = Command.parse(args);
     try (InteractiveConsole console = new InteractiveConsole()) {
       WorkspaceSettings settings = command.action() == Action.CONFIG ? configure(console) : loadOrConfigure(console);
