@@ -9,7 +9,7 @@
 | 一：解析器、容錯、診斷 | 8da98aeac6fa4f79aaeb0fda81981368cedc7f2c | [全綠](https://github.com/sprangdes/screentrace/actions/runs/37077608733) |
 | 二：來源、DOM、事件 | 20a6b6d4fddff4f797cac00fd42bd257a2a200dd | [全綠](https://github.com/sprangdes/screentrace/actions/runs/37078464909) |
 | 三：行為、CLIENT 檢核、第三方表 | 8670f781c2b6bb34c06620ed1f20307c18b9e89d | [全綠](https://github.com/sprangdes/screentrace/actions/runs/37079122785) |
-| 四：追蹤、值、Java 圖整合 | 本回報所在提交 | 待本提交推送後確認 |
+| 四：追蹤、值、Java 圖整合 | d72a2f3c25117d63e83098312dd6e8ecc7f52a94 | [全綠](https://github.com/sprangdes/screentrace/actions/runs/37085587989) |
 
 OQ-003 停止紀錄 027a0f0 的 [CI 全綠](https://github.com/sprangdes/screentrace/actions/runs/37077836291)；需求方決定後才繼續。
 
@@ -34,7 +34,7 @@ OQ-003 停止紀錄 027a0f0 的 [CI 全綠](https://github.com/sprangdes/screent
 
 capture 首次廣泛測試曾 13 通過／2 失敗：Chromium 沙箱權限不足，以及手動 report-design 測試缺 URL；先前退出碼被後續 diff 覆蓋的成功紀錄已更正。取得 Chromium 權限後四個自動測試檔 14 通過；不宣稱手動報表測試成功。
 
-遠端每次門檻均包括 Java build／test、Dependency-Check、Node 測試與 npm audit。增量四結果待推送確認。
+遠端每次門檻均包括 Java build／test、Dependency-Check、Node 測試與 npm audit。增量四 [CI 全綠](https://github.com/sprangdes/screentrace/actions/runs/37085587989)，兩個 job 及所有必要步驟 success。
 
 ## 4. 設計決策
 
@@ -79,4 +79,4 @@ OQ-003 已處理，無未處理的 WP4 問題。容錯、未知函式、動態�
 | C9 | 通過：來源穩定鍵、同類出現序，行號變化不改 ID |
 | C10 | 通過：文件／診斷繁體中文；程式鍵與 ID 英文 |
 
-所有既有測試斷言保留，相關文件及開放問題已更新；遠端增量四門檻確認後完成 WP4。
+所有既有測試斷言保留，相關文件及開放問題已更新；四個增量皆已推送且遠端 CI 全綠，WP4 完成；依需求方指示停止，不進入 WP5。
