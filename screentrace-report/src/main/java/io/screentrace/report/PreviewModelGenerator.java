@@ -47,7 +47,10 @@ final class PreviewModelGenerator {
               component.node.attributes().get("target"), component.targetScreenId, baseline == null ? null : baseline.bounds(), Map.of()));
       }
     }
-    return new PreviewModel("1", screens, components);
+    var baseline = new PreviewModel("1", screens, components);
+    if ("2.2".equals(graph.schemaVersion()) && Files.exists(output.resolve("static-preview/element-styles.json")))
+      return new PreviewCaptureReader().read(graph, baseline, output);
+    return baseline;
   }
 
   private PreviewModel.PreviewComponent component(String screenId, JsonNode item, List<GraphComponent> graphComponents) {

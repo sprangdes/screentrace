@@ -188,7 +188,7 @@ public final class ScreenTraceCli {
 
   @SuppressWarnings("java:S4036")
   private static void renderStaticJsp(Path target, Path output) throws IOException, InterruptedException {
-    Process process = new ProcessBuilder("node", Path.of("screentrace-capture/capture-static-jsp.mjs").toAbsolutePath().toString(), target.toString(), output.toString()).inheritIO().start();
+    Process process = new ProcessBuilder("node", Path.of("screentrace-capture/capture-static-jsp.mjs").toAbsolutePath().toString(), target.toString(), output.toString(), "--preview-v2").inheritIO().start();
     if (!process.waitFor(120, TimeUnit.SECONDS)) {
       process.destroy();
       if (!process.waitFor(2, TimeUnit.SECONDS)) process.destroyForcibly();

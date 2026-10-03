@@ -1,0 +1,26 @@
+package io.screentrace.report;
+import static org.junit.jupiter.api.Assertions.*;
+import io.screentrace.core.*;
+import io.screentrace.core.ApplicationGraph.*;
+import java.nio.file.*;
+import java.util.*;
+import org.junit.jupiter.api.Test;
+class PreviewCaptureReaderTest {
+ private ApplicationGraph graph(String version){var source=new SourceLocation("page.jsp",1);var proof=List.of(new AnalysisEvidence(source,"FixtureParser",ResolutionStatus.CONFIRMED,null));return new ApplicationGraph(new Application("preview",".",List.of()),List.of(new GraphNode("screen",NodeType.SCREEN,"page",Map.of("view","page.jsp"),source,Confidence.CONFIRMED,proof)),List.of(),List.of(),List.of(),version,List.of(),List.of());}
+ private Path output() throws Exception {var root=Files.createTempDirectory("preview-reader");Files.createDirectories(root.resolve("static-preview"));Files.writeString(root.resolve("static-preview/element-styles.json"),"""
+ {"version":"2","schemaVersion":"2.2","screens":{"screen":{"width":1440,"height":900,"rendering":{"mode":"reconstructed"},"dynamicExpressions":["${name}"],"elements":[{"path":"body>span[1]","tag":"span","id":null,"name":null,"className":"sample","text":"示例","bounds":{"x":1.25,"y":2.5,"width":20.5,"height":10.5},"styleId":"style:x","defaultId":"html:span","graphComponentId":null,"graphComponentCandidates":[],"componentResolution":"UNRESOLVED","conditions":["${allowed}"],"source":{"file":"page.jsp","line":2}}],"thumbnail":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aT9sAAAAASUVORK5CYII=","diagnostics":[{"code":"STYLE_ELEMENT_LIMIT","screenId":"screen","message":"完整資料保留","limit":1,"actual":2}]}},"styles":{"style:x":{"color":"red"}},"defaults":{"html:span":{"color":"black"}},"diagnostics":[{"code":"STYLE_ELEMENT_LIMIT","screenId":"screen","message":"完整資料保留","limit":1,"actual":2}]}
+ """);return root;}
+ @Test void loadsCompletePreviewMetadataAndPreservesUnmappedElements() throws Exception {var baseline=new PreviewModel("1",List.of(new PreviewModel.PreviewScreen("screen","static-preview/page.html",null,1440,900)),List.of());var result=new PreviewCaptureReader().read(graph("2.2"),baseline,output());assertEquals("2",result.version());assertEquals("reconstructed",result.screens().get(0).rendering().mode());assertEquals(List.of("${name}"),result.screens().get(0).dynamicExpressions());assertTrue(result.screens().get(0).thumbnail().startsWith("data:image/png;base64,"));assertEquals(1,result.elements().size());var element=result.elements().get(0);assertEquals("screen",element.graphScreenId());assertEquals("body>span[1]",element.path());assertEquals(1.25,element.bounds().x());assertNull(element.graphComponentId());assertEquals(List.of("${allowed}"),element.conditions());assertEquals("red",result.styles().get(element.styleId()).get("color"));assertEquals("black",result.defaults().get(element.defaultId()).get("color"));assertEquals("STYLE_ELEMENT_LIMIT",result.diagnostics().get(0).code());assertEquals(1,result.screens().get(0).diagnostics().size());}
+ @Test void modernPreviewReaderRejectsHistoricalGraphs() throws Exception {var root=output();var error=assertThrows(IllegalArgumentException.class,()->new PreviewCaptureReader().read(graph("2.1"),new PreviewModel("1",List.of(),List.of()),root));assertTrue(error.getMessage().contains("2.2"));assertTrue(error.getMessage().contains("2.1"));}
+ @Test void rejectsDanglingStyleReferenceRatherThanDroppingElement() throws Exception {var root=output();var file=root.resolve("static-preview/element-styles.json");Files.writeString(file,Files.readString(file).replace("\"styleId\":\"style:x\"","\"styleId\":\"missing\""));assertThrows(java.io.IOException.class,()->new PreviewCaptureReader().read(graph("2.2"),new PreviewModel("1",List.of(),List.of()),root));}
+ @Test void reportUsesPreviewContractForReconstructionNoticeDiagnosticsAndAllElementConditions() throws Exception {
+   var root=output();new ReportGenerator().write(graph("2.2"),root);
+   var html=Files.readString(root.resolve("report/index.html"));
+   assertTrue(html.contains("示意畫面:動態資料為範例值"));
+   assertTrue(html.contains("preview.elements"));
+   assertTrue(html.contains("screenPreview.diagnostics"));
+   assertTrue(html.contains("item.conditions"));
+   var data=new com.fasterxml.jackson.databind.ObjectMapper().readTree(root.resolve("preview-model.json").toFile());
+   assertEquals("2",data.path("version").asText());assertEquals(1,data.path("elements").size());
+ }
+}

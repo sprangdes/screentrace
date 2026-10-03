@@ -66,6 +66,10 @@ jobs:
             screentrace-js/package-lock.json
       - name: Install Node dependencies
         run: npm --prefix screentrace-capture ci
+      - name: Install Chromium for static reconstruction tests
+        run: npm exec --prefix screentrace-capture -- playwright install --with-deps chromium
+      - name: Test static capture and project documentation
+        run: node --test screentrace-capture/docs-baseline.test.mjs screentrace-capture/safe-files.test.mjs screentrace-capture/spring-resource-mappings.test.mjs screentrace-capture/capture-static-jsp.security.test.mjs screentrace-capture/preview-markup.test.mjs screentrace-capture/preview-v2.test.mjs
       - name: Audit Node dependencies
         run: npm --prefix screentrace-capture audit --audit-level=high
       - name: Install JavaScript parser dependencies

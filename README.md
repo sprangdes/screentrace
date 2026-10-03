@@ -73,7 +73,7 @@ Windows：
 /project/ocp/analyze/專案名稱/
 ```
 
-分析完成後會自動開啟報表，並顯示本機網址。JSP 專案會同時產生靜態預覽、渲染截圖與元件位置資料。報表開啟期間，在 CLI 按 Esc 可只關閉 localhost 報表並回到功能選單。
+分析完成後會自動開啟報表，並顯示本機網址。JSP／HTML 畫面會同時產生重建預覽、渲染截圖、所有元素位置與去重 computed style，保留條件原文、動態運算式及最多 320px 的內嵌縮圖。預覽會標示「示意畫面:動態資料為範例值」及超量診斷。報表開啟期間，在 CLI 按 Esc 可只關閉 localhost 報表並回到功能選單。
 
 ### 開啟報表
 
@@ -225,7 +225,7 @@ AI 應以 `REMOVE` 作為可移除範圍、以 `KEEP` 作為必須保留範圍�
 <分析結果根目錄>/<專案名稱>/
 ├── application-graph.json       # 靜態分析出的標準 Application Graph
 ├── prototype-model.json         # 原型畫面與元件基準資料
-├── preview-model.json           # 預覽畫面與可見元件的統一資料
+├── preview-model.json           # 預覽畫面、全部元素與去重樣式的統一資料
 ├── edit-overlay.json            # 使用者確認與編輯決策
 ├── review-result.json           # 匯出給 AI 的確認結果
 ├── report/
@@ -321,3 +321,13 @@ WP5 的 WAR context path 可在 `~/.screentrace/config.json` 加入 `contextPath
 ### WP5 schema 與 context
 
 新分析的 Struts／Spring／混合圖一律 schema 2.2，嚴格驗證來源證據。URL 配對與明確 context 候選保留全部歧義；API 契約與 SERVER 規則附來源。core 舊版 API 與舊報表／JSON 匯出僅歷史相容，列出證據限制；移除義務見 [ADR 0015](docs/adr/0015-schema-two-production-and-historical-compatibility.md)、[ADR 0016](docs/adr/0016-historical-report-entries-and-schema-retirement.md)。WP5 完整測試與 CI 見 [回報](docs/reports/WP5.md)。
+
+### WP6 靜態重建預覽
+
+正式 CLI 使用 schema 2.2 的完整預覽模式；獨立執行：
+
+```bash
+node screentrace-capture/capture-static-jsp.mjs <target-project> <analysis-directory> --preview-v2
+```
+
+每畫面的警告上限可用 `--style-element-limit=50000`、`--style-byte-limit=16777216` 調整；超量產生診斷，完整元素／樣式保留。安全路徑、來源檔大小與截圖硬限制仍生效，失敗明確標記。預設舊 capture 入口僅供將於 WP7 移除的歷史流程；不執行目標 JSP、Java 或 JavaScript。契約與限制見 [ADR 0018](docs/adr/0018-complete-reconstructed-preview.md)。
