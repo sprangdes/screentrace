@@ -5,7 +5,6 @@ import io.screentrace.adapter.struts.StrutsProjectAnalyzer;
 import io.screentrace.core.ApplicationGraph;
 import io.screentrace.core.ApplicationGraphMerger;
 import io.screentrace.report.SingleHtmlAnalysisWriter;
-import io.screentrace.report.ReviewResultGenerator;
 import io.screentrace.scanner.ProjectScanner;
 import io.screentrace.scanner.SafeProjectFiles;
 import java.awt.Desktop;
@@ -16,7 +15,7 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
-/** Interactive entry point plus scriptable analyze, report, export, and config commands. */
+/** Interactive entry point plus scriptable analyze, report, and config commands. */
 public final class ScreenTraceCli {
   private static final Logger LOGGER = Logger.getLogger(ScreenTraceCli.class.getName());
 
@@ -44,7 +43,6 @@ public final class ScreenTraceCli {
         openReport(result.report());
       }
       else if (command.action() == Action.REPORT) openReport(new SingleHtmlAnalysisWriter().generate(project.analysisDirectory()).path());
-      else logExport(export(project));
     }
   }
 
@@ -64,10 +62,6 @@ public final class ScreenTraceCli {
       try {
         project = selectProject(console, catalog, projects, null);
       } catch (InteractiveConsole.SelectionCancelledException ignored) {
-        continue;
-      }
-      if (action == Action.EXPORT) {
-        console.showExportComplete(export(project));
         continue;
       }
       Path report;
@@ -113,8 +107,8 @@ public final class ScreenTraceCli {
   }
 
   private static Action chooseCommand(InteractiveConsole console) throws IOException {
-    return console.select("請選擇功能", List.of(Action.ANALYZE, Action.REPORT, Action.EXPORT, Action.EXIT),
-        Action::label, 'q', "q / Esc 結束", 3);
+    return console.select("請選擇功能", List.of(Action.ANALYZE, Action.REPORT, Action.EXIT),
+        Action::label, 'q', "q / Esc 結束", 2);
   }
 
   private static ProjectCatalog.Project selectProject(InteractiveConsole console, ProjectCatalog catalog,
@@ -180,16 +174,6 @@ public final class ScreenTraceCli {
     } else if (process.exitValue() != 0) LOGGER.warning("無法建立 JSP 靜態預覽；未取得預覽的畫面將明確標記。");
   }
 
-  private static Path export(ProjectCatalog.Project project) throws IOException {
-    Path destination = project.analysisDirectory().resolve("review-result.json");
-    new ReviewResultGenerator().write(project.analysisDirectory(), destination);
-    return destination;
-  }
-
-  private static void logExport(Path destination) {
-    LOGGER.info(() -> "確認功能結果已匯出：\n  " + destination);
-  }
-
   private static Path captureTool(String name) throws IOException {
     for (Path root = Path.of("").toAbsolutePath(); root != null; root = root.getParent()) {
       Path tool = root.resolve("screentrace-capture").resolve(name);
@@ -236,7 +220,7 @@ public final class ScreenTraceCli {
     }
 
     private static IllegalArgumentException usage() {
-      return new IllegalArgumentException("Usage: screentrace [analyze|report|export] [project-name] | screentrace config");
+      return new IllegalArgumentException("Usage: screentrace [analyze|report] [project-name] | screentrace config");
     }
   }
 
@@ -247,7 +231,7 @@ public final class ScreenTraceCli {
 
   private enum Action {
     INTERACTIVE(null, null), ANALYZE("analyze", "分析專案"), REPORT("report", "開啟報表"),
-    EXPORT("export", "匯出確認結果"), EXIT(null, "結束 ScreenTrace"), CONFIG("config", "設定");
+    EXIT(null, "結束 ScreenTrace"), CONFIG("config", "設定");
 
     private final String command;
     private final String label;

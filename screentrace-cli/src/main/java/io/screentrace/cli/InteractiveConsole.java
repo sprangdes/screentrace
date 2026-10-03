@@ -115,10 +115,6 @@ final class InteractiveConsole implements AutoCloseable {
     showCompletionPanel("分析完成", details);
   }
 
-  void showExportComplete(Path destination) {
-    showCompletionPanel("確認功能結果已匯出", List.of("輸出：" + destination));
-  }
-
   private String read(String prompt, Path defaultValue) {
     String value = lines.readLine(prompt + " [" + defaultValue + "]：").trim();
     return value.isEmpty() ? defaultValue.toString() : value;

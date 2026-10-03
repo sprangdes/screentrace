@@ -18,9 +18,7 @@ public final class SingleHtmlAnalysisWriter {
     Files.createDirectories(output);
     write(output, "application-graph.json", graph);
     write(output, "prototype-model.json", new PrototypeModelGenerator().generate(graph));
-    // Historical CLI JSON export needs this fixture until its WP8 retirement; viewer decisions use localStorage only.
-    if (!Files.exists(output.resolve("edit-overlay.json"), LinkOption.NOFOLLOW_LINKS))
-      write(output, "edit-overlay.json", new EditOverlay("1", List.of()));
+
   }
   public SingleHtmlReportGenerator.Output generate(Path output) throws IOException {
     var data = json.readTree(SafeProjectFiles.readUtf8Limited(output, output.resolve("application-graph.json"),

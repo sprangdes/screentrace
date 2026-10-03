@@ -18,13 +18,12 @@ The report uses independent, durable contracts:
 application-graph.json   source-derived relationships and evidence
 prototype-model.json     editable visual baseline projected from the graph
 preview-model.json       static documents and graph-derived component trace data
-edit-overlay.json        user-owned target-state operations
-review-result.json       version-2 review decisions and migration metadata (on export)
+screentrace-review.md    browser-generated reviewed migration instructions and machine state
 ```
 
-`edit-overlay.json` is initialized once and never overwritten by later analyses. Operations (`HIDE`, `UPDATE`, `MOVE`, `ADD`) target stable prototype component IDs.
+The core EditOverlay model remains historical data; new analysis does not initialize it or consume it. Existing user-owned files are preserved. New review decisions use the shared composite-key TypeScript contract.
 
-The historical CLI JSON export uses `ReviewResultGenerator` until WP8; its authenticated browser POST endpoint has been removed. The new viewer stores composite decisions in localStorage and does not consume the historical overlay. The version-2 review contract combines decisions with graph-derived API contracts, direct navigation, source locations, and existing preview metadata. It never re-parses target source or assigns review decisions to APIs. See [Review result contract](REVIEW_RESULT_CONTRACT.md) for schema, provenance, missing-data behavior, and ordering.
+The viewer generates and imports a single review md file locally. Its human section isolates project text in bounded code spans; YAML and the final state appendix preserve complete IDs with strict escaping. A SHA-256 detects state corruption; orphan decisions remain intact. See [Review md contract](REVIEW_MD_CONTRACT.md). The legacy JSON generator and CLI export command have been removed at WP8.
 
 ## 1. Architectural Goal
 
@@ -107,11 +106,11 @@ JavaScript AST 分析模組 screentrace-js 已建立（WP4 增量一）；單一
 
 ### screentrace-report
 
-SingleHtmlAnalysisWriter 彙整嚴格圖／Preview 與靜態封裝；SingleHtmlReportGenerator 只注入資料並驗證建置雜湊。舊 ReportGenerator／PreviewModelGenerator／樣式資源已於 WP7 E 移除。ReviewResultGenerator 歷史 JSON 入口保留至 WP8。
+SingleHtmlAnalysisWriter 彙整嚴格圖／Preview 與靜態封裝；SingleHtmlReportGenerator 只注入資料並驗證建置雜湊。舊 ReportGenerator／PreviewModelGenerator／樣式資源已於 WP7 E 移除。ReviewResultGenerator 歷史 JSON 入口與測試已於 WP8 移除。
 
 ### screentrace-cli
 
-工作區設定、專案選單、分析協調、capture 啟動、本機報表 HTTP server、review overlay 儲存與 JSON 匯出。分析流程目前位於 adapters 和 CLI，沒有獨立 analyzer 模組。
+工作區設定、專案選單、分析協調、capture／pack 啟動與 file:// 單檔開啟；md 下載／匯入由檢視器處理。分析流程目前位於 adapters 和 CLI，沒有獨立 analyzer 模組。
 
 ### screentrace-capture
 
@@ -549,8 +548,12 @@ UrlGraphContribution 對 canonical API／表單請求套用共用引擎，保留
 
 ### WP5 增量四與歷史入口
 
-所有 adapter／CLI 新分析回傳 2.2 並通過 requireAnalysis。合併嚴格 2.2 輸入／輸出均驗證；混合版本與缺證據 2.2 拒絕，兩份 2.1 僅回傳明確標示的歷史圖，不升版。相同行為的證據合併、不同結果不擇一，CLI 再執行共用 URL 配對。ReportGenerator 歷史入口與原測試已於 WP7 E 移除；ReviewResultGenerator 保留 Deprecated 歷史入口至 WP8，2.1 輸出有版本／證據限制；新檢視器／共用 review 模組只接受嚴格 2.2。見 ADR 0015／0016。
+所有 adapter／CLI 新分析回傳 2.2 並通過 requireAnalysis。合併嚴格 2.2 輸入／輸出均驗證；混合版本與缺證據 2.2 拒絕，兩份 2.1 僅回傳明確標示的歷史圖，不升版。相同行為的證據合併、不同結果不擇一，CLI 再執行共用 URL 配對。ReportGenerator 歷史入口與原測試已於 WP7 E 移除；ReviewResultGenerator 與其測試已於 WP8 移除；新檢視器／共用 review／md 模組只接受嚴格 2.2。見 ADR 0015／0016。
 
 ### screentrace-viewer
 
 WP7 新單檔檢視器；TypeScript 7.0.2／esbuild 0.28.2 僅建置期，執行期無 UI 框架。Java SingleHtmlReportGenerator 嚴格 2.2，僅注入資料並驗證建置 script 雜湊。單檔 file:// 不 fetch 任何資源；CSP style-src unsafe-inline 依 v1.5 授權，script-src 僅雜湊，srcdoc sandbox 不含 allow-scripts。E 已移除舊 ReportGenerator 與 server。B 自製 SCC 分層；C srcdoc 及全部樣式／來源面板；D review 共用模組；E API 頁。資料／版本契約見 REVIEW_STATE_CONTRACT，設計見 ADR 0019–0021。
+
+### WP8 本地 review md
+
+shared/review-md 與 strict-graph 供瀏覽器／Node 共用，建置同時提供 ESM artifact。Acorn 8.18.0 MIT 只解析輸出運算式的內容邊界，不執行。md-controls 以 Blob 下載和檔案選擇器讀本地內容；通過最後附錄／已知鍵／決策／大小／SHA 驗證後才原子更新目前狀態。指紋不同／orphan 保留決策並提示，不猜測改名。正文／機器區隔離、格式、排序與容量見 REVIEW_MD_CONTRACT、ADR 0022–0025；元件庫覆寫留 WP9，尚未開始。

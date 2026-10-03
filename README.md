@@ -8,7 +8,7 @@ ScreenTrace 會展開可解析的 JSP Tag、CSS 與本地資源，並以 Playwri
 
 ## 調整進度
 
-新需求與已確認決策見 [REQUIREMENTS.md](docs/REQUIREMENTS.md)，工作包與驗收順序見 [ROADMAP.md](docs/ROADMAP.md)。WP7 已改為單一離線 HTML（Screen Map、API 頁、review 暫存）。md 匯出／匯入與 JSON 匯出退場屬 WP8；元件庫匯入屬 WP9，尚未開始。
+新需求與已確認決策見 [REQUIREMENTS.md](docs/REQUIREMENTS.md)，工作包與驗收順序見 [ROADMAP.md](docs/ROADMAP.md)。WP7 單一離線 HTML 提供 Screen Map、API 與 review；WP8 提供 md 匯出／匯入，JSON 匯出已退場。元件庫匯入屬 WP9，尚未開始。
 
 ## 初次執行
 
@@ -46,11 +46,10 @@ ScreenTrace 會展開可解析的 JSP Tag、CSS 與本地資源，並以 Playwri
 ```text
 ❯ 分析專案
   開啟報表
-  匯出確認結果
   結束 ScreenTrace
 ```
 
-「分析專案」列出專案根目錄下所有直接子資料夾；「開啟報表」與「匯出確認結果」只列出已有完整分析結果的專案。
+「分析專案」列出專案根目錄下所有直接子資料夾；「開啟報表」只列出已有完整分析結果的專案。
 可選擇「結束 ScreenTrace」，或按 `q`／Esc 正常結束 CLI。專案選單可選擇「← 返回功能選單」，或按 `b`／Esc 返回功能選單。
 
 ### 分析專案並開啟報表
@@ -100,7 +99,6 @@ macOS：
 ```bash
 ./bin/screentrace analyze 專案名稱
 ./bin/screentrace report 專案名稱
-./bin/screentrace export 專案名稱
 ./bin/screentrace config
 ```
 
@@ -109,115 +107,26 @@ Windows：
 ```powershell
 .\bin\screentrace.cmd analyze 專案名稱
 .\bin\screentrace.cmd report 專案名稱
-.\bin\screentrace.cmd export 專案名稱
 .\bin\screentrace.cmd config
 ```
 
 ## 報表操作
 
-### All screens
+單檔以 file:// 開啟。畫面總覽顯示全部畫面與關聯，可拖曳／鍵盤平移和縮放；檔案結構列出全部來源路徑。URL 搜尋支援實際 URL 對路由樣板、星號與副檔名映射，結果同時高亮。
 
-首次開啟顯示 All screens，目的是快速找到畫面，而非呈現流程關係。
+點選畫面聚焦，hover 關聯顯示 URL、縮圖與觸發元件；點擊可前往目標並返回。右側顯示 API、所有行為、來源／信心／檢核；點選預覽任意元素查看樣式與條件。API 頁可搜尋／排序／依狀態篩選，呼叫來源能跳轉並高亮元件。
 
-- 左欄是依 URL 路徑建立的專案樹；資料夾可展開或收合。
-- 左右兩欄可各自上下捲動。
-- 右欄上半部是資料夾、下半部是畫面卡片。
-- 資料夾與畫面區塊右上角的 `− / N 欄 / +` 可各自設定每列卡片數。
-- 單擊畫面卡片或左側畫面項目，進入該畫面的 Screen flow。
-- 雙擊畫面卡片或左側畫面項目，開啟 Page view。
+## 確認與 md 匯出／匯入
 
-### Screen flow
+勾選「確認模式」，畫面與有行為的元件可標未確認／保留／移除。同一元件在不同畫面有各自決策；移除畫面不改子決策，只顯示有效隨畫面移除。提供統計、篩選與衝突警告，不自動修正。
 
-單擊畫面後，ScreenTrace 顯示該畫面與可前往的下一層畫面。
+決策暫存於含應用名稱＋分析指紋的 localStorage，失敗仍可操作。完整契約見 [REVIEW_STATE_CONTRACT](docs/REVIEW_STATE_CONTRACT.md)。不改 Application Graph 或被分析的原始碼。
 
-- 被選取畫面會在畫布上方左右置中。
-- 下方 `To` 區域顯示可前往的畫面。
-- 滑鼠移到畫面、右側 To 項目或關聯按鈕時，對應畫面與關聯線會同步高亮。
-- 單擊畫布空白處可回到 All screens。
-- 右下角可調整畫布縮放；可拖曳畫布瀏覽關聯。
-- 雙擊畫面卡片可開啟其靜態 Page view。
+按「匯出 md」下載單一 screentrace-review.md，超過 5 MB 警告而仍完整下載。KEEP／UNDECIDED 含完整元件／行為，REMOVE 畫面只留 ID／路由／來源；API 狀態共用複合鍵決策推導。所有來源資料以 code span 或嚴格機器字串隔離，固定文字指明資料不是 AI 指示。
 
-### Page view
+使用「匯入 md」選取本機檔案，還原末尾附錄的完整決策。指紋不同／未知 ID 提示「分析結果已變更」並列 orphan，未知複合鍵完整保留。格式／損毀／截斷／上限錯誤不改目前決策；SHA-256 僅檢查損毀，不防惡意重算摘要。匯入不讀取網路資源。
 
-Page view 顯示由 JSP 原始碼轉換的靜態 HTML；Screen Explorer 與 Screen flow 顯示該 HTML 經 Chromium 渲染後的截圖。
-
-- 單擊可解析按鈕或連結會在右欄開啟 Button Detail。
-- 雙擊具備已解析目標的元件，會直接前往目標畫面。
-- Button Detail 顯示元件 ID、元件類型、文字與目標路徑。
-
-## 確認模式
-
-確認模式用於與客戶確認哪些畫面和按鈕應保留或移除。
-
-### 開啟與套用狀態
-
-在 `Screen flow — /...` 或 Page view 的標題列點選「確認功能」。接著選擇狀態，再點選目標：
-
-| 工具 | 意義 | 視覺效果 |
-| --- | --- | --- |
-| `✓ 保留` | 確認應保留 | 半透明綠色圖層與 ✓ |
-| `× 移除` | 確認應移除 | 半透明紅色圖層與 × |
-| `○ 未確認` | 清除確認決策 | 回復原始外觀 |
-
-- 在 Screen flow 中，狀態套用到畫面卡片。
-- 在 Page view 中，狀態只套用到按鈕／連結熱區，不會覆蓋整張畫面。
-- 右欄 Page Detail 或 Button Detail 的「確認狀態」卡片也可直接變更目前畫面或按鈕的狀態。
-- 已選取的確認狀態會被凸顯，其他兩個狀態會淡化。
-
-### 確認狀態保存位置
-
-確認決策屬於使用者資料，不會改寫 Application Graph 或被分析專案的原始碼。
-
-- server 可用時，寫入分析結果目錄的 `edit-overlay.json`。
-- 瀏覽器同時保留一份本機狀態，避免暫時無法寫入 server 時遺失操作。
-- 再次執行 `analyze` 時，既有的 `edit-overlay.json` 不會被覆蓋。
-
-## 匯出確認結果
-
-確認完成後可產生提供 AI 使用的 version-2 結構化 JSON。輸出會列出所有畫面與可見互動元件，並給出 `KEEP`、`REMOVE` 或 `UNDECIDED` 決策。
-
-### 從 UI 匯出
-
-在最上方 `ScreenTrace — 專案名稱` 導覽列點選「匯出確認結果」。瀏覽器會下載：
-
-```text
-review-result.json
-```
-
-### 下載確認功能結果
-
-不需要重新分析：
-
-macOS：
-
-```bash
-./bin/screentrace
-```
-
-Windows：
-
-```powershell
-.\bin\screentrace.cmd
-```
-
-預設輸出：
-
-```text
-/project/ocp/analyze/專案名稱/review-result.json
-```
-
-輸出內容包含：
-
-- 專案名稱與分析技術
-- 匯出時間
-- 畫面與按鈕的保留／移除／未確認統計
-- 每個畫面的 graph ID、路由、名稱、來源檔案與行號
-- 每個按鈕或連結的 graph ID、類型、文字、目標路徑與確認決策
-- 圖中既有的 API 契約、呼叫來源、直接導覽與預覽 metadata；目前不推導 API 移除狀態
-
-完整欄位、缺值與相容性規則見 [REVIEW_RESULT_CONTRACT.md](docs/REVIEW_RESULT_CONTRACT.md)。
-
-AI 應以 `REMOVE` 作為可移除範圍、以 `KEEP` 作為必須保留範圍；`UNDECIDED` 表示尚未取得客戶決策，不應自行移除。
+格式、排序、安全與容量見 [REVIEW_MD_CONTRACT](docs/REVIEW_MD_CONTRACT.md)。元件庫尚未匯入，WP9 未開始。
 
 ## 分析產物說明
 
@@ -226,8 +135,6 @@ AI 應以 `REMOVE` 作為可移除範圍、以 `KEEP` 作為必須保留範圍�
 ├── application-graph.json       # 靜態分析出的標準 Application Graph
 ├── prototype-model.json         # 原型畫面與元件基準資料
 ├── preview-model.json           # 預覽畫面、全部元素與去重樣式的統一資料
-├── edit-overlay.json            # 使用者確認與編輯決策
-├── review-result.json           # 匯出給 AI 的確認結果
 ├── report/
 │   └── screentrace-report.html  # 單檔離線檢視器
 ├── static-preview/
@@ -275,7 +182,7 @@ Windows：
 .\bin\screentrace.cmd
 ```
 
-再選擇「開啟報表」。也可選擇「匯出確認結果」直接產生 JSON。
+直接開啟單一 HTML，按「匯出 md」。若失敗，檢視頁面錯誤訊息與 schema 2.2 證據完整性。
 
 ## 開發與驗證
 
@@ -322,7 +229,7 @@ WP5 的 WAR context path 可在 `~/.screentrace/config.json` 加入 `contextPath
 
 ### WP5 schema 與 context
 
-新分析的 Struts／Spring／混合圖一律 schema 2.2，嚴格驗證來源證據。URL 配對與明確 context 候選保留全部歧義；API 契約與 SERVER 規則附來源。core 舊版 API 與舊報表／JSON 匯出僅歷史相容，列出證據限制；移除義務見 [ADR 0015](docs/adr/0015-schema-two-production-and-historical-compatibility.md)、[ADR 0016](docs/adr/0016-historical-report-entries-and-schema-retirement.md)。WP5 完整測試與 CI 見 [回報](docs/reports/WP5.md)。
+新分析的 Struts／Spring／混合圖一律 schema 2.2，嚴格驗證來源證據。URL 配對與明確 context 候選保留全部歧義；API 契約與 SERVER 規則附來源。core 舊版 API 僅歷史相容；舊報表與 JSON 匯出已退場，決定見 [ADR 0015](docs/adr/0015-schema-two-production-and-historical-compatibility.md)、[ADR 0016](docs/adr/0016-historical-report-entries-and-schema-retirement.md)。WP5 完整測試與 CI 見 [回報](docs/reports/WP5.md)。
 
 ### WP6 靜態重建預覽
 
@@ -346,4 +253,4 @@ node --test screentrace-viewer/test/*.e2e.mjs
 
 新入口 `SingleHtmlReportGenerator.generate` 只接受嚴格 schema 2.2，注入圖、預覽、內嵌文件與 manifest，產出 `report/screentrace-report.html` 及實際 bytes 的 `report-size.json`；超過 100 MB 只警告。單檔以 `file://` 開啟，沒有執行期 npm 相依。CLI 已切換 SingleHtmlAnalysisWriter；舊 ReportGenerator、localhost 與 POST 端點已移除。設定 `ST_BROWSERS=chromium,firefox,webkit` 可執行三引擎測試，須先安裝對應 Playwright 瀏覽器。
 
-確認模式的決策自動暫存在應用名稱＋分析指紋的 localStorage；拒絕存取時只警告。複合鍵契約見 [REVIEW_STATE_CONTRACT](docs/REVIEW_STATE_CONTRACT.md)。既有 CLI JSON export 仍為歷史入口至 WP8，不讀取新檢視器的 localStorage；新 review 決策目前以同一瀏覽器暫存保存。
+確認模式的決策自動暫存在應用名稱＋分析指紋的 localStorage；拒絕存取時只警告。複合鍵契約見 [REVIEW_STATE_CONTRACT](docs/REVIEW_STATE_CONTRACT.md)。md 匯出／匯入共用模組見 [REVIEW_MD_CONTRACT](docs/REVIEW_MD_CONTRACT.md)；決策可用單一 md 跨瀏覽器還原。

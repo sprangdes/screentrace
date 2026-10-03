@@ -18,4 +18,12 @@ c70e7c6：ProductionSchemaTest 保留混合分析原斷言，增加實際 applic
 
 本機 Chromium／WebKit 全套 22 E2E（含新 md 7 項）通過；三引擎於遠端為全套 26 E2E（新 md 10 項）。逐引擎標記→匯出→清除 localStorage→匯入→再匯出，generated_at 外位元組相同；未知 ID 保留、損毀拒絕、實際 >5 MB 完整下載與警告通過。200 Java、22 unit 通過；既有斷言未修改。B 首輪 f18eae3 [遠端全綠](https://github.com/sprangdes/screentrace/actions/runs/37116287520)；C／WP9 未開始。
 
-B 邊界補足：新增字串／regex 內的 function／分號與物件方法／模板插值函式本體反例，先失敗。改用 Acorn 8.18.0 MIT（ADR 0024，新增釘選 lock）解析 AST、迭代檢查，不執行目標文字；保持允許的文字，省略真正函式／敘述式。24 unit、200 Java、22 Chromium／WebKit E2E、npm audit 0 通過；首次渲染 160.6 ms，縮放中位數 <1 ms。本補足仍屬 B，最終 gate 待推送，通過後才進 C。
+B 邊界補足：新增字串／regex 內的 function／分號與物件方法／模板插值函式本體反例，先失敗。改用 Acorn 8.18.0 MIT（ADR 0024，新增釘選 lock）解析 AST、迭代檢查，不執行目標文字；保持允許的文字，省略真正函式／敘述式。24 unit、200 Java、22 Chromium／WebKit E2E、npm audit 0 通過；首次渲染 160.6 ms，縮放中位數 <1 ms。B 最終 8ea190d [遠端全綠](https://github.com/sprangdes/screentrace/actions/runs/37116717919)，含 Acorn npm audit／Dependency-Check 與三引擎往返；gate 後才進 C。
+
+## C 移除舊碼
+
+新增 3 項 Java 退場測試先失敗後實作。移除 ReviewResultGenerator／13 項原測試、CLI export／互動選項／helper、舊契約與範例；停止初始化只供舊入口的 overlay，不刪使用者已有檔案。StandaloneViewerTest 只移除 obsolete export 尾段、準確改名；新 schema／HTML／CSP 及其他長期分析斷言全保留（ADR 0025）。README／ARCHITECTURE／ROADMAP 更新。最終 gate 待推送；未進 WP9。
+
+C 補足：元件存在的 CONFIRMED 不可掩蓋其 AMBIGUOUS 綁定證據；新增反例先失敗，§8 列 aggregate 與所有證據狀態。原兩份 golden、原斷言完全不變。clean verify 190 Java；單元測試 25 項通過。
+
+C 最終本機結果：190 Java、25 unit、22 Chromium／WebKit E2E 全通過；首次渲染 206.9 ms、縮放中位數 1 ms。遠端 gate 通過後本輪停止，未啟動 WP9。
