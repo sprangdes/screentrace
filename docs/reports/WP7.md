@@ -23,3 +23,5 @@ B gate：`68e260b`，[遠端全綠](https://github.com/sprangdes/screentrace/act
 新增 details／relations／preview／usage TypeScript 模組；全部目標文字使用 textContent。畫面聚焦／關聯 tooltip（10 項＋其餘數量）／返回、API 與各類行為詳情、預覽任意元素樣式／條件／來源／候選，呼叫來源保留載入、共用元件、未綁定與回呼。新增 pack-preview 工具：靜態 CSS import、圖片／字型雜湊字典、外部／越界資源停用及診斷，E 切換 CLI 時串接。
 
 先失敗：封裝模組缺少；右側缺載入時資訊。最終 viewer unit 5 tests、Chromium file:// E2E 5 tests、封裝 3 tests、Java 注入 3 tests 通過；沒有修改既有測試斷言。新測試中的繁體「畫」文案拼字校正，測試意義與行為未變。安全 fixture CSS／圖片內嵌成功，對外與相對請求 0、腳本探針未觸發。首次渲染 130.1 ms，20 次縮放中位數 1 ms（本機 Chromium）。設計見 [ADR 0020](../adr/0020-viewer-projection-and-preview-pack.md)。無新增相依或未決需求。
+
+C 補足：純 MARKUP 檢核缺集中畫面列表的新 E2E 先逾時失敗；面板合併同畫面元件、載入／元件 API 的檢核規則且按 ID 去重後，6 項 E2E 全通過。原本成功斷言全數保留。
