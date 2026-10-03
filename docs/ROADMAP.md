@@ -38,3 +38,5 @@
 
 - WP7 驗收：移除 Deprecated ReportGenerator 歷史入口及原測試，隨新單一 HTML 實作取代；新資料注入只接受嚴格 2.2。
 - WP8 驗收：移除 Deprecated ReviewResultGenerator 歷史 JSON 入口及原測試，隨 md 匯出取代；新匯出及共用模組只接受嚴格 2.2。
+
+- WP7 B：單檔畫布／決定性 SCC 分層、檔案樹、URL 搜尋與平移縮放已實作；逐增量 CI gate 見 docs/reports/WP7.md。
