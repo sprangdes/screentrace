@@ -589,3 +589,5 @@ R3 WP20：overview.ts 在 viewer 依相同連結目的／名稱／屬性跨至�
 R4 UI1：shell-ui.ts 只建立本地 SVG 圖示與外殼控制元件，main.ts 組織頂部導覽／左側畫面脈絡／右側空狀態；診斷與元件庫原內容移至本地 dialog。CSS 變數提供系統字型與 AA 色彩，不載入外部資源。md-controls 只更換檔案選擇的呈現入口，共用格式／決策／API 模組不變；見 ADR 0040。
 
 R5 WP23：總覽改由流程邊（不含全站導覽與自我迴圈）做 sorted DFS 去回邊、DAG 最長路徑分層與重心排序；無流程關聯者獨立置右欄。保留卡片間走廊路由與聚焦版面，全站導覽只疊加較淡的線；>150 畫面或 >600 關聯使用原格狀保護。見 ADR 0049。單一 HTML 的 application.path 不注入，但指紋仍來自完整 canonical graph，見 ADR 0048。
+
+R6 WP24–WP25：capture 縮圖為決定性的640px PNG，reader保留格式／範圍驗證。總覽卡片80%為縮圖，擴大既有走廊格距。prototype.ts 以原單一 sandbox iframe 顯示完整靜態文件，依原寬度縮放及內容高度撐高；FLIP使用父頁WAAPI300ms，reduced-motion直接切換。prototype-history.ts只在記憶體保存畫面與捲動位置，canvas保留平移縮放；流程視圖為明確切換入口。所有預覽文字仍經DOM及textContent顯示，inert-document先中和會預載的屬性再由DOMParser解析，offline-css沿用本專案capture的資源token掃描，僅允許嵌入資源、遞迴隔離data CSS，另有iframe CSP。父頁攔截點擊／送出與鍵盤，目標腳本移除且sandbox無allow-scripts；WP25僅提示，不執行WP26模擬。canonical graph、review/md/API規則與指紋不變；見ADR0050／0051。

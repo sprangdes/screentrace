@@ -53,3 +53,8 @@
 - capture 相容清理：packDocuments 舊 inline CSS 入口僅供 C 增量歷史 fixture；正式 CLI 使用 packStandaloneDocuments。依 OQ-006 保留原斷言，後續與歷史 capture 路徑一併移除（ADR 0021）。
 
 - OQ-015：WP21 已補足靜態 tag body 名稱（ADR 0045）；R4 範圍內缺少確切 graphComponentId 對應的 tag-body 導覽元件暫用圖中 title；UI3 此項未完成，另案補強分析／capture 的可證明對應後再採可見文字，不依 DOM 順序或文字相似度猜配。
+
+## R6 停止點
+
+- WP24／WP25：縮圖主體卡片、640px PNG、完整靜態頁面原型檢視器與記憶體歷史；完成驗證後等待需求方驗收外觀與動畫，見 reports/R6.md、ADR0050／0051。
+- WP26：尚未開始；頁面內連結／表單只攔截並提示，不執行模擬導覽、彈窗或API。
