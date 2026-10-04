@@ -91,3 +91,12 @@
 - 可選方案 B：機器附錄只保存目前 manifest 的有效 component_overrides；舊覆寫僅保留於瀏覽器暫存並在介面／md 正文列 orphan，明確警告 md 不含舊覆寫的還原資料。重新匯入該 md 不還原這些 orphan。
 - 影響範圍：增量三的覆寫／localStorage orphan 資料模型，以及增量四的 format_version 2 已知欄位、SHA／匯出匯入往返、REVIEW_STATE_CONTRACT／REVIEW_MD_CONTRACT。WP9 增量一／二已完成並遠端全綠，不涉及 WP10。
 - 狀態：已處理（2026-10-03）；採 A，v2 增 orphan_component_overrides，保存 ID／完整小寫來源摘要；有效／orphan 可逆重新分區（含 A/B/A），未知圖 ID 保留、foreign orphan 不套用也不改 API／涵蓋率，正文僅 §7 數量分類。v1 拒絕 v2 欄位；同一模組服務 localStorage／md，SHA 覆蓋新欄位。見 ADR 0029、REVIEW_STATE_CONTRACT／REVIEW_MD_CONTRACT。
+
+## OQ-011 — WP12 歧義證據與「需求方畫面不得顯示內部 ID」衝突
+
+- 情境：R2 §0 要求需求方可見畫面不得出現內部 ID；WP12 要求 `evidence` 只在預設收合的「技術細節」中顯示。既有 `details.e2e.mjs` 的「ambiguous behavior details retain every candidate and evidence instead of selecting one」斷言不可修改，點入歧義行為後要求右欄文字包含 `全部候選：ep、unused`。在技術細節保持收合且不顯示 ID 時，此斷言失敗；顯示原文則違反需求方畫面限制。
+- 可選方案 A：保留既有斷言；只在使用者主動選取未解析／歧義項目後，自動展開該項目的技術細節，先以可讀資訊顯示全部候選，再顯示證據；沒有可讀資訊時才顯示原始 ID。
+- 可選方案 B：嚴格遵守任何需求方可見狀態都不顯示內部 ID，技術細節維持收合；將既有斷言改為驗證中文歧義說明與全部候選數量。此方案違反現有「既有斷言不得修改」規則，需明確授權例外並記錄原因。
+- 影響範圍：WP12 行為詳情與技術細節呈現、既有 viewer E2E 斷言；WP13–WP16 暫停，未開始。
+- 狀態：已決定（2026-10-04）；需求方採方案 A，WP12 可繼續。
+- 決定：預設未選取任何項目時，需求方畫面不得顯示內部 ID、JSON 或英文列舉。只有使用者主動選取 UNRESOLVED／AMBIGUOUS 項目時，才自動展開該項目的技術細節並顯示全部候選與證據；先顯示候選名稱、URL、來源檔與行號，無可讀資訊時才顯示原始 ID。此例外不擴及其他畫面狀態。新增預設右欄不含候選 ID 的測試。
