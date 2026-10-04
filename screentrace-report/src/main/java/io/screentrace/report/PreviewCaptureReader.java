@@ -112,8 +112,8 @@ final class PreviewCaptureReader {
       byte[] signature = {(byte)137,80,78,71,13,10,26,10};
       if (png.length < 24 || !Arrays.equals(signature,Arrays.copyOf(png,8))) throw new IllegalArgumentException();
       int width = ByteBuffer.wrap(png,16,4).getInt(), height = ByteBuffer.wrap(png,20,4).getInt();
-      if (width < 1 || width > 320 || height < 1) throw new IllegalArgumentException();
-    } catch (IllegalArgumentException e) { throw new IOException("Invalid preview thumbnail (PNG, width 1..320 required)",e); }
+      if (width < 1 || width > 640 || height < 1) throw new IllegalArgumentException();
+    } catch (IllegalArgumentException e) { throw new IOException("Invalid preview thumbnail (PNG, width 1..640 required)",e); }
   }
   private static String optional(JsonNode node, String key) { return node.hasNonNull(key) ? node.path(key).asText() : null; }
   private static List<String> strings(JsonNode node) { var result = new ArrayList<String>(); node.forEach(n -> result.add(n.asText())); return result; }

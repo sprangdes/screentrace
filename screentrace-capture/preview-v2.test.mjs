@@ -30,7 +30,7 @@ test('captures every element with stable paths, all computed deltas and lossless
  browser=await chromium.launch();const context=await browser.newContext({viewport:{width:1440,height:900},javaScriptEnabled:false});const page=await context.newPage();await page.goto(pathToFileURL(path.join(f.output,'static-preview/screen.html')).href);
  const originals=await page.locator('html,body,body *').evaluateAll(nodes=>nodes.filter(n=>!['SCRIPT','STYLE'].includes(n.tagName)).map(n=>Object.fromEntries([...getComputedStyle(n)].sort().map(k=>[k,getComputedStyle(n).getPropertyValue(k)]))));
  assert.equal(originals.length,screen.elements.length);for(let i=0;i<originals.length;i++){const e=screen.elements[i];assert.deepEqual({...capture.defaults[e.defaultId],...capture.styles[e.styleId]},originals[i]);for(const [k,v] of Object.entries(capture.styles[e.styleId]))assert.notEqual(v,capture.defaults[e.defaultId][k]);}
- const png=Buffer.from(screen.thumbnail.split(',')[1],'base64');assert.match(screen.thumbnail,/^data:image\/png;base64,/);assert.ok(png.readUInt32BE(16)<=320);assert.ok(png.readUInt32BE(20)>0);
+ const png=Buffer.from(screen.thumbnail.split(',')[1],'base64');assert.match(screen.thumbnail,/^data:image\/png;base64,/);assert.equal(png.readUInt32BE(16),640);assert.ok(png.readUInt32BE(20)>0);
  const again=await run(f);assert.equal(again.status,0,again.error);assert.deepEqual(await read(f),capture);
  }finally{await browser?.close();await rm(f.root,{recursive:true,force:true});}
 });
