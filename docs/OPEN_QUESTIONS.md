@@ -100,3 +100,11 @@
 - 影響範圍：WP12 行為詳情與技術細節呈現、既有 viewer E2E 斷言；WP13–WP16 暫停，未開始。
 - 狀態：已決定（2026-10-04）；需求方採方案 A，WP12 可繼續。
 - 決定：預設未選取任何項目時，需求方畫面不得顯示內部 ID、JSON 或英文列舉。只有使用者主動選取 UNRESOLVED／AMBIGUOUS 項目時，才自動展開該項目的技術細節並顯示全部候選與證據；先顯示候選名稱、URL、來源檔與行號，無可讀資訊時才顯示原始 ID。此例外不擴及其他畫面狀態。新增預設右欄不含候選 ID 的測試。
+
+## OQ-012 — WP17 c:set 頁面變數解析與既有邊界斷言衝突
+
+- 情境：R3 WP17.1 明確要求解析同檔、先宣告的 page-scope `<c:set var="url" value="/a"/>`，但既有 `UrlVariableBoundaryTest.cSetCannotDefineOrReassignAnEligibleVariable` 固定斷言 `<c:set var='url' value='/a'/><a href='${url}'>Items</a>` 必須保持 UNRESOLVED。新合成 fixture `fixtures/r3/wp17/cset-url.jsp` 與 `Wp17PageVariableTest` 依 WP17 要求驗證應解析的情境；測試目前按既有行為失敗，實際 target 為 `${pageUrl}`。
+- 可選方案 A：保留舊斷言，將 `c:set` 維持 UNRESOLVED，放棄 WP17.1 中 c:set 定義解析；其餘 WP17 項目不受影響。
+- 可選方案 B：授權修改既有斷言與其預期，讓符合 page-scope、先宣告、同檔字面值的 c:set 變數解析；重賦值仍保持 UNRESOLVED。
+- 影響範圍：WP17 的 c:set 變數解析、既有測試與新合成測試；不涉及 graph schema。
+- 狀態：待決。依 R3 §0.3，在收到決定前不實作 c:set 解析。
