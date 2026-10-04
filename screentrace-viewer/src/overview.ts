@@ -21,8 +21,15 @@ export function overviewLayout(index:Index):Map<string,Position>{
  const columns=Math.max(1,index.screens.length<=12?Math.min(3,Math.ceil(Math.sqrt(index.screens.length))):Math.ceil(Math.sqrt(index.screens.length))),positions=new Map<string,Position>();
  index.screens.forEach((screen,i)=>positions.set(screen.id,{x:60+(i%columns)*340,y:60+Math.floor(i/columns)*240}));return positions;
 }
-/** Orthogonal routes only use row/column gutters; arrow stops at the destination's left edge. */
+/** Adjacent cards use their nearest ports; longer routes stay in row/column gutters.
+ * Each path is simple (no retraced segment), including self loops. Reverse flows use
+ * separate ports so their arrows remain independently readable. */
 export function overviewRoute(positions:Map<string,Position>,r:Relation,ordinal:number):Position[]{
- const a=positions.get(r.from)!,b=positions.get(r.to)!,lane=(ordinal%8)*2,x=a.x+280+lane,y=a.y+216+lane,entry=b.x-30-lane;
- return [{x:a.x+250,y:a.y+72},{x,y:a.y+72},{x,y},{x:entry,y},{x:entry,y:b.y+72},{x:b.x,y:b.y+72}];
+ const a=positions.get(r.from)!,b=positions.get(r.to)!,reverse=r.from>r.to,offset=reverse?12:0,lane=(ordinal%4)*12;
+ if(r.from===r.to)return [{x:a.x+250,y:a.y+50},{x:a.x+280+lane,y:a.y+50},{x:a.x+280+lane,y:a.y+180+lane},{x:a.x+180,y:a.y+180+lane},{x:a.x+180,y:a.y+145}];
+ if(a.y===b.y&&Math.abs(a.x-b.x)===340){const right=b.x>a.x;return [{x:a.x+(right?250:0),y:a.y+72+offset},{x:b.x+(right?0:250),y:b.y+72+offset}];}
+ if(a.x===b.x&&Math.abs(a.y-b.y)===240){const down=b.y>a.y;return [{x:a.x+125+offset,y:a.y+(down?145:0)},{x:b.x+125+offset,y:b.y+(down?0:145)}];}
+ const down=b.y>=a.y,exitY=a.y+(down?180+lane:-16-lane),entryY=b.y+(down?-16-lane:180+lane),rail=a.x+(reverse?-16-lane:270+lane),port=a.x+125+offset,targetPort=b.x+125+offset;
+ const points=[{x:port,y:a.y+(down?145:0)},{x:port,y:exitY},{x:rail,y:exitY},{x:rail,y:entryY},{x:targetPort,y:entryY},{x:targetPort,y:b.y+(down?0:145)}];
+ return points.filter((p,i)=>!i||p.x!==points[i-1].x||p.y!==points[i-1].y);
 }
