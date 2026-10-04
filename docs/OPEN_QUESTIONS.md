@@ -128,3 +128,11 @@
 - 可選方案 B：保持所有既有斷言，將 WP19 的同名 title／來源路徑與 WP20 收合英文代碼需求取消或修訂為保留舊行為；其他 WP19／WP20 項目維持。
 - 影響範圍：WP19 命名／卡片，WP20 診斷摘要；無 schema 變更，不涉及分析 URL／導向信心。G9／G10 尚未實作，未修改目標專案。
 - 狀態：已決定（2026-10-04）；需求方採受限方案 A。只更新 diagnostics.e2e.mjs 所列三處斷言，其餘既有斷言／fixture／golden／證據與安全測試不動。新斷言須在舊實作證明失敗，新增三種命名測試，ADR 逐處記錄。繼續 WP19 → WP20（含 G9／G10）。
+
+## OQ-015 — R4 UI3 的 tag-body 可見名稱缺少可證明的元件對應
+
+- 情境：PetClinic 唯讀報表實測，menuitem 預覽含 `Home`／`Find owners`，但這些元素的 graphComponentId 為 null、graphComponentCandidates 為空、componentResolution 為 UNRESOLVED；title 已變為範例值 `Title`。圖上的 `home page`／`find owners` 元件僅有 title 與 URL，來源為共用展開位置，tag 呼叫／定義證據不能區分四個導覽元素。viewer 對已有確切 ID 或 preview record 對應的項目已落實可見文字優先；不能以文字相似度、DOM 順序或專案硬編碼把這批項目猜配。
+- 方案 A：維持 R4 的 viewer／模板範圍，這批無法對應的導覽元件暫用圖中 title；明確記錄 UI3 的此項未完成，另立後續分析／capture 補強。
+- 方案 B：授權最小的 analyzer／capture 來源對應補強，保留展開後的可見文字或確切元件對應；先加合成 tag-body 失敗測試，不變更 URL、信心、schema、決策或既有資料／安全斷言，再驗證 PetClinic 真實標籤。
+- 影響範圍：只暫停 UI3 中尚缺確切對應的 tag-body 名稱；UI2 與其餘 UI3／UI4 可驗證的呈現保持，UI4 的 API 主從頁繼續驗證。不得改目標來源。
+- 狀態：待決定（2026-10-04）；依 CODEX_INSTRUCTIONS §0.3，缺少靜態證明且 R4 禁止改分析邏輯，未自行猜配或擴大範圍。

@@ -7,7 +7,7 @@
 
 ## 授權的逐處測試變更
 
-以下各測試中每個 `[data-screen-review]` 操作，舊預期為 selectOption 決策／inputValue；新預期為 `[data-decision]` 按鈕 click／group 的 data-decision。所有 KEEP、REMOVE、UNDECIDED 的期望值與 md 位元組斷言不变。原因是需求方明確要求移除畫面下拉。共用 setDecision 僅執行 hover 與 click，不直接改狀態。
+以下各測試中每個 `[data-screen-review]` 操作，舊預期為 selectOption 決策／inputValue；新預期為 `[data-decision]` 按鈕 click／group 的 data-decision。所有 KEEP、REMOVE、UNDECIDED 的期望值與 md 位元組斷言不變。原因是需求方明確要求移除畫面下拉。共用 setDecision 僅執行 hover 與 click，不直接改狀態。
 
 - `screentrace-viewer/test/api.e2e.mjs` — API page shows three derived states, all caller groups, search/filter/sort and clickable jump/highlight：本段每處 screen-review select 操作／讀值依上述控制項替換；期望的決策值不變。
 - `screentrace-viewer/test/library.e2e.mjs` — ${engine}: library details, KEEP-only composite override and reversible A/B/A：本段每處 screen-review select 操作／讀值依上述控制項替換；期望的決策值不變。

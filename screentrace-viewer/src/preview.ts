@@ -20,4 +20,6 @@ export function previewDocument(payload:Payload,id:string):string {
  return document.documentElement.outerHTML;
 }
 export function elementPath(node:Element):string{const parts:string[]=[];for(let current:Element|null=node;current;current=current.parentElement){const tag=current.localName;let position=1;for(let previous=current.previousElementSibling;previous;previous=previous.previousElementSibling)if(previous.localName===tag&&previous.namespaceURI===current.namespaceURI)position++;parts.unshift(`${tag}:nth-of-type(${position})`);}return parts.join('>');}
-export function previewElement(payload:Payload,id:string,node:Element):ElementRecord|undefined{return payload.preview.elements?.find(e=>e.graphScreenId===id&&e.path===elementPath(node));}
+/** Capture v2's tag[n] and CSS nth-of-type paths identify the same static element. */
+export function previewSelector(path:string):string{return path.split('>').map(part=>part.replace(/^([\w-]+)\[(\d+)\]$/,'$1:nth-of-type($2)')).join('>');}
+export function previewElement(payload:Payload,id:string,node:Element):ElementRecord|undefined{return payload.preview.elements?.find(e=>{if(e.graphScreenId!==id)return false;try{return node.matches(previewSelector(e.path));}catch{return false;}});}
