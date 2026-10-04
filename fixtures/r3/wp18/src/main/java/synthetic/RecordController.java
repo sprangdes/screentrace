@@ -45,4 +45,16 @@ import org.springframework.web.servlet.view.RedirectView;
     Runnable ignored = () -> { String hidden = "redirect:/absent"; };
     return "records/detail";
   }
+  @GetMapping("/aliased") ModelAndView aliased(String name) {
+    ModelAndView result = new ModelAndView("records/detail");
+    ModelAndView alias = result;
+    alias.setViewName(name);
+    return result;
+  }
+  @GetMapping("/same-view") String sameView(boolean first) {
+    if (first) return "records/detail";
+    return "records/detail";
+  }
+  @GetMapping("/partial") String partial(Record record) { return "redirect:/records/prefix" + record.identity(); }
+  @GetMapping("/shadow") String shadow(String FORM) { return FORM; }
 }

@@ -69,4 +69,15 @@ class Wp18ControllerFlowTest {
     assertTrue(graph.behaviors().stream().anyMatch(b->ajax.id().equals(b.triggerId())&&b.type()==BehaviorType.CALL_API));
     assertTrue(graph.relationships().stream().noneMatch(e->e.type()==EdgeType.NAVIGATES_TO&&e.from().equals(ajax.id())));
   }
+  @Test void escapedModelAndViewAliasesPartialSegmentsAndShadowedConstantsAreUnresolved() {
+    for(String method:List.of("aliased","partial","shadow")) {
+      assertTrue(returns(method).isEmpty(),method);
+      assertTrue(graph.diagnostics().stream().anyMatch(d->d.code().equals("SPRING_RETURN_UNRESOLVED")&&d.evidence().stream().anyMatch(e->e.detail()!=null&&e.detail().contains("RecordController."+method))),method);
+    }
+  }
+  @Test void identicalViewBranchesRemainSeparateAndRetainConditionEvidence() {
+    var edges=returns("sameView");assertEquals(2,edges.size());
+    assertEquals(Set.of(55,56),new HashSet<>(edges.stream().map(e->e.source().line()).toList()));
+    assertTrue(edges.stream().anyMatch(e->e.evidence().stream().anyMatch(p->p.detail()!=null&&p.detail().contains("條件=(first)"))));
+  }
 }
