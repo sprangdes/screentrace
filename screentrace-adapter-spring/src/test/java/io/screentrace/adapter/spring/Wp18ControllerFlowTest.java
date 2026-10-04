@@ -80,4 +80,16 @@ class Wp18ControllerFlowTest {
     assertEquals(Set.of(55,56),new HashSet<>(edges.stream().map(e->e.source().line()).toList()));
     assertTrue(edges.stream().anyMatch(e->e.evidence().stream().anyMatch(p->p.detail()!=null&&p.detail().contains("條件=(first)"))));
   }
+  @Test void excessiveRedirectDepthStopsWithoutInventingADestination() throws Exception {
+    Path root=Files.createTempDirectory("wp18-depth"),jsp=root.resolve("src/main/webapp/WEB-INF/jsp/detail.jsp");
+    Files.createDirectories(jsp.getParent());Files.writeString(jsp,"<p>Detail</p>");
+    StringBuilder source=new StringBuilder("import org.springframework.stereotype.Controller; import org.springframework.web.bind.annotation.*; @Controller class ChainController {");
+    for(int i=0;i<12;i++)source.append("@GetMapping(\"/step").append(i).append("\") String step").append(i).append("(){return \"redirect:/step").append(i+1).append("\";}");
+    source.append("@GetMapping(\"/step12\") String step12(){return \"detail\";} }");
+    Files.writeString(root.resolve("ChainController.java"),source);
+    var deep=new SpringMvcAnalyzer().analyze(new ProjectScanner().scan(root));
+    var first=deep.nodes().stream().filter(n->n.type()==NodeType.HANDLER&&"step0".equals(n.attributes().get("method"))).findFirst().orElseThrow();
+    assertTrue(deep.relationships().stream().noneMatch(e->e.from().equals(first.id())&&e.type()==EdgeType.FORWARDS_TO));
+    assertTrue(deep.diagnostics().stream().anyMatch(d->d.code().equals("SPRING_RETURN_UNRESOLVED")&&d.message().contains("深度 10")));
+  }
 }

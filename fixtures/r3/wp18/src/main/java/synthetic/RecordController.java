@@ -42,7 +42,7 @@ import org.springframework.web.servlet.view.RedirectView;
   @GetMapping("/cycle-b") String cycleB() { return "redirect:/cycle-a"; }
   @PostMapping("/bad-forward") String badForward() { return "forward:/records/7"; }
   @GetMapping("/callback") String callback() {
-    Runnable ignored = () -> { String hidden = "redirect:/absent"; };
+    java.util.concurrent.Callable<String> ignored = () -> { return "records/other"; };
     return "records/detail";
   }
   @GetMapping("/aliased") ModelAndView aliased(String name) {
