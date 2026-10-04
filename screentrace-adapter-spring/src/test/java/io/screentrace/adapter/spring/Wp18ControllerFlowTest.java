@@ -92,4 +92,15 @@ class Wp18ControllerFlowTest {
     assertTrue(deep.relationships().stream().noneMatch(e->e.from().equals(first.id())&&e.type()==EdgeType.FORWARDS_TO));
     assertTrue(deep.diagnostics().stream().anyMatch(d->d.code().equals("SPRING_RETURN_UNRESOLVED")&&d.message().contains("深度 10")));
   }
+  @Test void modelAndViewEscapingThroughFieldAssignmentOrConstructorRemainsUnresolved() throws Exception {
+    for(String escape:List.of("stored = mav;", "new Mutator(mav);")) {
+      Path root=Files.createTempDirectory("wp18-escape"),jsp=root.resolve("src/main/webapp/WEB-INF/jsp/detail.jsp");
+      Files.createDirectories(jsp.getParent());Files.writeString(jsp,"<p>Detail</p>");
+      Files.writeString(root.resolve("EscapeController.java"),"import org.springframework.stereotype.Controller; import org.springframework.web.bind.annotation.*; import org.springframework.web.servlet.ModelAndView; @Controller class EscapeController { ModelAndView stored; @GetMapping(\"/escape\") ModelAndView escape(){ ModelAndView mav = new ModelAndView(\"detail\"); "+escape+" return mav; } }");
+      var escaped=new SpringMvcAnalyzer().analyze(new ProjectScanner().scan(root));
+      assertTrue(escaped.relationships().stream().noneMatch(e->e.type()==EdgeType.RENDERS),escape);
+      assertTrue(escaped.diagnostics().stream().anyMatch(d->d.code().equals("SPRING_RETURN_UNRESOLVED")),escape);
+    }
+  }
+
 }
