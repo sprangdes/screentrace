@@ -107,4 +107,5 @@
 - 可選方案 A：保留舊斷言，將 `c:set` 維持 UNRESOLVED，放棄 WP17.1 中 c:set 定義解析；其餘 WP17 項目不受影響。
 - 可選方案 B：授權修改既有斷言與其預期，讓符合 page-scope、先宣告、同檔字面值的 c:set 變數解析；重賦值仍保持 UNRESOLVED。
 - 影響範圍：WP17 的 c:set 變數解析、既有測試與新合成測試；不涉及 graph schema。
-- 狀態：待決。依 R3 §0.3，在收到決定前不實作 c:set 解析。
+- 狀態：已決定（2026-10-04）；需求方採方案 A。
+- 決定：延續 ADR 0005／OQ-002，只支援 `c:url` 與 `spring:url` 的已證明字面 URL 變數；`c:set` 維持 `UNRESOLVED`。R3 WP17.1 中要求解析 `c:set` 的部分取消。新增 `Wp17PageVariableTest` 保留此限制為回歸測試，既有 `UrlVariableBoundaryTest` 斷言不變。
