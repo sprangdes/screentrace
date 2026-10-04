@@ -27,6 +27,7 @@ class Wp17SpringLoopVariableTest {
     assertEquals("${fn:escapeXml(editUrl)}",item.originalExpression());assertEquals(Confidence.CONFIRMED,item.confidence());
     assertEquals("loop-spring-url.jsp",item.definitionEvidence().get(0).source().file());
     assertEquals(2,item.definitionEvidence().get(0).source().line());assertEquals(6,item.source().line());
+    assertTrue(item.definitionEvidence().get(0).detail().contains("OQ-013"));
   }
   @Test void resolvesPureVariableInKnownLoopsIncludingSameLoopConditionalUse() throws Exception {
     for(String loop:List.of("c:forEach","logic:iterate")) {
@@ -61,5 +62,9 @@ class Wp17SpringLoopVariableTest {
     unresolved("<custom:repeat>"+DEFINITION+USE+"</custom:repeat>");
     unresolved("<c:forEach items='${records}'><custom:repeat>"+DEFINITION+USE+"</custom:repeat></c:forEach>");
     unresolved("<c:forEach items='${records}'>"+USE+DEFINITION+"</c:forEach>");
+  }
+  @Test void incompleteOrMismatchedLoopBoundariesCannotProveScope() throws Exception {
+    unresolved("<c:forEach items='${records}'>"+DEFINITION+USE);
+    unresolved("<c:if test='${flag}'><c:forEach items='${records}'>"+DEFINITION+USE+"</c:if></c:forEach>");
   }
 }
