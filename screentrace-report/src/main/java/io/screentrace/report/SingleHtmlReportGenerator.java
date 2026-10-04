@@ -22,7 +22,9 @@ public final class SingleHtmlReportGenerator {
     GraphIntegrityValidator.requireAnalysis(graph);
     String script=resource("viewer.js"),hash=resource("viewer.sha256").trim();
     if(!hash.equals(Base64.getEncoder().encodeToString(digest(script))))throw new IOException("Viewer bundle hash mismatch; rebuild screentrace-viewer");
-    var data=new TreeMap<String,Object>();data.put("graph",graph);data.put("preview",preview);data.put("documents",new TreeMap<>(documents));data.put("manifest",new TreeMap<>(manifest));
+    var data=new TreeMap<String,Object>();var displayGraph = json.valueToTree(graph);
+    ((com.fasterxml.jackson.databind.node.ObjectNode) displayGraph.path("application")).remove("path");
+    data.put("graph",displayGraph);data.put("preview",preview);data.put("documents",new TreeMap<>(documents));data.put("manifest",new TreeMap<>(manifest));
     if(library!=null){ComponentLibrary.validate(json.writeValueAsBytes(library.manifest()));if(!library.sha256().matches("[a-f0-9]{64}"))throw new IllegalArgumentException("manifest_sha256 格式錯誤");data.put("componentLibrary",library);}
     data.put("toolVersion",resource("viewer.version").trim());
     data.put("fingerprint",HexFormat.of().formatHex(digest(json.writeValueAsString(graph))));
