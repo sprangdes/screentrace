@@ -53,7 +53,7 @@ for (const engine of engines) for (const family of families) {
             await page.getByRole('checkbox', {name: '確認模式', exact: true}).check();
             await setDecision(page.locator(`[data-screen-review="${owner}"]`),'KEEP');
             await page.locator(`.screen-card[data-screen="${owner}"]`).click();
-            await page.locator(`[data-component-review="${button.id}"]`).selectOption('KEEP');
+            await setDecision(page.locator(`[data-component-review="${button.id}"]`),'KEEP');
             await page.locator(`[data-library-override="${button.id}"]`).selectOption('sample-button');
             if (engine === 'chromium' && family === 'spring-mvc-jsp') {
                 const dir = path.join(root, 'screentrace-cli/target/wp10-screenshots');
@@ -78,7 +78,7 @@ for (const engine of engines) for (const family of families) {
             await page.locator('[data-md-status]').filter({hasText: '匯入完成'}).waitFor();
             assert.equal(await page.locator(`[data-screen-review="${owner}"]`).getAttribute('data-decision'), 'KEEP');
             await page.locator(`.screen-card[data-screen="${owner}"]`).click();
-            assert.equal(await page.locator(`[data-component-review="${button.id}"]`).inputValue(), 'KEEP');
+            assert.equal(await page.locator(`[data-component-review="${button.id}"]`).getAttribute('data-decision'), 'KEEP');
             assert.equal(await page.locator(`[data-library-override="${button.id}"]`).inputValue(), 'sample-button');
             assert.equal(normalize(await download()), normalize(first));
             assert.equal(await page.evaluate(() => globalThis.wp10Probe), undefined);

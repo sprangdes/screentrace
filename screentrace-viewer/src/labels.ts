@@ -4,8 +4,8 @@ export function kindName(node:Node):string{return kindNames[node.attributes.kind
 export function componentLabel(node:Node,fallback=1):string{
  const a=node.attributes,visible=a.label||a.text||(!['TEXT_INPUT','CHECKBOX','RADIO'].includes(a.kind)?a.value:undefined)||node.name;
  const acceptable=(value?:string)=>value&&value!==node.id&&!/\$\{|#\{|<%/.test(value)&&!['a','button','input','page','open','notempty'].includes(value.trim().toLowerCase());
- for(const value of [visible,a.title,a.name,a.id])if(acceptable(value))return value!.trim();
- return `${kindName(node)}${a.target&&!/\$\{|#\{|<%/.test(a.target)?` ${a.target}`:` ${fallback}`}`;
+ for(const value of [(node as Node&{displayLabel?:string}).displayLabel,visible,a.title,a.name,a.id])if(acceptable(value))return value!.trim();
+ return `${kindName(node)} ${fallback}`;
 }
 export function isAction(index:Index,node:Node):boolean{
  if(['TEXT_INPUT','TEXTAREA','CHECKBOX','RADIO','FILE_INPUT','TABLE','FORM'].includes(node.attributes.kind))return false;
