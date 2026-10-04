@@ -1,0 +1,5 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {readFile} from 'node:fs/promises';
+const css=await readFile(new URL('../src/viewer.css',import.meta.url),'utf8');
+function value(name){return css.match(new RegExp(`--${name}:(#[0-9a-f]{6})`))[1];}
+function luminance(hex){const rgb=hex.slice(1).match(/../g).map(v=>parseInt(v,16)/255).map(v=>v<=.04045?v/12.92:((v+.055)/1.055)**2.4);return rgb[0]*.2126+rgb[1]*.7152+rgb[2]*.0722;}
+test('UI1 design token text/background pairs satisfy WCAG AA',()=>{for(const [fg,bg]of [['gray-900','gray-50'],['gray-700','gray-100'],['gray-500','gray-50'],['primary','primary-soft'],['keep','gray-50'],['remove','gray-50'],['undecided','gray-50'],['inferred','gray-50'],['unresolved','gray-50'],['error','gray-50']]){const a=luminance(value(fg)),b=luminance(value(bg));assert.ok((Math.max(a,b)+.05)/(Math.min(a,b)+.05)>=4.5,`${fg}/${bg}`);}assert.ok(1.05/(luminance(value('primary'))+.05)>=4.5);assert.match(css,/@media\(prefers-reduced-motion:reduce\)/);});

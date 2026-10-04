@@ -583,3 +583,5 @@ R3 WP19：畫面顯示名稱由 viewer names.ts 單一決定，唯一 title → 
 R3 WP17／WP20：JspTagFileExpander 在 JSP adapter 依已證明 tagdir 與呼叫屬性展開，保留呼叫／定義證據、循環與深度限制。僅已知字面屬性的 ${fn:escapeXml(var)} 做 XML 跳脫代入，動態屬性／未知函式保持資料及未解析邊界；不執行目標碼。Spring adapter 的 ControllerReturns 以 JavaParser 提取每個 return，保留 guard、來源與 INFERRED／AMBIGUOUS；經端點／handler 投射畫面邊，AJAX 不當成導頁。
 
 R3 WP20：overview.ts 在 viewer 依相同連結目的／名稱／屬性跨至少兩個且 ≥50% 畫面計算全站導覽，混合關聯保留非導覽觸發者；canonical graph 與 schema 不變。總覽採穩定 ID 排序格狀座標、卡片間走廊正交路徑與進出邊 hover；聚焦將全站導覽另分組，未解析目的合併且保留所有觸發／證據。labels.ts 共用可讀元件標籤，diagnostics.ts 為每個現有代碼提供中文收合分類，英文與完整來源置技術明細。主要 URL 先選直接 render 的路由，再選入站路由；全部候選仍保留。見 ADR 0039。
+
+R4 UI1：shell-ui.ts 只建立本地 SVG 圖示與外殼控制元件，main.ts 組織頂部導覽／左側畫面脈絡／右側空狀態；診斷與元件庫原內容移至本地 dialog。CSS 變數提供系統字型與 AA 色彩，不載入外部資源。md-controls 只更換檔案選擇的呈現入口，共用格式／決策／API 模組不變；見 ADR 0040。
