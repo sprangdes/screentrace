@@ -136,3 +136,12 @@
 - 方案 B：授權最小的 analyzer／capture 來源對應補強，保留展開後的可見文字或確切元件對應；先加合成 tag-body 失敗測試，不變更 URL、信心、schema、決策或既有資料／安全斷言，再驗證 PetClinic 真實標籤。
 - 影響範圍：只暫停 UI3 中尚缺確切對應的 tag-body 名稱；UI2 與其餘 UI3／UI4 可驗證的呈現保持，UI4 的 API 主從頁繼續驗證。不得改目標來源。
 - 狀態：已決定（2026-10-04），採方案 A。維持 R4 範圍，缺少確切對應的導覽元件暫用圖中 title；UI3 此項「未完成，另案處理」。不改分析器或 capture、不猜配可見文字；技術債記錄於 ROADMAP 與 R4 回報。
+
+## OQ-016 — R5 跨輸出目錄的預覽樣式決定性
+
+- 情境：同一 Petclinic 原始碼在同一 Chromium 環境產生兩次，僅變更分析輸出目錄。application-graph.json 與 viewer-documents.json 位元組一致；preview-model.json 與單一 HTML 不一致。差異為 logo 的 computed background-image 保存輸出目錄的 file:// 絕對 URL，兩個 styleId 因而不同。此為既有 capture／報表資料路徑，WP21、WP22 沒有修改它。eMusic 的兩次圖、preview、documents 與 HTML 均一致。
+- 約束：C3 要求同來源圖／HTML／md 決定性；WP22 只改呈現層，不改 md、分析 graph 或樣式原文契約；現有 capture 測試要求 computed style lossless roundtrip。不能藉修改既有斷言或忽略差異宣稱通過。
+- 方案 A：授權先新增合成失敗測試，只在報表資料讀取層正規化本地資源 URL 與其樣式識別，保留原始 capture、既有全部斷言、無新增 schema 欄位。補足跨目錄決定性後再結案 R5。
+- 方案 B：本輪只交付 WP21、WP22 的名稱／分群／措辭，將既有跨輸出目錄決定性缺陷列技術債，明確豁免這項本輪验收；仍不進 WP23，等待需求方驗收。
+- 影響範圍：R5 最終決定性驗收；WP21 名稱與 WP22 分群實作、全部測試、真實報表觀察及大小驗證已完成。未改 capture 或樣式保存程式。
+- 狀態：待決定；已依 §0.3 停止決定性補強項目，不自行擴大修改。

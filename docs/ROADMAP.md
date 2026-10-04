@@ -17,7 +17,7 @@
 | WP10 | 限定合成 fixture、決定性、完整 E2E、使用文件 | 完成；17dd801 遠端全綠，204 Java／46 三引擎 E2E；見 reports/M4.md，不做效能／格式化／相容清理 |
 | R2 | WP11–WP16：報表呈現補強與查證 | 完成；各工作包獨立提交；WP16 記錄於 reports/R2.md |
 | R4 | UI1–UI5：報表介面改善 | UI1 已驗收；UI2／UI4 完成（241 Java／52 viewer／60 Chromium E2E）；UI2–UI4 已驗收；UI3 無對應 tag-body 名稱依 OQ-015 方案 A 未完成、另案處理；UI5 完成待驗收（241 Java／54 viewer／65 Chromium E2E），見 reports/R4.md |
-| R5 | WP21–WP23：靜態名稱、端點分群與流向 | WP21 完成；WP22 待實作；WP23 等驗收後進入，見 reports/R5.md |
+| R5 | WP21–WP23：靜態名稱、端點分群與流向 | WP21 完成；WP22 呈現及完整測試完成、C3 待 OQ-016；WP23 未開始，見 reports/R5.md |
 | R3 | WP17–WP20：流程補強與呈現修正 | WP17／WP18 已驗收；WP19／WP20 完成，等待驗收（241 Java／50 viewer／48 E2E）；包含 G9 全站導覽／格狀版面與 G10 導覽名稱，見 reports/R3.md |
 
 | 里程碑 | 工作包 | 狀態 |
