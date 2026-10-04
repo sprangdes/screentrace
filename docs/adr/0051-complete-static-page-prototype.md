@@ -38,4 +38,4 @@ f87afaf先提交歷史單元及兩個完整頁E2E失敗測試：缺少history模
 
 追加驗證：e3bfdfe的＋／－測試先失敗（select的`.75`與程式設定的`0.75`不符，比例成0），修正為尋找數值相符的實際option。一次全套重跑暴露原review E2E查詢競態（71過／1失敗）：srcdoc元素已解析但load回呼尚未寫data-review-status。6c5206c以延遲1000ms的合成load回呼先重現失敗，隨後把純呈現確認標記在srcdoc交付前建立；決策推導／保存及既有review斷言不變。原review測試及新增延遲測試均重跑，見R6最終驗證；沒有隱藏失敗或加入固定等待放寬斷言。
 
-將標記移前後，完整驗證另暴露既有capture路徑`body>c:param[1]>a:nth-of-type(1)`不是合法CSS selector：原先load回呼內只中斷標記，移前會中斷整個聚焦建構（四個Spring整合E2E失敗）。瀏覽器錯誤確認原因後，無效selector保持無法對應、略過該記錄，继续處理可證明的記錄，不依順序猜配。延遲load回歸測試加入此反例；原合成fixture／golden／整合斷言不變。失敗紀錄/private/tmp/wp25-synthetic-error.log與完整驗證69過／4失敗後重新修正。
+將標記移前後，完整驗證另暴露既有capture路徑`body>c:param[1]>a:nth-of-type(1)`不是合法CSS selector：原先load回呼內只中斷標記，移前會中斷整個聚焦建構（四個Spring整合E2E失敗）。瀏覽器錯誤確認原因後，無效selector保持無法對應、略過該記錄，繼續處理可證明的記錄，不依順序猜配。延遲load回歸測試加入此反例；原合成fixture／golden／整合斷言不變。失敗紀錄/private/tmp/wp25-synthetic-error.log與完整驗證69過／4失敗後重新修正。
