@@ -41,4 +41,20 @@ class PreviewResourceDeterminismTest {
   Path project=temp.resolve("project-root"),output=temp.resolve("output-private");Files.createDirectories(project);fixture(output);String html=Files.readString(new SingleHtmlAnalysisWriter().generate(graph(),output).path());
   for(String forbidden:List.of(output.toString(),project.toString(),System.getProperty("user.home"),"file://","/Users/","C:\\Users\\","C:\\\\Users\\\\"))assertFalse(html.contains(forbidden),"Leaked local path category: "+(forbidden.startsWith("file")?"file URL":"absolute path"));
  }
+ @Test void resourceUrisPreserveEncodedRelativePathsQueriesFragmentsAndDataValues() throws Exception {
+  Path output=temp.resolve("output encoded");Path capture=fixture(output);var data=(com.fasterxml.jackson.databind.node.ObjectNode)json.readTree(capture.toFile());var values=(com.fasterxml.jackson.databind.node.ObjectNode)data.path("styles").elements().next();
+  values.put("background-image","url(\""+output.resolve("static-preview/assets/圖 示.svg").toUri()+"?version=1#view\")");values.put("content","url(\"data:image/png;base64,AAA=\")");json.writeValue(capture.toFile(),data);byte[] original=Files.readAllBytes(capture);
+  new SingleHtmlAnalysisWriter().generate(graph(),output);var preview=json.readTree(output.resolve("preview-model.json").toFile());var normalized=preview.path("styles").elements().next();assertEquals("url(\"st-preview-resource:static-preview/assets/%E5%9C%96%20%E7%A4%BA.svg?version=1#view\")",normalized.path("background-image").asText());assertEquals("url(\"data:image/png;base64,AAA=\")",normalized.path("content").asText());assertArrayEquals(original,Files.readAllBytes(capture));
+ }
+ @Test void invalidEscapingAndOutsideOutputUrlsAreRejectedWithoutLeakingTheirPaths() throws Exception {
+  Path output=temp.resolve("output");Path capture=fixture(output);String original=Files.readString(capture);String inside=output.resolve("static-preview/assets/image.svg").toUri().toString();
+  for(String unsafe:List.of(temp.resolve("output-neighbor/secret.svg").toUri().toString(),output.toUri()+"%2e%2e/secret.svg","file:///C:/Users/private/image.svg","file:///Users/private/image.svg","file:///bad%ZZ/image.svg")){
+   Files.writeString(capture,original.replace(inside,unsafe));var error=assertThrows(java.io.IOException.class,()->new SingleHtmlAnalysisWriter().generate(graph(),output));assertFalse(error.getMessage().contains(unsafe));assertFalse(Files.exists(output.resolve("report/screentrace-report.html")));
+  }
+ }
+
+ @Test void quotedResourceUrisSupportParenthesesInTheActualOutputRoot() throws Exception {
+  Path first=temp.resolve("output (one)"),second=temp.resolve("output (two)");fixture(first);fixture(second);var writer=new SingleHtmlAnalysisWriter();assertArrayEquals(Files.readAllBytes(writer.generate(graph(),first).path()),Files.readAllBytes(writer.generate(graph(),second).path()));
+ }
+
 }

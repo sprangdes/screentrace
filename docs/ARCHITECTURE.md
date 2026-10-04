@@ -16,6 +16,8 @@ Target source (read-only) -> scanner -> selected Spring and/or Struts adapter ->
 
 The viewer is split into graph projection/search (`map.ts`), focused relations (`relations.ts`), requester/API details (`details.ts`, `api-page.ts`), preview rendering and element-style display (`preview.ts`), and shared review state. URL search strips a context-path prefix only when `UrlResolution` evidence records an adopted value. Preview style records contain computed-style deltas from clean browser defaults for each captured non-script/style DOM element; this preserves effects from inline and external styles without embedding the original CSS source.
 
+OQ-016: `PreviewCaptureReader` normalizes computed local file URIs in styles/defaults into stable output-relative resource identifiers, rehashing changed style dictionaries and remapping element references. The original capture and packed documents remain unchanged; actual rendering still uses packed assets. URI paths outside the output root are rejected without disclosing paths. See [ADR 0047](adr/0047-report-local-resource-normalization.md).
+
 ## Prototype and Edit Mode
 
 The report uses independent, durable contracts:
