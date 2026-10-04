@@ -73,4 +73,52 @@ class ApiUsageTest {
     var graph=new ApplicationGraph(new Application("sample",".",List.of()),List.of(node("screen",NodeType.SCREEN),node("api",NodeType.ENDPOINT)),List.of(edge("load-edge",EdgeType.CALLS,"screen","api")),List.of(),List.of(),"2.1",List.of(new Behavior("load","screen","load",BehaviorType.CALL_API,"api",null,null,"fetch('/api')",proof)),List.of());
     assertEquals(1,ApiUsage.derive(graph,Map.of(),Map.of()).get("api").callers().size());
   }
+  @Test void nullApiTargetWithoutOtherCallsIsUnreferenced() {
+    var base=graph(false);
+    var graph=new ApplicationGraph(base.application(),base.nodes(),List.of(),List.of(),List.of(),"2.2",
+        List.of(new Behavior("null","s1","click",BehaviorType.CALL_API,null,null,null,null,List.of())),List.of());
+    var usage=ApiUsage.derive(graph,Map.of(),Map.of());
+    assertEquals(ApiUsage.Status.UNREFERENCED,usage.get("api").status());
+    assertEquals(List.of(),usage.get("api").callers());
+  }
+  @Test void nullApiTargetCoexistsWithValidCalls() {
+    var base=graph(false);
+    var graph=new ApplicationGraph(base.application(),base.nodes(),List.of(),List.of(),List.of(),"2.2",
+        List.of(new Behavior("null","s1","click",BehaviorType.CALL_API,null,null,null,null,List.of()),
+            new Behavior("valid","s2","ready",BehaviorType.CALL_API,"api",null,null,null,List.of())),List.of());
+    assertEquals(new ApiUsage.Usage(ApiUsage.Status.IN_USE,List.of(new ApiUsage.Caller("s2",null,"valid"))),
+        ApiUsage.derive(graph,Map.of(),Map.of()).get("api"));
+    assertEquals(ApiUsage.Status.REMOVABLE,ApiUsage.derive(graph,Map.of("s2",ApiUsage.Decision.REMOVE),Map.of()).get("api").status());
+  }
+  @Test void nullRelationshipTargetsDoNotQueryCallerTreeMap() {
+    var base=graph(false);
+    var graph=new ApplicationGraph(base.application(),base.nodes(),List.of(
+        edge("null-call",EdgeType.CALLS,"s1",null),edge("null-trigger",EdgeType.TRIGGERS,"c",null),
+        edge("valid",EdgeType.CALLS,"s2","api")),List.of(),List.of(),"2.2",List.of(),List.of());
+    assertEquals(new ApiUsage.Usage(ApiUsage.Status.IN_USE,List.of(new ApiUsage.Caller("s2",null,null))),
+        ApiUsage.derive(graph,Map.of(),Map.of()).get("api"));
+  }
+  @Test void derivesSharedJavaAndTypeScriptVectors() throws Exception {
+    var root=java.nio.file.Path.of("").toAbsolutePath();
+    while(root!=null && !(java.nio.file.Files.isRegularFile(root.resolve("pom.xml")) && java.nio.file.Files.isDirectory(root.resolve("screentrace-core")))) root=root.getParent();
+    assertNotNull(root,"Repository source root must exist without requiring .git");
+    var mapper=new com.fasterxml.jackson.databind.ObjectMapper();
+    var vectors=mapper.readTree(root.resolve("docs/examples/api-usage-vectors.json").toFile());
+    assertEquals(1,vectors.path("format_version").asInt());
+    var covered=new TreeSet<String>();
+    assertFalse(vectors.path("cases").isEmpty());
+    for(var vector:vectors.path("cases")) {
+      String id=vector.path("id").asText();
+      vector.path("rules").forEach(rule->covered.add(rule.asText()));
+      var graph=mapper.treeToValue(vectors.path("graphs").path(vector.path("graph").asText()),ApplicationGraph.class);
+      Map<String,ApiUsage.Decision> screens=new TreeMap<>();
+      vector.path("screenDecisions").fields().forEachRemaining(e->screens.put(e.getKey(),ApiUsage.Decision.valueOf(e.getValue().asText())));
+      Map<ApiUsage.ComponentKey,ApiUsage.Decision> components=new HashMap<>();
+      vector.path("componentDecisions").fields().forEachRemaining(s->s.getValue().fields().forEachRemaining(c->components.put(new ApiUsage.ComponentKey(s.getKey(),c.getKey()),ApiUsage.Decision.valueOf(c.getValue().asText()))));
+      var originalScreens=Map.copyOf(screens);var originalComponents=Map.copyOf(components);
+      assertEquals(vector.path("expected"),mapper.valueToTree(ApiUsage.derive(graph,screens,components)),id);
+      assertEquals(originalScreens,screens,id);assertEquals(originalComponents,components,id);
+    }
+    assertEquals(Set.of("R-API-1","R-API-2","R-API-3","R-API-4","R-API-5","R-API-6"),covered);
+  }
 }

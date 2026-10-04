@@ -26,7 +26,7 @@ public final class ApiUsage {
         .forEach(e->owners.computeIfAbsent(e.to(),id->new TreeSet<>()).add(e.from()));
     Map<String,SortedSet<Caller>> callers=new TreeMap<>();
     graph.nodes().stream().filter(n->n.type()==NodeType.ENDPOINT).forEach(n->callers.put(n.id(),new TreeSet<>()));
-    for(Relationship edge:graph.relationships()) if(callers.containsKey(edge.to()) && (edge.type()==EdgeType.CALLS||edge.type()==EdgeType.TRIGGERS)) {
+    for(Relationship edge:graph.relationships()) if(edge.to()!=null && callers.containsKey(edge.to()) && (edge.type()==EdgeType.CALLS||edge.type()==EdgeType.TRIGGERS)) {
       GraphNode from=nodes.get(edge.from());
       if(from==null) continue;
       if(from.type()==NodeType.SCREEN && graph.behaviors().stream().noneMatch(b -> b.type()==BehaviorType.CALL_API && from.id().equals(b.triggerId()) && edge.to().equals(b.targetId()))) callers.get(edge.to()).add(new Caller(from.id(),null,null));
@@ -34,7 +34,7 @@ public final class ApiUsage {
         for(String screen:owners.getOrDefault(from.id(),Set.of())) callers.get(edge.to()).add(new Caller(screen,from.id(),null));
     }
     Map<String,Behavior> behaviors=new TreeMap<>();graph.behaviors().forEach(b->behaviors.put(b.id(),b));
-    for(Behavior behavior:graph.behaviors()) if(behavior.type()==BehaviorType.CALL_API && callers.containsKey(behavior.targetId())) {
+    for(Behavior behavior:graph.behaviors()) if(behavior.type()==BehaviorType.CALL_API && behavior.targetId()!=null && callers.containsKey(behavior.targetId())) {
       Behavior parent=behavior;Set<String> seen=new HashSet<>();
       while(parent.triggerId()==null && parent.parentId()!=null && seen.add(parent.id()) && behaviors.containsKey(parent.parentId())) parent=behaviors.get(parent.parentId());
       GraphNode trigger=nodes.get(parent.triggerId());if(trigger==null) continue;
