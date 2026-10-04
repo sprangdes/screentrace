@@ -1,3 +1,4 @@
+import {setDecision} from './decision-controls.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile, mkdir} from 'node:fs/promises';
@@ -50,7 +51,7 @@ for (const engine of engines) for (const family of families) {
             await page.goto(url);
             assert.equal(await page.locator('[data-library-summary]').count(), 1);
             await page.getByRole('checkbox', {name: '確認模式', exact: true}).check();
-            await page.locator(`[data-screen-review="${owner}"]`).selectOption('KEEP');
+            await setDecision(page.locator(`[data-screen-review="${owner}"]`),'KEEP');
             await page.locator(`.screen-card[data-screen="${owner}"]`).click();
             await page.locator(`[data-component-review="${button.id}"]`).selectOption('KEEP');
             await page.locator(`[data-library-override="${button.id}"]`).selectOption('sample-button');
@@ -72,10 +73,10 @@ for (const engine of engines) for (const family of families) {
             await page.evaluate(() => localStorage.clear());
             await page.reload();
             await page.getByRole('checkbox', {name: '確認模式', exact: true}).check();
-            assert.equal(await page.locator(`[data-screen-review="${owner}"]`).inputValue(), 'UNDECIDED');
+            assert.equal(await page.locator(`[data-screen-review="${owner}"]`).getAttribute('data-decision'), 'UNDECIDED');
             await page.getByLabel('匯入 md', {exact: true}).setInputFiles({name: 'review.md', mimeType: 'text/markdown', buffer: Buffer.from(first)});
             await page.locator('[data-md-status]').filter({hasText: '匯入完成'}).waitFor();
-            assert.equal(await page.locator(`[data-screen-review="${owner}"]`).inputValue(), 'KEEP');
+            assert.equal(await page.locator(`[data-screen-review="${owner}"]`).getAttribute('data-decision'), 'KEEP');
             await page.locator(`.screen-card[data-screen="${owner}"]`).click();
             assert.equal(await page.locator(`[data-component-review="${button.id}"]`).inputValue(), 'KEEP');
             assert.equal(await page.locator(`[data-library-override="${button.id}"]`).inputValue(), 'sample-button');
