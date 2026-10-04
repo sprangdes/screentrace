@@ -16,7 +16,7 @@
 | WP9 | 元件庫 manifest、驗證與決定性比對 | 完成；四增量皆遠端全綠，OQ-009／010 已處理；Schema 補強後 201 Java／38 unit／33 三引擎 E2E；見 reports/WP9.md |
 | WP10 | 限定合成 fixture、決定性、完整 E2E、使用文件 | 完成；17dd801 遠端全綠，204 Java／46 三引擎 E2E；見 reports/M4.md，不做效能／格式化／相容清理 |
 | R2 | WP11–WP16：報表呈現補強與查證 | 完成；各工作包獨立提交；WP16 記錄於 reports/R2.md |
-| R3 | WP17–WP20：流程補強與呈現修正 | WP17 進行中；OQ-012 已決定 c:set 保持未解析 |
+| R3 | WP17–WP20：流程補強與呈現修正 | WP17 完成，等待驗收；OQ-012／013 已決定，見 reports/R3.md；WP18–WP20 未開始 |
 
 | 里程碑 | 工作包 | 狀態 |
 |---|---|---|
@@ -36,6 +36,8 @@
 這些能力仍有附件 §3 列出的落差。WP3／WP4 已完成本次要求的標記與 JavaScript 靜態分析；後端對應 WP5 已驗收；單檔 HTML WP7 分增量驗收；md 匯出與元件庫匯入依 WP8／WP9。不啟動或修改被分析專案，不產生遷移程式碼。
 
 ## 技術債
+
+- OQ-013：spring:url 與 c:url 在迴圈內行為不一致；本次僅授權 spring:url 的同作用域靜態樣板例外，c:url 維持既有 UNRESOLVED 邊界。待日後授權統一，見 ADR 0005。
 
 - API 狀態規則目前有 Java ApiUsage 與 TypeScript deriveApiUsage 兩份實作；以 [共用向量](examples/api-usage-vectors.json) 為一致性依據，兩端測試比對同一份完整預期（R-API-1～6）。後續規則變更須同時通過兩端向量測試，待未來整合共用執行實作；見 [ADR 0034](adr/0034-api-usage-shared-vectors.md)。
 

@@ -524,7 +524,7 @@ When trade-offs occur, prioritize in this order:
 
 R3 的 `JspTagFileExpander` 靜態讀取 taglib `tagdir` 內的 `.tag`，只代入呼叫處提供的字面屬性，遞迴展開自訂標籤及 `<jsp:doBody/>`。最大深度為 12，循環與超深度均產生診斷；動態屬性保留原運算式並維持未解析。tag file 產生的元件使用實際畫面作為擁有者，證據包含呼叫與定義位置。Spring adapter 只在該 JSP 有唯一 controller route 時，才以路由目錄解析相對 URL；多路由保持歧義，缺路由保持未解析。URL 變數只延續 ADR 0005 的 `c:url`／`spring:url` 邊界，`c:set` 不作為定義來源。
 
-`UrlVariableResolver` 僅實作 v1.2 WP3.8 指定的同來源 URL 常值例外。Interaction 保留 `originalExpression`、`definitionEvidence` 及 `componentId`，投影至 include 使用者時不改寫定義來源。來源字串 CONFIRMED 與後端路由對應信心分開；{name} 保留樣板，param 不解析，未知函式不作透明包裝。見 ADR 0005。
+`UrlVariableResolver` 僅實作 v1.2 WP3.8 指定的同來源 URL 常值例外。Interaction 保留 `originalExpression`、`definitionEvidence` 及 `componentId`，投影至 include 使用者時不改寫定義來源。OQ-013 僅允許 spring:url 的單一靜態定義與使用位於同一已證明迴圈作用域；迴圈外／不同迴圈、第二次定義、EL 值與可能改寫均未解析，c:url 迴圈維持原邊界。來源字串 CONFIRMED 與後端路由對應信心分開；{name} 保留樣板，param 不解析，未知函式不作透明包裝。見 ADR 0005。
 
 `MarkupGraphContribution` 將元件、MARKUP 規則、檢核／彈窗／導覽／表單行為整合到 canonical graph，遞迴展開 directive／jsp include、Tiles insert／put、定義參照與繼承。共享片段維持同一 component ID、各畫面 CONTAINS 所有權，包含位置的條件與 repeated 證據保留於所有權邊；元件 conditional／repeated 為任一使用處存在此性質的標記，詳情以該畫面的邊證據為準。
 

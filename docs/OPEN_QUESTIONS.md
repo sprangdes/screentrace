@@ -116,4 +116,5 @@
 - 可選方案 A：延續 ADR 0005，所有迴圈內 URL 變數維持 `UNRESOLVED`，接受 WP17 驗收中這三個連結不能解析。
 - 可選方案 B：只新增受限的 `spring:url` 例外：同一個可證明的迴圈內、靜態 URL 樣板、使用點位於同一作用域時可解析；`spring:param` 值仍不展開，`{name}` 保留。`c:url` 迴圈行為維持既有測試預期。需修訂 ADR 0005 的邊界，但不修改既有斷言。
 - 影響範圍：WP17.1 `spring:url`／`c:url` 變數的迴圈作用域、PetClinic 的 Edit Pet／Add Visit 與 ownersList 導覽；無 schema 變更。
-- 狀態：待決。受影響的迴圈 URL 變數維持 `UNRESOLVED`；其他 WP17 工作可繼續。
+- 狀態：已決定（2026-10-04）；需求方採受限方案 B。
+- 決定：僅 `spring:url` 的單次來源定義、無 EL 的靜態樣板、完整定義先於使用且同一可證明迴圈作用域可解析。保留 `{name}`、不展開 param。迴圈外使用、第二次定義、EL 值、可能改寫的 c:set／scriptlet 均保持 UNRESOLVED；c:url 與既有斷言不變。見 ADR 0005 的 R3 例外與 Wp17SpringLoopVariableTest。

@@ -19,7 +19,7 @@ final class JspTagFileExpander {
   private static final Set<String> BUILTIN = Set.of("jsp", "html", "form", "spring", "c", "fn", "fmt", "tiles", "logic", "bean");
 
   Result expand(Path root, String pagePath, String text) {
-    Expanded expanded = expandText(root, pagePath, text, new ArrayDeque<>(), 0);
+    Expanded expanded = expandText(root, pagePath, text, new ArrayDeque<>(), 0, Map.of(), 0);
     Map<Integer,List<AnalysisEvidence>> byLine = new TreeMap<>();
     for (MarkupTag tag : MarkupTag.scan(text)) {
       if (tag.closing()) continue;
@@ -30,8 +30,9 @@ final class JspTagFileExpander {
     return new Result(expanded.text(), byLine, expanded.diagnostics());
   }
 
-  private Expanded expandText(Path root, String sourcePath, String text, Deque<String> stack, int depth) {
-    Map<String,String> prefixes = prefixes(text);
+  private Expanded expandText(Path root, String sourcePath, String text, Deque<String> stack, int depth,
+                              Map<String,String> inheritedPrefixes, int lineOffset) {
+    Map<String,String> prefixes = new HashMap<>(inheritedPrefixes);prefixes.putAll(prefixes(text));
     List<MarkupTag> tags = MarkupTag.scan(text);
     StringBuilder out = new StringBuilder();
     List<AnalysisEvidence> evidence = new ArrayList<>();
@@ -40,7 +41,7 @@ final class JspTagFileExpander {
     for (int i=0;i<tags.size();i++) {
       MarkupTag open = tags.get(i);
       if (open.closing()) continue;
-      String definition = tagFile(root, sourcePath, text, open.name());
+      String definition = tagFile(root, sourcePath, prefixes, open.name());
       if (definition == null) continue;
       int start = text.lastIndexOf('<', open.end());
       int after = open.end()+1;
@@ -62,33 +63,46 @@ final class JspTagFileExpander {
       }
       if(start<cursor)continue;
       out.append(text,cursor,start);
-      SourceLocation call = new SourceLocation(sourcePath,open.line());
+      SourceLocation call = new SourceLocation(sourcePath,open.line()+lineOffset);
       if(depth>=MAX_DEPTH || stack.contains(definition)) {
         diagnostics.add((depth>=MAX_DEPTH?"JSP_TAG_DEPTH_LIMIT":"JSP_TAG_CYCLE")+" at "+sourcePath+":"+open.line());
+        out.append("\n".repeat(newlines(text.substring(start,after))));
         cursor=after;
         continue;
       }
       try {
         String tagText=SafeProjectFiles.readUtf8Limited(root,root.resolve(definition),SafeProjectFiles.MAX_JSP_FILE_BYTES);
         Map<String,String> attributes=open.attributes();
-        tagText=substitute(tagText,attributes).replaceAll("(?is)<jsp:doBody\\s*/>",Matcher.quoteReplacement(body));
+        // Isolate caller body from the tag template: flatten template lines only,
+        // then restore body lines so caller definitions/use sites retain their positions.
+        String marker="\u0000ST_BODY\u0000";
+        while(tagText.contains(marker)||body.contains(marker))marker+="\u0000";
+        tagText=substitute(tagText,attributes).replaceAll("(?is)<jsp:doBody\\s*/>",Matcher.quoteReplacement(marker));
         int definitionLine=definitionLine(root,definition,tagText);
         stack.push(definition);
-        Expanded nested=expandText(root,definition,tagText,stack,depth+1);
+        Expanded nested=expandText(root,definition,tagText,stack,depth+1,Map.of(),0);
+        Expanded callerBody=nested.text().contains(marker)?expandText(root,sourcePath,body,stack,depth+1,prefixes,
+            lineOffset+open.line()-1+newlines(text.substring(start,open.end()+1))):new Expanded("",List.of(),List.of());
         stack.pop();
-        // Keep source line mapping at the call site; tag definition locations remain in evidence.
-        out.append(nested.text().replace('\n',' ').replace('\r',' '));
+        String replacement=nested.text().replace('\n',' ').replace('\r',' ').replace(marker,
+            "\n".repeat(newlines(text.substring(start,open.end()+1)))+callerBody.text());
+        out.append(replacement);
+        out.append("\n".repeat(Math.max(0,newlines(text.substring(start,after))-newlines(replacement))));
         evidence.add(new AnalysisEvidence(call,"JspTagFileExpander",ResolutionStatus.CONFIRMED,"自訂標籤呼叫位置"));
         evidence.add(new AnalysisEvidence(new SourceLocation(definition,definitionLine),"JspTagFileExpander",ResolutionStatus.CONFIRMED,"標籤定義位置"));
-        evidence.addAll(nested.definitions());diagnostics.addAll(nested.diagnostics());
+        evidence.addAll(nested.definitions());evidence.addAll(callerBody.definitions());
+        diagnostics.addAll(nested.diagnostics());diagnostics.addAll(callerBody.diagnostics());
       } catch(IOException|SecurityException ex) {
         diagnostics.add("JSP_TAG_UNRESOLVED at "+sourcePath+":"+open.line());
+        out.append("\n".repeat(newlines(text.substring(start,after))));
       }
       cursor=after;
     }
     out.append(text.substring(cursor));
     return new Expanded(out.toString(),evidence.stream().distinct().toList(),diagnostics.stream().distinct().sorted().toList());
   }
+
+  private static int newlines(String text) {return (int)text.chars().filter(c->c=='\n').count();}
 
   private static String substitute(String text,Map<String,String> attributes) {
     Map<String,String> normalized=new HashMap<>();attributes.forEach((key,value)->normalized.put(key.toLowerCase(Locale.ROOT),value));
@@ -114,9 +128,12 @@ final class JspTagFileExpander {
   }
 
   private static String tagFile(Path root,String sourcePath,String text,String tagName) {
+    return tagFile(root,sourcePath,prefixes(text),tagName);
+  }
+  private static String tagFile(Path root,String sourcePath,Map<String,String> prefixes,String tagName) {
     int colon=tagName.indexOf(':');if(colon<1)return null;
     String prefix=tagName.substring(0,colon);if(BUILTIN.contains(prefix))return null;
-    String tagdir=prefixes(text).get(prefix);if(tagdir==null)return null;
+    String tagdir=prefixes.get(prefix);if(tagdir==null)return null;
     String name=tagName.substring(colon+1);
     List<Path> candidates=new ArrayList<>();
     if(tagdir.startsWith("/")) {candidates.add(root.resolve("src/main/webapp").resolve(tagdir.substring(1)).resolve(name+".tag"));candidates.add(root.resolve(tagdir.substring(1)).resolve(name+".tag"));}

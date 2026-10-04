@@ -7,13 +7,15 @@ import java.util.regex.Pattern;
 /** Resolves only the explicitly authorized same-source URL variable exception; never evaluates EL. */
 public final class UrlVariableResolver {
   public record Resolution(String value, String originalExpression, List<AnalysisEvidence> definitions) { }
-  private record Definition(String value, int end, SourceLocation source, List<Integer> scopes, boolean valid) { }
+  private record Definition(String value, int end, SourceLocation source, List<Integer> scopes, List<Integer> loops, boolean valid) { }
   private record Scope(String tag, int id, boolean loop) { }
   private static final Pattern VARIABLE=Pattern.compile("[A-Za-z_][A-Za-z0-9_]*");
   private static final Set<String> CONTROL=Set.of("c:if","c:when","c:otherwise","c:foreach","logic:iterate","logic:present","logic:notpresent","logic:equal","logic:notequal","logic:empty","logic:notempty","logic:greaterthan","logic:lessthan");
   private final Map<String,List<Definition>> definitions=new TreeMap<>();
   private final Set<String> writes=new HashSet<>();
   private final Map<Integer,List<Integer>> scopes=new HashMap<>();
+  private final Map<Integer,List<Integer>> loops=new HashMap<>();
+  private final Set<Integer> closedLoops=new HashSet<>();
   private final String path;
   private boolean unknownWrite;
 
@@ -26,15 +28,24 @@ public final class UrlVariableResolver {
     for(MarkupTag tag:tokens) {
       String name=tag.name().toLowerCase(Locale.ROOT);
       if(tag.closing()) {
-        for(int i=stack.size()-1;i>=0;i--) if(stack.get(i).tag().equals(name)) {stack.subList(i,stack.size()).clear();break;}
+        for(int i=stack.size()-1;i>=0;i--) if(stack.get(i).tag().equals(name)) {
+          if(i==stack.size()-1&&stack.get(i).loop())closedLoops.add(stack.get(i).id());
+          stack.subList(i,stack.size()).clear();break;
+        }
         continue;
       }
       List<Integer> scope=stack.stream().map(Scope::id).toList();scopes.put(tag.end(),scope);
+      List<Integer> loopScope=stack.stream().filter(Scope::loop).map(Scope::id).toList();loops.put(tag.end(),loopScope);
       if(Set.of("c:url","spring:url").contains(name) && tag.attribute("var")!=null) {
         String value=tag.attribute("value"), declaredScope=tag.attribute("scope");
         if(MarkupAnalysis.dynamic(tag.attribute("var")))unknownWrite=true;
-        boolean valid=value!=null&&!MarkupAnalysis.dynamic(value) && (declaredScope==null||declaredScope.equals("page")) && stack.stream().noneMatch(Scope::loop);
-        definitions.computeIfAbsent(tag.attribute("var"),k->new ArrayList<>()).add(new Definition(value,completed.getOrDefault(tag.end(),Integer.MAX_VALUE),new SourceLocation(path,tag.line()),scope,valid));
+        // OQ-013 permits spring:url only in statically known loop scopes. Unknown custom
+        // scopes and c:url keep ADR 0005's original single-assignment restriction.
+        boolean authorizedLoop=name.equals("spring:url") && stack.stream().filter(Scope::loop)
+            .allMatch(s->s.tag().equals("c:foreach")||s.tag().equals("logic:iterate"));
+        boolean valid=value!=null&&!MarkupAnalysis.dynamic(value) && (declaredScope==null||declaredScope.equals("page"))
+            && (loopScope.isEmpty()||authorizedLoop);
+        definitions.computeIfAbsent(tag.attribute("var"),k->new ArrayList<>()).add(new Definition(value,completed.getOrDefault(tag.end(),Integer.MAX_VALUE),new SourceLocation(path,tag.line()),scope,loopScope,valid));
       } else if(tag.attribute("var")!=null || name.equals("c:remove")) {
         String variable=name.equals("c:remove")?tag.attribute("var"):tag.attribute("var");
         if(variable==null||MarkupAnalysis.dynamic(variable)) unknownWrite=true; else writes.add(variable);
@@ -76,6 +87,8 @@ public final class UrlVariableResolver {
     if(values.size()!=1) return new Resolution(raw,raw,List.of());
     Definition definition=values.get(0);var useScopes=scopes.getOrDefault(use.end(),List.of());
     if(!definition.valid()||definition.end()>=use.end()||useScopes.size()<definition.scopes().size()||!useScopes.subList(0,definition.scopes().size()).equals(definition.scopes())) return new Resolution(raw,raw,List.of());
-    return new Resolution(definition.value(),raw,List.of(new AnalysisEvidence(definition.source(),"JspUrlVariableResolver",ResolutionStatus.CONFIRMED,"同來源、使用前、單一定義且作用域可證明；原始運算式："+raw+"；param 不解析")));
+    if(!definition.loops().isEmpty()&&(!definition.loops().equals(loops.getOrDefault(use.end(),List.of()))||!closedLoops.containsAll(definition.loops()))) return new Resolution(raw,raw,List.of());
+    String rule=definition.loops().isEmpty()?"同來源、使用前、單一定義且作用域可證明":"OQ-013 spring:url 同來源、使用前、單一靜態定義且位於同一可證明迴圈作用域";
+    return new Resolution(definition.value(),raw,List.of(new AnalysisEvidence(definition.source(),"JspUrlVariableResolver",ResolutionStatus.CONFIRMED,rule+"；原始運算式："+raw+"；param 不解析")));
   }
 }
