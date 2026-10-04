@@ -109,3 +109,11 @@
 - 影響範圍：WP17 的 c:set 變數解析、既有測試與新合成測試；不涉及 graph schema。
 - 狀態：已決定（2026-10-04）；需求方採方案 A。
 - 決定：延續 ADR 0005／OQ-002，只支援 `c:url` 與 `spring:url` 的已證明字面 URL 變數；`c:set` 維持 `UNRESOLVED`。R3 WP17.1 中要求解析 `c:set` 的部分取消。新增 `Wp17PageVariableTest` 保留此限制為回歸測試，既有 `UrlVariableBoundaryTest` 斷言不變。
+
+## OQ-013 — WP17 page URL variables declared inside loop scopes
+
+- 情境：PetClinic 的 `ownersList.jsp` 在 `<c:forEach>` 內定義 `ownerUrl`，`ownerDetails.jsp` 在 `<c:forEach>` 內定義 `petUrl`、`visitUrl`，各自於同一迴圈內以 `fn:escapeXml` 使用。R3 §0.3 的 WP17 期望這些 `{ownerId}`／`{petId}` 樣板解析；但 ADR 0005 明定迴圈定義不視為單次賦值，且既有 `UrlVariableBoundaryTest.onlyUsesWithinTheProvenConditionalScopeResolve` 固定斷言同一迴圈內定義／使用的 `c:url` 必須保持 `UNRESOLVED`。PetClinic 的三個連結目前因此維持未解析；其他可證明 URL 已解析。
+- 可選方案 A：延續 ADR 0005，所有迴圈內 URL 變數維持 `UNRESOLVED`，接受 WP17 驗收中這三個連結不能解析。
+- 可選方案 B：只新增受限的 `spring:url` 例外：同一個可證明的迴圈內、靜態 URL 樣板、使用點位於同一作用域時可解析；`spring:param` 值仍不展開，`{name}` 保留。`c:url` 迴圈行為維持既有測試預期。需修訂 ADR 0005 的邊界，但不修改既有斷言。
+- 影響範圍：WP17.1 `spring:url`／`c:url` 變數的迴圈作用域、PetClinic 的 Edit Pet／Add Visit 與 ownersList 導覽；無 schema 變更。
+- 狀態：待決。受影響的迴圈 URL 變數維持 `UNRESOLVED`；其他 WP17 工作可繼續。

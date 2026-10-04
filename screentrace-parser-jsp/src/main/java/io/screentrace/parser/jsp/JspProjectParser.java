@@ -61,6 +61,12 @@ public final class JspProjectParser {
                                List<Diagnostic> diagnostics, Map<String, MarkupAnalysis> markup) throws IOException {
     String text = SafeProjectFiles.readUtf8Limited(root, file, SafeProjectFiles.MAX_JSP_FILE_BYTES);
     String relative = relative(root, file);
+    JspTagFileExpander.Result tagExpansion=new JspTagFileExpander().expand(root,relative,text);
+    text=tagExpansion.text();
+    for(String diagnostic:tagExpansion.diagnostics()) {
+      String code=diagnostic.startsWith("JSP_TAG_CYCLE")?"JSP_TAG_CYCLE":diagnostic.startsWith("JSP_TAG_DEPTH_LIMIT")?"JSP_TAG_DEPTH_LIMIT":"JSP_TAG_UNRESOLVED";
+      diagnostics.add(new Diagnostic("JSP 標籤檔展開受限："+diagnostic,Confidence.UNRESOLVED,new SourceLocation(relative,1),code,List.of()));
+    }
     markup.put(relative, MarkupAnalysis.parse(relative, text));
     JspAnalysis.ViewKind kind = relative.endsWith(".jspf") ? JspAnalysis.ViewKind.JSPF : relative.endsWith(".jsp") ? JspAnalysis.ViewKind.JSP : JspAnalysis.ViewKind.HTML;
     views.add(new JspAnalysis.View(relative, kind, new SourceLocation(relative, 1)));
@@ -129,6 +135,14 @@ public final class JspProjectParser {
       if(resolution != null) for(int i=interactionStart;i<interactions.size();i++) {
         var item=interactions.get(i);
         interactions.set(i,new JspAnalysis.Interaction(item.viewPath(),item.type(),item.label(),item.target(),item.httpMethod(),item.source(),item.confidence(),item.submitsCurrentView(),resolution.originalExpression(),resolution.definitions(),componentId));
+      }
+    }
+    for(int i=0;i<interactions.size();i++) {
+      JspAnalysis.Interaction item=interactions.get(i);
+      List<io.screentrace.core.ApplicationGraph.AnalysisEvidence> tagEvidence=tagExpansion.definitionEvidence().get(item.source().line());
+      if(item.viewPath().equals(relative)&&tagEvidence!=null&&!tagEvidence.isEmpty()) {
+        List<io.screentrace.core.ApplicationGraph.AnalysisEvidence> proof=new ArrayList<>(item.definitionEvidence());proof.addAll(tagEvidence);
+        interactions.set(i,new JspAnalysis.Interaction(item.viewPath(),item.type(),item.label(),item.target(),item.httpMethod(),item.source(),item.confidence(),item.submitsCurrentView(),item.originalExpression(),proof.stream().distinct().toList(),item.componentId()));
       }
     }
   }

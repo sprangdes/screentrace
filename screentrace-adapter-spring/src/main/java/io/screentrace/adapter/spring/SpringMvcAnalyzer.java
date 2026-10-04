@@ -371,13 +371,15 @@ public final class SpringMvcAnalyzer {
     }
 
     private static void addJspInteractions(JspAnalysis jsp, State state) {
-        for (JspAnalysis.Interaction interaction : jsp.interactions()) {
+        for (JspAnalysis.Interaction rawInteraction : jsp.interactions()) {
+            JspAnalysis.Interaction interaction=resolveRelativeJspTarget(rawInteraction,state);
             String screenId = state.screensByView.get(interaction.viewPath());
             if (screenId == null) continue;
             String id = interaction.componentId()!=null?interaction.componentId():ApplicationGraph.id(NodeType.COMPONENT, interaction.viewPath() + ":" + interaction.source().line() + ":" + interaction.target());
             Map<String, String> attributes = new TreeMap<>();
             attributes.put("componentType", interaction.type().name());
             attributes.put("target", interaction.target());
+            attributes.put("targetStatus",interaction.confidence().name());
             if(interaction.originalExpression()!=null)attributes.put("originalExpression",interaction.originalExpression());
             if (!interaction.viewPath().equals(interaction.source().file())) attributes.put("includedBy", interaction.viewPath());
             if (interaction.httpMethod() != null) attributes.put("httpMethod", interaction.httpMethod());
@@ -394,6 +396,38 @@ public final class SpringMvcAnalyzer {
             String next = state.screensByView.get(interaction.target());
             if (next != null) edge(state, EdgeType.NAVIGATES_TO, id, next, Confidence.CONFIRMED, interaction.source());
         }
+    }
+
+    private static JspAnalysis.Interaction resolveRelativeJspTarget(JspAnalysis.Interaction interaction,State state) {
+        String raw=interaction.target();
+        if(raw==null||raw.isBlank()||raw.startsWith("/")||raw.startsWith("#")||raw.contains("://")||raw.startsWith("//")
+            ||raw.equals(JspProjectParser.CURRENT_VIEW_TARGET)
+            ||raw.contains("${")||raw.contains("#{")||raw.contains("<%")||raw.matches("(?i)^[a-z][a-z0-9+.-]*:.*"))return interaction;
+        String screenId=state.screensByView.get(interaction.viewPath());if(screenId==null)return unresolvedRelative(interaction,state,List.of(),"找不到來源畫面");
+        List<EndpointReference> routes=state.endpointsByScreen.getOrDefault(screenId,List.of()).stream()
+            .collect(java.util.stream.Collectors.toMap(EndpointReference::path,e->e,(a,b)->a,TreeMap::new)).values().stream().toList();
+        if(routes.size()!=1) {
+            if(routes.isEmpty())return unresolvedRelative(interaction,state,routes,"找不到可證明的 controller 路由");
+            List<ApplicationGraph.AnalysisEvidence> proof=new ArrayList<>(interaction.definitionEvidence());
+            routes.forEach(route->{GraphNode endpoint=state.nodes.stream().filter(n->n.id().equals(route.id())).findFirst().orElse(null);if(endpoint!=null)proof.add(new ApplicationGraph.AnalysisEvidence(endpoint.source(),"SpringMvcRelativeJspUrl",ApplicationGraph.ResolutionStatus.AMBIGUOUS,"JSP 相對 URL 的來源畫面有多個 controller 路由"));});
+            state.diagnostics.add(new Diagnostic("JSP 相對 URL 的 controller 路由不唯一："+raw,Confidence.AMBIGUOUS,interaction.source(),"JSP_ROUTE_AMBIGUOUS",proof));
+            return new JspAnalysis.Interaction(interaction.viewPath(),interaction.type(),interaction.label(),raw,interaction.httpMethod(),interaction.source(),Confidence.AMBIGUOUS,interaction.submitsCurrentView(),interaction.originalExpression(),proof,interaction.componentId());
+        }
+        String route=routes.get(0).path();int slash=route.lastIndexOf('/');String parent=slash<=0?"":route.substring(0,slash);
+        String resolved=(parent+"/"+raw).replaceAll("/{2,}","/");
+        GraphNode endpoint=state.nodes.stream().filter(n->n.id().equals(routes.get(0).id())).findFirst().orElse(null);
+        List<ApplicationGraph.AnalysisEvidence> proof=new ArrayList<>(interaction.definitionEvidence());
+        proof.add(new ApplicationGraph.AnalysisEvidence(interaction.source(),"SpringMvcRelativeJspUrl",ApplicationGraph.ResolutionStatus.INFERRED,"相對 URL 以唯一渲染此畫面的 controller 路由目錄解析："+route+" → "+resolved));
+        if(endpoint!=null)proof.add(new ApplicationGraph.AnalysisEvidence(endpoint.source(),"SpringMvcRelativeJspUrl",ApplicationGraph.ResolutionStatus.INFERRED,"來源 controller 路由"));
+        return new JspAnalysis.Interaction(interaction.viewPath(),interaction.type(),interaction.label(),resolved,interaction.httpMethod(),interaction.source(),Confidence.INFERRED,interaction.submitsCurrentView(),interaction.originalExpression(),proof,interaction.componentId());
+    }
+
+    private static JspAnalysis.Interaction unresolvedRelative(JspAnalysis.Interaction interaction,State state,List<EndpointReference> routes,String reason) {
+        List<ApplicationGraph.AnalysisEvidence> proof=new ArrayList<>(interaction.definitionEvidence());
+        routes.forEach(route->{GraphNode endpoint=state.nodes.stream().filter(n->n.id().equals(route.id())).findFirst().orElse(null);if(endpoint!=null)proof.add(new ApplicationGraph.AnalysisEvidence(endpoint.source(),"SpringMvcRelativeJspUrl",ApplicationGraph.ResolutionStatus.UNRESOLVED,reason));});
+        proof.add(new ApplicationGraph.AnalysisEvidence(interaction.source(),"SpringMvcRelativeJspUrl",ApplicationGraph.ResolutionStatus.UNRESOLVED,reason+"；保留原始相對 URL："+interaction.target()));
+        state.diagnostics.add(new Diagnostic("JSP 相對 URL 無法以唯一 controller 路由解析："+interaction.target(),Confidence.UNRESOLVED,interaction.source(),"JSP_ROUTE_UNRESOLVED",proof));
+        return new JspAnalysis.Interaction(interaction.viewPath(),interaction.type(),interaction.label(),interaction.target(),interaction.httpMethod(),interaction.source(),Confidence.UNRESOLVED,interaction.submitsCurrentView(),interaction.originalExpression(),proof,interaction.componentId());
     }
 
     private static List<ApplicationGraph.AnalysisEvidence> interactionEvidence(JspAnalysis.Interaction interaction) {

@@ -34,7 +34,8 @@ public final class MarkupGraphContribution {
     for(var interaction:jsp.interactions()) if(interaction.componentId()!=null&&nodes.containsKey(interaction.componentId())) {
       var node=nodes.get(interaction.componentId());var attrs=new TreeMap<>(node.attributes());
       if(interaction.originalExpression()!=null)attrs.put("originalExpression",interaction.originalExpression());
-      attrs.put("target",interaction.target());attrs.put("targetStatus",interaction.confidence().name());
+      if(!attrs.containsKey("target"))attrs.put("target",interaction.target());
+      if(!attrs.containsKey("targetStatus"))attrs.put("targetStatus",interaction.confidence().name());
       List<AnalysisEvidence> proof=new ArrayList<>(node.evidence());proof.addAll(interaction.definitionEvidence());
       nodes.put(node.id(),new GraphNode(node.id(),node.type(),node.name(),attrs,node.source(),node.confidence(),proof.stream().distinct().toList()));
     }

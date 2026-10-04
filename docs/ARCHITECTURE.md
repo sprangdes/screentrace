@@ -4,6 +4,8 @@
 
 The current implementation analyzes server-rendered JSP applications using Struts 1, Spring MVC, Spring Boot, or their supported combinations.
 
+R3 WP17 parser behavior: `JspTagFileExpander` in `screentrace-parser-jsp` follows statically declared taglib `tagdir` mappings, substitutes only literal call-site attributes, expands nested tag files and `<jsp:doBody/>`, and guards recursion at depth 12 with cycle/depth diagnostics. Dynamic attributes remain unresolved. Components are projected from each consuming JSP, retaining both the page call-site and tag-file definition as evidence. `SpringMvcAnalyzer` resolves a relative JSP URL only when exactly one controller route is proven to render that JSP; it joins the relative value to that route's directory and records `INFERRED` evidence. Multiple routes remain `AMBIGUOUS`; no route remains `UNRESOLVED`. The legacy exception in ADR 0005 still excludes `c:set` from URL-variable resolution.
+
 ```text
 Target source (read-only) -> scanner -> selected Spring and/or Struts adapter -> ApplicationGraph JSON -> embedded standalone HTML
 ```
@@ -96,7 +98,7 @@ JavaScript AST 分析模組 screentrace-js 已建立（WP4 增量一）；單一
 
 ### screentrace-parser-jsp
 
-共用 JSP/JSPF 標記解析、字面值互動目標、include、Tiles 與 Spring URL tag 擷取。輸出 `JspAnalysis`，不自行解析後端路由或 handler。
+共用 JSP/JSPF 標記解析、字面值互動目標、include、Tiles、`c:url`／`spring:url` 變數與 JSP tag file 展開。輸出 `JspAnalysis`，不自行解析後端路由或 handler。
 
 ### screentrace-adapter-spring
 
@@ -519,6 +521,8 @@ When trade-offs occur, prioritize in this order:
 ### WP3 標記與圖貢獻
 
 `JspAnalysis.markup` 按來源相對路徑提供 `MarkupAnalysis`，涵蓋 JSP/JSPF/HTML：元件種類、穩定 ID、原始屬性、行號、條件原文、迴圈、表單／欄位、事件運算式、MARKUP 檢核與彈窗行為。事件／檢核來源使用屬性實際行號。主解析直接掃描原始文字，忽略註解、scriptlet、script/style 與 EL 字串中的假標籤，保留真實行號；`preprocess` 僅保留既有相容 API，不作為解析入口。
+
+R3 的 `JspTagFileExpander` 靜態讀取 taglib `tagdir` 內的 `.tag`，只代入呼叫處提供的字面屬性，遞迴展開自訂標籤及 `<jsp:doBody/>`。最大深度為 12，循環與超深度均產生診斷；動態屬性保留原運算式並維持未解析。tag file 產生的元件使用實際畫面作為擁有者，證據包含呼叫與定義位置。Spring adapter 只在該 JSP 有唯一 controller route 時，才以路由目錄解析相對 URL；多路由保持歧義，缺路由保持未解析。URL 變數只延續 ADR 0005 的 `c:url`／`spring:url` 邊界，`c:set` 不作為定義來源。
 
 `UrlVariableResolver` 僅實作 v1.2 WP3.8 指定的同來源 URL 常值例外。Interaction 保留 `originalExpression`、`definitionEvidence` 及 `componentId`，投影至 include 使用者時不改寫定義來源。來源字串 CONFIRMED 與後端路由對應信心分開；{name} 保留樣板，param 不解析，未知函式不作透明包裝。見 ADR 0005。
 
