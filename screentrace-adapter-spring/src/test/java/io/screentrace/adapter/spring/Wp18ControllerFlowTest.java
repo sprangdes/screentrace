@@ -65,7 +65,7 @@ class Wp18ControllerFlowTest {
     assertTrue(returns("save").stream().anyMatch(e->e.type()==EdgeType.RENDERS&&e.to().equals(screen("form").id())&&e.source().line()==10));
   }
   @Test void ajaxResponsesNeverBecomeBrowserNavigation() {
-    var ajax=component("Load without navigation");
+    var ajax=graph.nodes().stream().filter(n->n.type()==NodeType.COMPONENT&&"ajax".equals(n.attributes().get("id"))).findFirst().orElseThrow();
     assertTrue(graph.behaviors().stream().anyMatch(b->ajax.id().equals(b.triggerId())&&b.type()==BehaviorType.CALL_API));
     assertTrue(graph.relationships().stream().noneMatch(e->e.type()==EdgeType.NAVIGATES_TO&&e.from().equals(ajax.id())));
   }
