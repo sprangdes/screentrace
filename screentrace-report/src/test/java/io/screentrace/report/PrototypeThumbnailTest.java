@@ -1,6 +1,6 @@
 package io.screentrace.report;
 import static org.junit.jupiter.api.Assertions.*;
-import io.screentrace.core.ApplicationGraph;import io.screentrace.core.ApplicationGraph.*;import io.screentrace.core.AnalysisEvidence;import io.screentrace.core.ResolutionStatus;import java.nio.file.*;import java.util.*;import java.awt.image.BufferedImage;import javax.imageio.ImageIO;import java.io.*;import org.junit.jupiter.api.Test;import org.junit.jupiter.api.io.TempDir;
+import io.screentrace.core.ApplicationGraph;import io.screentrace.core.ApplicationGraph.*;import io.screentrace.core.*;import java.nio.file.*;import java.util.*;import java.awt.image.BufferedImage;import javax.imageio.ImageIO;import java.io.*;import org.junit.jupiter.api.Test;import org.junit.jupiter.api.io.TempDir;
 class PrototypeThumbnailTest {
  @TempDir Path root;
  private PreviewModel load(int width) throws Exception {
