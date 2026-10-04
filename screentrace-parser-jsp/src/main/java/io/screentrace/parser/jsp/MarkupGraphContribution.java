@@ -22,7 +22,8 @@ public final class MarkupGraphContribution {
       if(c.field()!=null) {attrs.put("field",c.field());attrs.put("bindingStatus","UNRESOLVED");}if(c.model()!=null)attrs.put("model",c.model());
       markup.events().stream().filter(e->e.componentId().equals(c.id())).forEach(e->{attrs.put("event."+e.event(),e.expression());attrs.put("eventLine."+e.event(),Integer.toString(e.source().line()));});
       List<AnalysisEvidence> evidence=new ArrayList<>();if(old!=null)evidence.addAll(old.evidence());evidence.add(MarkupAnalysis.evidence(c.source(),Confidence.CONFIRMED,"來源元件標記"));
-      String name=old==null?first(attrs,"value","title","id","name","property","tag"):old.name();
+      String name=c.attributes().getOrDefault("displayName",old==null?first(attrs,"value","title","id","name","property","tag"):old.name());
+      for(String key:List.of("visibleText","displayName","labelSource"))if(c.attributes().containsKey(key))attrs.put(key,c.attributes().get(key));
       nodes.put(c.id(),new GraphNode(c.id(),NodeType.COMPONENT,name,attrs,c.source(),old==null?Confidence.CONFIRMED:old.confidence(),evidence.stream().distinct().toList()));
     }
     for(var screen:graph.nodes()) if(screen.type()==NodeType.SCREEN) {

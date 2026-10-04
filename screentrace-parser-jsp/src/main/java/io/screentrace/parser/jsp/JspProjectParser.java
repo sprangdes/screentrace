@@ -67,7 +67,7 @@ public final class JspProjectParser {
       String code=diagnostic.startsWith("JSP_TAG_CYCLE")?"JSP_TAG_CYCLE":diagnostic.startsWith("JSP_TAG_DEPTH_LIMIT")?"JSP_TAG_DEPTH_LIMIT":"JSP_TAG_UNRESOLVED";
       diagnostics.add(new Diagnostic("JSP 標籤檔展開受限："+diagnostic,Confidence.UNRESOLVED,new SourceLocation(relative,1),code,List.of()));
     }
-    markup.put(relative, MarkupAnalysis.parse(relative, text));
+    markup.put(relative, StaticComponentNames.annotate(MarkupAnalysis.parse(relative, text),text));
     JspAnalysis.ViewKind kind = relative.endsWith(".jspf") ? JspAnalysis.ViewKind.JSPF : relative.endsWith(".jsp") ? JspAnalysis.ViewKind.JSP : JspAnalysis.ViewKind.HTML;
     views.add(new JspAnalysis.View(relative, kind, new SourceLocation(relative, 1)));
     UrlVariableResolver urls = new UrlVariableResolver(relative,text,includedWrites(root,relative,text,new java.util.HashSet<>()));
