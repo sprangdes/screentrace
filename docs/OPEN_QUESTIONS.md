@@ -118,3 +118,13 @@
 - 影響範圍：WP17.1 `spring:url`／`c:url` 變數的迴圈作用域、PetClinic 的 Edit Pet／Add Visit 與 ownersList 導覽；無 schema 變更。
 - 狀態：已決定（2026-10-04）；需求方採受限方案 B。
 - 決定：僅 `spring:url` 的單次來源定義、無 EL 的靜態樣板、完整定義先於使用且同一可證明迴圈作用域可解析。保留 `{name}`、不展開 param。迴圈外使用、第二次定義、EL 值、可能改寫的 c:set／scriptlet 均保持 UNRESOLVED；c:url 與既有斷言不變。見 ADR 0005 的 R3 例外與 Wp17SpringLoopVariableTest。
+
+
+## OQ-014 — WP19／WP20 呈現規則與既有 E2E 斷言衝突
+
+- 情境：R3 WP19.1 要求 title／h1 僅在全部畫面中唯一時採用，同 title 改用唯一 h1 或人性化 view 名；WP19.2 要求卡片不再顯示完整來源路徑。既有 `screentrace-viewer/test/diagnostics.e2e.mjs` 的 `navigation prioritizes page titles, groups Chinese diagnostics, and masks JSP expressions in preview` 明確要求兩張同 title 卡片仍含 `帳戶維護.*web/a.jsp` 與 `帳戶維護.*web/b.jsp`。保留這兩個斷言與實作新命名規則不能同時成立。
+- 同檔 `graph and preview diagnostics retain source and unsafe text without execution` 在展開診斷前要求 `.analysis-diagnostics` 的可見文字含 `UNSUPPORTED_FRAMEWORK`；WP20.1 要求收合時呈現中文診斷摘要，英文代碼只放明細技術欄位。這個既有可見文字斷言也與新規則衝突。
+- 可選方案 A：授權只更新上述直接鎖定被取代呈現方式的斷言，改為驗證新規格：同 title 使用唯一 h1／人性化 view 名，卡片不含來源路徑；收合診斷中文顯示，展開技術明細後完整英文代碼仍可查。其餘既有斷言、fixture、golden 與證據／安全測試不改。於 ADR 逐處記錄原因，另加全同名／部分重複／全唯一測試。
+- 可選方案 B：保持所有既有斷言，將 WP19 的同名 title／來源路徑與 WP20 收合英文代碼需求取消或修訂為保留舊行為；其他 WP19／WP20 項目維持。
+- 影響範圍：WP19 命名／卡片，WP20 診斷摘要；無 schema 變更，不涉及分析 URL／導向信心。G9／G10 尚未實作，未修改目標專案。
+- 狀態：已決定（2026-10-04）；需求方採受限方案 A。只更新 diagnostics.e2e.mjs 所列三處斷言，其餘既有斷言／fixture／golden／證據與安全測試不動。新斷言須在舊實作證明失敗，新增三種命名測試，ADR 逐處記錄。繼續 WP19 → WP20（含 G9／G10）。
