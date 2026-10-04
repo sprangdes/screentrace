@@ -1,3 +1,4 @@
+import {screenNames,NameHint} from './names';
 import {matchLibrary,libraryLabel} from './shared/library';
 import {libraryDetails,libraryOverride} from './library-ui';
 import {setOverride} from './shared/review';
@@ -14,10 +15,10 @@ import {emptyReview,loadReview,saveReview,screenDecision,componentDecision,effec
 import {decisionControl,decisionLabel} from './review-ui';
 const root=document.querySelector<HTMLDivElement>('#app')!;
 const dynamicPattern=/\$\{[^{}]*\}|#\{[^{}]*\}|<%[\s\S]*?%>/g;
-function visibleScreenNames(graph:ReturnType<typeof requireGraph>,payload:Payload):Map<string,string>{const proposals=new Map<string,string>();for(const screen of graph.nodes.filter(node=>node.type==='SCREEN')){const source=payload.documents[screen.id]||'',document=new DOMParser().parseFromString(source,'text/html'),title=document.querySelector('title')?.textContent?.trim(),heading=document.querySelector('h1')?.textContent?.trim(),identifier=screen.attributes.viewIdentifier||screen.attributes.screenName||screen.attributes.view||screen.name,filename=screen.source?.file?.split('/').at(-1);const raw=title||heading||identifier||filename||'未命名畫面',name=raw.replace(dynamicPattern,'動態內容').replace(/\s+/g,' ').trim()||'未命名畫面';proposals.set(screen.id,name);}const names=new Map<string,string>(),groups=new Map<string,string[]>();for(const [id,name]of proposals)groups.set(name,[...(groups.get(name)||[]),id]);for(const [id,name]of proposals){const duplicates=groups.get(name)||[];if(duplicates.length<2)names.set(id,name);else{const node=graph.nodes.find(item=>item.id===id)!,path=node.source?.file||node.attributes.view||'來源未提供';names.set(id,`${name}（${path}）`);}}return names;}
+
 try {
  const payload=JSON.parse(document.querySelector('#st-data')!.textContent!) as Payload;
- const sourceGraph=requireGraph(payload.graph),displayNames=visibleScreenNames(sourceGraph,payload),graph={...sourceGraph,nodes:sourceGraph.nodes.map(node=>node.type==='SCREEN'?{...node,name:displayNames.get(node.id)||node.name}:node)},index=indexGraph(graph);
+ const sourceGraph=requireGraph(payload.graph),sourceIndex=indexGraph(sourceGraph),hints=new Map<string,NameHint>();for(const screen of sourceIndex.screens){const document=new DOMParser().parseFromString(payload.documents[screen.id]||'','text/html');hints.set(screen.id,{title:document.querySelector('title')?.textContent||undefined,heading:document.querySelector('h1')?.textContent||undefined});}const displayNames=screenNames(sourceIndex.screens,hints,sourceIndex.routes),graph={...sourceGraph,nodes:sourceGraph.nodes.map(node=>node.type==='SCREEN'?{...node,name:displayNames.get(node.id)||node.name}:node)},index=indexGraph(graph);
  document.querySelector('#application')!.textContent=graph.application.name;
  const shell=element('div',undefined,'shell'),nav=element('nav'),main=element('main'),panel=element('aside');
  nav.setAttribute('aria-label','主要導覽');panel.append(element('h2',text.info));

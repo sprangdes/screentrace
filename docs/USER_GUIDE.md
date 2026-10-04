@@ -111,3 +111,7 @@ macOS 範例（Windows 改用 `bin\screentrace.cmd`）：
 ```
 
 使用專案實際名稱。省略 `--project` 只儲存、不綁定；解除綁定或更換庫後須重新產生報表。相同名稱@版本但內容不同時預設拒絕，只在確認要更換時使用 `--replace`，並為受影響專案重產報表。範例 manifest 為虛構資料，實際庫須由提供者填寫；格式與限制見 [Schema](schemas/component-library.schema.json)、[Review md 契約](REVIEW_MD_CONTRACT.md)。
+
+## 畫面名稱與卡片
+
+版型 title 重複時，卡片會使用唯一頁面標題或可讀檔名，例如 Owner Details。卡片第二行顯示主要 URL，滑鼠移上可看完整 URL；完整來源檔在右側「畫面摘要」與「檔案結構」。相同檔名會以 URL 區分。

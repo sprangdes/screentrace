@@ -577,3 +577,5 @@ fixtures/wp10 是自行撰寫的 source-only 分析資料，不是 Maven 模組�
 screentrace-viewer/test/synthetic-project.e2e.mjs 直接讀取 Java 產物，Node md 決定性與 Chromium／Firefox／WebKit file:// 標記、覆寫、下載、清暫存、匯入還原共用正式資料與模組。預覽比較限定同次測試的相同 Chromium／viewport／字型環境；沒有跨環境圖片 golden。完整圖／預覽／HTML 不忽略任何欄位，md 只正規化 generated_at。
 
 本輪只含 fixture、決定性、E2E、USER_GUIDE／README／架構文件；既有 security.yml 已涵蓋新增 Java 與 *.e2e.mjs，不修改 CI、效能、格式化或相容入口。決定見 ADR 0032；使用步驟與實際合成報表截圖位置見 USER_GUIDE。
+
+R3 WP19：畫面顯示名稱由 viewer names.ts 單一決定，唯一 title → 唯一 h1 → 人性化 view basename，重名追加主要 URL／穩定序號。卡片只顯示名稱與主要 URL，來源保留於右欄／檔案樹；display graph 不修改 canonical graph 或 md，見 ADR 0038。
