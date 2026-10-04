@@ -8,8 +8,6 @@ import com.github.javaparser.ast.expr.AnnotationExpr;
 import com.github.javaparser.ast.expr.Expression;
 import com.github.javaparser.ast.expr.NormalAnnotationExpr;
 import com.github.javaparser.ast.expr.SingleMemberAnnotationExpr;
-import com.github.javaparser.ast.expr.ObjectCreationExpr;
-import com.github.javaparser.ast.body.VariableDeclarator;
 import io.screentrace.core.ApplicationGraph;
 import io.screentrace.core.ApplicationGraph.Confidence;
 import io.screentrace.core.ApplicationGraph.Diagnostic;
@@ -62,6 +60,8 @@ public final class SpringMvcAnalyzer {
         discoverExceptionView(inventory, state);
         parseXmlControllers(inventory, state);
         for (Path java : inventory.javaFiles()) parseController(java, state);
+        SpringControllerFlow.resolve(state.nodes,state.edges,state.diagnostics,state.returnTargets,
+            io.screentrace.parser.jsp.UrlResolution.context(inventory,List.of()));
         addJspInteractions(jsp, state);
         addJspIncludes(jsp, state);
         state.diagnostics.addAll(jsp.diagnostics());
@@ -69,7 +69,7 @@ public final class SpringMvcAnalyzer {
                 state.nodes, state.edges, state.diagnostics, state.apiContracts, ApplicationGraph.BEHAVIOR_SCHEMA_VERSION, List.of(), List.of());
         graph=MarkupGraphContribution.enrich(graph,jsp);
         graph=SpringFormBindings.bind(graph,inventory);
-        return io.screentrace.core.GraphIntegrityValidator.requireAnalysis(SpringServerValidation.enrich(io.screentrace.parser.jsp.UrlGraphContribution.enrich(io.screentrace.parser.jsp.JavaScriptGraphContribution.enrich(MarkupGraphContribution.enrich(graph,jsp),inventory),inventory),inventory));
+        return io.screentrace.core.GraphIntegrityValidator.requireAnalysis(SpringControllerFlow.project(SpringServerValidation.enrich(io.screentrace.parser.jsp.UrlGraphContribution.enrich(io.screentrace.parser.jsp.JavaScriptGraphContribution.enrich(MarkupGraphContribution.enrich(graph,jsp),inventory),inventory),inventory)));
     }
 
     private static void discoverExceptionView(ProjectInventory inventory, State state) {
@@ -145,7 +145,13 @@ public final class SpringMvcAnalyzer {
         addNode(state, new GraphNode(handlerId, NodeType.HANDLER, handlerName, Map.of("class", type.getNameAsString(), "method", method.getNameAsString()), source, Confidence.CONFIRMED));
         List<String> children = paths(mapping);
         if (children.isEmpty()) children = List.of("");
-        List<String> views = rest ? List.of() : returnedViews(method, constants);
+        var returns=rest?List.<SpringControllerReturns.Target>of():SpringControllerReturns.extract(method,relative,type.getNameAsString(),constants);
+        List<String> views = returns.stream().filter(t->t.kind()!=SpringControllerReturns.Kind.UNKNOWN)
+            .map(t->t.kind()==SpringControllerReturns.Kind.VIEW?t.value():(t.kind()==SpringControllerReturns.Kind.FORWARD?"forward:":"redirect:")+t.value()).distinct().toList();
+        for(var target:returns) {
+            if(target.kind()==SpringControllerReturns.Kind.UNKNOWN)SpringControllerFlow.unresolved(state.diagnostics,target,"無法證明常值或未改寫的回傳物件");
+            else if(target.kind()!=SpringControllerReturns.Kind.VIEW)state.returnTargets.add(new SpringControllerFlow.Pending(handlerId,httpMethod(mapping),target));
+        }
         for (String base : bases) for (String child : children) {
             String path = join(base, child);
             String endpointId = ApplicationGraph.id(NodeType.ENDPOINT, httpMethod(mapping) + " " + path + ":" + handlerId);
@@ -156,9 +162,11 @@ public final class SpringMvcAnalyzer {
             state.endpoints.add(endpoint);
             edge(state, EdgeType.HANDLED_BY, endpointId, handlerId, Confidence.CONFIRMED, source);
             state.apiContracts.add(state.contracts.contract(endpointId, method, mapping, source, views));
-            for (String view : views.stream().filter(view -> !view.startsWith("redirect:")).distinct().toList()) {
-                String screenId = screenForView(view, source, state);
-                edge(state, EdgeType.RENDERS, handlerId, screenId, resolvedScreenId(view, state) != null ? Confidence.CONFIRMED : Confidence.INFERRED, source);
+            for (var target : returns.stream().filter(t->t.kind()==SpringControllerReturns.Kind.VIEW).toList()) {
+                String view=target.value();String screenId = screenForView(view, target.source(), state);
+                Confidence confidence=resolvedScreenId(view, state) != null ? Confidence.CONFIRMED : Confidence.INFERRED;
+                String returnId=ApplicationGraph.id(NodeType.COMPONENT,"RENDERS:"+handlerId+":"+screenId+":"+target.source().line()+":"+target.expression());
+                if(state.edges.stream().noneMatch(e->e.id().equals(returnId)))state.edges.add(new Relationship(returnId,EdgeType.RENDERS,handlerId,screenId,confidence,target.source(),target.evidence()));
                 state.endpointsByScreen.computeIfAbsent(screenId, ignored -> new ArrayList<>()).add(endpoint);
                 state.screensByEndpoint.computeIfAbsent(endpointId, ignored -> new ArrayList<>()).add(screenId);
             }
@@ -534,30 +542,9 @@ public final class SpringMvcAnalyzer {
     }
     private static Map<String, String> viewConstants(ClassOrInterfaceDeclaration type) {
         Map<String, String> values = new HashMap<>();
-        type.getFields().forEach(field -> field.getVariables().forEach(variable -> variable.getInitializer().filter(Expression::isStringLiteralExpr)
+        type.getFields().stream().filter(field->field.isFinal()).forEach(field -> field.getVariables().forEach(variable -> variable.getInitializer().filter(Expression::isStringLiteralExpr)
                 .ifPresent(value -> values.put(variable.getNameAsString(), value.asStringLiteralExpr().asString()))));
         return values;
-    }
-    private static List<String> returnedViews(MethodDeclaration method, Map<String, String> constants) {
-        Map<String, String> modelAndViews = new HashMap<>();
-        for (VariableDeclarator variable : method.findAll(VariableDeclarator.class)) {
-            variable.getInitializer().filter(Expression::isObjectCreationExpr).map(Expression::asObjectCreationExpr).filter(creation -> creation.getType().getNameAsString().equals("ModelAndView"))
-                    .filter(creation -> !creation.getArguments().isEmpty() && creation.getArgument(0).isStringLiteralExpr())
-                    .ifPresent(creation -> modelAndViews.put(variable.getNameAsString(), creation.getArgument(0).asStringLiteralExpr().asString()));
-        }
-        List<String> views = new ArrayList<>();
-        for (Expression expression : method.findAll(com.github.javaparser.ast.stmt.ReturnStmt.class).stream().flatMap(r -> r.getExpression().stream()).toList()) {
-            if (expression.isStringLiteralExpr()) views.add(expression.asStringLiteralExpr().asString());
-            else if (expression.isNameExpr()) {
-                String name = expression.asNameExpr().getNameAsString();
-                if (constants.containsKey(name)) views.add(constants.get(name));
-                if (modelAndViews.containsKey(name)) views.add(modelAndViews.get(name));
-            } else if (expression.isObjectCreationExpr()) {
-                ObjectCreationExpr creation = expression.asObjectCreationExpr();
-                if (creation.getType().getNameAsString().equals("ModelAndView") && !creation.getArguments().isEmpty() && creation.getArgument(0).isStringLiteralExpr()) views.add(creation.getArgument(0).asStringLiteralExpr().asString());
-            }
-        }
-        return views;
     }
     private static String join(String base, String child) { String path = (base + "/" + child).replaceAll("/{2,}", "/"); return path.isEmpty() ? "/" : path.startsWith("/") ? path : "/" + path; }
     private static void addNode(State state, GraphNode node) {
@@ -575,6 +562,7 @@ public final class SpringMvcAnalyzer {
         private final Map<String, List<EndpointReference>> endpointsByScreen = new HashMap<>();
         private final Map<String, List<String>> screensByEndpoint = new HashMap<>(); private final Map<String, String> screensByView = new HashMap<>();
         private final Map<String, String> fragmentsByPath = new HashMap<>(); private final List<ViewResolver> viewResolvers = new ArrayList<>();
+        private final List<SpringControllerFlow.Pending> returnTargets=new ArrayList<>();
         private String defaultExceptionView;
         private State(Path root, List<Path> javaFiles) { this.root = root; this.contracts = new ApiContractExtractor(root, javaFiles); }
     }

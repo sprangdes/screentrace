@@ -1,5 +1,7 @@
 # ScreenTrace Technical Architecture
 
+R3 WP18 controller flows: `SpringControllerReturns` in `screentrace-adapter-spring` classifies annotation-handler returns with JavaParser, retaining each return line, class/method, original expression and enclosing branch conditions. Literal views use `RENDERS`; application-relative `redirect:`/`forward:` and constant RedirectView targets resolve through existing endpoints into `FORWARDS_TO`. A constant redirect prefix plus an unknown whole path segment becomes an `INFERRED` template, never a concrete runtime value. `SpringControllerFlow` projects only proven navigation/form `TRIGGERS → HANDLED_BY → RENDERS/FORWARDS_TO` chains into `NAVIGATES_TO`; AJAX responses do not imply page navigation. All endpoint candidates and return branches remain visible, including validation self returns. Mutable/aliased ModelAndView values, unsupported targets and unknown methods remain unresolved; redirect recursion has a cycle guard and depth 10. No graph schema change. Details: [ADR 0037](adr/0037-controller-return-flow.md).
+
 ## Current POC implementation
 
 The current implementation analyzes server-rendered JSP applications using Struts 1, Spring MVC, Spring Boot, or their supported combinations.
