@@ -587,3 +587,5 @@ R3 WP17／WP20：JspTagFileExpander 在 JSP adapter 依已證明 tagdir 與呼�
 R3 WP20：overview.ts 在 viewer 依相同連結目的／名稱／屬性跨至少兩個且 ≥50% 畫面計算全站導覽，混合關聯保留非導覽觸發者；canonical graph 與 schema 不變。總覽採穩定 ID 排序格狀座標、卡片間走廊正交路徑與進出邊 hover；聚焦將全站導覽另分組，未解析目的合併且保留所有觸發／證據。labels.ts 共用可讀元件標籤，diagnostics.ts 為每個現有代碼提供中文收合分類，英文與完整來源置技術明細。主要 URL 先選直接 render 的路由，再選入站路由；全部候選仍保留。見 ADR 0039。
 
 R4 UI1：shell-ui.ts 只建立本地 SVG 圖示與外殼控制元件，main.ts 組織頂部導覽／左側畫面脈絡／右側空狀態；診斷與元件庫原內容移至本地 dialog。CSS 變數提供系統字型與 AA 色彩，不載入外部資源。md-controls 只更換檔案選擇的呈現入口，共用格式／決策／API 模組不變；見 ADR 0040。
+
+R5 WP23：總覽改由流程邊（不含全站導覽與自我迴圈）做 sorted DFS 去回邊、DAG 最長路徑分層與重心排序；無流程關聯者獨立置右欄。保留卡片間走廊路由與聚焦版面，全站導覽只疊加較淡的線；>150 畫面或 >600 關聯使用原格狀保護。見 ADR 0049。單一 HTML 的 application.path 不注入，但指紋仍來自完整 canonical graph，見 ADR 0048。

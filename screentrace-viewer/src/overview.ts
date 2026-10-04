@@ -17,10 +17,32 @@ export function partitionNavigation(index:Index):{global:Relation[];flows:Relati
  return {global,flows};
 }
 /** Stable grid keeps cyclic applications spread across both axes. */
-export function overviewLayout(index:Index):Map<string,Position>{
+export function gridLayout(index:Index):Map<string,Position>{
  const columns=Math.max(1,index.screens.length<=12?Math.min(3,Math.ceil(Math.sqrt(index.screens.length))):Math.ceil(Math.sqrt(index.screens.length))),positions=new Map<string,Position>();
  index.screens.forEach((screen,i)=>positions.set(screen.id,{x:60+(i%columns)*340,y:60+Math.floor(i/columns)*240}));return positions;
 }
+export interface FlowLayout {positions:Map<string,Position>;dag:Relation[];back:Relation[];isolated:string[];fallback:boolean}
+/** Sorted DFS removes only ancestor edges; longest DAG paths determine left-to-right layers.
+ * Four alternating barycenter sweeps order each layer, with IDs breaking every tie. */
+export function flowLayout(index:Index):FlowLayout {
+ if(index.screens.length>150||index.relations.length>600)return {positions:gridLayout(index),dag:[],back:[],isolated:[],fallback:true};
+ const ids=index.screens.map(s=>s.id).sort(order),edges=partitionNavigation(index).flows.filter(r=>r.from!==r.to).sort((a,b)=>order(a.from,b.from)||order(a.to,b.to));
+ const incoming=new Map(ids.map(id=>[id,edges.filter(r=>r.to===id)])),outgoing=new Map(ids.map(id=>[id,edges.filter(r=>r.from===id)]));
+ const isolated=ids.filter(id=>!incoming.get(id)!.length&&!outgoing.get(id)!.length),active=ids.filter(id=>!isolated.includes(id)),state=new Map<string,number>(),dag:Relation[]=[],back:Relation[]=[];
+ const primary=(id:string)=>index.routes.get(id)?.[0];
+ const rootOrder=(a:string,b:string)=>Number(primary(b)==='/')-Number(primary(a)==='/')||(primary(a)?.length??Infinity)-(primary(b)?.length??Infinity)||order(a,b);
+ const visit=(id:string)=>{state.set(id,1);for(const r of outgoing.get(id)!){if(state.get(r.to)===1)back.push(r);else{dag.push(r);if(!state.has(r.to))visit(r.to);}}state.set(id,2);};
+ for(const id of active.filter(id=>!incoming.get(id)!.length).sort(order))if(!state.has(id))visit(id);
+ for(const id of [...active].sort(rootOrder))if(!state.has(id))visit(id);
+ const indegree=new Map(active.map(id=>[id,dag.filter(r=>r.to===id).length])),rank=new Map(active.map(id=>[id,0])),queue=active.filter(id=>!indegree.get(id));
+ while(queue.length){queue.sort(order);const id=queue.shift()!;for(const r of dag.filter(r=>r.from===id)){rank.set(r.to,Math.max(rank.get(r.to)!,rank.get(id)!+1));indegree.set(r.to,indegree.get(r.to)!-1);if(!indegree.get(r.to))queue.push(r.to);}}
+ const layers:string[][]=[];for(const id of active){const n=rank.get(id)!;(layers[n]??=[]).push(id);}
+ const rows=new Map<string,number>();const updateRows=()=>layers.forEach(layer=>layer.forEach((id,i)=>rows.set(id,i)));updateRows();
+ for(let sweep=0;sweep<4;sweep++){const forward=sweep%2===0;for(const n of layers.map((_,i)=>i).sort((a,b)=>forward?a-b:b-a)){const center=(id:string)=>{const neighbors=dag.filter(r=>forward?r.to===id:r.from===id).map(r=>rows.get(forward?r.from:r.to)!);return neighbors.length?neighbors.reduce((a,b)=>a+b,0)/neighbors.length:rows.get(id)!;};const centers=new Map(layers[n].map(id=>[id,center(id)]));layers[n].sort((a,b)=>centers.get(a)!-centers.get(b)!||order(a,b));updateRows();}}
+ const positions=new Map<string,Position>();layers.forEach((layer,n)=>layer.forEach((id,i)=>positions.set(id,{x:60+n*340,y:60+i*240})));isolated.forEach((id,i)=>positions.set(id,{x:60+layers.length*340,y:60+i*240}));
+ return {positions:new Map(ids.map(id=>[id,positions.get(id)!])),dag,back,isolated,fallback:false};
+}
+export function overviewLayout(index:Index):Map<string,Position>{return flowLayout(index).positions;}
 /** Adjacent cards use their nearest ports; longer routes stay in row/column gutters.
  * Each path is simple (no retraced segment), including self loops. Reverse flows use
  * separate ports so their arrows remain independently readable. */

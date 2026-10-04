@@ -8,7 +8,7 @@ import {Payload,Behavior,ElementRecord,Rule,Node} from './contracts';
 import {element,text} from './text';
 import {callSources,screenBehaviors,rootTrigger,callerKind} from './usage';
 
-const behaviorNames:Record<string,string>={NAVIGATE:'前往其他畫面',SUBMIT_FORM:'送出表單',CALL_API:'呼叫 API',OPEN_DIALOG:'開啟彈窗',VALIDATE:'執行資料檢核',UI_STATE_CHANGE:'變更畫面狀態',SELECT_CHANGE:'變更選項',UNKNOWN:'待確認的操作'};
+const behaviorNames:Record<string,string>={NAVIGATE:'導向待確認',SUBMIT_FORM:'送出表單',CALL_API:'呼叫 API',OPEN_DIALOG:'開啟彈窗',VALIDATE:'執行資料檢核',UI_STATE_CHANGE:'變更畫面狀態',SELECT_CHANGE:'變更選項',UNKNOWN:'待確認的操作'};
 const displayRoute=(value:string)=>value;
 const resolutionName=(value?:string)=>value==='UNRESOLVED'?'未解析':value==='AMBIGUOUS'?'有多個候選':value==='INFERRED'?'依證據推定':value==='CONFIRMED'?'已由來源確認':'待確認';
 function resolution(index:Index,record:Node|Behavior):string {const states=(record.evidence||[]).map((e:any)=>e.resolution);return resolutionName(states.includes('AMBIGUOUS')?'AMBIGUOUS':states.includes('UNRESOLVED')?'UNRESOLVED':states.includes('INFERRED')?'INFERRED':states.includes('CONFIRMED')?'CONFIRMED':record.confidence);}
