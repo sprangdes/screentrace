@@ -106,7 +106,16 @@ final class JspTagFileExpander {
 
   private static String substitute(String text,Map<String,String> attributes) {
     Map<String,String> normalized=new HashMap<>();attributes.forEach((key,value)->normalized.put(key.toLowerCase(Locale.ROOT),value));
-    Matcher matcher=VARIABLE.matcher(text);StringBuffer out=new StringBuffer();
+    Matcher escaped=Pattern.compile("\\$\\{\\s*fn:escapeXml\\(\\s*([A-Za-z_][A-Za-z0-9_]*)\\s*\\)\\s*}").matcher(text);
+    StringBuffer escapedText=new StringBuffer();
+    while(escaped.find()) {
+      String value=normalized.get(escaped.group(1).toLowerCase(Locale.ROOT));
+      if(value!=null&&!value.contains("${")&&!value.contains("#{")&&!value.contains("<%"))
+        value=value.replace("&","&amp;").replace("<","&lt;").replace(">","&gt;").replace("\"","&quot;").replace("'","&#39;");
+      escaped.appendReplacement(escapedText,Matcher.quoteReplacement(value==null?escaped.group():value));
+    }
+    escaped.appendTail(escapedText);
+    Matcher matcher=VARIABLE.matcher(escapedText.toString());StringBuffer out=new StringBuffer();
     while(matcher.find()) {
       String value=normalized.get(matcher.group(1).toLowerCase(Locale.ROOT));
       matcher.appendReplacement(out,Matcher.quoteReplacement(value==null?matcher.group():value));

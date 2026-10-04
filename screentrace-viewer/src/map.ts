@@ -16,7 +16,8 @@ export function indexGraph(input:Graph):Index {
  const behaviors=new Map((graph.behaviors||[]).map(b=>[b.id,b]));
  for(const b of behaviors.values())if(b.targetId&&['NAVIGATE','SUBMIT_FORM'].includes(b.type)){let parent=b;const seen=new Set<string>();while(!parent.triggerId&&parent.parentId&&behaviors.has(parent.parentId)&&!seen.has(parent.id)){seen.add(parent.id);parent=behaviors.get(parent.parentId)!;}if(parent.triggerId)add(parent.triggerId,b.targetId,b.id);}
  const relations=[...pairs.values()].sort((a,b)=>order(a.from,b.from)||order(a.to,b.to));for(const r of relations){r.triggers=[...new Set(r.triggers)].sort(order);r.behaviorIds=[...new Set(r.behaviorIds)].sort(order);}
- return {graph,nodes,screens,owners,routes:new Map([...routes].map(([id,set])=>[id,[...set].sort(order)])),relations,behaviors};
+ const displayRoutes=new Map<string,string[]>();for(const screen of screens){const candidates=new Map<string,number>();for(const endpoint of graph.nodes.filter(n=>n.type==='ENDPOINT'))for(const handled of edges.filter(e=>e.type==='HANDLED_BY'&&e.from===endpoint.id))if(edges.some(e=>e.type==='RENDERS'&&e.from===handled.to&&e.to===screen.id)){const outcomes=edges.filter(e=>e.from===handled.to&&['RENDERS','FORWARDS_TO'].includes(e.type)).length,score=(endpoint.attributes.httpMethod==='GET'?4:0)+(outcomes===1?2:0);const path=endpoint.attributes.path;if(path)candidates.set(path,Math.max(candidates.get(path)||0,score));}const explicit=screen.attributes.route||screen.attributes.url||screen.attributes.path;displayRoutes.set(screen.id,[...routes.get(screen.id)!].sort((a,b)=>(b===explicit?100:candidates.get(b)||0)-(a===explicit?100:candidates.get(a)||0)||order(a,b)));}
+ return {graph,nodes,screens,owners,routes:displayRoutes,relations,behaviors};
 }
 export interface Position {x:number;y:number}
 /** Tarjan SCC condensation, then stable longest-path layers; cycles occupy one layer. */

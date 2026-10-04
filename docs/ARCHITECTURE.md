@@ -579,3 +579,7 @@ screentrace-viewer/test/synthetic-project.e2e.mjs 直接讀取 Java 產物，Nod
 本輪只含 fixture、決定性、E2E、USER_GUIDE／README／架構文件；既有 security.yml 已涵蓋新增 Java 與 *.e2e.mjs，不修改 CI、效能、格式化或相容入口。決定見 ADR 0032；使用步驟與實際合成報表截圖位置見 USER_GUIDE。
 
 R3 WP19：畫面顯示名稱由 viewer names.ts 單一決定，唯一 title → 唯一 h1 → 人性化 view basename，重名追加主要 URL／穩定序號。卡片只顯示名稱與主要 URL，來源保留於右欄／檔案樹；display graph 不修改 canonical graph 或 md，見 ADR 0038。
+
+R3 WP17／WP20：JspTagFileExpander 在 JSP adapter 依已證明 tagdir 與呼叫屬性展開，保留呼叫／定義證據、循環與深度限制。僅已知字面屬性的 ${fn:escapeXml(var)} 做 XML 跳脫代入，動態屬性／未知函式保持資料及未解析邊界；不執行目標碼。Spring adapter 的 ControllerReturns 以 JavaParser 提取每個 return，保留 guard、來源與 INFERRED／AMBIGUOUS；經端點／handler 投射畫面邊，AJAX 不當成導頁。
+
+R3 WP20：overview.ts 在 viewer 依相同連結目的／名稱／屬性跨至少兩個且 ≥50% 畫面計算全站導覽，混合關聯保留非導覽觸發者；canonical graph 與 schema 不變。總覽採穩定 ID 排序格狀座標、卡片間走廊正交路徑與進出邊 hover；聚焦將全站導覽另分組，未解析目的合併且保留所有觸發／證據。labels.ts 共用可讀元件標籤，diagnostics.ts 為每個現有代碼提供中文收合分類，英文與完整來源置技術明細。主要 URL 先選直接 render 的路由，再選入站路由；全部候選仍保留。見 ADR 0039。
