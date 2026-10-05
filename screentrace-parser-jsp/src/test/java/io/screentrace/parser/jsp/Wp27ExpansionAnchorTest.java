@@ -29,7 +29,7 @@ class Wp27ExpansionAnchorTest {
   assertEquals(List.of("body.jsp:3"),anchors("body.jsp"));
   assertEquals(List.of("loop.jsp:3 > WEB-INF/tags/item.tag:1"),anchors("loop.jsp"));
  }
- @Test void sameLineOpeningTagsHaveOrdinals()throws Exception {assertEquals(List.of("same-line.jsp:1#1","same-line.jsp:1#2"),anchors("same-line.jsp"));}
+ @Test void sameLineOpeningTagsHaveOrdinals()throws Exception {assertEquals(List.of("same-calls.jsp:2#1 > WEB-INF/tags/item.tag:1","same-calls.jsp:2#2 > WEB-INF/tags/item.tag:1"),anchors("same-calls.jsp"));assertEquals(List.of("same-line.jsp:1#1","same-line.jsp:1#2"),anchors("same-line.jsp"));}
  @Test void limitedExpansionHasNoInventedComponentsOrAnchors()throws Exception {
   for(String page:List.of("cycle.jsp","depth.jsp")){
    var result=new JspProjectParser().analyze(ROOT,List.of(ROOT.resolve(page)));

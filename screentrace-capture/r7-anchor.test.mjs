@@ -36,3 +36,15 @@ test('no source and no attribute evidence cannot consume a same-tag component; a
   for(const item of data.elements.filter(e=>e.tag==='a')){assert.equal(item.componentResolution,'AMBIGUOUS');assert.deepEqual(item.graphComponentCandidates,['a','b']);assert.equal(item.graphComponentId,null);assert.equal(item.matchBasis,'ANCHOR');}
  }finally{await browser?.close();}
 });
+
+test('unique anchors support repeated DOM occurrences and ignore other screens and conflicting heuristics',async()=>{
+ let browser;try{browser=await chromium.launch();const context=await browser.newContext({javaScriptEnabled:false});const page=await context.newPage();await page.setContent('<body><a id="wrong" data-st-expansion-anchor="same">One</a><a data-st-expansion-anchor="same">Two</a>');
+  const nodes=['correct','other','wrong'].map(id=>({id,type:'COMPONENT',source:{file:'page.jsp',line:1},attributes:{tag:'a',expansionAnchor:id==='wrong'?'elsewhere':'same',id}}));
+  const graph={schemaVersion:'2.2',nodes,relationships:[{type:'CONTAINS',from:'screen',to:'correct'},{type:'CONTAINS',from:'screen',to:'wrong'},{type:'CONTAINS',from:'other-screen',to:'other'}]};
+  for(const item of (await collectElementStyles(page,context,graph,'screen')).elements.filter(e=>e.tag==='a')){assert.equal(item.graphComponentId,'correct');assert.deepEqual(item.graphComponentCandidates,['correct']);assert.equal(item.componentResolution,'INFERRED');assert.equal(item.matchBasis,'ANCHOR');}
+ }finally{await browser?.close();}
+});
+test('packed display documents omit redundant DOM anchor strings while original capture documents remain intact',async()=>{
+ const {packStandaloneDocuments}=await import('./pack-preview.mjs'),root=await mkdtemp(path.join(os.tmpdir(),'r7-pack-'));
+ try{await mkdir(path.join(root,'static-preview'));const html='<body><a href="/a" data-st-source-file="page.jsp" data-st-expansion-anchor="page.jsp:1 &gt; tags/item.tag:2">A</a></body>';await writeFile(path.join(root,'static-preview/a.html'),html);const packed=await packStandaloneDocuments(root,{screen:'static-preview/a.html'});assert.doesNotMatch(packed.documents.screen,/data-st-expansion-anchor/);assert.match(packed.documents.screen,/href="\/a"/);assert.match(packed.documents.screen,/data-st-source-file="page.jsp"/);assert.equal(await readFile(path.join(root,'static-preview/a.html'),'utf8'),html);}finally{await rm(root,{recursive:true,force:true});}
+});
