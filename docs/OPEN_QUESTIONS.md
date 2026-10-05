@@ -176,10 +176,7 @@
 
 ## OQ-020 — 功能區域規則產生多個單畫面區域
 
-- 情境：WP35 按既定順序先以 handler 控制器／Action 分組，再以 URL 第一段退補。PetClinic 的實際結果有五個僅含一個畫面的區域：CrashController（Exception）、`mvc:view-controller`（Welcome；顯示名稱為 Mvc View Controller）、URL 前段 `owners`（Owner Details）、PetController（Create Or Update Pet Form）、VetController（Vet List）。eMusicStore 有三個：CartItemController（CART）、LoginController（Login）、首頁與其他（Using Angular）。分析只顯示證據導出的現況；沒有把單畫面組合併。
-- 可選方案 A：保留既定分組規則與所有單畫面區域；名稱與分組依據照現有證據顯示。
-- 可選方案 B：改以 URL 第一段作為所有畫面的統一分組依據，弱化控制器優先規則；同一路徑下的畫面可能合併，跨路徑的同一控制器則可能拆開。
-- 可選方案 C：以 handler 套件／模組的上一層作分組依據，前提是來源圖能一致提供該欄位；否則仍沿用現況。
-- 可選方案 D：由需求方提供專案區域對照表，把控制器／路徑鍵映射成業務區域；無對照項仍依原規則顯示。
-- 影響範圍：僅 WP35 viewer 分組與顯示名稱，不改圖、來源、路由、API 或決策資料。WP35／WP36 已按文件既定規則完成；本問題只等待是否另行授權變更分組依據。
-- 狀態：待需求方決定。WP35 不自行採用以上替代方案。
+- 情境：需求方要求整個專案只使用一種功能區域依據，並要求減少單畫面區域、提供切換及易讀名稱。
+- 決定：已決定（2026-10-05）。依據選項為網址前段、控制器類別、JSP 所在目錄。預設選擇單畫面區域數最少的依據；平手順序為網址前段、控制器、JSP 目錄。介面提供切換並標明依據。分組由單一決定性純函式完成，技術後綴須移除並將名稱人性化。
+- 範圍：viewer 分組與呈現，不改 Application Graph、分析結果、API 推導或 review state。PetClinic 與 eMusicStore 的選擇依據及各區域畫面數記入 R10 實際報告。
+- 舊規格：WP35 原先先依控制器／Action 分組，再按 URL 退補；因此出現 PetClinic 五個及 eMusicStore 三個單畫面區域。此分組假設由本決定取代。
