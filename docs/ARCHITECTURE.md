@@ -593,3 +593,5 @@ R5 WP23：總覽改由流程邊（不含全站導覽與自我迴圈）做 sorted
 R6 WP24–WP25：capture 縮圖為決定性的640px PNG，reader保留格式／範圍驗證。總覽卡片80%為縮圖，擴大既有走廊格距。prototype.ts 以原單一 sandbox iframe 顯示完整靜態文件，依原寬度縮放及內容高度撐高；FLIP使用父頁WAAPI300ms，reduced-motion直接切換。prototype-history.ts只在記憶體保存畫面與捲動位置，canvas保留平移縮放；流程視圖為明確切換入口。所有預覽文字仍經DOM及textContent顯示，inert-document先中和會預載的屬性再由DOMParser解析，offline-css沿用本專案capture的資源token掃描，僅允許嵌入資源、遞迴隔離data CSS，另有iframe CSP。父頁攔截點擊／送出與鍵盤，目標腳本移除且sandbox無allow-scripts；WP25僅提示，不執行WP26模擬。canonical graph、review/md/API規則與指紋不變；見ADR0050／0051。
 
 R6 WP26：simulation.ts 為純圖規則，exact preview path→元件→行為，保留全部候選／未知分支與來源證據，不執行條件。simulation-ui.ts 將效果轉為原型導覽、原生表單驗證／可能的 SERVER 訊息、既有 MODAL 覆蓋層及不發送的 API 提示；覆蓋率以真實靜態 DOM 計算，未配對／缺失文件不隱藏。WebKit 阻擋 sandbox 內父頁事件回呼，simulation-surface.ts 使用精確 DOM 矩形的父頁原生控制與暫時值同步，規則共用、目標 HTML／腳本不進父頁，原 iframe 保持無 allow-scripts。模擬狀態僅記憶體，重置重建；canonical graph、review/md、API 推導及指紋不變。見 ADR0052。
+
+WP26驗收呈現補強（ADR0053）：操作模式以元素摘要為主，計算樣式收合、檢查模式保留樣式優先。送出結果窄條有高度上限及內部捲動，每個候選白話原因與完整證據分離、技術細節預設收合。覆蓋率分成互斥的圖支持行為／可直接輸入欄位／無法確認三類；不改推導、圖、review或md。

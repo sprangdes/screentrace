@@ -1,3 +1,4 @@
+import {simulate,Effect} from './simulation';
 import {endpointGroup,endpointAction} from './endpoint-presentation';
 import {icon,iconButton} from './shell-ui';
 import {kindNames,kindName,componentLabel,isAction} from './labels';
@@ -38,3 +39,13 @@ export function screenPanel(panel:HTMLElement,index:Index,payload:Payload,id:str
 
 
 export function unresolvedPanel(panel:HTMLElement,index:Index,payload:Payload,screenId:string,ids:string[],onBack:()=>void){panel.replaceChildren(element('h2',`未解析 ×${ids.length}`));const back=element('button','返回畫面資訊');back.onclick=onBack;panel.append(back);for(const id of ids){const behavior=index.behaviors.get(id);if(!behavior)continue;const trigger=rootTrigger(index,behavior),label=index.nodes.get(trigger||'')?.name||'畫面載入';const entry=element('section',undefined,'unresolved-item');behaviorDetail(entry,index,payload,screenId,behavior,onBack);entry.prepend(element('h3',label));panel.append(entry);}}
+
+/** Operate mode leads with graph information; inspection retains style-first rendering. */
+export function elementSummary(panel:HTMLElement,index:Index,payload:Payload,screenId:string,record:ElementRecord,onFocus:(id:string)=>void,onApi:(id:string)=>void){
+ const component=record.graphComponentId?index.nodes.get(record.graphComponentId):undefined;
+ panel.replaceChildren(element('h2','元素摘要'),element('p',`標籤：${component?.name||record.text||'未提供'}`),element('p',`類型：${component?kindName(component):kindNames[record.tag.toUpperCase()]||'畫面元素'}`),element('p',`信心：${record.componentResolution==='CONFIRMED'?'已確認':record.componentResolution==='INFERRED'?'靜態推定':record.componentResolution==='AMBIGUOUS'?'有多個候選':'無法確認'}`));
+ const ids=record.componentResolution==='AMBIGUOUS'?record.graphComponentCandidates||[]:record.graphComponentId?[record.graphComponentId]:[],behaviors=(index.graph.behaviors||[]).filter(b=>ids.includes(b.triggerId||''));panel.append(element('h3','行為'));if(!behaviors.length)panel.append(element('p','靜態分析無法確認這個操作'));for(const b of behaviors)panel.append(element('p',behaviorNames[b.type]||'無法確認'));
+ panel.append(element('h3','目的畫面'));const screens=new Set<string>();const collect=(effect:Effect)=>{if(effect.kind==='navigate'&&effect.targetId)screens.add(effect.targetId);for(const choice of effect.choices||[])collect(choice);};if(record.componentResolution==='AMBIGUOUS')for(const componentId of ids)collect(simulate(payload,screenId,record,{tag:record.tag,valid:true,componentId}));else collect(simulate(payload,screenId,record,{tag:record.tag,valid:true}));if(!screens.size)panel.append(element('p','沒有可直接確認的目的畫面'));for(const id of screens){panel.append(element('p',index.nodes.get(id)?.name||'畫面'));}
+ panel.append(element('h3','可前往的 API'));const apis=new Set(behaviors.filter(b=>b.type==='CALL_API'&&b.targetId&&index.nodes.get(b.targetId)?.type==='ENDPOINT').map(b=>b.targetId!));if(!apis.size)panel.append(element('p','沒有可確認的 API'));for(const id of apis){const endpoint=index.nodes.get(id)!,button=element('button',`${endpoint.attributes.httpMethod||'ANY'} ${endpoint.attributes.path||endpoint.name}`);button.onclick=()=>onApi(id);panel.append(button);}
+ const styles=element('details',undefined,'element-styles');styles.append(element('summary','技術細節：計算樣式與來源'));const content=element('div');elementDetail(content,payload,record);styles.append(content);panel.append(styles);
+}
