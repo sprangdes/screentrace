@@ -1,6 +1,6 @@
 import test from 'node:test';import assert from 'node:assert/strict';import {readFile} from 'node:fs/promises';import {ownModule} from './module.mjs';import {fixture} from './fixture.mjs';
 test('WP29 mapped reasons share simulation decisions, including event filtering and data-only navigation',async()=>{
- const m=await ownModule('simulation'),vectors=JSON.parse(await readFile('fixtures/r7/coverage/mapped-reasons.json'));
+ const m=await ownModule('simulation'),vectors=JSON.parse(await readFile(new URL('../../fixtures/r7/coverage/mapped-reasons.json',import.meta.url)));
  for(const v of vectors.cases){const p=fixture(),record={graphComponentId:'shared',componentResolution:'INFERRED'};
  p.graph.behaviors=v.type?[{id:'test',triggerId:'shared',type:v.type,event:v.event,targetId:v.target,evidence:[{parser:'Fixture',resolution:v.resolution,detail:v.resolution==='AMBIGUOUS'?'候選：[missing1, missing2]':''}]}]:[];
  const intent={tag:v.tag,valid:true},actual=m.assessSimulation(p,'a',record,intent);

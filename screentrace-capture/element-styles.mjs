@@ -4,6 +4,19 @@ export function captureOptions(args) {
  const read=(key,fallback)=>{const raw=args.find(s=>s.startsWith(`--${key}=`));if(!raw)return fallback;const value=Number(raw.split('=')[1]);if(!Number.isSafeInteger(value)||value<1)throw new Error(`無效預覽設定：${key}`);return value;};
  return {maxElements:read('style-element-limit',50000),maxStyleBytes:read('style-byte-limit',16*1024*1024)};
 }
+/** Only component-unmapped operables; no inference of target behavior here. */
+export function unmappedReason(element,nodes=[]){
+ if(!['a','button','form','select','input','textarea'].includes(element.tag)||element.graphComponentId&&['CONFIRMED','INFERRED'].includes(element.componentResolution))return undefined;
+ if(element.componentResolution==='AMBIGUOUS')return 'AMBIGUOUS_CANDIDATES';
+ if(element.componentResolution!=='UNRESOLVED')return 'OTHER';
+ if(element.source&&(/\$\{|<%/.test(element.source.file||'')||!Number.isSafeInteger(element.source.line)||element.source.line<1))return 'DYNAMIC_OR_UNRESOLVED_SOURCE';
+ if(element.source?.file?.endsWith('.tag')&&!element.expansionAnchor)return 'ANCHOR_MISSING';
+ // A graph component exists at this source position, but none is provably paired.
+ // Do not claim that the analyzer failed to create a component.
+ if(element.source&&nodes.some(n=>n.source?.file===element.source.file&&n.source?.line===element.source.line))return 'OTHER';
+ if(!element.source&&nodes.length)return 'DYNAMIC_OR_UNRESOLVED_SOURCE';
+ return 'NO_GRAPH_COMPONENT';
+}
 function componentLinks(elements,graph,screenId) {
  const owned=new Set(graph.relationships.filter(e=>e.type==='CONTAINS'&&e.from===screenId).map(e=>e.to));
  const nodes=graph.nodes.filter(n=>n.type==='COMPONENT'&&owned.has(n.id)).sort((a,b)=>a.source.file.localeCompare(b.source.file,'en')||a.source.line-b.source.line||a.id.localeCompare(b.id,'en'));
@@ -18,12 +31,22 @@ function componentLinks(elements,graph,screenId) {
   if(candidates.length)element.matchBasis=basis||'HEURISTIC';
   element.graphComponentCandidates=candidates.map(n=>n.id).sort();element.graphComponentId=candidates.length===1?candidates[0].id:null;
   element.componentResolution=candidates.length===1?'INFERRED':candidates.length>1?'AMBIGUOUS':'UNRESOLVED';
+  element.unmappedReason=unmappedReason(element,nodes);
   if(candidates.length===1)used.add(candidates[0].id);
  }
 }
 /** Inspector code is tool-owned; the page context has target JavaScript disabled. */
 export async function collectElementStyles(page,context,graph,screenId,options=captureOptions([])) {
  if(graph.schemaVersion!=='2.2')throw new Error(`預覽樣式只接受 schema 2.2，收到 ${graph.schemaVersion??'未設定'}`);
+ // Force layout to discover used fonts, then wait for completion before recording
+ // geometry/computed styles. Tool-owned inspection only; target scripts stay disabled.
+ await page.evaluate(()=>{document.documentElement.getBoundingClientRect();});
+ const fontDeadline=Date.now()+5000;
+ while(await page.evaluate(()=>[...document.fonts].some(font=>font.status==='loading'))){
+  if(Date.now()>=fontDeadline)throw new Error('預覽字型載入逾時，無法確認穩定樣式');
+  // Poll from Node: page timers/events are disabled along with target JavaScript.
+  await new Promise(resolve=>setTimeout(resolve,25));
+ }
  const raw=await page.locator('html,body,body *').evaluateAll(nodes=>nodes.filter(n=>!['SCRIPT','STYLE'].includes(n.tagName)&&!n.closest('script,style')).map(n=>{
   const css=getComputedStyle(n),box=n.getBoundingClientRect();
   let visibleText='';const textStack=[n];while(textStack.length){const node=textStack.pop();if(node.nodeType===3)visibleText+=node.nodeValue;else if(!['HEAD','SCRIPT','STYLE'].includes(node.nodeName.toUpperCase()))textStack.push(...[...node.childNodes].reverse());}

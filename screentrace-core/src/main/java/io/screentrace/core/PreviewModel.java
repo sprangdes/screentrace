@@ -37,11 +37,17 @@ public record PreviewModel(String version, List<PreviewScreen> screens, List<Pre
       String graphComponentId, List<String> graphComponentCandidates, String componentResolution,
       List<String> conditions, ApplicationGraph.SourceLocation source,
       @JsonInclude(JsonInclude.Include.NON_EMPTY) String expansionAnchor,
-      @JsonInclude(JsonInclude.Include.NON_EMPTY) String matchBasis) {
+      @JsonInclude(JsonInclude.Include.NON_EMPTY) String matchBasis,
+      @JsonInclude(JsonInclude.Include.NON_EMPTY) String unmappedReason) {
     public PreviewElement(String graphScreenId,String path,String tag,String id,String name,String className,String text,
         RenderedBounds bounds,String styleId,String defaultId,String graphComponentId,List<String> graphComponentCandidates,
         String componentResolution,List<String> conditions,ApplicationGraph.SourceLocation source) {
-      this(graphScreenId,path,tag,id,name,className,text,bounds,styleId,defaultId,graphComponentId,graphComponentCandidates,componentResolution,conditions,source,null,null);
+      this(graphScreenId,path,tag,id,name,className,text,bounds,styleId,defaultId,graphComponentId,graphComponentCandidates,componentResolution,conditions,source,null,null,null);
+    }
+    public PreviewElement(String graphScreenId,String path,String tag,String id,String name,String className,String text,
+        RenderedBounds bounds,String styleId,String defaultId,String graphComponentId,List<String> graphComponentCandidates,
+        String componentResolution,List<String> conditions,ApplicationGraph.SourceLocation source,String expansionAnchor,String matchBasis) {
+      this(graphScreenId,path,tag,id,name,className,text,bounds,styleId,defaultId,graphComponentId,graphComponentCandidates,componentResolution,conditions,source,expansionAnchor,matchBasis,null);
     }
     public PreviewElement {
       graphComponentCandidates = graphComponentCandidates == null ? List.of() : List.copyOf(graphComponentCandidates);

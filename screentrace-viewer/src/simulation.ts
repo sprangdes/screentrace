@@ -18,6 +18,13 @@ function effect(payload:Payload,b:Behavior,targetId:string,intent:Intent,resolut
  if(b.type==='SUBMIT_FORM')return{kind:'form',targetId,label:node.name,method:node.attributes.httpMethod||'ANY',path:node.attributes.path||node.attributes.route||node.name,resolution,evidence:b.evidence,choices:outcomes,rules:serverRules(payload,targetId)};
  return outcomes.length===1&&(outcomes[0].resolution!=='AMBIGUOUS'||resolution==='AMBIGUOUS'&&node.type==='SCREEN')?outcomes[0]:{kind:'choices',choices:outcomes,expression:b.expression,message:'有多個可能目的，請選擇；系統不會替你決定'};
 }
+/** Same bounded callback-root and event selection used by simulation and explanation. */
+function componentBehaviors(payload:Payload,component:string):Behavior[]{
+ const byId=new Map((payload.graph.behaviors||[]).map(b=>[b.id,b]));const root=(b:Behavior)=>{let cursor=b;const seen=new Set<string>();for(let depth=0;!cursor.triggerId&&cursor.parentId&&depth<10;depth++){if(seen.has(cursor.id))return undefined;seen.add(cursor.id);const parent=byId.get(cursor.parentId);if(!parent)return undefined;cursor=parent;}return cursor.triggerId;};
+
+ return (payload.graph.behaviors||[]).filter(b=>root(b)===component);
+}
+function applicable(b:Behavior,intent:Intent):boolean{return !b.event||!!b.parentId||(intent.tag==='form'?b.event==='submit'||b.type==='SUBMIT_FORM'&&b.event==='click':['click','change'].includes(b.event));}
 export function simulate(payload:Payload,screenId:string,record:Partial<ElementRecord>|undefined,intent:Intent):Effect {
  if(intent.tag==='a'&&/^(https?:)?\/\//i.test((intent.href||'').trim()))return{kind:'external',message:'外部連結（不會開啟）'};
  if(intent.tag==='a'&&/^javascript:/i.test((intent.href||'').replace(/[\u0000-\u0020]/g,'')))return unknown(intent.href);
@@ -26,9 +33,35 @@ export function simulate(payload:Payload,screenId:string,record:Partial<ElementR
  if(record.componentResolution==='AMBIGUOUS'&&!intent.componentId)return{kind:'choices',message:'元素有多個圖元件候選，請選擇；靜態分析無法確認唯一對應',choices:(record.graphComponentCandidates||[]).map(id=>({kind:'choices',componentId:id,label:payload.graph.nodes.find(n=>n.id===id)?.name||id,choices:[],resolution:'AMBIGUOUS'}))};
  const component=intent.componentId||record.graphComponentId;if(!component||intent.componentId&&!record.graphComponentCandidates?.includes(component))return unknown();
  if(!(payload.graph.relationships||[]).some(e=>e.type==='CONTAINS'&&e.from===screenId&&e.to===component))return unknown();
- const byId=new Map((payload.graph.behaviors||[]).map(b=>[b.id,b]));const root=(b:Behavior)=>{let cursor=b;const seen=new Set<string>();for(let depth=0;!cursor.triggerId&&cursor.parentId&&depth<10;depth++){if(seen.has(cursor.id))return undefined;seen.add(cursor.id);const parent=byId.get(cursor.parentId);if(!parent)return undefined;cursor=parent;}return cursor.triggerId;};
- const behaviors=(payload.graph.behaviors||[]).filter(b=>root(b)===component&&(!b.event||!!b.parentId||(intent.tag==='form'?b.event==='submit'||b.type==='SUBMIT_FORM'&&b.event==='click':['click','change'].includes(b.event))));const effects:Effect[]=[];
+ const behaviors=componentBehaviors(payload,component).filter(b=>applicable(b,intent));const effects:Effect[]=[];
  for(const b of behaviors){const resolution=state(b);if(resolution==='AMBIGUOUS'){const ids=candidates(b);effects.push({kind:'choices',message:'有多個候選，請選擇；系統不會替你決定',expression:b.expression,evidence:b.evidence,choices:ids.map(id=>effect(payload,b,id,intent,'AMBIGUOUS'))});}else if(['CONFIRMED','INFERRED'].includes(resolution)&&b.targetId){const resolved=effect(payload,b,b.targetId,intent,resolution);effects.push(b.guard||b.condition?{kind:'choices',message:`條件尚未求值，請選擇可能結果：${b.guard||b.condition}`,expression:b.expression,choices:[resolved],evidence:b.evidence}:resolved);}else effects.push(unknown(b.expression,b.type==='OPEN_DIALOG'?'彈窗內容無法從靜態分析重建':undefined));}
  if(!effects.length)return unknown();return effects.length===1?effects[0]:{kind:'choices',message:'此元素有多個靜態行為，請選擇要檢視的操作',choices:effects};
 }
 export function canSimulate(effect:Effect):boolean{return['navigate','dialog','api'].includes(effect.kind)||effect.kind==='form'&&!!effect.choices?.some(canSimulate)||effect.kind==='choices'&&!!effect.choices?.some(canSimulate);}
+
+export type UnmappedReason='NO_GRAPH_COMPONENT'|'AMBIGUOUS_CANDIDATES'|'ANCHOR_MISSING'|'DYNAMIC_OR_UNRESOLVED_SOURCE'|'OTHER';
+export type SimulationReason=UnmappedReason|'NO_KNOWN_BEHAVIOR'|'BEHAVIOR_AMBIGUOUS'|'DESTINATION_UNRESOLVED'|'UNSUPPORTED_SIMULATION';
+export const simulationReasons:SimulationReason[]=['NO_GRAPH_COMPONENT','AMBIGUOUS_CANDIDATES','ANCHOR_MISSING','DYNAMIC_OR_UNRESOLVED_SOURCE','OTHER','NO_KNOWN_BEHAVIOR','BEHAVIOR_AMBIGUOUS','DESTINATION_UNRESOLVED','UNSUPPORTED_SIMULATION'];
+export function simulationReasonText(reason:SimulationReason):string{return {
+ NO_GRAPH_COMPONENT:'分析器未建立元件：這個元素沒有可對應的圖元件',
+ AMBIGUOUS_CANDIDATES:'元件有多個候選：靜態分析無法確認唯一對應',
+ ANCHOR_MISSING:'展開位置不完整：預覽與分析器的標記位置無法對照',
+ DYNAMIC_OR_UNRESOLVED_SOURCE:'來源無法靜態確認：這個元素的來源尚未解析',
+ OTHER:'配對原因尚未確認：需要分析人員協助',
+ NO_KNOWN_BEHAVIOR:'沒有已知的行為：這個元素沒有被分析到會觸發的動作（可能由頁面腳本控制）',
+ BEHAVIOR_AMBIGUOUS:'已記錄行為但無法確認結果：行為有歧義，無法證明此元素可模擬的結果',
+ DESTINATION_UNRESOLVED:'已記錄行為但無法確認結果：行為目的未解析，沒有可證明的目的畫面或操作結果',
+ UNSUPPORTED_SIMULATION:'已記錄行為但無法確認結果：行為類型或觸發事件不支援模擬'
+ }[reason];}
+/** Classification explains existing decisions. It never makes an effect executable. */
+export function assessSimulation(payload:Payload,screenId:string,record:Partial<ElementRecord>|undefined,intent:Intent):{effect:Effect;possible:boolean;reason?:SimulationReason}{
+ const result=simulate(payload,screenId,record,intent),possible=canSimulate(result)||record?.componentResolution==='AMBIGUOUS'&&!!record.graphComponentCandidates?.some(componentId=>canSimulate(simulate(payload,screenId,record,{...intent,componentId})));
+ if(possible)return{effect:result,possible:true};
+ if(!record?.graphComponentId||record.componentResolution==='UNRESOLVED'||record.componentResolution==='AMBIGUOUS')return{effect:result,possible:false,reason:record?.unmappedReason||(record?.componentResolution==='AMBIGUOUS'?'AMBIGUOUS_CANDIDATES':'NO_GRAPH_COMPONENT')};
+ const all=componentBehaviors(payload,record.graphComponentId);
+ let reason:SimulationReason='UNSUPPORTED_SIMULATION';
+ if(!all.length)reason='NO_KNOWN_BEHAVIOR';
+ else if(all.some(b=>state(b)==='AMBIGUOUS'))reason='BEHAVIOR_AMBIGUOUS';
+ else if(all.some(b=>['NAVIGATE','SUBMIT_FORM','CALL_API','OPEN_DIALOG'].includes(b.type)&&(state(b)==='UNRESOLVED'||applicable(b,intent)&&!canSimulate(effect(payload,b,b.targetId!,intent,state(b))))))reason='DESTINATION_UNRESOLVED';
+ return{effect:result,possible:false,reason};
+}

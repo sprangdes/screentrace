@@ -57,7 +57,10 @@ final class PreviewCaptureReader {
               && e.from().equals(screen.graphScreenId()) && e.to().equals(id))) throw new IOException("Preview component does not belong to its screen");
         }
         String componentId = optional(element, "graphComponentId");
-        String matchBasis=optional(element,"matchBasis"),anchor=optional(element,"expansionAnchor");
+        String matchBasis=optional(element,"matchBasis"),anchor=optional(element,"expansionAnchor"),unmappedReason=optional(element,"unmappedReason");
+        if(unmappedReason!=null&&(!Set.of("NO_GRAPH_COMPONENT","AMBIGUOUS_CANDIDATES","ANCHOR_MISSING","DYNAMIC_OR_UNRESOLVED_SOURCE","OTHER").contains(unmappedReason)
+            ||!Set.of("a","button","form","select","input","textarea").contains(element.path("tag").asText())
+            ||!Set.of("UNRESOLVED","AMBIGUOUS").contains(element.path("componentResolution").asText())||componentId!=null))throw new IOException("Invalid preview unmappedReason");
         if(matchBasis!=null&&!Set.of("ANCHOR","HEURISTIC").contains(matchBasis))throw new IOException("Invalid preview matchBasis");
         if("ANCHOR".equals(matchBasis)) {
           var owned=new HashSet<String>();graph.relationships().stream().filter(e->e.type()==ApplicationGraph.EdgeType.CONTAINS&&e.from().equals(screen.graphScreenId())).forEach(e->owned.add(e.to()));
@@ -72,7 +75,7 @@ final class PreviewCaptureReader {
             optional(element,"name"), optional(element,"className"), element.path("text").asText(),
             new RenderedBounds(bounds.path("x").asDouble(),bounds.path("y").asDouble(),bounds.path("width").asDouble(),bounds.path("height").asDouble()),
             styleIds.get(styleId), defaultId, componentId, candidates, element.path("componentResolution").asText(), strings(element.path("conditions")),
-            source.isObject() ? new ApplicationGraph.SourceLocation(source.path("file").asText(), source.path("line").asInt()) : null,anchor,matchBasis));
+            source.isObject() ? new ApplicationGraph.SourceLocation(source.path("file").asText(), source.path("line").asInt()) : null,anchor,matchBasis,unmappedReason));
       }
       String thumbnail = optional(captured,"thumbnail"); if (thumbnail != null) validateThumbnail(thumbnail);
       screens.add(new PreviewScreen(screen.graphScreenId(), screen.staticDocument(), screen.screenshot(), captured.path("width").asInt(screen.width()),

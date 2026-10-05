@@ -9,3 +9,11 @@
 先提交自行撰寫的 petclinic 風格向量與失敗測試。舊實作缺少 assessSimulation、unmappedReason，且契約沒有欄位驗證，因此新增三個測試全部失敗（/private/tmp/wp29-red.log）。另新增畫面及全專案不變量、四種合成 family 與中文離線點選 E2E。
 
 不修改任何既有斷言、fixture、golden、圖 schema、元件 ID、行為信心、API／review／md 規則；無既有斷言需授權調整。真實專案僅唯讀分析，資料／輸出不提交。
+
+補強點選一致性：新增 E2E 先證明可重建彈窗仍被右欄誤標（1 != 0）；因摘要缺少同一個 DOM 的 dialogIds。elementSimulationAssessment 統一取得彈窗可用性與原生欄位條件，覆蓋率、結果提示、右欄都使用此入口，避免相同函式卻不同上下文產生矛盾。測試亦驗證可編輯原生欄位沒有未知原因。Java reader 先紅燈於未保留新欄位，再增加序列化／範圍驗證；原契約 fixture 缺欄位保留相容。無既有斷言異動。
+
+決定性補強：最終真實專案重驗發現 petclinic 同一畫面的字型尺寸與 styleId 不一致。domcontentloaded 後立即量測，字型可能尚在載入；先提交 fc8f9c6 的合成延遲字型失敗測試，再於 collectElementStyles 強制版面計算、以 Node 輪詢各 FontFace 的 loading 狀態（5 秒逾時），完成或失敗後才量測。25ms 僅是讀取條件的頻率，不是固定延遲／成功標準；逾時沿既有 capture 失敗診斷處理，不偽造樣式。
+
+停用目標 JavaScript 時，頁面定時器及 FontFaceSet 的完成事件無法可靠更新；新增測試初稿用 FontFaceSet.status 判斷，已修正為各 FontFace 實際狀態，並在移除等待的舊實作再驗證為失敗。這是本工作包新增測試的修正，不變更任何工作包之前的既有斷言。合成字型由自行撰寫的無效資料加攔截回應構成，覆蓋失敗後穩定 fallback，不複製第三方字型或目標來源、不發真實網路請求。真實字型成功載入另以唯讀 petclinic 三次輸出驗證。
+
+未對應的保守邊界：若圖已在相同來源位置建立元件但沒有可證明配對，使用 OTHER，不能宣稱分析器未建立元件；缺少來源且畫面已有圖元件時，來源仍未解析。這不新增任何猜配，真實專案可操作元素未對應為零，未發現 OTHER 個案需改歸類。
