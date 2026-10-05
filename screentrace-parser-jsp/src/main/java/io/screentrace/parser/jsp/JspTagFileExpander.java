@@ -13,13 +13,14 @@ import java.util.regex.Pattern;
 /** Expands statically addressed JSP tag files without evaluating JSP expressions. */
 final class JspTagFileExpander {
   static final int MAX_DEPTH = 12;
-  record Result(String text, Map<Integer,List<AnalysisEvidence>> definitionEvidence, List<String> diagnostics) { }
+  record Result(String text, Map<Integer,List<AnalysisEvidence>> definitionEvidence, List<String> diagnostics, Map<Integer,String> anchors) { }
   private record Expanded(String text, List<AnalysisEvidence> definitions, List<String> diagnostics) { }
   private static final Pattern VARIABLE = Pattern.compile("\\$\\{\\s*([A-Za-z_][A-Za-z0-9_]*)\\s*}");
   private static final Set<String> BUILTIN = Set.of("jsp", "html", "form", "spring", "c", "fn", "fmt", "tiles", "logic", "bean");
 
   Result expand(Path root, String pagePath, String text) {
-    Expanded expanded = expandText(root, pagePath, text, new ArrayDeque<>(), 0, Map.of(), 0);
+    AnchorBookmarks bookmarks=new AnchorBookmarks();
+    Expanded expanded = expandText(root, pagePath, bookmarks.mark(text,pagePath,""), new ArrayDeque<>(), 0, Map.of(), 0,bookmarks);
     Map<Integer,List<AnalysisEvidence>> byLine = new TreeMap<>();
     for (MarkupTag tag : MarkupTag.scan(text)) {
       if (tag.closing()) continue;
@@ -27,11 +28,12 @@ final class JspTagFileExpander {
       if (file == null) continue;
       byLine.put(tag.line(), expanded.definitions().stream().distinct().toList());
     }
-    return new Result(expanded.text(), byLine, expanded.diagnostics());
+    var clean=bookmarks.clean(expanded.text());
+    return new Result(clean.text(), byLine, expanded.diagnostics(),clean.anchors());
   }
 
   private Expanded expandText(Path root, String sourcePath, String text, Deque<String> stack, int depth,
-                              Map<String,String> inheritedPrefixes, int lineOffset) {
+                              Map<String,String> inheritedPrefixes, int lineOffset, AnchorBookmarks bookmarks) {
     Map<String,String> prefixes = new HashMap<>(inheritedPrefixes);prefixes.putAll(prefixes(text));
     List<MarkupTag> tags = MarkupTag.scan(text);
     StringBuilder out = new StringBuilder();
@@ -43,7 +45,7 @@ final class JspTagFileExpander {
       if (open.closing()) continue;
       String definition = tagFile(root, sourcePath, prefixes, open.name());
       if (definition == null) continue;
-      int start = text.lastIndexOf('<', open.end());
+      int start = open.start();
       int after = open.end()+1;
       String body = "";
       if (text.charAt(open.end()-1)!='/') {
@@ -56,7 +58,7 @@ final class JspTagFileExpander {
         }
         if(closeIndex<0) continue;
         MarkupTag close=tags.get(closeIndex);
-        int closeStart=text.lastIndexOf('<',close.end());
+        int closeStart=close.start();
         body=text.substring(open.end()+1,closeStart);
         after=close.end()+1;
         i=closeIndex;
@@ -73,6 +75,7 @@ final class JspTagFileExpander {
       try {
         String tagText=SafeProjectFiles.readUtf8Limited(root,root.resolve(definition),SafeProjectFiles.MAX_JSP_FILE_BYTES);
         Map<String,String> attributes=open.attributes();
+        tagText=bookmarks.mark(tagText,definition,bookmarks.at(text,start));
         // Isolate caller body from the tag template: flatten template lines only,
         // then restore body lines so caller definitions/use sites retain their positions.
         String marker="\u0000ST_BODY\u0000";
@@ -80,9 +83,9 @@ final class JspTagFileExpander {
         tagText=substitute(tagText,attributes).replaceAll("(?is)<jsp:doBody\\s*/>",Matcher.quoteReplacement(marker));
         int definitionLine=definitionLine(root,definition,tagText);
         stack.push(definition);
-        Expanded nested=expandText(root,definition,tagText,stack,depth+1,Map.of(),0);
+        Expanded nested=expandText(root,definition,tagText,stack,depth+1,Map.of(),0,bookmarks);
         Expanded callerBody=nested.text().contains(marker)?expandText(root,sourcePath,body,stack,depth+1,prefixes,
-            lineOffset+open.line()-1+newlines(text.substring(start,open.end()+1))):new Expanded("",List.of(),List.of());
+            lineOffset+open.line()-1+newlines(text.substring(start,open.end()+1)),bookmarks):new Expanded("",List.of(),List.of());
         stack.pop();
         String replacement=nested.text().replace('\n',' ').replace('\r',' ').replace(marker,
             "\n".repeat(newlines(text.substring(start,open.end()+1)))+callerBody.text());

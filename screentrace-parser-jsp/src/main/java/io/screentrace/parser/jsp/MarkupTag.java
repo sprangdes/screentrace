@@ -13,18 +13,26 @@ public final class MarkupTag {
   private final int line;
   private final Map<String,Integer> attributeLines;
   private final int end;
+  private final int start;
   private final boolean closing;
 
-  private MarkupTag(String name, Map<String, String> attributes, int line, int end, boolean closing, Map<String,Integer> attributeLines) {
+  private MarkupTag(String name, Map<String, String> attributes, int line, int start, int end, boolean closing, Map<String,Integer> attributeLines) {
     this.name = name;
     this.attributes = attributes;
     this.line = line;
     this.attributeLines = Map.copyOf(attributeLines);
     this.end = end;
+    this.start = start;
     this.closing = closing;
   }
 
   public static List<MarkupTag> scan(String source) {
+    return scan(source,false);
+  }
+
+  static List<MarkupTag> scanForAnchors(String source) {return scan(source,true);}
+
+  private static List<MarkupTag> scan(String source,boolean anchors) {
     List<MarkupTag> tags = new ArrayList<>();
     int line = 1, lineCursor = 0;
     for (int start = 0; start < source.length(); start++) {
@@ -32,6 +40,9 @@ public final class MarkupTag {
         int close=endOfExpression(source,start+2);if(close<0)break;start=close;continue;
       }
       if(source.charAt(start)!='<')continue;
+      if(anchors && source.startsWith("<![CDATA[",start)) {
+        int close=source.indexOf("]]>",start+9);if(close<0)break;start=close+2;continue;
+      }
       if (source.startsWith("<!--", start) || source.startsWith("<%--", start)) {
         String delimiter = source.startsWith("<!--", start) ? "-->" : "--%>";
         int close = source.indexOf(delimiter, start + 4);
@@ -49,7 +60,7 @@ public final class MarkupTag {
       if (end < 0) break;
       while (lineCursor < start) if (source.charAt(lineCursor++) == '\n') line++;
       String body = source.substring(start + 1, end).trim();
-      MarkupTag tag = parse(body, line, end);
+      MarkupTag tag = parse(body, line, start, end);
       if (tag != null) tags.add(tag);
       start = end;
       if (tag != null && !tag.closing() && (tag.name().equalsIgnoreCase("script") || tag.name().equalsIgnoreCase("style"))) {
@@ -65,6 +76,7 @@ public final class MarkupTag {
   public int line() { return line; }
   public int attributeLine(String name) { return attributeLines.getOrDefault(name.toLowerCase(Locale.ROOT),line); }
   public int end() { return end; }
+  public int start() { return start; }
   public boolean closing() { return closing; }
   public Map<String, String> attributes() { return Map.copyOf(attributes); }
   public String attribute(String name) { return attributes.get(name.toLowerCase(Locale.ROOT)); }
@@ -106,7 +118,7 @@ public final class MarkupTag {
     return endOfTag(source, start);
   }
 
-  private static MarkupTag parse(String body, int line, int end) {
+  private static MarkupTag parse(String body, int line, int start, int end) {
     if (body.startsWith("%@")) {
       body = "@" + body.substring(2).trim().replaceFirst("%$", "");
     }
@@ -118,7 +130,7 @@ public final class MarkupTag {
     String name = body.substring(0, split);
     Map<String,Integer> locations=new LinkedHashMap<>();
     int attributeBase=line+(int)body.substring(0,split).chars().filter(c->c=='\n').count();
-    return new MarkupTag(name, attributes(body.substring(split),attributeBase,locations), line, end, closing,locations);
+    return new MarkupTag(name, attributes(body.substring(split),attributeBase,locations), line, start, end, closing,locations);
   }
 
   private static Map<String, String> attributes(String body, int baseLine, Map<String,Integer> locations) {

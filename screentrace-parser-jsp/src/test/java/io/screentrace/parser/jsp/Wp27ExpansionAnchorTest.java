@@ -12,6 +12,11 @@ class Wp27ExpansionAnchorTest {
   return new JspProjectParser().analyze(ROOT,List.of(ROOT.resolve(page))).markup().get(page).components();
  }
  private List<String> anchors(String page)throws Exception {return components(page).stream().map(c->c.attributes().get("expansionAnchor")).toList();}
+ @Test void sharedVectorsUseOriginalQualifiedNamesAndStartLines()throws Exception {
+  var vectors=new ObjectMapper().readTree(Files.readString(Path.of("../docs/examples/expansion-anchor-vectors.json"))).get("vectors");
+  for(var vector:vectors){var expected=new ArrayList<String>();vector.get("expected").forEach(v->expected.add(v.asText()));
+   assertEquals(expected,new ArrayList<>(AnchorBookmarks.positions(vector.get("path").asText(),vector.get("source").asText()).values()),vector.get("name").asText());}
+ }
  @Test void threeCallsKeepDistinctCallSites()throws Exception {
   assertEquals(List.of("calls.jsp:2 > WEB-INF/tags/item.tag:1","calls.jsp:3 > WEB-INF/tags/item.tag:1","calls.jsp:4 > WEB-INF/tags/item.tag:1"),anchors("calls.jsp"));
   assertEquals(List.of("/one","/two","/three"),components("calls.jsp").stream().map(c->c.attributes().get("href")).toList());

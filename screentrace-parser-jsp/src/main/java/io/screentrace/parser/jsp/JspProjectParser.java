@@ -67,7 +67,7 @@ public final class JspProjectParser {
       String code=diagnostic.startsWith("JSP_TAG_CYCLE")?"JSP_TAG_CYCLE":diagnostic.startsWith("JSP_TAG_DEPTH_LIMIT")?"JSP_TAG_DEPTH_LIMIT":"JSP_TAG_UNRESOLVED";
       diagnostics.add(new Diagnostic("JSP 標籤檔展開受限："+diagnostic,Confidence.UNRESOLVED,new SourceLocation(relative,1),code,List.of()));
     }
-    markup.put(relative, StaticComponentNames.annotate(MarkupAnalysis.parse(relative, text),text));
+    markup.put(relative, withAnchors(StaticComponentNames.annotate(MarkupAnalysis.parse(relative, text),text),text,tagExpansion.anchors()));
     JspAnalysis.ViewKind kind = relative.endsWith(".jspf") ? JspAnalysis.ViewKind.JSPF : relative.endsWith(".jsp") ? JspAnalysis.ViewKind.JSP : JspAnalysis.ViewKind.HTML;
     views.add(new JspAnalysis.View(relative, kind, new SourceLocation(relative, 1)));
     UrlVariableResolver urls = new UrlVariableResolver(relative,text,includedWrites(root,relative,text,new java.util.HashSet<>()));
@@ -145,6 +145,17 @@ public final class JspProjectParser {
         interactions.set(i,new JspAnalysis.Interaction(item.viewPath(),item.type(),item.label(),item.target(),item.httpMethod(),item.source(),item.confidence(),item.submitsCurrentView(),item.originalExpression(),proof.stream().distinct().toList(),item.componentId()));
       }
     }
+  }
+
+  private static MarkupAnalysis withAnchors(MarkupAnalysis markup,String text,Map<Integer,String> anchors) {
+    List<MarkupAnalysis.Component> components=new ArrayList<>();int index=0;
+    for(var token:MarkupTag.scan(text)) {
+      if(token.closing()||MarkupAnalysis.kind(token.name().toLowerCase(Locale.ROOT),token.attributes())==null)continue;
+      var c=markup.components().get(index++);var attrs=new java.util.TreeMap<>(c.attributes());
+      String anchor=anchors.get(token.start());if(anchor!=null)attrs.put("expansionAnchor",anchor);
+      components.add(new MarkupAnalysis.Component(c.id(),c.kind(),c.tag(),attrs,c.source(),c.guard(),c.repeated(),c.formId(),c.model(),c.field(),c.bindingStatus()));
+    }
+    return new MarkupAnalysis(components,markup.events(),markup.rules(),markup.behaviors());
   }
 
   private static Map<Integer,Boolean> markupRepeats(String text) {
