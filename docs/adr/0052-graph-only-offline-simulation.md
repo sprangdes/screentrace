@@ -4,7 +4,7 @@
 
 simulation.ts 是可在 Node 單獨測試的純函式：輸入既有圖、畫面、exact preview path 的元件對應及原生表單有效性，輸出導覽／表單／彈窗／API／全部候選／無法確認的描述。simulation-ui.ts 僅呈現與綁定事件。所有文字使用 textContent，不執行 guard、條件、URL 運算式或專案程式。不修改 schema、分析器、API 狀態、review/md 契約或決策。
 
-只有已證明的 CONTAINS 與行為目的可操作；UNRESOLVED、UNKNOWN、UI_STATE_CHANGE、SELECT_CHANGE、VALIDATE 不假造效果。回呼的靜態子行為列為選擇，不模擬執行回呼。guard 未求值時先列可能操作供選擇。AMBIGUOUS 的圖元件與行為目的候選全部列出，不以文字、URL 相似度或 DOM 順序擇一。行為候選僅讀現有 producer 的正式「候選：[ID, ID]」證據欄位，不從任意 evidence 文字猜測；不認得或不存在的目的仍呈現未知。
+只有已證明的 CONTAINS 與行為目的可操作；目的節點本身若為UNRESOLVED，即使行為持有targetId也不能模擬；UNRESOLVED、UNKNOWN、UI_STATE_CHANGE、SELECT_CHANGE、VALIDATE 不假造效果。回呼的靜態子行為列為選擇，不模擬執行回呼。guard 未求值時先列可能操作供選擇。AMBIGUOUS 的圖元件與行為目的候選全部列出，不以文字、URL 相似度或 DOM 順序擇一。行為候選僅讀現有 producer 的正式「候選：[ID, ID]」證據欄位，不從任意 evidence 文字猜測；不認得或不存在的目的仍呈現未知。
 
 HANDLED_BY／RENDERS／FORWARDS_TO／NAVIGATES_TO 沿既有證據追蹤，深度10並防循環。已解析、未解析與缺少目的的結果均保留；表單只有唯一且已解析的畫面結果才自動導覽，歧義、條件與未解析結果不自動套用。每個結果保留證據等級、來源與解析器。context-path 的「未設定」證據不當成目的解析失敗；只讀真正 URL 解析結果，不新增 URL 推斷。
 
@@ -25,3 +25,5 @@ N 為可取得靜態文件中所有 a、button、form、select、input、textare
 b781d57 先提交缺少模組的規則失敗與互動測試。初版 E2E fixture 的 fingerprint／證據不完整，md 下載先失敗；補齊新 fixture 後，以保存的 WP24 報表證明缺少操作模式／覆蓋率、導覽仍留原畫面。既有斷言、fixture、golden 沒有改動。新增條件／回呼與未解析、缺少分支的回歸先失敗再修正；唯一未解析結果不得自動導覽另有 E2E；此新增測試先暴露原生欄位 blur 插入無關提示造成滑鼠按下／放開間位移、漏掉真實送出點擊。未對應原生欄位僅編輯值，不在 blur 產生無關效果；明確點選或下拉操作仍可提示未知。沒有增加固定等待或修改結果斷言。WebKit 原導覽、Esc 關閉失敗均記入 R6 報告，不用固定等待掩飾。
 
 完整數字、真實 Petclinic 操作、四類 fixture 覆蓋率、瀏覽器可用性與未驗證項目見 reports/R6.md。無新增相依。WP26 完成後等待需求方驗收。
+
+最終補充39114c0先提交API／MODAL目的節點UNRESOLVED的失敗測試（原本只檢查行為證據與ID），再實作節點信心檢查，避免錯計覆蓋率。紀錄wp26-unresolved-node-red.log；完整驗證重新執行，既有斷言未改。
