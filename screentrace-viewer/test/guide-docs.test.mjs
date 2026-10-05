@@ -14,7 +14,15 @@ const requiredStatements=[
   '未解析（UNRESOLVED）',
   '有歧義（AMBIGUOUS）',
   '依證據推定（INFERRED）',
-  '截圖皆來自自行撰寫的合成專案'
+  '截圖皆來自自行撰寫的合成專案',
+  '暫存在瀏覽器',
+  '換電腦',
+  '換檔案位置',
+  '私密瀏覽',
+  '清除瀏覽器資料',
+  '匯出 md 保存',
+  '5 MB',
+  '64 MiB'
 ];
 const shots=['overview-flow.png','overview-global-nav.png','zoom-viewer.png','simulate-link.png','simulate-submit.png','simulate-dialog.png','coverage.png','inspect-mode.png','review-mode.png','api-page.png','analysis-info.png','library-override.png'];
 const chapters=['了解這份報表','開啟報表並查看總覽','查看單一畫面','試著操作畫面','查看按鈕、API 與來源','標記保留、移除或未確認','查看 API 頁','查看元件庫建議並手動覆寫','匯出、匯入並交付 AI','判斷分析結果是否可信','常見問題與詞彙表'];
