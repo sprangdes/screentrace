@@ -8,7 +8,7 @@ ScreenTrace 會展開可解析的 JSP Tag、CSS 與本地資源，並以 Playwri
 
 ## 調整進度
 
-新需求與已確認決策見 [REQUIREMENTS.md](docs/REQUIREMENTS.md)，工作包與驗收順序見 [ROADMAP.md](docs/ROADMAP.md)。WP7 單一離線 HTML 提供 Screen Map、API 與 review；WP8 提供 md 匯出／匯入，JSON 匯出已退場。WP9 提供 manifest 匯入、決定性比對與手動覆寫。需求方操作步驟與截圖位置見 [使用指南](docs/USER_GUIDE.md)。
+ScreenTrace 可分析支援的 JSP 專案，產生離線互動報表、確認標記、md 審查文件與元件庫建議。需求方操作請看[報表使用指南](docs/USER_GUIDE.md)；CLI、交付檢查與疑難排解請看[分析人員指南](docs/ANALYST_GUIDE.md)。目前 R8 文件與可重現截圖已完成，待需求方驗收；CLI 非互動失敗改善尚未開始。完整進度見 [ROADMAP.md](docs/ROADMAP.md)。
 
 ## 初次執行
 

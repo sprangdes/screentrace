@@ -17,11 +17,15 @@ const requiredStatements=[
   '截圖皆來自自行撰寫的合成專案'
 ];
 const shots=['overview-flow.png','overview-global-nav.png','zoom-viewer.png','simulate-link.png','simulate-submit.png','simulate-dialog.png','coverage.png','inspect-mode.png','review-mode.png','api-page.png','analysis-info.png','library-override.png'];
+const chapters=['了解這份報表','開啟報表並查看總覽','查看單一畫面','試著操作畫面','查看按鈕、API 與來源','標記保留、移除或未確認','查看 API 頁','查看元件庫建議並手動覆寫','匯出、匯入並交付 AI','判斷分析結果是否可信','常見問題與詞彙表'];
 
 test('requester guide is task-focused, safe, plain-language and illustrated',async()=>{
   const text=await readFile(userGuide,'utf8'),lines=text.trimEnd().split(/\r?\n/);
   assert.ok(lines.length<=250,`USER_GUIDE.md has ${lines.length} lines`);
   assert.doesNotMatch(text,/\bWP\d+\b|\bR\d\b|\bOQ-\d+\b|\bADR\s*\d+\b|ANCHOR/);
+  assert.doesNotMatch(text,/(?:\.java\b|\.ts\b|\.mjs\b|ApiUsage|GraphIntegrityValidator|ApplicationGraph|pom\.xml|AGENTS\.md|screentrace-[a-z-]+)/i);
+  assert.deepEqual([...text.matchAll(/^## \d+\. (.+)$/gm)].map(match=>match[1]),chapters,'guide chapters must follow the requester task flow');
+  for(const chapter of chapters){const at=text.indexOf(`## ${chapters.indexOf(chapter)+1}. ${chapter}`),next=text.indexOf('\n## ',at+1),opening=text.slice(at,next<0?text.length:next).split(/\r?\n/).find(line=>line&&!line.startsWith('#'));assert.match(opening,/^你可以/ ,`chapter must open with its user task: ${chapter}`);}
   for(const statement of requiredStatements)assert.ok(text.includes(statement),`missing required statement: ${statement}`);
   for(const shot of shots)assert.ok(text.includes(`images/user-guide/${shot}`),`guide must reference ${shot}`);
   const imageDir=path.join(root,'docs/images/user-guide'),actual=(await readdir(imageDir)).filter(name=>name.endsWith('.png')).sort();
