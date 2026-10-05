@@ -61,5 +61,5 @@
 
 ## R7
 
-- WP27／WP28 已驗收；WP29 依 OQ-018 完成五類元件未對應原因及共用模擬判定的兩層中文分類，268 Java／40 JS／80 viewer／41 capture／79 Chromium E2E 通過；停止等待需求方驗收。見 reports/R7.md、ADR0054／0055。
+- WP27／WP28 已驗收；WP29 依 OQ-018 完成五類元件未對應原因及共用模擬判定的兩層中文分類，268 Java／40 JS／80 viewer／41 capture／79 Chromium E2E 通過；其餘已通過驗收；表單委派的實際操作／覆蓋率不一致待補正，五個失敗測試提交 3f738d2，依 OQ-019 暫停等待僅更新兩處舊數字斷言的授權。見 reports/R7.md、ADR0054／0055。
 - 技術債：Java 與 capture 的 tag 展開仍為兩份實作，不在 R7 合併；以 docs/examples/expansion-anchor-vectors.json 的雙端向量與展開整合測試降低漂移風險。

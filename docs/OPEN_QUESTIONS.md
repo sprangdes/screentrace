@@ -165,3 +165,12 @@
 - 可選方案 B：將 unmappedReason 擴充為所有「無法確認」元素的原因欄位，新增 NO_KNOWN_BEHAVIOR 與 UNRESOLVED_BEHAVIOR（或需求方指定名稱）。需明確修訂 R7 的欄位適用範圍與列舉，避免已對應元件被誤視為配對失敗。
 - 影響範圍：WP29 預覽契約、分類統計與點選說明。未修改任何程式碼、既有斷言、圖或模擬規則。19 個元素與 eMusic 暴露缺口已記入 reports/R7.md，兩份 tag 展開器技術債保留於 ROADMAP。
 - 狀態：已決定（2026-10-05）；需求方採方案 A。unmappedReason 維持五類，僅用於元件未對應；另以 simulate／canSimulate 共用判定推導已對應但無法模擬的原因（沒有已知的行為，附註可能由頁面腳本控制；行為有歧義、目的未解析、行為類型不支援模擬）。畫面／全專案分類加總必須等於無法確認總數，中文兩層呈現並同步點選說明；真實專案未對應數據按適用範圍揭露，不把不適用寫成已驗證零。完成 WP29 後停止驗收。
+
+## OQ-019 — 表單委派一致性修正與既有覆蓋率數字斷言
+
+- 情境：需求方要求每個可操作元素的覆蓋率直接等於實際模擬結果。實際 click 將 submit 控制項委派給其 associated form，但覆蓋率目前只模擬控制項本身。新增四個 WP10 family 加自行撰寫 petclinic 風格 fixture 的遍歷測試，五個全失敗，已先提交 3f738d2。
+- 已查證的斷言衝突：`screentrace-viewer/test/wp26-simulation.e2e.mjs` 的 `WP26 ${engine}: offline actions, all candidates, native validation, popup, API and reset preserve md`，以及 `screentrace-viewer/test/wp26-feedback.e2e.mjs` 的 `WP26 feedback: human result strip, collapsed complete proof, mode-specific detail and disjoint coverage`，各有一處固定要求「有圖支持的行為 5 個、可直接輸入的欄位 3 個、無法確認 5 個」。同一既有 fixture 的 submit 已能委派至 form 並產生兩個已證明結果；一致性修正後須為 6／3／4，總數 13 不變。只改 petclinic 或只對有獨立 button record 的元素採表單委派，會形成第二份判定與硬編碼／例外，不能採用。
+- 方案 A（建議）：授權只更新上述兩處覆蓋率數字斷言，5／3／5 → 6／3／4；fixture、其他斷言、golden、安全、證據、決策、API、md 規則全部不變。於 ADR 逐處記錄舊／新預期與原因。實際操作、覆蓋率、原因分類共用唯一元素模擬入口，然後完成完整驗證與 petclinic 清單／全專案數字更新。
+- 方案 B：不授權修改任何既有斷言；保留目前實作並停止本項修正，無法同時滿足新的一致性規則與舊數字斷言。
+- 影響範圍：只阻塞 WP29 的表單委派一致性補正；五個失敗測試已提交，尚未修改實作或既有斷言。WP29 其餘已通過需求方驗收。依 CODEX_INSTRUCTIONS.md §0.3／§0.4 暫停，不能以維持錯誤數字宣稱完成。
+- 狀態：待決定。
