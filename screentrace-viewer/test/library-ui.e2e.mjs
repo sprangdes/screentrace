@@ -11,6 +11,8 @@ for(const engine of process.env.ST_BROWSERS?.split(',')||['chromium'])test(`${en
  try{
   const data=mdFixture();
   data.componentLibrary={manifest:JSON.parse(await readFile(new URL('../../docs/examples/component-library.sample.json',import.meta.url),'utf8')),sha256:'a'.repeat(64)};
+  data.componentLibrary.manifest.library.name='Sample `Controls`';
+  data.componentLibrary.manifest.components[0].name='Sample `button`';
   const url=await fileFixture(data),page=await browser.newPage();
   await page.goto(url);await page.getByRole('checkbox',{name:'確認模式',exact:true}).check();
   await setDecision(page.locator('[data-screen-review="a"]'),'KEEP');
@@ -29,5 +31,6 @@ for(const engine of process.env.ST_BROWSERS?.split(',')||['chromium'])test(`${en
   assert.match(expanded,/sample-button/);
   assert.match(expanded,/MATCH/);
   assert.match(expanded,/stable/);
+  assert.match(expanded,/\\u\{60\}/,'literal backticks from manifest text must be displayed as visible escapes');
  }finally{await browser.close();}
 });
