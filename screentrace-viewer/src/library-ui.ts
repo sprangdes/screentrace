@@ -5,7 +5,7 @@ import {ReviewState,effectiveOverride,screenDecision} from './shared/review';
 import {projectText} from './shared/review-md';
 
 const stripFence=(value:string):string=>{const start=value.match(/^(`+) /);return start&&value.endsWith(' '+start[1])?value.slice(start[0].length,-(start[1].length+1)):value;};
-const safeText=(value:unknown,reference?:string):string=>stripFence(projectText(value,undefined,reference));
+const safeText=(value:unknown,reference?:string):string=>stripFence(projectText(value,undefined,reference)).replaceAll('`','\\u{60}');
 const statusLabel=(status:string):string=>({MATCH:'已對應',AMBIGUOUS:'有多個候選',NONE:'尚無建議',stable:'穩定版',beta:'測試版',deprecated:'已停止維護',experimental:'實驗版'}[status]||'狀態待確認');
 function technicalValue(label:string,value:unknown,reference:string):HTMLElement {const row=element('p');row.append(document.createTextNode(`${label}：`),element('code',safeText(value,reference)));return row;}
 
@@ -13,6 +13,7 @@ function technicalValue(label:string,value:unknown,reference:string):HTMLElement
 export function libraryDetails(payload:Payload,componentId:string):HTMLElement {
  const section=element('section');section.dataset.libraryDetails='true';section.append(element('h3','建議元件'));
  const library=payload.componentLibrary;if(!library){section.append(element('p','未匯入元件庫'));return section;}
+ const libraryName=element('p');libraryName.append(document.createTextNode('元件庫：'),element('code',safeText(library.manifest.library.name,libraryLabel(library))));section.append(libraryName);
  const match=matchLibrary(payload.graph,library).matches[componentId];
  if(!match||match.status==='NONE'){section.append(element('p','尚無建議'));return section;}
  section.append(element('p',statusLabel(match.status)));
