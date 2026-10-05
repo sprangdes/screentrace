@@ -82,7 +82,7 @@ jobs:
       - name: Install Chromium for static reconstruction tests
         run: npm exec --prefix screentrace-capture -- playwright install --with-deps chromium
       - name: Test static capture and project documentation
-        run: node --test screentrace-capture/docs-baseline.test.mjs screentrace-capture/safe-files.test.mjs screentrace-capture/spring-resource-mappings.test.mjs screentrace-capture/capture-static-jsp.security.test.mjs screentrace-capture/preview-markup.test.mjs screentrace-capture/preview-v2.test.mjs screentrace-capture/pack-preview.test.mjs
+        run: node --test screentrace-capture/docs-baseline.test.mjs screentrace-capture/safe-files.test.mjs screentrace-capture/spring-resource-mappings.test.mjs screentrace-capture/capture-static-jsp.security.test.mjs screentrace-capture/preview-markup.test.mjs screentrace-capture/preview-v2.test.mjs screentrace-capture/pack-preview.test.mjs screentrace-capture/r6-thumbnail.test.mjs screentrace-capture/r7-anchor.test.mjs
       - name: Audit Node dependencies
         run: npm --prefix screentrace-capture audit --audit-level=high
       - name: Test and audit standalone viewer build

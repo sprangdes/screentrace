@@ -1,3 +1,4 @@
+import {openingAnchorPositions} from './expansion-anchor.mjs';
 import {createHash} from 'node:crypto';
 // Lexical markup scanner: quoted attributes, raw-text elements and JSP/comment regions are atomic.
 export function markupTokens(source) {
@@ -7,7 +8,7 @@ export function markupTokens(source) {
   else{let quote=null,index=start+1;for(;index<source.length;index++){const char=source[index];if(quote){if(char===quote)quote=null;}else if(char==='"'||char==="'")quote=char;else if(char==='>')break;}end=Math.min(index+1,source.length);}
   if(end<=start)end=source.length;let text=source.slice(start,end),match=/^<\s*(\/?)\s*([A-Za-z][\w:.-]*)(?=[\s/>])/.exec(text);
   if(match&&!match[1]&&['script','style'].includes(match[2].toLowerCase())){const close=new RegExp(`</${match[2]}\\s*>`,'ig');close.lastIndex=end;const last=close.exec(source);if(last)end=close.lastIndex;text=source.slice(start,end);match=null;}
-  result.push({text,start,line,name:match?.[2]?.toLowerCase(),closing:!!match?.[1],selfClosing:/\/\s*>$/.test(text)});line+=text.split('\n').length-1;cursor=end;
+  result.push({text,start,line,name:match?.[2]?.toLowerCase(),originalName:match?.[2],closing:!!match?.[1],selfClosing:/\/\s*>$/.test(text)});line+=text.split('\n').length-1;cursor=end;
  }
  return result;
 }
@@ -24,12 +25,12 @@ function componentId(file,kind,identity,occurrence){const fields=[file.replaceAl
 
 function removeReserved(text,names){for(const name of names)text=text.replace(new RegExp(`\\s+${name}(?:\\s*=\\s*(?:"[^"]*"|'[^']*'|[^\\s>]+))?`,'gi'),'');return text;}
 function add(text,attrs){return text.replace(/\s*(\/?)>$/,(_,slash)=>Object.entries(attrs).map(([k,v])=>` ${k}="${escape(v)}"`).join('')+(slash?'/':'')+'>');}
-export function annotateSource(source,file,nodes=[]){
- const occurrences=new Map();return markupTokens(source).map(t=>{if(!t.name||t.closing)return t.text;
+export function annotateSource(source,file,nodes=[],parentAnchor=''){
+ const positions=openingAnchorPositions(source,file),occurrences=new Map();return markupTokens(source).map(t=>{if(!t.name||t.closing)return t.text;
   const identity={...attributes(t.text),tag:t.name},kinds=[...new Set(nodes.filter(n=>n.type==='COMPONENT'&&n.source?.file===file&&n.attributes?.tag?.toLowerCase()===t.name).map(n=>n.attributes.kind).filter(Boolean))];let ids=[];
   for(const kind of kinds){const key=JSON.stringify([kind,Object.entries(identity).sort(([a],[b])=>a<b?-1:a>b?1:0)]),occurrence=occurrences.get(key)||0;occurrences.set(key,occurrence+1);const id=componentId(file,kind,identity,occurrence);if(nodes.some(n=>n.id===id))ids.push(id);}
-  const metadata={'data-st-source-file':file,'data-st-source-line':t.line};if(ids.length===1)metadata['data-st-component-id']=ids[0];
-  return add(removeReserved(t.text,['data-st-source-file','data-st-source-line','data-st-component-id']),metadata);
+  const metadata={'data-st-source-file':file,'data-st-source-line':t.line};const position=positions.get(t.start);if(position)metadata['data-st-expansion-anchor']=parentAnchor?parentAnchor+' > '+position:position;if(ids.length===1)metadata['data-st-component-id']=ids[0];
+  return add(removeReserved(t.text,['data-st-source-file','data-st-source-line','data-st-component-id','data-st-expansion-anchor']),metadata);
  }).join('');
 }
 

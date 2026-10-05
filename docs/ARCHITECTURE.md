@@ -595,3 +595,13 @@ R6 WP24–WP25：capture 縮圖為決定性的640px PNG，reader保留格式／�
 R6 WP26：simulation.ts 為純圖規則，exact preview path→元件→行為，保留全部候選／未知分支與來源證據，不執行條件。simulation-ui.ts 將效果轉為原型導覽、原生表單驗證／可能的 SERVER 訊息、既有 MODAL 覆蓋層及不發送的 API 提示；覆蓋率以真實靜態 DOM 計算，未配對／缺失文件不隱藏。WebKit 阻擋 sandbox 內父頁事件回呼，simulation-surface.ts 使用精確 DOM 矩形的父頁原生控制與暫時值同步，規則共用、目標 HTML／腳本不進父頁，原 iframe 保持無 allow-scripts。模擬狀態僅記憶體，重置重建；canonical graph、review/md、API 推導及指紋不變。見 ADR0052。
 
 WP26驗收呈現補強（ADR0053）：操作模式以元素摘要為主，計算樣式收合、檢查模式保留樣式優先。送出結果窄條有高度上限及內部捲動，每個候選白話原因與完整證據分離、技術細節預設收合。覆蓋率分成互斥的圖支持行為／可直接輸入欄位／無法確認三類；不改推導、圖、review或md。
+
+## R7 展開來源錨點
+
+Java JspTagFileExpander 在原始檔案分組開啟標籤，臨時書籤保存來源鏈；書籤不進入任何輸出，也不參與 StableGraphIds、名稱、事件或檢核解析。展開後清除書籤，JspProjectParser 將旁表中的錨點加入元件 attributes.expansionAnchor。doBody 內容保留呼叫者的位置與同行序號。
+
+capture 在 annotateSource 原文階段使用同一行號／序號规则，自訂 tag 展開時傳遞呼叫鏈。分組名稱轉小寫，但 tag 檔案查找保留原始名稱大小寫，避免大小寫不敏感檔案系統產生不同來源字串。componentLinks 僅在同畫面精確錨點相等時標記 ANCHOR；唯一候選為 INFERRED，多候選為 AMBIGUOUS 全列。無錨點候選時依既有 ID／name／field／來源證據標 HEURISTIC；移除無來源的同標籤第一筆猜測。
+
+PreviewElement 增 optional expansionAnchor、matchBasis（ANCHOR／HEURISTIC）。PreviewCaptureReader 與 viewer.requirePreview 驗證已知值、同畫面全部錨點候選與解析狀態。capture 原始 HTML 保留 data-st-expansion-anchor；打包成展示用文件時移除這個重複的工具屬性，圖與 preview model 保留完整錨點。原始 capture 文件、身分與安全處理不變。
+
+Java 與 Node 仍有獨立 tag 展開器；共用 docs/examples/expansion-anchor-vectors.json，配合 CLI 整合與真實專案唯讀驗收降低漂移。WP29 的未對應原因分類尚未實作。

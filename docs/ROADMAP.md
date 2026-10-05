@@ -61,5 +61,5 @@
 
 ## R7
 
-- WP27：展開錨點與 OQ-017 同行規則完成，WP28 精確預覽配對待完成；兩者完成後停止驗收。
+- WP27／WP28：展開錨點、OQ-017 同行規則與精確預覽配對完成；完整驗證後停止驗收，WP29 未開始。見 reports/R7.md、ADR0054。
 - 技術債：Java 與 capture 的 tag 展開仍為兩份實作，不在 R7 合併；以 docs/examples/expansion-anchor-vectors.json 的雙端向量與展開整合測試降低漂移風險。

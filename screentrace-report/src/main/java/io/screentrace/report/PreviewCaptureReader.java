@@ -57,13 +57,22 @@ final class PreviewCaptureReader {
               && e.from().equals(screen.graphScreenId()) && e.to().equals(id))) throw new IOException("Preview component does not belong to its screen");
         }
         String componentId = optional(element, "graphComponentId");
+        String matchBasis=optional(element,"matchBasis"),anchor=optional(element,"expansionAnchor");
+        if(matchBasis!=null&&!Set.of("ANCHOR","HEURISTIC").contains(matchBasis))throw new IOException("Invalid preview matchBasis");
+        if("ANCHOR".equals(matchBasis)) {
+          var owned=new HashSet<String>();graph.relationships().stream().filter(e->e.type()==ApplicationGraph.EdgeType.CONTAINS&&e.from().equals(screen.graphScreenId())).forEach(e->owned.add(e.to()));
+          var expected=graph.nodes().stream().filter(n->n.type()==ApplicationGraph.NodeType.COMPONENT&&owned.contains(n.id())&&anchor!=null&&anchor.equals(n.attributes().get("expansionAnchor"))).map(ApplicationGraph.GraphNode::id).sorted().toList();
+          if(expected.isEmpty()||!expected.equals(candidates.stream().sorted().toList()))throw new IOException("Invalid preview anchor candidates");
+          String resolution=element.path("componentResolution").asText();
+          if(!resolution.equals(expected.size()==1?"INFERRED":"AMBIGUOUS")||(expected.size()==1?!expected.get(0).equals(componentId):componentId!=null))throw new IOException("Invalid preview anchor resolution");
+        }
         if (componentId != null && (candidates.size() != 1 || !candidates.contains(componentId))) throw new IOException("Invalid preview component resolution");
         var bounds = element.path("bounds"); var source = element.path("source");
         elements.add(new PreviewElement(screen.graphScreenId(), element.path("path").asText(), element.path("tag").asText(), optional(element,"id"),
             optional(element,"name"), optional(element,"className"), element.path("text").asText(),
             new RenderedBounds(bounds.path("x").asDouble(),bounds.path("y").asDouble(),bounds.path("width").asDouble(),bounds.path("height").asDouble()),
             styleIds.get(styleId), defaultId, componentId, candidates, element.path("componentResolution").asText(), strings(element.path("conditions")),
-            source.isObject() ? new ApplicationGraph.SourceLocation(source.path("file").asText(), source.path("line").asInt()) : null));
+            source.isObject() ? new ApplicationGraph.SourceLocation(source.path("file").asText(), source.path("line").asInt()) : null,anchor,matchBasis));
       }
       String thumbnail = optional(captured,"thumbnail"); if (thumbnail != null) validateThumbnail(thumbnail);
       screens.add(new PreviewScreen(screen.graphScreenId(), screen.staticDocument(), screen.screenshot(), captured.path("width").asInt(screen.width()),

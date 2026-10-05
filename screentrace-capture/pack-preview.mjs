@@ -17,7 +17,7 @@ async function pack(root,manifest,cssDataUri){
  for(const [id,relative]of Object.entries(manifest).sort(([a],[b])=>a<b?-1:a>b?1:0)){const file=path.resolve(root,relative);const source=await readUtf8Limited(root,file);if(cache.has(file)){documents[id]=cache.get(file);continue;}const output=[];
   for(const token of markupTokens(source)){if(!token.name){if(/^<\s*script\b/i.test(token.text))continue;if(/^<\s*style\b/i.test(token.text)){const start=token.text.indexOf('>')+1,end=token.text.toLowerCase().lastIndexOf('</style');output.push(stylesheet(await css(token.text.slice(start,end<0?undefined:end),file)));}else output.push(token.text);continue;}
    const name=token.name;if(['script','base','iframe','object','embed'].includes(name))continue;if(token.closing){output.push(`</${name}>`);continue;}
-   const attrs=markupAttributes(token.text);if(name==='meta'&&attrs['http-equiv'])continue;
+   const attrs=markupAttributes(token.text);delete attrs['data-st-expansion-anchor'];if(name==='meta'&&attrs['http-equiv'])continue;
    if(name==='link'){if(attrs.rel?.toLowerCase()==='stylesheet'&&attrs.href){try{const target=resolve(attrs.href,file);output.push(stylesheet(await css(await readUtf8Limited(root,target),target,new Set([target]))));}catch{unresolved();}}continue;}
    for(const key of Object.keys(attrs)){if(key.startsWith('on')||['srcdoc','srcset','action','formaction','ping','target','href','xlink:href','background'].includes(key))delete attrs[key];}
    if(attrs.style)attrs.style=await css(decode(attrs.style),file);if(attrs.src){if(['img','source','video','audio','input'].includes(name))attrs.src=await asset(decode(attrs.src),file);else delete attrs.src;}if(attrs.poster)attrs.poster=await asset(decode(attrs.poster),file);

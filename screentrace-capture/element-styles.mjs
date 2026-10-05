@@ -11,10 +11,11 @@ function componentLinks(elements,graph,screenId) {
  for(const element of elements) {
   const matches=(key,value)=>value?nodes.filter(n=>n.attributes?.[key]===value):[];
   const exact=nodes.filter(n=>element.source&&n.source.file===element.source.file&&n.source.line===element.source.line&&n.attributes?.tag?.split(':').at(-1)===element.tag);
-  let candidates=nodes.filter(n=>n.id===element.sourceComponentId);if(!candidates.length)candidates=matches('id',element.id);if(!candidates.length)candidates=matches('name',element.name);
+  let candidates=matches('expansionAnchor',element.expansionAnchor),basis=candidates.length?'ANCHOR':undefined;
+  if(!candidates.length)candidates=nodes.filter(n=>n.id===element.sourceComponentId);if(!candidates.length)candidates=matches('id',element.id);if(!candidates.length)candidates=matches('name',element.name);
   if(!candidates.length)candidates=matches('field',element.name);
   if(!candidates.length&&exact.length)candidates=exact.filter(n=>!used.has(n.id));
-  if(!candidates.length&&!element.source){const compatible=nodes.filter(n=>!used.has(n.id)&&n.attributes?.tag?.split(':').at(-1)===element.tag);if(compatible.length)candidates=[compatible[0]];}
+  if(candidates.length)element.matchBasis=basis||'HEURISTIC';
   element.graphComponentCandidates=candidates.map(n=>n.id).sort();element.graphComponentId=candidates.length===1?candidates[0].id:null;
   element.componentResolution=candidates.length===1?'INFERRED':candidates.length>1?'AMBIGUOUS':'UNRESOLVED';
   if(candidates.length===1)used.add(candidates[0].id);
@@ -30,7 +31,7 @@ export async function collectElementStyles(page,context,graph,screenId,options=c
   const parts=[];let current=n;while(current&&current!==document.body&&current!==document.documentElement){parts.unshift(step(current));current=current.parentElement;}
   const path=n===document.documentElement?'html':n===document.body?'body':`body>${parts.join('>')}`;
   const conditions=JSON.parse(n.getAttribute('data-st-condition')||'[]');const source=n.hasAttribute('data-st-source-file')?{file:n.getAttribute('data-st-source-file'),line:Number(n.getAttribute('data-st-source-line'))}:null;
-  return {sourceComponentId:n.getAttribute('data-st-component-id'),path,tag:n.localName,namespace:n.namespaceURI,id:n.id||null,name:n.getAttribute('name'),className:n.getAttribute('class')||null,text:Array.from(visibleText.replace(/\s+/g,' ').trim()).slice(0,80).join(''),source,bounds:{x:box.left+scrollX,y:box.top+scrollY,width:box.width,height:box.height},conditions,css:Object.fromEntries([...css].sort().map(k=>[k,css.getPropertyValue(k)]))};
+  return {expansionAnchor:n.getAttribute('data-st-expansion-anchor'),sourceComponentId:n.getAttribute('data-st-component-id'),path,tag:n.localName,namespace:n.namespaceURI,id:n.id||null,name:n.getAttribute('name'),className:n.getAttribute('class')||null,text:Array.from(visibleText.replace(/\s+/g,' ').trim()).slice(0,80).join(''),source,bounds:{x:box.left+scrollX,y:box.top+scrollY,width:box.width,height:box.height},conditions,css:Object.fromEntries([...css].sort().map(k=>[k,css.getPropertyValue(k)]))};
  }));
  const tags=[...new Map(raw.map(e=>[`${e.namespace}:${e.tag}`,{tag:e.tag,namespace:e.namespace}])).values()].sort((a,b)=>a.tag.localeCompare(b.tag,'en')||a.namespace.localeCompare(b.namespace,'en'));
  const baseline=await context.newPage();let defaults;

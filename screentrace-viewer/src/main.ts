@@ -8,7 +8,7 @@ import {screenNames,NameHint} from './names';
 import {matchLibrary,libraryLabel} from './shared/library';
 import {libraryDetails,libraryOverride} from './library-ui';
 import {setOverride} from './shared/review';
-import {Payload,requireGraph} from './contracts';
+import {Payload,requireGraph,requirePreview} from './contracts';
 import {element,text} from './text';
 import {indexGraph,searchScreens} from './map';
 import {canvas,fileTree,CanvasTransform} from './canvas';
@@ -25,6 +25,7 @@ const root=document.querySelector<HTMLDivElement>('#app')!;
 
 try {
  const payload=JSON.parse(document.querySelector('#st-data')!.textContent!) as Payload;
+ requirePreview(payload.preview,requireGraph(payload.graph));
  const visibleTexts=new Map<string,Set<string>>();const remember=(id:string,node:Element|null)=>{if(!node||!['A','BUTTON'].includes(node.tagName))return;const value=node.textContent?.trim();if(!value||/\$\{|#\{|<%/.test(value))return;const values=visibleTexts.get(id)||new Set<string>();values.add(value);visibleTexts.set(id,values);};for(const [id,html]of Object.entries(payload.documents)){const doc=inertDocument(html);for(const node of doc.querySelectorAll('[data-st-component-id]'))remember(node.getAttribute('data-st-component-id')!,node);for(const record of payload.preview.elements||[])if(record.graphScreenId===id&&record.graphComponentId)try{remember(record.graphComponentId,doc.querySelector(previewSelector(record.path)));}catch{}}const visibleComponentText=(node:any)=>visibleTexts.get(node.id)?.size===1?[...visibleTexts.get(node.id)!][0]:undefined;const sourceGraph=requireGraph(payload.graph),sourceIndex=indexGraph(sourceGraph),hints=new Map<string,NameHint>();for(const screen of sourceIndex.screens){const document=inertDocument(payload.documents[screen.id]||'');hints.set(screen.id,{title:document.querySelector('title')?.textContent||undefined,heading:document.querySelector('h1')?.textContent||undefined});}const displayNames=screenNames(sourceIndex.screens,hints,sourceIndex.routes),graph={...sourceGraph,nodes:sourceGraph.nodes.map(node=>node.type==='SCREEN'?{...node,name:displayNames.get(node.id)||node.name}:node.type==='COMPONENT'?{...node,name:componentLabel({...node,displayLabel:visibleComponentText(node)}),displayLabel:visibleComponentText(node)}:node)},index=indexGraph(graph);
  document.querySelector('#application')!.textContent=graph.application.name;document.querySelector<HTMLElement>('#application')!.title=graph.application.name;
  const shell=element('div',undefined,'shell'),nav=element('nav'),main=element('main'),panel=element('aside'),topbar=document.querySelector('header')!;topbar.classList.add('topbar');document.body.prepend(iconSprite());shell.dataset.sidebarCollapsed=String(innerWidth<1024);shell.dataset.detailsOpen='false';

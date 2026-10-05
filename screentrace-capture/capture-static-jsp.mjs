@@ -1,3 +1,4 @@
+import {metadataValue} from './expansion-anchor.mjs';
 import { lstat, mkdir, readdir } from 'node:fs/promises';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -129,27 +130,29 @@ function replaceExpressions(source, values = {}) {
 }
 let localTagDirs=new Map(),previewExpressions=new Set();
 function declaredTagDirs(source){for(const match of source.matchAll(/<%@\s*taglib\b([\s\S]*?)%>/g)){const declaration=attrs(match[1]);if(declaration.prefix&&declaration.tagdir)localTagDirs.set(declaration.prefix,path.join(webRoot,declaration.tagdir));}}
-async function expandTag(name, attributeText, body, slots, depth, directory=tagRoot) {
+async function expandTag(name, attributeText, body, slots, depth, directory=tagRoot, tagStack=[]) {
+  if (previewV2 && depth >= 12) {captureDiagnostics.push('JSP_TAG_DEPTH_LIMIT: local tag not rendered');return '';}
   if (depth > 12) return body;
   const file = path.join(directory, `${name}.tag`);
   if (!(await exists(file))) return body || '';
+  if(previewV2&&tagStack.includes(file)){captureDiagnostics.push('JSP_TAG_CYCLE: local tag not rendered');return '';}
   const values = attrs(attributeText);
   let template = await text(file);
-  if(previewV2){declaredTagDirs(template);expressionList(template).forEach(e=>previewExpressions.add(e));template=await expandIncludes(annotateSource(template,path.relative(target,file).replaceAll(path.sep,'/'),graph.nodes),file,new Set([file]));}
+  if(previewV2){declaredTagDirs(template);expressionList(template).forEach(e=>previewExpressions.add(e));template=await expandIncludes(annotateSource(template,path.relative(target,file).replaceAll(path.sep,'/'),graph.nodes,metadataValue(values['data-st-expansion-anchor'])),file,new Set([file]));}
   template=removeDirectives(template);
   template = previewV2?template.replace(/\$\{([^}]+)}/g,(raw,key)=>values[key.trim()]??raw):replaceExpressions(template, values);
   template = template.replace(/<jsp:doBody\b[^>]*\/>/g, body || '');
   template = template.replace(/<jsp:invoke\s+fragment=["']customScript["']\s*\/>/g, slots.customScript || '');
-  return expandTags(template, slots, depth + 1);
+  return expandTags(template, slots, depth + 1,[...tagStack,file]);
 }
-async function expandTags(source, slots = {}, depth = 0) {
+async function expandTags(source, slots = {}, depth = 0,tagStack=[]) {
   if(previewV2){
     if(depth>12){captureDiagnostics.push('Local tag expansion depth limit reached.');return source;}
     const tokens=markupTokens(source);let result='';
-    for(let i=0;i<tokens.length;i++){const token=tokens[i],parts=token.name?.split(':');
+    for(let i=0;i<tokens.length;i++){const token=tokens[i],parts=token.originalName?.split(':');
       if(!parts||parts.length!==2||token.closing||!localTagDirs.has(parts[0])){result+=token.text;continue;}
       let end=i,body='';if(!token.selfClosing){let nested=1;for(end=i+1;end<tokens.length;end++){const next=tokens[end];if(next.name===token.name&&!next.selfClosing)nested+=next.closing?-1:1;if(nested===0)break;body+=next.text;}if(end===tokens.length){captureDiagnostics.push('Unclosed local tag not rendered.');result+=body;i=end;continue;}}
-      result+=await expandTag(parts[1],token.text,body,slots,depth,localTagDirs.get(parts[0]));i=end;
+      result+=await expandTag(parts[1],token.text,body,slots,depth,localTagDirs.get(parts[0]),tagStack);i=end;
     }return result;
   }
   // Expand paired tags before self-closing tags so jsp:body content remains available to layout.tag.

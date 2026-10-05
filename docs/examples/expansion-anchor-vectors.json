@@ -108,6 +108,23 @@
         "views/page.jsp:1#1",
         "views/page.jsp:1#2"
       ]
+    },
+    {
+      "name": "windows-path-separators",
+      "path": "views\\page.jsp",
+      "source": "<a/><a/>",
+      "expected": [
+        "views/page.jsp:1#1",
+        "views/page.jsp:1#2"
+      ]
+    },
+    {
+      "name": "excluded-multiline-regions",
+      "path": "views/page.jsp",
+      "source": "<!--\r\n<a/>\r\n--><%--\n<a/>\n--%><![CDATA[\n<a/>\n]]><a/>",
+      "expected": [
+        "views/page.jsp:7"
+      ]
     }
   ]
 }
