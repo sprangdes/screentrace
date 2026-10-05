@@ -1,0 +1,113 @@
+{
+  "format_version": 1,
+  "rule": "OQ-017 A: lowercase qualified opening tag name + original start line; ordinal only for groups larger than one",
+  "vectors": [
+    {
+      "name": "same-name",
+      "path": "views/page.jsp",
+      "source": "<a/><a/>",
+      "expected": [
+        "views/page.jsp:1#1",
+        "views/page.jsp:1#2"
+      ]
+    },
+    {
+      "name": "same-kind-different-name",
+      "path": "views/page.jsp",
+      "source": "<a/><html:link/>",
+      "expected": [
+        "views/page.jsp:1",
+        "views/page.jsp:1"
+      ]
+    },
+    {
+      "name": "same-name-different-type",
+      "path": "views/page.jsp",
+      "source": "<input type=\"text\"/><input type=\"checkbox\"/>",
+      "expected": [
+        "views/page.jsp:1#1",
+        "views/page.jsp:1#2"
+      ]
+    },
+    {
+      "name": "multiline",
+      "path": "views/page.jsp",
+      "source": "<a\n href=\"/a\"\n/><a/>",
+      "expected": [
+        "views/page.jsp:1",
+        "views/page.jsp:3"
+      ]
+    },
+    {
+      "name": "closing",
+      "path": "views/page.jsp",
+      "source": "<a></a><a/>",
+      "expected": [
+        "views/page.jsp:1#1",
+        "views/page.jsp:1#2"
+      ]
+    },
+    {
+      "name": "comments",
+      "path": "views/page.jsp",
+      "source": "<!-- <a/> --><%-- <a/> --%><a/>",
+      "expected": [
+        "views/page.jsp:1"
+      ]
+    },
+    {
+      "name": "crlf",
+      "path": "views/page.jsp",
+      "source": "<a\r\n href=\"/a\"/>\r\n<a/>",
+      "expected": [
+        "views/page.jsp:1",
+        "views/page.jsp:3"
+      ]
+    },
+    {
+      "name": "mixed-case",
+      "path": "views/page.jsp",
+      "source": "<A/><a/>",
+      "expected": [
+        "views/page.jsp:1#1",
+        "views/page.jsp:1#2"
+      ]
+    },
+    {
+      "name": "namespace",
+      "path": "views/page.jsp",
+      "source": "<t:item/><T:ITEM/><other:item/>",
+      "expected": [
+        "views/page.jsp:1#1",
+        "views/page.jsp:1#2",
+        "views/page.jsp:1"
+      ]
+    },
+    {
+      "name": "self-and-paired",
+      "path": "views/page.jsp",
+      "source": "<t:item/><t:item></t:item>",
+      "expected": [
+        "views/page.jsp:1#1",
+        "views/page.jsp:1#2"
+      ]
+    },
+    {
+      "name": "excluded",
+      "path": "views/page.jsp",
+      "source": "<![CDATA[<a/>]]><% String x=\"<a/>\"; %>${\"<a/>\"}#{\"<a/>\"}<a/>",
+      "expected": [
+        "views/page.jsp:1"
+      ]
+    },
+    {
+      "name": "quoted-brackets",
+      "path": "views/page.jsp",
+      "source": "<a title=\"<fake/>\"></a><a/>",
+      "expected": [
+        "views/page.jsp:1#1",
+        "views/page.jsp:1#2"
+      ]
+    }
+  ]
+}
