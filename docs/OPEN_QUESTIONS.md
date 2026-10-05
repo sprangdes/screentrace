@@ -168,9 +168,8 @@
 
 ## OQ-019 — 表單委派一致性修正與既有覆蓋率數字斷言
 
-- 情境：需求方要求每個可操作元素的覆蓋率直接等於實際模擬結果。實際 click 將 submit 控制項委派給其 associated form，但覆蓋率目前只模擬控制項本身。新增四個 WP10 family 加自行撰寫 petclinic 風格 fixture 的遍歷測試，五個全失敗，已先提交 3f738d2。
-- 已查證的斷言衝突：`screentrace-viewer/test/wp26-simulation.e2e.mjs` 的 `WP26 ${engine}: offline actions, all candidates, native validation, popup, API and reset preserve md`，以及 `screentrace-viewer/test/wp26-feedback.e2e.mjs` 的 `WP26 feedback: human result strip, collapsed complete proof, mode-specific detail and disjoint coverage`，各有一處固定要求「有圖支持的行為 5 個、可直接輸入的欄位 3 個、無法確認 5 個」。同一既有 fixture 的 submit 已能委派至 form 並產生兩個已證明結果；一致性修正後須為 6／3／4，總數 13 不變。只改 petclinic 或只對有獨立 button record 的元素採表單委派，會形成第二份判定與硬編碼／例外，不能採用。
-- 方案 A（建議）：授權只更新上述兩處覆蓋率數字斷言，5／3／5 → 6／3／4；fixture、其他斷言、golden、安全、證據、決策、API、md 規則全部不變。於 ADR 逐處記錄舊／新預期與原因。實際操作、覆蓋率、原因分類共用唯一元素模擬入口，然後完成完整驗證與 petclinic 清單／全專案數字更新。
-- 方案 B：不授權修改任何既有斷言；保留目前實作並停止本項修正，無法同時滿足新的一致性規則與舊數字斷言。
-- 影響範圍：只阻塞 WP29 的表單委派一致性補正；五個失敗測試已提交，尚未修改實作或既有斷言。WP29 其餘已通過需求方驗收。依 CODEX_INSTRUCTIONS.md §0.3／§0.4 暫停，不能以維持錯誤數字宣稱完成。
-- 狀態：待決定。
+- 情境：submit 控制項實際點擊時會委派至其 associated form，但舊覆蓋率只對 button/input 本身做判定，造成覆蓋率與操作結果不一致。
+- 狀態：已決定（2026-10-05）；需求方採方案 A。只授權更新 `screentrace-viewer/test/wp26-simulation.e2e.mjs` 與 `screentrace-viewer/test/wp26-feedback.e2e.mjs` 中各一處覆蓋率數字斷言，5／3／5 改為 6／3／4；其他既有斷言、fixture、golden、安全、證據、決策、API 與 md 規則不變。
+- 實作界線：元素操作、覆蓋率與原因分類使用同一元素模擬入口；submit button、submit input 與 image input 依 DOM 的 form 關聯委派至表單。模擬結果本身攜帶可模擬狀態與原因，`canSimulate` 僅讀取該結果，不另行判定行為類型或事件，不含專案／元素類型例外。
+- 舊實作反證：更新後的兩個 E2E 斷言在舊 viewer bundle 上皆收到 5／3／5 而失敗；更新 bundle 後同兩項皆通過。WP29 五個 family／合成 fixture 遍歷測試亦從舊實作 5 項全失敗轉為 5 項全通過。
+- 結果：petclinic Find Owner 與 Add Visit 的表單提交從「類型或事件不支援」移至有圖支持行為；全專案覆蓋率由 55／85、19 無法確認更新為 57／85、17 無法確認。eMusic 前後維持 28／128、87 無法確認，類型或事件不支援為 0。見 `docs/reports/R7.md` 與 ADR 0056。
