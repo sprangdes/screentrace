@@ -16,6 +16,8 @@ Target source (read-only) -> scanner -> selected Spring and/or Struts adapter ->
 
 The viewer is split into graph projection/search (`map.ts`), focused relations (`relations.ts`), requester/API details (`details.ts`, `api-page.ts`), preview rendering and element-style display (`preview.ts`), and shared review state. URL search strips a context-path prefix only when `UrlResolution` evidence records an adopted value. Preview style records contain computed-style deltas from clean browser defaults for each captured non-script/style DOM element; this preserves effects from inline and external styles without embedding the original CSS source.
 
+R11 WP39 removes the screen viewer's operation/inspection and element-visibility modes. Preview clicks continue through the existing static simulation path; Alt/Option-click and touch long-press select without simulation. The right panel keeps operation, API, validation, style, and technical evidence in fixed tabs; toolbar overflow actions remain keyboard accessible. These presentation changes do not alter graph data, simulation results, review state, or Markdown contracts. WP40's always-visible decision controls are not part of WP39.
+
 OQ-016: `PreviewCaptureReader` normalizes computed local file URIs in styles/defaults into stable output-relative resource identifiers, rehashing changed style dictionaries and remapping element references. The original capture and packed documents remain unchanged; actual rendering still uses packed assets. URI paths outside the output root are rejected without disclosing paths. See [ADR 0047](adr/0047-report-local-resource-normalization.md).
 
 ## Prototype and Edit Mode

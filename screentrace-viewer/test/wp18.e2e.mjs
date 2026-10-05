@@ -13,13 +13,13 @@ test('WP18 source fixture offline map exposes submit success, validation return 
   const page=await browser.newPage(),external=[];
   page.on('request',r=>{if(!/^(file|data|about|blob):/.test(r.url()))external.push(r.url());});
   await page.goto(pathToFileURL(report).href);await page.waitForSelector('[data-ready="true"]');
-  await page.locator(`.screen-card[data-screen="${screen('form').id}"]`).click();await page.getByRole('button',{name:'流程視圖',exact:true}).click();
+  await page.locator(`.screen-card[data-screen="${screen('form').id}"]`).click();await page.getByRole('button',{name:'看流程',exact:true}).click();
   const formRelations=await page.locator('.focus-relation').evaluateAll(lines=>lines.map(line=>line.getAttribute('aria-label')));
   const formCards=await page.locator('.focus-destination').evaluateAll(cards=>cards.map(card=>({id:card.getAttribute('data-relation-to'),name:card.querySelector('strong').textContent})));
   assert.ok(formCards.some(card=>card.id===screen('detail').id&&formRelations.includes(card.name)),'submit success must lead to detail');
   assert.ok(formCards.some(card=>card.id===screen('form').id&&formRelations.includes(card.name)),'validation failure must retain its self return');
   await page.getByRole('button',{name:'地圖',exact:true}).click();
-  await page.locator(`.screen-card[data-screen="${screen('find').id}"]`).click();await page.getByRole('button',{name:'流程視圖',exact:true}).click();
+  await page.locator(`.screen-card[data-screen="${screen('find').id}"]`).click();await page.getByRole('button',{name:'看流程',exact:true}).click();
   const searchRelations=await page.locator('.focus-relation').evaluateAll(lines=>lines.map(line=>line.getAttribute('aria-label')));
   const searchCards=await page.locator('.focus-destination').evaluateAll(cards=>cards.map(card=>({id:card.getAttribute('data-relation-to'),name:card.querySelector('strong').textContent})));
   for(const view of ['find','detail','list'])assert.ok(searchCards.some(card=>card.id===screen(view).id&&searchRelations.includes(card.name)),`search return ${view}`);

@@ -31,6 +31,7 @@ test('requester guide is task-focused, safe, plain-language and illustrated',asy
   const text=await readFile(userGuide,'utf8'),lines=text.trimEnd().split(/\r?\n/);
   assert.ok(lines.length<=250,`USER_GUIDE.md has ${lines.length} lines`);
   assert.doesNotMatch(text,/\bWP\d+\b|\bR\d\b|\bOQ-\d+\b|\bADR\s*\d+\b|ANCHOR/);
+  assert.doesNotMatch(text,/「(?:操作|檢查)」模式|流程視圖/);
   assert.doesNotMatch(text,/(?:\.java\b|\.ts\b|\.mjs\b|ApiUsage|GraphIntegrityValidator|ApplicationGraph|pom\.xml|AGENTS\.md|screentrace-[a-z-]+)/i);
   assert.deepEqual([...text.matchAll(/^## \d+\. (.+)$/gm)].map(match=>match[1]),chapters,'guide chapters must follow the requester task flow');
   for(const chapter of chapters){const at=text.indexOf(`## ${chapters.indexOf(chapter)+1}. ${chapter}`),next=text.indexOf('\n## ',at+1),opening=text.slice(at,next<0?text.length:next).split(/\r?\n/).find(line=>line&&!line.startsWith('#'));assert.match(opening,/^你可以/ ,`chapter must open with its user task: ${chapter}`);}
