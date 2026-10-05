@@ -8,7 +8,7 @@ ScreenTrace 會展開可解析的 JSP Tag、CSS 與本地資源，並以 Playwri
 
 ## 調整進度
 
-ScreenTrace 可分析支援的 JSP 專案，產生離線互動報表、確認標記、md 審查文件與元件庫建議。需求方操作請看[報表使用指南](docs/USER_GUIDE.md)；CLI、交付檢查與疑難排解請看[分析人員指南](docs/ANALYST_GUIDE.md)。目前 R8 文件與可重現截圖已完成，待需求方驗收；CLI 非互動失敗改善尚未開始。完整進度見 [ROADMAP.md](docs/ROADMAP.md)。
+ScreenTrace 可分析支援的 JSP 專案，產生離線互動報表、確認標記、md 審查文件與元件庫建議。需求方操作請看[報表使用指南](docs/USER_GUIDE.md)；CLI、交付檢查與疑難排解請看[分析人員指南](docs/ANALYST_GUIDE.md)。R8 文件、可重現截圖與 CLI 無互動環境友善失敗已完成，等待需求方驗收。完整進度見 [ROADMAP.md](docs/ROADMAP.md)。
 
 ## 初次執行
 
