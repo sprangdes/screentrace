@@ -23,7 +23,11 @@ function controllerKey(index:Index,screenId:string):string|undefined {
 function jspDirectory(index:Index,screenId:string):string|undefined {
  const screen=index.nodes.get(screenId);if(!screen)return undefined;
  const path=[screen.source?.file,screen.attributes.view].map(value=>String(value||'').replaceAll('\\','/')).find(value=>/\.jspx?$/i.test(value));if(!path)return undefined;
- const parts=path.split('/').filter(Boolean);parts.pop();return parts.at(-1);
+ const parts=path.split('/').filter(Boolean);parts.pop();if(!parts.length)return undefined;
+ const last=parts.at(-1)!;
+ if(last.toLowerCase()==='jsp')return undefined;
+ if(last.toLowerCase()==='views'&&parts.at(-2)?.toLowerCase()==='web-inf')return undefined;
+ return last;
 }
 function rawKey(index:Index,screenId:string,strategy:FeatureGroupingStrategy):string|undefined {
  if(strategy==='url')return firstSegment(index.routes.get(screenId)?.[0]);
