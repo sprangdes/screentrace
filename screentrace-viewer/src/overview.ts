@@ -1,13 +1,15 @@
 import {Index,Relation,Position} from './map';
 import {Node} from './contracts';
 const order=(a:string,b:string)=>a<b?-1:a>b?1:0;
+/** Only visible/semantic link identity belongs in grouping; expansion anchors and other provenance vary per source occurrence. */
+const NAVIGATION_SEMANTIC_ATTRIBUTES=['kind','tag','componentType','href','target','httpMethod'] as const;
 function navigationKey(index:Index,node:Node|undefined,to:string):string|undefined {
  if(!node)return;
  if(node.attributes.kind!=='LINK'&&node.attributes.tag!=='a'&&node.attributes.componentType!=='NAVIGATION')return;
- const attributes=Object.entries(node.attributes).sort(([a],[b])=>order(a,b));
+ const attributes=NAVIGATION_SEMANTIC_ATTRIBUTES.filter(name=>node.attributes[name]!==undefined).map(name=>[name,node.attributes[name]]);
  return JSON.stringify([to,node.name,attributes]);
 }
-/** Presentation classification only: at least two owners, same target and attributes, >=50% of screens. */
+/** Presentation classification only: at least two owners, same target and semantic link identity, >=50% of screens. */
 export function partitionNavigation(index:Index):{global:Relation[];flows:Relation[]}{
  const owners=new Map<string,Set<string>>();
  for(const r of index.relations)for(const trigger of r.triggers){const key=navigationKey(index,index.nodes.get(trigger),r.to);if(key){const set=owners.get(key)||new Set<string>();set.add(r.from);owners.set(key,set);}}
