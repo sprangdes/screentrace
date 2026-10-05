@@ -1,7 +1,7 @@
 import {Node} from './contracts';
 export interface NameHint {title?:string;heading?:string}
 const clean=(value?:string)=>String(value||'').replace(/\$\{[^{}]*\}|#\{[^{}]*\}|<%[\s\S]*?%>/g,'動態內容').replace(/\s+/g,' ').trim();
-function humanize(value:string):string {
+export function humanizeName(value:string):string {
  const filename=value.split(/[\\/]/).at(-1)!.replace(/\.[^.]+$/,'');
  return clean(filename.replace(/([a-z0-9])([A-Z])/g,'$1 $2').replace(/([A-Z])([A-Z][a-z])/g,'$1 $2').replace(/[_-]+/g,' ')).replace(/\b[a-z]/g,s=>s.toUpperCase())||'未命名畫面';
 }
@@ -12,7 +12,7 @@ export function screenNames(screens:Node[],hints:Map<string,NameHint>,routes:Map
  const names=new Map<string,string>();
  for(const screen of sorted){const hint=hints.get(screen.id)||{},title=clean(hint.title),heading=clean(hint.heading),duplicate=!!title&&counts.get(title)!>1;
  const fallback=screen.attributes.view||screen.attributes.viewIdentifier||screen.source?.file||screen.name;
- names.set(screen.id,title&&counts.get(title)===1?title:heading&&counts.get(heading)===1?heading:duplicate||screen.attributes.view?humanize(fallback):clean(screen.attributes.screenName||screen.name)||humanize(fallback));}
+ names.set(screen.id,title&&counts.get(title)===1?title:heading&&counts.get(heading)===1?heading:duplicate||screen.attributes.view?humanizeName(fallback):clean(screen.attributes.screenName||screen.name)||humanizeName(fallback));}
  const groups=new Map<string,string[]>();for(const [id,name]of names)groups.set(name,[...(groups.get(name)||[]),id]);
  for(const [name,ids]of groups)if(ids.length>1)for(const id of ids)names.set(id,`${name}（${routes.get(id)?.[0]||'沒有已知 URL'}）`);
  const used=new Set<string>();for(const [id,base]of names){let name=base,n=1;while(used.has(name))name=`${base}（${++n}）`;used.add(name);names.set(id,name);}

@@ -8,7 +8,7 @@ import {guidePayload} from '../tools/guide-screenshots.mjs';
 import {fileFixture} from './fixture.mjs';
 
 const root=fileURLToPath(new URL('../../',import.meta.url));
-const shots=['overview-flow.png','overview-global-nav.png','zoom-viewer.png','simulate-link.png','simulate-submit.png','simulate-dialog.png','coverage.png','inspect-mode.png','review-mode.png','api-page.png','analysis-info.png','library-override.png'];
+const shots=['overview-flow.png','overview-global-nav.png','feature-regions.png','button-table.png','zoom-viewer.png','simulate-link.png','simulate-submit.png','simulate-dialog.png','coverage.png','inspect-mode.png','review-mode.png','api-page.png','analysis-info.png','library-override.png'];
 const privateMarkers=[os.homedir(),root,'/Users/','C:\\Users\\','file://'].filter(Boolean);
 
 test('synthetic guide report HTML and screenshot bytes contain no local absolute paths',async()=>{

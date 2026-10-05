@@ -3,7 +3,7 @@ import {Node} from './contracts';
 const order=(a:string,b:string)=>a<b?-1:a>b?1:0;
 /** Only visible/semantic link identity belongs in grouping; expansion anchors and other provenance vary per source occurrence. */
 const NAVIGATION_SEMANTIC_ATTRIBUTES=['kind','tag','componentType','href','target','httpMethod'] as const;
-function navigationKey(index:Index,node:Node|undefined,to:string):string|undefined {
+export function navigationIdentity(index:Index,node:Node|undefined,to:string):string|undefined {
  if(!node)return;
  if(node.attributes.kind!=='LINK'&&node.attributes.tag!=='a'&&node.attributes.componentType!=='NAVIGATION')return;
  const attributes=NAVIGATION_SEMANTIC_ATTRIBUTES.filter(name=>node.attributes[name]!==undefined).map(name=>[name,node.attributes[name]]);
@@ -12,9 +12,9 @@ function navigationKey(index:Index,node:Node|undefined,to:string):string|undefin
 /** Presentation classification only: at least two owners, same target and semantic link identity, >=50% of screens. */
 export function partitionNavigation(index:Index):{global:Relation[];flows:Relation[]}{
  const owners=new Map<string,Set<string>>();
- for(const r of index.relations)for(const trigger of r.triggers){const key=navigationKey(index,index.nodes.get(trigger),r.to);if(key){const set=owners.get(key)||new Set<string>();set.add(r.from);owners.set(key,set);}}
+ for(const r of index.relations)for(const trigger of r.triggers){const key=navigationIdentity(index,index.nodes.get(trigger),r.to);if(key){const set=owners.get(key)||new Set<string>();set.add(r.from);owners.set(key,set);}}
  const global:Relation[]=[],flows:Relation[]=[];
- for(const r of index.relations){const common=r.triggers.filter(id=>{const key=navigationKey(index,index.nodes.get(id),r.to),count=key?owners.get(key)?.size||0:0;return count>=2&&count*2>=index.screens.length;}),specific=r.triggers.filter(id=>!common.includes(id));
+ for(const r of index.relations){const common=r.triggers.filter(id=>{const key=navigationIdentity(index,index.nodes.get(id),r.to),count=key?owners.get(key)?.size||0:0;return count>=2&&count*2>=index.screens.length;}),specific=r.triggers.filter(id=>!common.includes(id));
  if(common.length)global.push({...r,triggers:common});if(specific.length||!r.triggers.length)flows.push({...r,triggers:specific});}
  return {global,flows};
 }
