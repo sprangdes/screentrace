@@ -34,3 +34,15 @@ test('WP35 humanizes a namespaced view-controller label without exposing punctua
  const data={schemaVersion:'2.2',application:{name:'MVC'},nodes:[screen('home','/'),{id:'view-controller',type:'HANDLER',name:'View Controller',attributes:{class:'org.springframework.web.servlet.mvc:view-controller'},confidence:'CONFIRMED'}],relationships:[edge('home-render','RENDERS','view-controller','home')]};
  assert.equal(groupFeatureRegions(indexGraph(data),'controller')[0].name,'Mvc');
 });
+
+test('JSP directory grouping puts root views in the home area',async()=>{
+ const {indexGraph,groupFeatureRegions}=await Promise.all([ownModule('map'),ownModule('feature-regions')]).then(([map,regions])=>({...map,...regions}));
+ const data={schemaVersion:'2.2',application:{name:'JSP roots'},nodes:[
+  {...screen('jsp-root'),source:{file:'src/main/webapp/jsp/home.jsp'}},
+  {...screen('views-root'),source:{file:'src/main/webapp/WEB-INF/views/owners.jsp'}},
+  {...screen('nested-view'),source:{file:'src/main/webapp/WEB-INF/views/owners/list.jsp'}},
+  {...screen('no-jsp'),source:undefined,attributes:{route:'/visits'}}
+ ],relationships:[]};
+ const regions=groupFeatureRegions(indexGraph(data),'jsp-directory');
+ assert.deepEqual(regions.map(region=>[region.name,region.screenIds]),[['Owners',['nested-view']],['首頁與其他',['jsp-root','no-jsp','views-root']]]);
+});
