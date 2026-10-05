@@ -45,11 +45,12 @@ async function main(){
   await page.goto(url);
   await page.locator('#app[data-ready="true"]').waitFor();
   await page.evaluate(async family=>{await document.fonts.ready;if(!document.fonts.check('12px '+family))throw new Error('Required screenshot font unavailable: '+family);},fonts);
-  await page.addStyleTag({content:'*,*::before,*::after{animation:none!important;transition:none!important;caret-color:transparent!important;scroll-behavior:auto!important}.topbar button.secondary{border-radius:0!important}'});
+  await page.addStyleTag({content:'*,*::before,*::after{animation:none!important;transition:none!important;caret-color:transparent!important;scroll-behavior:auto!important}.topbar button.secondary{border-radius:0!important}.topbar>.segmented button[aria-pressed=true],.topbar .toggle-switch input{box-shadow:none!important}'});
   const screenshot=async name=>{
    await page.mouse.move(1439,899);
    await page.evaluate(()=>{if(document.activeElement instanceof HTMLElement)document.activeElement.blur();});
    for(const frame of page.frames())await frame.evaluate(()=>{if(document.activeElement instanceof HTMLElement)document.activeElement.blur();});
+   await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
    await page.locator('[data-transition="running"]').count().then(count=>assert.equal(count,0,'screenshot captured during screen transition'));
    await page.evaluate(async()=>{await document.fonts.ready;await Promise.all([...document.images].map(image=>image.decode().catch(()=>{})));});
    for(const frame of page.frames())assert.equal(await frame.evaluate(async family=>{await document.fonts.ready;return document.fonts.check('12px '+family);},fonts),true,'required screenshot font unavailable in a frame');
