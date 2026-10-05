@@ -31,6 +31,8 @@ test('WP35 grouping basis ties prefer URL, then controller, then JSP directory',
  const {indexGraph,chooseFeatureGroupingBasis}=await Promise.all([ownModule('map'),ownModule('feature-regions')]).then(([map,regions])=>({...map,...regions}));
  const tieGraph={...graph,nodes:graph.nodes.map(node=>node.type==='SCREEN'?{...node,attributes:{...node.attributes,view:`${node.id}.jsp`}}:node)};
  assert.equal(chooseFeatureGroupingBasis(indexGraph(tieGraph)),'url');
+ const controllerDirectoryTie={schemaVersion:'2.2',application:{name:'Tie'},nodes:[screen('a','/alpha','WEB-INF/x/a.jsp'),screen('b','/beta','WEB-INF/x/b.jsp'),screen('c','/gamma','WEB-INF/y/c.jsp'),controller('shared','org.example.SharedController'),controller('other','org.example.OtherController')],relationships:[edge('a-r','shared','a'),edge('b-r','shared','b'),edge('c-r','other','c')]};
+ assert.equal(chooseFeatureGroupingBasis(indexGraph(controllerDirectoryTie)),'controller');
 });
 
 test('WP35 strips technical controller suffixes and exposes the selected basis label',async()=>{
@@ -38,4 +40,10 @@ test('WP35 strips technical controller suffixes and exposes the selected basis l
  const regions=groupFeatureRegions(indexGraph(graph),'controller');
  assert.ok(regions.every(region=>region.basis==='依控制器類別'));
  assert.deepEqual(regions.map(region=>region.name),['Audit','Order','User']);
+});
+
+test('WP35 locates JSP directories from source paths when view names are logical aliases',async()=>{
+ const {indexGraph,groupFeatureRegions}=await Promise.all([ownModule('map'),ownModule('feature-regions')]).then(([map,regions])=>({...map,...regions}));
+ const graph={schemaVersion:'2.2',application:{name:'Views'},nodes:[{...screen('a','/a','logical-a'),source:{file:'WEB-INF/views/orders/a.jsp',line:1}},{...screen('b','/b','logical-b'),source:{file:'WEB-INF/views/orders/b.jsp',line:1}}],relationships:[]};
+ assert.deepEqual(groupFeatureRegions(indexGraph(graph),'jsp-directory').map(region=>[region.name,region.screenIds]),[['Orders',['a','b']]]);
 });

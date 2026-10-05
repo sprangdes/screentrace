@@ -20,3 +20,10 @@ test('WP36 quick row marks use the same composite-key writer and preserve byte-i
  assert.equal(await md.generateMarkdown(payload,quick,options),await md.generateMarkdown(payload,individual,options));
  assert.equal(await md.generateMarkdown(payload,quick,options),await md.generateMarkdown(payload,batch,options));
 });
+
+test('WP36 rows of the same action kind use stable name ordering',async()=>{
+ const payload=mdFixture(),{indexGraph}=await ownModule('map'),{buttonTableRows}=await ownModule('button-table');
+ for(const [id,name]of [['link-z','Zulu'],['link-a','Alpha']]){payload.graph.nodes.push({id,type:'COMPONENT',name,attributes:{kind:'LINK',tag:'a'},confidence:'CONFIRMED',source:{file:'web/a.jsp',line:1}});payload.graph.relationships.push({id:`contains-${id}`,type:'CONTAINS',from:'a',to:id,confidence:'CONFIRMED'});}
+ const links=buttonTableRows(indexGraph(payload.graph)).filter(row=>row.kind==='連結'&&!row.global&&row.members[0].screenId==='a');
+ assert.deepEqual(links.map(row=>row.name),['Alpha','Zulu']);
+});
