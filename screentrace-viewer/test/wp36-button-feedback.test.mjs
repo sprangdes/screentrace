@@ -12,6 +12,8 @@ test('WP36 button summaries separate primary action, sorted outcomes and collaps
  const index=indexGraph(g),link=actionSummary(index,'link'),submit=actionSummary(index,'submit');
  assert.equal(link.primaryAction,'前往「候選畫面」');assert.equal(link.possibleResults,'可能前往：Alpha、Zulu；有多個可能結果');assert.doesNotMatch(`${link.primaryAction} ${link.possibleResults}`,/呼叫 API|送出到/);
  assert.equal(submit.primaryAction,'送出表單');assert.equal(submit.possibleResults,'可能前往：Alpha、Zulu；有多個可能結果');assert.deepEqual(submit.technicalDetails,['伺服端路由：POST /a-route','伺服端路由：POST /z-route']);
+ const routeOnly=actionSummary(indexGraph({...g,relationships:g.relationships.filter(edge=>!(edge.from==='submit'&&edge.type==='NAVIGATES_TO'))}),'submit');assert.equal(routeOnly.primaryAction,'送出表單');assert.equal(routeOnly.possibleResults,'可能前往：靜態分析無法確認；有多個可能結果');
+ const oneScreen=actionSummary(indexGraph({...g,relationships:g.relationships.filter(edge=>!(edge.from==='submit'&&edge.to==='screen-z'))}),'submit');assert.equal(oneScreen.possibleResults,'可能前往：Alpha');
 });
 
 test('WP36 quick row marks use the same composite-key writer and preserve byte-identical Markdown',async()=>{
