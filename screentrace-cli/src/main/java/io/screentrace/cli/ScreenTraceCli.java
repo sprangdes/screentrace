@@ -14,37 +14,69 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
+import org.jline.terminal.Terminal;
+import org.jline.terminal.TerminalBuilder;
 
 /** Interactive entry point plus scriptable analyze, report, and config commands. */
 public final class ScreenTraceCli {
   private static final Logger LOGGER = Logger.getLogger(ScreenTraceCli.class.getName());
 
   public static void main(String[] args) throws IOException, InterruptedException {
-    if(args.length>0&&args[0].equals("library")){System.out.println(LibraryCommands.run(args,WorkspaceSettings.defaultFile().getParent()));return;}
+    int status=run(args);
+    if(status!=0)System.exit(status);
+  }
+
+  private static int run(String[] args) throws IOException, InterruptedException {
+    if(args.length>0&&args[0].equals("library")){System.out.println(LibraryCommands.run(args,WorkspaceSettings.defaultFile().getParent()));return 0;}
     Command command = Command.parse(args);
-    try (InteractiveConsole console = new InteractiveConsole()) {
-      WorkspaceSettings settings = command.action() == Action.CONFIG ? configure(console) : loadOrConfigure(console);
-      if (command.action() == Action.CONFIG) return;
-      ProjectCatalog catalog = new ProjectCatalog();
-      if (command.action() == Action.INTERACTIVE) {
-        runInteractive(console, settings, catalog);
-        return;
+    if(command.action()==Action.INTERACTIVE||command.action()==Action.CONFIG){
+      if(!interactiveTerminalAvailable())return failForMissingTerminal();
+      try(InteractiveConsole console=new InteractiveConsole()){
+        WorkspaceSettings settings=command.action()==Action.CONFIG?configure(console):loadOrConfigure(console);
+        if(command.action()==Action.INTERACTIVE)runInteractive(console,settings,new ProjectCatalog());
       }
-      List<ProjectCatalog.Project> projects = command.action() == Action.ANALYZE
-          ? catalog.allProjects(settings) : catalog.analyzedProjects(settings);
-      ProjectCatalog.Project project;
-      try {
-        project = selectProject(console, catalog, projects, command.projectName());
-      } catch (InteractiveConsole.SelectionCancelledException ignored) {
-        return;
-      }
-      if (command.action() == Action.ANALYZE) {
-        AnalysisResult result = analyze(project,settings);
-        logAnalysis(result);
-        openReport(result.report());
-      }
-      else if (command.action() == Action.REPORT) openReport(new SingleHtmlAnalysisWriter().generate(project.analysisDirectory(),new LibraryStore(WorkspaceSettings.defaultFile().getParent()).selected(project.name())).path());
+      return 0;
     }
+    boolean configured=hasConfiguredWorkspace();
+    boolean needsPrompt=!configured||command.projectName()==null;
+    if(needsPrompt&&!interactiveTerminalAvailable()){
+      if(!configured)return failForMissingTerminal();
+      System.err.println("此指令需要選擇專案；請在終端機執行，或指定專案名稱。");
+      return 2;
+    }
+    if(needsPrompt){
+      try(InteractiveConsole console=new InteractiveConsole()){
+        runCommand(console,loadOrConfigure(console),command);
+      }
+    }else runCommand(null,WorkspaceSettings.load(WorkspaceSettings.defaultFile()),command);
+    return 0;
+  }
+
+  private static int failForMissingTerminal(){
+    System.err.println("尚未設定專案根目錄與輸出根目錄。請先在終端機執行 `./bin/screentrace config`");
+    return 2;
+  }
+
+  private static boolean hasConfiguredWorkspace(){
+    try{Path file=WorkspaceSettings.defaultFile();return Files.isRegularFile(file)&&Files.isDirectory(WorkspaceSettings.load(file).projectRoot());}
+    catch(IOException|RuntimeException ignored){return false;}
+  }
+
+  private static boolean interactiveTerminalAvailable() throws IOException {
+    if(System.console()==null)return false;
+    try(Terminal terminal=TerminalBuilder.builder().system(true).build()){
+      return !Terminal.TYPE_DUMB.equals(terminal.getType())&&!Terminal.TYPE_DUMB_COLOR.equals(terminal.getType());
+    }
+  }
+
+  private static void runCommand(InteractiveConsole console,WorkspaceSettings settings,Command command) throws IOException,InterruptedException {
+    ProjectCatalog catalog=new ProjectCatalog();
+    List<ProjectCatalog.Project> projects=command.action()==Action.ANALYZE?catalog.allProjects(settings):catalog.analyzedProjects(settings);
+    ProjectCatalog.Project project;
+    try{project=selectProject(console,catalog,projects,command.projectName());}
+    catch(InteractiveConsole.SelectionCancelledException ignored){return;}
+    if(command.action()==Action.ANALYZE){AnalysisResult result=analyze(project,settings);logAnalysis(result);openReport(result.report());}
+    else if(command.action()==Action.REPORT)openReport(new SingleHtmlAnalysisWriter().generate(project.analysisDirectory(),new LibraryStore(WorkspaceSettings.defaultFile().getParent()).selected(project.name())).path());
   }
 
   private static void runInteractive(InteractiveConsole console, WorkspaceSettings settings, ProjectCatalog catalog)

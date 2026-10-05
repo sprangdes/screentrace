@@ -49,6 +49,7 @@ class NonInteractiveCliTest {
     var args = new java.util.ArrayList<String>();
     args.add(Path.of(System.getProperty("java.home"), "bin", "java").toString());
     args.add("-Duser.home=" + home);
+    args.add("-Djava.awt.headless=true");
     args.add("-cp");args.add(classpath);args.add(ScreenTraceCli.class.getName());args.add(command);
     if (configured) args.add("demo");
     ProcessBuilder builder = new ProcessBuilder(args).redirectErrorStream(true);
