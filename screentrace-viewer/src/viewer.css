@@ -113,7 +113,15 @@ body{height:100dvh;display:flex;flex-direction:column;overflow:hidden}.topbar{fl
 .screen-card[data-screen-status=KEEP]{border-left:4px solid var(--keep)}
 .screen-card[data-screen-status=REMOVE]{border-left:4px solid var(--remove)}
 .card-review{opacity:0;pointer-events:none;transition:opacity 140ms ease}
-.card-review:hover,.card-review:focus-within,.screen-card:hover+.card-review,.card-review.touch-revealed{opacity:1;pointer-events:auto}
+.card-review:hover,.card-review:focus-within,.screen-card:hover+.card-review,.screen-card:focus+.card-review,.card-review.touch-revealed{opacity:1;pointer-events:auto}
 .focus-heading .decision-buttons{flex:0 0 auto}
 .feature-region-progress{display:block}
+.canvas[data-semantic-zoom=compact] .screen-card{overflow:visible}
+.canvas[data-semantic-zoom=compact] .screen-card .screen-caption{position:absolute;left:0;bottom:0;z-index:3;width:250px;height:auto;min-height:30px;padding:3px 8px;overflow:visible;background:#fffffff2;transform:scale(calc(1 / var(--canvas-zoom)));transform-origin:left bottom}
+.canvas[data-semantic-zoom=compact] .screen-card .screen-caption strong{display:block;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.canvas[data-semantic-zoom=compact] .screen-card .screen-route{display:none}
+.canvas[data-semantic-zoom=compact] .screen-card:hover .screen-caption,.canvas[data-semantic-zoom=compact] .screen-card:focus .screen-caption{height:auto;min-height:0;padding-bottom:26px}
+.canvas[data-semantic-zoom=compact] .screen-card:hover .screen-route,.canvas[data-semantic-zoom=compact] .screen-card:focus .screen-route{display:block;position:absolute;left:0;top:100%;z-index:4;width:max-content;max-width:250px;white-space:normal;overflow-wrap:anywhere;padding:3px 6px;border:1px solid var(--gray-200);border-radius:4px;background:white;box-shadow:var(--shadow-card);font-size:12px}
+.screen-summary-line{display:block;max-height:none;overflow:visible;white-space:normal;line-height:1.5;margin:4px 0 12px;padding:6px 0;color:var(--gray-600);font-size:13px}
+.feature-region-card .screen-summary-line{margin:2px 0 10px;padding:0 8px;font-size:12px}
 @media(max-width:1023px){.review-progress-panel{position:fixed;right:12px;top:100px}.topbar{gap:8px;padding:0 10px}.topbar .review-help>p{position:fixed;right:8px;top:96px;z-index:40}}

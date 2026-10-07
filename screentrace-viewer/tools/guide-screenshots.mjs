@@ -7,6 +7,7 @@ import {chromium} from '../../screentrace-capture/node_modules/playwright/index.
 import {simulationFixture} from '../test/wp26-fixture.mjs';
 import {fileFixture,node} from '../test/fixture.mjs';
 import {setDecision} from '../test/decision-controls.mjs';
+import {canonicalPng} from './png-canonical.mjs';
 
 const root=fileURLToPath(new URL('../../',import.meta.url));
 const output=path.join(root,'docs/images/user-guide');
@@ -54,7 +55,7 @@ async function main(){
    await page.locator('[data-transition="running"]').count().then(count=>assert.equal(count,0,'screenshot captured during screen transition'));
    await page.evaluate(async()=>{await document.fonts.ready;await Promise.all([...document.images].map(image=>image.decode().catch(()=>{})));});
    for(const frame of page.frames())assert.equal(await frame.evaluate(async family=>{await document.fonts.ready;return document.fonts.check('12px '+family);},fonts),true,'required screenshot font unavailable in a frame');
-   const file=path.join(output,name);let previous,bytes;for(let attempt=0;attempt<12;attempt++){bytes=await page.screenshot({animations:'disabled'});if(previous&&bytes.equals(previous))break;previous=bytes;await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));}assert.ok(previous&&bytes.equals(previous),`${name} did not reach a stable screenshot`);await writeFile(file,bytes);assert.ok(bytes.length>1000,`${name} is unexpectedly small`);
+   const file=path.join(output,name);let previous,bytes;for(let attempt=0;attempt<12;attempt++){bytes=canonicalPng(await page.screenshot({animations:'disabled'}));if(previous&&bytes.equals(previous))break;previous=bytes;await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));}assert.ok(previous&&bytes.equals(previous),`${name} did not reach a stable screenshot`);await writeFile(file,bytes);assert.ok(bytes.length>1000,`${name} is unexpectedly small`);
    for(const value of forbidden)assert.ok(!bytes.includes(Buffer.from(value)),`${name} contains private path marker ${value}`);
   };
   await page.locator('.canvas[data-fitted="true"]').waitFor();await screenshot(shots[0]);

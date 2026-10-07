@@ -18,12 +18,15 @@ test('overview cards keep summaries and decision tools out of the resting view',
   await card.hover();
   assert.equal(await controls.evaluate(el=>getComputedStyle(el).opacity),'1');
   assert.equal(await controls.getByRole('radio',{name:'保留'}).count(),1);
+  await page.mouse.move(1390,850);
   card.focus();
   assert.equal(await controls.evaluate(el=>getComputedStyle(el).opacity),'1');
+  await page.keyboard.press('Tab');
+  assert.equal(await controls.evaluate(el=>el.contains(document.activeElement)),true);
   await controls.getByRole('radio',{name:'保留'}).click();
   assert.equal(await card.getAttribute('data-screen-status'),'KEEP');
   assert.equal(await card.locator('[data-screen-status]').count(),0);
-  assert.equal(await card.getByRole('img',{name:'保留'}).count(),1);
+  assert.equal(await card.locator('.review-status-icon[aria-label="保留"]').count(),1);
  }finally{await browser.close();}
 });
 
@@ -43,7 +46,8 @@ test('overview uses semantic zoom while retaining readable screen names',async()
   const zoom=await page.locator('.world').evaluate(el=>new DOMMatrixReadOnly(getComputedStyle(el).transform).a);
   assert.ok(zoom<.7,`expected compact zoom, got ${zoom}`);
   assert.equal(await page.locator('.canvas').getAttribute('data-semantic-zoom'),'compact');
-  assert.match(await card.locator('strong').innerText(),/第三畫面|模擬|畫面/);
+  assert.equal(await card.locator('strong').innerText(),'甲');
+  assert.ok((await card.locator('strong').evaluate(el=>el.getBoundingClientRect().height))>=14);
   assert.equal(await route.evaluate(el=>getComputedStyle(el).display),'none');
   await card.hover();
   assert.notEqual(await route.evaluate(el=>getComputedStyle(el).display),'none');
@@ -57,10 +61,16 @@ test('screen summary lives under the focused title and in feature cards only',as
   await page.goto(await fileFixture(simulationFixture()));
   assert.equal(await page.locator('.screen-card .screen-summary-line').count(),0);
   await page.locator('.screen-card[data-screen="a"]').click();
-  assert.equal(await page.locator('.focus-heading+.screen-summary-line').count(),1);
-  assert.match(await page.locator('.focus-heading+.screen-summary-line').innerText(),/個畫面.*個按鈕/s);
+  await page.locator('.prototype-viewer .focus-breadcrumb+.screen-summary-line').waitFor();
+  const focusSummary=page.locator('.prototype-viewer .focus-breadcrumb+.screen-summary-line');
+  assert.match(await focusSummary.innerText(),/個畫面.*個按鈕/s);
+  assert.equal(await focusSummary.evaluate(el=>getComputedStyle(el).maxHeight),'none');
+  assert.equal(await focusSummary.evaluate(el=>el.scrollHeight<=el.clientHeight),true);
   await page.getByRole('button',{name:'地圖',exact:true}).click();
   await page.getByRole('button',{name:'功能',exact:true}).click();
-  assert.ok(await page.locator('.feature-region-card p').filter({hasText:'畫面'}).count()>0);
+  const regionSummary=page.locator('.feature-region-card .screen-summary-line').first();
+  assert.ok(await regionSummary.count()>0);
+  assert.equal(await regionSummary.evaluate(el=>getComputedStyle(el).maxHeight),'none');
+  assert.equal(await regionSummary.evaluate(el=>el.scrollHeight<=el.clientHeight),true);
  }finally{await browser.close();}
 });
