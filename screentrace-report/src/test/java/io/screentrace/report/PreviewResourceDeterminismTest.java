@@ -9,6 +9,7 @@ import java.security.MessageDigest;
 import java.util.*;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.Assumptions;
 
 class PreviewResourceDeterminismTest {
  @TempDir Path temp;
@@ -55,6 +56,28 @@ class PreviewResourceDeterminismTest {
 
  @Test void quotedResourceUrisSupportParenthesesInTheActualOutputRoot() throws Exception {
   Path first=temp.resolve("output (one)"),second=temp.resolve("output (two)");fixture(first);fixture(second);var writer=new SingleHtmlAnalysisWriter();assertArrayEquals(Files.readAllBytes(writer.generate(graph(),first).path()),Files.readAllBytes(writer.generate(graph(),second).path()));
+ }
+
+ @Test void outputRootSymlinkAliasProducesTheSameReportAsItsRealPath() throws Exception {
+  Path actual=temp.resolve("actual-output"),alias=temp.resolve("output-link");fixture(actual);Files.createSymbolicLink(alias,actual);
+  var writer=new SingleHtmlAnalysisWriter();byte[] expected=Files.readAllBytes(writer.generate(graph(),actual).path());
+  assertArrayEquals(expected,Files.readAllBytes(writer.generate(graph(),alias).path()));
+ }
+
+ @Test void outputRootCaseAliasProducesTheSameReportOnCaseInsensitiveFilesystems() throws Exception {
+  Path actual=temp.resolve("CaseOutput"),alias=temp.resolve("caseoutput");fixture(actual);
+  boolean same;try{same=Files.isSameFile(actual,alias);}catch(NoSuchFileException unavailable){same=false;}
+  Assumptions.assumeTrue(same,"此檔案系統區分大小寫，無法建立大小寫別名");
+  var writer=new SingleHtmlAnalysisWriter();byte[] expected=Files.readAllBytes(writer.generate(graph(),actual).path());
+  assertArrayEquals(expected,Files.readAllBytes(writer.generate(graph(),alias).path()));
+ }
+
+ @Test void resourceSymlinkThatResolvesOutsideOutputIsRejected() throws Exception {
+  Path output=temp.resolve("output"),capture=fixture(output),outside=temp.resolve("private-image.svg");Files.writeString(outside,"<svg/>");
+  Path linked=output.resolve("static-preview/assets/linked.svg");Files.createSymbolicLink(linked,outside);
+  String original=Files.readString(capture),inside=output.resolve("static-preview/assets/image.svg").toUri().toString();
+  Files.writeString(capture,original.replace(inside,linked.toUri().toString()));
+  assertThrows(java.io.IOException.class,()->new SingleHtmlAnalysisWriter().generate(graph(),output));
  }
 
 }

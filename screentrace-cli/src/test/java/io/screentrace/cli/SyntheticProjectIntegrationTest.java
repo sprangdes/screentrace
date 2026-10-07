@@ -150,4 +150,17 @@ class SyntheticProjectIntegrationTest {
         assertTrue(serialized.contains("/other"));
         assertFalse(serialized.contains(System.getProperty("user.home")));
     }
+
+    @Test void cliAnalysisThroughSymlinkOutputRootMatchesTheStandardRootByteForByte() throws Exception {
+        Path source=root().resolve("fixtures/wp10/spring-mvc-jsp");
+        Path standardRoot=temp.resolve("standard-output"),realAliasRoot=temp.resolve("real-output"),aliasRoot=temp.resolve("output-link");
+        Files.createDirectories(standardRoot);Files.createDirectories(realAliasRoot);Files.createSymbolicLink(aliasRoot,realAliasRoot);
+        var analyze=ScreenTraceCli.class.getDeclaredMethod("analyze",ProjectCatalog.Project.class,WorkspaceSettings.class);analyze.setAccessible(true);
+        var standard=new ProjectCatalog.Project("spring-mvc-jsp",source,standardRoot.resolve("spring-mvc-jsp"));
+        var alias=new ProjectCatalog.Project("spring-mvc-jsp",source,aliasRoot.resolve("spring-mvc-jsp"));
+        analyze.invoke(null,standard,new WorkspaceSettings(source.getParent(),standardRoot));
+        analyze.invoke(null,alias,new WorkspaceSettings(source.getParent(),aliasRoot));
+        for(String artifact:List.of("application-graph.json","preview-model.json","viewer-documents.json","report/screentrace-report.html"))
+            assertArrayEquals(Files.readAllBytes(standard.analysisDirectory().resolve(artifact)),Files.readAllBytes(alias.analysisDirectory().resolve(artifact)),artifact);
+    }
 }
