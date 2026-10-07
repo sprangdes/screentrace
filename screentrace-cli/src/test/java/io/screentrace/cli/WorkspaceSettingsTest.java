@@ -13,6 +13,7 @@ class WorkspaceSettingsTest {
   @TempDir Path root;
 
   @Test void persistsNormalizedWorkspaceLocations() throws Exception {
+    root=root.toRealPath();
     Path file = root.resolve("settings/config.json");
     WorkspaceSettings settings = new WorkspaceSettings(root.resolve("projects/../projects"), root.resolve("output"));
 
@@ -45,6 +46,10 @@ class WorkspaceSettingsTest {
     assertEquals(projectReal.toRealPath().toString(),saved.path("projectRoot").asText());
     assertEquals(outputReal.toRealPath().toString(),saved.path("outputRoot").asText());
     var loaded=WorkspaceSettings.load(file);assertEquals(projectReal.toRealPath(),loaded.projectRoot());assertEquals(outputReal.toRealPath(),loaded.outputRoot());
+    var correction=WorkspaceSettings.canonicalPaths(projectAlias,outputAlias).correctionMessage();
+    org.junit.jupiter.api.Assertions.assertTrue(correction.contains("已將"));
+    org.junit.jupiter.api.Assertions.assertTrue(correction.contains("專案根目錄"));
+    org.junit.jupiter.api.Assertions.assertTrue(correction.contains("輸出根目錄"));
   }
 
   @Test void loadingLegacyWorkspaceConfigResolvesSymbolicLinkRoots() throws Exception {
@@ -54,6 +59,17 @@ class WorkspaceSettingsTest {
     Path file=root.resolve("legacy.json");var json=new com.fasterxml.jackson.databind.ObjectMapper();
     Files.writeString(file,json.writeValueAsString(java.util.Map.of("projectRoot",projectAlias.toString(),"outputRoot",outputAlias.toString())));
     var loaded=WorkspaceSettings.load(file);assertEquals(projectReal.toRealPath(),loaded.projectRoot());assertEquals(outputReal.toRealPath(),loaded.outputRoot());
+  }
+
+  @Test void savingCaseVariantWorkspacePathsStoresTheFilesystemSpellingWhenSupported() throws Exception {
+    Path actual=Files.createDirectory(root.resolve("CaseProjects")),output=Files.createDirectory(root.resolve("CaseOutput"));
+    Path projectAlias=root.resolve("caseprojects"),outputAlias=root.resolve("caseoutput");
+    boolean aliases;try{aliases=Files.isSameFile(actual,projectAlias)&&Files.isSameFile(output,outputAlias);}catch(java.nio.file.NoSuchFileException unavailable){aliases=false;}
+    org.junit.jupiter.api.Assumptions.assumeTrue(aliases,"此檔案系統區分大小寫，無法建立大小寫別名");
+    var canonical=WorkspaceSettings.canonicalPaths(projectAlias,outputAlias);
+    assertEquals(actual.toRealPath(),canonical.projectRoot());
+    assertEquals(output.toRealPath(),canonical.outputRoot());
+    org.junit.jupiter.api.Assertions.assertTrue(canonical.correctionMessage().contains("已將"));
   }
 
   @Test @EnabledOnOs(OS.WINDOWS) void windowsDriveCaseAndMixedSeparatorsResolveToTheSameWorkspace() throws Exception {

@@ -7,6 +7,7 @@ import io.screentrace.core.GraphIntegrityValidator;
 import io.screentrace.core.PreviewModel;
 import io.screentrace.core.PreviewModel.*;
 import io.screentrace.scanner.SafeProjectFiles;
+import io.screentrace.scanner.RealPaths;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.net.URI;
@@ -88,7 +89,7 @@ final class PreviewCaptureReader {
   private static final Pattern FILE_URI = Pattern.compile("(?i)\"(file:/+[^\"]+)\"|'(file:/+[^']+)'|(file:/+[^\\s\"'()]+)");
   private Map<String,String> normalizeResources(Map<String,String> values, Path output) throws IOException {
     var result = new TreeMap<String,String>();
-    Path root = output.toAbsolutePath().normalize();
+    Path root = output.toRealPath();
     for (var entry : values.entrySet()) {
       var matcher = FILE_URI.matcher(entry.getValue()); var text = new StringBuffer();
       while (matcher.find()) {
@@ -97,14 +98,17 @@ final class PreviewCaptureReader {
           String raw = matcher.group(1) != null ? matcher.group(1) : matcher.group(2) != null ? matcher.group(2) : matcher.group(3);
           URI uri = URI.create(raw);
           URI location = new URI(uri.getScheme(), uri.getAuthority(), uri.getPath(), null, null);
-          Path resource = Path.of(location).toAbsolutePath().normalize();
-          if (!resource.startsWith(root)) throw new IllegalArgumentException();
+          Path resource = Path.of(location);
+          Path realResource = RealPaths.resolveAllowMissing(resource);
+          if (!realResource.startsWith(root)) throw PreviewResourceBoundaryException.outside(resource);
           // A URI preserves escaped spaces, delimiters and Unicode without exposing the local root.
-          String relative = root.relativize(resource).toString().replace(java.io.File.separatorChar, '/');
+          String relative = root.relativize(realResource).toString().replace(java.io.File.separatorChar, '/');
           stable = "st-preview-resource:" + new URI(null, null, relative, uri.getQuery(), uri.getFragment()).toASCIIString();
+        } catch (PreviewResourceBoundaryException unsafe) {
+          throw unsafe;
         } catch (Exception invalid) {
           // Do not include the URI or its exception (both could disclose a local path).
-          throw new IOException("Preview local resource URL is invalid or outside the analysis output");
+          throw PreviewResourceBoundaryException.invalid();
         }
         String quote = matcher.group(1) != null ? "\"" : matcher.group(2) != null ? "'" : "";
         matcher.appendReplacement(text, java.util.regex.Matcher.quoteReplacement(quote + stable + quote));

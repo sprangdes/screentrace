@@ -5,6 +5,7 @@ import io.screentrace.adapter.struts.StrutsProjectAnalyzer;
 import io.screentrace.core.ApplicationGraph;
 import io.screentrace.core.ApplicationGraphMerger;
 import io.screentrace.report.SingleHtmlAnalysisWriter;
+import io.screentrace.report.PreviewResourceBoundaryException;
 import io.screentrace.scanner.ProjectScanner;
 import io.screentrace.scanner.SafeProjectFiles;
 import java.awt.Desktop;
@@ -22,8 +23,17 @@ public final class ScreenTraceCli {
   private static final Logger LOGGER = Logger.getLogger(ScreenTraceCli.class.getName());
 
   public static void main(String[] args) throws IOException, InterruptedException {
-    int status=run(args);
+    int status;
+    try { status=run(args); }
+    catch (PreviewResourceBoundaryException rejected) {
+      status=reportRejectedPreviewResource(rejected,System.err);
+    }
     if(status!=0)System.exit(status);
+  }
+
+  static int reportRejectedPreviewResource(PreviewResourceBoundaryException rejected, java.io.PrintStream error) {
+    error.println(rejected.getMessage());
+    return 2;
   }
 
   private static int run(String[] args) throws IOException, InterruptedException {
@@ -124,7 +134,9 @@ public final class ScreenTraceCli {
     Path projectRoot = console.existingDirectory("所有專案的根目錄", projectDefault);
     Path outputDefault = current == null ? projectRoot.resolve("analyze") : current.outputRoot();
     Path outputRoot = console.outputDirectory("分析結果根目錄", outputDefault);
-    WorkspaceSettings settings = new WorkspaceSettings(projectRoot, outputRoot,current==null?java.util.Map.of():current.contextPaths());
+    WorkspaceSettings.CanonicalPaths canonical=WorkspaceSettings.canonicalPaths(projectRoot,outputRoot);
+    if(canonical.correctionMessage()!=null)LOGGER.info(canonical.correctionMessage());
+    WorkspaceSettings settings = new WorkspaceSettings(canonical.projectRoot(), canonical.outputRoot(),current==null?java.util.Map.of():current.contextPaths());
     settings.save(WorkspaceSettings.defaultFile());
     LOGGER.info(() -> "設定已儲存：\n  專案根目錄：" + settings.projectRoot() + "\n  輸出根目錄：" + settings.outputRoot());
     return settings;

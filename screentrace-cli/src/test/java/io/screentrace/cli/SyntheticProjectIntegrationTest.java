@@ -163,4 +163,18 @@ class SyntheticProjectIntegrationTest {
         for(String artifact:List.of("application-graph.json","preview-model.json","viewer-documents.json","report/screentrace-report.html"))
             assertArrayEquals(Files.readAllBytes(standard.analysisDirectory().resolve(artifact)),Files.readAllBytes(alias.analysisDirectory().resolve(artifact)),artifact);
     }
+
+    @Test void cliAnalysisThroughCaseVariantOutputRootMatchesTheStandardRootByteForByteWhenSupported() throws Exception {
+        Path source=root().resolve("fixtures/wp10/spring-mvc-jsp");
+        Path standardRoot=temp.resolve("CaseOutput"),aliasRoot=temp.resolve("caseoutput");Files.createDirectories(standardRoot);
+        boolean same;try{same=Files.isSameFile(standardRoot,aliasRoot);}catch(NoSuchFileException unavailable){same=false;}
+        org.junit.jupiter.api.Assumptions.assumeTrue(same,"此檔案系統區分大小寫，無法建立大小寫別名");
+        var analyze=ScreenTraceCli.class.getDeclaredMethod("analyze",ProjectCatalog.Project.class,WorkspaceSettings.class);analyze.setAccessible(true);
+        var standard=new ProjectCatalog.Project("spring-mvc-jsp",source,standardRoot.resolve("spring-mvc-jsp"));
+        var alias=new ProjectCatalog.Project("spring-mvc-jsp",source,aliasRoot.resolve("spring-mvc-jsp"));
+        analyze.invoke(null,standard,new WorkspaceSettings(source.getParent(),standardRoot));
+        analyze.invoke(null,alias,new WorkspaceSettings(source.getParent(),aliasRoot));
+        for(String artifact:List.of("application-graph.json","preview-model.json","viewer-documents.json","report/screentrace-report.html"))
+            assertArrayEquals(Files.readAllBytes(standard.analysisDirectory().resolve(artifact)),Files.readAllBytes(alias.analysisDirectory().resolve(artifact)),artifact);
+    }
 }

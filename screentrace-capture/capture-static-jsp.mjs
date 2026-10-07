@@ -1,7 +1,7 @@
 import {metadataValue} from './expansion-anchor.mjs';
 import { lstat, mkdir, readdir } from 'node:fs/promises';
 import path from 'node:path';
-import { pathToFileURL } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { chromium } from 'playwright';
 import {collectElementStyles,thumbnailDataUri,captureOptions} from './element-styles.mjs';
 import {annotateConditions,annotateSource,convertControls,expressionList,markupTokens,replaceDynamicExpressions} from './preview-markup.mjs';
@@ -259,8 +259,8 @@ await context.route('**/*', async route => {
   const url = route.request().url();
   if (!url.startsWith('file:')) return route.abort('blockedbyclient');
   try {
-    const local = await resolveExistingFileWithin(htmlRootReal, new URL(url).pathname);
-    return local.startsWith(htmlRootReal + path.sep) || local === htmlRootReal ? route.continue() : route.abort('blockedbyclient');
+    await resolveExistingFileWithin(htmlRootReal, fileURLToPath(url));
+    return route.continue();
   } catch { return route.abort('blockedbyclient'); }
 });
 const page = await context.newPage();

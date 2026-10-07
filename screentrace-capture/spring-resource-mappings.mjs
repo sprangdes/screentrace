@@ -44,12 +44,17 @@ function sourceDirectory(target, webRoot, location) {
 async function within(root, candidate) {
   const normalizedRoot = path.resolve(root);
   const normalizedCandidate = path.resolve(candidate);
-  if (normalizedCandidate !== normalizedRoot && !normalizedCandidate.startsWith(normalizedRoot + path.sep)) return false;
+  if (!pathWithin(normalizedRoot, normalizedCandidate)) return false;
   try {
     const safe = await resolveExistingDirectoryWithin(root, candidate);
     const canonicalRoot = await resolveExistingDirectoryWithin(root, root);
-    return safe === canonicalRoot || safe.startsWith(canonicalRoot + path.sep);
+    return pathWithin(canonicalRoot, safe);
   } catch (error) { return error.code === 'ENOENT'; }
+}
+
+function pathWithin(root, candidate) {
+  const relative = path.relative(root, candidate);
+  return relative === '' || (relative !== '..' && !relative.startsWith(`..${path.sep}`) && !path.isAbsolute(relative));
 }
 
 /** Discovers servlet-webapp and classpath locations exposed by Spring MVC resource mappings. */

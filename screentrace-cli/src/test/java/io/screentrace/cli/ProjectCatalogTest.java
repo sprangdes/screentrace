@@ -28,6 +28,15 @@ class ProjectCatalogTest {
     assertEquals(output.resolve("alpha"), catalog.named(catalog.analyzedProjects(settings), "alpha").analysisDirectory());
   }
 
+  @Test void excludesOutputDirectoryWhenConfiguredWithDifferentCaseOnCaseInsensitiveFilesystems() throws Exception {
+    Path projects=Files.createDirectories(root.resolve("Projects"));Files.createDirectory(projects.resolve("demo"));
+    Path output=Files.createDirectory(projects.resolve("Analyze")),alias=projects.resolve("analyze");
+    boolean same;try{same=Files.isSameFile(output,alias);}catch(java.nio.file.NoSuchFileException unavailable){same=false;}
+    org.junit.jupiter.api.Assumptions.assumeTrue(same,"此檔案系統區分大小寫，無法建立大小寫別名");
+    var found=new ProjectCatalog().allProjects(new WorkspaceSettings(projects,alias));
+    assertEquals(List.of("demo"),found.stream().map(ProjectCatalog.Project::name).toList());
+  }
+
   private static void complete(Path output) throws Exception {
     Files.createDirectories(output.resolve("report"));
     Files.writeString(output.resolve("application-graph.json"), "{}");

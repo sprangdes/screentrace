@@ -21,29 +21,25 @@ public final class SafeProjectFiles {
   public static Path canonicalRoot(Path root) throws IOException { return root.toRealPath(); }
 
   public static Path requireExistingRegularFileWithin(Path root, Path candidate) throws IOException {
-    for(Path part:root.toAbsolutePath().normalize().relativize(candidate.toAbsolutePath().normalize()))if(part.toString().startsWith("workspace:"))throw new IOException("Reserved workspace evidence name is not a target source");
-    Path canonicalRoot = canonicalRoot(root);
+    Path realRoot = canonicalRoot(root);
     Path lexicalRoot = root.toAbsolutePath().normalize();
     Path absolute = candidate.toAbsolutePath().normalize();
-    Path boundary = absolute.startsWith(lexicalRoot) ? lexicalRoot : canonicalRoot;
-    if (!absolute.startsWith(boundary) || containsSymlinkBelow(boundary, absolute)
+    Path real = candidate.toRealPath();
+    if (!real.startsWith(realRoot) || containsSymlinkBelow(lexicalRoot, absolute, realRoot, real)
         || !Files.isRegularFile(absolute, LinkOption.NOFOLLOW_LINKS))
       throw new IOException("Not a regular non-symlink source file: " + candidate);
-    Path real = absolute.toRealPath();
-    if (!real.startsWith(canonicalRoot)) throw new IOException("Path is outside project root: " + candidate);
+    for(Path part:realRoot.relativize(real))if(part.toString().startsWith("workspace:"))throw new IOException("Reserved workspace evidence name is not a target source");
     return real;
   }
 
   public static Path requireExistingDirectoryWithin(Path root, Path candidate) throws IOException {
-    Path canonicalRoot = canonicalRoot(root);
+    Path realRoot = canonicalRoot(root);
     Path lexicalRoot = root.toAbsolutePath().normalize();
     Path absolute = candidate.toAbsolutePath().normalize();
-    Path boundary = absolute.startsWith(lexicalRoot) ? lexicalRoot : canonicalRoot;
-    if (!absolute.startsWith(boundary) || containsSymlinkBelow(boundary, absolute)
+    Path real = candidate.toRealPath();
+    if (!real.startsWith(realRoot) || containsSymlinkBelow(lexicalRoot, absolute, realRoot, real)
         || !Files.isDirectory(absolute, LinkOption.NOFOLLOW_LINKS))
       throw new IOException("Not a directory or symbolic link: " + candidate);
-    Path real = absolute.toRealPath();
-    if (!real.startsWith(canonicalRoot)) throw new IOException("Path is outside project root: " + candidate);
     return real;
   }
 
@@ -52,9 +48,12 @@ public final class SafeProjectFiles {
     catch (IOException | SecurityException ignored) { return false; }
   }
 
-  private static boolean containsSymlinkBelow(Path root, Path path) {
+  private static boolean containsSymlinkBelow(Path lexicalRoot, Path path, Path realRoot, Path realPath) {
+    Path root = path.startsWith(lexicalRoot) ? lexicalRoot : realRoot;
+    Path checkedPath = path.startsWith(lexicalRoot) ? path : realPath;
+    if (!checkedPath.startsWith(root)) return true;
     Path current = root;
-    for (Path part : root.relativize(path)) {
+    for (Path part : root.relativize(checkedPath)) {
       current = current.resolve(part);
       if (Files.isSymbolicLink(current)) return true;
     }
@@ -90,18 +89,22 @@ public final class SafeProjectFiles {
 
   public static Path requireWritePathWithin(Path outputRoot, Path target) throws IOException {
     Path root = outputRoot.toAbsolutePath().normalize();
-    Path realRoot = root.toRealPath();
+    Path realRoot = outputRoot.toRealPath();
     Path resolved = target.toAbsolutePath().normalize();
-    if (!resolved.startsWith(root)) throw new IOException("Output path is outside configured output root: " + target);
+    if (!RealPaths.isWithin(outputRoot, resolved)) throw new IOException("Output path is outside configured output root: " + target);
     Path existing = resolved;
     while (existing != null && !Files.exists(existing, LinkOption.NOFOLLOW_LINKS)) existing = existing.getParent();
     if (existing != null) {
-      Path current = root;
-      for (Path part : root.relativize(existing)) {
-        current = current.resolve(part);
-        if (Files.isSymbolicLink(current)) throw new IOException("Output path traverses a symbolic link: " + current);
+      if (!Files.isSameFile(root, existing)) {
+        Path walkRoot = existing.startsWith(root) ? root : realRoot;
+        Path walkPath = existing.startsWith(root) ? existing : existing.toRealPath();
+        if (!walkPath.startsWith(walkRoot)) throw new IOException("Output path escapes configured output root: " + target);
+        Path current = walkRoot;
+        for (Path part : walkRoot.relativize(walkPath)) {
+          current = current.resolve(part);
+          if (Files.isSymbolicLink(current)) throw new IOException("Output path traverses a symbolic link: " + current);
+        }
       }
-      if (Files.isSymbolicLink(existing)) throw new IOException("Output path traverses a symbolic link: " + existing);
       Path realExisting = existing.toRealPath();
       if (!realExisting.startsWith(realRoot)) throw new IOException("Output path escapes configured output root: " + target);
     }
