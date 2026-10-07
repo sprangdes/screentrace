@@ -24,7 +24,7 @@ const requiredStatements=[
   '5 MB',
   '64 MiB'
 ];
-const shots=['overview-flow.png','overview-global-nav.png','feature-regions.png','button-table.png','zoom-viewer.png','simulate-link.png','simulate-submit.png','simulate-dialog.png','coverage.png','element-style.png','confirmation-dashboard.png','impact-preview.png','pre-export-check.png','api-page.png','analysis-info.png','library-override.png'];
+const shots=['overview-flow.png','overview-global-nav.png','feature-regions.png','button-table.png','zoom-viewer.png','simulate-link.png','simulate-submit.png','simulate-dialog.png','coverage.png','element-style.png','confirmation-dashboard.png','impact-preview.png','pre-export-check.png','api-page.png','analysis-info.png','library-override.png','flow-outline.png','global-search.png','first-run-guide.png','help-popover.png'];
 const chapters=['了解這份報表','開啟報表並查看總覽','查看單一畫面','試著操作畫面','查看按鈕、API 與來源','標記保留、移除或未確認','查看 API 頁','查看元件庫建議並手動覆寫','匯出、匯入並交付 AI','判斷分析結果是否可信','常見問題與詞彙表'];
 
 test('requester guide is task-focused, safe, plain-language and illustrated',async()=>{

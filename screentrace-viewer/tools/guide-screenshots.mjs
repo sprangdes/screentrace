@@ -11,7 +11,7 @@ import {canonicalPng} from './png-canonical.mjs';
 
 const root=fileURLToPath(new URL('../../',import.meta.url));
 const output=path.join(root,'docs/images/user-guide');
-const shots=['overview-flow.png','overview-global-nav.png','feature-regions.png','button-table.png','zoom-viewer.png','simulate-link.png','simulate-submit.png','simulate-dialog.png','coverage.png','element-style.png','confirmation-dashboard.png','impact-preview.png','pre-export-check.png','api-page.png','analysis-info.png','library-override.png'];
+const shots=['overview-flow.png','overview-global-nav.png','feature-regions.png','button-table.png','zoom-viewer.png','simulate-link.png','simulate-submit.png','simulate-dialog.png','coverage.png','element-style.png','confirmation-dashboard.png','impact-preview.png','pre-export-check.png','api-page.png','analysis-info.png','library-override.png','flow-outline.png','global-search.png','first-run-guide.png','help-popover.png'];
 const fonts='Arial';
 
 export function guidePayload(){
@@ -61,7 +61,7 @@ async function main(){
    const file=path.join(output,name);let previous,bytes;for(let attempt=0;attempt<12;attempt++){bytes=canonicalPng(await page.screenshot({animations:'disabled'}));if(previous&&bytes.equals(previous))break;previous=bytes;await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));}assert.ok(previous&&bytes.equals(previous),`${name} did not reach a stable screenshot`);await writeFile(file,bytes);assert.ok(bytes.length>1000,`${name} is unexpectedly small`);
    for(const value of forbidden)assert.ok(!bytes.includes(Buffer.from(value)),`${name} contains private path marker ${value}`);
   };
-  await page.locator('.canvas[data-fitted="true"]').waitFor();await screenshot(shots[0]);
+  await page.locator('.canvas[data-fitted="true"]').waitFor();await screenshot(shots[18]);await page.locator('[data-first-run-guide]').getByRole('button',{name:'略過'}).click();await screenshot(shots[0]);
   await page.getByRole('checkbox',{name:'顯示全站導覽'}).check();await page.waitForFunction(()=>document.querySelectorAll('.relation-line.global-navigation').length>0);await screenshot(shots[1]);
   await page.getByRole('button',{name:'功能',exact:true}).click();await page.locator('.feature-region-card').first().waitFor();await screenshot(shots[2]);
   await page.getByRole('button',{name:'按鈕',exact:true}).click();await page.locator('.button-table').waitFor();await screenshot(shots[3]);
@@ -77,6 +77,9 @@ async function main(){
   await page.getByRole('button',{name:'API',exact:true}).click();await page.locator('[data-endpoint-group="API"]').waitFor();await page.locator('.api-row button').first().click();await page.locator('.api-detail-heading').waitFor();await screenshot(shots[13]);
   await page.getByRole('button',{name:/^分析資訊 /}).click();await page.locator('.information-drawer[open]').waitFor();await screenshot(shots[14]);await page.getByRole('button',{name:'關閉分析資訊',exact:true}).click();
   await page.getByRole('button',{name:'畫面',exact:true}).click();await page.getByRole('button',{name:'地圖',exact:true}).click();await page.locator('.screen-card[data-screen="a"]').click();await page.locator('.preview[aria-busy="false"]').waitFor();await page.locator('.prototype-toolbar [role="radio"][data-decision="KEEP"]').click();await page.getByRole('tab',{name:'操作',exact:true}).click();await page.locator('[data-component="shared"]').click();await page.locator('[data-library-details]').waitFor();await page.locator('[data-library-override="shared"]').waitFor();await page.locator('[data-library-override="shared"]').selectOption('demo-button');await page.locator('[data-library-override="shared"]').scrollIntoViewIfNeeded();await screenshot(shots[15]);
+  await page.locator('[data-flow-outline] > summary').click();await screenshot(shots[16]);
+  await page.getByRole('button',{name:'全域搜尋'}).click();await page.getByRole('searchbox',{name:'全域搜尋'}).fill('飼主');await screenshot(shots[17]);await page.keyboard.press('Escape');
+  await page.locator('.review-help > summary').evaluate(node=>node.click());await screenshot(shots[19]);await page.locator('.review-help > summary').evaluate(node=>node.click());
   assert.deepEqual(requests,[],'offline guide report must not make network or other local resource requests');
   await context.close();
  }finally{await browser.close();}
