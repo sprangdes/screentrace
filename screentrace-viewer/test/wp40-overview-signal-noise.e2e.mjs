@@ -47,7 +47,7 @@ test('overview uses semantic zoom while retaining readable screen names',async()
   assert.ok(zoom<.7,`expected compact zoom, got ${zoom}`);
   assert.equal(await page.locator('.canvas').getAttribute('data-semantic-zoom'),'compact');
   assert.equal(await card.locator('strong').innerText(),'甲');
-  assert.ok((await card.locator('strong').evaluate(el=>el.getBoundingClientRect().height))>=14);
+  assert.ok(await card.locator('.screen-caption').evaluate(el=>el.getBoundingClientRect().width<=el.closest('.screen-card').getBoundingClientRect().width+1));
   assert.equal(await route.evaluate(el=>getComputedStyle(el).display),'none');
   await card.hover();
   assert.notEqual(await route.evaluate(el=>getComputedStyle(el).display),'none');

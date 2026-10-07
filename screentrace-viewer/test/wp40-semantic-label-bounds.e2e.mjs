@@ -30,12 +30,14 @@ test('compact ten-screen overview keeps each full name label inside its card wit
   assert.ok(zoom<.7,`expected fit-to-window compact zoom, got ${zoom}`);
   const labels=await page.locator('.screen-card').evaluateAll(cards=>cards.map(card=>{
    const c=card.getBoundingClientRect(),label=card.querySelector('.screen-caption').getBoundingClientRect();
-   return {name:card.querySelector('strong').textContent,card:{left:c.left,right:c.right,top:c.top,bottom:c.bottom},label:{left:label.left,right:label.right,top:label.top,bottom:label.bottom}};
+   return {name:card.querySelector('strong').textContent,card:{left:c.left,right:c.right,top:c.top,bottom:c.bottom},label:{left:label.left,right:label.right,top:label.top,bottom:label.bottom,width:label.width},lineClamp:getComputedStyle(card.querySelector('strong')).webkitLineClamp};
   }));
   assert.equal(labels.length,10);
   for(const {name,card,label} of labels){
    assert.ok(label.left>=card.left-1&&label.right<=card.right+1&&label.top>=card.top-1&&label.bottom<=card.bottom+1,`${name} label extends outside its card: ${JSON.stringify({card,label})}`);
+   assert.ok(label.width<=card.right-card.left+1,`${name} label is wider than its card`);
   }
+  for(const {name,lineClamp} of labels)assert.equal(lineClamp,'2',`${name} must be limited to two lines`);
   for(let i=0;i<labels.length;i++)for(let j=i+1;j<labels.length;j++){
    const a=labels[i].label,b=labels[j].label;
    const overlaps=a.left<b.right&&a.right>b.left&&a.top<b.bottom&&a.bottom>b.top;
