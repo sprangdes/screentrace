@@ -20,6 +20,7 @@ test('WP37 dashboard groups progress by region and provides deterministic review
   await page.keyboard.press('x');
   assert.equal(await page.locator('main').getAttribute('data-review-focus'),'a:amb');
   await page.keyboard.press('n');
+  await page.locator('[data-review-progress]').click();
   assert.notEqual(await page.locator('[data-review-focus]').getAttribute('data-review-focus'),'a:shared');
   await page.getByRole('checkbox',{name:'標記後自動前進'}).uncheck();
   const field=page.frameLocator('iframe').locator('#name');await field.focus();await page.keyboard.press('k');
@@ -27,6 +28,39 @@ test('WP37 dashboard groups progress by region and provides deterministic review
   assert.notEqual(saved?.componentDecisions?.a?.api,'KEEP','keyboard marking does not fire inside input fields');
   await page.keyboard.press('k');
   assert.equal(await page.getByRole('checkbox',{name:'標記後自動前進'}).isChecked(),false);
+ }finally{await browser.close();}
+});
+
+test('WP37 dashboard closes with real Escape and an outside mouse click',async()=>{
+ const browser=await chromium.launch();
+ try{
+  const page=await browser.newPage({viewport:{width:1440,height:900},reducedMotion:'reduce'});page.setDefaultTimeout(4000);
+  await page.goto(await fileFixture(simulationFixture()));
+  const dashboard=page.locator('.review-progress-panel');
+  await page.locator('[data-review-progress]').click();assert.ok(await dashboard.isVisible());
+  await page.keyboard.press('Escape');await dashboard.waitFor({state:'hidden'});
+  assert.equal(await page.locator('[data-review-progress]').getAttribute('aria-expanded'),'false');
+  await page.locator('[data-review-progress]').click();assert.ok(await dashboard.isVisible());
+  await page.mouse.click(120,28);await dashboard.waitFor({state:'hidden'});
+  assert.equal(await page.locator('[data-review-progress]').getAttribute('aria-expanded'),'false');
+ }finally{await browser.close();}
+});
+
+test('WP37 docked dashboard leaves REMOVE impact visible without closing',async()=>{
+ const browser=await chromium.launch();
+ try{
+  const page=await browser.newPage({viewport:{width:1440,height:900},reducedMotion:'reduce'});page.setDefaultTimeout(4000);
+  await page.goto(await fileFixture(simulationFixture()));
+  await page.locator('.screen-card[data-screen="a"]').click();
+  await page.locator('.preview[aria-busy="false"]').waitFor();
+  await page.locator('[data-review-progress]').click();
+  const dashboard=page.locator('.review-progress-panel');assert.ok(await dashboard.isVisible());
+  await page.locator('[data-screen-review="a"] [role="radio"][data-decision="REMOVE"]').last().evaluate(button=>button.click());
+  await page.locator('.decision-impact').waitFor({state:'visible'});
+  assert.ok(await dashboard.isVisible(),'dashboard stays open after marking REMOVE');
+  const [dashboardBox,impactBox]=await Promise.all([dashboard.boundingBox(),page.locator('.decision-impact').boundingBox()]);
+  assert.ok(dashboardBox&&impactBox);
+  assert.ok(dashboardBox.x+dashboardBox.width<=impactBox.x||impactBox.x+impactBox.width<=dashboardBox.x||dashboardBox.y+dashboardBox.height<=impactBox.y||impactBox.y+impactBox.height<=dashboardBox.y,'dashboard does not cover the right-side impact preview');
  }finally{await browser.close();}
 });
 
