@@ -21,7 +21,7 @@
 | R3 | WP17–WP20：流程補強與呈現修正 | WP17／WP18 已驗收；WP19／WP20 完成，等待驗收（241 Java／50 viewer／48 E2E）；包含 G9 全站導覽／格狀版面與 G10 導覽名稱，見 reports/R3.md |
 | R8 | WP30–WP32：需求方文件、可重現截圖與 CLI 友善失敗 | WP30／WP31／WP32 完成，等待需求方驗收；缺少設定且無互動終端機時立即以中文訊息及結束碼 2 失敗，設定有效時指定專案可照常執行。R3 完成流程與全站導覽排版；R4 改善報表操作介面；R5 補強路徑隱私與流程版面；R6 加入離線模擬操作與誠實覆蓋率；R7 統一模擬結果與覆蓋率並補強靜態對應。詳見 reports/R8.md。 |
 | R9 | WP33：路徑大小寫與符號連結 | 完成，停止等待需求方驗收；真實路徑邊界、工作區設定正規化、越界資源中文錯誤與路徑檢查盤點見 reports/R9.md、ADR 0061。Windows 未實測。 |
-| R10 | WP34–WP38：需求方功能理解與確認工作流 | WP34–WP36 已驗收；WP35 的 OQ-020 分組依據已決定並實作，JSP 根目錄頁歸「首頁與其他」，缺 JSP 的畫面明確標記。WP37–WP38 未開始。見 reports/R10.md、ADR 0057／0058。 |
+| R10 | WP34–WP38：需求方功能理解與確認工作流 | WP34–WP36 已驗收；WP37 確認儀表板、下一個未確認、影響預覽、匯出前檢查與 config 專屬訊息完成，停止等待需求方驗收；WP38 未開始。見 reports/R10.md、ADR 0057／0058／0062。 |
 | R11 | WP39–WP40：檢視器簡化與決策介面常駐 | WP39／WP40 完成，等待需求方驗收；R10 WP37／WP38 尚未開始。確認模式已移除，決策、進度、篩選、衝突提示與快捷操作常駐。見 reports/R11.md、ADR 0059／0060。 |
 
 | 里程碑 | 工作包 | 狀態 |
@@ -53,6 +53,8 @@
 - WP8 C 已移除 ReviewResultGenerator／原測試與 CLI export；新 md 與共用模組嚴格 2.2。
 
 - WP7 B：單檔畫布／決定性 SCC 分層、檔案樹、URL 搜尋與平移縮放已實作；逐增量 CI gate 見 docs/reports/WP7.md。
+
+- R10 WP37：確認儀表板擴充既有 R11 常駐決策介面；區域進度與「下一個未確認」共用固定順序。完成後停在 WP37，未開始 WP38；見 [R10 報告](reports/R10.md)、[ADR 0062](adr/0062-confirmation-dashboard-workflow.md)。
 
 - capture 相容清理：packDocuments 舊 inline CSS 入口僅供 C 增量歷史 fixture；正式 CLI 使用 packStandaloneDocuments。依 OQ-006 保留原斷言，後續與歷史 capture 路徑一併移除（ADR 0021）。
 

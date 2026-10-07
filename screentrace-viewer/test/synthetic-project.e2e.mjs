@@ -1,4 +1,5 @@
 import {setDecision} from './decision-controls.mjs';
+import {startReviewDownload} from './review-export.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile, mkdir} from 'node:fs/promises';
@@ -62,9 +63,8 @@ for (const engine of engines) for (const family of families) {
                 await page.locator(`[data-library-override="${button.id}"]`).locator('..').screenshot({path: path.join(dir, 'library-override.png')});
             }
             const download = async () => {
-                const pending = page.waitForEvent('download');
-                await page.getByRole('button', {name: '匯出 md', exact: true}).click();
-                return readFile(await (await pending).path(), 'utf8');
+                const pending = await startReviewDownload(page);
+                return readFile(await pending.path(), 'utf8');
             };
             const first = await download();
             assert.match(first, /"format_version":2/);

@@ -40,7 +40,7 @@ public final class ScreenTraceCli {
     if(args.length>0&&args[0].equals("library")){System.out.println(LibraryCommands.run(args,WorkspaceSettings.defaultFile().getParent()));return 0;}
     Command command = Command.parse(args);
     if(command.action()==Action.INTERACTIVE||command.action()==Action.CONFIG){
-      if(!interactiveTerminalAvailable())return failForMissingTerminal();
+      if(!interactiveTerminalAvailable())return command.action()==Action.CONFIG?failConfigWithoutTerminal():failForMissingTerminal();
       try(InteractiveConsole console=new InteractiveConsole()){
         WorkspaceSettings settings=command.action()==Action.CONFIG?configure(console):loadOrConfigure(console);
         if(command.action()==Action.INTERACTIVE)runInteractive(console,settings,new ProjectCatalog());
@@ -64,6 +64,11 @@ public final class ScreenTraceCli {
 
   private static int failForMissingTerminal(){
     System.err.println("尚未設定專案根目錄與輸出根目錄。請先在終端機執行 `./bin/screentrace config`");
+    return 2;
+  }
+
+  private static int failConfigWithoutTerminal(){
+    System.err.println("config 需要互動式終端機");
     return 2;
   }
 

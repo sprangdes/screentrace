@@ -15,6 +15,6 @@ test('WP40 guide uses always-available marking and retains storage and size noti
  assert.match(marking,/務必匯出 md 保存/);
  assert.match(exporting,/超過 5 MB/);
  assert.match(exporting,/超過 64 MiB/);
- for(const name of ['element-style.png','always-on-decisions.png'])assert.ok((await stat(path.join(images,name))).size>1000,name);
+ for(const name of ['element-style.png','confirmation-dashboard.png'])assert.ok((await stat(path.join(images,name))).size>1000,name);
  for(const name of ['inspect-mode.png','review-mode.png'])await assert.rejects(stat(path.join(images,name)),{code:'ENOENT'});
 });
