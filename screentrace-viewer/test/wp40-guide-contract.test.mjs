@@ -1,0 +1,20 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFile,stat} from 'node:fs/promises';
+import {fileURLToPath} from 'node:url';
+import path from 'node:path';
+const guide=fileURLToPath(new URL('../../docs/USER_GUIDE.md',import.meta.url));
+const images=path.resolve(path.dirname(guide),'images/user-guide');
+test('WP40 guide uses always-available marking and retains storage and size notices',async()=>{
+ const text=await readFile(guide,'utf8');
+ assert.doesNotMatch(text,/確認模式|開啟「確認模式」|操作／檢查模式/);
+ const marking=text.split('## 6. 標記保留、移除或未確認')[1].split('\n## ')[0];
+ const exporting=text.split('## 9. 匯出、匯入並交付 AI')[1].split('\n## ')[0];
+ for(const section of [marking,exporting])assert.match(section,/暫存在瀏覽器/);
+ assert.match(marking,/換電腦、換檔案位置、使用私密瀏覽或清除瀏覽器資料/);
+ assert.match(marking,/務必匯出 md 保存/);
+ assert.match(exporting,/超過 5 MB/);
+ assert.match(exporting,/超過 64 MiB/);
+ for(const name of ['element-style.png','always-on-decisions.png'])assert.ok((await stat(path.join(images,name))).size>1000,name);
+ for(const name of ['inspect-mode.png','review-mode.png'])await assert.rejects(stat(path.join(images,name)),{code:'ENOENT'});
+});

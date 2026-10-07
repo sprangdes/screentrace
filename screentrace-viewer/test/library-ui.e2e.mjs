@@ -14,7 +14,7 @@ for(const engine of process.env.ST_BROWSERS?.split(',')||['chromium'])test(`${en
   data.componentLibrary.manifest.library.name='Sample `Controls`';
   data.componentLibrary.manifest.components[0].name='Sample `button`';
   const url=await fileFixture(data),page=await browser.newPage();
-  await page.goto(url);await page.getByRole('checkbox',{name:'確認模式',exact:true}).check();
+  await page.goto(url);
   await setDecision(page.locator('[data-screen-review="a"]'),'KEEP');
   await page.locator('.screen-card[data-screen="a"]').click();
   await page.locator('[data-component="shared"]').click();

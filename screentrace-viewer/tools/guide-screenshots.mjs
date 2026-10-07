@@ -10,7 +10,7 @@ import {setDecision} from '../test/decision-controls.mjs';
 
 const root=fileURLToPath(new URL('../../',import.meta.url));
 const output=path.join(root,'docs/images/user-guide');
-const shots=['overview-flow.png','overview-global-nav.png','feature-regions.png','button-table.png','zoom-viewer.png','simulate-link.png','simulate-submit.png','simulate-dialog.png','coverage.png','inspect-mode.png','review-mode.png','api-page.png','analysis-info.png','library-override.png'];
+const shots=['overview-flow.png','overview-global-nav.png','feature-regions.png','button-table.png','zoom-viewer.png','simulate-link.png','simulate-submit.png','simulate-dialog.png','coverage.png','element-style.png','always-on-decisions.png','api-page.png','analysis-info.png','library-override.png'];
 const fonts='Arial';
 
 export function guidePayload(){
@@ -45,7 +45,7 @@ async function main(){
   await page.goto(url);
   await page.locator('#app[data-ready="true"]').waitFor();
   await page.evaluate(async family=>{await document.fonts.ready;if(!document.fonts.check('12px '+family))throw new Error('Required screenshot font unavailable: '+family);},fonts);
-  await page.addStyleTag({content:'*,*::before,*::after{animation:none!important;transition:none!important;caret-color:transparent!important;scroll-behavior:auto!important}.topbar button.secondary{border-radius:0!important}.topbar>.segmented button[aria-pressed=true],.topbar .toggle-switch input{box-shadow:none!important}'});
+  await page.addStyleTag({content:'*,*::before,*::after{animation:none!important;transition:none!important;caret-color:transparent!important;scroll-behavior:auto!important}.topbar button.secondary{border-radius:0!important}.topbar>.segmented button[aria-pressed=true]{box-shadow:none!important}'});
   const screenshot=async name=>{
    await page.mouse.move(1439,899);
    await page.evaluate(()=>{if(document.activeElement instanceof HTMLElement)document.activeElement.blur();document.body.tabIndex=-1;document.body.focus();});
@@ -67,10 +67,10 @@ async function main(){
   await page.getByRole('button',{name:'地圖',exact:true}).click();await page.locator('.screen-card[data-screen="a"]').click();await page.locator('.preview[aria-busy="false"]').waitFor();await page.frameLocator('iframe').locator('#open').click();await page.frameLocator('iframe').getByRole('dialog').waitFor();await screenshot(shots[7]);
   await page.getByRole('button',{name:'地圖',exact:true}).click();await page.locator('.screen-card[data-screen="a"]').click();await page.locator('.preview[aria-busy="false"]').waitFor();await page.frameLocator('iframe').locator('#unknown').click();await page.locator('.simulation-coverage').waitFor();await screenshot(shots[8]);
   await page.getByRole('button',{name:'地圖',exact:true}).click();await page.locator('.screen-card[data-screen="a"]').click();await page.locator('.preview[aria-busy="false"]').waitFor();await page.frameLocator('iframe').locator('#go').evaluate(el=>el.dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true,altKey:true})));await page.locator('#detail-tab-button-3').click();await page.locator('[data-detail-tab="3"]').locator('.computed-style-row').first().waitFor();await screenshot(shots[9]);
-  await page.getByRole('button',{name:'地圖',exact:true}).click();await page.getByRole('checkbox',{name:'確認模式',exact:true}).check();await page.locator('[data-screen-review="a"]').waitFor();await setDecision(page.locator('[data-screen-review="a"]'),'KEEP');await screenshot(shots[10]);
+  await page.getByRole('button',{name:'地圖',exact:true}).click();await page.locator('.screen-card[data-screen="a"]').hover();await page.locator('.card-review[data-screen-controls="a"] [role="radio"][data-decision="KEEP"]').click();await page.locator('[data-review-progress]').click();await screenshot(shots[10]);await page.locator('[data-review-progress]').click();
   await page.getByRole('button',{name:'API',exact:true}).click();await page.locator('[data-endpoint-group="API"]').waitFor();await page.locator('.api-row button').first().click();await page.locator('.api-detail-heading').waitFor();await screenshot(shots[11]);
   await page.getByRole('button',{name:/^分析資訊 /}).click();await page.locator('.information-drawer[open]').waitFor();await screenshot(shots[12]);await page.getByRole('button',{name:'關閉分析資訊',exact:true}).click();
-  await page.getByRole('button',{name:'畫面',exact:true}).click();await page.getByRole('button',{name:'地圖',exact:true}).click();await page.getByRole('checkbox',{name:'確認模式',exact:true}).check();await page.locator('[data-screen-review="a"]').waitFor();await setDecision(page.locator('[data-screen-review="a"]'),'KEEP');await page.locator('.screen-card[data-screen="a"]').click();await page.locator('.preview[aria-busy="false"]').waitFor();await page.getByRole('tab',{name:'操作',exact:true}).click();await page.locator('[data-component="shared"]').click();await page.locator('[data-library-details]').waitFor();await page.locator('[data-library-override="shared"]').waitFor();await page.locator('[data-library-override="shared"]').selectOption('demo-button');await page.locator('[data-library-override="shared"]').scrollIntoViewIfNeeded();await screenshot(shots[13]);
+  await page.getByRole('button',{name:'畫面',exact:true}).click();await page.getByRole('button',{name:'地圖',exact:true}).click();await page.locator('.screen-card[data-screen="a"]').click();await page.locator('.preview[aria-busy="false"]').waitFor();await page.getByRole('tab',{name:'操作',exact:true}).click();await page.locator('[data-component="shared"]').click();await page.locator('[data-library-details]').waitFor();await page.locator('[data-library-override="shared"]').waitFor();await page.locator('[data-library-override="shared"]').selectOption('demo-button');await page.locator('[data-library-override="shared"]').scrollIntoViewIfNeeded();await screenshot(shots[13]);
   assert.deepEqual(requests,[],'offline guide report must not make network or other local resource requests');
   await context.close();
  }finally{await browser.close();}

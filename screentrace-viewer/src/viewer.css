@@ -97,3 +97,23 @@ body{height:100dvh;display:flex;flex-direction:column;overflow:hidden}.topbar{fl
 @media(max-width:1023px){.shell[data-right-panel-hidden=true],.shell[data-right-panel-hidden=true][data-sidebar-collapsed=true]{grid-template-columns:56px minmax(0,1fr)}.shell[data-right-panel-hidden=true]>nav{grid-column:1}.shell[data-right-panel-hidden=true]>main{grid-column:2}.shell[data-page=api][data-right-panel-hidden=true]>main{grid-column:1}}
 .prototype-viewer{position:relative}.prototype-toolbar{flex-wrap:nowrap;min-width:0;overflow:visible}.prototype-toolbar .icon-button{flex:0 0 auto;white-space:nowrap}.prototype-toolbar .prototype-url{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.prototype-flow-button{display:inline-flex;align-items:center;gap:4px;white-space:nowrap}.prototype-flow-button .icon{width:16px;height:16px}.prototype-more{position:relative;flex:0 0 auto}.prototype-more>summary{list-style:none;cursor:pointer;border:1px solid var(--gray-300);border-radius:5px;padding:5px 8px;font-size:12px;white-space:nowrap}.prototype-more>summary::-webkit-details-marker{display:none}.prototype-menu-items{position:absolute;right:0;top:calc(100% + 4px);z-index:12;display:grid;min-width:180px;padding:5px;background:white;border:1px solid var(--gray-300);border-radius:6px;box-shadow:var(--shadow-float)}.prototype-menu-items button{text-align:left;border:0;background:white;white-space:nowrap}.prototype-menu-items button:hover,.prototype-menu-items button:focus{background:var(--gray-100)}.prototype-zoom-controls{position:absolute;right:12px;bottom:12px;z-index:4;display:flex;gap:4px;padding:4px;background:#fffE;border:1px solid var(--gray-300);border-radius:7px;box-shadow:var(--shadow-float)}.prototype-zoom-controls .icon-button{width:32px;height:32px;margin:0;padding:6px}.computed-style-row{display:flex;align-items:center;gap:7px;overflow-wrap:anywhere}.style-swatch{display:inline-block;width:14px;height:14px;border:1px solid #64748b;border-radius:3px;flex:none}.detail-tab-panel .inspect-hint{font-size:12px;color:var(--gray-500)}
 @media(max-width:1024px){.prototype-toolbar{gap:3px}.prototype-toolbar .icon-button{padding:5px;min-width:30px}.prototype-toolbar .prototype-url{flex:1 1 0;font-size:11px;padding:6px}.prototype-flow-button{padding:5px;font-size:11px}.prototype-toolbar .icon-button .icon{width:16px;height:16px}}
+/* WP40: decisions are always available; undecided items stay visually quiet. */
+.review-progress{white-space:nowrap;flex:0 0 auto}
+.review-progress-panel{position:absolute;right:220px;top:52px;z-index:30;display:grid;gap:8px;min-width:260px;padding:14px;background:white;border:1px solid var(--gray-200);border-radius:var(--radius);box-shadow:var(--shadow-float);font-size:13px}
+.review-progress-panel[hidden]{display:none}
+.review-progress-panel p{margin:0}
+.review-help{position:relative;flex:0 0 auto}
+.review-help>summary{list-style:none;width:30px;height:30px;display:grid;place-items:center;border:1px solid var(--gray-200);border-radius:50%;font-weight:700}
+.review-help[open]{z-index:31}
+.review-help>p{position:relative;max-width:260px;margin:8px 0;padding:8px;background:white;border:1px solid var(--gray-200);box-shadow:var(--shadow-card);font-size:12px}
+.sidebar-screen-row{display:grid;gap:3px;padding:6px 0;border-bottom:1px solid var(--gray-100)}
+.sidebar-screen-row .sidebar-screen{display:grid;grid-template-columns:18px minmax(0,1fr);column-gap:8px;width:100%;text-align:left;padding:8px;border:0;margin:0}
+.sidebar-screen-row .decision-buttons{margin-left:26px}
+.sidebar-screen-row .decision-buttons button{min-height:24px}
+.screen-card[data-screen-status=KEEP]{border-left:4px solid var(--keep)}
+.screen-card[data-screen-status=REMOVE]{border-left:4px solid var(--remove)}
+.card-review{opacity:0;pointer-events:none;transition:opacity 140ms ease}
+.card-review:hover,.card-review:focus-within,.screen-card:hover+.card-review,.card-review.touch-revealed{opacity:1;pointer-events:auto}
+.focus-heading .decision-buttons{flex:0 0 auto}
+.feature-region-progress{display:block}
+@media(max-width:1023px){.review-progress-panel{position:fixed;right:12px;top:100px}.topbar{gap:8px;padding:0 10px}.topbar .review-help>p{position:fixed;right:8px;top:96px;z-index:40}}
