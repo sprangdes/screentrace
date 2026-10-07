@@ -22,6 +22,14 @@ class NonInteractiveCliTest {
     }
   }
 
+  @Test void configWithoutAnInteractiveTerminalNamesTheConfigRequirement() throws Exception {
+    Result result = run("config", false, false);
+    assertEquals(2, result.exitCode(), result.output());
+    assertTrue(result.output().contains("config 需要互動式終端機"), result.output());
+    assertFalse(result.output().contains("尚未設定專案根目錄"), result.output());
+    assertFalse(result.output().contains("Exception"), result.output());
+  }
+
   @Test void completeSettingsAllowAnalyzeToRunWithClosedInput() throws Exception {
     Result result = run("analyze", false, true);
     assertEquals(0, result.exitCode(), result.output());
