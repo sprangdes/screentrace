@@ -21,3 +21,28 @@ test('flow outline is deterministic, bounds depth and width, marks cycles, ambig
  const all=[...first.nodes,...first.overflow];assert.ok(all.some(n=>n.label==='丙')&&all.some(n=>n.label==='丁'),'all candidates sharing one trigger remain available, including overflow');
  const height=(nodes,depth=1)=>nodes.reduce((max,node)=>Math.max(max,height(node.children,depth+1)),depth);assert.ok(height(first.nodes)<=5,'root plus four navigation levels');assert.ok(first.depth<=4);
 });
+
+test('flow outline expands each screen once, reuses destinations as jump links, merges unresolved targets, and applies readable trigger names',async()=>{
+ const {indexGraph}=await ownModule('map'),{buildFlowOutline}=await ownModule('flow-outline');
+ const data=fixture();
+ data.graph.nodes.push(node('c','SCREEN','寵物表單',{route:'/pets/new'}),node('d','SCREEN','就診表單',{route:'/visits/new'}),
+  node('add-owner-form','COMPONENT','add-owner-form',{kind:'FORM'}),node('generic-form','COMPONENT','表單 1',{kind:'FORM'}),node('generic-link','COMPONENT','連結 6',{kind:'LINK'}),node('readable','COMPONENT','編輯飼主',{kind:'LINK'}),node('unknown-one','COMPONENT','unknown-one',{kind:'BUTTON'}),node('unknown-two','COMPONENT','unknown-two',{kind:'LINK'}));
+ data.graph.relationships.push({id:'owner-trigger',type:'CONTAINS',from:'a',to:'add-owner-form'},
+  {id:'generic-form-owner',type:'CONTAINS',from:'a',to:'generic-form'},{id:'generic-link-owner',type:'CONTAINS',from:'a',to:'generic-link'},
+  {id:'readable-owner',type:'CONTAINS',from:'b',to:'readable'},{id:'unknown-one-owner',type:'CONTAINS',from:'a',to:'unknown-one'},{id:'unknown-two-owner',type:'CONTAINS',from:'a',to:'unknown-two'},
+  {id:'a-b',type:'NAVIGATES_TO',from:'add-owner-form',to:'b'},{id:'a-c',type:'NAVIGATES_TO',from:'generic-form',to:'c'},
+  {id:'a-d-1',type:'NAVIGATES_TO',from:'generic-link',to:'d'},{id:'a-d-2',type:'NAVIGATES_TO',from:'generic-form',to:'d'},
+  {id:'b-d',type:'NAVIGATES_TO',from:'readable',to:'d'});
+ data.graph.behaviors.push({id:'unknown-1',triggerId:'unknown-one',type:'NAVIGATE',expression:'first()',confidence:'UNRESOLVED'},
+  {id:'unknown-2',triggerId:'unknown-two',type:'NAVIGATE',expression:'second()',confidence:'UNRESOLVED'});
+ const outline=buildFlowOutline(indexGraph(data.graph),'a');
+ const all=[],visit=nodes=>nodes.forEach(item=>{all.push(item);visit(item.children);});visit(outline.nodes);
+ const expandedD=all.filter(item=>item.id==='d'&&!item.alreadyExpanded),reusedD=all.filter(item=>item.id==='d'&&item.alreadyExpanded);
+ assert.equal(expandedD.length,1,'a destination screen is expanded once in the tree');
+ assert.equal(reusedD.length,1,'a later reference is a single jump link marked already expanded');
+ assert.equal(reusedD[0].label,'就診表單（已在上面展開）');assert.equal(reusedD[0].canNavigate,true);
+ assert.equal(all.filter(item=>item.unresolved).length,1,'all unknown targets share one node per source screen');
+ assert.deepEqual(all.find(item=>item.unresolved).triggers,['按鈕（web/unknown-one.jsp 第 1 行）','連結（web/unknown-two.jsp 第 1 行）']);
+ const text=JSON.stringify(outline);for(const internal of ['add-owner-form','表單 1','連結 6','unknown-one','unknown-two'])assert.equal(text.includes(internal),false,`internal name ${internal} must not appear`);
+ assert.ok(all.some(item=>item.triggers.includes('編輯飼主')),'readable component labels use the shared R5 naming rule');
+});
