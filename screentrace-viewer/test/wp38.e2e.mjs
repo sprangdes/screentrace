@@ -17,3 +17,20 @@ test('WP38 flow outline, global search, first-run guide and help can be used wit
 test('WP38 first-run guide remains available on each launch when browser storage is unavailable',async()=>{const browser=await chromium.launch();try{const page=await browser.newPage();await page.addInitScript(()=>{Object.defineProperty(window,'localStorage',{get(){throw new DOMException('blocked','SecurityError')}});});await page.goto(await fileFixture());await page.waitForSelector('[data-ready="true"]');const guide=page.locator('[data-first-run-guide]');await guide.waitFor();await guide.getByRole('button',{name:'略過'}).click();await guide.waitFor({state:'hidden'});await page.reload();await guide.waitFor();}finally{await browser.close();}});
 
 test('WP38 first-run guide does not intercept application controls',async()=>{const browser=await chromium.launch();try{const page=await browser.newPage({viewport:{width:1440,height:900}});await page.goto(await fileFixture());await page.waitForSelector('[data-ready="true"]');await page.locator('[data-first-run-guide]').waitFor();await page.getByRole('button',{name:'API',exact:true}).click();await page.locator('.api-sorting>summary').click();assert.equal(await page.locator('.api-sorting').getAttribute('open'),'');}finally{await browser.close();}});
+
+test('WP38 rendered flow tree expands each screen once, groups unknown outcomes and exposes only requester labels',async()=>{
+ const data=fixture();data.graph.nodes.push(node('c','SCREEN','寵物表單',{route:'/pets/new'}),node('d','SCREEN','就診表單',{route:'/visits/new'}),
+  node('add-owner-form','COMPONENT','add-owner-form',{kind:'FORM'}),node('generic-form','COMPONENT','表單 1',{kind:'FORM'}),node('generic-link','COMPONENT','連結 6',{kind:'LINK'}),node('readable','COMPONENT','編輯飼主',{kind:'LINK'}),node('unknown-one','COMPONENT','unknown-one',{kind:'BUTTON'}),node('unknown-two','COMPONENT','unknown-two',{kind:'LINK'}));
+ data.graph.relationships.push({id:'owner-trigger',type:'CONTAINS',from:'a',to:'add-owner-form'},{id:'generic-form-owner',type:'CONTAINS',from:'a',to:'generic-form'},
+  {id:'generic-link-owner',type:'CONTAINS',from:'a',to:'generic-link'},{id:'readable-owner',type:'CONTAINS',from:'b',to:'readable'},
+  {id:'unknown-one-owner',type:'CONTAINS',from:'a',to:'unknown-one'},{id:'unknown-two-owner',type:'CONTAINS',from:'a',to:'unknown-two'},
+  {id:'a-b',type:'NAVIGATES_TO',from:'add-owner-form',to:'b'},{id:'a-c',type:'NAVIGATES_TO',from:'generic-form',to:'c'},
+  {id:'a-d-1',type:'NAVIGATES_TO',from:'generic-link',to:'d'},{id:'a-d-2',type:'NAVIGATES_TO',from:'generic-form',to:'d'},
+  {id:'b-d',type:'NAVIGATES_TO',from:'readable',to:'d'});
+ data.graph.behaviors.push({id:'unknown-1',triggerId:'unknown-one',type:'NAVIGATE',expression:'first()',confidence:'UNRESOLVED'},{id:'unknown-2',triggerId:'unknown-two',type:'NAVIGATE',expression:'second()',confidence:'UNRESOLVED'});
+ const browser=await chromium.launch();try{const page=await browser.newPage();await page.goto(await fileFixture(data));await page.locator('[data-ready="true"]').waitFor();await page.locator('[data-screen-list="a"]').click();const tree=page.locator('[data-flow-outline]');await tree.locator(':scope > summary').click();await tree.locator('[data-flow-root="a"]').waitFor();
+  assert.equal(await tree.locator('[data-flow-node="d"]:not([data-already-expanded])').count(),1);assert.equal(await tree.locator('[data-flow-node="d"][data-already-expanded="true"]').count(),1);assert.equal(await tree.locator('[data-unresolved="true"]').count(),1);
+  const text=await tree.innerText();assert.match(text,/已在上面展開/);assert.match(text,/按鈕（畫面 甲，第 1 行）/);assert.match(text,/連結（畫面 甲，第 1 行）/);assert.doesNotMatch(text,/add-owner-form|表單 1|連結 6|unknown-one|unknown-two/);
+  await tree.locator('[data-flow-node="d"][data-already-expanded="true"] .flow-outline-link').first().click();await page.locator('main h2').filter({hasText:'就診表單'}).waitFor();
+ }finally{await browser.close();}
+});

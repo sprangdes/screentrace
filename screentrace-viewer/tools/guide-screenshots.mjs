@@ -14,6 +14,27 @@ const output=path.join(root,'docs/images/user-guide');
 const shots=['overview-flow.png','overview-global-nav.png','feature-regions.png','button-table.png','zoom-viewer.png','simulate-link.png','simulate-submit.png','simulate-dialog.png','coverage.png','element-style.png','confirmation-dashboard.png','impact-preview.png','pre-export-check.png','api-page.png','analysis-info.png','library-override.png','flow-outline.png','global-search.png','first-run-guide.png','help-popover.png'];
 const fonts='Arial';
 
+/** Wait for browser-driven work to finish, then require a quiet render window rather than sleeping. */
+export async function waitForGuideScreenshotReady(page){
+ await page.evaluate(()=>{
+  const reset=(doc)=>{doc.scrollingElement?.scrollTo(0,0);for(const node of doc.querySelectorAll('*')){if(node.scrollTop)node.scrollTop=0;if(node.scrollLeft)node.scrollLeft=0;}};
+  reset(document);for(const frame of document.querySelectorAll('iframe'))try{reset(frame.contentDocument);}catch{}
+ });
+ await page.waitForFunction(()=>{
+  const atOrigin=doc=>doc.scrollingElement?.scrollTop===0&&doc.scrollingElement?.scrollLeft===0&&[...doc.querySelectorAll('*')].every(node=>node.scrollTop===0&&node.scrollLeft===0);
+  return atOrigin(document)&&[...document.querySelectorAll('iframe')].every(frame=>{try{return atOrigin(frame.contentDocument);}catch{return true;}});
+ });
+ await page.waitForFunction(()=>{
+  const app=document.querySelector('#app'),images=[...document.images],frames=[...document.querySelectorAll('iframe')];
+  return app?.dataset.ready==='true'&&document.fonts.status==='loaded'&&images.every(image=>image.complete)&&frames.every(frame=>frame.getAttribute('aria-busy')!=='true'&&!!frame.contentDocument&&[...frame.contentDocument.images].every(image=>image.complete))&&!document.querySelector('.preview[aria-busy="true"],[data-transition="running"]')&&document.getAnimations({subtree:true}).every(animation=>animation.playState!=='running');
+ });
+ await page.evaluate(()=>new Promise(resolve=>{
+  let quietFrames=0;const observer=new MutationObserver(()=>{quietFrames=0;});
+  observer.observe(document.documentElement,{subtree:true,attributes:true,childList:true,characterData:true});
+  const frame=()=>{quietFrames++;if(quietFrames>=16){observer.disconnect();resolve();}else requestAnimationFrame(frame);};requestAnimationFrame(frame);
+ }));
+}
+
 export function guidePayload(){
  const data=simulationFixture();
  data.graph.application.name='示範業務系統';
@@ -49,15 +70,16 @@ async function main(){
   await page.evaluate(({key,application,fingerprint})=>localStorage.setItem(key,JSON.stringify({format:'screentrace-review',version:1,schemaVersion:'2.2',application,fingerprint,screenDecisions:{a:'KEEP'},componentDecisions:{a:{shared:'KEEP'}}})),{key:reviewKey,application:data.graph.application.name,fingerprint:data.fingerprint});
   await page.reload();await page.locator('#app[data-ready="true"]').waitFor();
   await page.evaluate(async family=>{await document.fonts.ready;if(!document.fonts.check('12px '+family))throw new Error('Required screenshot font unavailable: '+family);},fonts);
-  await page.addStyleTag({content:'*,*::before,*::after{animation:none!important;transition:none!important;caret-color:transparent!important;scroll-behavior:auto!important}.topbar button.secondary{border-radius:0!important}.topbar>.segmented button[aria-pressed=true]{box-shadow:none!important}'});
+  await page.addStyleTag({content:'*,*::before,*::after{animation:none!important;transition:none!important;caret-color:transparent!important;scroll-behavior:auto!important}::-webkit-scrollbar{display:none!important}.topbar button.secondary,.topbar>.segmented,.chip,.screen-card,.prototype-destinations summary button{border-radius:0!important}.topbar>.segmented button[aria-pressed=true],.screen-card,.prototype-destinations summary button{box-shadow:none!important}.relations{shape-rendering:crispEdges!important}'});
   const screenshot=async name=>{
-   await page.mouse.move(1439,899);
+   await page.mouse.move(1,1);
    await page.evaluate(()=>{if(document.activeElement instanceof HTMLElement)document.activeElement.blur();document.body.tabIndex=-1;document.body.focus();});
    for(const frame of page.frames())await frame.evaluate(()=>{if(document.activeElement instanceof HTMLElement)document.activeElement.blur();});
    await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
    await page.locator('[data-transition="running"]').count().then(count=>assert.equal(count,0,'screenshot captured during screen transition'));
    await page.evaluate(async()=>{await document.fonts.ready;await Promise.all([...document.images].map(image=>image.decode().catch(()=>{})));});
-   for(const frame of page.frames())assert.equal(await frame.evaluate(async family=>{await document.fonts.ready;return document.fonts.check('12px '+family);},fonts),true,'required screenshot font unavailable in a frame');
+   for(const frame of page.frames())assert.equal(await frame.evaluate(async family=>{await document.fonts.ready;await Promise.all([...document.images].map(image=>image.decode().catch(()=>{})));return document.fonts.check('12px '+family);},fonts),true,'required screenshot font unavailable in a frame');
+   await waitForGuideScreenshotReady(page);
    const file=path.join(output,name);let previous,bytes;for(let attempt=0;attempt<12;attempt++){bytes=canonicalPng(await page.screenshot({animations:'disabled'}));if(previous&&bytes.equals(previous))break;previous=bytes;await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));}assert.ok(previous&&bytes.equals(previous),`${name} did not reach a stable screenshot`);await writeFile(file,bytes);assert.ok(bytes.length>1000,`${name} is unexpectedly small`);
    for(const value of forbidden)assert.ok(!bytes.includes(Buffer.from(value)),`${name} contains private path marker ${value}`);
   };
