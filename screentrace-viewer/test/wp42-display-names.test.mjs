@@ -23,6 +23,8 @@ test('WP42 display labels follow the evidence priority and humanize only proven 
  assert.equal(componentLabel({...unnamed,displayLabel:'Alex Johnson'},{visibleText:'Alex Johnson',dynamicContent:true,ancestors:[{tag:'nav'}]}),'連結（位於 導覽列）');
  assert.equal(componentLabel({...unnamed,name:'Alex Johnson',attributes:{...unnamed.attributes,visibleText:'Alex Johnson',displayName:'Alex Johnson',labelSource:'visibleText'}},{visibleText:'Alex Johnson',dynamicContent:true,ancestors:[{tag:'nav'}]}),'連結（位於 導覽列）');
  assert.equal(componentLabel({...base,attributes:{kind:'LINK',tag:'a',visibleText:'Owners'}},{knownDestination:'Owners List'}),'Owners');
+ assert.equal(componentLabel({...unnamed,attributes:{kind:'LINK',tag:'a'}},{knownDestination:'Owners List'}),'連結（無文字）');
+ assert.equal(componentLabel({...unnamed,attributes:{kind:'LINK',tag:'a'}},{ancestors:[{tag:'nav'}],knownDestination:'Owners List'}),'連結（位於 導覽列），前往 Owners List');
  assert.equal(componentLabel({...unnamed,attributes:{kind:'BUTTON',tag:'button'}},{ancestors:[{tag:'screen',text:'Find Owners'},{tag:'nav'}]}),'按鈕（位於 導覽列）');
  assert.equal(componentLabel({...unnamed,attributes:{kind:'BUTTON',tag:'button'}},{ancestors:[{tag:'screen',text:'Find Owners'},{tag:'form',text:'Find Owner',staticText:true}]}),'按鈕（位於 Find Owner 表單）');
  assert.equal(componentLabel({...unnamed,attributes:{kind:'BUTTON',tag:'button'}},{ancestors:[{tag:'screen',text:'Find Owners'},{tag:'header'}]}),'按鈕（位於 頁首）');
