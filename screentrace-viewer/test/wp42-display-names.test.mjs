@@ -17,15 +17,17 @@ test('WP42 display labels follow the evidence priority and humanize only proven 
  assert.equal(componentLabel({...base,name:'',id:'',attributes:{kind:'BUTTON',tag:'button',class:'navbar-toggler'}},{ancestors:[{tag:'nav'}]}),'按鈕（位於 導覽列）');
  assert.equal(componentLabel({...base,name:'',id:'',attributes:{kind:'BUTTON',tag:'button'}}),'按鈕（無文字）');
  assert.equal(componentLabel({...base,attributes:{...base.attributes,visibleText:'Save'}},{duplicateOrdinal:2,duplicateCount:2}),'Save（第 2 個）');
- assert.equal(componentLabel({...base,attributes:{...base.attributes,visibleText:'Owner'}},{knownDestination:'Owner Details'}),'Owner，前往 Owner Details');
- assert.equal(componentLabel({...base,displayLabel:'Alex Johnson',attributes:{...base.attributes,visibleText:'${owner.name}'}},{ancestors:[{tag:'form'}]}),'表單（位於 表單）');
- assert.equal(componentLabel({...base,displayLabel:'Alex Johnson',attributes:{kind:'LINK',tag:'a'}},{visibleText:'Alex Johnson',dynamicContent:true,ancestors:[{tag:'nav'}]}),'連結（位於 導覽列）');
+ assert.equal(componentLabel({...base,attributes:{...base.attributes,visibleText:'Owner'}},{knownDestination:'Owner Details'}),'Owner');
+ assert.equal(componentLabel({...base,displayLabel:'Alex Johnson',attributes:{...base.attributes,visibleText:'${owner.name}'}},{ancestors:[{tag:'form'}]}),'Search Owner Form 表單');
+ const unnamed={...base,id:'component:dynamic',name:'',attributes:{kind:'LINK',tag:'a'}};
+ assert.equal(componentLabel({...unnamed,displayLabel:'Alex Johnson'},{visibleText:'Alex Johnson',dynamicContent:true,ancestors:[{tag:'nav'}]}),'連結（位於 導覽列）');
+ assert.equal(componentLabel({...unnamed,name:'Alex Johnson',attributes:{...unnamed.attributes,visibleText:'Alex Johnson',displayName:'Alex Johnson',labelSource:'visibleText'}},{visibleText:'Alex Johnson',dynamicContent:true,ancestors:[{tag:'nav'}]}),'連結（位於 導覽列）');
  assert.equal(componentLabel({...base,attributes:{kind:'LINK',tag:'a',visibleText:'Owners'}},{knownDestination:'Owners List'}),'Owners');
- assert.equal(componentLabel({...base,name:'',id:'',attributes:{kind:'BUTTON',tag:'button'}},{ancestors:[{tag:'screen',text:'Find Owners'},{tag:'nav'}]}),'按鈕（位於 導覽列）');
- assert.equal(componentLabel({...base,name:'',id:'',attributes:{kind:'BUTTON',tag:'button'}},{ancestors:[{tag:'screen',text:'Find Owners'},{tag:'form',text:'Find Owner',staticText:true}]}),'按鈕（位於 Find Owner 表單）');
- assert.equal(componentLabel({...base,name:'',id:'',attributes:{kind:'BUTTON',tag:'button'}},{ancestors:[{tag:'screen',text:'Find Owners'},{tag:'header'}]}),'按鈕（位於 頁首）');
- assert.equal(componentLabel({...base,name:'',id:'',attributes:{kind:'BUTTON',tag:'button'}},{ancestors:[{tag:'screen',text:'Find Owners'},{tag:'footer'}]}),'按鈕（位於 頁尾）');
- assert.equal(componentLabel({...base,name:'',id:'',attributes:{kind:'BUTTON',tag:'button'}},{ancestors:[{tag:'screen',text:'Find Owners'},{tag:'h2',text:'Owner details',staticText:true}]}),'按鈕（位於 Owner details 區塊）');
+ assert.equal(componentLabel({...unnamed,attributes:{kind:'BUTTON',tag:'button'}},{ancestors:[{tag:'screen',text:'Find Owners'},{tag:'nav'}]}),'按鈕（位於 導覽列）');
+ assert.equal(componentLabel({...unnamed,attributes:{kind:'BUTTON',tag:'button'}},{ancestors:[{tag:'screen',text:'Find Owners'},{tag:'form',text:'Find Owner',staticText:true}]}),'按鈕（位於 Find Owner 表單）');
+ assert.equal(componentLabel({...unnamed,attributes:{kind:'BUTTON',tag:'button'}},{ancestors:[{tag:'screen',text:'Find Owners'},{tag:'header'}]}),'按鈕（位於 頁首）');
+ assert.equal(componentLabel({...unnamed,attributes:{kind:'BUTTON',tag:'button'}},{ancestors:[{tag:'screen',text:'Find Owners'},{tag:'footer'}]}),'按鈕（位於 頁尾）');
+ assert.equal(componentLabel({...unnamed,attributes:{kind:'BUTTON',tag:'button'}},{ancestors:[{tag:'screen',text:'Find Owners'},{tag:'h2',text:'Owner details',staticText:true}]}),'按鈕（位於 Owner details 區塊）');
 });
 
 test('WP42 labels are computed once per graph index and reused by every consumer',async()=>{
