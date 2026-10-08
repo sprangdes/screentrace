@@ -64,7 +64,7 @@ test('WP42 names ignore reconstructed sample text and use the shared cross-scree
  const browser=await chromium.launch();
  try{
   const page=await browser.newPage({viewport:{width:1440,height:900},reducedMotion:'reduce'});page.setDefaultTimeout(4000);await page.goto(await fileFixture(data));
-  const expected='連結（位於 導覽列）';
+  const expected='連結（位於導覽列）';
   await page.locator('.screen-card[data-screen="a"]').click();
   assert.match(await page.locator('.action-items').innerText(),new RegExp(expected));
   assert.doesNotMatch(await page.locator('.action-items').innerText(),/Alex Johnson|連結 1|Owners Home 畫面/);

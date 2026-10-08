@@ -7,6 +7,7 @@ export function kindName(node:Node):string{return kindNames[node.attributes.kind
 export interface LabelContext {
  visibleText?:string;ariaLabel?:string;title?:string;alt?:string;value?:string;
  ancestors?:Array<{tag:string;text?:string;staticText?:boolean}>;
+ precedingHeading?:string;
  formHeading?:string;submitText?:string;knownDestination?:string;
  duplicateOrdinal?:number;duplicateCount?:number;dynamicContent?:boolean;globalNavigation?:boolean;
 }
@@ -17,13 +18,16 @@ const technical=(value:string,node:Node)=>!value||value===node.id||expression.te
 function humanize(value:string):string{return value.replace(/([a-z0-9])([A-Z])/gu,'$1 $2').split(/[-_\s]+/u).filter(Boolean).map(part=>part[0].toLocaleUpperCase()+part.slice(1)).join(' ');}
 function location(context:LabelContext):string|undefined{
  if(context.globalNavigation)return '導覽列';
- for(const ancestor of context.ancestors||[]){const text=ancestor.staticText?normalize(ancestor.text):'';switch(ancestor.tag.toLowerCase()){
+ const ancestors=context.ancestors||[];
+ for(const ancestor of ancestors){const text=ancestor.staticText?normalize(ancestor.text):'';switch(ancestor.tag.toLowerCase()){
   case'nav':return '導覽列';case'header':return '頁首';case'footer':return '頁尾';
   case'form':{const formName=context.formHeading||context.submitText||text;return formName?`${formName.replace(/\s*表單$/u,'')} 表單`:'表單';}
-  default:if(/^h[1-4]$/i.test(ancestor.tag)&&text)return `${text} 區塊`;
  }}
+ const heading=ancestors.find(ancestor=>/^h[1-4]$/i.test(ancestor.tag)&&ancestor.staticText&&normalize(ancestor.text))?.text||context.precedingHeading;
+ if(heading)return `${normalize(heading)} 區塊`;
  return undefined;
 }
+function positionPhrase(place:string):string{return `位於${['導覽列','頁首','頁尾','表單'].includes(place)?'':' '}${place}`;}
 /** Name from graph/source evidence only. Preview-rendered sample text is never a name source. */
 export function componentLabel(node:Node&{displayLabel?:string},context:LabelContext={}):string{
  const a=node.attributes,kind=kindName(node),tag=String(a.tag||'').toLowerCase();
@@ -37,7 +41,7 @@ export function componentLabel(node:Node&{displayLabel?:string},context:LabelCon
  }
  if(!label){const candidates=[normalize(a.name),normalize(a.id),...(context.dynamicContent?[]:[normalize(node.name)])],match=candidates.find(value=>value&&!expression.test(value)&&!serialLabel.test(value)&&!/^(?:a|button|input|page|open|notempty|[a-z]|\d+)$/i.test(value)&&!/^component:[0-9a-f-]+$/i.test(value));if(match){label=humanize(match);label+=` ${kind}`;}}
  let positionFallback=false;
- if(!label){const place=location(context);positionFallback=!!place;label=place?`${kind}（位於 ${place}）`:`${kind}（無文字）`;}
+ if(!label){const place=location(context);positionFallback=!!place;label=place?`${kind}（${positionPhrase(place)}）`:`${kind}（無文字）`;}
  if(positionFallback&&context.knownDestination)label+=`，前往 ${normalize(context.knownDestination)}`;
  if((context.duplicateCount||0)>1)label+=`（第 ${Math.max(1,context.duplicateOrdinal||1)} 個）`;
  return [...label].length>80?[...label].slice(0,79).join('')+'…':label;
@@ -55,8 +59,20 @@ function documentContexts(index:Index,screenId:string,document:Document|undefine
   if(textCache.has(element))return textCache.get(element);const value=normalize(element.textContent);const safe=value&&!expression.test(value)?value:undefined;textCache.set(element,safe);return safe;
  };
  const stack:Array<{element:Element;ancestors:Element[]}>=[];
+ let lastStaticHeading:string|undefined;
  for(let i=document.documentElement.children.length-1;i>=0;i--)stack.push({element:document.documentElement.children[i],ancestors:[]});
- while(stack.length){const {element,ancestors}=stack.pop()!,id=element.getAttribute('data-st-component-id');if(id){const meaningful=ancestors.filter(item=>['nav','header','footer','form'].includes(item.localName)||/^h[1-4]$/.test(item.localName)),target=index.nodes.get(id),markedDynamic=element.matches('[data-st-dynamic-content],.st-dynamic-placeholder')||!!element.querySelector('[data-st-dynamic-content],.st-dynamic-placeholder'),hasSourceLabel=target?.attributes.labelSource==='visibleText'&&!!normalize(target.attributes.visibleText)&&!expression.test(normalize(target.attributes.visibleText)),isDynamic=markedDynamic||dynamicContent&&!hasSourceLabel,context:LabelContext={visibleText:isDynamic?undefined:safeText(element),ariaLabel:isDynamic?undefined:element.getAttribute('aria-label')||undefined,title:isDynamic?undefined:element.getAttribute('title')||undefined,alt:isDynamic?undefined:element.getAttribute('alt')||element.querySelector('img[alt]')?.getAttribute('alt')||undefined,value:isDynamic?undefined:element.getAttribute('value')||undefined,dynamicContent:isDynamic,ancestors:meaningful.map(item=>({tag:item.localName,text:safeText(item),staticText:!dynamicContent&&!item.matches('[data-st-dynamic-content],.st-dynamic-placeholder')&&!item.querySelector('[data-st-dynamic-content],.st-dynamic-placeholder')}))};const form=element.localName==='form'?element:ancestors.find(item=>item.localName==='form');if(form){const componentId=form.getAttribute('data-st-component-id'),formNode=componentId?index.nodes.get(componentId):undefined;const formName=formNode?componentLabel(formNode,{dynamicContent}):undefined,heading=form.querySelector('legend,h1,h2,h3,h4');context.formHeading=dynamicContent?undefined:safeText(heading||form)||undefined;if(!context.formHeading&&formName&&!formName.includes('（無文字）'))context.formHeading=formName.replace(/\s*表單$/u,'');}
+ while(stack.length){
+  const {element,ancestors}=stack.pop()!;
+  if(/^h[1-4]$/.test(element.localName)){const heading=safeText(element);if(heading)lastStaticHeading=heading;}
+  const id=element.getAttribute('data-st-component-id');
+  if(id){
+   const meaningful=ancestors.filter(item=>['nav','header','footer','form'].includes(item.localName)||/^h[1-4]$/.test(item.localName));
+   const hasHeadingAncestor=meaningful.some(item=>/^h[1-4]$/.test(item.localName)&&!!safeText(item));
+   const target=index.nodes.get(id),markedDynamic=element.matches('[data-st-dynamic-content],.st-dynamic-placeholder')||!!element.querySelector('[data-st-dynamic-content],.st-dynamic-placeholder');
+   const hasSourceLabel=target?.attributes.labelSource==='visibleText'&&!!normalize(target.attributes.visibleText)&&!expression.test(normalize(target.attributes.visibleText));
+   const isDynamic=markedDynamic||dynamicContent&&!hasSourceLabel;
+   const context:LabelContext={visibleText:isDynamic?undefined:safeText(element),ariaLabel:isDynamic?undefined:element.getAttribute('aria-label')||undefined,title:isDynamic?undefined:element.getAttribute('title')||undefined,alt:isDynamic?undefined:element.getAttribute('alt')||element.querySelector('img[alt]')?.getAttribute('alt')||undefined,value:isDynamic?undefined:element.getAttribute('value')||undefined,dynamicContent:isDynamic,ancestors:meaningful.map(item=>({tag:item.localName,text:safeText(item),staticText:!item.matches('[data-st-dynamic-content],.st-dynamic-placeholder')&&!item.querySelector('[data-st-dynamic-content],.st-dynamic-placeholder')})),precedingHeading:hasHeadingAncestor?undefined:lastStaticHeading};
+   const form=element.localName==='form'?element:ancestors.find(item=>item.localName==='form');if(form){const componentId=form.getAttribute('data-st-component-id'),formNode=componentId?index.nodes.get(componentId):undefined;const formName=formNode?componentLabel(formNode,{dynamicContent}):undefined,heading=form.querySelector('legend,h1,h2,h3,h4');context.formHeading=dynamicContent?undefined:safeText(heading||form)||undefined;if(!context.formHeading&&formName&&!formName.includes('（無文字）'))context.formHeading=formName.replace(/\s*表單$/u,'');}
    const relation=targets.get(id);if(relation?.size===1)context.knownDestination=index.nodes.get([...relation][0])?.name;
    result.set(id,context);
   }
