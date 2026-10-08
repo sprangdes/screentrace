@@ -86,3 +86,20 @@ test('WP43 reduced motion skips card zoom and in-screen crossfade animations',as
   assert.equal(await page.locator('.prototype-outgoing').count(),0);assert.equal(await page.evaluate(()=>document.getAnimations().length),0);assert.equal(await page.locator('iframe').count(),1);
  }finally{await browser.close();}
 });
+
+test('WP43 keeps the old title and URL until the preview crossfade starts',async()=>{
+ const browser=await chromium.launch();
+ try{
+  const page=await browser.newPage({viewport:{width:1440,height:900}});page.setDefaultTimeout(5000);
+  await page.addInitScript(()=>{const descriptor=Object.getOwnPropertyDescriptor(HTMLIFrameElement.prototype,'srcdoc');let writes=0;Object.defineProperty(HTMLIFrameElement.prototype,'srcdoc',{...descriptor,set(value){if(++writes===2)setTimeout(()=>descriptor.set.call(this,value),600);else descriptor.set.call(this,value);}});});
+  await page.goto(await fileFixture(navigationFixture()));await page.locator('.screen-card[data-screen="a"]').click();await page.locator('main>.prototype-viewer .preview[aria-busy="false"]').waitFor();
+  assert.equal(await page.locator('main>.prototype-viewer .focus-breadcrumb h2').innerText(),'甲');assert.equal(await page.locator('main>.prototype-viewer .prototype-url').innerText(),'/owners/{id}/edit');
+  await page.locator('.sidebar-screen[data-screen-list="b"]').click();await page.locator('main>.prototype-viewer .preview[aria-busy="true"]').waitFor();await page.waitForFunction(()=>Number(getComputedStyle(document.querySelector('.prototype-outgoing')).opacity)<=.61);
+  const before=await page.evaluate(()=>({title:document.querySelector('main>.prototype-viewer .focus-breadcrumb h2')?.textContent,titleOpacity:getComputedStyle(document.querySelector('main>.prototype-viewer .focus-breadcrumb')).opacity,url:document.querySelector('main>.prototype-viewer .prototype-url')?.textContent,urlOpacity:getComputedStyle(document.querySelector('main>.prototype-viewer .prototype-url')).opacity,outgoingTitle:document.querySelector('.prototype-outgoing .focus-breadcrumb h2')?.textContent,outgoingUrl:document.querySelector('.prototype-outgoing .prototype-url')?.textContent}));
+  assert.equal(before.title,'乙');assert.equal(before.url,'/legacy/*.do');assert.equal(before.titleOpacity,'0');assert.equal(before.urlOpacity,'0');assert.equal(before.outgoingTitle,'甲');assert.equal(before.outgoingUrl,'/owners/{id}/edit');
+  await page.locator('main>.prototype-viewer .preview[aria-busy="false"]').waitFor();
+  const handoff=await page.evaluate(()=>{const title=document.querySelector('main>.prototype-viewer .focus-breadcrumb'),url=document.querySelector('main>.prototype-viewer .prototype-url'),animations=document.getAnimations().filter(animation=>animation.effect?.target===title||animation.effect?.target===url);return{title:title?.textContent,url:url?.textContent,records:animations.map(animation=>({target:animation.effect?.target===title?'title':'url',duration:animation.effect?.getTiming().duration,start:animation.effect?.getKeyframes()[0]?.opacity,end:animation.effect?.getKeyframes().at(-1)?.opacity,startTime:animation.startTime}))};});
+  assert.equal(handoff.title,'乙');assert.equal(handoff.url,'/legacy/*.do');assert.deepEqual(handoff.records.map(record=>record.target).sort(),['title','url']);assert.ok(handoff.records.every(record=>record.duration===150&&record.start==='0'&&record.end==='1'),JSON.stringify(handoff.records));assert.ok(Math.abs(handoff.records[0].startTime-handoff.records[1].startTime)<=20,JSON.stringify(handoff.records));
+  await page.locator('.prototype-outgoing').waitFor({state:'detached'});assert.equal(await page.locator('iframe').count(),1);
+ }finally{await browser.close();}
+});
