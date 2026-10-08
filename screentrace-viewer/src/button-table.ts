@@ -1,6 +1,7 @@
 import {Index} from './map';
 import {navigationIdentity,partitionNavigation} from './overview';
-import {componentLabel,isAction,kindName} from './labels';
+import {componentLabelsByScreen,isAction,kindName} from './labels';
+import {confidenceLabel} from './terms';
 import {Node} from './contracts';
 import {rootTrigger} from './usage';
 
@@ -27,14 +28,14 @@ export function actionSummary(index:Index,id:string):ActionSummary {
  const possibleResults=targets.length?`可能前往：${targets.join('、')}${multiple?'；有多個可能結果':''}`:sortedRoutes.length?`可能前往：靜態分析無法確認${multiple?'；有多個可能結果':''}`:otherActions.size?[...otherActions].sort(candidateOrder).join('、'):'沒有已知行為';
  return {primaryAction,possibleResults,technicalDetails:sortedRoutes.map(route=>`伺服端路由：${route}`),multiple};
 }
-function resolution(node:Node):string{const values=(node.evidence||[]).map((entry:any)=>entry.resolution);return values.includes('AMBIGUOUS')?'有多個候選':values.includes('UNRESOLVED')?'無法確認':values.includes('INFERRED')||node.confidence==='INFERRED'?'靜態推定':'已確認';}
+function resolution(node:Node):string{const values=(node.evidence||[]).map((entry:any)=>entry.resolution);return confidenceLabel(values.includes('AMBIGUOUS')?'AMBIGUOUS':values.includes('UNRESOLVED')?'UNRESOLVED':values.includes('INFERRED')||node.confidence==='INFERRED'?'INFERRED':'CONFIRMED');}
 const kindOrder=new Map(['表單送出','按鈕','連結','下拉選單','多選欄位','日期欄位','彈窗'].map((kind,index)=>[kind,index]));
 export function buttonTableRows(index:Index):ButtonRow[]{
- const rows=new Map<string,ButtonRow>(),globalRelations=partitionNavigation(index).global;
+ const rows=new Map<string,ButtonRow>(),globalRelations=partitionNavigation(index).global,labels=componentLabelsByScreen(index);
  for(const [componentId,screenIds]of index.owners){const node=index.nodes.get(componentId);if(!node||!isAction(index,node))continue;const globalMembership=new Map<string,{target:string;identity:string}>();
   for(const relation of globalRelations)if(relation.triggers.includes(componentId)){const identity=navigationIdentity(index,node,relation.to);if(identity)globalMembership.set(relation.from, {target:relation.to,identity});}
   for(const screenId of screenIds){const membership=globalMembership.get(screenId),key=membership?`global:${membership.identity}`:`item:${JSON.stringify([screenId,componentId])}`,existing=rows.get(key),member={screenId,componentId};if(existing){if(!existing.members.some(item=>item.screenId===screenId&&item.componentId===componentId))existing.members.push(member);continue;}
-   const target=membership?index.nodes.get(membership.target):undefined,label=componentLabel(node),name=membership?`（全站導覽）${label} → ${target?.name||'目的未解析'} ×${globalMembership.size} 個畫面`:label,summary=actionSummary(index,componentId);
+   const target=membership?index.nodes.get(membership.target):undefined,label=labels.get(screenId)?.get(componentId)||node.name,name=membership?`（全站導覽）${label} → ${target?.name||'目的未解析'} ×${globalMembership.size} 個畫面`:label,summary=actionSummary(index,componentId);
    rows.set(key,{key,global:!!membership,name,screenNames:[],kind:kindName(node),...summary,resolution:resolution(node),members:[member],screenId,componentId});
   }
  }

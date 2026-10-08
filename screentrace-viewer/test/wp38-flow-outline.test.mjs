@@ -14,7 +14,7 @@ test('flow outline is deterministic, bounds depth and width, marks cycles, ambig
  data.graph.behaviors.push({id:'unknown',triggerId:'unknown-button',type:'NAVIGATE',event:'click',expression:'${dynamic}',confidence:'UNRESOLVED'});
  const index=indexGraph(data.graph),first=buildFlowOutline(index,'a'),second=buildFlowOutline(index,'a');
  assert.deepEqual(first,second);assert.ok(first.nodes.length<=8);assert.ok(first.more>0);
- assert.ok(first.nodes.some(n=>n.label==='丙'&&n.triggers.includes('共用按鈕')));
+ assert.ok(first.nodes.some(n=>n.label==='丙'&&n.triggers.some(label=>label.startsWith('共用按鈕'))));
  assert.ok(buildFlowOutline(index,'q').nodes.some(n=>n.label==='無法確認的目的'));
  assert.ok(!first.nodes.some(n=>n.triggers.includes('Home')),'global navigation is excluded');
  const cycle=buildFlowOutline(index,'b');assert.ok(JSON.stringify(cycle).includes('已在上面展開')); // WP38 revision: a repeated destination is a jump link, not a repeated cycle row.
@@ -42,8 +42,8 @@ test('flow outline expands each screen once, reuses destinations as jump links, 
  assert.equal(reusedD.length,1,'a later reference is a single jump link marked already expanded');
  assert.equal(reusedD[0].label,'就診表單（已在上面展開）');assert.equal(reusedD[0].canNavigate,true);
  assert.equal(all.filter(item=>item.unresolved).length,1,'all unknown targets share one node per source screen');
- assert.deepEqual(all.find(item=>item.unresolved).triggers,['按鈕（畫面 甲，第 1 行）','連結（畫面 甲，第 1 行）']);
+ assert.deepEqual(all.find(item=>item.unresolved).triggers,['Unknown One 按鈕','Unknown Two 連結']);
  const text=JSON.stringify(outline);for(const internal of ['add-owner-form','表單 1','連結 6','unknown-one','unknown-two'])assert.equal(text.includes(internal),false,`internal name ${internal} must not appear`);
- assert.ok(all.some(item=>item.triggers.includes('編輯飼主')),'readable component labels use the shared R5 naming rule');
+ assert.ok(all.some(item=>item.triggers.some(label=>label.startsWith('編輯飼主'))),'readable component labels use the shared R5 naming rule');
  assert.equal(publicTriggerName('連結 6'),'連結（所在畫面）');assert.equal(publicTriggerName('add-owner-form'),'可操作項目（所在畫面）');assert.equal(publicTriggerName('Find Owner'),'Find Owner');
 });

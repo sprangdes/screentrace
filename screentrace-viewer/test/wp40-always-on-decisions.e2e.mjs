@@ -76,6 +76,7 @@ test('WP40 list, button table, feature progress and touch long-press expose the 
   assert.equal(await page.locator('.button-quick-decisions [data-quick-decision="KEEP"]').first().getAttribute('aria-pressed'),'true');
   await page.getByRole('button',{name:'畫面',exact:true}).click();
   const sidebar=page.locator('.sidebar-screen-row').filter({has:page.locator('[data-screen-list="a"]')});
+  await sidebar.locator('.sidebar-screen').hover();
   await sidebar.locator('[role="radio"][data-decision="KEEP"]').click();
   await page.getByRole('button',{name:'地圖',exact:true}).click();
   assert.equal(await page.locator('.screen-card[data-screen="a"]').getAttribute('data-screen-status'),'KEEP');

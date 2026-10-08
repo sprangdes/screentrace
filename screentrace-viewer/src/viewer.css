@@ -126,7 +126,8 @@ body{height:100dvh;display:flex;flex-direction:column;overflow:hidden}.topbar{fl
 .review-help>p{position:relative;max-width:260px;margin:8px 0;padding:8px;background:white;border:1px solid var(--gray-200);box-shadow:var(--shadow-card);font-size:12px}
 .sidebar-screen-row{display:grid;gap:3px;padding:6px 0;border-bottom:1px solid var(--gray-100)}
 .sidebar-screen-row .sidebar-screen{display:grid;grid-template-columns:18px minmax(0,1fr);column-gap:8px;width:100%;text-align:left;padding:8px;border:0;margin:0}
-.sidebar-screen-row .decision-buttons{margin-left:26px}
+.sidebar-screen-row .decision-buttons{margin-left:26px;opacity:0;pointer-events:none;transition:opacity 140ms ease}
+.sidebar-screen-row:hover .decision-buttons,.sidebar-screen-row:focus-within .decision-buttons,.sidebar-screen-row.touch-revealed .decision-buttons{opacity:1;pointer-events:auto}
 .sidebar-screen-row .decision-buttons button{min-height:24px}
 .screen-card[data-screen-status=KEEP]{border-left:4px solid var(--keep)}
 .screen-card[data-screen-status=REMOVE]{border-left:4px solid var(--remove)}

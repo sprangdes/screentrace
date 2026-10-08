@@ -1,2 +1,2 @@
 // UI presentation helper: preserves the original decision values and result assertions.
-export async function setDecision(locator,value){const control=locator.first();await control.hover();await control.locator(`[role="radio"][data-decision="${value}"]`).click();}
+export async function setDecision(locator,value){const control=locator.first(),row=control.locator('xpath=ancestor::div[contains(@class,"sidebar-screen-row")]').first();if(await row.count())await row.locator('.sidebar-screen').hover();await control.hover();await control.locator(`[role="radio"][data-decision="${value}"]`).click();}
