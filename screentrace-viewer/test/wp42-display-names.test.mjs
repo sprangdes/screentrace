@@ -18,6 +18,22 @@ test('WP42 display labels follow the evidence priority and humanize only proven 
  assert.equal(componentLabel({...base,name:'',id:'',attributes:{kind:'BUTTON',tag:'button'}}),'按鈕（無文字）');
  assert.equal(componentLabel({...base,attributes:{...base.attributes,visibleText:'Save'}},{duplicateOrdinal:2,duplicateCount:2}),'Save（第 2 個）');
  assert.equal(componentLabel({...base,attributes:{...base.attributes,visibleText:'Owner'}},{knownDestination:'Owner Details'}),'Owner，前往 Owner Details');
+ assert.equal(componentLabel({...base,displayLabel:'Alex Johnson',attributes:{...base.attributes,visibleText:'${owner.name}'}},{ancestors:[{tag:'form'}]}),'表單（位於 表單）');
+ assert.equal(componentLabel({...base,displayLabel:'Alex Johnson',attributes:{kind:'LINK',tag:'a'}},{visibleText:'Alex Johnson',dynamicContent:true,ancestors:[{tag:'nav'}]}),'連結（位於 導覽列）');
+ assert.equal(componentLabel({...base,attributes:{kind:'LINK',tag:'a',visibleText:'Owners'}},{knownDestination:'Owners List'}),'Owners');
+ assert.equal(componentLabel({...base,name:'',id:'',attributes:{kind:'BUTTON',tag:'button'}},{ancestors:[{tag:'screen',text:'Find Owners'},{tag:'nav'}]}),'按鈕（位於 導覽列）');
+ assert.equal(componentLabel({...base,name:'',id:'',attributes:{kind:'BUTTON',tag:'button'}},{ancestors:[{tag:'screen',text:'Find Owners'},{tag:'form',text:'Find Owner',staticText:true}]}),'按鈕（位於 Find Owner 表單）');
+ assert.equal(componentLabel({...base,name:'',id:'',attributes:{kind:'BUTTON',tag:'button'}},{ancestors:[{tag:'screen',text:'Find Owners'},{tag:'header'}]}),'按鈕（位於 頁首）');
+ assert.equal(componentLabel({...base,name:'',id:'',attributes:{kind:'BUTTON',tag:'button'}},{ancestors:[{tag:'screen',text:'Find Owners'},{tag:'footer'}]}),'按鈕（位於 頁尾）');
+ assert.equal(componentLabel({...base,name:'',id:'',attributes:{kind:'BUTTON',tag:'button'}},{ancestors:[{tag:'screen',text:'Find Owners'},{tag:'h2',text:'Owner details',staticText:true}]}),'按鈕（位於 Owner details 區塊）');
+});
+
+test('WP42 labels are computed once per graph index and reused by every consumer',async()=>{
+ const {componentLabelsByScreen}=await ownModule('labels');
+ const graph={schemaVersion:'2.2',application:{name:'Labels'},nodes:[{id:'s',name:'Screen',type:'SCREEN',attributes:{}},{id:'c',name:'Save',type:'COMPONENT',attributes:{kind:'BUTTON',visibleText:'Save'}}],relationships:[{id:'contains',type:'CONTAINS',from:'s',to:'c'}],behaviors:[]};
+ const index={graph,nodes:new Map(graph.nodes.map(n=>[n.id,n])),screens:[graph.nodes[0]],owners:new Map([['c',['s']]]),routes:new Map([['s',[]]]),relations:[],behaviors:new Map()};
+ const first=componentLabelsByScreen(index),second=componentLabelsByScreen(index);
+ assert.equal(first,second,'shared label map should be cached for screen details, search, flow, and tables');
 });
 
 test('WP42 source vocabulary variants stay out of viewer code outside the terms dictionary',async()=>{

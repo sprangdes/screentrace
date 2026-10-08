@@ -47,3 +47,36 @@ test('WP42 public names stay readable in screen details, button table, global se
   assert.deepEqual(unnamed,[],'icon-only buttons need accessible names and hover titles');
  }finally{await browser.close();}
 });
+
+test('WP42 names ignore reconstructed sample text and use the shared cross-screen location everywhere',async()=>{
+ const data=fixture();
+ data.graph.nodes.find(item=>item.id==='a').name='Owners Home';data.graph.nodes.find(item=>item.id==='b').name='Owners List';
+ const dynamic=node('dynamic-link-1','COMPONENT','連結 1',{kind:'LINK',tag:'a',visibleText:'${owner.name}'});
+ data.graph.nodes.push(dynamic);
+ data.graph.relationships.push({id:'dynamic-owner-a',type:'CONTAINS',from:'a',to:dynamic.id},{id:'dynamic-owner-b',type:'CONTAINS',from:'b',to:dynamic.id},{id:'dynamic-nav',type:'NAVIGATES_TO',from:dynamic.id,to:'b'});
+ data.documents.a='<html><body><nav><a data-st-component-id="dynamic-link-1">Alex Johnson</a></nav><h1>Owners Home</h1></body></html>';
+ data.documents.b='<html><body><nav><a data-st-component-id="dynamic-link-1">Alex Johnson</a></nav><h1>Owners List</h1></body></html>';
+ data.preview.screens[0].dynamicExpressions=['${owner.name}'];
+ const browser=await chromium.launch();
+ try{
+  const page=await browser.newPage({viewport:{width:1440,height:900},reducedMotion:'reduce'});await page.goto(await fileFixture(data));
+  const expected='連結（位於 導覽列）';
+  await page.locator('.screen-card[data-screen="a"]').click();
+  assert.match(await page.locator('.action-items').innerText(),new RegExp(expected));
+  assert.doesNotMatch(await page.locator('.action-items').innerText(),/Alex Johnson|連結 1|Owners Home 畫面/);
+  await page.locator('.flow-outline summary').click();
+  assert.match(await page.locator('.flow-outline').innerText(),new RegExp(expected));
+  assert.doesNotMatch(await page.locator('.flow-outline').innerText(),/Alex Johnson|連結 1|Owners Home 畫面/);
+  await page.getByRole('button',{name:/按鈕/}).first().click();
+  const globalRow=page.locator('.button-table [data-button-row^="global:"]');
+  assert.match(await globalRow.innerText(),new RegExp(expected));
+  assert.doesNotMatch(await globalRow.innerText(),/Owners Home|Alex Johnson|連結 1/);
+  await page.getByRole('button',{name:/搜尋/}).first().click();await page.locator('.global-search-dialog input').fill('連結');
+  assert.match(await page.locator('.global-search-results').innerText(),new RegExp(expected));
+  assert.doesNotMatch(await page.locator('.global-search-results').innerText(),/Alex Johnson|連結 1|Owners Home 畫面/);
+  await page.locator('[data-global-result="button"]').first().click();
+  assert.match(await page.locator('.action-items').innerText(),new RegExp(expected));
+  await page.locator('.review-progress').click();
+  assert.doesNotMatch(await page.locator('.review-progress-panel').innerText(),/Alex Johnson|連結 1|Owners Home 畫面/);
+ }finally{await browser.close();}
+});
