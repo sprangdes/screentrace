@@ -1,7 +1,7 @@
 import {Index} from './map';
 import {focusedRelations} from './relations';
 import {partitionNavigation} from './overview';
-import {componentLabel} from './labels';
+import {componentLabelsForScreen} from './labels';
 import {element} from './text';
 
 export interface FlowOutlineNode {id:string;label:string;triggers:string[];children:FlowOutlineNode[];alreadyExpanded:boolean;unresolved:boolean;canNavigate:boolean;more:number;overflow:FlowOutlineNode[]}
@@ -15,11 +15,11 @@ export const publicTriggerName=(value:string)=>{if(!internalName(value,''))retur
 export function buildFlowOutline(index:Index,root:string,maxDepth=4,maxWidth=8):FlowOutline {
  const flows=partitionNavigation(index).flows,capDepth=Math.max(0,Math.min(4,Math.floor(maxDepth))),capWidth=Math.max(1,Math.min(8,Math.floor(maxWidth)));
  const screenLabel=(id:string)=>index.nodes.get(id)?.name||'無法確認的目的';
- const labelCache=new Map<string,Map<string,string>>(),nameTriggers=(ids:string[],screenId:string,destination?:string)=>{const screen=index.nodes.get(screenId),unique=[...new Set(ids)],cache=labelCache.get(screenId)||new Map<string,string>();labelCache.set(screenId,cache);const bases=unique.map(id=>{let base=cache.get(id);if(!base){const node=index.nodes.get(id);base=node?componentLabel(node,{ancestors:[{tag:'screen',text:screen?.name}]}):'可操作項目（所在畫面）';cache.set(id,base);}return destination?`${base}，前往 ${destination}`:base;}),totals=new Map<string,number>();for(const name of bases)totals.set(name,(totals.get(name)||0)+1);const seen=new Map<string,number>();return bases.map(name=>{const ordinal=(seen.get(name)||0)+1;seen.set(name,ordinal);return totals.get(name)!>1?`${name}（第 ${ordinal} 個）`:name;}).sort(order);};
+ const nameTriggers=(ids:string[],screenId:string)=>{const labels=componentLabelsForScreen(index,screenId);return [...new Set(ids)].map(id=>labels.get(id)||'可操作項目（無文字）').sort(order);};
  const expanded=new Set<string>([root]);
  const make=(screenId:string,depth:number):{nodes:FlowOutlineNode[];more:number;overflow:FlowOutlineNode[]}=>{
   if(depth>=capDepth)return {nodes:[],more:0,overflow:[]};
-  const known=flows.filter(relation=>relation.from===screenId).map(relation=>({id:relation.to,label:screenLabel(relation.to),triggers:nameTriggers(relation.triggers,screenId,screenLabel(relation.to)),unresolved:false}));
+  const known=flows.filter(relation=>relation.from===screenId).map(relation=>({id:relation.to,label:screenLabel(relation.to),triggers:nameTriggers(relation.triggers,screenId),unresolved:false}));
   const unknown=focusedRelations(index,screenId).filter(relation=>relation.unresolved);
   const rows=[...known];if(unknown.length)rows.push({id:`unresolved:${screenId}`,label:'無法確認的目的',triggers:nameTriggers(unknown.flatMap(relation=>relation.triggers),screenId),unresolved:true});
   rows.sort((a,b)=>order(a.label,b.label)||order(a.id,b.id)||order(a.triggers.join('\0'),b.triggers.join('\0')));

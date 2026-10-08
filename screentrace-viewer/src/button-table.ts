@@ -1,6 +1,6 @@
 import {Index} from './map';
 import {navigationIdentity,partitionNavigation} from './overview';
-import {componentLabelsByScreen,isAction,kindName} from './labels';
+import {componentLabel,componentLabelsByScreen,isAction,kindName} from './labels';
 import {confidenceLabel} from './terms';
 import {Node} from './contracts';
 import {rootTrigger} from './usage';
@@ -35,7 +35,7 @@ export function buttonTableRows(index:Index):ButtonRow[]{
  for(const [componentId,screenIds]of index.owners){const node=index.nodes.get(componentId);if(!node||!isAction(index,node))continue;const globalMembership=new Map<string,{target:string;identity:string}>();
   for(const relation of globalRelations)if(relation.triggers.includes(componentId)){const identity=navigationIdentity(index,node,relation.to);if(identity)globalMembership.set(relation.from, {target:relation.to,identity});}
   for(const screenId of screenIds){const membership=globalMembership.get(screenId),key=membership?`global:${membership.identity}`:`item:${JSON.stringify([screenId,componentId])}`,existing=rows.get(key),member={screenId,componentId};if(existing){if(!existing.members.some(item=>item.screenId===screenId&&item.componentId===componentId))existing.members.push(member);continue;}
-   const target=membership?index.nodes.get(membership.target):undefined,label=labels.get(screenId)?.get(componentId)||node.name,name=membership?`（全站導覽）${label} → ${target?.name||'目的未解析'} ×${globalMembership.size} 個畫面`:label,summary=actionSummary(index,componentId);
+   const target=membership?index.nodes.get(membership.target):undefined,displayLabel=labels.get(screenId)?.get(componentId)||'可操作項目（無文字）',label=membership&&displayLabel.startsWith(kindName(node)+'（')?componentLabel(node,{dynamicContent:true,globalNavigation:true}):displayLabel,name=membership?`（全站導覽）${label} → ${target?.name||'目的未解析'} ×${globalMembership.size} 個畫面`:label,summary=actionSummary(index,componentId);
    rows.set(key,{key,global:!!membership,name,screenNames:[],kind:kindName(node),...summary,resolution:resolution(node),members:[member],screenId,componentId});
   }
  }

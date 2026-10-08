@@ -30,7 +30,7 @@ test('WP38 rendered flow tree expands each screen once, groups unknown outcomes 
  data.graph.behaviors.push({id:'unknown-1',triggerId:'unknown-one',type:'NAVIGATE',expression:'first()',confidence:'UNRESOLVED'},{id:'unknown-2',triggerId:'unknown-two',type:'NAVIGATE',expression:'second()',confidence:'UNRESOLVED'});
  const browser=await chromium.launch();try{const page=await browser.newPage();await page.goto(await fileFixture(data));await page.locator('[data-ready="true"]').waitFor();await page.locator('[data-screen-list="a"]').click();const tree=page.locator('[data-flow-outline]');await tree.locator(':scope > summary').click();await tree.locator('[data-flow-root="a"]').waitFor();
   assert.equal(await tree.locator('[data-flow-node="d"]:not([data-already-expanded])').count(),1);assert.equal(await tree.locator('[data-flow-node="d"][data-already-expanded="true"]').count(),1);assert.equal(await tree.locator('[data-unresolved="true"]').count(),1);
-  const text=await tree.innerText();assert.match(text,/已在上面展開/);assert.match(text,/表單（位於 甲 畫面）/);assert.match(text,/連結（位於 甲 畫面）/);assert.doesNotMatch(text,/add-owner-form|表單 1|連結 6|unknown-one|unknown-two/);
+  const text=await tree.innerText();assert.match(text,/已在上面展開/);assert.match(text,/Add Owner Form 表單/);assert.match(text,/表單（無文字）/);assert.match(text,/連結（無文字）/);assert.doesNotMatch(text,/add-owner-form|表單 1|連結 6|unknown-one|unknown-two/);
   await tree.locator('[data-flow-node="d"][data-already-expanded="true"] .flow-outline-link').first().click();await page.locator('main h2').filter({hasText:'就診表單'}).waitFor();
  }finally{await browser.close();}
 });

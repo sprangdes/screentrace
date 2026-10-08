@@ -30,10 +30,12 @@ test('WP42 public names stay readable in screen details, button table, global se
   const labels=await list.locator('[data-component]').allInnerTexts();
   assert.ok(labels.some(label=>label.includes('Find Owner')));
   assert.ok(labels.some(label=>label.includes('螢幕追蹤首頁')));
-  assert.ok(labels.some(label=>label.includes('Find Owners 表單')));
+  await page.locator('.field-items summary').click();
+  const fieldLabels=await page.locator('.field-items [data-component]').allInnerTexts();
+  assert.ok(fieldLabels.some(label=>label.includes('Find Owners 表單')),JSON.stringify(fieldLabels));
   const visible=await list.innerText();
   for(const value of ['按鈕 1','連結 1','下拉選單 1','add-owner-form','第 1 行'])assert.equal(visible.includes(value),false,`details must not display ${value}`);
-  await page.locator('.flow-outline summary').click();
+  await page.locator('.flow-outline summary').click();await page.locator('.flow-outline-node').first().waitFor();
   const flow=await page.locator('.flow-outline').innerText();
   assert.equal(flow.includes('連結 1'),false);assert.equal(flow.includes('第 1 行'),false);
   await page.getByRole('button',{name:/按鈕/}).first().click();
@@ -51,26 +53,31 @@ test('WP42 public names stay readable in screen details, button table, global se
 test('WP42 names ignore reconstructed sample text and use the shared cross-screen location everywhere',async()=>{
  const data=fixture();
  data.graph.nodes.find(item=>item.id==='a').name='Owners Home';data.graph.nodes.find(item=>item.id==='b').name='Owners List';
+ data.graph.nodes=data.graph.nodes.filter(item=>item.id!=='shared');data.graph.relationships=data.graph.relationships.filter(edge=>edge.from!=='shared'&&edge.to!=='shared');
  const dynamic=node('dynamic-link-1','COMPONENT','連結 1',{kind:'LINK',tag:'a',visibleText:'${owner.name}'});
- data.graph.nodes.push(dynamic);
- data.graph.relationships.push({id:'dynamic-owner-a',type:'CONTAINS',from:'a',to:dynamic.id},{id:'dynamic-owner-b',type:'CONTAINS',from:'b',to:dynamic.id},{id:'dynamic-nav',type:'NAVIGATES_TO',from:dynamic.id,to:'b'});
- data.documents.a='<html><body><nav><a data-st-component-id="dynamic-link-1">Alex Johnson</a></nav><h1>Owners Home</h1></body></html>';
+ const flowTrigger=node('flow-link-1','COMPONENT','連結 2',{kind:'LINK',tag:'a',visibleText:'${owner.name}'});
+ data.graph.nodes.push(dynamic,flowTrigger);
+ data.graph.relationships.push({id:'dynamic-owner-a',type:'CONTAINS',from:'a',to:dynamic.id},{id:'dynamic-owner-b',type:'CONTAINS',from:'b',to:dynamic.id},{id:'dynamic-nav',type:'NAVIGATES_TO',from:dynamic.id,to:'b'},{id:'flow-owner-a',type:'CONTAINS',from:'a',to:flowTrigger.id},{id:'flow-nav',type:'NAVIGATES_TO',from:flowTrigger.id,to:'b'});
+ data.documents.a='<html><body><nav><a data-st-component-id="dynamic-link-1">Alex Johnson</a><a data-st-component-id="flow-link-1">Alex Johnson</a></nav><h1>Owners Home</h1></body></html>';
  data.documents.b='<html><body><nav><a data-st-component-id="dynamic-link-1">Alex Johnson</a></nav><h1>Owners List</h1></body></html>';
- data.preview.screens[0].dynamicExpressions=['${owner.name}'];
+ data.preview.screens.forEach(screen=>screen.dynamicExpressions=['${owner.name}']);
  const browser=await chromium.launch();
  try{
-  const page=await browser.newPage({viewport:{width:1440,height:900},reducedMotion:'reduce'});await page.goto(await fileFixture(data));
+  const page=await browser.newPage({viewport:{width:1440,height:900},reducedMotion:'reduce'});page.setDefaultTimeout(4000);await page.goto(await fileFixture(data));
   const expected='連結（位於 導覽列）';
   await page.locator('.screen-card[data-screen="a"]').click();
   assert.match(await page.locator('.action-items').innerText(),new RegExp(expected));
   assert.doesNotMatch(await page.locator('.action-items').innerText(),/Alex Johnson|連結 1|Owners Home 畫面/);
-  await page.locator('.flow-outline summary').click();
+  await page.locator('.flow-outline summary').click();await page.locator('.flow-outline-node').first().waitFor();
   assert.match(await page.locator('.flow-outline').innerText(),new RegExp(expected));
   assert.doesNotMatch(await page.locator('.flow-outline').innerText(),/Alex Johnson|連結 1|Owners Home 畫面/);
   await page.getByRole('button',{name:/按鈕/}).first().click();
   const globalRow=page.locator('.button-table [data-button-row^="global:"]');
   assert.match(await globalRow.innerText(),new RegExp(expected));
   assert.doesNotMatch(await globalRow.innerText(),/Owners Home|Alex Johnson|連結 1/);
+  await globalRow.locator('.button-row-open').click();
+  const members=page.locator('.button-global-members');assert.match(await members.innerText(),new RegExp(expected));
+  assert.doesNotMatch(await members.innerText(),/Alex Johnson|連結 1/);
   await page.getByRole('button',{name:/搜尋/}).first().click();await page.locator('.global-search-dialog input').fill('連結');
   assert.match(await page.locator('.global-search-results').innerText(),new RegExp(expected));
   assert.doesNotMatch(await page.locator('.global-search-results').innerText(),/Alex Johnson|連結 1|Owners Home 畫面/);
@@ -78,5 +85,8 @@ test('WP42 names ignore reconstructed sample text and use the shared cross-scree
   assert.match(await page.locator('.action-items').innerText(),new RegExp(expected));
   await page.locator('.review-progress').click();
   assert.doesNotMatch(await page.locator('.review-progress-panel').innerText(),/Alex Johnson|連結 1|Owners Home 畫面/);
+  await page.locator('[data-md-export]').click();
+  const exportCheck=page.locator('.pre-export-check');await exportCheck.waitFor();
+  assert.doesNotMatch(await exportCheck.innerText(),/Alex Johnson|連結 1|Owners Home 畫面/,await exportCheck.innerText());
  }finally{await browser.close();}
 });
