@@ -1,10 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {fixture,node} from './fixture.mjs';
-import {classifyScreenEntry} from '../src/inventory.js';
+import {ownModule} from './module.mjs';
 
-test('WP45 classifies each screen from proven inbound entries, auto redirect and route evidence',()=>{
+test('WP45 classifies each screen from proven inbound entries, auto redirect and route evidence',async()=>{
+ const {classifyScreenEntry}=await ownModule('inventory');
  const data=fixture();
+ data.graph.relationships.find(edge=>edge.id==='3').confidence='CONFIRMED';
  data.graph.nodes.push(
   node('no-entry','SCREEN','沒有入口',{}),
   node('auto','SCREEN','自動導向',{autoRedirect:'LOGIN_PAGE'}),
@@ -28,10 +30,10 @@ test('WP45 classifies each screen from proven inbound entries, auto redirect and
  );
  const result=classifyScreenEntry(data.graph);
  assert.deepEqual([...result].map(([id,value])=>[id,value.classification]),[
-  ['a','HAS_ENTRY'],['b','HAS_ENTRY'],['no-entry','NO_ENTRY'],['auto','AUTO_REDIRECT'],
-  ['inferred','INFERRED_ENTRY'],['confirmed','HAS_ENTRY'],['mixed','HAS_ENTRY'],['source','ROUTE_ONLY']
+  ['a','HAS_ENTRY'],['auto','AUTO_REDIRECT'],['b','HAS_ENTRY'],['confirmed','HAS_ENTRY'],
+  ['inferred','INFERRED_ENTRY'],['mixed','HAS_ENTRY'],['no-entry','NO_ENTRY'],['source','ROUTE_ONLY']
  ]);
- assert.equal(result.get('a').entries.length,1,'global navigation counts as an entry');
+ assert.equal(result.get('a').entries.length,2,'global navigation and shared cross-screen links count as entries');
  assert.equal(result.get('no-entry').entries.length,0,'self links do not count as incoming entries');
  assert.deepEqual(result.get('inferred').entries[0].evidence[0].source,{file:'a.jsp',line:2});
 });
