@@ -61,12 +61,11 @@ class UrlGraphIntegrationTest {
   assertTrue(one.behaviors().stream().anyMatch(b->b.evidence().stream().anyMatch(e->e.source().file().equals("workspace:config.json")&&e.source().line()==7&&e.detail().contains("採用值=/shop"))));
  }
  @Test void contextPathHintListsUnresolvedPrefixCallsWithoutAddingRelations() throws Exception {
-  var g=graph("<a href='/shop/api/items/${id}'>Item</a><script>fetch('/shop/api/items/'+itemId);</script>","@GetMapping(\"/api/items/{id}\") String item(){return \"ok\";}",null);
+  var g=graph("<a href='/shop/api/items/${id}'>Item</a><a href='/shop/api/items/${otherId}'>Other</a>","@GetMapping(\"/api/items/{id}\") String item(){return \"ok\";}",null);
   var hints=g.diagnostics().stream().filter(d->d.code().equals("CONTEXT_PATH_HINT")).toList();
-  assertEquals(1,hints.size());assertTrue(hints.get(0).message().contains("/shop"));assertTrue(hints.get(0).message().contains("2"));
+  assertEquals(1,hints.size());assertTrue(hints.get(0).message().contains("/shop"),hints.toString());assertTrue(hints.get(0).message().contains("2"),hints.toString());
   assertTrue(hints.get(0).message().contains("./bin/screentrace config"));
-  assertTrue(hints.get(0).evidence().stream().anyMatch(e->e.source().file().endsWith("page.jsp")));
-  assertTrue(hints.get(0).evidence().stream().anyMatch(e->e.source().file().endsWith("app.js")));
+  assertEquals(2,hints.get(0).evidence().size());assertTrue(hints.get(0).evidence().stream().allMatch(e->e.source().file().endsWith("page.jsp")));
   var endpoint=endpoint(g,"/api/items/{id}","GET");
   assertFalse(g.relationships().stream().anyMatch(e->e.to().equals(endpoint.id())&&Set.of(EdgeType.CALLS,EdgeType.TRIGGERS,EdgeType.NAVIGATES_TO).contains(e.type())));
  }

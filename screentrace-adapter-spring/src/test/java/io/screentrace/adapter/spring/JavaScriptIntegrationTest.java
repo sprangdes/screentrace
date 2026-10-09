@@ -63,7 +63,7 @@ class JavaScriptIntegrationTest {
     assertTrue(graph.diagnostics().stream().anyMatch(d->d.code().equals("ANGULAR_SCOPE_DEPTH_LIMIT"))==false);
   }
   @Test void angularRequestDescriptionMatchesJavaEndpointPathForParametersAndScopeProperties() throws Exception {
-    var root=project("<main ng-controller='Cart'><button id='add' ng-click='addToCart(7)'>Add</button><button id='clear' ng-click='clearCart()'>Clear</button><script src='/app.js'></script></main>","");
+    var root=project("<main ng-controller='Cart'><button id='add' ng-click='addToCart(productId)'>Add</button><button id='clear' ng-click='clearCart()'>Clear</button><script src='/app.js'></script></main>","");
     Files.writeString(root.resolve("src/main/webapp/app.js"),"angular.module('shop').controller('Cart',function($scope){$scope.addToCart=function(productId){$http.put('/x/add/'+productId);};$scope.clearCart=function(){$http.delete('/x/cart/'+$scope.cartId);};});");
     Files.createDirectories(root.resolve("src/main/java"));
     Files.writeString(root.resolve("src/main/java/CartApi.java"),"import org.springframework.web.bind.annotation.*;@RestController class CartApi{@PutMapping(\"/x/add/{productId}\") void add(){}@DeleteMapping(\"/x/cart/{cartId}\") void clear(){}}\n");
