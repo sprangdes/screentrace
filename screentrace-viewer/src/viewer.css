@@ -193,7 +193,7 @@ body{height:100dvh;display:flex;flex-direction:column;overflow:hidden}.topbar{fl
 .shell>aside{grid-column:4;position:relative}
 .panel-resize{grid-column:3;grid-row:1;z-index:4;cursor:col-resize;touch-action:none;background:transparent;border-radius:4px;outline-offset:-2px}
 .panel-resize:hover,.panel-resize:focus-visible{background:var(--primary-soft)}
-.panel-collapse{position:sticky;top:0;z-index:5;float:right;background:#fff;box-shadow:var(--shadow-card)}
+.panel-collapse{position:absolute;top:8px;right:8px;z-index:5;float:none;background:#fff;box-shadow:var(--shadow-card)}
 .shell[data-right-panel-hidden=true]{grid-template-columns:280px minmax(0,1fr) 0 0}
 .shell[data-right-panel-hidden=true][data-sidebar-collapsed=true]{grid-template-columns:56px minmax(0,1fr) 0 0}
 .shell[data-right-panel-hidden=true]>.panel-resize,.shell[data-right-panel-hidden=true]>aside{display:none!important}
