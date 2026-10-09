@@ -1,3 +1,4 @@
+import {openScreen} from './decision-controls.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {chromium} from '../../screentrace-capture/node_modules/playwright/index.mjs';
@@ -44,7 +45,7 @@ test('submit click keeps the clicked button selected and includes its owning for
   const page=await browser.newPage({reducedMotion:'reduce'});
   page.setDefaultTimeout(4000);
   await page.goto(await fileFixture(data));
-  await page.locator('[data-screen-list="a"]').click();
+  await openScreen(page,'a');
   await page.locator('.preview[aria-busy="false"]').waitFor();
   await page.frameLocator('iframe').locator('#name').fill('A');
   await page.frameLocator('iframe').locator('#submit').click();
@@ -68,16 +69,15 @@ test('WP40 list, button table, feature progress and touch long-press expose the 
   await page.locator('.screen-card[data-screen="a"]').dispatchEvent('pointerup',{pointerType:'touch',button:0});
   await page.locator('.card-review[data-screen-controls="a"] [data-decision="REMOVE"]').click();
   assert.equal(await page.locator('.screen-card[data-screen="a"]').getAttribute('data-screen-status'),'REMOVE');
-  await page.getByRole('button',{name:'功能',exact:true}).click();
+  await page.getByRole('button',{name:'功能地圖',exact:true}).click();await page.getByRole('button',{name:'功能',exact:true}).click();
   assert.ok(await page.locator('.feature-region-progress').count()>0);
   await page.getByRole('button',{name:'按鈕',exact:true}).click();
   const quick=page.locator('.button-quick-decisions [data-quick-decision="KEEP"]').first();
   await quick.click();
   assert.equal(await page.locator('.button-quick-decisions [data-quick-decision="KEEP"]').first().getAttribute('aria-pressed'),'true');
   await page.getByRole('button',{name:'畫面',exact:true}).click();
-  const sidebar=page.locator('.sidebar-screen-row').filter({has:page.locator('[data-screen-list="a"]')});
-  await sidebar.locator('.sidebar-screen').hover();
-  await sidebar.locator('[role="radio"][data-decision="KEEP"]').click();
+  await page.locator('[data-review-queue-screen="a"] .sidebar-screen').click();
+  await page.locator('aside [data-screen-decision="KEEP"]').click();
   await page.getByRole('button',{name:'地圖',exact:true}).click();
   assert.equal(await page.locator('.screen-card[data-screen="a"]').getAttribute('data-screen-status'),'KEEP');
  }finally{await browser.close();}

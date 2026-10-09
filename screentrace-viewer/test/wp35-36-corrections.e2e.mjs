@@ -4,14 +4,14 @@ import {chromium} from '../../screentrace-capture/node_modules/playwright/index.
 import {fileFixture,fixture,node} from './fixture.mjs';
 
 test('WP35 chooses one whole-project grouping basis and always shows progress',async()=>{
- const browser=await chromium.launch();try{const page=await browser.newPage(),url=await fileFixture();await page.goto(url);await page.locator('#app[data-ready=true]').waitFor();await page.getByRole('button',{name:'功能',exact:true}).click();
+ const browser=await chromium.launch();try{const page=await browser.newPage(),url=await fileFixture();await page.goto(url);await page.locator('#app[data-ready=true]').waitFor();await page.getByRole('button',{name:'功能地圖',exact:true}).click();await page.getByRole('button',{name:'功能',exact:true}).click();
   const basis=page.getByLabel('功能區域分組依據');assert.equal(await basis.inputValue(),'controller');const cards=page.locator('.feature-region-card');assert.ok(await cards.count()>0);for(const label of await page.locator('.feature-region-basis').allTextContents())assert.equal(label,'依控制器類別');assert.equal(await page.locator('.feature-region-progress').count(),await cards.count());
   await basis.selectOption('url');for(const label of await page.locator('.feature-region-basis').allTextContents())assert.equal(label,'依網址前段');assert.equal(await page.locator('.feature-region-progress').count(),await cards.count());
  }finally{await browser.close();}
 });
 
 test('WP36 buttons and APIs use the full workspace when no item is selected',async()=>{
- const browser=await chromium.launch();try{const page=await browser.newPage(),url=await fileFixture();await page.goto(url);await page.locator('#app[data-ready=true]').waitFor();await page.getByRole('button',{name:'功能',exact:true}).click();await page.getByRole('button',{name:'按鈕',exact:true}).click();
+ const browser=await chromium.launch();try{const page=await browser.newPage(),url=await fileFixture();await page.goto(url);await page.locator('#app[data-ready=true]').waitFor();await page.getByRole('button',{name:'功能地圖',exact:true}).click();await page.getByRole('button',{name:'功能',exact:true}).click();await page.getByRole('button',{name:'按鈕',exact:true}).click();
   assert.equal(await page.locator('.feature-region-card').count(),0);assert.equal(await page.locator('.shell>aside').isVisible(),false);assert.equal(await page.locator('.shell').getAttribute('data-right-panel-hidden'),'true');await page.getByRole('button',{name:'API',exact:true}).click();assert.equal(await page.locator('.shell>aside').isVisible(),false);assert.match(await page.locator('.shell').evaluate(el=>getComputedStyle(el).gridTemplateColumns),/^\d+(?:\.\d+)?px$/);
  }finally{await browser.close();}
 });

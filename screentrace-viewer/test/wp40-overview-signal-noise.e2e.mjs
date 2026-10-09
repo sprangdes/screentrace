@@ -1,3 +1,4 @@
+import {openScreen} from './decision-controls.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {chromium} from '../../screentrace-capture/node_modules/playwright/index.mjs';
@@ -60,14 +61,14 @@ test('screen summary lives under the focused title and in feature cards only',as
   const page=await browser.newPage({viewport:{width:1440,height:900},reducedMotion:'reduce'});
   await page.goto(await fileFixture(simulationFixture()));
   assert.equal(await page.locator('.screen-card .screen-summary-line').count(),0);
-  await page.locator('.screen-card[data-screen="a"]').click();
+  await openScreen(page,'a');
   await page.locator('.prototype-viewer .focus-breadcrumb+.screen-summary-line').waitFor();
   const focusSummary=page.locator('.prototype-viewer .focus-breadcrumb+.screen-summary-line');
   assert.match(await focusSummary.innerText(),/個畫面.*個按鈕/s);
   assert.equal(await focusSummary.evaluate(el=>getComputedStyle(el).maxHeight),'none');
   assert.equal(await focusSummary.evaluate(el=>el.scrollHeight<=el.clientHeight),true);
   await page.getByRole('button',{name:'地圖',exact:true}).click();
-  await page.getByRole('button',{name:'功能',exact:true}).click();
+  await page.getByRole('button',{name:'功能地圖',exact:true}).click();await page.getByRole('button',{name:'功能',exact:true}).click();
   const regionSummary=page.locator('.feature-region-card .screen-summary-line').first();
   assert.ok(await regionSummary.count()>0);
   assert.equal(await regionSummary.evaluate(el=>getComputedStyle(el).maxHeight),'none');

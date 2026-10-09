@@ -1,3 +1,4 @@
+import {openScreen} from './decision-controls.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {chromium} from '../../screentrace-capture/node_modules/playwright/index.mjs';
@@ -9,11 +10,11 @@ function tenScreenFixture(){
  data.graph.behaviors=[];data.graph.apiContracts=[];data.graph.validationRules=[];data.preview.screens=screens.map(screen=>({graphScreenId:screen.id,width:1280,height:900}));data.preview.elements=[];data.documents=Object.fromEntries(screens.map(screen=>[screen.id,'<html><body><h1>合成畫面</h1><a id="global-nav">首頁</a></body></html>']));return data;
 }
 
-test('WP41 top bar has four action groups and overflow menu exposes every moved action',async()=>{
+test('WP41 top bar exposes the added delivery action and overflow menu and overflow menu exposes every moved action',async()=>{
  const browser=await chromium.launch();
  try{
   const page=await browser.newPage({viewport:{width:1440,height:900},reducedMotion:'reduce'});page.setDefaultTimeout(4000);await page.goto(await fileFixture());
-  const actions=page.locator('.topbar-actions');assert.equal(await actions.locator(':scope > *').count(),4);
+  const actions=page.locator('.topbar-actions');assert.equal(await actions.locator(':scope > *').count(),5);
   assert.equal(await actions.locator('.review-workflow-control [data-review-progress]').count(),1);
   assert.equal(await actions.locator('.review-workflow-control .next-undecided').count(),1);
   const menu=page.locator('.topbar-more'),menuSummary=page.locator('.topbar-more>summary');await menuSummary.click();
@@ -39,13 +40,13 @@ test('WP41 workflow segment opens the dashboard and advances independently',asyn
 test('WP41 resizable details panel supports pointer, keyboard, persistence and storage failure',async()=>{
  const browser=await chromium.launch();
  try{
-  const page=await browser.newPage({viewport:{width:1440,height:900},reducedMotion:'reduce'});page.setDefaultTimeout(4000);await page.goto(await fileFixture());
+  const page=await browser.newPage({viewport:{width:1440,height:900},reducedMotion:'reduce'});page.setDefaultTimeout(4000);await page.goto(await fileFixture());await openScreen(page,'a');
   const handle=page.getByRole('separator',{name:'調整資訊欄寬度'}),aside=page.locator('.shell>aside'),initial=await aside.boundingBox();assert.ok(initial);
   await handle.focus();await page.keyboard.press('ArrowLeft');const keyboard=await aside.boundingBox();assert.ok(keyboard&&keyboard.width<initial.width);
   await handle.focus();await page.keyboard.press('End');assert.equal(Number(await handle.getAttribute('aria-valuenow')),720);
   const box=await handle.boundingBox();assert.ok(box);await page.mouse.move(box.x+box.width/2,box.y+box.height/2);await page.mouse.down();await page.mouse.move(box.x+60,box.y+box.height/2);await page.mouse.up();const moved=await aside.boundingBox();assert.ok(moved&&moved.width>600&&moved.width<720);
-  await page.reload();assert.equal((await aside.boundingBox()).width,moved.width);
-  const blocked=await browser.newPage({viewport:{width:1440,height:900}});await blocked.addInitScript(()=>Object.defineProperty(window,'localStorage',{get(){throw new Error('storage disabled');}}));await blocked.goto(await fileFixture());assert.equal(Number(await blocked.getByRole('separator',{name:'調整資訊欄寬度'}).getAttribute('aria-valuenow')),320);
+  await page.reload();await openScreen(page,'a');assert.equal((await aside.boundingBox()).width,moved.width);
+  const blocked=await browser.newPage({viewport:{width:1440,height:900}});await blocked.addInitScript(()=>Object.defineProperty(window,'localStorage',{get(){throw new Error('storage disabled');}}));await blocked.goto(await fileFixture());await openScreen(blocked,'a');assert.equal(Number(await blocked.getByRole('separator',{name:'調整資訊欄寬度'}).getAttribute('aria-valuenow')),320);
   await blocked.close();
   await page.locator('.panel-collapse').click();assert.equal(await page.locator('.shell').getAttribute('data-right-panel-hidden'),'true');await page.locator('.topbar-more>summary').click();await page.locator('.topbar-menu [role="menuitem"]').filter({hasText:'展開右側欄'}).click();assert.equal(await page.locator('.shell').getAttribute('data-right-panel-hidden'),'false');
  }finally{await browser.close();}

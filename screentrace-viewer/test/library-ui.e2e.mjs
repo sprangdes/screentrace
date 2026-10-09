@@ -4,7 +4,7 @@ import {readFile} from 'node:fs/promises';
 import {chromium,firefox,webkit} from '../../screentrace-capture/node_modules/playwright/index.mjs';
 import {fileFixture} from './fixture.mjs';
 import {mdFixture} from './md-fixture.mjs';
-import {setDecision} from './decision-controls.mjs';
+import {openScreen, setDecision} from './decision-controls.mjs';
 
 for(const engine of process.env.ST_BROWSERS?.split(',')||['chromium'])test(`${engine}: library suggestions use requester language and keep technical values collapsed`,async()=>{
  const browser=await({chromium,firefox,webkit}[engine]).launch();
@@ -16,7 +16,7 @@ for(const engine of process.env.ST_BROWSERS?.split(',')||['chromium'])test(`${en
   const url=await fileFixture(data),page=await browser.newPage();
   await page.goto(url);
   await setDecision(page.locator('[data-screen-review="a"]'),'KEEP');
-  await page.locator('.screen-card[data-screen="a"]').click();
+  await openScreen(page,'a');
   await page.locator('[data-component="shared"]').click();
   const details=page.locator('[data-library-details]');await details.waitFor();
   const text=await details.innerText();

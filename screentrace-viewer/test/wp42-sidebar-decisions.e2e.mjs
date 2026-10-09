@@ -7,7 +7,7 @@ test('sidebar screen decisions are quiet by default, reveal on hover/focus/long 
  const browser=await chromium.launch();
  try{
   const page=await browser.newPage({viewport:{width:1440,height:900},hasTouch:true});
-  await page.goto(await fileFixture(fixture()));
+  await page.goto(await fileFixture(fixture()));await page.getByRole('button',{name:'功能地圖',exact:true}).click();
   const row=page.locator('.sidebar-screen-row').filter({has:page.locator('[data-screen-list="a"]')}).first();
   const choices=row.locator('.decision-buttons');
   assert.equal(await choices.evaluate(el=>getComputedStyle(el).opacity),'0');

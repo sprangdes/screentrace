@@ -1,3 +1,4 @@
+import {openScreen} from './decision-controls.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {chromium} from '../../screentrace-capture/node_modules/playwright/index.mjs';
@@ -25,7 +26,7 @@ test('WP42 public names stay readable in screen details, button table, global se
  try{
   const page=await browser.newPage({viewport:{width:1440,height:900},reducedMotion:'reduce'});page.setDefaultTimeout(4000);
   await page.goto(await fileFixture(namingFixture()));
-  await page.locator('.screen-card[data-screen="a"]').click();
+  await openScreen(page,'a');
   const list=page.locator('.action-items');await list.waitFor();
   const labels=await list.locator('[data-component]').allInnerTexts();
   assert.ok(labels.some(label=>label.includes('Find Owner')));
@@ -65,7 +66,7 @@ test('WP42 names ignore reconstructed sample text and use the shared cross-scree
  try{
   const page=await browser.newPage({viewport:{width:1440,height:900},reducedMotion:'reduce'});page.setDefaultTimeout(4000);await page.goto(await fileFixture(data));
   const expected='連結（位於導覽列）';
-  await page.locator('.screen-card[data-screen="a"]').click();
+  await openScreen(page,'a');
   assert.match(await page.locator('.action-items').innerText(),new RegExp(expected));
   assert.doesNotMatch(await page.locator('.action-items').innerText(),/Alex Johnson|連結 1|Owners Home 畫面/);
   await page.locator('.flow-outline summary').click();await page.locator('.flow-outline-node').first().waitFor();

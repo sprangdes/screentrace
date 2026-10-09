@@ -1,3 +1,4 @@
+import {openScreen} from './decision-controls.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {chromium} from '../../screentrace-capture/node_modules/playwright/index.mjs';
@@ -51,7 +52,7 @@ test('WP37 docked dashboard leaves REMOVE impact visible without closing',async(
  try{
   const page=await browser.newPage({viewport:{width:1440,height:900},reducedMotion:'reduce'});page.setDefaultTimeout(4000);
   await page.goto(await fileFixture(simulationFixture()));
-  await page.locator('.screen-card[data-screen="a"]').click();
+  await openScreen(page,'a');
   await page.locator('.preview[aria-busy="false"]').waitFor();
   await page.locator('[data-review-progress]').click();
   const dashboard=page.locator('.review-progress-panel');assert.ok(await dashboard.isVisible());
@@ -72,7 +73,7 @@ test('WP37 remove impact shows known inbound links, newly removable APIs, compon
   const url=await fileFixture(data);await page.goto(url);
   await page.evaluate(()=>localStorage.setItem('screentrace:review:v1:%E6%B8%AC%E8%A9%A6%E6%87%89%E7%94%A8:'+('a'.repeat(64)),JSON.stringify({format:'screentrace-review',version:1,schemaVersion:'2.2',application:'測試應用',fingerprint:'a'.repeat(64),screenDecisions:{},componentDecisions:{b:{back:'KEEP'}}})));
   await page.reload();
-  await page.locator('.screen-card[data-screen="a"]').click();await page.locator('.preview[aria-busy="false"]').waitFor();
+  await openScreen(page,'a');await page.locator('.preview[aria-busy="false"]').waitFor();
   await page.locator('.prototype-toolbar [role="radio"][data-decision="REMOVE"]').click();
   const impact=page.locator('.decision-impact');
   assert.ok(await impact.isVisible());assert.match(await impact.innerText(),/導向此畫面的其他按鈕／畫面/);

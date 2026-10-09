@@ -19,3 +19,14 @@ WP45 adds the exact `交付清單 · 已決定 N / 總數` action. It retains th
 - Counts and labels are computed from each graph; screenshot figures are not copied into the UI.
 - The design screenshots intentionally differ from the live data and from four §8.1 cases: the map keeps relationship edges, screen review uses the complete viewer, delivery does not add a progress-file format, and the queue lists all screens.
 - The retained progress and direct-export controls make the top bar denser than the mock. They preserve already accepted behavior; the new delivery action is available alongside them.
+
+## Authorized regression expectation updates (§2.4)
+
+| Test | Previous expectation | Current expectation | Reason and old-implementation evidence |
+|---|---|---|---|
+| `WP41 top bar exposes the added delivery action and overflow menu exposes every moved action` in `r12-wp41.e2e.mjs` | Four direct action groups | Five direct action groups | WP45 adds the separately visible delivery-list action. Running the updated assertion against the pre-WP45 `c10afad` snapshot failed at the count: actual 4, expected 5. The final implementation passes. |
+| `WP46 page review has a grouped queue, complete center preview, always-visible rationale and explicit screen decisions` in `wp46-review-workspace.e2e.mjs` | No assertion that the dashboard remains attached after replacing the sidebar | Added assertion that the visible dashboard is a direct child of `body` | WP46 replaces the sidebar content with the full-screen queue. On the pre-fix `09159dc` snapshot the new assertion timed out waiting for `body > .review-progress-panel`; the final implementation passes. |
+| `UI2 leaves undecided cards quiet and exposes quick decisions without a review mode` in `r4-canvas.e2e.mjs` | Tooltip title `動態資料為範例值` | Visible preview notice `示意畫面：資料為範例值` | The title-only expectation did not verify what the reviewer sees in the complete preview. Against pre-WP46 `45f83ad`, the visible text was only `示意`, so the revised assertion failed. |
+| `review composite selections, inherited state, statistics, filtering, conflicts and local restore` in `review.e2e.mjs` | Conflict details only | Retained the full detail assertion and added dashboard summary `衝突 1 個` | WP46 moves the workflow summary into the dashboard while preserving detailed conflict evidence. On `45f83ad` the new dashboard control was absent, so the new assertion timed out; the final implementation passes. |
+
+These are the only changed existing expectations and added layout assertions. The existing detailed conflict assertion remains unchanged; no graph, security, decision, Markdown, golden, determinism, or simulation assertions were altered.
