@@ -54,7 +54,7 @@ test('WP41 resizable details panel supports pointer, keyboard, persistence and s
 test('WP41 overview fit uses card and relation bounds, and refits after global navigation and resize',async()=>{
  const browser=await chromium.launch();
  try{
-  const page=await browser.newPage({viewport:{width:1440,height:900},reducedMotion:'reduce'});page.setDefaultTimeout(4000);await page.goto(await fileFixture(tenScreenFixture()));
+  const page=await browser.newPage({viewport:{width:1440,height:900},reducedMotion:'reduce'});page.setDefaultTimeout(4000);await page.goto(await fileFixture(tenScreenFixture()));await page.locator('.primary-tabs button').nth(3).click();
   await page.locator('.canvas[data-fitted="true"]').waitFor();
   const coverage=async()=>page.evaluate(()=>{const canvas=document.querySelector('.canvas'),world=document.querySelector('.world'),cards=[...world.querySelectorAll('.screen-card')],zoom=Number(world.style.getPropertyValue('--canvas-zoom')||1);const rs=cards.map(e=>e.getBoundingClientRect()),left=Math.min(...rs.map(r=>r.left)),right=Math.max(...rs.map(r=>r.right)),top=Math.min(...rs.map(r=>r.top)),bottom=Math.max(...rs.map(r=>r.bottom)),w=Math.max(1,canvas.clientWidth-48),h=Math.max(1,canvas.clientHeight-80);return {width:(right-left)/w,height:(bottom-top)/h,zoom};});
   let before=await coverage();assert.ok(Math.max(before.width,before.height)>=.85,JSON.stringify(before));
