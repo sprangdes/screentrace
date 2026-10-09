@@ -66,7 +66,7 @@ class StrutsR16TilesBoundaryTest {
     assertTrue(graph.nodes().stream().anyMatch(node->node.type()==NodeType.SCREEN&&node.source().file().endsWith("unrouted-fragment.jsp")),graph.nodes().stream().filter(node->node.type()==NodeType.SCREEN).toList().toString());
   }
 
-  @Test void tileTemplateControlsAreGroupedIntoDirectlyForwardedJspWhenItsSlotIsThatPage()throws Exception{
+  @Test void unreferencedTileTemplateRetainsItsOwnScreenAndControls()throws Exception{
     file("src/main/webapp/WEB-INF/web.xml","<web-app><servlet><servlet-name>action</servlet-name><servlet-class>org.apache.struts.action.ActionServlet</servlet-class></servlet><servlet-mapping><servlet-name>action</servlet-name><url-pattern>*.do</url-pattern></servlet-mapping></web-app>");
     file("src/main/webapp/WEB-INF/struts-config.xml","<struts-config><action-mappings><action path='/home' type='sample.Home'><forward name='ok' path='/WEB-INF/jsp/page.jsp'/></action></action-mappings></struts-config>");
     file("tiles-defs.xml","<tiles-definitions><definition name='base' path='/WEB-INF/jsp/layout.jsp'><put name='body' value='/WEB-INF/jsp/page.jsp'/></definition></tiles-definitions>");
@@ -74,13 +74,13 @@ class StrutsR16TilesBoundaryTest {
     file("src/main/webapp/WEB-INF/jsp/page.jsp","<h1>Page</h1>");
 
     var graph=analyze();
-    var page=graph.nodes().stream().filter(node->node.type()==NodeType.SCREEN&&node.name().equals("page")).findFirst().orElseThrow();
-    assertFalse(graph.nodes().stream().anyMatch(node->node.type()==NodeType.SCREEN&&node.source().file().endsWith("layout.jsp")));
-    assertTrue(graph.relationships().stream().anyMatch(edge->edge.type()==EdgeType.CONTAINS&&edge.from().equals(page.id())&&graph.nodes().stream().anyMatch(node->node.id().equals(edge.to())&&"layout-action".equals(node.attributes().get("id")))),graph.nodes().toString()+"\n"+graph.relationships().toString());
-    assertTrue(graph.behaviors().stream().anyMatch(behavior->behavior.triggerId().equals(page.id())&&behavior.type()==BehaviorType.CALL_API&&behavior.expression().contains("/tiles-layout-api")),graph.relationships().stream().filter(edge->edge.type()==EdgeType.INCLUDES).toList().toString()+"\n"+graph.nodes().stream().filter(node->node.type()==NodeType.VIEW).toList());
+    var layout=graph.nodes().stream().filter(node->node.type()==NodeType.SCREEN&&node.name().equals("base")).findFirst().orElseThrow();
+    assertTrue(graph.relationships().stream().anyMatch(edge->edge.type()==EdgeType.CONTAINS&&edge.from().equals(layout.id())&&graph.nodes().stream().anyMatch(node->node.id().equals(edge.to())&&"layout-action".equals(node.attributes().get("id")))),graph.nodes().toString()+"\n"+graph.relationships().toString());
+    assertFalse(graph.relationships().stream().anyMatch(edge->edge.type()==EdgeType.RENDERS&&edge.to().equals(layout.id())));
+    assertTrue(graph.behaviors().stream().anyMatch(behavior->behavior.triggerId().equals(layout.id())&&behavior.type()==BehaviorType.CALL_API&&behavior.expression().contains("/tiles-layout-api")),graph.behaviors()+"\n"+graph.diagnostics());
   }
 
-  @Test void tileTemplateScriptIsOwnedByForwardedJspEvenWhenItHasNoInteractiveMarkup()throws Exception{
+  @Test void standaloneTileTemplateScriptRemainsAttachedToItsUnroutedScreen()throws Exception{
     file("src/main/webapp/WEB-INF/web.xml","<web-app><servlet><servlet-name>action</servlet-name><servlet-class>org.apache.struts.action.ActionServlet</servlet-class></servlet><servlet-mapping><servlet-name>action</servlet-name><url-pattern>*.do</url-pattern></servlet-mapping></web-app>");
     file("src/main/webapp/WEB-INF/struts-config.xml","<struts-config><action-mappings><action path='/home' type='sample.Home'><forward name='ok' path='/WEB-INF/jsp/page.jsp'/></action></action-mappings></struts-config>");
     file("tiles-defs.xml","<tiles-definitions><definition name='base' path='/WEB-INF/jsp/layout.jsp'><put name='body' value='/WEB-INF/jsp/page.jsp'/></definition></tiles-definitions>");
@@ -88,7 +88,7 @@ class StrutsR16TilesBoundaryTest {
     file("src/main/webapp/WEB-INF/jsp/page.jsp","<h1>Page</h1>");
 
     var graph=analyze();
-    var page=graph.nodes().stream().filter(node->node.type()==NodeType.SCREEN&&node.name().equals("page")).findFirst().orElseThrow();
-    assertTrue(graph.behaviors().stream().anyMatch(behavior->behavior.triggerId().equals(page.id())&&behavior.type()==BehaviorType.CALL_API&&behavior.expression().contains("/tiles-layout-api")),graph.relationships().stream().filter(edge->edge.type()==EdgeType.INCLUDES).toList().toString()+"\n"+graph.nodes().stream().filter(node->node.type()==NodeType.VIEW).toList());
+    var layout=graph.nodes().stream().filter(node->node.type()==NodeType.SCREEN&&node.name().equals("base")).findFirst().orElseThrow();
+    assertTrue(graph.behaviors().stream().anyMatch(behavior->behavior.triggerId().equals(layout.id())&&behavior.type()==BehaviorType.CALL_API&&behavior.expression().contains("/tiles-layout-api")),graph.behaviors()+"\n"+graph.diagnostics());
   }
 }
