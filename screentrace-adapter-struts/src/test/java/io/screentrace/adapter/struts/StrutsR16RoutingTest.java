@@ -57,6 +57,47 @@ class StrutsR16RoutingTest {
     assertEquals(2, graph.relationships().stream().filter(edge -> edge.type() == EdgeType.TRIGGERS && edge.to().equals(endpoints.get(0).id())).count());
   }
 
+  @Test void provenMappingMarksMergedCallerConfirmedAndCarriesMappingEvidence() throws Exception {
+    actionServlet("*.do", "/WEB-INF/struts-config.xml");
+    config("<action path=\"/save\" type=\"sample.SaveAction\"/>");
+    file("src/main/webapp/page.jsp", "<html:form action=\"/save.do\"><html:submit value=\"Save\"/></html:form><script>fetch('/save.do',{method:'POST'});</script>");
+    file("src/main/java/sample/SaveAction.java", "package sample; class SaveAction extends Action { public ActionForward execute(ActionMapping m, ActionForm f, HttpServletRequest q, HttpServletResponse s){ return null; } }");
+
+    var graph = analyze();
+    var endpoint = graph.nodes().stream().filter(node -> node.type() == NodeType.ENDPOINT).findFirst().orElseThrow();
+    assertTrue(endpoint.attributes().getOrDefault("aliases", "").contains("/save"));
+    var caller = graph.relationships().stream().filter(edge -> edge.type() == EdgeType.CALLS && edge.to().equals(endpoint.id())).findFirst().orElseThrow();
+    assertEquals(Confidence.CONFIRMED, caller.confidence());
+    assertTrue(caller.evidence().stream().anyMatch(evidence -> Objects.toString(evidence.detail(), "").contains("servlet mapping 已證明")));
+  }
+
+  @Test void provenMappingsMergeAliasesIndependentlyAcrossModules() throws Exception {
+    file("src/main/webapp/WEB-INF/web.xml", """
+        <web-app><servlet><servlet-name>action</servlet-name><servlet-class>org.apache.struts.action.ActionServlet</servlet-class>
+          <init-param><param-name>config/admin</param-name><param-value>/WEB-INF/struts-config-admin.xml</param-value></init-param>
+          <init-param><param-name>config/shop</param-name><param-value>/WEB-INF/struts-config-shop.xml</param-value></init-param>
+        </servlet><servlet-mapping><servlet-name>action</servlet-name><url-pattern>*.do</url-pattern></servlet-mapping></web-app>
+        """);
+    file("src/main/webapp/WEB-INF/struts-config-admin.xml", "<struts-config><action-mappings><action path=\"/save\" type=\"sample.AdminSave\"/></action-mappings></struts-config>");
+    file("src/main/webapp/WEB-INF/struts-config-shop.xml", "<struts-config><action-mappings><action path=\"/save\" type=\"sample.ShopSave\"/></action-mappings></struts-config>");
+
+    var graph = analyze();
+    var endpoints = graph.nodes().stream().filter(node -> node.type() == NodeType.ENDPOINT).toList();
+    assertEquals(2, endpoints.size());
+    assertTrue(endpoints.stream().anyMatch(node -> "/admin/save.do".equals(node.attributes().get("path")) && "/admin/save".equals(node.attributes().get("aliases"))));
+    assertTrue(endpoints.stream().anyMatch(node -> "/shop/save.do".equals(node.attributes().get("path")) && "/shop/save".equals(node.attributes().get("aliases"))));
+  }
+
+  @Test void unprovenServletMappingPreservesLegacyEndpointCandidatesAndAddsDiagnostic() throws Exception {
+    file("src/main/webapp/WEB-INF/web.xml", "<web-app><servlet-mapping><servlet-name>action</servlet-name><url-pattern>*.do</url-pattern></servlet-mapping></web-app>");
+    config("<action path=\"/save\" type=\"sample.SaveAction\"/>");
+
+    var graph = analyze();
+    assertTrue(graph.nodes().stream().anyMatch(node -> node.type() == NodeType.ENDPOINT && node.name().equals("ANY /save")));
+    assertTrue(graph.nodes().stream().anyMatch(node -> node.type() == NodeType.ENDPOINT && node.name().equals("ANY /save.do")));
+    assertTrue(graph.diagnostics().stream().anyMatch(diagnostic -> diagnostic.code().equals("STRUTS_SERVLET_MAPPING_UNRESOLVED") && diagnostic.message().contains("未證明")));
+  }
+
   @Test void configuredPrefixMappingPublishesPrefixAndDoesNotInventAnExtension() throws Exception {
     actionServlet("/do/*", "/WEB-INF/struts-config.xml");
     config("<action path=\"/save\" type=\"sample.SaveAction\"/>");
@@ -105,7 +146,7 @@ class StrutsR16RoutingTest {
     var index = graph.nodes().stream().filter(node -> node.type() == NodeType.SCREEN && node.attributes().getOrDefault("view", "").endsWith("index.jsp")).findFirst().orElseThrow();
     var welcome = graph.nodes().stream().filter(node -> node.type() == NodeType.SCREEN && node.attributes().getOrDefault("view", "").endsWith("welcome.jsp")).findFirst().orElseThrow();
     assertTrue(graph.nodes().stream().anyMatch(node -> node.type() == NodeType.ENDPOINT && "/".equals(node.attributes().get("path"))));
-    assertTrue(graph.relationships().stream().anyMatch(edge -> edge.type() == EdgeType.NAVIGATES_TO && edge.to().equals(welcome.id())));
+    assertTrue(graph.relationships().stream().anyMatch(edge -> edge.type() == EdgeType.NAVIGATES_TO && edge.to().equals(welcome.id())), graph.nodes().stream().filter(node->node.type()==NodeType.COMPONENT).toList()+"\n"+graph.relationships()+"\n"+graph.diagnostics());
     assertTrue(graph.relationships().stream().anyMatch(edge -> edge.type() == EdgeType.RENDERS && edge.to().equals(index.id())));
   }
 
@@ -127,8 +168,8 @@ class StrutsR16RoutingTest {
     var graph = analyze();
     assertTrue(graph.nodes().stream().anyMatch(node -> node.type() == NodeType.ENDPOINT && node.attributes().getOrDefault("path", "").equals("/admin/save.do")));
     assertTrue(graph.nodes().stream().anyMatch(node -> node.type() == NodeType.ENDPOINT && node.attributes().getOrDefault("path", "").equals("/shop/save.do")));
-    assertTrue(graph.relationships().stream().anyMatch(edge -> edge.type() == EdgeType.TRIGGERS && graph.nodes().stream().anyMatch(node -> node.id().equals(edge.to()) && node.attributes().getOrDefault("path", "").equals("/admin/save.do"))));
-    assertTrue(graph.relationships().stream().anyMatch(edge -> edge.type() == EdgeType.NAVIGATES_TO && graph.nodes().stream().anyMatch(node -> node.id().equals(edge.to()) && node.type() == NodeType.SCREEN)));
+    assertTrue(graph.relationships().stream().anyMatch(edge -> edge.type() == EdgeType.TRIGGERS && graph.nodes().stream().anyMatch(node -> node.id().equals(edge.to()) && node.attributes().getOrDefault("path", "").equals("/admin/save.do"))), graph.nodes()+"\n"+graph.relationships()+"\n"+graph.diagnostics());
+    assertTrue(graph.relationships().stream().anyMatch(edge -> edge.type() == EdgeType.NAVIGATES_TO && graph.nodes().stream().anyMatch(node -> node.id().equals(edge.to()) && node.type() == NodeType.SCREEN)),graph.relationships()+"\n"+graph.diagnostics());
   }
 
   @Test void missingServletMappingKeepsLogicalAndLiteralPublicTargetsSeparate() throws Exception {
@@ -160,7 +201,7 @@ class StrutsR16RoutingTest {
 
     var graph = analyze();
     assertTrue(graph.nodes().stream().anyMatch(node -> node.type() == NodeType.HANDLER && node.name().contains("FormAction")));
-    assertTrue(graph.diagnostics().stream().noneMatch(diagnostic -> diagnostic.code().equals("STRUTS_FORWARD_UNRESOLVED")));
+    assertTrue(graph.diagnostics().stream().noneMatch(diagnostic -> diagnostic.code().equals("STRUTS_FORWARD_UNRESOLVED")),graph.diagnostics().toString());
     assertTrue(graph.relationships().stream().anyMatch(edge -> edge.type() == EdgeType.FORWARDS_TO && graph.nodes().stream().anyMatch(node -> node.id().equals(edge.to()) && node.type() == NodeType.SCREEN && node.attributes().getOrDefault("view", "").endsWith("home.jsp"))));
   }
 }
