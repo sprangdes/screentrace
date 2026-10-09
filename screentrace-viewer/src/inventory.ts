@@ -18,6 +18,24 @@ export interface ScreenEntryResult {
  autoRedirectEvidence:unknown[];
 }
 
+export type ApiSourceBasis='STATIC_URL'|'TEMPLATE_INFERENCE'|undefined;
+
+/** Uses the same §9.2 evidence rules wherever API source basis is presented. */
+export function apiSourceBasis(graph:Graph,endpointId:string):ApiSourceBasis{
+ const sources=(graph.relationships||[]).filter(edge=>edge.to===endpointId&&['CALLS','TRIGGERS'].includes(edge.type));
+ if(!sources.length)return undefined;
+ const parserNames=new Set(['RouteTemplateInference','RedirectInheritance','JavaScriptUrlTemplateInference']);
+ const hasStaticSource=(edge:any)=>{
+  const evidence=[...(edge.evidence||[])],node=graph.nodes.find(item=>item.id===edge.from),nodeEvidence=node?.evidence||[];
+  const staticEvidence=[...evidence,...nodeEvidence].some((item:any)=>['UrlResolution','JspUrlVariableResolver'].includes(item?.parser)&&item?.resolution==='CONFIRMED');
+  const staticComponent=node?.type==='COMPONENT'&&node.attributes?.targetStatus==='CONFIRMED'&&!!text(node.attributes?.target)&&nodeEvidence.some((item:any)=>['UrlResolution','JspUrlVariableResolver'].includes(item?.parser)&&item?.resolution==='CONFIRMED');
+  return staticEvidence||staticComponent;
+ };
+ if(sources.some(hasStaticSource))return 'STATIC_URL';
+ if(sources.every((edge:any)=>[...(edge.evidence||[])].some((item:any)=>parserNames.has(item?.parser))))return 'TEMPLATE_INFERENCE';
+ return undefined;
+}
+
 const text=(value:unknown):string=>typeof value==='string'?value.trim():'';
 const stable=(a:string,b:string)=>a<b?-1:a>b?1:0;
 
