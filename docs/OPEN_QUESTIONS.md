@@ -218,7 +218,8 @@
 - 可選方案 B：同時保留邏輯 path 與公開 URL，但明確表示為同一 endpoint 的別名，統計只計一次、呼叫來源共用。
 - 可選方案 C：保留目前兩筆 endpoint，各自呈現與推導狀態。
 - 影響範圍：Struts route 解析、JSP form/link 對應、API 狀態與 API 清單統計；不涉及 Spring URL 規則。
-- 狀態：待決定。稽核依據：R15 報告 WP53「誤判：表單呼叫來源被列為找不到」。
+- 狀態：已決定（2026-10-09）；需求方採方案 B，並補充：
+- 決定：邏輯 action path 與依 `web.xml` servlet mapping 展開的公開 URL 是**同一個 endpoint 的別名**，統計只計一次、呼叫來源共用。介面與搜尋以**公開 URL**（例如 `/SubmitLogon.do`）為主要顯示，邏輯 path 列為別名；以任一形式搜尋都能找到。forward／redirect 的 `path` 若寫成公開 URL（例如 `path="/MainMenu.do"`），必須依同一份 servlet mapping 正規化回 action path，再沿該 action 的 forward 找到畫面。servlet mapping 不可證明（缺 `web.xml`、多個候選）時，不猜測副檔名，維持兩者分開並記診斷。
 
 ## OQ-025 — Tiles layout/fragment 是否為可確認畫面
 
@@ -227,7 +228,8 @@
 - 可選方案 B：所有 Tiles definition 都列為 screen，包括可重用 layout；JSP fragment 仍不單列。
 - 可選方案 C：每個 JSP 與 Tiles definition 都保留為 screen，並在 UI 明確標出「版型／片段」類型。
 - 影響範圍：Tiles adapter、screen count、入口分類、縮圖與功能地圖。
-- 狀態：待決定。稽核依據：R15 報告 WP53「多判：Tiles 版型與片段顯示成獨立畫面」。
+- 狀態：已決定（2026-10-09）；需求方採方案 A。
+- 決定：只有被 action forward（或 global forward）指向的 Tiles definition，以及被直接 forward 的完整 JSP，才是畫面。只作為版型（被其他 definition `extends`）或只被 `put`／`insert` 的 JSP 是組成證據，不列為畫面；其中的按鈕依 R14 WP46 第 3 點歸入「頁首、頁尾的按鈕」類型的片段群組（群組名稱取片段檔名或 put 名稱）。畫面名稱取 definition 的 title put 值（若為常值）或主體 JSP 的可讀名稱，不顯示 `.base` 之類 definition 名。沒有任何 forward 指向的 page definition 依入口分類規則處理（可能為「完全找不到入口」）。
 
 ## OQ-026 — Struts + JSF 混合應用的元件支援範圍
 
@@ -236,4 +238,5 @@
 - 可選方案 B：Struts 支援僅限 Struts HTML/JSP tags；JSF 混合模組明確標示部分不支援，不把 JSF 元件列為已分析。
 - 可選方案 C：先保留現況，待有獨立 JSF adapter 工作包時再決定。
 - 影響範圍：JSP 元件掃描、`*.faces` URL mapping、JSF navigation/action 與 Struts endpoint caller 對應；不改動目標專案。
-- 狀態：待決定。稽核依據：R15 報告 WP53「漏判：JSF 元件不是 Struts `html:*`」。
+- 狀態：已決定（2026-10-09）；需求方採方案 B。
+- 決定：JSF 不在 REQUIREMENTS §1 的支援框架內，本階段不解析 JSF 元件。偵測到 FacesServlet 或 JSF taglib 時：輸出診斷 `UNSUPPORTED_COMPONENT_FRAMEWORK`（含檔名與行號）；報表首頁在「可能已經沒在用」上方顯示提醒（同 `CONTEXT_PATH_HINT` 的位置與樣式）：「這個專案有 N 個畫面使用 JSF 元件，ScreenTrace 不分析 JSF，相關畫面的按鈕與 API 呼叫來源可能漏列，請勿只憑本報告判定可移除」；使用 JSF 元件的畫面在逐頁確認的判斷依據中顯示同一提醒；md §8 分析限制列出這些畫面。JSF 元件不得被計為「知道會做什麼」或標成已解析。
