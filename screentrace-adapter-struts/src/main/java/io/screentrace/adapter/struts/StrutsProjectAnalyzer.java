@@ -315,7 +315,16 @@ public final class StrutsProjectAnalyzer {
     List<String> result=new ArrayList<>();
     for(String value:mapping.localForwards().values())result.addAll(resolveForwardScreens(value,mapping.module(),state,visited,depth+1,source));
     if(mapping.input()!=null&&!mapping.input().isBlank())result.addAll(resolveForwardScreens(mapping.input(),mapping.module(),state,visited,depth+1,source));
-    return result.stream().distinct().sorted().toList();
+    List<String> screens=result.stream().distinct().sorted().toList();String alias=publicPath(mapping.route(),state);
+    for(String screen:screens)addScreenRouteAlias(screen,alias,state);
+    return screens;
+  }
+
+  private static void addScreenRouteAlias(String screenId,String alias,State state) {
+    GraphNode screen=state.nodes.get(screenId);if(screen==null||alias==null||alias.isBlank())return;
+    Set<String> aliases=new TreeSet<>();String existing=screen.attributes().get("routeAliases");if(existing!=null&&!existing.isBlank())aliases.addAll(Arrays.asList(existing.split(";")));aliases.add(alias);
+    Map<String,String> attrs=new TreeMap<>(screen.attributes());attrs.put("routeAliases",String.join(";",aliases));
+    state.nodes.put(screenId,new GraphNode(screen.id(),screen.type(),screen.name(),attrs,screen.source(),screen.confidence(),screen.evidence()));
   }
 
   private static void addInteractions(JspAnalysis jsp,State state) throws IOException {
