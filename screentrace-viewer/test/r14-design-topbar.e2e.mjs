@@ -11,6 +11,7 @@ test('R14 WP45 top bar exposes the current delivery-list decision count',async()
     await page.locator('[data-first-run-guide] button', {hasText:'略過'}).click();
     const cta=page.locator('[data-delivery-progress]');
     assert.equal(await cta.innerText(),'交付清單 · 已決定 0 / 4');
+    assert.equal(await page.locator('#application').evaluate(node=>node.getBoundingClientRect().width>0),true);
     await cta.click();
     assert.equal(await page.locator('[data-delivery]').isVisible(),true);
   }finally{await browser.close();}
