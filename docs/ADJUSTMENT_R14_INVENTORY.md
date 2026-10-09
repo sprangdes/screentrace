@@ -516,3 +516,11 @@ eMusicStore 的部署 context path 為 `/eMusicStore`（需求方提供）。以
 2. **`REDIRECT` 仍以原始代碼顯示**：API 清單 `/cart/`、`deleteProduct/{productId}` 第二行仍是 `REDIRECT`。依 §11.1 第 3 項顯示「轉址」，原值放 tooltip。
 
 完成後：在 R14 報告「最終驗收收尾」補上 eMusicStore（有／無 context path）API 頁四類實測數字與逐 API 來源 basis 表；§5 完整驗證全綠後結案。另：收尾提交訊息前綴誤標為 `WP11:`，之後的提交請使用 `R14:`（既有提交不需改寫）。
+
+---
+
+## 13. R14 結案（需求方，2026-10-09）
+
+審查者以 HEAD（2b8ad32）唯讀重新分析 eMusicStore（設定 `/eMusicStore`）：API 頁「全部 7、使用中 2、推定使用中 4、找不到呼叫來源 1、可移除 0」，首頁「另有 4 個 API 的呼叫來源是推定的」，與 §12 修正後預期一致。**R14 結案。**
+
+留待下一輪的小問題（不重開 R14）：API 清單中 `ANY /cart/`、`ANY /admin/productInventory/deleteProduct/{productId}` 的方法徽章顯示為「轉址」，但列內第二行仍是原始分類 `REDIRECT`。應為方法徽章「任何方法」、分類行「轉址」（原值放 tooltip）。
