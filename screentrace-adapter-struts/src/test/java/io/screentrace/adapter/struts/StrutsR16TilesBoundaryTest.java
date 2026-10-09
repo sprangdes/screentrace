@@ -28,7 +28,7 @@ class StrutsR16TilesBoundaryTest {
     assertTrue(graph.relationships().stream().anyMatch(edge->edge.type()==EdgeType.CONTAINS&&edge.from().equals(outer.id())),"unrouted page definition must retain its controls");
   }
 
-  @Test void onlyForwardedTileDefinitionBecomesScreenAndItsJspControlsStayGrouped()throws Exception{
+  @Test void everyUnreferencedPageDefinitionRemainsAScreenAndItsJspControlsStayGrouped()throws Exception{
     file("src/main/webapp/WEB-INF/web.xml","<web-app><servlet><servlet-name>action</servlet-name><servlet-class>org.apache.struts.action.ActionServlet</servlet-class></servlet><servlet-mapping><servlet-name>action</servlet-name><url-pattern>*.do</url-pattern></servlet-mapping></web-app>");
     file("src/main/webapp/WEB-INF/struts-config.xml","<struts-config><action-mappings><action path='/home' type='sample.Home'><forward name='ok' path='home.page'/></action></action-mappings></struts-config>");
     file("tiles-defs.xml","<tiles-definitions><definition name='base' path='/WEB-INF/jsp/layout.jsp'><put name='body' value='/WEB-INF/jsp/body.jsp'/><put name='header' value='/header.jsp'/></definition><definition name='home.page' extends='base'><put-attribute name='heading' value='Home'/></definition><definition name='unused.page' extends='base'><put name='body' value='/WEB-INF/jsp/unused.jsp'/></definition></tiles-definitions>");
@@ -41,17 +41,19 @@ class StrutsR16TilesBoundaryTest {
 
     var graph=analyze();
     Set<String> screenNames=new TreeSet<>();graph.nodes().stream().filter(node->node.type()==NodeType.SCREEN).forEach(node->screenNames.add(node.name()));
-    assertEquals(Set.of("full","home.page"),screenNames);
+    assertEquals(Set.of("full","home.page","unused.page"),screenNames);
     var home=graph.nodes().stream().filter(node->node.type()==NodeType.SCREEN&&node.name().equals("home.page")).findFirst().orElseThrow();
     var contained=graph.relationships().stream().filter(edge->edge.type()==EdgeType.CONTAINS&&edge.from().equals(home.id())).map(edge->graph.nodes().stream().filter(node->node.id().equals(edge.to())).findFirst().orElseThrow()).toList();
     assertTrue(contained.stream().anyMatch(node->node.source().file().endsWith("body.jsp")&&"body-action".equals(node.attributes().get("id"))),contained.toString());
     assertTrue(contained.stream().anyMatch(node->node.source().file().endsWith("layout.jsp")&&"layout-action".equals(node.attributes().get("id"))),contained.toString());
     assertTrue(contained.stream().anyMatch(node->node.source().file().endsWith("header.jsp")&&"header-action".equals(node.attributes().get("id"))),contained.toString());
-    assertFalse(contained.stream().anyMatch(node->node.source().file().endsWith("unused.jsp")),contained.toString());
+    var unused=graph.nodes().stream().filter(node->node.type()==NodeType.SCREEN&&node.name().equals("unused.page")).findFirst().orElseThrow();
+    assertFalse(graph.relationships().stream().anyMatch(edge->Set.of(EdgeType.RENDERS,EdgeType.FORWARDS_TO).contains(edge.type())&&edge.to().equals(unused.id())));
+    assertTrue(graph.relationships().stream().anyMatch(edge->edge.type()==EdgeType.CONTAINS&&edge.from().equals(unused.id())&&graph.nodes().stream().anyMatch(node->node.id().equals(edge.to())&&node.source().file().endsWith("unused.jsp"))),graph.nodes().toString());
     assertTrue(graph.relationships().stream().anyMatch(edge->edge.type()==EdgeType.INCLUDES&&edge.from().equals(home.id())));
   }
 
-  @Test void jspContainingTilesInsertIsNotAStandaloneScreenEvenWhenNoDefinitionReferencesIt()throws Exception{
+  @Test void unreferencedTileFragmentsAndOrdinaryJspRemainScreens()throws Exception{
     file("src/main/webapp/WEB-INF/web.xml","<web-app><servlet><servlet-name>action</servlet-name><servlet-class>org.apache.struts.action.ActionServlet</servlet-class></servlet><servlet-mapping><servlet-name>action</servlet-name><url-pattern>*.do</url-pattern></servlet-mapping></web-app>");
     file("src/main/webapp/WEB-INF/struts-config.xml","<struts-config><action-mappings><action path='/home' type='sample.Home'><forward name='ok' path='home.page'/></action></action-mappings></struts-config>");
     file("tiles-defs.xml","<tiles-definitions><definition name='home.page' path='/WEB-INF/jsp/home.jsp'/></tiles-definitions>");
@@ -60,8 +62,8 @@ class StrutsR16TilesBoundaryTest {
     file("src/main/webapp/WEB-INF/jsp/unrouted-fragment.jsp","<p>Fragment only</p>");
 
     var graph=analyze();
-    assertFalse(graph.nodes().stream().anyMatch(node->node.type()==NodeType.SCREEN&&node.source().file().endsWith("orphan-layout.jsp")));
-    assertFalse(graph.nodes().stream().anyMatch(node->node.type()==NodeType.SCREEN&&node.source().file().endsWith("unrouted-fragment.jsp")),graph.nodes().stream().filter(node->node.type()==NodeType.SCREEN).toList().toString());
+    assertTrue(graph.nodes().stream().anyMatch(node->node.type()==NodeType.SCREEN&&node.source().file().endsWith("orphan-layout.jsp")));
+    assertTrue(graph.nodes().stream().anyMatch(node->node.type()==NodeType.SCREEN&&node.source().file().endsWith("unrouted-fragment.jsp")),graph.nodes().stream().filter(node->node.type()==NodeType.SCREEN).toList().toString());
   }
 
   @Test void tileTemplateControlsAreGroupedIntoDirectlyForwardedJspWhenItsSlotIsThatPage()throws Exception{
