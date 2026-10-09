@@ -21,3 +21,16 @@ test('R14 closeout 1 shares §9.2 API source basis between dashboard and API pag
   await inferred.click();assert.equal(await page.locator('[data-api-row="cart"]').count(),0,'STATIC_URL API must not be classified as inferred usage');
  }finally{await browser.close();}
 });
+
+test('R14 closeout 2 API status filters are exclusive and header totals are concise',async()=>{
+ const data=fixture();data.graph.nodes=data.graph.nodes.filter(item=>item.type!=='ENDPOINT');
+ data.graph.relationships=data.graph.relationships.filter(edge=>!['ep','unused'].includes(edge.to));
+ for(let i=0;i<7;i++)data.graph.nodes.push(node(`api-${i}`,'ENDPOINT',`API ${i}`,{path:`/api/${i}`,method:'GET',category:'REST_API'}));
+ for(let i=0;i<12;i++)data.graph.nodes.push(node(`route-${i}`,'ENDPOINT',`網址 ${i}`,{path:`/page/${i}`,method:'GET',category:'MVC_SCREEN'}));
+ for(let i=0;i<6;i++){const id=`caller-${i}`;data.graph.nodes.push(node(id,'COMPONENT',`呼叫 ${i}`,{kind:'LINK'}));data.graph.relationships.push({id:`owner-${i}`,type:'CONTAINS',from:'a',to:id});data.graph.relationships.push({id:`api-call-${i}`,type:'CALLS',from:id,to:`api-${i}`,confidence:i===0?'CONFIRMED':'INFERRED',evidence:[{parser:i===0?'UrlResolution':'RouteTemplateInference',resolution:i===0?'CONFIRMED':'INFERRED',source:{file:'web/page.jsp',line:i+1}}]});}
+ const browser=await chromium.launch();try{const page=await browser.newPage({viewport:{width:1440,height:900}});await page.goto(await fileFixture(data));await page.locator('#app[data-ready=true]').waitFor();await page.locator('.primary-tabs button').nth(4).click();await page.locator('.api-page').waitFor();
+  assert.equal((await page.locator('.api-total-summary').innerText()).trim(),'API 7 · 畫面網址 12');
+  const filters=page.locator('.api-state-filters');for(const [key,count]of [['IN_USE',1],['INFERRED_USAGE',5],['UNREFERENCED',1],['REMOVABLE',0],['ALL',7]]){const text=await filters.locator(`[data-api-filter="${key}"]`).innerText();assert.equal(Number(text.match(/(\d+)/)[1]),count,key);}
+  assert.equal(await page.locator('[data-endpoint-group="UNCLASSIFIED"]').count(),0);
+ }finally{await browser.close();}
+});
