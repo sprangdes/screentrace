@@ -8,7 +8,7 @@
 
 只有在 `web.xml` 能唯一證明 Struts ActionServlet mapping 時，action path 與公開 URL 才合併為同一個 endpoint。公開 URL 是 endpoint 的主要 `path`；`logicalPath` 與 `aliases` 保留 action path，呼叫來源只連到該 endpoint 一次。無法證明或 mapping 有多個候選時，維持 R16 前的 endpoint 候選與信心，另發出 mapping 未證明診斷。Viewer 的 API 全域搜尋同時檢查公開 path、logicalPath 與 aliases。
 
-Tiles definition 一律保留為 `VIEW`，只有 Struts forward 唯一指向的 definition 才建立 `SCREEN`。被 Tiles template 或 JSP-valued put 引用的 JSP 不因檔案存在而自動成為畫面；若被 Struts forward 或 welcome-file 直接指向，仍建立獨立畫面。被使用的 template 與 JSP 片段維持 `VIEW`／`INCLUDES` 關係，片段控制項依 definition 歸屬到畫面；未被導向的 definition 不產生畫面或畫面控制項。
+Tiles definition 一律保留為 `VIEW`，只有 Struts forward 唯一指向的 definition 才建立 `SCREEN`。被 Tiles template 或 JSP-valued put 引用的 JSP 不因檔案存在而自動成為畫面；以 `/name.jsp` 表示的 web root 檔案與 `/WEB-INF/...` 檔案都依唯一來源檔解析。若 JSP 被 Struts forward 或 welcome-file 直接指向，仍建立獨立畫面。被使用的 template 與 JSP 片段維持 `VIEW`／`INCLUDES` 關係，片段控制項依 definition 歸屬到畫面；未被導向的 definition 不產生畫面或畫面控制項。
 
 Action forward 鏈導向畫面時，畫面另保留已證明的入口網址於通用 `routeAliases` 屬性；GraphIntegrityValidator 接受元件目標與此清單中的精確網址相符。沒有宣告的其他目標仍會被拒絕。這讓 `/start.do` 經 `/next.do` forward 到同一畫面的已知導覽可通過完整性檢查。
 
@@ -17,5 +17,6 @@ Action forward 鏈導向畫面時，畫面另保留已證明的入口網址於�
 - `StrutsR16RoutingTest` 覆蓋 mapping 已證明、缺少或多候選時的 endpoint 身分與診斷。
 - `r16-endpoint-alias-search.e2e.mjs` 驗證 API 全域搜尋可用 logical alias 與公開 path 找到同一 endpoint。
 - `StrutsR16TilesBoundaryTest.onlyForwardedTileDefinitionBecomesScreenAndItsJspControlsStayGrouped` 覆蓋 extends、JSP put、字串 put、被 forward 與未被 forward 的 definition、直接 forward JSP，以及 layout／fragment 控制項歸屬。
+- 同一測試也鎖定 web root `/header.jsp` 片段不成為畫面、但其按鈕仍歸到被導向 Tiles 畫面；舊版實際失敗為額外出現 `header` 畫面。
 - `GraphIntegrityValidatorTest.acceptsNavigationThroughAnExplicitScreenRouteAlias` 先行失敗（舊驗證回報 `Navigation target does not match screen route or view`），之後鎖定宣告過的畫面路由別名；`StrutsR16RoutingTest.actionLinkForwardChainDeclaresScreenRouteAliasForGraphValidation` 覆蓋完整 Struts forward 鏈。
 - R16 前已存在的測試與 fixture 未修改；OQ-028 授權的兩個 R16 新測試預期另記於 ADR 0073。

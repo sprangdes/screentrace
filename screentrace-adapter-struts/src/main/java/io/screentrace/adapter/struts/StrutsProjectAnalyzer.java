@@ -599,9 +599,11 @@ public final class StrutsProjectAnalyzer {
   }
 
   private static void removeImplicitScreen(String path,State state) {
-    String id=state.screens.remove(path);if(id==null)return;
-    state.nodes.remove(id);state.edges.entrySet().removeIf(entry->entry.getValue().from().equals(id)||entry.getValue().to().equals(id));
-    state.screens.entrySet().removeIf(entry->entry.getValue().equals(id));
+    String id=state.screens.get(path);
+    if(id==null){String viewId=state.viewIds.get(path);if(viewId==null){List<String> candidates=state.viewIds.values().stream().distinct().filter(candidate->{GraphNode view=state.nodes.get(candidate);String actual=view==null?null:view.attributes().get("view");return actual!=null&&actual.endsWith(path.startsWith("/")?path:"/"+path);}).toList();if(candidates.size()==1)viewId=candidates.get(0);}GraphNode view=viewId==null?null:state.nodes.get(viewId);String actualPath=view==null?null:view.attributes().get("view");if(actualPath!=null)id=state.screens.get(actualPath);}
+    if(id==null)return;String screenId=id;
+    state.nodes.remove(screenId);state.edges.entrySet().removeIf(entry->entry.getValue().from().equals(screenId)||entry.getValue().to().equals(screenId));
+    state.screens.entrySet().removeIf(entry->entry.getValue().equals(screenId));
   }
 
   private static String ensureTileScreen(String name,State state) {
@@ -617,7 +619,7 @@ public final class StrutsProjectAnalyzer {
       else if(target.endsWith(".jsp")||target.startsWith("/"))diagnostic(state,"Tiles 屬性目標未解析："+target,tile.source(),"TILES_REFERENCE_UNRESOLVED");
       if(target.endsWith(".jsp")) {
         state.tileFragmentOwners.computeIfAbsent(target,key->new TreeSet<>()).add(screen);
-        String targetView=state.viewIds.get(target);GraphNode targetViewNode=targetView==null?null:state.nodes.get(targetView);
+        String targetView=state.viewIds.get(target);if(targetView==null){List<String> matches=state.viewIds.values().stream().distinct().filter(candidate->{GraphNode candidateView=state.nodes.get(candidate);String actual=candidateView==null?null:candidateView.attributes().get("view");return actual!=null&&actual.endsWith(target.startsWith("/")?target:"/"+target);}).toList();if(matches.size()==1)targetView=matches.get(0);}GraphNode targetViewNode=targetView==null?null:state.nodes.get(targetView);
         if(targetViewNode!=null){String sourcePath=targetViewNode.attributes().get("view");if(sourcePath!=null)state.tileFragmentOwners.computeIfAbsent(sourcePath,key->new TreeSet<>()).add(screen);}
       }
     }
