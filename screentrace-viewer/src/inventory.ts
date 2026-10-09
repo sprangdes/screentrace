@@ -53,7 +53,7 @@ export function classifyScreenEntry(graph:Graph):Map<string,ScreenEntryResult>{
  return result;
 }
 
-export function entryClassLabel(value:ScreenEntryClass):string{return({AUTO_REDIRECT:'系統自動導向',NO_ENTRY:'完全找不到入口',ROUTE_ONLY:'有網址，但沒有連結進入',INFERRED_ENTRY:'入口是推定的',HAS_ENTRY:'有確定入口'})[value];}
+export function entryClassLabel(value:ScreenEntryClass):string{return({AUTO_REDIRECT:'系統自動導向',NO_ENTRY:'完全找不到入口',ROUTE_ONLY:'有網址，但沒有連結進入',INFERRED_ENTRY:'入口是推定的',HAS_ENTRY:'有入口的畫面'})[value];}
 
 export function apiEntryWarningCount(graph:Graph):number{
  return (graph.diagnostics||[]).filter((diagnostic:any)=>diagnostic?.code==='CONTEXT_PATH_HINT').reduce((sum:number,diagnostic:any)=>sum+(Array.isArray(diagnostic?.evidence?.calls)?diagnostic.evidence.calls.length:Array.isArray(diagnostic?.calls)?diagnostic.calls.length:0),0);
