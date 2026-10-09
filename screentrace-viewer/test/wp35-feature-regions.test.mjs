@@ -46,3 +46,13 @@ test('JSP directory grouping puts root views in the home area',async()=>{
  const regions=groupFeatureRegions(indexGraph(data),'jsp-directory');
  assert.deepEqual(regions.map(region=>[region.name,region.screenIds]),[['Owners',['nested-view']],['首頁與其他',['jsp-root','no-jsp','views-root']]]);
 });
+
+test('WP45 excludes a single-region strategy when another evidence basis separates screens',async()=>{
+ const {indexGraph,chooseFeatureGroupingBasis,groupFeatureRegions}=await Promise.all([ownModule('map'),ownModule('feature-regions')]).then(([map,regions])=>({...map,...regions}));
+ const data={schemaVersion:'2.2',application:{name:'同目錄不同功能'},nodes:[
+  {...screen('owner-list','/owners/list'),source:{file:'WEB-INF/views/list.jsp'}},
+  {...screen('owner-edit','/owners/edit'),source:{file:'WEB-INF/views/edit.jsp'}},
+  {...screen('product-list','/products'),source:{file:'WEB-INF/views/products.jsp'}}
+ ],relationships:[]};
+ const index=indexGraph(data);assert.equal(chooseFeatureGroupingBasis(index),'url');assert.equal(groupFeatureRegions(index).length,3);
+});
