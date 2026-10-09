@@ -16,6 +16,14 @@ class StrutsR16TilesBoundaryTest {
   private void file(String path,String text)throws Exception{Path target=root.resolve(path);Files.createDirectories(target.getParent());Files.writeString(target,text);}
   private ApplicationGraph analyze()throws Exception{return new StrutsProjectAnalyzer().analyze(new ProjectScanner().scan(root));}
 
+  @Test void wp10BehaviorSourceTuplesBeforeWp55RemainPresentAfterTilesDeduplication()throws Exception{
+    Path project=null;for(Path candidate=Path.of("").toAbsolutePath();candidate!=null;candidate=candidate.getParent())if(Files.isRegularFile(candidate.resolve("pom.xml"))&&Files.isDirectory(candidate.resolve("screentrace-core"))){project=candidate.resolve("fixtures/wp10/struts1");break;}
+    assertNotNull(project,"repository root");var graph=new StrutsProjectAnalyzer().analyze(new ProjectScanner().scan(project));
+    Set<String> before;try(var input=getClass().getResourceAsStream("/wp10-struts1-wp55-before-behavior-sources.txt")){assertNotNull(input);before=new TreeSet<>(new String(input.readAllBytes(),java.nio.charset.StandardCharsets.UTF_8).lines().filter(line->!line.isBlank()).toList());}
+    Set<String> after=new TreeSet<>();for(var behavior:graph.behaviors())for(var proof:behavior.evidence())if(proof.source()!=null&&!proof.source().file().equals("."))after.add(proof.source().file()+"\t"+proof.source().line()+"\t"+behavior.type().name());
+    Set<String> missing=new TreeSet<>(before);missing.removeAll(after);assertTrue(missing.isEmpty(),"WP55 removed behavior source tuples: "+missing);
+  }
+
   @Test void wp10FixtureKeepsUnroutedPageDefinitionAndDirectJspAsScreens()throws Exception{
     Path project=null;for(Path candidate=Path.of("").toAbsolutePath();candidate!=null;candidate=candidate.getParent())if(Files.isRegularFile(candidate.resolve("pom.xml"))&&Files.isDirectory(candidate.resolve("screentrace-core"))){project=candidate.resolve("fixtures/wp10/struts1");break;}
     assertNotNull(project,"repository root");assertTrue(Files.isDirectory(project),project.toString());
