@@ -419,7 +419,7 @@ eMusicStore 的部署 context path 為 `/eMusicStore`（需求方提供）。以
 
 1. **頂部列**：只保留品牌＋專案名、6 個主分頁、搜尋（圖示＋⌘K）、「交付清單 · 已決定 N / 總數」、「⋯」。移除「已確認 N／總數」按鈕與其箭頭（確認儀表板的內容已由首頁與交付清單承接）。「匯出 md」移入「⋯」選單第一項，直到 WP49 交付清單頁完成。1440、1280、1024px 寬時主分頁文字不得被截斷（實測「交付清單」分頁被裁成「交付清」），放不下時搜尋框收成圖示。
 2. **功能區域**：eMusicStore 仍為「首頁與其他：11」，違反 §2.2。依 §2.2 修正並驗收：eMusicStore 不得只有 1 區；R14 報告列出三種依據各自的區域數與單畫面區域數，以及選中的依據。
-3. **「找不到呼叫來源的 API」卡片**：只列 API（依 WP44 分類，`REST_API` 等非畫面路由），不列畫面網址（如 `POST /admin/productInventory/addProduct`、`ANY /login`）；渲染 `AUTO_REDIRECT` 畫面的路由一律不列；`origin=javascript-request` 的前端請求描述不計入（§7.4 提前適用於首頁）。開頭的「N 個 API」同樣排除前端請求描述（實測顯示 23，應為 19）。
+3. **「找不到呼叫來源的 API」卡片**：只列 API（依 WP44 分類，`REST_API` 等非畫面路由），不列畫面網址（如 `POST /admin/productInventory/addProduct`、`ANY /login`）；渲染 `AUTO_REDIRECT` 畫面的路由一律不列；`origin=javascript-request` 的前端請求描述不計入（§7.4 提前適用於首頁）。開頭的「N 個 API」只計 API 類別，不含畫面網址與前端請求描述（實測顯示 23；eMusicStore 應為 7：5 支 `/rest/cart` REST_API 與 2 支 REDIRECT 端點 `/cart/`、`deleteProduct/{productId}`）。
 4. **卡片列內容依 1-home.png**：
    - 推定入口畫面：第一行畫面名稱，第二行「從 <來源畫面>「<按鈕>」」。
    - 自動導向畫面：第二行白話說明（例如「進入 /admin 開頭的畫面但還沒登入時，會自動導向這裡」，由 evidence 的保護規則樣式組成），最下方一行「依據：<檔名> 第 <行> 行 <設定>」，只顯示檔名，不顯示 `src/main/webapp/WEB-INF/` 完整路徑。
