@@ -44,8 +44,10 @@ class StrutsR16TilesBoundaryTest {
     file("src/main/webapp/WEB-INF/struts-config.xml","<struts-config><action-mappings><action path='/home' type='sample.Home'><forward name='ok' path='/WEB-INF/jsp/home.jsp'/></action></action-mappings></struts-config>");
     file("src/main/webapp/WEB-INF/jsp/home.jsp","<h1>Home</h1>");
     file("src/main/webapp/WEB-INF/jsp/orphan-layout.jsp","<%@ taglib prefix='tiles' uri='http://struts.apache.org/tags-tiles' %><tiles:insert attribute='body'/><button>Layout action</button>");
+    file("src/main/webapp/WEB-INF/jsp/unrouted-fragment.jsp","<p>Fragment only</p>");
 
     var graph=analyze();
     assertFalse(graph.nodes().stream().anyMatch(node->node.type()==NodeType.SCREEN&&node.source().file().endsWith("orphan-layout.jsp")));
+    assertFalse(graph.nodes().stream().anyMatch(node->node.type()==NodeType.SCREEN&&node.source().file().endsWith("unrouted-fragment.jsp")));
   }
 }
