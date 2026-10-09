@@ -32,7 +32,7 @@ export function apiSourceBasis(graph:Graph,endpointId:string):ApiSourceBasis{
   return staticEvidence||staticComponent;
  };
  if(sources.some(hasStaticSource))return 'STATIC_URL';
- if(sources.every((edge:any)=>[...(edge.evidence||[])].some((item:any)=>parserNames.has(item?.parser))))return 'TEMPLATE_INFERENCE';
+ if(sources.every((edge:any)=>edge.confidence==='INFERRED'||[...(edge.evidence||[])].some((item:any)=>parserNames.has(item?.parser))))return 'TEMPLATE_INFERENCE';
  return undefined;
 }
 
