@@ -39,6 +39,10 @@ test('native Bootstrap and window.onload are source-only behaviors',()=>{
  assert.equal(a.behaviors.find(b=>b.type==='OPEN_DIALOG')?.status,'CONFIRMED');assert.equal(a.behaviors.find(b=>b.type==='CALL_API')?.event,'load');assert.equal(a.behaviors.find(b=>b.type==='CALL_API')?.status,'CONFIRMED');
  assert.equal(identifyLibrary('app.js',`const message='Bootstrap'; fetch('/must-not-skip')`),null);
 });
+test('AngularJS vendor runtime is identified and never treated as application behavior',()=>{
+ const source=`/* AngularJS v1.5.5 */ (function(){fetch('/vendor-noise');})();`;
+ assert.equal(identifyLibrary('src/main/webapp/angular.min.js',source),'angularjs');assert.deepEqual(analyze({sources:[{file:'src/main/webapp/angular.min.js',code:source}],dom}).behaviors,[]);
+});
 test('a present but dynamic HTTP method must not default to GET',()=>{
  const a=run(`fetch('/api',{method:userInput});$.ajax({url:'/api',type:obj[x]});`);
  assert.ok(a.behaviors.filter(b=>b.type==='CALL_API').every(b=>b.status==='UNRESOLVED'&&b.method===null));
