@@ -14,6 +14,7 @@ test('WP46 home regions show URL prefixes, friendly redirect evidence and only i
   node('inferred-api','ENDPOINT','Delete item',{path:'/api/items/{itemId}',httpMethod:'DELETE',category:'REST_API'})
  );
  data.graph.nodes.find(item=>item.id==='a').attributes.route='/owners/{ownerId}/edit';
+ data.graph.nodes.find(item=>item.id==='static-component').evidence=[{source:{file:'web/a.jsp',line:3},parser:'JspUrlVariableResolver',resolution:'CONFIRMED',detail:'巢狀 URL 常值定義；param 不解析'}];
  data.graph.nodes.find(item=>item.id==='redirect-screen').evidence=[{source:{file:'config/security.xml',line:49},parser:'Fixture',resolution:'CONFIRMED',detail:'設定鍵=LOGIN_PAGE；路徑=/login；受保護路徑=[/admin/**]'}];
  data.graph.relationships.push(
   {id:'root-contains',type:'CONTAINS',from:'root-screen',to:'shared',confidence:'CONFIRMED'},
