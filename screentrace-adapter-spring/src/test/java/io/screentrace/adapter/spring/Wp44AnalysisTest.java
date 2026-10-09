@@ -27,6 +27,11 @@ class Wp44AnalysisTest {
   file("src/main/webapp/WEB-INF/jsp/list.jsp","<a href=\"<spring:url value='/items/${item.id}'/>\">View</a>\n");
   var g=analyze();assertTrue(g.relationships().stream().anyMatch(e->e.type()==EdgeType.NAVIGATES_TO&&e.confidence()==Confidence.INFERRED));
  }
+ @Test void jspRouteInferenceFollowsMatchedHandlerRedirectToScreen()throws Exception{
+  file("src/main/java/Pages.java","import org.springframework.stereotype.*;import org.springframework.web.bind.annotation.*;@Controller class Pages{@GetMapping(\"/items/{id}\") String item(){return \"redirect:/items\";}@GetMapping(\"/items\") String list(){return \"list\";}}\n");
+  file("src/main/webapp/WEB-INF/jsp/list.jsp","<a href=\"<spring:url value='/items/${item.id}'/>\">Remove</a>\n");
+  var g=analyze();var screen=g.nodes().stream().filter(n->n.type()==NodeType.SCREEN&&n.attributes().getOrDefault("view","").endsWith("list.jsp")).findFirst().orElseThrow();assertTrue(g.relationships().stream().anyMatch(e->e.type()==EdgeType.NAVIGATES_TO&&e.to().equals(screen.id())&&e.confidence()==Confidence.INFERRED));
+ }
  @Test void cUrlUsesTheSeparateRouteProjectionAndAmbiguityKeepsEveryCandidate()throws Exception{
   file("src/main/java/Pages.java","import org.springframework.stereotype.*;import org.springframework.web.bind.annotation.*;@Controller class Pages{@GetMapping(\"/items/{id}\") String one(){return \"one\";}@GetMapping(\"/items/{key}\") String two(){return \"two\";}}\n");
   file("src/main/webapp/WEB-INF/jsp/list.jsp","<c:forEach items='${items}' var='item'><c:url value='/items/${item.id}' var='detail'/><a href='${detail}'>View</a></c:forEach>\n");
