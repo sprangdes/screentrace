@@ -7,7 +7,7 @@ test('WP36 table derives operable rows and merges shared navigation without losi
  const data=mdFixture();data.graph.nodes.find(node=>node.id==='shared').attributes={kind:'LINK',tag:'a'};const [map,catalog]=await Promise.all([ownModule('map'),ownModule('button-table')]),index=map.indexGraph(data.graph),rows=catalog.buttonTableRows(index);
  assert.ok(rows.some(row=>row.kind==='連結'&&row.members.some(member=>member.screenId==='a'&&member.componentId==='shared')));
  const global=rows.find(row=>row.global);assert.ok(global,'shared navigation must be represented by one display-only row');assert.equal(new Set(global.members.map(member=>member.screenId)).size,2);
- assert.equal(global.members.length,2);assert.match(global.name,/×2 個畫面$/);
+ assert.equal(global.members.length,2);assert.match(global.name,/出現在 2 個畫面$/);
 });
 
 test('WP36 batch decisions generate byte-identical Markdown to individual decisions',async()=>{

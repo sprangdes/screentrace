@@ -14,7 +14,7 @@ test('WP48 groups identical label and action signatures, and exposes divergent a
   {id:'run-b-target',type:'NAVIGATES_TO',from:'run-b',to:'target-two',confidence:'CONFIRMED'}
  );
  const [{indexGraph},{buttonTableRows}]=await Promise.all([ownModule('map'),ownModule('button-table')]);const rows=buttonTableRows(indexGraph(data.graph));
- const save=rows.find(row=>row.name==='Save');assert.equal(save?.members.length,2);assert.equal(save?.behaviorDifferent,false);
- const run=rows.find(row=>row.name==='Run');assert.equal(run?.behaviorDifferent,true);assert.equal(run?.members.length,2);assert.equal(run?.variants.length,2);assert.equal(run?.markable,false);
- assert.equal(rows.filter(row=>row.name==='Save'||row.name==='Run').length,2);
+ const save=rows.find(row=>row.name.startsWith('Save ·'));assert.equal(save?.members.length,2);assert.equal(save?.behaviorDifferent,false);
+ const run=rows.find(row=>row.name.startsWith('Run ·'));assert.equal(run?.behaviorDifferent,true);assert.equal(run?.members.length,2);assert.equal(run?.variants.length,2);assert.equal(run?.markable,false);
+ assert.equal(rows.filter(row=>row.name.startsWith('Save ·')||row.name.startsWith('Run ·')).length,2);
 });
