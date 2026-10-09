@@ -34,8 +34,8 @@ public final class StrutsProjectAnalyzer {
     for(Path config:inventory.strutsConfigFiles()) parseConfig(config,state);
     resolveConfiguredForwards(state);
     readWelcomeFiles(state);
+    materializeTileScreens(state);
     addInteractions(jsp,state);
-    pruneUnroutedTilesScreens(state);
     parseValidation(state);
     parseActionForms(state);
     return GraphIntegrityValidator.requireAnalysis(io.screentrace.parser.jsp.UrlGraphContribution.enrich(JavaScriptGraphContribution.enrich(MarkupGraphContribution.enrich(ActionContracts.enrich(state.graph(),inventory),jsp),inventory),inventory));
@@ -301,7 +301,13 @@ public final class StrutsProjectAnalyzer {
   private static List<String> resolveForwardScreens(String target,String module,State state,Set<String> visited,int depth,SourceLocation source) {
     if(depth>=5){diagnostic(state,"forward 鏈超過 5 層",source,"STRUTS_FORWARD_DEPTH");return List.of();}
     String named=state.globalForwards.get(module+":"+target);if(named!=null&&!named.equals(target))return resolveForwardScreens(named,module,state,visited,depth+1,source);
-    if(state.tiles.containsKey(target)){String screen=ensureTileScreen(target,state);return screen==null?List.of():List.of(screen);}
+    if(state.tiles.containsKey(target)){
+      if(state.tilePageDefinitions.contains(target)||state.tileStandaloneDefinitions.contains(target)){String screen=ensureTileScreen(target,state);return screen==null?List.of():List.of(screen);}
+      Set<String> owners=state.tilePageOwners.entrySet().stream().filter(entry->entry.getValue().contains(target)).map(Map.Entry::getKey).collect(java.util.stream.Collectors.toCollection(TreeSet::new));
+      if(owners.size()==1){String screen=ensureTileScreen(owners.iterator().next(),state);return screen==null?List.of():List.of(screen);}
+      if(owners.size()>1){diagnostic(state,"forward 目標對應多個 Tiles 頁面定義："+target,source,"STRUTS_FORWARD_AMBIGUOUS");return List.of();}
+      String screen=ensureTileScreen(target,state);return screen==null?List.of():List.of(screen);
+    }
     String direct=screenForView(target,state,source);if(direct!=null)return List.of(direct);
     String logical=logicalPath(target,state);if(logical==null&&target.startsWith("/")&&!target.startsWith("/WEB-INF/")&&!target.contains(".jsp"))logical=module.isBlank()||target.startsWith(module+"/")?target:module+target;
     if(logical==null)logical=target;
@@ -579,51 +585,115 @@ public final class StrutsProjectAnalyzer {
     Map<String,Tile> resolved=new TreeMap<>();
     for(String name:tiles.keySet()) resolveTile(name,tiles,resolved,new HashSet<>(),state);
     state.tiles.putAll(resolved);
-    Set<String> tileJspPaths=new TreeSet<>();
-    for(Path file:state.inventory.files()) if(file.toString().endsWith(".jsp")) try {
+    Set<String> referencedDefinitions=new TreeSet<>();
+    for(Tile tile:resolved.values()) {
+      if(resolved.containsKey(tile.parent()))referencedDefinitions.add(tile.parent());
+      for(String value:tile.puts().values())if(resolved.containsKey(value))referencedDefinitions.add(value);
+    }
+    for(Path file:state.inventory.files())if(file.toString().endsWith(".jsp")||file.toString().endsWith(".jspf"))try {
       String text=SafeProjectFiles.readUtf8Limited(state.inventory.root(),file,SafeProjectFiles.MAX_SOURCE_FILE_BYTES);
-      boolean tilesTagLibrary=text.contains("struts.apache.org/tags-tiles");
-      if(tilesTagLibrary&&MarkupTag.scan(text).stream().anyMatch(tag->!tag.closing()&&tag.name().endsWith(":insert")))tileJspPaths.add(relative(state,file));
-    } catch(Exception ignored) { }
+      for(MarkupTag tag:MarkupTag.scan(text))if(!tag.closing()&&tag.name().equalsIgnoreCase("tiles:insert")) {
+        String target=first(tag,"definition","name","page","value");if(resolved.containsKey(target))referencedDefinitions.add(target);
+      }
+    }catch(Exception ignored) { }
+    for(String name:resolved.keySet())if(!referencedDefinitions.contains(name))state.tilePageDefinitions.add(name);
+    for(String page:state.tilePageDefinitions)collectTileDefinitions(page,state,state.tilePageOwners.computeIfAbsent(page,key->new TreeSet<>()),new HashSet<>());
+    for(String name:resolved.keySet())if(state.tilePageOwners.values().stream().noneMatch(owners->owners.contains(name)))state.tileStandaloneDefinitions.add(name);
     for(Tile tile:resolved.values()) {
       String viewId=ApplicationGraph.id(NodeType.VIEW,"tiles:"+tile.name());state.tileViewIds.put(tile.name(),viewId);
       Confidence status=state.viewIds.containsKey(tile.template())?Confidence.CONFIRMED:Confidence.UNRESOLVED;
       addNode(state,viewId,NodeType.VIEW,tile.name(),Map.of("view",tile.template()),tile.source(),status);
-      if(tile.template().endsWith(".jsp"))tileJspPaths.add(tile.template());
-      for(String target:tile.puts().values())if(target.endsWith(".jsp"))tileJspPaths.add(target);
     }
     for(Tile tile:resolved.values()) {
       String viewId=state.tileViewIds.get(tile.name());
       List<String> targets=new ArrayList<>(tile.puts().values());targets.add(tile.template());
       for(String target:targets) {
-        String referenced=state.viewIds.get(target);if(referenced==null)referenced=state.tileViewIds.get(target);
+        String referenced=tileViewId(target,state);if(referenced==null)referenced=state.tileViewIds.get(target);
         if(referenced!=null)edge(state,EdgeType.INCLUDES,viewId,referenced,Confidence.CONFIRMED,tile.source());
         else if(target.endsWith(".jsp")||target.startsWith("/"))diagnostic(state,"Tiles 屬性目標未解析："+target,tile.source(),"TILES_REFERENCE_UNRESOLVED");
       }
     }
-    for(String path:tileJspPaths)removeImplicitScreen(path,state);
   }
 
-  private static void removeImplicitScreen(String path,State state) {
-    String id=state.screens.get(path);
-    if(id==null){String viewId=state.viewIds.get(path);if(viewId==null){List<String> candidates=state.viewIds.values().stream().distinct().filter(candidate->{GraphNode view=state.nodes.get(candidate);String actual=view==null?null:view.attributes().get("view");return actual!=null&&actual.endsWith(path.startsWith("/")?path:"/"+path);}).toList();if(candidates.size()==1)viewId=candidates.get(0);}GraphNode view=viewId==null?null:state.nodes.get(viewId);String actualPath=view==null?null:view.attributes().get("view");if(actualPath!=null)id=state.screens.get(actualPath);}
-    if(id==null)return;String screenId=id;
-    state.nodes.remove(screenId);state.edges.entrySet().removeIf(entry->entry.getValue().from().equals(screenId)||entry.getValue().to().equals(screenId));
-    state.screens.entrySet().removeIf(entry->entry.getValue().equals(screenId));
+  private static void collectTileDefinitions(String name,State state,Set<String> owners,Set<String> seen) {
+    if(!seen.add(name))return;owners.add(name);Tile tile=state.tiles.get(name);if(tile==null)return;
+    if(state.tiles.containsKey(tile.parent()))collectTileDefinitions(tile.parent(),state,owners,seen);
+    List<String> targets=new ArrayList<>(tile.puts().values());targets.add(tile.template());
+    for(String value:targets)if(state.tiles.containsKey(value))collectTileDefinitions(value,state,owners,seen);else if(value.endsWith(".jsp")||value.endsWith(".jspf"))for(String inserted:tileInsertDefinitions(value,state))collectTileDefinitions(inserted,state,owners,seen);
   }
 
-  private static void pruneUnroutedTilesScreens(State state) {
+  private static Set<String> tileInsertDefinitions(String target,State state) {
+    String path=tileJspViewPath(target,state);if(path==null)return Set.of();Path file=state.inventory.root().resolve(path);
+    try {
+      String text=SafeProjectFiles.readUtf8Limited(state.inventory.root(),file,SafeProjectFiles.MAX_JSP_FILE_BYTES);Set<String> result=new TreeSet<>();
+      for(MarkupTag tag:MarkupTag.scan(text))if(!tag.closing()&&tag.name().equalsIgnoreCase("tiles:insert")) {String definition=first(tag,"definition","name","page","value");if(definition!=null&&state.tiles.containsKey(definition))result.add(definition);}
+      return result;
+    }catch(IOException|SecurityException error){return Set.of();}
+  }
+
+  private static String tileJspViewPath(String target,State state) {
+    String viewId=state.viewIds.get(target);
+    if(viewId==null) {
+      List<String> candidates=state.viewIds.entrySet().stream().filter(entry->entry.getKey().endsWith(target)).map(Map.Entry::getValue).distinct().toList();
+      if(candidates.size()==1)viewId=candidates.get(0);
+    }
+    GraphNode view=viewId==null?null:state.nodes.get(viewId);if(view!=null)return view.attributes().get("view");
+    String suffix=target.startsWith("/")?target.substring(1):target;
+    List<String> paths=state.inventory.files().stream().filter(file->relative(state,file).endsWith(suffix)).map(file->relative(state,file)).distinct().toList();
+    return paths.size()==1?paths.get(0):null;
+  }
+
+  private static String tileViewId(String target,State state) {
+    String viewId=state.viewIds.get(target);
+    if(viewId==null&&(target.endsWith(".jsp")||target.endsWith(".jspf"))) {
+      String path=tileJspViewPath(target,state);if(path!=null)viewId=state.viewIds.get(path);
+    }
+    return viewId;
+  }
+
+  private static boolean sameJspPath(String actual,String target,State state) {
+    String resolved=tileJspViewPath(target,state);return actual.equals(resolved)||(resolved==null&&actual.endsWith(target.startsWith("/")?target:"/"+target));
+  }
+
+  private static void materializeTileScreens(State state) {
     if(state.tiles.isEmpty())return;
-    Set<String> destinations=state.edges.values().stream()
-        .filter(edge->Set.of(EdgeType.RENDERS,EdgeType.FORWARDS_TO,EdgeType.NAVIGATES_TO).contains(edge.type()))
-        .map(Relationship::to).collect(java.util.stream.Collectors.toSet());
-    Set<String> remove=state.nodes.values().stream()
-        .filter(node->node.type()==NodeType.SCREEN&&!"true".equals(node.attributes().get("tilesDefinition"))&&!destinations.contains(node.id()))
-        .map(GraphNode::id).collect(java.util.stream.Collectors.toSet());
-    if(remove.isEmpty())return;
-    remove.forEach(state.nodes::remove);
-    state.edges.entrySet().removeIf(entry->remove.contains(entry.getValue().from())||remove.contains(entry.getValue().to()));
-    state.screens.entrySet().removeIf(entry->remove.contains(entry.getValue()));
+    for(String name:new TreeSet<>(state.tilePageDefinitions))ensureTileScreen(name,state);
+    for(String name:new TreeSet<>(state.tileStandaloneDefinitions)) {
+      String screen=ensureTileScreen(name,state);if(screen==null)continue;
+      for(String path:tileJspPaths(name,state)) {
+        state.tilePageJspPaths.add(path);state.tileFragmentOwners.computeIfAbsent(path,key->new TreeSet<>()).add(screen);
+      }
+    }
+    for(var entry:state.tilePageOwners.entrySet()) {
+      String page=entry.getKey(),screen=state.screens.get(page);if(screen==null)continue;
+      for(String definition:entry.getValue())for(String path:tileJspPaths(definition,state)) {
+        state.tilePageJspPaths.add(path);state.tileFragmentOwners.computeIfAbsent(path,key->new TreeSet<>()).add(screen);
+        String viewId=state.viewIds.get(path);Tile tile=state.tiles.get(definition);
+        if(viewId!=null&&tile!=null)edge(state,EdgeType.INCLUDES,screen,viewId,Confidence.CONFIRMED,tile.source(),"Tiles 版型／片段歸入頁面定義畫面");
+      }
+    }
+    for(String path:state.tilePageJspPaths)removeUnroutedImplicitScreen(path,state);
+  }
+
+  private static Set<String> tileJspPaths(String definition,State state) {
+    Set<String> paths=new TreeSet<>();collectTileJspPaths(definition,state,new HashSet<>(),paths);return paths;
+  }
+
+  private static void collectTileJspPaths(String definition,State state,Set<String> seen,Set<String> paths) {
+    if(!seen.add(definition))return;Tile tile=state.tiles.get(definition);if(tile==null)return;
+    List<String> targets=new ArrayList<>(tile.puts().values());targets.add(tile.template());
+    for(String target:targets) {
+      if(state.tiles.containsKey(target))collectTileJspPaths(target,state,seen,paths);
+      else if(target.endsWith(".jsp")||target.endsWith(".jspf")) {String path=tileJspViewPath(target,state);if(path!=null){paths.add(path);for(String inserted:tileInsertDefinitions(path,state))collectTileJspPaths(inserted,state,seen,paths);}}
+    }
+  }
+
+  private static void removeUnroutedImplicitScreen(String path,State state) {
+    String id=state.screens.get(path);if(id==null)return;
+    boolean directEntry=state.edges.values().stream().anyMatch(edge->edge.to().equals(id)&&Set.of(EdgeType.RENDERS,EdgeType.FORWARDS_TO,EdgeType.NAVIGATES_TO).contains(edge.type()));
+    if(directEntry)return;
+    state.nodes.remove(id);state.edges.entrySet().removeIf(entry->entry.getValue().from().equals(id)||entry.getValue().to().equals(id));
+    state.screens.entrySet().removeIf(entry->entry.getValue().equals(id));
   }
 
   private static String ensureTileScreen(String name,State state) {
@@ -634,7 +704,7 @@ public final class StrutsProjectAnalyzer {
     addNode(state,screen,NodeType.SCREEN,tile.name(),Map.of("view",tile.template(),"tilesDefinition","true"),tile.source(),status);state.screens.put(name,screen);
     List<String> targets=new ArrayList<>(tile.puts().values());targets.add(tile.template());
     for(String target:targets) {
-      String view=state.viewIds.get(target);if(view==null)view=state.tileViewIds.get(target);
+      String view=tileViewId(target,state);if(view==null)view=state.tileViewIds.get(target);
       if(view!=null)edge(state,EdgeType.INCLUDES,screen,view,Confidence.CONFIRMED,tile.source());
       else if(target.endsWith(".jsp")||target.startsWith("/"))diagnostic(state,"Tiles 屬性目標未解析："+target,tile.source(),"TILES_REFERENCE_UNRESOLVED");
       if(target.endsWith(".jsp")) {
@@ -691,6 +761,8 @@ public final class StrutsProjectAnalyzer {
     final Map<String,String> screens=new TreeMap<>(),viewIds=new TreeMap<>(),tileViewIds=new TreeMap<>(),beans=new TreeMap<>(),forms=new TreeMap<>();
     final Set<String> ambiguousTiles=new TreeSet<>();
     final Map<String,Tile> tiles=new TreeMap<>();final Map<String,Set<String>> tileFragmentOwners=new TreeMap<>();
+    final Set<String> tilePageDefinitions=new TreeSet<>(),tileStandaloneDefinitions=new TreeSet<>(),tilePageJspPaths=new TreeSet<>();
+    final Map<String,Set<String>> tilePageOwners=new TreeMap<>();
     final Map<String,List<Mapping>> routes=new TreeMap<>();final Map<String,String> endpointIds=new TreeMap<>(),globalForwards=new TreeMap<>();final Map<String,Boolean> inputForward=new TreeMap<>();final List<Mapping> actionMappings=new ArrayList<>();final List<PendingForward> pendingForwards=new ArrayList<>();ServletPattern servletPattern;
     final Map<String,StrutsSources.JavaType> types=new TreeMap<>();final Map<String,Set<String>> messages=new TreeMap<>();
     State(ProjectInventory inventory) {this.inventory=new ProjectInventory(inventory.root(),inventory.files().stream().sorted().toList(),inventory.technologies().stream().sorted().toList(),inventory.diagnostics().stream().sorted().toList(),inventory.contextPaths(),inventory.contextSettingsFile(),inventory.contextSettingsLine());}

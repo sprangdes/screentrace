@@ -20,9 +20,10 @@ public final class JavaScriptGraphContribution {
     Map<String,Behavior> behaviors=new TreeMap<>();graph.behaviors().forEach(b->behaviors.put(b.id(),b));
     Map<String,ValidationRule> rules=new TreeMap<>();graph.validationRules().forEach(r->rules.put(r.id(),r));
     Map<String,Set<String>> owners=new TreeMap<>();
-    Set<String> sourcePaths=new TreeSet<>();collected.dom().forEach(d->sourcePaths.add((String)d.get("ownerFile")));
+    Set<String> sourcePaths=new TreeSet<>();collected.dom().forEach(d->sourcePaths.add((String)d.get("ownerFile")));collected.scripts().forEach(script->sourcePaths.add(script.ownerFile()));
     for(var screen:graph.nodes())if(screen.type()==NodeType.SCREEN)for(String path:sourcePaths)if(path.equals(screen.attributes().get("view"))||(screen.source()!=null&&path.equals(screen.source().file())))owners.computeIfAbsent(path,k->new TreeSet<>()).add(screen.id());
     for(var edge:graph.relationships())if(edge.type()==EdgeType.CONTAINS&&nodes.get(edge.from())!=null&&nodes.get(edge.from()).type()==NodeType.SCREEN){var node=nodes.get(edge.to());if(node!=null&&node.source()!=null)owners.computeIfAbsent(node.source().file(),k->new TreeSet<>()).add(edge.from());}
+    for(var edge:graph.relationships())if(edge.type()==EdgeType.INCLUDES&&nodes.get(edge.from())!=null&&nodes.get(edge.from()).type()==NodeType.SCREEN){var view=nodes.get(edge.to());if(view!=null&&view.type()==NodeType.VIEW){String path=view.attributes().get("view");if(path!=null&&sourcePaths.contains(path))owners.computeIfAbsent(path,k->new TreeSet<>()).add(edge.from());}}
     try {
       var jsp=new JspProjectParser().analyze(inventory.root(),inventory.files());boolean changed=true;
       while(changed){changed=false;for(var include:jsp.includes()) {
