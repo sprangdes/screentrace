@@ -117,8 +117,11 @@ class StrutsR16RoutingTest {
 
     var graph = analyze();
     assertTrue(graph.diagnostics().stream().anyMatch(diagnostic -> diagnostic.code().equals("STRUTS_SERVLET_MAPPING_AMBIGUOUS")));
-    assertEquals(1, endpointCount(graph));
-    assertEquals("/save", graph.nodes().stream().filter(node -> node.type() == NodeType.ENDPOINT).findFirst().orElseThrow().attributes().get("path"));
+    var endpoints=graph.nodes().stream().filter(node -> node.type() == NodeType.ENDPOINT).toList();
+    assertEquals(2, endpoints.size());
+    assertTrue(endpoints.stream().anyMatch(node -> "/save".equals(node.attributes().get("path")) && node.confidence()==Confidence.INFERRED));
+    assertTrue(endpoints.stream().anyMatch(node -> "/save.do".equals(node.attributes().get("path")) && node.confidence()==Confidence.INFERRED));
+    assertTrue(graph.diagnostics().stream().anyMatch(diagnostic -> diagnostic.code().equals("STRUTS_SERVLET_MAPPING_UNRESOLVED") && diagnostic.message().contains("未證明")));
   }
 
   @Test void publicUrlForwardResolvesThroughTheMappedActionToItsView() throws Exception {
@@ -178,8 +181,9 @@ class StrutsR16RoutingTest {
 
     var graph = analyze();
     assertTrue(graph.nodes().stream().anyMatch(node -> node.type() == NodeType.ENDPOINT && node.attributes().getOrDefault("path", "").equals("/save")));
-    assertTrue(graph.nodes().stream().anyMatch(node -> node.type() == NodeType.ENDPOINT && node.attributes().getOrDefault("path", "").equals("/save.do") && node.confidence() == Confidence.UNRESOLVED));
-    assertTrue(graph.diagnostics().stream().anyMatch(diagnostic -> diagnostic.code().equals("STRUTS_SERVLET_MAPPING_UNRESOLVED")));
+    assertTrue(graph.nodes().stream().anyMatch(node -> node.type() == NodeType.ENDPOINT && node.attributes().getOrDefault("path", "").equals("/save.do") && node.confidence() == Confidence.INFERRED));
+    assertTrue(graph.relationships().stream().anyMatch(edge -> edge.type()==EdgeType.TRIGGERS && edge.confidence()==Confidence.INFERRED));
+    assertTrue(graph.diagnostics().stream().anyMatch(diagnostic -> diagnostic.code().equals("STRUTS_SERVLET_MAPPING_UNRESOLVED") && diagnostic.message().contains("未證明")));
   }
 
   @Test void inputForwardAndExceptionPublicPathsResolveThroughActions() throws Exception {
