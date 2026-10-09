@@ -12,6 +12,8 @@ test('R14 dashboard uses the full design canvas and shows its progress card',asy
   assert.equal(await page.locator('.shell>nav').isVisible(),false);
   assert.equal(await page.locator('.shell>aside').isVisible(),false);
   assert.ok(await page.locator('.dashboard-progress').count());
+  assert.equal(await page.getByRole('button',{name:'從第一項開始確認 →'}).count(),1);
+  assert.ok((await page.locator('.dashboard-region-summary').count())>0,'region cards show their computed entry-class counts');
   assert.ok((await page.locator('.inventory-dashboard h1').evaluate(el=>parseFloat(getComputedStyle(el).fontSize)))>=36);
   assert.ok((await page.locator('.inventory-dashboard').evaluate(el=>el.getBoundingClientRect().width))>=1300);
   await page.locator('.primary-tabs button').filter({hasText:'逐頁確認'}).click();
