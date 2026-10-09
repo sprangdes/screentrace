@@ -21,7 +21,7 @@ test('WP46 screen review follows the three-column design structure and retains o
   assert.match(await page.locator('.screen-review-queue').innerText(),/待確認清單/);
   assert.ok(await page.locator('.screen-review-queue').evaluate(el=>el.getBoundingClientRect().width>=260&&el.getBoundingClientRect().width<=300));
   assert.equal(await page.locator('main h1').count(),1);
-  assert.match(await page.locator('.screen-review-rationale h2').innerText(),/判斷依據/);
+  assert.match(await page.locator('.screen-review-rationale > h2').innerText(),/判斷依據/);
   assert.equal(await page.locator('.screen-review-technical[open]').count(),0);
   assert.equal(await page.locator('.prototype-toolbar [data-decision],.prototype-toolbar [data-screen-decision]').count(),0);
   assert.doesNotMatch(await page.locator('.shell[data-page=screen]').innerText(),/未確認|檔案結構/);
