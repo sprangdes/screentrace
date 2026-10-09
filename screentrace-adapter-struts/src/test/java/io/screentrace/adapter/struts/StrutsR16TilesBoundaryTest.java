@@ -40,7 +40,7 @@ class StrutsR16TilesBoundaryTest {
     file("src/main/webapp/WEB-INF/web.xml","<web-app><servlet><servlet-name>action</servlet-name><servlet-class>org.apache.struts.action.ActionServlet</servlet-class></servlet><servlet-mapping><servlet-name>action</servlet-name><url-pattern>*.do</url-pattern></servlet-mapping></web-app>");
     file("src/main/webapp/WEB-INF/struts-config.xml","<struts-config><action-mappings><action path='/home' type='sample.Home'><forward name='ok' path='home.page'/></action></action-mappings></struts-config>");
     file("tiles-defs.xml","<tiles-definitions><definition name='base' path='/WEB-INF/jsp/layout.jsp'><put name='body' value='/WEB-INF/jsp/body.jsp'/><put name='header' value='/header.jsp'/></definition><definition name='home.page' extends='base'><put-attribute name='heading' value='Home'/></definition><definition name='unused.page' extends='base'><put name='body' value='/WEB-INF/jsp/unused.jsp'/></definition></tiles-definitions>");
-    file("src/main/webapp/WEB-INF/jsp/layout.jsp","<tiles:insert page='/WEB-INF/jsp/body.jsp'/><button id='layout-action'>Layout action</button>");
+    file("src/main/webapp/WEB-INF/jsp/layout.jsp","<tiles:insert page='/WEB-INF/jsp/body.jsp'/><button id='layout-action'>Layout action</button><script>fetch('/layout-api')</script>");
     file("src/main/webapp/WEB-INF/jsp/body.jsp","<button id='body-action'>Body action</button>");
     file("src/main/webapp/WEB-INF/jsp/unused.jsp","<button id='unused-action'>Unused</button>");
     file("src/main/webapp/WEB-INF/jsp/full.jsp","<h1>Full page</h1>");
@@ -55,6 +55,10 @@ class StrutsR16TilesBoundaryTest {
     assertTrue(contained.stream().anyMatch(node->node.source().file().endsWith("body.jsp")&&"body-action".equals(node.attributes().get("id"))),contained.toString());
     assertTrue(contained.stream().anyMatch(node->node.source().file().endsWith("layout.jsp")&&"layout-action".equals(node.attributes().get("id"))),contained.toString());
     assertTrue(contained.stream().anyMatch(node->node.source().file().endsWith("header.jsp")&&"header-action".equals(node.attributes().get("id"))),contained.toString());
+    for(String name:List.of("home.page","unused.page")) {
+      var owner=graph.nodes().stream().filter(node->node.type()==NodeType.SCREEN&&node.name().equals(name)).findFirst().orElseThrow();
+      assertTrue(graph.behaviors().stream().anyMatch(behavior->behavior.triggerId().equals(owner.id())&&behavior.type()==BehaviorType.CALL_API&&behavior.expression().contains("/layout-api")),name+" must own the shared layout script behavior");
+    }
     var unused=graph.nodes().stream().filter(node->node.type()==NodeType.SCREEN&&node.name().equals("unused.page")).findFirst().orElseThrow();
     assertFalse(graph.relationships().stream().anyMatch(edge->Set.of(EdgeType.RENDERS,EdgeType.FORWARDS_TO).contains(edge.type())&&edge.to().equals(unused.id())));
     assertTrue(graph.relationships().stream().anyMatch(edge->edge.type()==EdgeType.CONTAINS&&edge.from().equals(unused.id())&&graph.nodes().stream().anyMatch(node->node.id().equals(edge.to())&&node.source().file().endsWith("unused.jsp"))),graph.nodes().toString());
