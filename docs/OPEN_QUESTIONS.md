@@ -201,3 +201,11 @@
 - 影響範圍：`screentrace-js` 的 CALL_API `url` 欄位、Java graph projection 的 endpoint path、路由樣板比對、A2 新增測試與 ADR 0010。未決定前不實作 A2。
 - 狀態：已決定（2026-10-09）；需求方不採 A、B，採方案 C。
 - 決定（方案 C）：既有佔位符慣例不是捏造，維持不變，既有斷言一律不改——未知識別字段為 `{識別字名}`（INFERRED），整段網址無法取得時 `url === null`（UNRESOLVED），計算屬性 `obj[key]` 維持 UNRESOLVED。A2 縮小為：(1) 任何無法靜態取得的值不得序列化為字面 `null`／`undefined` 路徑段；函式參數比照未知識別字輸出 `{參數名}`。(2) 非計算的屬性存取（如 `$scope.cartId`、`item.product.productId`）輸出 `{最後一個屬性名}`（如 `{cartId}`、`{productId}`），不得把運算式原文放進路徑；原文只放 evidence。(3) JS analyzer 的 `behavior.url` 與 Java graph 投影出的 endpoint path 必須一致。新增測試只增不改。
+
+## OQ-023 — WP51 轉址分類標籤與既有 E2E 斷言衝突
+
+- 情境：R15 WP51 要求方法徽章依 HTTP method 顯示（`ANY` 顯示「任何方法」，tooltip 保留 `ANY`），並將分類 `REDIRECT` 顯示為「轉址」、tooltip 保留 `REDIRECT`。現有 `screentrace-viewer/test/r14-redirect-category-label.e2e.mjs` 對 `category=REDIRECT`、`method=ANY` 的列，卻從 `[data-method]` 方法徽章斷言文字為「轉址」。依 WP51 新規格，該方法徽章應為「任何方法」，「轉址」應由分類標籤呈現；保留該既有斷言與新規格不能同時成立。
+- 可選方案 A：維持既有斷言與目前畫面行為，取消 WP51 對 `ANY`／`REDIRECT` 列方法徽章的修正；分類仍須避免向使用者顯示原始 `REDIRECT`。
+- 可選方案 B：授權只將既有 E2E 的 selector 從 `[data-method]` 改為分類標籤 selector，保留「轉址」文字與 tooltip `REDIRECT` 的斷言內容；方法徽章另以 WP51 新測試驗證為「任何方法」並以 tooltip 保留 `ANY`。其他既有斷言不變。
+- 影響範圍：WP51 API 清單的 `ANY` 方法徽章與 `REDIRECT` 分類標籤；不改分析資料、API 狀態或 graph。
+- 狀態：待需求方決定。WP51 新失敗測試已獨立提交 `198a9c3`；尚未提交實作。
