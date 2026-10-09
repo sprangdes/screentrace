@@ -74,6 +74,21 @@ class StrutsR16TilesBoundaryTest {
     assertTrue(graph.nodes().stream().anyMatch(node->node.type()==NodeType.SCREEN&&node.source().file().endsWith("unrouted-fragment.jsp")),graph.nodes().stream().filter(node->node.type()==NodeType.SCREEN).toList().toString());
   }
 
+  @Test void layoutReferencedOnlyByJspInsertRemainsOneUnroutedDefinitionScreen()throws Exception{
+    file("src/main/webapp/WEB-INF/web.xml","<web-app><servlet><servlet-name>action</servlet-name><servlet-class>org.apache.struts.action.ActionServlet</servlet-class></servlet><servlet-mapping><servlet-name>action</servlet-name><url-pattern>*.do</url-pattern></servlet-mapping></web-app>");
+    file("src/main/webapp/WEB-INF/struts-config.xml","<struts-config><action-mappings><action path='/home' type='sample.Home'><forward name='ok' path='home.page'/></action></action-mappings></struts-config>");
+    file("tiles-defs.xml","<tiles-definitions><definition name='home.page' path='/WEB-INF/jsp/home.jsp'/><definition name='orphan.layout' path='/WEB-INF/jsp/orphan-layout.jsp'/></tiles-definitions>");
+    file("src/main/webapp/WEB-INF/jsp/home.jsp","<tiles:insert definition='orphan.layout'/><h1>Home</h1>");
+    file("src/main/webapp/WEB-INF/jsp/orphan-layout.jsp","<button id='layout-action'>Shared layout</button>");
+
+    var graph=analyze();
+    Set<String> screens=new TreeSet<>();graph.nodes().stream().filter(node->node.type()==NodeType.SCREEN).forEach(node->screens.add(node.name()));
+    assertEquals(Set.of("home.page","orphan.layout"),screens);
+    var orphan=graph.nodes().stream().filter(node->node.type()==NodeType.SCREEN&&node.name().equals("orphan.layout")).findFirst().orElseThrow();
+    assertFalse(graph.relationships().stream().anyMatch(edge->Set.of(EdgeType.RENDERS,EdgeType.FORWARDS_TO).contains(edge.type())&&edge.to().equals(orphan.id())));
+    assertTrue(graph.relationships().stream().anyMatch(edge->edge.type()==EdgeType.CONTAINS&&edge.from().equals(orphan.id())&&graph.nodes().stream().anyMatch(node->node.id().equals(edge.to())&&"layout-action".equals(node.attributes().get("id")))));
+  }
+
   @Test void unreferencedTileTemplateRetainsItsOwnScreenAndControls()throws Exception{
     file("src/main/webapp/WEB-INF/web.xml","<web-app><servlet><servlet-name>action</servlet-name><servlet-class>org.apache.struts.action.ActionServlet</servlet-class></servlet><servlet-mapping><servlet-name>action</servlet-name><url-pattern>*.do</url-pattern></servlet-mapping></web-app>");
     file("src/main/webapp/WEB-INF/struts-config.xml","<struts-config><action-mappings><action path='/home' type='sample.Home'><forward name='ok' path='/WEB-INF/jsp/page.jsp'/></action></action-mappings></struts-config>");
