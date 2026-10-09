@@ -57,6 +57,19 @@ export function analyze(request) {
   const xhr=new Map();walk(parsed.ast,n=>{if(n.type==='VariableDeclarator'&&n.init?.type==='NewExpression'&&calleeName(n.init.callee)==='XMLHttpRequest')xhr.set(n.id.name,[]);if(n.type==='CallExpression'&&n.callee.type==='MemberExpression'&&!n.callee.computed&&n.callee.property.name==='open'&&xhr.has(n.callee.object.name))xhr.get(n.callee.object.name).push(n.arguments);});
   const registered=new Map();for(const b of unit.event?[]:bindings(unit,unitDom,{resolveSelector:value})){if(b.handler){if(!registered.has(b.expression))registered.set(b.expression,[]);registered.get(b.expression).push(b);}}
   function visit(node,ctx) {const previous=currentContext;currentContext=ctx;try{return visitNode(node,ctx);}finally{currentContext=previous;}}
+  function visitNestedApiCalls(values,ctx) {
+   const isRequest=node=>{
+    if(node?.type!=='CallExpression')return false;
+    const name=calleeName(node.callee),method=node.callee.property?.name,receiver=node.callee.object;
+    return name==='$http'||name?.startsWith('$http.')||['$.ajax','jQuery.ajax','$.get','$.post','$.getJSON','jQuery.get','jQuery.post','jQuery.getJSON','fetch','axios'].includes(name)||name?.startsWith('axios.')||method==='load'&&receiver?.type==='CallExpression'&&['$','jQuery'].includes(calleeName(receiver.callee))||method==='send'&&xhr.has(receiver?.name);
+   };
+   const scan=node=>{
+    if(!node?.type||functionTypes.has(node.type))return;
+    if(isRequest(node)){visit(node,ctx);return;}
+    for(const child of children(node))scan(child);
+   };
+   for(const valueNode of values)scan(valueNode);
+  }
   function visitNode(node,ctx) {
    if(!node?.type||functionTypes.has(node.type))return;
    if(node.type==='IfStatement') {visit(node.test,ctx);visit(node.consequent,{...ctx,guard:ctx.guard?ctx.guard+' && '+text(node.test,code):text(node.test,code)});if(node.alternate)visit(node.alternate,{...ctx,guard:'!('+text(node.test,code)+')'});return;}
@@ -129,6 +142,7 @@ export function analyze(request) {
   }
   walk(parsed.ast,n=>{if(n.type!=='CallExpression'||n.callee?.type!=='MemberExpression'||n.callee.property?.name!=='controller'||!n.arguments?.[0]?.value||!functionTypes.has(n.arguments[1]?.type))return;const controller=n.arguments[0].value,fn=n.arguments[1];walk(fn.body,a=>{if(a.type!=='AssignmentExpression'||a.left?.type!=='MemberExpression'||calleeName(a.left.object)!=='$scope'||!functionTypes.has(a.right?.type))return;const name=a.left.property?.name;if(!name)return;const key=`${unit.screenId}:${controller}:${name}`;if(!angularFunctions.has(key))angularFunctions.set(key,[]);angularFunctions.get(key).push({file:unit.file,invoke:(args,ctx)=>invoke(a.right,args,ctx,a.right,rootEnv,ctx.stack.length===0)});});});
   function execute(callee,args,ctx,call,asHandler=false) {
+   visitNestedApiCalls(args,ctx);
    const resolved=args.map(value);
    if(functionTypes.has(callee?.type)){invoke(callee,resolved,ctx,call,ctx.env??rootEnv,asHandler);return true;}
    const name=calleeName(callee);const local=lookup(ctx.env??rootEnv,name,'functions');
