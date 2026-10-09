@@ -9,10 +9,14 @@ import java.nio.file.*;
 import java.io.IOException;
 import java.util.*;
 import java.util.regex.Pattern;
+import javax.xml.XMLConstants;
+import javax.xml.parsers.DocumentBuilderFactory;
+import org.xml.sax.InputSource;
+import java.io.StringReader;
 
 /** Source collection only. Never loads target classes or JavaScript modules. */
 public final class ScriptSources {
-  public record Script(String file,int line,String code,boolean module,String event,String componentId,String ownerFile,String status,String expression,List<AnalysisEvidence> evidence,Map<String,String> elValues,String guard) { }
+  public record Script(String file,int line,String code,boolean module,String event,String componentId,String ownerFile,String status,String expression,List<AnalysisEvidence> evidence,Map<String,String> elValues,String guard,String controllerName) { }
   public record Reference(SourceLocation source,String expression,String status,List<String> candidates,List<AnalysisEvidence> evidence) { }
   public record Result(List<Script> scripts,List<Reference> references,List<Diagnostic> diagnostics,List<Map<String,Object>> dom,Map<String,String> moduleFiles) { }
   private record Definition(String file,String value,int end,SourceLocation source,boolean scopeProven,String kind) { }
@@ -76,6 +80,7 @@ public final class ScriptSources {
         if(name.equals("script")) {
           if(tag.attribute("src")!=null) {
             String raw=tag.attribute("src"),target=raw,status="CONFIRMED";List<AnalysisEvidence> evidence=new ArrayList<>();boolean eligible=true;
+            for(var mapping:resourceMappings(inventory,raw))evidence.add(proof(mapping.source(),"CONFIRMED","靜態資源映射；路徑="+mapping.file()+"；設定="+mapping.mapping()+" → "+mapping.location()));
             var resolution=resolver.resolve(raw,tag);if(!resolution.definitions().isEmpty()){target=resolution.value();evidence.addAll(resolution.definitions());}
             else if(MarkupAnalysis.dynamic(raw)) {
               var prefix=PREFIX.matcher(raw);
@@ -96,18 +101,21 @@ public final class ScriptSources {
             var location=new SourceLocation(path,tag.attributeLine("src"));evidence.add(proof(location,status,"原始 script src："+raw+"；候選："+candidates));
             references.add(new Reference(location,raw,status,candidates,List.copyOf(evidence)));
             if(candidates.size()==1) {
-              String file=candidates.get(0);try{scripts.add(new Script(file,1,SafeProjectFiles.readUtf8Limited(inventory.root(),inventory.root().resolve(file),SafeProjectFiles.MAX_SOURCE_FILE_BYTES),"module".equals(tag.attribute("type")),"",null,path,status,raw,List.copyOf(evidence),Map.of(),guard));}
+              String file=candidates.get(0);try{scripts.add(new Script(file,1,SafeProjectFiles.readUtf8Limited(inventory.root(),inventory.root().resolve(file),SafeProjectFiles.MAX_SOURCE_FILE_BYTES),"module".equals(tag.attribute("type")),"",null,path,status,raw,List.copyOf(evidence),Map.of(),guard,null));}
               catch(IOException|SecurityException error){diagnostics.add(diag(path,tag.line(),"JS_SOURCE_READ",error.getMessage()));}
             } else diagnostics.add(diag(path,tag.line(),"JS_SCRIPT_REFERENCE","script src 無法唯一解析；原文："+raw+"；候選："+candidates));
           } else {
             int end=source.toLowerCase(Locale.ROOT).indexOf("</script",tag.end()+1);String type=tag.attribute("type");
-            if(end>=0&&(type==null||Set.of("module","text/javascript","application/javascript").contains(type)))scripts.add(new Script(path,bodyLine,source.substring(tag.end()+1,end),"module".equals(type),"",null,path,"CONFIRMED","inline script",withProof(valueProof,proof(new SourceLocation(path,tag.line()),"CONFIRMED","inline script")),Map.copyOf(elValues),guard));
+            if(end>=0&&(type==null||Set.of("module","text/javascript","application/javascript").contains(type)))scripts.add(new Script(path,bodyLine,source.substring(tag.end()+1,end),"module".equals(type),"",null,path,"CONFIRMED","inline script",withProof(valueProof,proof(new SourceLocation(path,tag.line()),"CONFIRMED","inline script")),Map.copyOf(elValues),guard,null));
           }
         }
         for(var attr:tag.attributes().entrySet()) {
           String event=null,code=attr.getValue();if(attr.getKey().startsWith("on")&&attr.getKey().length()>2)event=attr.getKey().substring(2);
           else if(Set.of("href","action").contains(attr.getKey())&&code.stripLeading().toLowerCase(Locale.ROOT).startsWith("javascript:")){event=attr.getKey().equals("action")?"submit":"click";code=code.stripLeading().substring(11);}
-          if(event!=null)scripts.add(new Script(path,tag.attributeLine(attr.getKey()),code,false,event,component==null?null:component.id(),path,"CONFIRMED",attr.getValue(),withProof(valueProof,proof(new SourceLocation(path,tag.attributeLine(attr.getKey())),"CONFIRMED","JS 事件屬性／javascript URL")),Map.copyOf(elValues),guard));
+          else if(Set.of("ng-click","data-ng-click").contains(attr.getKey()))event="click";
+          else if(Set.of("ng-submit","data-ng-submit").contains(attr.getKey()))event="submit";
+          else if(Set.of("ng-init","data-ng-init").contains(attr.getKey()))event="load";
+          if(event!=null){String controller=tag.attribute("ng-controller");if(controller==null)controller=tag.attribute("data-ng-controller");if(controller==null)controller=stack.stream().map(e->((Map<?,?>)e.get("attrs")).get("ng-controller")).filter(Objects::nonNull).map(Object::toString).findFirst().orElse(null);scripts.add(new Script(path,tag.attributeLine(attr.getKey()),code,false,event,component==null?null:component.id(),path,"CONFIRMED",attr.getValue(),withProof(valueProof,proof(new SourceLocation(path,tag.attributeLine(attr.getKey())),"CONFIRMED",attr.getKey().startsWith("ng-")?"AngularJS 宣告式事件":"JS 事件屬性／javascript URL")),Map.copyOf(elValues),guard,controller));}
         }
         if(!VOID.contains(name)&&source.charAt(tag.end()-1)!='/')stack.add(element);
       }
@@ -125,7 +133,18 @@ public final class ScriptSources {
         }
       } else if(Path.of(owner).getParent()!=null&&Path.of(owner).getParent().resolve(clean).normalize().toString().replace('\\','/').equals(relative))candidates.add(relative);
     }
+    resourceMappings(inventory,clean).forEach(mapping->candidates.add(mapping.file()));
     return List.copyOf(candidates);
+  }
+  private record ResourceMapping(String file,String mapping,String location,SourceLocation source) { }
+  private static List<ResourceMapping> resourceMappings(ProjectScanner.ProjectInventory inventory,String target) {
+    if(target==null||target.startsWith("//")||target.contains(":")||Arrays.asList(target.split("/")).contains(".."))return List.of();String clean=target.split("[?#]",2)[0];List<ResourceMapping> result=new ArrayList<>();
+    for(Path config:inventory.files())if(config.toString().endsWith(".xml"))try {
+      String xml=SafeProjectFiles.readUtf8Limited(inventory.root(),config,SafeProjectFiles.MAX_XML_FILE_BYTES);if(!xml.contains("resources"))continue;
+      var factory=DocumentBuilderFactory.newInstance();factory.setNamespaceAware(true);factory.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING,true);factory.setFeature("http://apache.org/xml/features/disallow-doctype-decl",true);factory.setAttribute(XMLConstants.ACCESS_EXTERNAL_DTD,"");factory.setAttribute(XMLConstants.ACCESS_EXTERNAL_SCHEMA,"");factory.setExpandEntityReferences(false);var doc=factory.newDocumentBuilder().parse(new InputSource(new StringReader(xml)));var all=doc.getElementsByTagName("*");
+      for(int i=0;i<all.getLength();i++){var element=(org.w3c.dom.Element)all.item(i);String name=element.getLocalName()==null?element.getTagName().replaceFirst("^.*:",""):element.getLocalName();if(!name.equals("resources")||!element.hasAttribute("mapping")||!element.hasAttribute("location"))continue;String mapping=element.getAttribute("mapping"),location=element.getAttribute("location");String prefix=mapping.endsWith("**")?mapping.substring(0,mapping.length()-2):null;if(prefix==null||!clean.startsWith(prefix))continue;String suffix=clean.substring(prefix.length()),base=location.split(",",2)[0].strip();if(!base.startsWith("/"))continue;String relative="src/main/webapp"+base+suffix;if(inventory.files().stream().anyMatch(f->inventory.root().relativize(f).toString().replace('\\','/').equals(relative))){int offset=xml.indexOf("mapping");int line=offset<0?1:1+(int)xml.substring(0,offset).chars().filter(c->c=='\n').count();result.add(new ResourceMapping(relative,mapping,location,new SourceLocation(inventory.root().relativize(config).toString().replace('\\','/'),line)));}}
+    }catch(Exception ignored){/* Unsafe or malformed XML never authorizes a resource mapping. */}
+    return result.stream().distinct().sorted(Comparator.comparing(ResourceMapping::file).thenComparing(m->m.source().file())).toList();
   }
   private static List<AnalysisEvidence> withProof(List<AnalysisEvidence> values,AnalysisEvidence source){var result=new ArrayList<>(values);result.add(source);return List.copyOf(result);}
   private static AnalysisEvidence proof(SourceLocation source,String status,String detail){return new AnalysisEvidence(source,"ScriptSourceCollector",ResolutionStatus.valueOf(status),detail);}

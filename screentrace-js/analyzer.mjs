@@ -10,13 +10,15 @@ const rank={CONFIRMED:0,INFERRED:1,AMBIGUOUS:2,UNRESOLVED:3};
 const status=(...values)=>values.filter(Boolean).sort((a,b)=>rank[b]-rank[a])[0]??'CONFIRMED';
 export function identifyLibrary(file,header='') {
  // Specific library signatures take precedence over the generic jQuery signature.
+ const comments=header.slice(0,4096).match(/^\s*(?:(?:\/\*[\s\S]*?\*\/|\/\/[^\n]*)(?:\s*))/)?.[0]??'';
+ if(/(?:^|\/)angular(?:[.-][^/]*)?\.js$/i.test(file)||/AngularJS\s+v\d/i.test(comments))return 'angularjs';
  for(const name of ['jquery.validate','jquery-ui','bootstrap','select2','datepicker','jquery']) {
-  const entry=table[name];const comments=header.slice(0,4096).match(/^\s*(?:(?:\/\*[\s\S]*?\*\/|\/\/[^\n]*)(?:\s*))/)?.[0]??'';if(new RegExp(entry.file,'i').test(file)||new RegExp(entry.header,'i').test(comments))return name;
+  const entry=table[name];if(new RegExp(entry.file,'i').test(file)||new RegExp(entry.header,'i').test(comments))return name;
  }return null;
 }
 export function analyze(request) {
  const behaviors=[],rules=[],diagnostics=[],libraries=[],dom=request.dom??[];let occurrences=new Map();
- const globalFunctions=new Map(),globalValues=new Map(),runners=[];const maxDepth=Number.isInteger(request.maxDepth)&&request.maxDepth>=0?request.maxDepth:10;
+ const globalFunctions=new Map(),globalValues=new Map(),angularFunctions=new Map(),runners=[];const maxDepth=Number.isInteger(request.maxDepth)&&request.maxDepth>=0?request.maxDepth:10;
  const stable=(kind,...parts)=>{const key=JSON.stringify(parts),count=occurrences.get(kind+key)??0;occurrences.set(kind+key,count+1);return kind+':js:'+createHash('sha256').update(JSON.stringify([...parts,count])).digest('hex').slice(0,24);};
  const expanded=expandModules(request.sources??[],request.moduleFiles??{});diagnostics.push(...expanded.diagnostics);
  for(const unit of expanded.sources) {
@@ -39,7 +41,7 @@ export function analyze(request) {
     return [...new Set(unitDom.filter(d=>ids.has(d.id)&&d.attrs?.name).map(d=>d.attrs.name))].sort();
    }return [];
   };
-  const root={triggerId:unit.triggerId??unit.screenId??null,event:unit.event??'load',selector:unit.event?'this':null,status:unit.event&&!unit.triggerId?'UNRESOLVED':'CONFIRMED',guard:unit.guard??unitDom.find(d=>d.componentId===unit.triggerId)?.guard??null,parentId:null,env:rootEnv,depth:0,stack:[],trace:[]};
+  const root={triggerId:unit.triggerId??unit.screenId??null,event:unit.event??'load',selector:unit.event&&unit.event!=='load'?'this':null,status:unit.event&&!unit.triggerId&&unit.event!=='load'?'UNRESOLVED':'CONFIRMED',guard:unit.guard??unitDom.find(d=>d.componentId===unit.triggerId)?.guard??null,parentId:null,env:rootEnv,depth:0,stack:[],trace:[],controllerName:unit.controllerName??null};
   const emit=(type,node,ctx,extra={},resolution='CONFIRMED')=>{
    const expression=text(node,code),id=stable('behavior',unit.file,ctx.triggerId,ctx.event,type,expression,ctx.parentId);
    let dynamic=false;function inspect(n){if(!n?.type||functionTypes.has(n.type))return;if(n.type==='MemberExpression'&&n.computed)dynamic=true;for(const c of children(n))inspect(c);}inspect(node);
@@ -69,6 +71,7 @@ export function analyze(request) {
    if(node.type==='CallExpression') {
     if(functionTypes.has(node.callee.type)){execute(node.callee,node.arguments,ctx,node);return;}
     const name=calleeName(node.callee),method=node.callee.property?.name,args=node.arguments,receiver=node.callee.object;
+    if(method==='controller'&&receiver?.type==='CallExpression'&&calleeName(receiver.callee)==='angular.module')return;
     if(lookup(ctx.env??rootEnv,name,'functions')||lookup(ctx.env??rootEnv,name)){if(execute(node.callee,args,ctx,node))return;emit('UNKNOWN',node,ctx,{callee:name},'UNRESOLVED');return;}
     const ready=(name==='$'||name==='jQuery')&&functionTypes.has(args[0]?.type);
     const load=method==='ready'||(method==='addEventListener'&&args[0]?.value==='load'&&['window','document'].includes(calleeName(receiver)));
@@ -83,6 +86,8 @@ export function analyze(request) {
     let api=false,urlNode=null,methodValue='GET',data=null;
     if(['$.ajax','jQuery.ajax'].includes(name)){api=true;urlNode=prop(args[0],'url');methodValue=configuredMethod(args[0]);data=prop(args[0],'data');}
     else if(['$.get','$.post','$.getJSON','jQuery.get','jQuery.post','jQuery.getJSON'].includes(name)){api=true;urlNode=args[0];methodValue=name.endsWith('.post')?'POST':'GET';data=args[1];}
+    else if(name==='$http'){api=true;urlNode=prop(args[0],'url');methodValue=configuredMethod(args[0]);data=prop(args[0],'data');}
+    else if(name?.startsWith('$http.')){api=true;urlNode=args[0];methodValue=name.slice(6).toUpperCase();data=args[1];}
     else if(name==='fetch'){api=true;urlNode=args[0];methodValue=configuredMethod(args[1]);data=prop(args[1],'body');}
     else if(name==='axios'||name?.startsWith('axios.')){api=true;urlNode=name==='axios'?prop(args[0],'url'):args[0];methodValue=name==='axios'?configuredMethod(args[0]):name.slice(6).toUpperCase();data=name==='axios'?prop(args[0],'data'):args[1];}
     else if(jquery&&method==='load'&&args.length){api=true;urlNode=args[0];data=args[1];methodValue=data?.type==='ObjectExpression'?'POST':'GET';}
@@ -106,7 +111,7 @@ export function analyze(request) {
     if(['add','remove','toggle'].includes(method)&&receiver?.property?.name==='classList'){emit('UI_STATE_CHANGE',node,ctx);return;}
     if(['JSON.stringify','JSON.parse','console.log','Object.keys','Object.values'].includes(name)||['$','jQuery'].includes(name))return;
     if(execute(node.callee,args,ctx,node))return;
-    emit('UNKNOWN',node,ctx,{callee:text(node.callee,code)},'UNRESOLVED');diagnostics.push(diagnostic(unit.file,source(node).line,'UNKNOWN_CALL','未知函式呼叫：'+text(node.callee,code)));return;
+   emit('UNKNOWN',node,ctx,{callee:text(node.callee,code)},'UNRESOLVED');diagnostics.push(diagnostic(unit.file,source(node).line,ctx.controllerName?'ANGULAR_CONTROLLER_UNRESOLVED':'UNKNOWN_CALL',ctx.controllerName?'AngularJS 控制器函式無法對應：'+text(node.callee,code):'未知函式呼叫：'+text(node.callee,code)));return;
    }
    for(const child of children(node))visit(child,ctx);
   }
@@ -116,18 +121,20 @@ export function analyze(request) {
   }
   function invoke(fn,args,ctx,call,declEnv,asHandler=false) {
    const key=unit.file+':'+fn.start;
-   if(ctx.stack.includes(key)||ctx.depth>=maxDepth){emit('UNKNOWN',call,ctx,{callee:text(call,code)},'UNRESOLVED');diagnostics.push(diagnostic(unit.file,source(call).line,ctx.stack.includes(key)?'JS_CALL_CYCLE':'JS_DEPTH_LIMIT','函式追蹤停止：'+text(call,code)));return;}
+   if(ctx.stack.includes(key)||ctx.depth>=maxDepth){emit('UNKNOWN',call,ctx,{callee:text(call,code)},'UNRESOLVED');diagnostics.push(diagnostic(unit.file,source(call).line,ctx.controllerName?'ANGULAR_SCOPE_DEPTH_LIMIT':ctx.stack.includes(key)?'JS_CALL_CYCLE':'JS_DEPTH_LIMIT','函式追蹤停止：'+text(call,code)));return;}
    const env=environment(fn.body,declEnv);fn.params.forEach((p,i)=>{if(p.type==='Identifier')env.values.set(p.name,{resolved:args[i]??{value:null,status:'UNRESOLVED',known:false,tainted:true},at:0});});
    const next={...ctx,env,depth:asHandler?ctx.depth:ctx.depth+1,stack:[...ctx.stack,key]};
    if(/^validate/i.test(fn.id?.name??call.name??'')) {walk(fn.body,n=>{if(n.type==='IfStatement'){let ids=[];walk(n.test,c=>{if(c.type==='CallExpression'&&c.callee.type==='MemberExpression')ids.push(...select(selectorOf(c.callee.object,code),unitDom,ctx.triggerId));});let message=null;walk(n.consequent,c=>{if(c.type==='CallExpression'&&['alert','window.alert'].includes(calleeName(c.callee)))message=c.arguments[0]?.value??null;});for(const id of new Set(ids))rule('custom',n,{...next,guard:text(n.test,code)},id,message,{condition:text(n.test,code)});}});}
    visit(fn.body,next);
   }
+  walk(parsed.ast,n=>{if(n.type!=='CallExpression'||n.callee?.type!=='MemberExpression'||n.callee.property?.name!=='controller'||!n.arguments?.[0]?.value||!functionTypes.has(n.arguments[1]?.type))return;const controller=n.arguments[0].value,fn=n.arguments[1];walk(fn.body,a=>{if(a.type!=='AssignmentExpression'||a.left?.type!=='MemberExpression'||calleeName(a.left.object)!=='$scope'||!functionTypes.has(a.right?.type))return;const name=a.left.property?.name;if(!name)return;const key=`${unit.screenId}:${controller}:${name}`;if(!angularFunctions.has(key))angularFunctions.set(key,[]);angularFunctions.get(key).push({file:unit.file,invoke:(args,ctx)=>invoke(a.right,args,ctx,a.right,rootEnv,ctx.stack.length===0)});});});
   function execute(callee,args,ctx,call,asHandler=false) {
    const resolved=args.map(value);
    if(functionTypes.has(callee?.type)){invoke(callee,resolved,ctx,call,ctx.env??rootEnv,asHandler);return true;}
    const name=calleeName(callee);const local=lookup(ctx.env??rootEnv,name,'functions');
    if(local&&!local.scope.invalid.has(name?.split('.')[0])){invoke(local.entry.node,resolved,{...ctx,trace:[...(ctx.trace??[]),{source:source(call),callee:text(callee,code)}]},call,local.entry.env,asHandler);return true;}
    if(local||lookup(ctx.env??rootEnv,name))return false;
+   if(ctx.controllerName){const angularName=name?.startsWith('$scope.')?name.slice(7):name;const angular=angularFunctions.get(`${unit.screenId}:${ctx.controllerName}:${angularName}`)??[];if(angular.length===1){angular[0].invoke(resolved,{...ctx,trace:[...(ctx.trace??[]),{source:source(call),callee:text(callee,code)}]});return true;}}
    const candidates=globalFunctions.get(unit.screenId)?.get(symbolKey(name))??[];
    if(candidates.length===1){candidates[0].invoke(resolved,{...ctx,trace:[...(ctx.trace??[]),{source:source(call),callee:text(callee,code)}]},asHandler);return true;}
    return false;

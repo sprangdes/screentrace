@@ -119,6 +119,8 @@
 - 狀態：已決定（2026-10-04）；需求方採受限方案 B。
 - 決定：僅 `spring:url` 的單次來源定義、無 EL 的靜態樣板、完整定義先於使用且同一可證明迴圈作用域可解析。保留 `{name}`、不展開 param。迴圈外使用、第二次定義、EL 值、可能改寫的 c:set／scriptlet 均保持 UNRESOLVED；c:url 與既有斷言不變。見 ADR 0005 的 R3 例外與 Wp17SpringLoopVariableTest。
 
+- R14 修訂（2026-10-09）：以上 UrlResolution 結果、targetStatus 與既有測試維持不變；新增獨立的路由樣板投影。JSP 的 `spring:url`／`c:url`／`href`／`action` 與 JS 字串常值前綴加動態片段只在路由逐段匹配恰有一個目標時新增 INFERRED 關係；多候選保留全部候選且不建邊，零候選維持 UNRESOLVED。JS context path 只可使用 workspace 設定或專案設定證明的候選；本次 eMusicStore 的 `/eMusicStore` 只有 JS URL 字串前綴證據，沒有 context path 設定，因此不剝除、不推定連到 `/rest/cart`。見 ADR 0067 與 reports/R14.md。
+
 
 ## OQ-014 — WP19／WP20 呈現規則與既有 E2E 斷言衝突
 
@@ -178,5 +180,6 @@
 
 - 情境：需求方要求整個專案只使用一種功能區域依據，並要求減少單畫面區域、提供切換及易讀名稱。
 - 決定：已決定（2026-10-05）。依據選項為網址前段、控制器類別、JSP 所在目錄。預設選擇單畫面區域數最少的依據；平手順序為網址前段、控制器、JSP 目錄。介面提供切換並標明依據。分組由單一決定性純函式完成，技術後綴須移除並將名稱人性化。
+- R14 修訂（2026-10-09）：產生區域數為 1 的依據不得成為預設，除非網址前段、控制器類別與 JSP 目錄三種依據都只產生 1 個區域。其他排序、切換與命名規則不變；viewer 實作屬 WP45，本次未開始。
 - 範圍：viewer 分組與呈現，不改 Application Graph、分析結果、API 推導或 review state。PetClinic 與 eMusicStore 的選擇依據及各區域畫面數記入 R10 實際報告。
 - 舊規格：WP35 原先先依控制器／Action 分組，再按 URL 退補；因此出現 PetClinic 五個及 eMusicStore 三個單畫面區域。此分組假設由本決定取代。

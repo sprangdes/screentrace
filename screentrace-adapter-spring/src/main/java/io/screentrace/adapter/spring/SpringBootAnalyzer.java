@@ -61,7 +61,9 @@ public final class SpringBootAnalyzer {
         ApplicationGraph graph=new ApplicationGraph(
                 new ApplicationGraph.Application(inventory.root().getFileName().toString(), inventory.root().toString(), inventory.technologies()),
                 state.nodes, state.edges, state.diagnostics, state.apiContracts, ApplicationGraph.BEHAVIOR_SCHEMA_VERSION, List.of(), List.of());
-        return io.screentrace.core.GraphIntegrityValidator.requireAnalysis(SpringServerValidation.enrich(io.screentrace.parser.jsp.UrlGraphContribution.enrich(graph,inventory),inventory));
+        var completed=SpringServerValidation.enrich(io.screentrace.parser.jsp.UrlGraphContribution.enrich(graph,inventory),inventory);
+        completed=io.screentrace.parser.jsp.RouteTemplateInference.enrich(completed,inventory);
+        return io.screentrace.core.GraphIntegrityValidator.requireAnalysis(SpringSecurityRedirects.enrich(completed,inventory));
     }
 
     private void parseController(Path root, Path file, AnalysisState state) {
@@ -88,7 +90,7 @@ public final class SpringBootAnalyzer {
         for (MethodDeclaration method : type.getMethods()) {
             java.util.Optional<AnnotationExpr> mapping = mapping(method);
             if (mapping.isPresent()) {
-                parseMapping(method, mapping.get(), new ControllerContext(type.getNameAsString(), relative, bases, rest), state);
+                parseMapping(method, mapping.get(), new ControllerContext(type.getNameAsString(), relative, bases, rest, type), state);
             }
         }
     }
@@ -107,7 +109,7 @@ public final class SpringBootAnalyzer {
 
         String result = returnLiteral(method);
         boolean redirect = result != null && result.startsWith("redirect:");
-        EndpointContext endpoint = new EndpointContext(handlerId, httpMethod, controller.rest()||annotation(method,"ResponseBody")!=null||method.getType().isClassOrInterfaceType()&&method.getType().asClassOrInterfaceType().getNameAsString().equals("ResponseEntity"), redirect, result, source);
+        EndpointContext endpoint = new EndpointContext(handlerId, httpMethod, controller.rest()||annotation(method,"ResponseBody")!=null||method.getType().isClassOrInterfaceType()&&method.getType().asClassOrInterfaceType().getNameAsString().equals("ResponseEntity")||(annotation(method,"ResponseStatus")!=null||annotation(controller.declaration(),"ResponseStatus")!=null)&&method.getType().isVoidType(), redirect, result, source);
         for (String base : controller.bases()) {
             for (String child : methodPaths) {
                 addEndpoint(state, join(base, child), endpoint, method, mapping);
@@ -520,7 +522,7 @@ public final class SpringBootAnalyzer {
         }
     }
 
-    private record ControllerContext(String typeName, String relative, List<String> bases, boolean rest) {
+    private record ControllerContext(String typeName, String relative, List<String> bases, boolean rest, ClassOrInterfaceDeclaration declaration) {
     }
 
     private record EndpointContext(String handlerId, String httpMethod, boolean rest, boolean redirect, String result, SourceLocation source) {

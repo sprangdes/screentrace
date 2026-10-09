@@ -28,9 +28,9 @@
     "VALIDATE": 19
   },
   "apis": {
-    "total": 27,
+    "total": 26,
     "by_status": {
-      "IN_USE": 22,
+      "IN_USE": 21,
       "REMOVABLE": 0,
       "UNREFERENCED": 5
     }

@@ -69,7 +69,9 @@ public final class SpringMvcAnalyzer {
                 state.nodes, state.edges, state.diagnostics, state.apiContracts, ApplicationGraph.BEHAVIOR_SCHEMA_VERSION, List.of(), List.of());
         graph=MarkupGraphContribution.enrich(graph,jsp);
         graph=SpringFormBindings.bind(graph,inventory);
-        return io.screentrace.core.GraphIntegrityValidator.requireAnalysis(SpringControllerFlow.project(SpringServerValidation.enrich(io.screentrace.parser.jsp.UrlGraphContribution.enrich(io.screentrace.parser.jsp.JavaScriptGraphContribution.enrich(MarkupGraphContribution.enrich(graph,jsp),inventory),inventory),inventory)));
+        var completed=SpringControllerFlow.project(SpringServerValidation.enrich(io.screentrace.parser.jsp.UrlGraphContribution.enrich(io.screentrace.parser.jsp.JavaScriptGraphContribution.enrich(MarkupGraphContribution.enrich(graph,jsp),inventory),inventory),inventory));
+        completed=io.screentrace.parser.jsp.RouteTemplateInference.enrich(completed,inventory);
+        return io.screentrace.core.GraphIntegrityValidator.requireAnalysis(SpringSecurityRedirects.enrich(completed,inventory));
     }
 
     private static void discoverExceptionView(ProjectInventory inventory, State state) {
@@ -130,7 +132,7 @@ public final class SpringMvcAnalyzer {
                 for (MethodDeclaration method : type.getMethods()) {
                     AnnotationExpr mapping = method.getAnnotations().stream().filter(a -> MAPPINGS.contains(a.getNameAsString())).findFirst().orElse(null);
                     if (mapping != null) addMapping(type, method, mapping, relative, bases, constants,
-                        rest || annotation(type,"ResponseBody")!=null || annotation(method, "ResponseBody") != null || method.getType().isClassOrInterfaceType()&&method.getType().asClassOrInterfaceType().getNameAsString().equals("ResponseEntity"), state);
+                        rest || annotation(type,"ResponseBody")!=null || annotation(method, "ResponseBody") != null || method.getType().isClassOrInterfaceType()&&method.getType().asClassOrInterfaceType().getNameAsString().equals("ResponseEntity") || (annotation(type,"ResponseStatus")!=null||annotation(method,"ResponseStatus")!=null)&&method.getType().isVoidType(), state);
                 }
             }
         } catch (IOException | RuntimeException exception) {

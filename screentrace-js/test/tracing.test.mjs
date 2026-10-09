@@ -92,3 +92,7 @@ test('scriptlet URL values are unresolved and never evaluated',()=>{
 test('XHR branch alternatives are not silently reduced to the last open call',()=>{
  const a=run(`var xhr=new XMLHttpRequest();if(mode){xhr.open('GET','/one');}else{xhr.open('GET','/two');}xhr.send();`);const b=a.behaviors.find(b=>b.type==='CALL_API');assert.equal(b.status,'AMBIGUOUS');assert.equal(b.url,null);assert.deepEqual(b.urlCandidates,['/one','/two']);
 });
+test('$http verb methods and configuration objects retain static route templates',()=>{
+ const a=run(`$http.get('/rest/cart/'+cartId);$http({method:'DELETE',url:'/rest/cart/'+cartId});$http.put('/rest/cart/add/'+productId);`),calls=a.behaviors.filter(b=>b.type==='CALL_API');
+ assert.deepEqual(calls.map(b=>b.method),['GET','DELETE','PUT']);assert.deepEqual(calls.map(b=>b.url),['/rest/cart/{cartId}','/rest/cart/{cartId}','/rest/cart/add/{productId}']);assert.ok(calls.every(b=>b.status==='INFERRED'));
+});

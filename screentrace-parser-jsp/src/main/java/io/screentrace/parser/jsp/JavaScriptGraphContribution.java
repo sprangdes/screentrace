@@ -35,7 +35,7 @@ public final class JavaScriptGraphContribution {
       Map<String,List<AnalysisEvidence>> inclusionEvidence=new HashMap<>();
       for(var script:collected.scripts()) {
         for(String screen:owners.getOrDefault(script.ownerFile(),Set.of())) {
-          Map<String,Object> unit=new TreeMap<>();unit.put("file",script.file());unit.put("line",script.line());unit.put("code",script.code());unit.put("module",script.module());unit.put("screenId",screen);unit.put("ownerFile",script.ownerFile());unit.put("status",script.status());unit.put("elValues",script.elValues());unit.put("entryFile",script.file());if(script.guard()!=null)unit.put("guard",script.guard());
+          Map<String,Object> unit=new TreeMap<>();unit.put("file",script.file());unit.put("line",script.line());unit.put("code",script.code());unit.put("module",script.module());unit.put("screenId",screen);unit.put("ownerFile",script.ownerFile());unit.put("status",script.status());unit.put("elValues",script.elValues());unit.put("entryFile",script.file());if(script.guard()!=null)unit.put("guard",script.guard());if(script.controllerName()!=null)unit.put("controllerName",script.controllerName());
           if(!script.event().isEmpty())unit.put("event",script.event());if(script.componentId()!=null)unit.put("triggerId",script.componentId());units.add(unit);
           inclusionEvidence.computeIfAbsent(screen+":"+script.file(),k->new ArrayList<>()).addAll(script.evidence());
         }
