@@ -1,0 +1,34 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {fixture,node} from './fixture.mjs';
+import {classifyScreenEntry} from '../src/inventory.js';
+
+test('WP45 classifies each screen from proven inbound entries, auto redirect and route evidence',()=>{
+ const data=fixture();
+ data.graph.nodes.push(
+  node('no-entry','SCREEN','沒有入口',{}),
+  node('auto','SCREEN','自動導向',{autoRedirect:'LOGIN_PAGE'}),
+  node('inferred','SCREEN','推定入口',{route:'/inferred'}),
+  node('confirmed','SCREEN','確定入口',{route:'/confirmed'}),
+  node('mixed','SCREEN','混合入口',{route:'/mixed'}),
+  node('source','SCREEN','來源畫面',{route:'/source'}),
+  node('global','COMPONENT','全站導覽',{kind:'LINK'})
+ );
+ data.graph.relationships.push(
+  {id:'to-inferred',type:'NAVIGATES_TO',from:'shared',to:'inferred',confidence:'INFERRED',evidence:[{source:{file:'a.jsp',line:2},parser:'test',resolution:'INFERRED'}]},
+  {id:'to-confirmed',type:'NAVIGATES_TO',from:'shared',to:'confirmed',confidence:'CONFIRMED',evidence:[{source:{file:'b.jsp',line:3},parser:'test',resolution:'CONFIRMED'}]},
+  {id:'to-mixed-inferred',type:'NAVIGATES_TO',from:'shared',to:'mixed',confidence:'INFERRED'},
+  {id:'to-mixed-confirmed',type:'NAVIGATES_TO',from:'shared',to:'mixed',confidence:'CONFIRMED'},
+  {id:'global-owner-a',type:'CONTAINS',from:'source',to:'global',confidence:'CONFIRMED'},
+  {id:'global-owner-b',type:'CONTAINS',from:'b',to:'global',confidence:'CONFIRMED'},
+  {id:'global-entry',type:'NAVIGATES_TO',from:'global',to:'a',confidence:'CONFIRMED'}
+ );
+ const result=classifyScreenEntry(data.graph);
+ assert.deepEqual([...result].map(([id,value])=>[id,value.classification]),[
+  ['a','HAS_ENTRY'],['b','ROUTE_ONLY'],['no-entry','NO_ENTRY'],['auto','AUTO_REDIRECT'],
+  ['inferred','INFERRED_ENTRY'],['confirmed','HAS_ENTRY'],['mixed','HAS_ENTRY'],['source','ROUTE_ONLY']
+ ]);
+ assert.equal(result.get('a').entries.length,1,'global navigation counts as an entry');
+ assert.equal(result.get('b').entries.length,0,'self links and links from the same screen do not count');
+ assert.deepEqual(result.get('inferred').entries[0].evidence[0].source,{file:'a.jsp',line:2});
+});
