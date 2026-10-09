@@ -52,6 +52,15 @@ test('R14 closeout 4 report and help use 未決定 throughout visible UI',async(
 
 test('R14 closeout 5 functional map keeps the fixed status and entry legend visible',async()=>{
  const browser=await chromium.launch();try{const page=await browser.newPage({viewport:{width:1440,height:900}});await page.goto(await fileFixture(fixture()));await page.locator('#app[data-ready=true]').waitFor();await page.locator('.primary-tabs button').nth(3).click();await page.locator('.canvas[data-fitted=true]').waitFor();
-  const legend=page.locator('.map-legend');assert.ok(await legend.isVisible());assert.deepEqual((await legend.locator('[data-legend-item]').allTextContents()).map(value=>value.trim()),['保留','移除','入口是推定的','找不到入口','系統自動導向']);const box=await legend.boundingBox();assert.ok(box&&box.x+box.width>1200&&box.y<120);
+  const legend=page.locator('.map-legend');assert.ok(await legend.isVisible());assert.deepEqual((await legend.locator('[data-legend-item]').allTextContents()).map(value=>value.trim()),['保留','移除','入口是推定的','找不到入口','系統自動導向']);const box=await legend.boundingBox(),canvasBox=await page.locator('.canvas').boundingBox();assert.ok(box&&canvasBox&&box.x+box.width>=canvasBox.x+canvasBox.width-20&&box.y<=canvasBox.y+20,JSON.stringify({box,canvasBox}));
+ }finally{await browser.close();}
+});
+
+test('R14 closeout 6 delivery impacts are lists with one post-table warning and unique item names',async()=>{
+ const data=fixture();data.graph.nodes.find(item=>item.id==='ep').attributes.category='REST_API';data.graph.nodes.find(item=>item.id==='a').source=undefined;
+ data.graph.nodes.push(node('only-a','COMPONENT','獨有連結',{kind:'LINK'}));data.graph.relationships.push({id:'only-a-owner',type:'CONTAINS',from:'a',to:'only-a'},{id:'only-a-call',type:'CALLS',from:'only-a',to:'ep',confidence:'CONFIRMED',evidence:[{parser:'UrlResolution',resolution:'CONFIRMED'}]});
+ const browser=await chromium.launch();try{const page=await browser.newPage();await page.goto(await fileFixture(data));await page.locator('#app[data-ready=true]').waitFor();await page.locator('.primary-tabs button').nth(1).click();await page.locator('[data-screen-list="a"]').click();await page.locator('.screen-review-screen-decision [data-screen-decision="REMOVE"]').click();await page.locator('.primary-tabs button').nth(5).click();await page.locator('[data-page="delivery"]').waitFor();
+  const row=page.locator('.delivery-table tr').nth(1);assert.equal((await row.locator('td').nth(0).innerText()).trim(),'甲');const impact=row.locator('td').nth(3);assert.equal(await impact.locator('ul > li').count(),3);assert.match(await impact.innerText(),/失去連結：/);assert.match(await impact.innerText(),/因此可移除的 API：.*api\/owners/);assert.match(await impact.innerText(),/隨畫面移除的按鈕：2 個/);
+  const warning=page.locator('.delivery-impact-warning');assert.equal(await warning.count(),1);assert.ok(await page.locator('.delivery-table').evaluate((table,el)=>table.compareDocumentPosition(el)&Node.DOCUMENT_POSITION_FOLLOWING,await warning.elementHandle()));
  }finally{await browser.close();}
 });
