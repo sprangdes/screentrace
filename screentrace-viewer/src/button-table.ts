@@ -7,7 +7,7 @@ import {rootTrigger} from './usage';
 
 export interface ButtonMember {screenId:string;componentId:string}
 export interface ActionSummary {primaryAction:string;possibleResults:string;technicalDetails:string[];multiple:boolean}
-export interface ButtonRow {key:string;global:boolean;name:string;screenNames:string[];kind:string;primaryAction:string;possibleResults:string;technicalDetails:string[];multiple:boolean;resolution:string;members:ButtonMember[];screenId?:string;componentId?:string}
+export interface ButtonRow {key:string;global:boolean;name:string;screenNames:string[];kind:string;primaryAction:string;possibleResults:string;technicalDetails:string[];multiple:boolean;resolution:string;members:ButtonMember[];behaviorDifferent:boolean;markable:boolean;variants?:ButtonRow[];screenId?:string;componentId?:string}
 const order=(a:string,b:string)=>a<b?-1:a>b?1:0;
 const candidateOrder=(a:string,b:string)=>order(a.toLowerCase(),b.toLowerCase())||order(a,b);
 function submitLike(node:Node):boolean{return ['SUBMIT','FORM_SUBMIT'].includes(String(node.attributes.kind||'').toUpperCase())||/表單送出/.test(kindName(node));}
@@ -30,14 +30,21 @@ export function actionSummary(index:Index,id:string):ActionSummary {
 }
 function resolution(node:Node):string{const values=(node.evidence||[]).map((entry:any)=>entry.resolution);return confidenceLabel(values.includes('AMBIGUOUS')?'AMBIGUOUS':values.includes('UNRESOLVED')?'UNRESOLVED':values.includes('INFERRED')||node.confidence==='INFERRED'?'INFERRED':'CONFIRMED');}
 const kindOrder=new Map(['表單送出','按鈕','連結','下拉選單','多選欄位','日期欄位','彈窗'].map((kind,index)=>[kind,index]));
-export function buttonTableRows(index:Index):ButtonRow[]{
- const rows=new Map<string,ButtonRow>(),globalRelations=partitionNavigation(index).global,labels=componentLabelsByScreen(index);
- for(const [componentId,screenIds]of index.owners){const node=index.nodes.get(componentId);if(!node||!isAction(index,node))continue;const globalMembership=new Map<string,{target:string;identity:string}>();
-  for(const relation of globalRelations)if(relation.triggers.includes(componentId)){const identity=navigationIdentity(index,node,relation.to);if(identity)globalMembership.set(relation.from, {target:relation.to,identity});}
-  for(const screenId of screenIds){const membership=globalMembership.get(screenId),key=membership?`global:${membership.identity}`:`item:${JSON.stringify([screenId,componentId])}`,existing=rows.get(key),member={screenId,componentId};if(existing){if(!existing.members.some(item=>item.screenId===screenId&&item.componentId===componentId))existing.members.push(member);continue;}
-   const target=membership?index.nodes.get(membership.target):undefined,displayLabel=labels.get(screenId)?.get(componentId)||'可操作項目（無文字）',label=membership&&displayLabel.startsWith(kindName(node)+'（')?componentLabel(node,{dynamicContent:true,globalNavigation:true}):displayLabel,name=membership?`（全站導覽）${label} → ${target?.name||'目的未解析'} ×${globalMembership.size} 個畫面`:label,summary=actionSummary(index,componentId);
-   rows.set(key,{key,global:!!membership,name,screenNames:[],kind:kindName(node),...summary,resolution:resolution(node),members:[member],screenId,componentId});
-  }
- }
- return [...rows.values()].map(row=>{const members=row.members.sort((a,b)=>order(a.screenId,b.screenId)||order(a.componentId,b.componentId)),screenNames=[...new Set(members.map(member=>index.nodes.get(member.screenId)?.name||'畫面'))].sort(candidateOrder);return {...row,members,screenNames,...(row.global?{name:row.name.replace(/ ×\d+ 個畫面$/,` ×${screenNames.length} 個畫面`)}:{})};}).sort((a,b)=>candidateOrder(a.screenNames[0]||'',b.screenNames[0]||'')||(kindOrder.get(a.kind)??99)-(kindOrder.get(b.kind)??99)||candidateOrder(a.name,b.name)||order(a.key,b.key));
+function actionSignature(index:Index,componentId:string):string {
+ const node=index.nodes.get(componentId)!;const screens=new Set<string>(),endpoints=new Set<string>(),unresolved=new Set<string>();
+ const record=(targetId?:string)=>{const target=targetId?index.nodes.get(targetId):undefined;if(target?.type==='SCREEN')screens.add(target.id);else if(target?.type==='ENDPOINT')endpoints.add(target.id);};
+ for(const behavior of index.graph.behaviors||[])if(rootTrigger(index,behavior)===componentId){if(behavior.targetId)record(behavior.targetId);else if(behavior.expression)unresolved.add(String(behavior.expression).trim().replace(/\$\{([^}]+)\}/g,'{$1}'));}
+ for(const edge of (index.graph.relationships||[]).filter(edge=>edge.from===componentId&&['NAVIGATES_TO','TRIGGERS','CALLS'].includes(edge.type)))record(edge.to);
+ const raw=String(node.attributes.target||node.attributes.href||node.attributes.originalExpression||'').trim();if(!screens.size&&!endpoints.size&&!unresolved.size&&raw)unresolved.add(raw.replace(/\$\{([^}]+)\}/g,'{$1}').replace(/[ \t]+/g,''));
+ const destinations=[...screens].sort(order).map(id=>`screen:${id}`).concat([...endpoints].sort(order).map(id=>`endpoint:${id}`),[...unresolved].sort(order).map(value=>`template:${value}`));
+ return JSON.stringify([String(node.attributes.kind||node.attributes.componentType||node.attributes.tag||'OTHER').toUpperCase(),destinations.length?destinations:['no-action']]);
 }
+export function buttonTableRows(index:Index,merge=true):ButtonRow[]{
+ const labels=componentLabelsByScreen(index),byName=new Map<string,ButtonRow[]>();
+ for(const [componentId,screenIds]of index.owners){const node=index.nodes.get(componentId);if(!node||!isAction(index,node))continue;for(const screenId of screenIds){const name=labels.get(screenId)?.get(componentId)||'可操作項目（無文字）',summary=actionSummary(index,componentId),member={screenId,componentId},row:ButtonRow={key:`item:${JSON.stringify([screenId,componentId])}`,global:false,name,screenNames:[index.nodes.get(screenId)?.name||'畫面'],kind:kindName(node),...summary,resolution:resolution(node),members:[member],behaviorDifferent:false,markable:true,screenId,componentId};const rows=byName.get(name)||[];rows.push(row);byName.set(name,rows);}}
+ if(!merge)return [...byName.values()].flat().sort((a,b)=>candidateOrder(a.screenNames[0]||'',b.screenNames[0]||'')||(kindOrder.get(a.kind)??99)-(kindOrder.get(b.kind)??99)||candidateOrder(a.name,b.name)||order(a.key,b.key));
+ const result:ButtonRow[]=[];
+ for(const [name,rows]of byName){const variants=new Map<string,ButtonRow[]>();for(const row of rows){const signature=actionSignature(index,row.members[0].componentId),items=variants.get(signature)||[];items.push(row);variants.set(signature,items);}if(variants.size>1){const members=rows.flatMap(row=>row.members).sort((a,b)=>order(a.screenId,b.screenId)||order(a.componentId,b.componentId)),screens=[...new Set(members.map(member=>index.nodes.get(member.screenId)?.name||'畫面'))].sort(candidateOrder),allKinds=[...new Set(rows.map(row=>row.kind))].sort(candidateOrder);result.push({key:`global-different:${name}`,global:true,name:`${name} · ${screens.length} 個畫面 · 行為不同`,screenNames:screens,kind:allKinds.length===1?allKinds[0]:'多種類型',primaryAction:'行為不同',possibleResults:'展開後逐一確認各畫面的可能結果',technicalDetails:[],multiple:true,resolution:'多種',members,behaviorDifferent:true,markable:false,variants:[...variants.values()].map(group=>mergeIdentical(group,name))});}else result.push(mergeIdentical(rows,name));}
+ return result.sort((a,b)=>candidateOrder(a.screenNames[0]||'',b.screenNames[0]||'')||(kindOrder.get(a.kind)??99)-(kindOrder.get(b.kind)??99)||candidateOrder(a.name,b.name)||order(a.key,b.key));
+}
+function mergeIdentical(rows:ButtonRow[],label:string):ButtonRow {const ordered=rows.sort((a,b)=>order(a.members[0].screenId,b.members[0].screenId)||order(a.members[0].componentId,b.members[0].componentId)),members=ordered.flatMap(row=>row.members),screenNames=[...new Set(ordered.flatMap(row=>row.screenNames))].sort(candidateOrder),base=ordered[0];return {...base,key:`${members.length>1?'global':'item'}:${JSON.stringify([label,ordered.map(row=>row.key).sort(order)])}`,global:members.length>1,name:members.length>1?`${label} · 出現在 ${screenNames.length} 個畫面`:label,screenNames,members,behaviorDifferent:false,markable:true};}
