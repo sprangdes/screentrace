@@ -7,62 +7,55 @@ import {fileFixture} from './fixture.mjs';
 import {simulationFixture} from './wp26-fixture.mjs';
 import {node} from './fixture.mjs';
 
-test('WP37 dashboard groups progress by region and provides deterministic review jumps',async()=>{
+test('R14 home owns progress while More preserves auto-advance and review shortcuts',async()=>{
  const browser=await chromium.launch();
  try{
   const page=await browser.newPage({viewport:{width:1440,height:900},reducedMotion:'reduce'});page.setDefaultTimeout(4000);
   await page.goto(await fileFixture(simulationFixture()));
-  await page.locator('[data-review-progress]').click();
-  assert.match(await page.locator('[data-review-progress]').innerText(),/已確認 0／/);
-  assert.ok(await page.locator('.review-dashboard-region').count()>0);
-  assert.ok(await page.locator('.review-dashboard-region [data-review-jump]').count()>0);
+  assert.ok(await page.locator('.dashboard-progress-track').count());
+  assert.ok(await page.locator('.dashboard-region').count()>0);
+  await page.locator('.topbar-more>summary').click();
   assert.equal(await page.getByRole('checkbox',{name:'標記後自動前進'}).isChecked(),true);
-  await page.getByRole('button',{name:'下一個未確認',exact:true}).click();
-  assert.equal(await page.locator('.focus-breadcrumb h2').innerText(),'甲');
+  await page.locator('.topbar-more>summary').click();
+  await page.locator('.primary-tabs button').nth(1).click();
+  const current=page.locator('[data-review-queue-screen][aria-current=page]');await current.waitFor();const first=await current.getAttribute('data-review-queue-screen');
   await page.keyboard.press('x');
-  assert.equal(await page.locator('main').getAttribute('data-review-focus'),'a:amb');
-  await page.keyboard.press('n');
-  await page.locator('[data-review-progress]').click();
-  assert.notEqual(await page.locator('[data-review-focus]').getAttribute('data-review-focus'),'a:shared');
+  assert.notEqual(await page.locator('[data-review-queue-screen][aria-current=page]').getAttribute('data-review-queue-screen'),first);
+  await page.locator('.topbar-more>summary').click();
   await page.getByRole('checkbox',{name:'標記後自動前進'}).uncheck();
-  const field=page.frameLocator('iframe').locator('#name');await field.focus();await page.keyboard.press('k');
-  const saved=await page.evaluate(()=>{const key=Object.keys(localStorage).find(value=>value.startsWith('screentrace:review:v1:'));return key?JSON.parse(localStorage.getItem(key)):undefined;});
-  assert.notEqual(saved?.componentDecisions?.a?.api,'KEEP','keyboard marking does not fire inside input fields');
-  await page.keyboard.press('k');
+  await page.locator('.topbar-more>summary').click();
+  await page.locator('.primary-tabs button').nth(1).click();
+  const after=await page.locator('[data-review-queue-screen][aria-current=page]').getAttribute('data-review-queue-screen');
+  await page.keyboard.press('n');
+  assert.notEqual(await page.locator('[data-review-queue-screen][aria-current=page]').getAttribute('data-review-queue-screen'),after);
+  await page.locator('.topbar-more>summary').click();
   assert.equal(await page.getByRole('checkbox',{name:'標記後自動前進'}).isChecked(),false);
  }finally{await browser.close();}
 });
 
-test('WP37 dashboard closes with real Escape and an outside mouse click',async()=>{
+test('R14 removes the floating confirmation dashboard without hiding home progress',async()=>{
  const browser=await chromium.launch();
  try{
   const page=await browser.newPage({viewport:{width:1440,height:900},reducedMotion:'reduce'});page.setDefaultTimeout(4000);
   await page.goto(await fileFixture(simulationFixture()));
-  const dashboard=page.locator('.review-progress-panel');
-  await page.locator('[data-review-progress]').click();assert.ok(await dashboard.isVisible());
-  await page.keyboard.press('Escape');await dashboard.waitFor({state:'hidden'});
-  assert.equal(await page.locator('[data-review-progress]').getAttribute('aria-expanded'),'false');
-  await page.locator('[data-review-progress]').click();assert.ok(await dashboard.isVisible());
-  await page.mouse.click(120,28);await dashboard.waitFor({state:'hidden'});
-  assert.equal(await page.locator('[data-review-progress]').getAttribute('aria-expanded'),'false');
+  assert.ok(await page.locator('.dashboard-progress-track').isVisible());
+  assert.equal(await page.locator('[data-review-progress],.review-progress-panel').count(),0);
+  await page.locator('.primary-tabs button').nth(1).click();
+  assert.equal(await page.locator('[data-review-queue]').count(),1);
  }finally{await browser.close();}
 });
 
-test('WP37 docked dashboard leaves REMOVE impact visible without closing',async()=>{
+test('R14 screen rationale keeps the assumed REMOVE impact beside the decision',async()=>{
  const browser=await chromium.launch();
  try{
   const page=await browser.newPage({viewport:{width:1440,height:900},reducedMotion:'reduce'});page.setDefaultTimeout(4000);
   await page.goto(await fileFixture(simulationFixture()));
-  await openScreen(page,'a');
+  await page.locator('.primary-tabs button').nth(1).click();await page.locator('[data-review-queue-screen="a"]').click();
   await page.locator('.preview[aria-busy="false"]').waitFor();
-  await page.locator('[data-review-progress]').click();
-  const dashboard=page.locator('.review-progress-panel');assert.ok(await dashboard.isVisible());
-  await page.locator('[data-screen-review="a"] [role="radio"][data-decision="REMOVE"]').last().evaluate(button=>button.click());
-  await page.locator('.decision-impact').waitFor({state:'visible'});
-  assert.ok(await dashboard.isVisible(),'dashboard stays open after marking REMOVE');
-  const [dashboardBox,impactBox]=await Promise.all([dashboard.boundingBox(),page.locator('.decision-impact').boundingBox()]);
-  assert.ok(dashboardBox&&impactBox);
-  assert.ok(dashboardBox.x+dashboardBox.width<=impactBox.x||impactBox.x+impactBox.width<=dashboardBox.x||dashboardBox.y+dashboardBox.height<=impactBox.y||impactBox.y+impactBox.height<=dashboardBox.y,'dashboard does not cover the right-side impact preview');
+  await page.locator('.screen-review-screen-decision [role="radio"][data-decision="REMOVE"]').click();
+  const impact=page.locator('.hypothetical-remove-impact');await impact.waitFor({state:'visible'});
+  assert.match(await impact.innerText(),/如果移除/);
+  assert.ok(await page.locator('.screen-review-screen-decision').isVisible());
  }finally{await browser.close();}
 });
 
@@ -111,6 +104,6 @@ test('WP37 next-undecided reports when every review target is confirmed',async()
   const data=simulationFixture();data.graph.nodes=data.graph.nodes.filter(item=>item.id==='a');data.graph.relationships=[];data.graph.behaviors=[];data.graph.apiContracts=[];data.graph.validationRules=[];data.preview.screens=data.preview.screens.filter(item=>item.graphScreenId==='a');data.preview.elements=[];data.documents={a:'<html><body>甲</body></html>'};
   const page=await browser.newPage({viewport:{width:1440,height:900},reducedMotion:'reduce'});page.setDefaultTimeout(4000);await page.goto(await fileFixture(data));
   await page.evaluate(()=>localStorage.setItem('screentrace:review:v1:%E6%B8%AC%E8%A9%A6%E6%87%89%E7%94%A8:'+('a'.repeat(64)),JSON.stringify({format:'screentrace-review',version:1,schemaVersion:'2.2',application:'測試應用',fingerprint:'a'.repeat(64),screenDecisions:{a:'KEEP'},componentDecisions:{}})));
-  await page.reload();await page.getByRole('button',{name:'下一個未確認',exact:true}).click();assert.equal(await page.locator('.workflow-status').innerText(),'全部已確認');
+  await page.reload();await page.locator('.primary-tabs button').nth(1).click();await page.keyboard.press('n');assert.equal(await page.locator('.workflow-status').innerText(),'全部畫面已確認');
  }finally{await browser.close();}
 });

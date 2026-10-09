@@ -12,5 +12,6 @@ export async function startReviewDownload(page) {
   const check = page.locator('.pre-export-check');
   await check.waitFor({state:'visible'});
   await page.getByRole('button', {name: '仍要匯出', exact: true}).click();
-  return pending;
+  const failure=page.locator('[data-md-status]').filter({hasText:'匯出失敗'});
+  return Promise.race([pending,failure.waitFor({state:'visible'}).then(async()=>{throw new Error(await failure.innerText());})]);
 }

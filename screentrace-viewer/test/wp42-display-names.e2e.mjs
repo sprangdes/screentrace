@@ -3,6 +3,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {chromium} from '../../screentrace-capture/node_modules/playwright/index.mjs';
 import {fixture,fileFixture,node} from './fixture.mjs';
+import {reviewExportMenuItem} from './review-export.mjs';
 
 function namingFixture(){
  const data=fixture(),components=[
@@ -84,9 +85,9 @@ test('WP42 names ignore reconstructed sample text and use the shared cross-scree
   assert.doesNotMatch(await page.locator('.global-search-results').innerText(),/Alex Johnson|連結 1|Owners Home 畫面/);
   await page.locator('[data-global-result="button"]').first().click();
   assert.match(await page.locator('.action-items').innerText(),new RegExp(expected));
-  await page.locator('.review-progress').click();
-  assert.doesNotMatch(await page.locator('.review-progress-panel').innerText(),/Alex Johnson|連結 1|Owners Home 畫面/);
-  await page.locator('[data-md-export]').click();
+  await page.getByRole('button',{name:'盤點首頁',exact:true}).click();
+  assert.doesNotMatch(await page.locator('.dashboard-progress').innerText(),/Alex Johnson|連結 1|Owners Home 畫面/);
+  await (await reviewExportMenuItem(page)).click();
   const exportCheck=page.locator('.pre-export-check');await exportCheck.waitFor();
   assert.doesNotMatch(await exportCheck.innerText(),/Alex Johnson|連結 1|Owners Home 畫面/,await exportCheck.innerText());
  }finally{await browser.close();}

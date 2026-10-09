@@ -12,7 +12,7 @@ test('WP40 decisions stay available without a mode and synchronize across overvi
   page.setDefaultTimeout(4000);
   await page.goto(await fileFixture(simulationFixture()));
   assert.equal(await page.getByRole('checkbox',{name:'確認模式',exact:true}).count(),0);
-  assert.match(await page.locator('[data-review-progress]').innerText(),/已確認/);
+  assert.match(await page.locator('[data-delivery-progress]').innerText(),/已決定/);
   const undecided=page.locator('.screen-card[data-screen="a"]');
   assert.equal(await undecided.locator('[data-screen-status]').count(),0);
   await undecided.hover();
@@ -61,8 +61,8 @@ test('WP40 list, button table, feature progress and touch long-press expose the 
   const page=await browser.newPage({viewport:{width:1440,height:900},reducedMotion:'reduce',hasTouch:true,isMobile:true});
   page.setDefaultTimeout(4000);
   await page.goto(await fileFixture(simulationFixture()));
-  await page.locator('[data-review-progress]').click();
-  assert.match(await page.locator('.review-progress-panel').innerText(),/畫面：保留 0 · 移除 0 · 未確認 3/);
+  assert.ok(await page.locator('.dashboard-progress-track').count());
+  assert.equal(await page.locator('[data-review-progress],.review-progress-panel').count(),0);
   assert.equal(await page.locator('.review-help>summary[aria-label="標記說明"]').count(),1);
   await page.locator('.screen-card[data-screen="a"]').dispatchEvent('pointerdown',{pointerType:'touch',button:0});
   await page.waitForFunction(()=>document.querySelector('.card-review[data-screen-controls="a"]')?.classList.contains('touch-revealed'),{timeout:1500});
@@ -78,7 +78,7 @@ test('WP40 list, button table, feature progress and touch long-press expose the 
   await page.getByRole('button',{name:'畫面',exact:true}).click();
   await page.locator('[data-review-queue-screen="a"] .sidebar-screen').click();
   await page.locator('aside [data-screen-decision="KEEP"]').click();
-  await page.getByRole('button',{name:'地圖',exact:true}).click();
+  await page.getByRole('button',{name:'功能地圖',exact:true}).click();
   assert.equal(await page.locator('.screen-card[data-screen="a"]').getAttribute('data-screen-status'),'KEEP');
  }finally{await browser.close();}
 });

@@ -14,26 +14,25 @@ test('WP41 top bar exposes the added delivery action and overflow menu and overf
  const browser=await chromium.launch();
  try{
   const page=await browser.newPage({viewport:{width:1440,height:900},reducedMotion:'reduce'});page.setDefaultTimeout(4000);await page.goto(await fileFixture());
-  const actions=page.locator('.topbar-actions');assert.equal(await actions.locator(':scope > *').count(),5);
-  assert.equal(await actions.locator('.review-workflow-control [data-review-progress]').count(),1);
-  assert.equal(await actions.locator('.review-workflow-control .next-undecided').count(),1);
+  const actions=page.locator('.topbar-actions');assert.equal(await actions.locator(':scope > *').count(),4);
+  assert.equal(await actions.locator('[data-review-progress],.next-undecided').count(),0);
   const menu=page.locator('.topbar-more'),menuSummary=page.locator('.topbar-more>summary');await menuSummary.click();
-  for(const name of ['匯入 md','分析資訊 0','重新開啟引導'])assert.equal(await menu.getByRole('menuitem',{name:new RegExp(name.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'))}).isVisible(),true,name);
+  for(const name of ['匯出 md','匯入 md','分析資訊 0','重新開啟引導'])assert.equal(await menu.getByRole('menuitem',{name:new RegExp(name.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'))}).isVisible(),true,name);
   assert.equal(await menu.locator('.review-help>summary').isVisible(),true,'help remains an available menu item');
   await menu.getByRole('menuitem',{name:/分析資訊/}).click();assert.equal(await page.locator('.information-drawer').evaluate(el=>el.open),true);
   await page.getByRole('button',{name:'關閉分析資訊'}).click();
-  await menuSummary.click();await menuSummary.focus();await page.keyboard.press('Enter');for(const expected of ['匯入 md','分析資訊 0','查看選取物件資訊','收合右側欄','標記說明','重新開啟引導']){await page.keyboard.press('ArrowDown');const active=await page.evaluate(()=>document.activeElement?.getAttribute('aria-label')||document.activeElement?.textContent?.trim()||'');assert.match(active,new RegExp(expected));}
+  if(await menu.evaluate(el=>el.open))await menuSummary.click();await menuSummary.focus();await page.keyboard.press('Enter');for(const expected of ['匯出 md','匯入 md','分析資訊 0','查看選取物件資訊','收合右側欄','標記說明','重新開啟引導']){await page.keyboard.press('ArrowDown');const active=await page.evaluate(()=>document.activeElement?.getAttribute('aria-label')||document.activeElement?.textContent?.trim()||'');assert.match(active,new RegExp(expected));}
   await page.keyboard.press('Escape');assert.equal(await menu.evaluate(el=>el.open),false);
   await page.keyboard.press('Escape');
  }finally{await browser.close();}
 });
 
-test('WP41 workflow segment opens the dashboard and advances independently',async()=>{
+test('WP45 home owns progress and the review queue advances independently',async()=>{
  const browser=await chromium.launch();
  try{
   const page=await browser.newPage({viewport:{width:1440,height:900},reducedMotion:'reduce'});page.setDefaultTimeout(4000);await page.goto(await fileFixture());
-  const progress=page.locator('[data-review-progress]'),dashboard=page.locator('.review-progress-panel');await progress.click();assert.equal(await dashboard.isVisible(),true);
-  await progress.click();await page.locator('.review-workflow-control .next-undecided').click();assert.equal(await page.locator('.focus-breadcrumb h2').innerText(),'甲');
+  assert.ok(await page.locator('.dashboard-progress-track').isVisible());
+  await page.locator('.primary-tabs button').nth(1).click();const current=page.locator('[data-review-queue-screen][aria-current=page]');await current.waitFor();const first=await current.getAttribute('data-review-queue-screen');await page.keyboard.press('n');assert.notEqual(await page.locator('[data-review-queue-screen][aria-current=page]').getAttribute('data-review-queue-screen'),first);
  }finally{await browser.close();}
 });
 
@@ -71,7 +70,7 @@ test('WP41 first-run guide is in normal layout and never overlaps interactive co
   const guide=page.locator('[data-first-run-guide]'),guideBox=await guide.boundingBox();assert.ok(guideBox);
   const overlaps=await page.locator('button,input,select,summary,[role="button"]').evaluateAll((elements,box)=>elements.filter(e=>!e.closest('[data-first-run-guide]')&&getComputedStyle(e).visibility!=='hidden'&&getComputedStyle(e).display!=='none').some(e=>{const r=e.getBoundingClientRect();return r.width>0&&r.height>0&&r.left<box.right&&r.right>box.left&&r.top<box.bottom&&r.bottom>box.top;}),guideBox);
   assert.equal(overlaps,false,'first-run guide overlaps an interactive control');
-  assert.equal(await page.locator('.shell>nav> .review-statistics').count(),0);assert.equal(await page.locator('.shell>nav> .conflicts').count(),0);assert.ok(await page.locator('.review-progress-panel .review-statistics').count());
+  assert.equal(await page.locator('.shell>nav> .review-statistics').count(),0);assert.equal(await page.locator('.shell>nav> .conflicts').count(),0);assert.ok(await page.locator('.dashboard-progress').count());
  }finally{await browser.close();}
 });
 
@@ -91,6 +90,6 @@ test('WP41 right-side controls fit without overflow at 1024px',async()=>{
   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
   assert.ok(await page.evaluate(()=>{const top=document.querySelector('.topbar'),actions=document.querySelector('.topbar-actions');return actions.getBoundingClientRect().right<=top.getBoundingClientRect().right+1;}));
   assert.ok(await page.locator('.global-search-open .search-label').isHidden());
-  assert.match(await page.locator('[data-review-progress]').innerText(),/\d+／\d+/);assert.doesNotMatch(await page.locator('[data-review-progress]').innerText(),/已確認/);
+  assert.match(await page.locator('[data-delivery-progress]').innerText(),/已決定 \d+ \/ \d+/);
  }finally{await browser.close();}
 });
