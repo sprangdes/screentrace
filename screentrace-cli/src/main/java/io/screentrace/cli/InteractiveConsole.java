@@ -104,14 +104,15 @@ final class InteractiveConsole implements AutoCloseable {
   }
 
   void showAnalysisComplete(String project, List<String> technologies, long endpoints, long screens, long components,
-      Path output) {
-    List<String> details = List.of(
+      Path output,long contextPathHintCount) {
+    List<String> details = new java.util.ArrayList<>(List.of(
         "專案：" + project,
         "技術：" + String.join(", ", technologies),
         "Endpoints：" + endpoints,
         "Screens：" + screens,
         "Components：" + components,
-        "輸出：" + output);
+        "輸出：" + output));
+    String hint=ScreenTraceCli.contextPathHintSummary(contextPathHintCount);if(hint!=null)details.add(hint);
     showCompletionPanel("分析完成", details);
   }
 

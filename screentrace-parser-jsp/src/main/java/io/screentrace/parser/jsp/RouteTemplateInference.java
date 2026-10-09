@@ -16,6 +16,7 @@ public final class RouteTemplateInference {
   Map<String,Relationship> edges=new TreeMap<>();graph.relationships().forEach(e->edges.put(e.id(),e));
   Map<String,Behavior> behaviors=new TreeMap<>();graph.behaviors().forEach(b->behaviors.put(b.id(),b));
   List<Diagnostic> diagnostics=new ArrayList<>(graph.diagnostics());
+  Map<String,Map<String,HintCall>> hintCalls=new TreeMap<>();
   List<String> contexts=UrlResolution.context(inventory,List.of()).values().stream().map(UrlResolution.ContextValue::value).filter(v->!v.isEmpty()).distinct().sorted().toList();
   List<GraphNode> endpoints=nodes.values().stream().filter(n->n.type()==NodeType.ENDPOINT&&n.attributes().containsKey("path")&&!("javascript-request".equals(n.attributes().get("origin")))).toList();
   for(GraphNode component:nodes.values().stream().filter(n->n.type()==NodeType.COMPONENT&&Set.of("LINK","FORM").contains(n.attributes().get("kind"))).toList()) {
@@ -28,6 +29,11 @@ public final class RouteTemplateInference {
    List<String> normalized=normalize(raw,contexts,b.type()==BehaviorType.CALL_API);
    List<GraphNode> compatible=new ArrayList<>();for(GraphNode endpoint:endpoints)if(methodCompatible(method,endpoint.attributes().getOrDefault("httpMethod","ANY"))&&normalized.stream().anyMatch(p->sameShape(p,endpoint.attributes().get("path"))))compatible.add(endpoint);
    compatible=compatible.stream().distinct().sorted(Comparator.comparing(GraphNode::id)).toList();
+   if(compatible.isEmpty()) {
+    SourceLocation hintSource=b.evidence().stream().filter(e->"AcornStaticAnalyzer".equals(e.parser())).map(AnalysisEvidence::source).filter(Objects::nonNull).findFirst()
+        .orElseGet(()->b.evidence().stream().map(AnalysisEvidence::source).filter(Objects::nonNull).filter(s->!".".equals(s.file())).findFirst().orElse(trigger.source()));
+    addContextPathHint(hintCalls,raw,method,endpoints,hintSource.file()+":"+hintSource.line()+":"+method+":"+raw,hintSource);
+   }
    List<GraphNode> targets=new ArrayList<>();
    if(b.type()==BehaviorType.NAVIGATE){for(GraphNode ep:compatible){for(Relationship handled:edges.values())if(handled.type()==EdgeType.HANDLED_BY&&handled.from().equals(ep.id()))for(Relationship rendered:edges.values())if(Set.of(EdgeType.RENDERS,EdgeType.FORWARDS_TO).contains(rendered.type())&&rendered.from().equals(handled.to())&&nodes.get(rendered.to())!=null&&nodes.get(rendered.to()).type()==NodeType.SCREEN)targets.add(nodes.get(rendered.to()));}}
    else targets.addAll(compatible);
@@ -36,9 +42,7 @@ public final class RouteTemplateInference {
    List<String> contextCandidates=contexts.stream().filter(c->raw.startsWith(c+"/")||raw.equals(c)).toList();
    String detail="原始樣板="+raw+"；正規化樣板="+normalized+"；context path 候選="+contextCandidates+"；候選路由="+compatible.stream().map(n->n.attributes().getOrDefault("path",n.id())).toList()+"；parser=RouteTemplateInference";
    ResolutionStatus status=targets.size()==1?ResolutionStatus.INFERRED:targets.size()>1?ResolutionStatus.AMBIGUOUS:ResolutionStatus.UNRESOLVED;
-   List<AnalysisEvidence> proof=new ArrayList<>(b.evidence());
-   if(b.type()==BehaviorType.CALL_API&&compatible.size()==1)proof=canonicalCallUrlEvidence(proof,raw,compatible.get(0).attributes().get("path"));
-   proof.add(new AnalysisEvidence(source,"RouteTemplateInference",status,detail));
+   List<AnalysisEvidence> proof=new ArrayList<>(b.evidence());proof.add(new AnalysisEvidence(source,"RouteTemplateInference",status,detail));
    if(b.type()==BehaviorType.NAVIGATE&&compatible.size()==1) {
     GraphNode endpoint=compatible.get(0);String callId=ApplicationGraph.id(NodeType.COMPONENT,EdgeType.TRIGGERS+":"+trigger.id()+":"+endpoint.id());Relationship oldCall=edges.get(callId);List<AnalysisEvidence> callProof=new ArrayList<>(proof);if(oldCall!=null)callProof.addAll(oldCall.evidence());
     edges.put(callId,new Relationship(callId,EdgeType.TRIGGERS,trigger.id(),endpoint.id(),Confidence.INFERRED,source,callProof.stream().distinct().sorted().toList()));
@@ -47,6 +51,7 @@ public final class RouteTemplateInference {
     removeSyntheticRequestEdge(edges,nodes,b);
     GraphNode target=targets.get(0);EdgeType edgeType=b.type()==BehaviorType.NAVIGATE?EdgeType.NAVIGATES_TO:trigger.type()==NodeType.SCREEN?EdgeType.CALLS:EdgeType.TRIGGERS;
     String edgeId=ApplicationGraph.id(NodeType.COMPONENT,edgeType+":"+trigger.id()+":"+target.id());Relationship old=edges.get(edgeId);if(old!=null)proof.addAll(old.evidence());
+    if(b.type()==BehaviorType.CALL_API&&compatible.size()==1)proof=canonicalCallUrlEvidence(proof,compatible.get(0).attributes().get("path"));
     edges.put(edgeId,new Relationship(edgeId,edgeType,trigger.id(),target.id(),Confidence.INFERRED,source,proof.stream().distinct().sorted().toList()));
     behaviors.put(b.id(),new Behavior(b.id(),b.triggerId(),b.event(),b.type(),target.id(),b.guard(),b.parentId(),b.expression(),proof.stream().distinct().sorted().toList()));
    } else {
@@ -54,10 +59,26 @@ public final class RouteTemplateInference {
     behaviors.put(b.id(),new Behavior(b.id(),b.triggerId(),b.event(),b.type(),targets.size()>1?null:b.targetId(),b.guard(),b.parentId(),b.expression(),proof.stream().distinct().sorted().toList()));
    }
   }
+  for(var group:hintCalls.entrySet()) {
+   List<HintCall> calls=group.getValue().values().stream().sorted(Comparator.comparing((HintCall c)->c.source().file()).thenComparingInt(c->c.source().line())).toList();
+   List<AnalysisEvidence> proof=calls.stream().map(c->new AnalysisEvidence(c.source(),"ContextPathHint",ResolutionStatus.UNRESOLVED,"候選前綴="+group.getKey()+"；候選路由="+c.route()+"；設定方式=./bin/screentrace config")).toList();
+   String sources=calls.stream().map(c->c.source().file()+":"+c.source().line()).distinct().reduce((a,b)->a+"、"+b).orElse("");
+   String message="可能缺少 context path：候選前綴="+group.getKey()+"；可解析的呼叫數="+calls.size()+"；來源="+sources+"；設定方式：./bin/screentrace config";
+   diagnostics.add(new Diagnostic(message,Confidence.UNRESOLVED,calls.get(0).source(),"CONTEXT_PATH_HINT",proof));
+  }
   nodes.entrySet().removeIf(e->"javascript-request".equals(e.getValue().attributes().get("origin"))&&behaviors.values().stream().noneMatch(b->e.getKey().equals(b.targetId()))&&edges.values().stream().noneMatch(edge->e.getKey().equals(edge.to())));
   return new ApplicationGraph(graph.application(),List.copyOf(nodes.values()),List.copyOf(edges.values()),diagnostics.stream().distinct().toList(),graph.apiContracts(),graph.schemaVersion(),List.copyOf(behaviors.values()),graph.validationRules());
  }
- private static List<AnalysisEvidence> canonicalCallUrlEvidence(List<AnalysisEvidence> evidence,String original,String endpointPath) {
+ private static void addContextPathHint(Map<String,Map<String,HintCall>> groups,String raw,String method,List<GraphNode> endpoints,String callId,SourceLocation source) {
+  if(raw==null||!raw.startsWith("/")||raw.startsWith("//")||raw.matches("^[A-Za-z][A-Za-z0-9+.-]*:.*"))return;
+  String path=raw.split("[?#]",2)[0];int slash=path.indexOf('/',1);if(slash<=1||slash==path.length()-1)return;
+  String prefix=path.substring(0,slash),remainder=path.substring(slash);
+  List<GraphNode> candidates=endpoints.stream().filter(e->methodCompatible(method,e.attributes().getOrDefault("httpMethod","ANY"))&&sameShape(remainder,e.attributes().get("path"))).distinct().toList();
+  if(candidates.size()!=1)return;
+  groups.computeIfAbsent(prefix,k->new TreeMap<>()).putIfAbsent(callId,new HintCall(source,candidates.get(0).attributes().getOrDefault("path",candidates.get(0).id())));
+ }
+ private record HintCall(SourceLocation source,String route) { }
+ private static List<AnalysisEvidence> canonicalCallUrlEvidence(List<AnalysisEvidence> evidence,String endpointPath) {
   if(endpointPath==null)return evidence;
   List<AnalysisEvidence> result=new ArrayList<>();
   for(AnalysisEvidence item:evidence) {

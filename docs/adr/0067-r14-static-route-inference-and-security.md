@@ -17,10 +17,13 @@ R14 要求補足 JSP 動態路由、JavaScript API 呼叫、AngularJS scope 事�
 5. Spring Security XML 與 Java Config 的常值登入頁／拒絕存取頁會在對應畫面記錄 autoRedirect、設定來源位置與受保護路徑；動態設定只產生診斷，不附加屬性。
 6. OQ-020 的預設區域規則修訂為：只產生一個區域的依據不得成為預設，除非三種依據都只產生一個區域。其餘預設排序與 UI 切換規則不變；UI 實作留在 WP45。
 7. OQ-022 方案 C 保留既有 JS 佔位符與 UNRESOLVED 規則。函式參數用 `{參數名}`、非計算屬性用 `{最後屬性名}`，computed access 不變。當帶 context path 的 JS 呼叫唯一對應後端路由時，Java graph evidence 的 canonical `url` 改為 endpoint path，原 URL 以 `originalUrl` 保留；behavior expression 仍保留原始運算式。沒有唯一對應時保留原前端請求路徑。
+8. A3 只在原始路徑尚未匹配、移除第一段後能依 HTTP method 唯一匹配既有 endpoint 時，按候選前綴產生 `CONTEXT_PATH_HINT` 診斷；同一來源位置、方法與 URL 的重複追蹤呼叫合併計數。診斷列出前綴、可解析呼叫數、來源檔與行號及 `./bin/screentrace config`。不新增或改寫關係。報表分析資訊沿用診斷清單顯示；CLI 完成摘要僅在有提示時附加一行。
 
 ## 測試與斷言
 
 測試先行提交 addd92f 新增失敗的 WP44 route、API、security、endpoint 類別與 Angular 整合測試；第二個測試先行提交 24d6bd7 增加巢狀 Spring URL 樣板與同元素 ng-init controller 綁定案例。舊實作分別因缺少路由關係／證據、缺少 autoRedirect、錯誤 endpoint 類別及無法追蹤 Angular 載入函式而失敗。實作後針對性測試通過。未修改任何既有斷言，未變更 graph schema，未新增相依。
+
+WP44 補正另以 `7d93885` 先提交 A2 失敗測試：函式參數 URL 為 null、`$scope` 屬性保留運算式文字，且 Java endpoint path 與 JS URL 不相同；`a9f501e` 再鎖定有 context path 時的投影差異。`5154a2d` 先提交 A3 診斷、CLI 摘要與 viewer 名稱測試。實作後相關 JS、Java 與 A3 測試通過；既有 `tracing.test.mjs` 未修改。完整預設並行 E2E 仍有一項既有 `struts1-spring` 分析摘要 golden 差異（IN_USE 預期 27、實際 28），未修改該斷言或 golden，詳見 R14 報告。
 
 R14 §2.4 授權的既有 golden 修改僅兩份合成 fixture 摘要：`spring-mvc-jsp.summary.json` 與 `spring-boot-jsp.summary.json`，每份只調整 `apis.total`（27 → 26）及 `apis.by_status.IN_USE`（22 → 21）。舊預期在預設並行 Chromium E2E 的 golden 比對中實際失敗；兩次分析都得到 total 26、IN_USE 21。路由投影把 JS 呼叫對應至既有端點並移除不再作為有效目標的合成 API 節點，故總數與使用中狀態同步減一。兩份 golden 的其他欄位未改。
 

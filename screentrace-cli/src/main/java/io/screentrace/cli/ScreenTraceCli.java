@@ -116,7 +116,7 @@ public final class ScreenTraceCli {
       if (action == Action.ANALYZE) {
         AnalysisResult result = analyze(project,settings);
         console.showAnalysisComplete(result.project(), result.technologies(), result.endpoints(), result.screens(),
-            result.components(), result.output());
+            result.components(), result.output(), result.contextPathHintCount());
         report = result.report();
       } else {
         report = new SingleHtmlAnalysisWriter().generate(project.analysisDirectory(),new LibraryStore(WorkspaceSettings.defaultFile().getParent()).selected(project.name())).path();
@@ -193,15 +193,21 @@ public final class ScreenTraceCli {
     long screens = graph.nodes().stream().filter(node -> node.type().name().equals("SCREEN")).count();
     long endpoints = graph.nodes().stream().filter(node -> node.type().name().equals("ENDPOINT")).count();
     long components = graph.nodes().stream().filter(node -> node.type().name().equals("COMPONENT")).count();
+    long contextPathHintCount=graph.diagnostics().stream().filter(d->"CONTEXT_PATH_HINT".equals(d.code())).mapToLong(d->d.evidence().size()).sum();
     return new AnalysisResult(report.path(), project.name(), graph.application().technologies(), endpoints,
-        screens, components, output);
+        screens, components, output,contextPathHintCount);
+  }
+
+  static String contextPathHintSummary(long count) {
+    return count>0?"提示："+count+" 個網址可能缺少 context path，請使用 ./bin/screentrace config 設定後重新分析":null;
   }
 
   private static void logAnalysis(AnalysisResult result) {
     LOGGER.info(() -> "分析完成：\n  專案：" + result.project() + "\n  技術："
         + String.join(", ", result.technologies()) + "\n  Endpoints：" + result.endpoints()
         + "\n  Screens：" + result.screens() + "\n  Components：" + result.components()
-        + "\n  輸出：" + result.output());
+        + "\n  輸出：" + result.output()
+        + (contextPathHintSummary(result.contextPathHintCount())==null?"":"\n  "+contextPathHintSummary(result.contextPathHintCount())));
   }
 
   private static ApplicationGraph analyze(ProjectScanner.ProjectInventory inventory) throws IOException {
@@ -277,7 +283,7 @@ public final class ScreenTraceCli {
   private record ProjectChoice(ProjectCatalog.Project project, String label) { }
 
   private record AnalysisResult(Path report, String project, List<String> technologies, long endpoints, long screens,
-      long components, Path output) { }
+      long components, Path output,long contextPathHintCount) { }
 
   private enum Action {
     INTERACTIVE(null, null), ANALYZE("analyze", "分析專案"), REPORT("report", "開啟報表"),
