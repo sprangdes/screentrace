@@ -509,9 +509,9 @@ eMusicStore 的部署 context path 為 `/eMusicStore`（需求方提供）。以
 
 審查者以 HEAD（3c3e721）唯讀重新分析 eMusicStore（設定 `/eMusicStore`）抽查 §11.1。第 4–7 項確認完成；第 2 項的計數精簡完成。**R14 重新開啟**，完成下列兩項後才結案：
 
-1. **推定判定方向錯誤（§11.1 第 1、2 項未達預期）**：API 頁為「使用中 5、推定使用中 1、找不到呼叫來源 1」，首頁為「另有 1 個 API 的呼叫來源是推定的」。§11.1 第 2 項明定預期為 **使用中 1（`ANY /cart/`）、推定使用中 5、找不到呼叫來源 1**。
-   - 目前被標為「使用中」的 `GET`／`DELETE /rest/cart/{cartId}`、`PUT /rest/cart/add/{productId}`、`PUT /rest/cart/remove/{productId}`，呼叫來源是 `controller.js` 的 `'/eMusicStore/rest/cart/' + 運算式` 字串串接。依 §9.2，「JS 字串串接推定」屬於 `TEMPLATE_INFERENCE`，不是 `STATIC_URL`；設定 context path 只是讓前綴可被去除，不會讓動態段變成靜態。
-   - 只有整段網址都是常值（例如 `controller.js:32` 的 `'/eMusicStore/rest/cart/cartId'`）才算 `STATIC_URL`。若某支 API 同時有常值與串接來源，依 §11.1 第 2 項「至少一個 STATIC_URL 來源 → 使用中」處理，並在報告逐一列出每支 API 的每個來源及其 basis。
+1. **推定判定方向錯誤（§11.1 第 1、2 項未達預期）**：API 頁為「使用中 5、推定使用中 1、找不到呼叫來源 1」，首頁為「另有 1 個 API 的呼叫來源是推定的」。§11.1 第 2 項寫的預期「1／5／1」是審查者計算錯誤（漏看下述常值來源），**修正後的預期為：使用中 2（`ANY /cart/`、`GET /rest/cart/{cartId}`）、推定使用中 4（`DELETE /rest/cart/{cartId}`、`PUT /rest/cart/add/{productId}`、`PUT /rest/cart/remove/{productId}`、`ANY /admin/productInventory/deleteProduct/{productId}`）、找不到呼叫來源 1（`PUT /rest/cart/{cartId}`）、可移除 0**；首頁對應顯示「另有 4 個 API 的呼叫來源是推定的」。
+   - 目前被標為「使用中」的 `DELETE /rest/cart/{cartId}`、`PUT /rest/cart/add/{productId}`、`PUT /rest/cart/remove/{productId}`，呼叫來源只有 `controller.js` 的 `'/eMusicStore/rest/cart/' + 運算式` 字串串接。依 §9.2，「JS 字串串接推定」屬於 `TEMPLATE_INFERENCE`，不是 `STATIC_URL`；設定 context path 只是讓前綴可被去除，不會讓動態段變成靜態。
+   - 只有整段網址都是常值才算 `STATIC_URL`。`GET /rest/cart/{cartId}` 同時有串接來源（`controller.js:11`）與常值來源（`controller.js:32`、`:39` 的 `'/eMusicStore/rest/cart/cartId'`），依「至少一個 STATIC_URL 來源 → 使用中」為使用中。報告須逐一列出每支 API 的每個來源及其 basis。
    - 補 E2E／單元測試：以 eMusicStore 等價的合成 fixture（JS 串接呼叫 ＋ 常值呼叫 ＋ JSP 靜態連結），斷言三類各自的數字；不得只斷言「首頁＝API 頁」。
 2. **`REDIRECT` 仍以原始代碼顯示**：API 清單 `/cart/`、`deleteProduct/{productId}` 第二行仍是 `REDIRECT`。依 §11.1 第 3 項顯示「轉址」，原值放 tooltip。
 
