@@ -310,3 +310,11 @@ eMusicStore 的部署 context path 為 `/eMusicStore`（需求方提供）。以
 3. **A4（OQ-021 方案 A）**：依 OQ-021 決定實作轉址目的地的推定來源繼承。先提交雙端向量與失敗測試，再實作。驗收：eMusicStore 設定 `/eMusicStore` 後 `GET /cart/{cartId}` 為 IN_USE，來源為 INFERRED、證據含 `/cart/` → `CartItemController.get()` → `redirect:` 的轉址鏈；未設定時結果同樣成立（`/cart/` 不受 context path 影響）；PetClinic 的變化逐項列入報告；受影響的 golden 依 §2.4 處理並記錄。
 
 **驗收條件**：1、2、3 完成且 §5 完整驗證全綠後，WP44 即視為通過，**不需再停**，直接進行 WP45、WP46、WP47，於 WP47 完成後停止等待驗收。任何一項未達成，仍停在 WP44。
+
+### 7.7 第三次驗收回覆（需求方，2026-10-09）
+
+§7.6 第 1 點「其他欄位不得變動」修訂為：**同一個端點狀態移動所連動的欄位一併更新**。`struts1-spring.summary.json` 的 `apis.by_status.UNREFERENCED` 13 → 12 與 IN_USE 27 → 28 是同一支 `GET /orders/{name}` 的狀態移動，`apis.total` 必須維持 40；授權更新，並在 ADR 0067 同一筆記錄中補上此欄位。除這兩個欄位外，該 golden 其他欄位仍不得變動。
+
+舊版 `report` 在同一環境同樣以 134 結束，確認為環境問題，WP44 不處理；PetClinic 隔離副本因缺少圖檔以 2 結束，屬隔離副本不完整，不列為缺陷。
+
+完成後若 §5 完整驗證全綠，WP44 即通過，依 §7.6 直接進行 WP45–WP47。
