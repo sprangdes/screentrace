@@ -19,5 +19,10 @@ test('R14 dashboard uses the full design canvas and shows its progress card',asy
   const label=row.locator('.sidebar-screen');
   assert.ok((await label.evaluate(el=>el.getBoundingClientRect().width))>=180);
   assert.equal(await row.getByRole('radiogroup').count(),0,'decision controls belong in the workspace, not the queue');
+  await row.click();
+  assert.equal(await page.locator('aside .screen-review-screen-decision [role=radiogroup]').count(),1,'screen decision belongs in the right column');
+  assert.equal(await page.locator('main .screen-review-actions').count(),1,'component decisions belong below the complete preview');
+  assert.equal(await page.locator('aside .screen-review-actions').count(),0);
+  assert.match(await page.locator('.preview-notice').innerText(),/示意畫面：資料為範例值/);
  }finally{await browser.close()}
 });
