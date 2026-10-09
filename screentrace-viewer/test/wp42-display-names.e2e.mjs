@@ -40,7 +40,7 @@ test('WP42 public names stay readable in screen details, button table, global se
   await page.locator('.flow-outline summary').click();await page.locator('.flow-outline-node').first().waitFor();
   const flow=await page.locator('.flow-outline').innerText();
   assert.equal(flow.includes('連結 1'),false);assert.equal(flow.includes('第 1 行'),false);
-  await page.getByRole('button',{name:/按鈕/}).first().click();
+  await page.locator('.primary-tabs button').nth(2).click();
   const table=page.locator('.button-table');await table.waitFor();const tableText=await table.innerText();
   for(const value of ['按鈕 1','連結 1','下拉選單 1','add-owner-form','第 1 行'])assert.equal(tableText.includes(value),false,`button table must not display ${value}`);
   await page.getByRole('button',{name:/搜尋/}).first().click();
@@ -74,12 +74,9 @@ test('WP42 names ignore reconstructed sample text and use the shared cross-scree
   assert.match(await page.locator('.flow-outline').innerText(),new RegExp(expected));
   assert.doesNotMatch(await page.locator('.flow-outline').innerText(),/Alex Johnson|連結 1|Owners Home 畫面/);
   await page.getByRole('button',{name:/按鈕/}).first().click();
-  const globalRow=page.locator('.button-table [data-button-row^="global:"]');
-  assert.match(await globalRow.innerText(),new RegExp(expected));
-  assert.doesNotMatch(await globalRow.innerText(),/Owners Home|Alex Johnson|連結 1/);
-  await globalRow.locator('.button-row-open').click();
-  const members=page.locator('.button-global-members');assert.match(await members.innerText(),new RegExp(expected));
-  assert.doesNotMatch(await members.innerText(),/Alex Johnson|連結 1/);
+  const buttonRows=page.locator('.button-table [data-button-row]'),buttonText=(await buttonRows.allTextContents()).join(' ');
+  assert.equal(await buttonRows.count(),3);assert.match(buttonText,new RegExp(expected));
+  assert.doesNotMatch(buttonText,/Alex Johnson|連結 1/);
   await page.getByRole('button',{name:/搜尋/}).first().click();await page.locator('.global-search-dialog input').fill('連結');
   assert.match(await page.locator('.global-search-results').innerText(),new RegExp(expected));
   assert.doesNotMatch(await page.locator('.global-search-results').innerText(),/Alex Johnson|連結 1|Owners Home 畫面/);
@@ -87,8 +84,8 @@ test('WP42 names ignore reconstructed sample text and use the shared cross-scree
   assert.match(await page.locator('.action-items').innerText(),new RegExp(expected));
   await page.getByRole('button',{name:'盤點首頁',exact:true}).click();
   assert.doesNotMatch(await page.locator('.dashboard-progress').innerText(),/Alex Johnson|連結 1|Owners Home 畫面/);
-  await (await reviewExportMenuItem(page)).click();
-  const exportCheck=page.locator('.pre-export-check');await exportCheck.waitFor();
-  assert.doesNotMatch(await exportCheck.innerText(),/Alex Johnson|連結 1|Owners Home 畫面/,await exportCheck.innerText());
+  await page.locator('.primary-tabs button').nth(5).click();
+  const delivery=page.locator('[data-delivery]');await delivery.waitFor();
+  assert.doesNotMatch(await delivery.innerText(),/Alex Johnson|連結 1|Owners Home 畫面|firstPage\.html/);
  }finally{await browser.close();}
 });

@@ -77,24 +77,14 @@ test('WP37 remove impact shows known inbound links, newly removable APIs, compon
  }finally{await browser.close();}
 });
 
-test('WP37 export check summarizes decisions and keeps the downloaded Markdown unchanged',async()=>{
+test('WP49 delivery checklist summarizes decisions without changing the downloaded Markdown',async()=>{
  const browser=await chromium.launch();
  try{
   const page=await browser.newPage({viewport:{width:1440,height:900},reducedMotion:'reduce'});page.setDefaultTimeout(4000);
   await page.goto(await fileFixture(simulationFixture()));
   await page.evaluate(()=>localStorage.setItem('screentrace:review:v1:%E6%B8%AC%E8%A9%A6%E6%87%89%E7%94%A8:'+('a'.repeat(64)),JSON.stringify({format:'screentrace-review',version:1,schemaVersion:'2.2',application:'測試應用',fingerprint:'a'.repeat(64),screenDecisions:{b:'REMOVE'},componentDecisions:{a:{shared:'KEEP'}}})));
-  await page.reload();
-  const readDownload=async(pending)=>{const item=await pending;const fs=await import('node:fs/promises');return(await fs.readFile(await item.path(),'utf8')).replace(/^generated_at: .*$/m,'generated_at: "TIME"');};
-  const exportChecked=async()=>{const pending=page.waitForEvent('download');await (await reviewExportMenuItem(page)).click();await page.locator('.pre-export-check').waitFor({state:'visible'});await page.getByRole('button',{name:'仍要匯出',exact:true}).click();return readDownload(pending);};
-  const baseline=await exportChecked();
-  await (await reviewExportMenuItem(page)).click();
-  const dialog=page.locator('.pre-export-check');assert.ok(await dialog.isVisible());
-  assert.match(await dialog.innerText(),/畫面：保留 0 · 移除 1 · 未確認 2/);
-  assert.match(await dialog.innerText(),/按鈕：/);assert.match(await dialog.innerText(),/仍有衝突：1 個/);assert.match(await dialog.innerText(),/乙/);assert.match(await dialog.innerText(),/共用按鈕/);assert.match(await dialog.innerText(),/換電腦|清除瀏覽器資料/);
-  await page.getByRole('button',{name:'回去處理',exact:true}).click();assert.equal(await dialog.isVisible(),false);
-  assert.equal(await exportChecked(),baseline,'the pre-export dialog does not alter Markdown bytes');
-  const skipped=page.waitForEvent('download');await (await reviewExportMenuItem(page)).click();await page.locator('.pre-export-check').waitFor({state:'visible'});await page.getByRole('button',{name:'不再顯示',exact:true}).click();await readDownload(skipped);
-  const direct=page.waitForEvent('download');await (await reviewExportMenuItem(page)).click();assert.equal(await readDownload(direct),baseline);
+  await page.reload();const readDownload=async(pending)=>{const item=await pending;const fs=await import('node:fs/promises');return(await fs.readFile(await item.path(),'utf8')).replace(/^generated_at: .*$/m,'generated_at: "TIME"');};
+  const exportDirect=async()=>{const pending=page.waitForEvent('download');await (await reviewExportMenuItem(page)).click();return readDownload(pending);};const baseline=await exportDirect();await page.locator('.primary-tabs button').nth(5).click();const delivery=page.locator('[data-delivery]');await delivery.waitFor();assert.equal(await delivery.locator('[data-delivery-stat="REMOVE"] strong').innerText(),'1');assert.equal(await delivery.locator('[data-delivery-stat="KEEP"] strong').innerText(),'1');assert.equal(await delivery.locator('[data-delivery-stat="UNDECIDED"] strong').innerText(),'8');assert.match(await delivery.innerText(),/決策衝突 · 1/);assert.match(await delivery.innerText(),/共用按鈕/);assert.match(await delivery.innerText(),/換電腦|清除瀏覽器資料/);assert.equal(await page.locator('dialog.pre-export-check').count(),0);assert.equal(await exportDirect(),baseline,'delivery checklist inspection does not alter Markdown bytes');
  }finally{await browser.close();}
 });
 
