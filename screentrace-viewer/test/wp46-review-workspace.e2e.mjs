@@ -1,0 +1,16 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {chromium} from '../../screentrace-capture/node_modules/playwright/index.mjs';
+import {fileFixture,fixture} from './fixture.mjs';
+
+test('WP46 page review has a grouped queue, complete center preview, always-visible rationale and explicit screen decisions',async()=>{
+ const browser=await chromium.launch();try{const page=await browser.newPage({viewport:{width:1440,height:900},reducedMotion:'reduce'});page.setDefaultTimeout(4000);await page.goto(await fileFixture(fixture()));await page.locator('#app[data-ready=true]').waitFor();await page.getByRole('button',{name:'逐頁確認'}).click();
+  const queue=page.locator('[data-review-queue]');await queue.waitFor();assert.ok(await queue.locator('[data-review-queue-group]').count());
+  await page.getByRole('checkbox',{name:'依功能區域'}).check();await page.getByRole('checkbox',{name:'只看未決定'}).check();
+  const first=queue.locator('[data-review-queue-screen]').first();await first.click();await page.locator('.prototype-viewer').waitFor();assert.match(await page.locator('.review-workspace-heading').innerText(),/第 1 \/ \d+ 頁/);assert.equal(await page.locator('aside').isVisible(),true);assert.match(await page.locator('aside').innerText(),/判斷依據/);
+  const decision=page.getByRole('radiogroup',{name:'畫面決定'});assert.ok(await decision.count());await decision.getByRole('radio',{name:'保留'}).click();assert.equal(await first.getAttribute('data-decision'),'KEEP');
+  await decision.getByRole('radio',{name:'保留'}).click();assert.equal(await first.getAttribute('data-decision'),'UNDECIDED');
+  await page.keyboard.press('x');assert.equal(await first.getAttribute('data-decision'),'REMOVE');await page.keyboard.press('u');assert.equal(await first.getAttribute('data-decision'),'UNDECIDED');
+  assert.ok(await page.locator('[data-review-queue-component]').count());assert.match(await page.locator('.screen-review-actions').innerText(),/跟著畫面/);
+ }finally{await browser.close()}
+});
