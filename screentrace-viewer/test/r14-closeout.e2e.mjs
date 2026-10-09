@@ -42,3 +42,10 @@ test('R14 closeout 3 API list humanizes ANY and REDIRECT while preserving source
   const redirect=page.locator('[data-api-row="unused"] [data-method]');assert.equal(await redirect.innerText(),'轉址');
  }finally{await browser.close();}
 });
+
+test('R14 closeout 4 report and help use 未決定 throughout visible UI',async()=>{
+ const browser=await chromium.launch();try{const page=await browser.newPage();await page.goto(await fileFixture(fixture()));await page.locator('#app[data-ready=true]').waitFor();
+  for(let i=0;i<6;i++){await page.locator('.primary-tabs button').nth(i).click();await page.locator('.primary-tabs button').nth(i).waitFor();assert.doesNotMatch(await page.locator('#app').innerText(),/未確認/,`report tab ${i}`);}
+  await page.locator('.topbar-more > summary').click();await page.locator('.review-help > summary').click();assert.doesNotMatch(await page.locator('.review-help').innerText(),/未確認/);assert.match(await page.locator('.review-help').innerText(),/未決定/);
+ }finally{await browser.close();}
+});
