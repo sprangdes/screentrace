@@ -1,0 +1,166 @@
+package io.screentrace.adapter.struts;
+
+import static org.junit.jupiter.api.Assertions.*;
+
+import io.screentrace.core.ApplicationGraph;
+import io.screentrace.core.ApplicationGraph.*;
+import io.screentrace.scanner.ProjectScanner;
+import java.nio.file.*;
+import java.util.*;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+
+class StrutsR16RoutingTest {
+  @TempDir Path root;
+
+  void file(String path, String text) throws Exception {
+    Path target = root.resolve(path);
+    Files.createDirectories(target.getParent());
+    Files.writeString(target, text);
+  }
+
+  ApplicationGraph analyze() throws Exception {
+    return new StrutsProjectAnalyzer().analyze(new ProjectScanner().scan(root));
+  }
+
+  void actionServlet(String mapping, String config) throws Exception {
+    file("src/main/webapp/WEB-INF/web.xml", """
+        <web-app>
+          <servlet><servlet-name>action</servlet-name><servlet-class>org.apache.struts.action.ActionServlet</servlet-class>
+            <init-param><param-name>config</param-name><param-value>%s</param-value></init-param>
+          </servlet>
+          <servlet-mapping><servlet-name>action</servlet-name><url-pattern>%s</url-pattern></servlet-mapping>
+        </web-app>
+        """.formatted(config, mapping));
+  }
+
+  void config(String actions) throws Exception {
+    file("src/main/webapp/WEB-INF/struts-config.xml", "<struts-config><global-forwards><forward name=\"home\" path=\"/home.jsp\"/></global-forwards><action-mappings>" + actions + "</action-mappings></struts-config>");
+  }
+
+  long endpointCount(ApplicationGraph graph) {
+    return graph.nodes().stream().filter(node -> node.type() == NodeType.ENDPOINT).count();
+  }
+
+  @Test void configuredExtensionMappingMergesLogicalAndPublicUrlIntoOneEndpoint() throws Exception {
+    actionServlet("*.do", "/WEB-INF/struts-config.xml");
+    config("<action path=\"/save\" type=\"sample.SaveAction\"><forward name=\"ok\" path=\"/done.jsp\"/></action>");
+    file("src/main/webapp/form.jsp", "<html:form action=\"/save.do\"><html:submit value=\"Save\"/></html:form>");
+    file("src/main/webapp/other.jsp", "<html:form action=\"/save\"><html:submit value=\"Save\"/></html:form>");
+    file("src/main/webapp/done.jsp", "<h1>Done</h1>");
+
+    var graph = analyze();
+    var endpoints = graph.nodes().stream().filter(node -> node.type() == NodeType.ENDPOINT).toList();
+    assertEquals(1, endpoints.size());
+    assertEquals("/save.do", endpoints.get(0).attributes().get("path"));
+    assertEquals("/save", endpoints.get(0).attributes().get("logicalPath"));
+    assertEquals(2, graph.relationships().stream().filter(edge -> edge.type() == EdgeType.TRIGGERS && edge.to().equals(endpoints.get(0).id())).count());
+  }
+
+  @Test void configuredPrefixMappingPublishesPrefixAndDoesNotInventAnExtension() throws Exception {
+    actionServlet("/do/*", "/WEB-INF/struts-config.xml");
+    config("<action path=\"/save\" type=\"sample.SaveAction\"/>");
+    file("src/main/webapp/form.jsp", "<html:form action=\"/do/save\"><html:submit value=\"Save\"/></html:form>");
+
+    var graph = analyze();
+    var endpoints = graph.nodes().stream().filter(node -> node.type() == NodeType.ENDPOINT).toList();
+    assertEquals(1, endpoints.size());
+    assertEquals("/do/save", endpoints.get(0).attributes().get("path"));
+    assertFalse(endpoints.get(0).attributes().get("path").endsWith(".do"));
+  }
+
+  @Test void ambiguousActionServletMappingsDoNotGuessAnEndpointAlias() throws Exception {
+    actionServlet("*.do", "/WEB-INF/struts-config.xml");
+    file("src/main/webapp/WEB-INF/web.xml", Files.readString(root.resolve("src/main/webapp/WEB-INF/web.xml")).replace("</web-app>", "<servlet-mapping><servlet-name>action</servlet-name><url-pattern>/do/*</url-pattern></servlet-mapping></web-app>"));
+    config("<action path=\"/save\" type=\"sample.SaveAction\"/>");
+
+    var graph = analyze();
+    assertTrue(graph.diagnostics().stream().anyMatch(diagnostic -> diagnostic.code().equals("STRUTS_SERVLET_MAPPING_AMBIGUOUS")));
+    assertEquals(1, endpointCount(graph));
+    assertEquals("/save", graph.nodes().stream().filter(node -> node.type() == NodeType.ENDPOINT).findFirst().orElseThrow().attributes().get("path"));
+  }
+
+  @Test void publicUrlForwardResolvesThroughTheMappedActionToItsView() throws Exception {
+    actionServlet("*.do", "/WEB-INF/struts-config.xml");
+    config("<action path=\"/start\" type=\"sample.StartAction\"><forward name=\"next\" path=\"/next.do\"/></action><action path=\"/next\" type=\"sample.NextAction\"><forward name=\"done\" path=\"/WEB-INF/done.jsp\"/></action>");
+    file("src/main/webapp/WEB-INF/done.jsp", "<h1>Done</h1>");
+
+    var graph = analyze();
+    var start = graph.nodes().stream().filter(node -> node.type() == NodeType.HANDLER && node.name().contains("StartAction")).findFirst().orElseThrow();
+    var done = graph.nodes().stream().filter(node -> node.type() == NodeType.SCREEN && node.attributes().getOrDefault("view", "").endsWith("done.jsp")).findFirst().orElseThrow();
+    assertTrue(graph.relationships().stream().anyMatch(edge -> edge.type() == EdgeType.FORWARDS_TO && edge.from().equals(start.id()) && edge.to().equals(done.id())));
+    assertFalse(graph.diagnostics().stream().anyMatch(diagnostic -> diagnostic.code().equals("STRUTS_FORWARD_UNRESOLVED")));
+  }
+
+  @Test void welcomeFileAndLogicRedirectForwardCreateProvableScreenEntrances() throws Exception {
+    actionServlet("*.do", "/WEB-INF/struts-config.xml");
+    file("src/main/webapp/WEB-INF/web.xml", Files.readString(root.resolve("src/main/webapp/WEB-INF/web.xml")).replace("</web-app>", "<welcome-file-list><welcome-file>index.jsp</welcome-file></welcome-file-list></web-app>"));
+    config("<action path=\"/Welcome\" type=\"sample.WelcomeAction\"><forward name=\"page\" path=\"/WEB-INF/welcome.jsp\"/></action>");
+    file("src/main/webapp/index.jsp", "<logic:redirect forward=\"home\"/>");
+    file("src/main/webapp/home.jsp", "<h1>Home</h1>");
+    file("src/main/webapp/WEB-INF/welcome.jsp", "<h1>Welcome</h1>");
+    file("src/main/webapp/WEB-INF/struts-config.xml", "<struts-config><global-forwards><forward name=\"home\" path=\"/Welcome.do\"/></global-forwards><action-mappings><action path=\"/Welcome\" type=\"sample.WelcomeAction\"><forward name=\"page\" path=\"/WEB-INF/welcome.jsp\"/></action></action-mappings></struts-config>");
+
+    var graph = analyze();
+    var index = graph.nodes().stream().filter(node -> node.type() == NodeType.SCREEN && node.attributes().getOrDefault("view", "").endsWith("index.jsp")).findFirst().orElseThrow();
+    var welcome = graph.nodes().stream().filter(node -> node.type() == NodeType.SCREEN && node.attributes().getOrDefault("view", "").endsWith("welcome.jsp")).findFirst().orElseThrow();
+    assertTrue(graph.nodes().stream().anyMatch(node -> node.type() == NodeType.ENDPOINT && "/".equals(node.attributes().get("path"))));
+    assertTrue(graph.relationships().stream().anyMatch(edge -> edge.type() == EdgeType.NAVIGATES_TO && edge.to().equals(welcome.id())));
+    assertTrue(graph.relationships().stream().anyMatch(edge -> edge.type() == EdgeType.RENDERS && edge.to().equals(index.id())));
+  }
+
+  @Test void moduleFormsAndLinksUseTheDeclaredModulePrefix() throws Exception {
+    file("src/main/webapp/WEB-INF/web.xml", """
+        <web-app>
+          <servlet><servlet-name>action</servlet-name><servlet-class>org.apache.struts.action.ActionServlet</servlet-class>
+            <init-param><param-name>config/admin</param-name><param-value>/WEB-INF/struts-config-admin.xml</param-value></init-param>
+            <init-param><param-name>config/shop</param-name><param-value>/WEB-INF/struts-config-shop.xml</param-value></init-param>
+          </servlet>
+          <servlet-mapping><servlet-name>action</servlet-name><url-pattern>*.do</url-pattern></servlet-mapping>
+        </web-app>
+        """);
+    file("src/main/webapp/WEB-INF/struts-config-admin.xml", "<struts-config><action-mappings><action path=\"/save\" type=\"sample.AdminSave\"/></action-mappings></struts-config>");
+    file("src/main/webapp/WEB-INF/struts-config-shop.xml", "<struts-config><action-mappings><action path=\"/save\" type=\"sample.ShopSave\"><forward name=\"ok\" path=\"/shop.jsp\"/></action></action-mappings></struts-config>");
+    file("src/main/webapp/admin/form.jsp", "<html:form action=\"/save.do\" module=\"/admin\"><html:submit value=\"Save\"/></html:form><html:link action=\"/save.do\" module=\"/shop\">Shop</html:link>");
+    file("src/main/webapp/shop.jsp", "<h1>Shop</h1>");
+
+    var graph = analyze();
+    assertTrue(graph.nodes().stream().anyMatch(node -> node.type() == NodeType.ENDPOINT && node.attributes().getOrDefault("path", "").equals("/admin/save.do")));
+    assertTrue(graph.nodes().stream().anyMatch(node -> node.type() == NodeType.ENDPOINT && node.attributes().getOrDefault("path", "").equals("/shop/save.do")));
+    assertTrue(graph.relationships().stream().anyMatch(edge -> edge.type() == EdgeType.TRIGGERS && graph.nodes().stream().anyMatch(node -> node.id().equals(edge.to()) && node.attributes().getOrDefault("path", "").equals("/admin/save.do"))));
+    assertTrue(graph.relationships().stream().anyMatch(edge -> edge.type() == EdgeType.NAVIGATES_TO && graph.nodes().stream().anyMatch(node -> node.id().equals(edge.to()) && node.type() == NodeType.SCREEN)));
+  }
+
+  @Test void missingServletMappingKeepsLogicalAndLiteralPublicTargetsSeparate() throws Exception {
+    config("<action path=\"/save\" type=\"sample.SaveAction\"/>");
+    file("src/main/webapp/form.jsp", "<html:form action=\"/save.do\"><html:submit value=\"Save\"/></html:form>");
+
+    var graph = analyze();
+    assertTrue(graph.nodes().stream().anyMatch(node -> node.type() == NodeType.ENDPOINT && node.attributes().getOrDefault("path", "").equals("/save")));
+    assertTrue(graph.nodes().stream().anyMatch(node -> node.type() == NodeType.ENDPOINT && node.attributes().getOrDefault("path", "").equals("/save.do") && node.confidence() == Confidence.UNRESOLVED));
+    assertTrue(graph.diagnostics().stream().anyMatch(diagnostic -> diagnostic.code().equals("STRUTS_SERVLET_MAPPING_UNRESOLVED")));
+  }
+
+  @Test void inputForwardAndExceptionPublicPathsResolveThroughActions() throws Exception {
+    actionServlet("*.do", "/WEB-INF/struts-config.xml");
+    file("src/main/webapp/WEB-INF/struts-config.xml", """
+        <struts-config>
+          <controller inputForward=\"true\"/>
+          <global-forwards><forward name=\"home\" path=\"/home.do\"/></global-forwards>
+          <global-exceptions><exception key=\"failure\" type=\"sample.Failure\" path=\"/error.do\"/></global-exceptions>
+          <action-mappings>
+            <action path=\"/form\" type=\"sample.FormAction\" input=\"home\"/>
+            <action path=\"/home\" type=\"sample.HomeAction\"><forward name=\"ok\" path=\"/home.jsp\"/></action>
+            <action path=\"/error\" type=\"sample.ErrorAction\"><forward name=\"ok\" path=\"/error.jsp\"/></action>
+          </action-mappings>
+        </struts-config>
+        """);
+    file("src/main/webapp/home.jsp", "<h1>Home</h1>");
+    file("src/main/webapp/error.jsp", "<h1>Error</h1>");
+
+    var graph = analyze();
+    assertTrue(graph.nodes().stream().anyMatch(node -> node.type() == NodeType.HANDLER && node.name().contains("FormAction")));
+    assertTrue(graph.diagnostics().stream().noneMatch(diagnostic -> diagnostic.code().equals("STRUTS_FORWARD_UNRESOLVED")));
+    assertTrue(graph.relationships().stream().anyMatch(edge -> edge.type() == EdgeType.FORWARDS_TO && graph.nodes().stream().anyMatch(node -> node.id().equals(edge.to()) && node.type() == NodeType.SCREEN && node.attributes().getOrDefault("view", "").endsWith("home.jsp"))));
+  }
+}
