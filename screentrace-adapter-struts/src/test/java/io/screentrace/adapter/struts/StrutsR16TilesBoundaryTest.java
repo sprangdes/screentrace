@@ -56,12 +56,25 @@ class StrutsR16TilesBoundaryTest {
     file("src/main/webapp/WEB-INF/web.xml","<web-app><servlet><servlet-name>action</servlet-name><servlet-class>org.apache.struts.action.ActionServlet</servlet-class></servlet><servlet-mapping><servlet-name>action</servlet-name><url-pattern>*.do</url-pattern></servlet-mapping></web-app>");
     file("src/main/webapp/WEB-INF/struts-config.xml","<struts-config><action-mappings><action path='/home' type='sample.Home'><forward name='ok' path='/WEB-INF/jsp/page.jsp'/></action></action-mappings></struts-config>");
     file("tiles-defs.xml","<tiles-definitions><definition name='base' path='/WEB-INF/jsp/layout.jsp'><put name='body' value='/WEB-INF/jsp/page.jsp'/></definition></tiles-definitions>");
-    file("src/main/webapp/WEB-INF/jsp/layout.jsp","<%@ taglib prefix='tiles' uri='http://struts.apache.org/tags-tiles' %><tiles:insert attribute='body'/><button id='layout-action'>Shared action</button>");
+    file("src/main/webapp/WEB-INF/jsp/layout.jsp","<%@ taglib prefix='tiles' uri='http://struts.apache.org/tags-tiles' %><tiles:insert attribute='body'/><button id='layout-action'>Shared action</button><script>fetch('/tiles-layout-api')</script>");
     file("src/main/webapp/WEB-INF/jsp/page.jsp","<h1>Page</h1>");
 
     var graph=analyze();
     var page=graph.nodes().stream().filter(node->node.type()==NodeType.SCREEN&&node.name().equals("page")).findFirst().orElseThrow();
     assertFalse(graph.nodes().stream().anyMatch(node->node.type()==NodeType.SCREEN&&node.source().file().endsWith("layout.jsp")));
-    assertTrue(graph.relationships().stream().anyMatch(edge->edge.type()==EdgeType.CONTAINS&&edge.from().equals(page.id())&&graph.nodes().stream().anyMatch(node->node.id().equals(edge.to())&&"layout-action".equals(node.attributes().get("id")))));
+    assertTrue(graph.relationships().stream().anyMatch(edge->edge.type()==EdgeType.CONTAINS&&edge.from().equals(page.id())&&graph.nodes().stream().anyMatch(node->node.id().equals(edge.to())&&"layout-action".equals(node.attributes().get("id")))),graph.nodes().toString()+"\n"+graph.relationships().toString());
+    assertTrue(graph.behaviors().stream().anyMatch(behavior->behavior.triggerId().equals(page.id())&&behavior.type()==BehaviorType.CALL_API&&behavior.expression().contains("/tiles-layout-api")));
+  }
+
+  @Test void tileTemplateScriptIsOwnedByForwardedJspEvenWhenItHasNoInteractiveMarkup()throws Exception{
+    file("src/main/webapp/WEB-INF/web.xml","<web-app><servlet><servlet-name>action</servlet-name><servlet-class>org.apache.struts.action.ActionServlet</servlet-class></servlet><servlet-mapping><servlet-name>action</servlet-name><url-pattern>*.do</url-pattern></servlet-mapping></web-app>");
+    file("src/main/webapp/WEB-INF/struts-config.xml","<struts-config><action-mappings><action path='/home' type='sample.Home'><forward name='ok' path='/WEB-INF/jsp/page.jsp'/></action></action-mappings></struts-config>");
+    file("tiles-defs.xml","<tiles-definitions><definition name='base' path='/WEB-INF/jsp/layout.jsp'><put name='body' value='/WEB-INF/jsp/page.jsp'/></definition></tiles-definitions>");
+    file("src/main/webapp/WEB-INF/jsp/layout.jsp","<%@ taglib prefix='tiles' uri='http://struts.apache.org/tags-tiles' %><tiles:insert attribute='body'/><script>fetch('/tiles-layout-api')</script>");
+    file("src/main/webapp/WEB-INF/jsp/page.jsp","<h1>Page</h1>");
+
+    var graph=analyze();
+    var page=graph.nodes().stream().filter(node->node.type()==NodeType.SCREEN&&node.name().equals("page")).findFirst().orElseThrow();
+    assertTrue(graph.behaviors().stream().anyMatch(behavior->behavior.triggerId().equals(page.id())&&behavior.type()==BehaviorType.CALL_API&&behavior.expression().contains("/tiles-layout-api")));
   }
 }
