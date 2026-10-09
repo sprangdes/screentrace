@@ -34,3 +34,11 @@ test('R14 closeout 2 API status filters are exclusive and header totals are conc
   assert.equal(await page.locator('[data-endpoint-group="UNCLASSIFIED"]').count(),0);
  }finally{await browser.close();}
 });
+
+test('R14 closeout 3 API list humanizes ANY and REDIRECT while preserving source values',async()=>{
+ const data=fixture();data.graph.nodes.find(item=>item.id==='ep').attributes={path:'/api/any',method:'ANY',category:'REST_API'};data.graph.nodes.find(item=>item.id==='unused').attributes={path:'/api/redirect',method:'REDIRECT',category:'REST_API'};
+ const browser=await chromium.launch();try{const page=await browser.newPage();await page.goto(await fileFixture(data));await page.locator('#app[data-ready=true]').waitFor();await page.locator('.primary-tabs button').nth(4).click();await page.locator('.api-page').waitFor();
+  const any=page.locator('[data-api-row="ep"] [data-method]');assert.equal(await any.innerText(),'任何方法');assert.equal(await any.getAttribute('title'),'ANY');
+  const redirect=page.locator('[data-api-row="unused"] [data-method]');assert.equal(await redirect.innerText(),'轉址');
+ }finally{await browser.close();}
+});
