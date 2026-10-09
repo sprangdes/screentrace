@@ -247,4 +247,5 @@
 - 可選方案 A：授權只更新此測試中直接受別名合併影響的預期：一個 endpoint 身分、一筆對應呼叫來源，並依已證明 servlet mapping 使用 `CONFIRMED`；其餘測試斷言不變。此項超出 R16 §3 的數量型期望預先授權。
 - 可選方案 B：保留既有 `AMBIGUOUS` 呼叫信心，即使兩種 URL 形式已合併為一個 endpoint；需接受 endpoint 身分唯一、呼叫信心仍標歧義的表示。
 - 影響範圍：Struts endpoint alias resolution、JS URL 對應 confidence、`UrlLinkingTest.actionsReceiveApiAndFormCallersWithAllExtensionCandidates`。不影響 Spring routes。
-- 狀態：待決定。依據：在 R16 實作中執行該測試，舊斷言所期待的 `AMBIGUOUS` 候選清單含 `/save` 與 `/save.do` 兩個 endpoint；合併後唯一呼叫使用 `CONFIRMED`，因此實際 `AMBIGUOUS` 清單為空。測試斷言未修改。
+- 狀態：已決定（2026-10-09）；需求方不採 A、B，採方案 C。
+- 決定：該測試原 fixture 的 `web.xml` 只有名為 `action` 的 `servlet-mapping`，沒有宣告該 servlet 為 `org.apache.struts.action.ActionServlet`，依 OQ-024「servlet mapping 不可證明時不猜測、維持兩者分開並記診斷」，原斷言（兩個 endpoint、`CALLS` 皆為 `AMBIGUOUS`）在新規則下**仍是正確預期**。WP54 未提交修改中替該 fixture 補上 `<servlet-class>` 屬於變更既有測試前提，**必須還原**；`UrlLinkingTest.actionsReceiveApiAndFormCallersWithAllExtensionCandidates` 的 fixture 與斷言一律不改。另**新增**一個測試：同樣情境但 `web.xml` 完整宣告 ActionServlet 與 `*.do` mapping，預期合併為單一 endpoint、別名含 `/save` 與 `/save.do`、`CALLS` 為 `CONFIRMED`、並產生「mapping 已證明」的證據。若還原 fixture 後既有測試失敗，代表實作在 mapping 不可證明時仍做了合併，須修正實作而非測試。此原則同樣適用於 R16 其他既有測試：不得以修改既有 fixture 的方式繞過斷言。
