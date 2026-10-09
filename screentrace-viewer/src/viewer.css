@@ -371,3 +371,6 @@ body>.review-progress-panel{position:fixed;top:64px;right:16px;z-index:30;width:
 .md-feedback:empty{display:none}.md-feedback:not(:empty){position:fixed;z-index:60;right:24px;bottom:24px;background:white;max-width:min(440px,90vw);max-height:30vh;overflow:auto;padding:12px 16px;border:1px solid var(--gray-200);border-radius:var(--radius);box-shadow:var(--shadow-float);font-size:13px;color:var(--gray-700)}.md-feedback[data-md-orphans]:not(:empty){bottom:96px}
 .shell[data-page=buttons]{grid-template-columns:minmax(0,1fr)}.shell[data-page=buttons]>nav,.shell[data-page=buttons]>aside,.shell[data-page=buttons]>.panel-resize{display:none!important}.shell[data-page=buttons]>main{grid-column:1;min-width:0}
 .world{pointer-events:none}.world>.screen-card,.world>.card-review,.world>.external-region-tag{pointer-events:auto}.world>svg.relations{pointer-events:auto}
+.shell[data-page=screen]>aside{padding-bottom:88px}
+.shell[data-page=screen][data-screen-review=true]>aside{padding-bottom:88px}
+.shell[data-page=screen]>aside>.panel-collapse{width:34px;height:34px;padding:7px}

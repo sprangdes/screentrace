@@ -50,6 +50,7 @@ for (const engine of engines) for (const family of families) {
             const requests = [];
             page.on('request', r => {if (r.url() !== url && !r.url().startsWith('data:') && !r.url().startsWith('blob:')) requests.push(r.url());});
             await page.goto(url);
+            await page.getByRole('button',{name:'功能地圖',exact:true}).click();
             assert.equal(await page.locator('[data-library-summary]').count(), 1);
 
             await setDecision(page.locator(`[data-screen-review="${owner}"]`),'KEEP');

@@ -11,6 +11,7 @@ test('WP50 focused details can scroll the last component control fully into view
     await page.goto(await fileFixture());
     await setDecision(page.locator('[data-screen-review="a"]'),'KEEP');
     await openScreen(page,'a');
+    await page.locator('.screen-review-technical > summary').click();
     const control=page.locator('[data-component="shared"]');
     await control.scrollIntoViewIfNeeded();
     const panel=await page.locator('aside').boundingBox();

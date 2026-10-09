@@ -10,7 +10,7 @@ test('WP40 decisions stay available without a mode and synchronize across overvi
  try{
   const page=await browser.newPage({viewport:{width:1440,height:900},reducedMotion:'reduce'});
   page.setDefaultTimeout(4000);
-  await page.goto(await fileFixture(simulationFixture()));
+  await page.goto(await fileFixture(simulationFixture()));await page.getByRole('button',{name:'功能地圖',exact:true}).click();
   assert.equal(await page.getByRole('checkbox',{name:'確認模式',exact:true}).count(),0);
   assert.match(await page.locator('[data-delivery-progress]').innerText(),/已決定/);
   const undecided=page.locator('.screen-card[data-screen="a"]');
@@ -44,7 +44,7 @@ test('submit click keeps the clicked button selected and includes its owning for
  try{
   const page=await browser.newPage({reducedMotion:'reduce'});
   page.setDefaultTimeout(4000);
-  await page.goto(await fileFixture(data));
+  await page.goto(await fileFixture(data));await page.getByRole('button',{name:'功能地圖',exact:true}).click();
   await openScreen(page,'a');
   await page.locator('.preview[aria-busy="false"]').waitFor();
   await page.frameLocator('iframe').locator('#name').fill('A');
@@ -64,6 +64,7 @@ test('WP40 list, button table, feature progress and touch long-press expose the 
   assert.ok(await page.locator('.dashboard-progress-track').count());
   assert.equal(await page.locator('[data-review-progress],.review-progress-panel').count(),0);
   assert.equal(await page.locator('.review-help>summary[aria-label="標記說明"]').count(),1);
+  await page.getByRole('button',{name:'功能地圖',exact:true}).click();
   await page.locator('.screen-card[data-screen="a"]').dispatchEvent('pointerdown',{pointerType:'touch',button:0});
   await page.waitForFunction(()=>document.querySelector('.card-review[data-screen-controls="a"]')?.classList.contains('touch-revealed'),{timeout:1500});
   await page.locator('.screen-card[data-screen="a"]').dispatchEvent('pointerup',{pointerType:'touch',button:0});
@@ -72,9 +73,10 @@ test('WP40 list, button table, feature progress and touch long-press expose the 
   await page.getByRole('button',{name:'功能地圖',exact:true}).click();await page.getByRole('button',{name:'功能',exact:true}).click();
   assert.ok(await page.locator('.feature-region-progress').count()>0);
   await page.getByRole('button',{name:'按鈕',exact:true}).click();
-  const quick=page.locator('.button-quick-decisions [data-quick-decision="KEEP"]').first();
+  const quick=page.locator('.button-table tbody tr:not(.button-global-members) .button-quick-decisions [data-quick-decision="KEEP"]').first();
+  await quick.locator('xpath=ancestor::tr').hover();
   await quick.click();
-  assert.equal(await page.locator('.button-quick-decisions [data-quick-decision="KEEP"]').first().getAttribute('aria-pressed'),'true');
+  assert.equal(await page.locator('.button-table tbody tr:not(.button-global-members) .button-quick-decisions [data-quick-decision="KEEP"]').first().getAttribute('aria-pressed'),'true');
   await page.getByRole('button',{name:'畫面',exact:true}).click();
   await page.locator('[data-review-queue-screen="a"] .sidebar-screen').click();
   await page.locator('aside [data-screen-decision="KEEP"]').click();

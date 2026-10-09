@@ -20,7 +20,7 @@ test('compact ten-screen overview keeps each full name label inside its card wit
  const browser=await chromium.launch();
  try{
   const page=await browser.newPage({viewport:{width:1440,height:900},reducedMotion:'reduce'});
-  await page.goto(await fileFixture(tenScreenFixture()));
+  await page.goto(await fileFixture(tenScreenFixture()));await page.getByRole('button',{name:'功能地圖',exact:true}).click();
   for(let i=0;i<20;i++){
    const zoom=await page.locator('.world').evaluate(el=>new DOMMatrixReadOnly(getComputedStyle(el).transform).a);
    if(zoom<.7)break;
@@ -50,7 +50,7 @@ test('hover exposes the complete screen name and URL for compact labels',async()
  const browser=await chromium.launch();
  try{
   const page=await browser.newPage({viewport:{width:1440,height:900},reducedMotion:'reduce'});
-  await page.goto(await fileFixture(tenScreenFixture()));
+  await page.goto(await fileFixture(tenScreenFixture()));await page.getByRole('button',{name:'功能地圖',exact:true}).click();
   const card=page.locator('.screen-card[data-screen="petclinic-3"]');
   await card.hover();
   assert.match(await card.getAttribute('title')||'',/Owner Search Results and Matching Records/);

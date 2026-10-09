@@ -9,7 +9,7 @@ test('overview cards keep summaries and decision tools out of the resting view',
  const browser=await chromium.launch();
  try{
   const page=await browser.newPage({viewport:{width:1440,height:900},reducedMotion:'reduce'});
-  await page.goto(await fileFixture(simulationFixture()));
+  await page.goto(await fileFixture(simulationFixture()));await page.getByRole('button',{name:'功能地圖',exact:true}).click();
   const card=page.locator('.screen-card[data-screen="a"]');
   assert.doesNotMatch(await card.innerText(),/可前往|個按鈕|呼叫 .*API|保留|移除|未確認/);
   assert.equal(await card.locator('.screen-summary-line').count(),0);
@@ -35,7 +35,7 @@ test('overview uses semantic zoom while retaining readable screen names',async()
  const browser=await chromium.launch();
  try{
   const page=await browser.newPage({viewport:{width:1440,height:900},reducedMotion:'reduce'});
-  await page.goto(await fileFixture(simulationFixture()));
+  await page.goto(await fileFixture(simulationFixture()));await page.getByRole('button',{name:'功能地圖',exact:true}).click();
   const card=page.locator('.screen-card[data-screen="a"]');
   const route=card.locator('.screen-route');
   assert.equal(await route.count(),1);
@@ -59,7 +59,7 @@ test('screen summary lives under the focused title and in feature cards only',as
  const browser=await chromium.launch();
  try{
   const page=await browser.newPage({viewport:{width:1440,height:900},reducedMotion:'reduce'});
-  await page.goto(await fileFixture(simulationFixture()));
+  await page.goto(await fileFixture(simulationFixture()));await page.getByRole('button',{name:'功能地圖',exact:true}).click();
   assert.equal(await page.locator('.screen-card .screen-summary-line').count(),0);
   await openScreen(page,'a');
   await page.locator('.prototype-viewer .focus-breadcrumb+.screen-summary-line').waitFor();

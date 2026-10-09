@@ -17,6 +17,8 @@ for(const engine of process.env.ST_BROWSERS?.split(',')||['chromium'])test(`${en
   await page.goto(url);
   await setDecision(page.locator('[data-screen-review="a"]'),'KEEP');
   await openScreen(page,'a');
+  await page.locator('aside .screen-review-technical > summary').click();
+  await page.locator('[data-component="shared"]').scrollIntoViewIfNeeded();
   await page.locator('[data-component="shared"]').click();
   const details=page.locator('[data-library-details]');await details.waitFor();
   const text=await details.innerText();
