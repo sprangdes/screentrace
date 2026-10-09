@@ -10,6 +10,7 @@ export async function startReviewDownload(page) {
   const pending = page.waitForEvent('download');
   await exportButton.click();
   const check = page.locator('.pre-export-check');
-  if (await check.isVisible()) await page.getByRole('button', {name: '仍要匯出', exact: true}).click();
+  await check.waitFor({state:'visible'});
+  await page.getByRole('button', {name: '仍要匯出', exact: true}).click();
   return pending;
 }
