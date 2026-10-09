@@ -342,6 +342,10 @@ body>.review-progress-panel{position:fixed;top:64px;right:16px;z-index:30;width:
 .screen-review-rationale h3{margin:8px 0 2px;font-size:14px;}
 .screen-review-rationale>p{margin:0;font-size:13px;}
 .screen-review-rationale>button{justify-self:start;}
+.shell[data-page=screen][data-screen-review=true]>aside>*{min-width:0;max-width:100%;}
+.screen-review-rationale *,.screen-review-screen-decision *{min-width:0;max-width:100%;overflow-wrap:anywhere;word-break:break-word;}
+.screen-review-rationale>code{display:block;white-space:normal;}
+.screen-review-rationale>button{justify-self:stretch;width:100%;text-align:left;white-space:normal;}
 .screen-review-technical{margin-top:8px;padding-top:8px;border-top:1px solid var(--gray-200);}
 .screen-review-technical>summary{cursor:pointer;font-weight:600;color:var(--blue-700);}
 .screen-review-screen-decision{margin:0 0 12px;padding:16px;border:1px solid var(--gray-200);border-radius:10px;background:white;}
