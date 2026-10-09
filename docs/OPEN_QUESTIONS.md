@@ -190,7 +190,8 @@
 - 可選方案 A：把可證明的轉址鏈視為推定呼叫來源，將來源畫面／元件沿轉址關係傳遞到目的路由，信心為 INFERRED。需在 Java 與 TypeScript 共用 API 向量加入只有轉址繼承來源、來源被移除、轉址鏈多候選等案例；兩端皆須對 `GET /cart/{cartId}` 得到相同 caller 與狀態。若來源決策為移除，依既有 R-API-2／3 規則重新推導目的 API 狀態。
 - 可選方案 B：維持 R-API 現狀，不將轉址來源繼承為 API caller；`GET /cart/{cartId}` 仍為 UNREFERENCED，僅在畫面或 API 詳情標示「由轉址到達」。新增的雙端向量只鎖定目前直接來源規則，轉址關係不改變 API 狀態。
 - 影響範圍：R-API-1～6 的 caller 定義、Java `ApiUsage`、TypeScript `deriveApiUsage`、共用 `docs/examples/api-usage-vectors.json`、API 詳情的轉址提示。不得把僅可到達的路由自行升為 IN_USE。
-- 狀態：待需求方決定；WP44 不實作此項。
+- 狀態：已決定（2026-10-09）；需求方採方案 A，限制如下。
+- 決定：只有可證明且**唯一**的轉址／forward 目的地（handler 回傳常值 `redirect:`／`forward:` 或既有 INFERRED 路由樣板唯一命中）才繼承轉址來源端點的全部呼叫來源，confidence 一律 INFERRED，證據記錄完整轉址鏈（每一跳的 handler、檔案與行號）。目的地 AMBIGUOUS 或 UNRESOLVED → 不繼承，記診斷。鏈長上限 5，偵測循環並記診斷。來源被標移除時依 R-API-2／3 重新推導。Java `ApiUsage` 與 TypeScript `deriveApiUsage` 同步，共用向量新增：只有轉址繼承來源、來源全被移除→REMOVABLE、目的地多候選不繼承、循環、鏈長超限。不得因「可到達」而把沒有任何來源鏈的路由升為 IN_USE。
 
 ## OQ-022 — WP44 JavaScript 路徑佔位符與既有斷言範圍
 

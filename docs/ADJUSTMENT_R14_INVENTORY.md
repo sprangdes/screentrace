@@ -300,3 +300,13 @@ eMusicStore 的部署 context path 為 `/eMusicStore`（需求方提供）。以
 ### 7.5 補正完成後
 
 重新跑 §5 完整驗證；在 R14 報告列出補正前後 eMusicStore（有／無 context path）與 PetClinic 的 API 狀態逐項對照表；然後停止，等需求方再次驗收 WP44。
+
+### 7.6 第二次驗收回覆（需求方，2026-10-09）
+
+審查者以 HEAD（19d813a）唯讀重跑，eMusicStore 無設定 14／0／9、設定 `/eMusicStore` 後 16／0／3，與回報一致；路徑中沒有 `null`、`undefined`、`$scope`；`CONTEXT_PATH_HINT` 只在無設定時出現。
+
+1. **struts1-spring golden IN_USE 27 → 28**：差異為 `GET /orders/{name}`（`page.jsp:17-18` 的 `c:url`／`spring:url` 樣板對應 `PageController` `@GetMapping("/orders/{name}")`），屬 A1 新增的 INFERRED 呼叫來源，**在 §2.4 預先授權範圍內**。請更新該 golden 欄位（其他欄位不得變動），並在 ADR 0067 逐處記錄：測試名稱、舊值、新值、造成差異的端點與證據，並證明新期望在 a591740 之前的實作上失敗。
+2. **report 結束碼 134**：審查者環境中同指令結束碼為 0，判定為執行環境問題（推測是無視窗環境下 `Desktop.browse` 觸發 AWT 中止）。請在同一環境以 `9600809` 重跑 `report` 確認是否同樣為 134，結果記入 R14 報告；WP44 不修改 `openReport`。
+3. **A4（OQ-021 方案 A）**：依 OQ-021 決定實作轉址目的地的推定來源繼承。先提交雙端向量與失敗測試，再實作。驗收：eMusicStore 設定 `/eMusicStore` 後 `GET /cart/{cartId}` 為 IN_USE，來源為 INFERRED、證據含 `/cart/` → `CartItemController.get()` → `redirect:` 的轉址鏈；未設定時結果同樣成立（`/cart/` 不受 context path 影響）；PetClinic 的變化逐項列入報告；受影響的 golden 依 §2.4 處理並記錄。
+
+**驗收條件**：1、2、3 完成且 §5 完整驗證全綠後，WP44 即視為通過，**不需再停**，直接進行 WP45、WP46、WP47，於 WP47 完成後停止等待驗收。任何一項未達成，仍停在 WP44。
