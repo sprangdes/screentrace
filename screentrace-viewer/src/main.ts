@@ -154,6 +154,7 @@ try {
  };
  function renderWorkspaceChrome(id:string,componentId?:string){
   if(!screenReviewActive)return;
+  shell.dataset.sidebarCollapsed='false';collapse.setAttribute('aria-label','收合畫面清單');
   main.querySelectorAll('.screen-review-actions').forEach(item=>item.remove());
   const groups=workspaceQueue(),items=groups.flatMap(group=>group.screens),position=items.findIndex(item=>item.screenId===id),queue=element('section',undefined,'screen-review-queue');
   queue.dataset.reviewQueue='true';queue.append(element('h2','待確認清單'));
