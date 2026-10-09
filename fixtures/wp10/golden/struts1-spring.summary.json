@@ -30,7 +30,7 @@
   "apis": {
     "total": 40,
     "by_status": {
-      "IN_USE": 27,
+      "IN_USE": 28,
       "REMOVABLE": 0,
       "UNREFERENCED": 13
     }

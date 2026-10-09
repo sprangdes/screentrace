@@ -27,6 +27,8 @@ WP44 補正另以 `7d93885` 先提交 A2 失敗測試：函式參數 URL 為 nul
 
 R14 §2.4 授權的既有 golden 修改僅兩份合成 fixture 摘要：`spring-mvc-jsp.summary.json` 與 `spring-boot-jsp.summary.json`，每份只調整 `apis.total`（27 → 26）及 `apis.by_status.IN_USE`（22 → 21）。舊預期在預設並行 Chromium E2E 的 golden 比對中實際失敗；兩次分析都得到 total 26、IN_USE 21。路由投影把 JS 呼叫對應至既有端點並移除不再作為有效目標的合成 API 節點，故總數與使用中狀態同步減一。兩份 golden 的其他欄位未改。
 
+WP44 第二次驗收依 §2.4 授權，另只調整 `fixtures/wp10/golden/struts1-spring.summary.json` 的 `apis.by_status.IN_USE`：27 → 28。對應既有測試 `real source fixtures produce identical graph, packed HTML and shared-module md on consecutive runs`；其兩次分析都使用同一摘要 golden。新增的唯一 INFERRED 呼叫來源是 `GET /orders/{name}`：`fixtures/wp10/struts1-spring/src/main/webapp/WEB-INF/views/page.jsp:17-18` 的 `<c:url>`／`<spring:url>` 樣板，唯一匹配 `synthetic.PageController` 的 `@GetMapping("/orders/{name}")`（`PageController.java:6`）。`RouteTemplateInference` 為來源元件新增 `TRIGGERS` 至 endpoint 的 INFERRED 關係，證據保留兩處 JSP 樣板及 endpoint 路由；所以 IN_USE 數量增加一。該測試在 `a591740` 之前的實作以新 golden 執行時仍輸出 27，預期 28 的斷言失敗。此處僅變更上述一個數字，golden 其餘欄位未動。
+
 ## 後果
 
 可證明的 JSP 路由與 Spring Security 導向新增 evidence-backed 關係。當 context path 沒有設定證據時，帶有額外前綴的 JS API 呼叫不會被猜測成既有 endpoint；分析結果可能仍列為 UNRESOLVED／UNREFERENCED，等待明確設定來源。
