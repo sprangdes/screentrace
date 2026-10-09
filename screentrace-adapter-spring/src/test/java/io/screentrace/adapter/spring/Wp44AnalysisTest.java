@@ -32,6 +32,15 @@ class Wp44AnalysisTest {
   file("src/main/webapp/WEB-INF/jsp/list.jsp","<a href=\"<spring:url value='/items/${item.id}'/>\">Remove</a>\n");
   var g=analyze();var screen=g.nodes().stream().filter(n->n.type()==NodeType.SCREEN&&n.attributes().getOrDefault("view","").endsWith("list.jsp")).findFirst().orElseThrow();assertTrue(g.relationships().stream().anyMatch(e->e.type()==EdgeType.NAVIGATES_TO&&e.to().equals(screen.id())&&e.confidence()==Confidence.INFERRED));
  }
+ @Test void inferredJspLinkHasTheSameEndpointAndScreenRelationsAsAConfirmedLink()throws Exception{
+  file("src/main/java/Pages.java","import org.springframework.stereotype.*;import org.springframework.web.bind.annotation.*;@Controller class Pages{@GetMapping(\"/items/{id}\") String item(){return \"redirect:/items\";}@GetMapping(\"/items\") String list(){return \"list\";}}\n");
+  file("src/main/webapp/WEB-INF/jsp/list.jsp","<a href=\"<spring:url value='/items/${item.id}'/>\">View item</a>\n");
+  var g=analyze();var component=g.nodes().stream().filter(n->n.type()==NodeType.COMPONENT&&n.source().file().endsWith("list.jsp")).findFirst().orElseThrow();
+  var endpoint=g.nodes().stream().filter(n->n.type()==NodeType.ENDPOINT&&"/items/{id}".equals(n.attributes().get("path"))).findFirst().orElseThrow();
+  var destination=g.nodes().stream().filter(n->n.type()==NodeType.SCREEN&&n.attributes().getOrDefault("view","").endsWith("list.jsp")).findFirst().orElseThrow();
+  assertTrue(g.relationships().stream().anyMatch(e->e.from().equals(component.id())&&e.to().equals(endpoint.id())&&e.type()==EdgeType.TRIGGERS&&e.confidence()==Confidence.INFERRED));
+  assertTrue(g.relationships().stream().anyMatch(e->e.from().equals(component.id())&&e.to().equals(destination.id())&&e.type()==EdgeType.NAVIGATES_TO&&e.confidence()==Confidence.INFERRED));
+ }
  @Test void cUrlUsesTheSeparateRouteProjectionAndAmbiguityKeepsEveryCandidate()throws Exception{
   file("src/main/java/Pages.java","import org.springframework.stereotype.*;import org.springframework.web.bind.annotation.*;@Controller class Pages{@GetMapping(\"/items/{id}\") String one(){return \"one\";}@GetMapping(\"/items/{key}\") String two(){return \"two\";}}\n");
   file("src/main/webapp/WEB-INF/jsp/list.jsp","<c:forEach items='${items}' var='item'><c:url value='/items/${item.id}' var='detail'/><a href='${detail}'>View</a></c:forEach>\n");
