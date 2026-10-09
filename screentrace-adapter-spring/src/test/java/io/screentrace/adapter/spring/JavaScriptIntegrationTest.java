@@ -62,6 +62,23 @@ class JavaScriptIntegrationTest {
     assertTrue(graph.behaviors().stream().anyMatch(b->b.type()==BehaviorType.CALL_API&&b.triggerId()!=null&&graph.nodes().stream().anyMatch(n->n.id().equals(b.triggerId())&&"clear".equals(n.attributes().get("id")))));
     assertTrue(graph.diagnostics().stream().anyMatch(d->d.code().equals("ANGULAR_SCOPE_DEPTH_LIMIT"))==false);
   }
+  @Test void angularRequestDescriptionMatchesJavaEndpointPathForParametersAndScopeProperties() throws Exception {
+    var root=project("<main ng-controller='Cart'><button id='add' ng-click='addToCart(7)'>Add</button><button id='clear' ng-click='clearCart()'>Clear</button><script src='/app.js'></script></main>","");
+    Files.writeString(root.resolve("src/main/webapp/app.js"),"angular.module('shop').controller('Cart',function($scope){$scope.addToCart=function(productId){$http.put('/x/add/'+productId);};$scope.clearCart=function(){$http.delete('/x/cart/'+$scope.cartId);};});");
+    Files.createDirectories(root.resolve("src/main/java"));
+    Files.writeString(root.resolve("src/main/java/CartApi.java"),"import org.springframework.web.bind.annotation.*;@RestController class CartApi{@PutMapping(\"/x/add/{productId}\") void add(){}@DeleteMapping(\"/x/cart/{cartId}\") void clear(){}}\n");
+    var graph=new SpringMvcAnalyzer().analyze(new ProjectScanner().scan(root));
+    var calls=graph.behaviors().stream().filter(b->b.type()==BehaviorType.CALL_API).toList();
+    assertEquals(2,calls.size());
+    var json=new com.fasterxml.jackson.databind.ObjectMapper();
+    for(var call:calls){
+      var jsUrl=call.evidence().stream().filter(e->e.parser().equals("AcornStaticAnalyzer")).map(e->{try{return json.readTree(e.detail()).path("url").asText(null);}catch(Exception ignored){return null;}}).filter(Objects::nonNull).findFirst().orElseThrow();
+      var target=graph.nodes().stream().filter(n->n.id().equals(call.targetId())).findFirst().orElseThrow();
+      assertEquals(jsUrl,target.attributes().get("path"));
+    }
+    assertTrue(graph.nodes().stream().anyMatch(n->n.type()==NodeType.ENDPOINT&&"/x/add/{productId}".equals(n.attributes().get("path"))));
+    assertTrue(graph.nodes().stream().anyMatch(n->n.type()==NodeType.ENDPOINT&&"/x/cart/{cartId}".equals(n.attributes().get("path"))));
+  }
   @Test void angularUnknownControllerAndScopeDepthLimitRemainExplicitlyUnresolved() throws Exception {
     var root=project("<main ng-controller='Missing'><button id='unknown' ng-click='ghost()'>Unknown</button></main><main ng-controller='Chain'><button id='deep' ng-click='go0()'>Deep</button></main><script src='/app.js'></script>","");String chain=java.util.stream.IntStream.range(0,12).mapToObj(i->"$scope.go"+i+"=function(){"+(i==11?"fetch('/too-deep');":"$scope.go"+(i+1)+"();")+"};").reduce("",String::concat);Files.writeString(root.resolve("src/main/webapp/app.js"),"angular.module('shop').controller('Chain',function($scope){"+chain+"});");
     var graph=new SpringMvcAnalyzer().analyze(new ProjectScanner().scan(root));assertTrue(graph.diagnostics().stream().anyMatch(d->d.code().equals("ANGULAR_CONTROLLER_UNRESOLVED")),graph.diagnostics().toString());assertTrue(graph.diagnostics().stream().anyMatch(d->d.code().equals("ANGULAR_SCOPE_DEPTH_LIMIT")),graph.diagnostics().toString());assertFalse(graph.behaviors().stream().anyMatch(b->"/too-deep".equals(b.expression())));
