@@ -37,3 +37,16 @@ test('WP45 classifies each screen from proven inbound entries, auto redirect and
  assert.equal(result.get('no-entry').entries.length,0,'self links do not count as incoming entries');
  assert.deepEqual(result.get('inferred').entries[0].evidence[0].source,{file:'a.jsp',line:2});
 });
+
+test('WP45 classifies entry confidence from URL acquisition evidence, not relationship confidence',async()=>{
+ const {classifyScreenEntry}=await ownModule('inventory');
+ const data=fixture();
+ data.graph.nodes.push(node('static-target','SCREEN','靜態網址入口',{route:'/static'}),node('template-target','SCREEN','樣板推定入口',{route:'/template/{id}'}));
+ data.graph.relationships.push(
+  {id:'static-entry',type:'NAVIGATES_TO',from:'shared',to:'static-target',confidence:'INFERRED',evidence:[{source:{file:'static.jsp',line:4},parser:'UrlResolution',resolution:'INFERRED',detail:'靜態網址解析'}]},
+  {id:'template-entry',type:'NAVIGATES_TO',from:'shared',to:'template-target',confidence:'INFERRED',evidence:[{source:{file:'template.jsp',line:8},parser:'RouteTemplateInference',resolution:'INFERRED',detail:'路由樣板推定'}]}
+ );
+ const result=classifyScreenEntry(data.graph);
+ assert.equal(result.get('static-target').classification,'HAS_ENTRY');
+ assert.equal(result.get('template-target').classification,'INFERRED_ENTRY');
+});
