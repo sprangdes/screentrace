@@ -41,6 +41,26 @@ public final class ApiUsage {
       if(trigger.type()==NodeType.SCREEN) callers.get(behavior.targetId()).add(new Caller(trigger.id(),null,behavior.id()));
       if(trigger.type()==NodeType.COMPONENT) for(String screen:owners.getOrDefault(trigger.id(),Set.of())) callers.get(behavior.targetId()).add(new Caller(screen,trigger.id(),behavior.id()));
     }
+    // A proven redirect/forward is represented by an inferred HANDLER -> ENDPOINT
+    // CALLS edge. Transfer only callers already present on its source route; route
+    // reachability by itself never creates a caller.
+    Map<String,Set<String>> redirects=new TreeMap<>();
+    for(Relationship edge:graph.relationships()) if(edge.type()==EdgeType.CALLS&&edge.confidence()==Confidence.INFERRED
+        &&edge.evidence().stream().anyMatch(e->"RedirectInheritance".equals(e.parser()))
+        &&callers.containsKey(edge.to())&&nodes.get(edge.from())!=null&&nodes.get(edge.from()).type()==NodeType.HANDLER) {
+      for(Relationship handled:graph.relationships()) if(handled.type()==EdgeType.HANDLED_BY&&handled.to().equals(edge.from())&&callers.containsKey(handled.from()))
+        redirects.computeIfAbsent(handled.from(),id->new TreeSet<>()).add(edge.to());
+    }
+    record Hop(String endpoint,Caller caller,int depth,Set<String> visited) { }
+    ArrayDeque<Hop> queue=new ArrayDeque<>();
+    for(var entry:callers.entrySet()) for(Caller caller:List.copyOf(entry.getValue())) queue.add(new Hop(entry.getKey(),caller,0,Set.of(entry.getKey())));
+    while(!queue.isEmpty()) {
+      Hop hop=queue.removeFirst();if(hop.depth()>=5)continue;
+      for(String destination:redirects.getOrDefault(hop.endpoint(),Set.of())) if(!hop.visited().contains(destination)) {
+        callers.get(destination).add(hop.caller());Set<String> visited=new HashSet<>(hop.visited());visited.add(destination);
+        queue.addLast(new Hop(destination,hop.caller(),hop.depth()+1,Set.copyOf(visited)));
+      }
+    }
     Map<String,Usage> result=new TreeMap<>();
     callers.forEach((id,values)->{
       boolean removed=!values.isEmpty()&&values.stream().allMatch(c->screenDecisions.get(c.screenId())==Decision.REMOVE || c.componentId()!=null&&componentDecisions.get(new ComponentKey(c.screenId(),c.componentId()))==Decision.REMOVE);

@@ -1,6 +1,6 @@
 export interface Source {file:string;line:number;className?:string;methodName?:string}
 export interface Node {id:string;type:string;name:string;attributes:Record<string,string>;source?:Source;confidence:string;evidence?:unknown[]}
-export interface Edge {id:string;type:string;from:string;to:string;source?:Source;confidence:string}
+export interface Edge {id:string;type:string;from:string;to:string;source?:Source;confidence:string;evidence?:Evidence[]}
 export interface Evidence {source?:Source;parser:string;resolution:string;detail?:string}
 export interface Rule {id:string;kind:string;fields:string[];message?:string;layer:string;parameters:Record<string,string>;evidence:Evidence[]}
 export interface Contract {endpointId:string;request?:unknown;responses?:unknown[];source?:Source;confidence:string}

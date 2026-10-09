@@ -29,6 +29,8 @@ R14 §2.4 授權的既有 golden 修改僅兩份合成 fixture 摘要：`spring-
 
 WP44 第二次驗收依 §2.4 授權，另只調整 `fixtures/wp10/golden/struts1-spring.summary.json` 的 `apis.by_status.IN_USE`：27 → 28。對應既有測試 `real source fixtures produce identical graph, packed HTML and shared-module md on consecutive runs`；其兩次分析都使用同一摘要 golden。新增的唯一 INFERRED 呼叫來源是 `GET /orders/{name}`：`fixtures/wp10/struts1-spring/src/main/webapp/WEB-INF/views/page.jsp:17-18` 的 `<c:url>`／`<spring:url>` 樣板，唯一匹配 `synthetic.PageController` 的 `@GetMapping("/orders/{name}")`（`PageController.java:6`）。`RouteTemplateInference` 為來源元件新增 `TRIGGERS` 至 endpoint 的 INFERRED 關係，證據保留兩處 JSP 樣板及 endpoint 路由；所以 IN_USE 數量增加一。該測試在 `a591740` 之前的實作以新 golden 執行時仍輸出 27，預期 28 的斷言失敗。此處僅變更上述一個數字，golden 其餘欄位未動。
 
+WP44 A4 依 OQ-021 方案 A，在轉址／forward 唯一命中時新增 handler → destination endpoint 的 `CALLS` 關係，confidence 固定 `INFERRED`，證據逐跳列出來源端點、handler、檔案行號、原始轉址及目的端點。Java `ApiUsage` 與 TypeScript `callSources` 只沿帶有 `RedirectInheritance` 證據的 INFERRED 關係傳遞已有呼叫者，最多五跳、以 visited endpoints 防循環；沒有初始來源不會建立呼叫者，歧義／未解析目的地不繼承並輸出診斷。共用向量覆蓋只有轉址來源、來源全移除、歧義、循環及五跳上限。A4 的五個向量在 `44e94bd` 僅提交測試時，Java 與 TypeScript 都在 `redirect-only-source-inherited` 失敗；Spring 合成測試亦在轉址目標 IN_USE 與循環／深度診斷斷言失敗。
+
 ## 後果
 
 可證明的 JSP 路由與 Spring Security 導向新增 evidence-backed 關係。當 context path 沒有設定證據時，帶有額外前綴的 JS API 呼叫不會被猜測成既有 endpoint；分析結果可能仍列為 UNRESOLVED／UNREFERENCED，等待明確設定來源。

@@ -24,6 +24,61 @@ final class SpringControllerFlow {
       }
       if(destinations.isEmpty()||!failures.isEmpty())unresolved(diagnostics,item.target(),failures.isEmpty()?"沒有可證明的目的畫面":String.join("；",new TreeSet<>(failures)));
     }
+    addApiRedirects(nodes,edges,diagnostics,pending,context);
+  }
+  private static void addApiRedirects(List<GraphNode> nodes,List<Relationship> edges,List<Diagnostic> diagnostics,
+                                     List<Pending> pending,UrlResolution.Context context) {
+    Map<String,GraphNode> byId=new HashMap<>();nodes.forEach(node->byId.put(node.id(),node));
+    List<UrlResolution.Endpoint> endpoints=nodes.stream().filter(n->n.type()==NodeType.ENDPOINT)
+        .map(n->new UrlResolution.Endpoint(n.id(),n.attributes().getOrDefault("path",""),n.attributes().getOrDefault("httpMethod","ANY"),n.evidence())).toList();
+    Map<String,Set<String>> routeLinks=new TreeMap<>();
+    for(Pending item:pending) {
+      var target=item.target();if(!Set.of(SpringControllerReturns.Kind.REDIRECT,SpringControllerReturns.Kind.REDIRECT_VIEW,SpringControllerReturns.Kind.FORWARD).contains(target.kind()))continue;
+      String path=target.value();if(path==null||!path.startsWith("/")||path.startsWith("//")||path.contains("${")||path.contains("#{")) {
+        diagnostics.add(new Diagnostic("轉址目的地無法靜態證明，未繼承呼叫來源",Confidence.UNRESOLVED,target.source(),"API_REDIRECT_UNRESOLVED",target.evidence()));continue;
+      }
+      String method=target.kind()==SpringControllerReturns.Kind.FORWARD?item.requestMethod():"GET";
+      if(method.equals("ANY")||method.contains(",")||method.contains("|")) {
+        diagnostics.add(new Diagnostic("轉址目的地的請求方法無法證明，未繼承呼叫來源",Confidence.UNRESOLVED,target.source(),"API_REDIRECT_UNRESOLVED",target.evidence()));continue;
+      }
+      boolean rawRedirectView=target.kind()==SpringControllerReturns.Kind.REDIRECT_VIEW;
+      var match=UrlResolution.resolve(path,method,rawRedirectView?context:new UrlResolution.Context(List.of(),List.of()),endpoints,false);
+      if(match.candidates().size()!=1) {
+        if(match.candidates().size()>1)diagnostics.add(new Diagnostic("轉址目的地有多個候選，未繼承呼叫來源",Confidence.AMBIGUOUS,target.source(),"API_REDIRECT_AMBIGUOUS",target.evidence()));
+        else diagnostics.add(new Diagnostic("轉址目的地無法唯一解析，未繼承呼叫來源",Confidence.UNRESOLVED,target.source(),"API_REDIRECT_UNRESOLVED",target.evidence()));
+        continue;
+      }
+      String destination=match.candidates().get(0);GraphNode handler=byId.get(item.handlerId());
+      if(handler==null||handler.type()!=NodeType.HANDLER)continue;
+      List<Relationship> sources=edges.stream().filter(edge->edge.type()==EdgeType.HANDLED_BY&&edge.to().equals(handler.id())&&byId.get(edge.from())!=null&&byId.get(edge.from()).type()==NodeType.ENDPOINT).toList();
+      for(Relationship source:sources) {
+        GraphNode sourceEndpoint=byId.get(source.from()),targetEndpoint=byId.get(destination);
+        List<AnalysisEvidence> proof=new ArrayList<>(target.evidence());proof.addAll(source.evidence());proof.addAll(handler.evidence());proof.addAll(sourceEndpoint.evidence());proof.addAll(targetEndpoint.evidence());
+        proof.add(new AnalysisEvidence(target.source(),"RedirectInheritance",ResolutionStatus.INFERRED,
+            "轉址鏈：來源端點="+sourceEndpoint.attributes().getOrDefault("httpMethod","ANY")+" "+sourceEndpoint.attributes().getOrDefault("path",sourceEndpoint.name())+
+                "；處理器="+handler.name()+"；來源="+handler.source().file()+":"+handler.source().line()+
+                "；原始轉址="+target.expression()+"；唯一目的端點="+targetEndpoint.attributes().getOrDefault("httpMethod","ANY")+" "+targetEndpoint.attributes().getOrDefault("path",targetEndpoint.name())));
+        String id=ApplicationGraph.id(NodeType.HANDLER,"REDIRECT_INHERITANCE:"+source.from()+":"+handler.id()+":"+destination+":"+target.source().file()+":"+target.source().line());
+        edges.add(new Relationship(id,EdgeType.CALLS,handler.id(),destination,Confidence.INFERRED,target.source(),proof.stream().distinct().sorted().toList()));
+        routeLinks.computeIfAbsent(source.from(),ignored->new TreeSet<>()).add(destination);
+      }
+    }
+    reportRedirectCyclesAndDepth(nodes,edges,diagnostics,routeLinks);
+  }
+  private static void reportRedirectCyclesAndDepth(List<GraphNode> nodes,List<Relationship> edges,List<Diagnostic> diagnostics,Map<String,Set<String>> links) {
+    Map<String,GraphNode> byId=new HashMap<>();nodes.forEach(node->byId.put(node.id(),node));
+    Set<String> cycles=new TreeSet<>(),depths=new TreeSet<>();
+    for(String source:links.keySet())walkRedirects(source,source,0,new LinkedHashSet<>(List.of(source)),links,cycles,depths);
+    for(String endpoint:cycles) {
+      var node=byId.get(endpoint);if(node!=null)diagnostics.add(new Diagnostic("轉址鏈偵測到循環，停止繼承",Confidence.UNRESOLVED,node.source(),"API_REDIRECT_CYCLE",node.evidence()));
+    }
+    for(String endpoint:depths) {
+      var node=byId.get(endpoint);if(node!=null)diagnostics.add(new Diagnostic("轉址鏈超過 5 跳，後續來源不再繼承",Confidence.UNRESOLVED,node.source(),"API_REDIRECT_DEPTH_LIMIT",node.evidence()));
+    }
+  }
+  private static void walkRedirects(String origin,String current,int depth,LinkedHashSet<String> path,Map<String,Set<String>> links,Set<String> cycles,Set<String> depths) {
+    Set<String> next=links.getOrDefault(current,Set.of());if(depth>=5&&!next.isEmpty()){depths.add(current);return;}
+    for(String destination:next)if(path.contains(destination))cycles.add(destination);else {var child=new LinkedHashSet<>(path);child.add(destination);walkRedirects(origin,destination,depth+1,child,links,cycles,depths);}
   }
   static void unresolved(List<Diagnostic> diagnostics,SpringControllerReturns.Target target,String reason) {
     diagnostics.add(new Diagnostic("Controller 回傳目標未解析："+target.expression()+"；"+reason,Confidence.UNRESOLVED,target.source(),"SPRING_RETURN_UNRESOLVED",target.evidence()));
