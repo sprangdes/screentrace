@@ -17,22 +17,22 @@
 | WP10 | 限定合成 fixture、決定性、完整 E2E、使用文件 | 完成；17dd801 遠端全綠，204 Java／46 三引擎 E2E；見 reports/M4.md，不做效能／格式化／相容清理 |
 | R2 | WP11–WP16：報表呈現補強與查證 | 完成；各工作包獨立提交；WP16 記錄於 reports/R2.md |
 | R4 | UI1–UI5：報表介面改善 | UI1 已驗收；UI2／UI4 完成（241 Java／52 viewer／60 Chromium E2E）；UI2–UI4 已驗收；UI3 無對應 tag-body 名稱依 OQ-015 方案 A 未完成、另案處理；UI5 完成待驗收（241 Java／54 viewer／65 Chromium E2E），見 reports/R4.md |
-| R5 | WP21–WP23：靜態名稱、端點分群與流向 | WP21／WP22 已驗收；路徑補強、20 次 E2E 重跑與 WP23 完整驗證通過；WP23 停止待驗收，見 reports/R5.md |
-| R3 | WP17–WP20：流程補強與呈現修正 | WP17／WP18 已驗收；WP19／WP20 完成，等待驗收（241 Java／50 viewer／48 E2E）；包含 G9 全站導覽／格狀版面與 G10 導覽名稱，見 reports/R3.md |
-| R8 | WP30–WP32：需求方文件、可重現截圖與 CLI 友善失敗 | WP30／WP31／WP32 完成，等待需求方驗收；缺少設定且無互動終端機時立即以中文訊息及結束碼 2 失敗，設定有效時指定專案可照常執行。R3 完成流程與全站導覽排版；R4 改善報表操作介面；R5 補強路徑隱私與流程版面；R6 加入離線模擬操作與誠實覆蓋率；R7 統一模擬結果與覆蓋率並補強靜態對應。詳見 reports/R8.md。 |
-| R9 | WP33：路徑大小寫與符號連結 | 完成，停止等待需求方驗收；真實路徑邊界、工作區設定正規化、越界資源中文錯誤與路徑檢查盤點見 reports/R9.md、ADR 0061。Windows 未實測。 |
-| R10 | WP34–WP38：需求方功能理解與確認工作流 | WP34–WP36 已驗收；WP37 確認儀表板、下一個未確認、影響預覽、匯出前檢查與 config 專屬訊息完成，停止等待需求方驗收；WP38 未開始。見 reports/R10.md、ADR 0057／0058／0062。 |
-| R11 | WP39–WP40：檢視器簡化與決策介面常駐 | WP39／WP40 完成，等待需求方驗收；R10 WP37／WP38 尚未開始。確認模式已移除，決策、進度、篩選、衝突提示與快捷操作常駐。見 reports/R11.md、ADR 0059／0060。 |
-| R13 | WP43：畫面切換動畫 | 完成實作與完整驗證，等待需求方驗收；畫面內切換改為淡化交接，總覽卡片 zoom 保留並修正。見 reports/R13.md、ADR 0066。 |
+| R5 | WP21–WP23：靜態名稱、端點分群與流向 | 已驗收（2026-10-09，隨 R14 實測確認）；靜態名稱與端點分群仍由報表資料使用，WP23 的流向關係與容納版面由 R14 WP49 泳道地圖延續。證據：`wp23-flow.e2e.mjs`「WP23 owner workflow cards follow deterministic WP49 feature lanes…」、`NonInteractiveCliTest.actualAnalyzeAndReportAcceptCaseAndSymlinkWorkspaceRootsWithIdenticalHtml`；見 reports/R5.md。 |
+| R3 | WP17–WP20：流程補強與呈現修正 | 已驗收（2026-10-09，隨 R14 實測確認）；G9 導覽關係、格狀配置與 G10 元件名稱仍可用，R14 WP49 以泳道地圖承接總覽版面。證據：`wp20.e2e.mjs`「WP20 overview global toggle, grid, incident highlights and focus navigation groups」、`wp23-flow.e2e.mjs`「WP23 owner workflow cards follow deterministic WP49 feature lanes…」；見 reports/R3.md。 |
+| R8 | WP30–WP32：需求方文件、可重現截圖與 CLI 友善失敗 | 已驗收（2026-10-09，隨 R14 實測確認）；使用者指南與無互動終端機的 config 友善失敗仍可用。證據：`guide-docs.test.mjs`「requester guide is task-focused, safe, plain-language and illustrated」、`wp40-guide-contract.test.mjs`「WP40 guide uses always-available marking and retains storage and size notices」、`NonInteractiveCliTest.configWithoutAnInteractiveTerminalNamesTheConfigRequirement`；見 reports/R8.md。 |
+| R9 | WP33：路徑大小寫與符號連結 | 已驗收（2026-10-09，隨 R14 實測確認）；路徑邊界與符號連結防護仍存在。證據：`JspProjectParserSecurityTest.traversalAndSymlinkIncludesAreUnresolved`、`NonInteractiveCliTest.actualAnalyzeAndReportAcceptCaseAndSymlinkWorkspaceRootsWithIdenticalHtml`。Windows 仍未驗證；見 reports/R9.md、ADR 0061。 |
+| R10 | WP34–WP38：需求方功能理解與確認工作流 | WP34–WP36 已驗收；WP37 已由 R14 WP45 第 8 點首頁盤點與交付清單取代。WP38 已完成（隨 R11–R14 實作）：流程大綱、全域搜尋、首次引導、「?」說明浮層均有現行實作與測試。證據：`wp38.e2e.mjs`「WP38 flow outline, global search, first-run guide and help can be used without changing decisions」及「WP38 rendered flow tree expands each screen once…」；見 reports/R10.md。 |
+| R11 | WP39–WP40：檢視器簡化與決策介面常駐 | 已驗收（2026-10-09，隨 R14 實測確認）；無模式決策與檢視器能力保留，R14 WP45／WP46 取代舊確認版面。證據：`wp39-simplify.e2e.mjs`「WP39 viewer removes mode controls…」、`wp40-always-on-decisions.e2e.mjs`「WP40 decisions stay available without a mode…」；見 reports/R11.md。 |
+| R13 | WP43：畫面切換動畫 | 已驗收（2026-10-09，隨 R14 實測確認）；轉場仍保留舊預覽至新 iframe 載入、支援 reduced motion 與快速切換。證據：`wp43-transition.e2e.mjs` 中 `WP43 in-screen navigation keeps the old preview until the next iframe loads…`、`WP43 rapid navigation cancels pending switches…`；見 reports/R13.md。 |
 | R14 | WP44–WP50：功能盤點工作台（分析誤判修正、盤點首頁、逐頁確認、決策原因與備註、按鈕合併、地圖泳道、API 與交付清單） | WP44–WP50、§11.1 與 §12 抽查補正完成，R14 結案。最終 §5 驗證：305 Java（304 通過、1 跳過）、118 viewer、45 JS、43 capture、168 預設並行 E2E 全綠。§12 提交 `d090315`、`03db57b`、`cdb2353`、`b60683a`，先補失敗測試再修正；API basis 區分完整常值與動態串接，REDIRECT 類別顯示「轉址」。eMusicStore 實測：無 context path 為 1／1／5／0，有 `/eMusicStore` 為 2／4／1／0（使用中／推定使用中／找不到呼叫來源／可移除）。詳見 reports/R14.md、ADR 0067／0069／0070／0071。 |
-| R15 | WP51–WP53：API 轉址標示收尾、ROADMAP 狀態整理、Struts 1 官方範例唯讀實測稽核 | 未開始；依 [ADJUSTMENT_R15_STRUTS_AUDIT.md](ADJUSTMENT_R15_STRUTS_AUDIT.md) 執行，WP53 完成後停止驗收。 |
+| R15 | WP51–WP53：API 轉址標示收尾、ROADMAP 狀態整理、Struts 1 官方範例唯讀實測稽核 | WP51、WP52 完成並通過 R14 §5 完整驗證；WP53 官方範例稽核進行中，完成後停止驗收。詳見 [R15 報告](reports/R15.md) 與 [R15 指示](ADJUSTMENT_R15_STRUTS_AUDIT.md)。 |
 
 | 里程碑 | 工作包 | 狀態 |
 |---|---|---|
 | M1 | WP0、WP1、WP2 | 完成；需求方已授權進入 M2，遠端 CI 全綠，見 reports/M1.md |
 | M2 | WP3、WP4、WP5 | 完成；三工作包均遠端全綠，最終 WP5 b7b51b9；需求方已驗收並授權進入 M3 |
 | M3 | WP6、WP7、WP8 | 完成；WP6／WP7／WP8 與 v1.8 補強已驗收 |
-| M4 | WP9、WP10 | WP9 已驗收；限定 WP10 四項完成且遠端全綠，停止等待驗收；見 reports/M4.md |
+| M4 | WP9、WP10 | 已驗收（2026-10-09，隨 R14 實測確認）；四類合成專案、決定性輸出與離線完整流程仍有整合測試。證據：`SyntheticProjectIntegrationTest.sourceOnlyCliPipelineTwiceProducesIdenticalGraphPreviewAndHtmlAndRejectsStrutsTwo`、`synthetic-project.e2e.mjs`「real source fixtures produce identical graph, packed HTML and shared-module md on consecutive runs」；見 reports/M4.md。 |
 | R2 | WP11–WP16 | 完成；報表關聯、需求方資訊、API 呼叫來源、review 標記及呈現查證完成；見 reports/R2.md |
 
 ## 本次調整前的既有能力
@@ -57,7 +57,7 @@
 
 - WP7 B：單檔畫布／決定性 SCC 分層、檔案樹、URL 搜尋與平移縮放已實作；逐增量 CI gate 見 docs/reports/WP7.md。
 
-- R10 WP37：確認儀表板擴充既有 R11 常駐決策介面；區域進度與「下一個未確認」共用固定順序。完成後停在 WP37，未開始 WP38；見 [R10 報告](reports/R10.md)、[ADR 0062](adr/0062-confirmation-dashboard-workflow.md)。
+- R10 WP37 已由 R14 WP45 第 8 點取代；WP38 流程大綱、全域搜尋、首次引導與說明浮層已由 R11–R14 完成，見 [R10 報告](reports/R10.md)。
 
 - capture 相容清理：packDocuments 舊 inline CSS 入口僅供 C 增量歷史 fixture；正式 CLI 使用 packStandaloneDocuments。依 OQ-006 保留原斷言，後續與歷史 capture 路徑一併移除（ADR 0021）。
 
