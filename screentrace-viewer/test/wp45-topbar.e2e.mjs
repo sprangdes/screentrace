@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {chromium} from '../../screentrace-capture/node_modules/playwright/index.mjs';
 import {fileFixture,fixture} from './fixture.mjs';
+import {reviewExportMenuItem} from './review-export.mjs';
 
 test('WP45 keeps delivery and export available while removing old confirmation toolbar controls',async()=>{
  const browser=await chromium.launch();try{const page=await browser.newPage({viewport:{width:1440,height:900}});await page.goto(await fileFixture(fixture()));await page.locator('#app[data-ready=true]').waitFor();
@@ -14,4 +15,8 @@ test('WP45 keeps delivery and export available while removing old confirmation t
   const current=await page.locator('[data-review-queue-screen][aria-current=page]').getAttribute('data-review-queue-screen');await page.keyboard.press('n');
   assert.notEqual(await page.locator('[data-review-queue-screen][aria-current=page]').getAttribute('data-review-queue-screen'),current);
  }finally{await browser.close();}
+});
+
+test('WP45 export moved into More still completes the download flow',async()=>{
+ const browser=await chromium.launch();try{const page=await browser.newPage();await page.goto(await fileFixture(fixture()));const pending=page.waitForEvent('download',{timeout:5000});await (await reviewExportMenuItem(page)).click();await page.getByRole('button',{name:'仍要匯出',exact:true}).click();const download=await pending;assert.equal(download.suggestedFilename(),'screentrace-review.md');}finally{await browser.close();}
 });

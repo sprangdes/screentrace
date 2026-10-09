@@ -1,5 +1,6 @@
 import {openScreen} from './decision-controls.mjs';
 import test from 'node:test';
+import {reviewExportMenuItem} from './review-export.mjs';
 import assert from 'node:assert/strict';
 import {chromium} from '../../screentrace-capture/node_modules/playwright/index.mjs';
 import {fileFixture} from './fixture.mjs';
@@ -91,16 +92,16 @@ test('WP37 export check summarizes decisions and keeps the downloaded Markdown u
   await page.evaluate(()=>localStorage.setItem('screentrace:review:v1:%E6%B8%AC%E8%A9%A6%E6%87%89%E7%94%A8:'+('a'.repeat(64)),JSON.stringify({format:'screentrace-review',version:1,schemaVersion:'2.2',application:'測試應用',fingerprint:'a'.repeat(64),screenDecisions:{b:'REMOVE'},componentDecisions:{a:{shared:'KEEP'}}})));
   await page.reload();
   const readDownload=async(pending)=>{const item=await pending;const fs=await import('node:fs/promises');return(await fs.readFile(await item.path(),'utf8')).replace(/^generated_at: .*$/m,'generated_at: "TIME"');};
-  const exportChecked=async()=>{const pending=page.waitForEvent('download');await page.getByRole('button',{name:'匯出 md',exact:true}).click();await page.locator('.pre-export-check').waitFor({state:'visible'});await page.getByRole('button',{name:'仍要匯出',exact:true}).click();return readDownload(pending);};
+  const exportChecked=async()=>{const pending=page.waitForEvent('download');await (await reviewExportMenuItem(page)).click();await page.locator('.pre-export-check').waitFor({state:'visible'});await page.getByRole('button',{name:'仍要匯出',exact:true}).click();return readDownload(pending);};
   const baseline=await exportChecked();
-  await page.getByRole('button',{name:'匯出 md',exact:true}).click();
+  await (await reviewExportMenuItem(page)).click();
   const dialog=page.locator('.pre-export-check');assert.ok(await dialog.isVisible());
   assert.match(await dialog.innerText(),/畫面：保留 0 · 移除 1 · 未確認 2/);
   assert.match(await dialog.innerText(),/按鈕：/);assert.match(await dialog.innerText(),/仍有衝突：1 個/);assert.match(await dialog.innerText(),/乙/);assert.match(await dialog.innerText(),/共用按鈕/);assert.match(await dialog.innerText(),/換電腦|清除瀏覽器資料/);
   await page.getByRole('button',{name:'回去處理',exact:true}).click();assert.equal(await dialog.isVisible(),false);
   assert.equal(await exportChecked(),baseline,'the pre-export dialog does not alter Markdown bytes');
-  const skipped=page.waitForEvent('download');await page.getByRole('button',{name:'匯出 md',exact:true}).click();await page.locator('.pre-export-check').waitFor({state:'visible'});await page.getByRole('button',{name:'不再顯示',exact:true}).click();await readDownload(skipped);
-  const direct=page.waitForEvent('download');await page.getByRole('button',{name:'匯出 md',exact:true}).click();assert.equal(await readDownload(direct),baseline);
+  const skipped=page.waitForEvent('download');await (await reviewExportMenuItem(page)).click();await page.locator('.pre-export-check').waitFor({state:'visible'});await page.getByRole('button',{name:'不再顯示',exact:true}).click();await readDownload(skipped);
+  const direct=page.waitForEvent('download');await (await reviewExportMenuItem(page)).click();assert.equal(await readDownload(direct),baseline);
  }finally{await browser.close();}
 });
 
