@@ -18,5 +18,7 @@ test('WP50 focused details can scroll the last component control fully into view
     assert.ok(panel&&bounds);
     assert.ok(bounds.y>=panel.y&&bounds.y+bounds.height<=panel.y+panel.height,
       `component control bounds ${JSON.stringify(bounds)} exceed details panel ${JSON.stringify(panel)}`);
+    assert.equal(await control.evaluate(element=>{const rect=element.getBoundingClientRect();const hit=document.elementFromPoint(rect.x+rect.width/2,rect.y+rect.height/2);return hit===element||element.contains(hit);}),true,
+      'the right-panel collapse control must not cover detail actions');
   } finally { await browser.close(); }
 });
