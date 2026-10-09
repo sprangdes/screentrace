@@ -63,6 +63,7 @@ class StrutsR16TilesBoundaryTest {
     assertFalse(graph.relationships().stream().anyMatch(edge->Set.of(EdgeType.RENDERS,EdgeType.FORWARDS_TO).contains(edge.type())&&edge.to().equals(unused.id())));
     assertTrue(graph.relationships().stream().anyMatch(edge->edge.type()==EdgeType.CONTAINS&&edge.from().equals(unused.id())&&graph.nodes().stream().anyMatch(node->node.id().equals(edge.to())&&node.source().file().endsWith("unused.jsp"))),graph.nodes().toString());
     assertTrue(graph.relationships().stream().anyMatch(edge->edge.type()==EdgeType.INCLUDES&&edge.from().equals(home.id())));
+    assertFalse(graph.diagnostics().stream().anyMatch(diagnostic->diagnostic.code().equals("TILES_REFERENCE_UNRESOLVED")&&diagnostic.message().contains("/header.jsp")),graph.diagnostics().toString());
   }
 
   @Test void unreferencedTileFragmentsAndOrdinaryJspRemainScreens()throws Exception{
@@ -105,6 +106,19 @@ class StrutsR16TilesBoundaryTest {
     assertTrue(graph.relationships().stream().anyMatch(edge->edge.type()==EdgeType.CONTAINS&&edge.from().equals(layout.id())&&graph.nodes().stream().anyMatch(node->node.id().equals(edge.to())&&"layout-action".equals(node.attributes().get("id")))),graph.nodes().toString()+"\n"+graph.relationships().toString());
     assertFalse(graph.relationships().stream().anyMatch(edge->edge.type()==EdgeType.RENDERS&&edge.to().equals(layout.id())));
     assertTrue(graph.behaviors().stream().anyMatch(behavior->behavior.triggerId().equals(layout.id())&&behavior.type()==BehaviorType.CALL_API&&behavior.expression().contains("/tiles-layout-api")),graph.behaviors()+"\n"+graph.diagnostics());
+  }
+
+  @Test void referencedRootTemplateWithoutEntryIsNotAnIndependentScreen()throws Exception{
+    file("src/main/webapp/WEB-INF/web.xml","<web-app><servlet><servlet-name>action</servlet-name><servlet-class>org.apache.struts.action.ActionServlet</servlet-class></servlet><servlet-mapping><servlet-name>action</servlet-name><url-pattern>*.do</url-pattern></servlet-mapping></web-app>");
+    file("src/main/webapp/WEB-INF/struts-config.xml","<struts-config><action-mappings><action path='/home' type='sample.Home'><forward name='ok' path='home.page'/></action></action-mappings></struts-config>");
+    file("tiles-defs.xml","<tiles-definitions><definition name='base' path='/layout.jsp'><put name='body' value='/body.jsp'/></definition><definition name='home.page' extends='base'/></tiles-definitions>");
+    file("src/main/webapp/layout.jsp","<tiles:insert attribute='body'/><button id='layout-action'>Layout</button>");
+    file("src/main/webapp/body.jsp","<button id='body-action'>Body</button>");
+
+    var graph=analyze();
+    assertFalse(graph.nodes().stream().anyMatch(node->node.type()==NodeType.SCREEN&&node.source().file().endsWith("layout.jsp")),graph.nodes().stream().filter(node->node.type()==NodeType.SCREEN).toList().toString());
+    var page=graph.nodes().stream().filter(node->node.type()==NodeType.SCREEN&&node.name().equals("home.page")).findFirst().orElseThrow();
+    assertTrue(graph.relationships().stream().anyMatch(edge->edge.type()==EdgeType.CONTAINS&&edge.from().equals(page.id())&&graph.nodes().stream().anyMatch(node->node.id().equals(edge.to())&&node.source().file().endsWith("layout.jsp")&&"layout-action".equals(node.attributes().get("id")))));
   }
 
   @Test void standaloneTileTemplateScriptRemainsAttachedToItsUnroutedScreen()throws Exception{
