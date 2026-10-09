@@ -240,3 +240,11 @@
 - 影響範圍：JSP 元件掃描、`*.faces` URL mapping、JSF navigation/action 與 Struts endpoint caller 對應；不改動目標專案。
 - 狀態：已決定（2026-10-09）；需求方採方案 B。
 - 決定：JSF 不在 REQUIREMENTS §1 的支援框架內，本階段不解析 JSF 元件。偵測到 FacesServlet 或 JSF taglib 時：輸出診斷 `UNSUPPORTED_COMPONENT_FRAMEWORK`（含檔名與行號）；報表首頁在「可能已經沒在用」上方顯示提醒（同 `CONTEXT_PATH_HINT` 的位置與樣式）：「這個專案有 N 個畫面使用 JSF 元件，ScreenTrace 不分析 JSF，相關畫面的按鈕與 API 呼叫來源可能漏列，請勿只憑本報告判定可移除」；使用 JSF 元件的畫面在逐頁確認的判斷依據中顯示同一提醒；md §8 分析限制列出這些畫面。JSF 元件不得被計為「知道會做什麼」或標成已解析。
+
+## OQ-027 — Struts URL 別名合併後的呼叫信心斷言
+
+- 情境：WP54 依 OQ-024 方案 B，把 Struts action 邏輯路徑與已證明的 servlet 公開 URL 合併為一個 endpoint。`UrlLinkingTest.actionsReceiveApiAndFormCallersWithAllExtensionCandidates` 原本將 `/save` 與 `/save.do` 視為兩個 endpoint，並要求 `CALLS` 關係對兩個候選都標 `AMBIGUOUS`。合併後兩個 URL 形式只對應一個 endpoint，因此新分析結果不再符合該既有信心斷言。
+- 可選方案 A：授權只更新此測試中直接受別名合併影響的預期：一個 endpoint 身分、一筆對應呼叫來源，並依已證明 servlet mapping 使用 `CONFIRMED`；其餘測試斷言不變。此項超出 R16 §3 的數量型期望預先授權。
+- 可選方案 B：保留既有 `AMBIGUOUS` 呼叫信心，即使兩種 URL 形式已合併為一個 endpoint；需接受 endpoint 身分唯一、呼叫信心仍標歧義的表示。
+- 影響範圍：Struts endpoint alias resolution、JS URL 對應 confidence、`UrlLinkingTest.actionsReceiveApiAndFormCallersWithAllExtensionCandidates`。不影響 Spring routes。
+- 狀態：待決定。依據：在 R16 實作中執行該測試，舊斷言所期待的 `AMBIGUOUS` 候選清單含 `/save` 與 `/save.do` 兩個 endpoint；合併後唯一呼叫使用 `CONFIRMED`，因此實際 `AMBIGUOUS` 清單為空。測試斷言未修改。
