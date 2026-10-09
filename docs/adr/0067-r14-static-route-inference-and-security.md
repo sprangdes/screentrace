@@ -16,6 +16,7 @@ R14 要求補足 JSP 動態路由、JavaScript API 呼叫、AngularJS scope 事�
 4. Spring MVC 與 Spring Boot 將 @RestController、@ResponseBody、ResponseEntity，以及 void 加 @ResponseStatus 的 handler 分類為 REST_API。
 5. Spring Security XML 與 Java Config 的常值登入頁／拒絕存取頁會在對應畫面記錄 autoRedirect、設定來源位置與受保護路徑；動態設定只產生診斷，不附加屬性。
 6. OQ-020 的預設區域規則修訂為：只產生一個區域的依據不得成為預設，除非三種依據都只產生一個區域。其餘預設排序與 UI 切換規則不變；UI 實作留在 WP45。
+7. OQ-022 方案 C 保留既有 JS 佔位符與 UNRESOLVED 規則。函式參數用 `{參數名}`、非計算屬性用 `{最後屬性名}`，computed access 不變。當帶 context path 的 JS 呼叫唯一對應後端路由時，Java graph evidence 的 canonical `url` 改為 endpoint path，原 URL 以 `originalUrl` 保留；behavior expression 仍保留原始運算式。沒有唯一對應時保留原前端請求路徑。
 
 ## 測試與斷言
 

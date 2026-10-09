@@ -36,7 +36,9 @@ public final class RouteTemplateInference {
    List<String> contextCandidates=contexts.stream().filter(c->raw.startsWith(c+"/")||raw.equals(c)).toList();
    String detail="原始樣板="+raw+"；正規化樣板="+normalized+"；context path 候選="+contextCandidates+"；候選路由="+compatible.stream().map(n->n.attributes().getOrDefault("path",n.id())).toList()+"；parser=RouteTemplateInference";
    ResolutionStatus status=targets.size()==1?ResolutionStatus.INFERRED:targets.size()>1?ResolutionStatus.AMBIGUOUS:ResolutionStatus.UNRESOLVED;
-   List<AnalysisEvidence> proof=new ArrayList<>(b.evidence());proof.add(new AnalysisEvidence(source,"RouteTemplateInference",status,detail));
+   List<AnalysisEvidence> proof=new ArrayList<>(b.evidence());
+   if(b.type()==BehaviorType.CALL_API&&compatible.size()==1)proof=canonicalCallUrlEvidence(proof,raw,compatible.get(0).attributes().get("path"));
+   proof.add(new AnalysisEvidence(source,"RouteTemplateInference",status,detail));
    if(b.type()==BehaviorType.NAVIGATE&&compatible.size()==1) {
     GraphNode endpoint=compatible.get(0);String callId=ApplicationGraph.id(NodeType.COMPONENT,EdgeType.TRIGGERS+":"+trigger.id()+":"+endpoint.id());Relationship oldCall=edges.get(callId);List<AnalysisEvidence> callProof=new ArrayList<>(proof);if(oldCall!=null)callProof.addAll(oldCall.evidence());
     edges.put(callId,new Relationship(callId,EdgeType.TRIGGERS,trigger.id(),endpoint.id(),Confidence.INFERRED,source,callProof.stream().distinct().sorted().toList()));
@@ -54,6 +56,21 @@ public final class RouteTemplateInference {
   }
   nodes.entrySet().removeIf(e->"javascript-request".equals(e.getValue().attributes().get("origin"))&&behaviors.values().stream().noneMatch(b->e.getKey().equals(b.targetId()))&&edges.values().stream().noneMatch(edge->e.getKey().equals(edge.to())));
   return new ApplicationGraph(graph.application(),List.copyOf(nodes.values()),List.copyOf(edges.values()),diagnostics.stream().distinct().toList(),graph.apiContracts(),graph.schemaVersion(),List.copyOf(behaviors.values()),graph.validationRules());
+ }
+ private static List<AnalysisEvidence> canonicalCallUrlEvidence(List<AnalysisEvidence> evidence,String original,String endpointPath) {
+  if(endpointPath==null)return evidence;
+  List<AnalysisEvidence> result=new ArrayList<>();
+  for(AnalysisEvidence item:evidence) {
+   if(!"AcornStaticAnalyzer".equals(item.parser())||item.detail()==null){result.add(item);continue;}
+   try {
+    var json=new com.fasterxml.jackson.databind.ObjectMapper().readTree(item.detail());
+    if(!json.isObject()||!json.hasNonNull("url")){result.add(item);continue;}
+    var copy=(com.fasterxml.jackson.databind.node.ObjectNode)json;
+    String originalUrl=copy.path("url").asText();if(!Objects.equals(originalUrl,endpointPath)){copy.put("originalUrl",originalUrl);copy.put("url",endpointPath);}
+    result.add(new AnalysisEvidence(item.source(),item.parser(),item.resolution(),copy.toString()));
+   }catch(Exception ignored){result.add(item);}
+  }
+  return result;
  }
  private static void removeSyntheticRequestEdge(Map<String,Relationship> edges,Map<String,GraphNode> nodes,Behavior behavior){if(behavior.targetId()==null)return;GraphNode prior=nodes.get(behavior.targetId());if(prior==null||!"javascript-request".equals(prior.attributes().get("origin")))return;edges.entrySet().removeIf(e->e.getValue().from().equals(behavior.triggerId())&&e.getValue().to().equals(prior.id())&&Set.of(EdgeType.CALLS,EdgeType.TRIGGERS).contains(e.getValue().type()));}
  private static String url(Behavior b,GraphNode trigger,ProjectInventory inventory) {
