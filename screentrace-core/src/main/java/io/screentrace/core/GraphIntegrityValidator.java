@@ -199,9 +199,9 @@ public final class GraphIntegrityValidator {
     String target = from.attributes().get("target");
     String route = to.attributes().get("route");
     String view = to.attributes().get("view");
-    Set<String> routeAliases = new HashSet<>(Arrays.asList(to.attributes().getOrDefault("routeAliases", "").split(";")));
+    Set<String> routeAliases = new HashSet<>(Arrays.asList(to.attributes().getOrDefault("routeAliases", "").split("\\u001f")));
     if (edge.confidence() == ApplicationGraph.Confidence.CONFIRMED && target != null && !target.equals(route) && !target.equals(view) && !routeAliases.contains(target)) {
-      errors.add("Navigation target does not match screen route or view: " + edge.id());
+      errors.add("Navigation target does not match screen route or view: " + edge.id() + " (target=" + target + ", route=" + route + ", view=" + view + ", routeAliases=" + routeAliases + ")");
     }
   }
 }

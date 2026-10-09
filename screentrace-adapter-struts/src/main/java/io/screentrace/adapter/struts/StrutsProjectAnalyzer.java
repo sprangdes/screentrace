@@ -322,8 +322,8 @@ public final class StrutsProjectAnalyzer {
 
   private static void addScreenRouteAlias(String screenId,String alias,State state) {
     GraphNode screen=state.nodes.get(screenId);if(screen==null||alias==null||alias.isBlank())return;
-    Set<String> aliases=new TreeSet<>();String existing=screen.attributes().get("routeAliases");if(existing!=null&&!existing.isBlank())aliases.addAll(Arrays.asList(existing.split(";")));aliases.add(alias);
-    Map<String,String> attrs=new TreeMap<>(screen.attributes());attrs.put("routeAliases",String.join(";",aliases));
+    Set<String> aliases=new TreeSet<>();String existing=screen.attributes().get("routeAliases");if(existing!=null&&!existing.isBlank())aliases.addAll(Arrays.asList(existing.split("\\u001f")));aliases.add(alias);
+    Map<String,String> attrs=new TreeMap<>(screen.attributes());attrs.put("routeAliases",String.join("\u001f",aliases));
     state.nodes.put(screenId,new GraphNode(screen.id(),screen.type(),screen.name(),attrs,screen.source(),screen.confidence(),screen.evidence()));
   }
 
@@ -419,7 +419,7 @@ public final class StrutsProjectAnalyzer {
         Set<String> destinations=new TreeSet<>();
         if("SwitchAction".equals(mapping.type().substring(mapping.type().lastIndexOf('.')+1))){String switchRoute=switchActionTarget(resolvedTarget);if(switchRoute!=null)for(Mapping candidate:state.routes.getOrDefault(switchRoute,List.of()))destinations.addAll(resolveMappingScreens(candidate,state,new LinkedHashSet<>(),0,control.source()));}
         else destinations.addAll(resolveMappingScreens(mapping,state,new LinkedHashSet<>(),0,control.source()));
-        for(String destination:destinations)edge(state,EdgeType.NAVIGATES_TO,control.id(),destination,status,control.source());
+        for(String destination:destinations){if(status==Confidence.CONFIRMED)addScreenRouteAlias(destination,control.attributes().get("target"),state);edge(state,EdgeType.NAVIGATES_TO,control.id(),destination,status,control.source());}
       }
     }
     edge(state,EdgeType.TRIGGERS,control.id(),endpoint,status,control.source());
