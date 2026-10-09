@@ -212,11 +212,21 @@ public final class StrutsProjectAnalyzer {
 
   private static String screenForView(String path,State state,SourceLocation source) {
     String direct=state.screens.get(path);if(direct!=null)return direct;
+    String indexed=state.viewIds.get(path);
+    if(indexed==null){List<String> candidates=state.viewIds.entrySet().stream().filter(entry->entry.getKey().endsWith(path)).map(Map.Entry::getValue).distinct().toList();if(candidates.size()==1)indexed=candidates.get(0);}
+    if(indexed!=null){String viewPath=state.nodes.get(indexed).attributes().get("view");if(viewPath!=null)return ensureJspScreen(viewPath,state);}
     if(!path.startsWith("/"))return null;
     List<String> matches=state.nodes.values().stream().filter(node->node.type()==NodeType.SCREEN&&node.attributes().getOrDefault("view","").endsWith(path)).map(GraphNode::id).distinct().toList();
     if(matches.size()==1)return matches.get(0);
     if(matches.size()>1)diagnostic(state,"forward JSP 路徑對應多個畫面："+path,source,"STRUTS_FORWARD_AMBIGUOUS");
     return null;
+  }
+
+  private static String ensureJspScreen(String viewPath,State state) {
+    String existing=state.screens.get(viewPath);if(existing!=null)return existing;
+    String viewId=state.viewIds.get(viewPath);GraphNode view=viewId==null?null:state.nodes.get(viewId);if(view==null)return null;
+    String id=StableGraphIds.screen(viewPath);String name=Path.of(viewPath).getFileName().toString().replaceFirst("\\.jsp$","");
+    addNode(state,id,NodeType.SCREEN,name,Map.of("view",viewPath),view.source(),Confidence.CONFIRMED);indexView(state.screens,viewPath,id);return id;
   }
 
   private static void resolveConfiguredForwards(State state) {
@@ -239,7 +249,7 @@ public final class StrutsProjectAnalyzer {
         } else {
           List<String> candidatePaths=new ArrayList<>();if(state.screens.containsKey(value))candidatePaths.add(value);
           for(Path sourceFile:state.inventory.files())if(sourceFile.getFileName().toString().equals(Path.of(value).getFileName().toString())) {String candidate=relative(state,sourceFile);if(candidate.endsWith("/"+value)||candidate.equals(value))candidatePaths.add(candidate);}
-          List<String> candidates=candidatePaths.stream().distinct().map(state.screens::get).filter(Objects::nonNull).distinct().toList();
+          List<String> candidates=candidatePaths.stream().distinct().map(candidate->screenForView(candidate,state,source)).filter(Objects::nonNull).distinct().toList();
           if(candidates.size()!=1) {diagnostic(state,candidates.isEmpty()?"welcome-file 未找到唯一 JSP 畫面："+value:"welcome-file 有多個同名 JSP 畫面："+value,source,candidates.isEmpty()?"STRUTS_WELCOME_FILE_UNRESOLVED":"STRUTS_WELCOME_FILE_AMBIGUOUS");continue;}
           screenId=candidates.get(0);
         }
@@ -290,6 +300,7 @@ public final class StrutsProjectAnalyzer {
   private static List<String> resolveForwardScreens(String target,String module,State state,Set<String> visited,int depth,SourceLocation source) {
     if(depth>=5){diagnostic(state,"forward 鏈超過 5 層",source,"STRUTS_FORWARD_DEPTH");return List.of();}
     String named=state.globalForwards.get(module+":"+target);if(named!=null&&!named.equals(target))return resolveForwardScreens(named,module,state,visited,depth+1,source);
+    if(state.tiles.containsKey(target)){String screen=ensureTileScreen(target,state);return screen==null?List.of():List.of(screen);}
     String direct=screenForView(target,state,source);if(direct!=null)return List.of(direct);
     String logical=logicalPath(target,state);if(logical==null&&target.startsWith("/")&&!target.startsWith("/WEB-INF/")&&!target.contains(".jsp"))logical=module.isBlank()||target.startsWith(module+"/")?target:module+target;
     if(logical==null)logical=target;
@@ -319,9 +330,10 @@ public final class StrutsProjectAnalyzer {
           if(tag.closing()) {if(Set.of("html:form","form","form:form").contains(name)) {action=null;formGroup=null;activeModule=null;}continue;}
           var source=new SourceLocation(path,tag.line());
           if(Set.of("tiles:insert","tiles:put").contains(name)) {
-            String target=first(tag,"definition","page","value");String view=state.viewIds.get(target);
-            if(view==null) view=state.tileViewIds.get(target);
-            String screen=state.screens.get(path);if(view!=null&&screen!=null) edge(state,EdgeType.INCLUDES,screen,view,Confidence.CONFIRMED,source);
+            String target=first(tag,"definition","page","value");String view=target==null?null:state.viewIds.get(target);
+            if(view==null&&target!=null)view=state.tileViewIds.get(target);
+            Set<String> owners=new TreeSet<>(state.tileFragmentOwners.getOrDefault(path,Set.of()));String directOwner=state.screens.get(path);if(directOwner!=null)owners.add(directOwner);
+            if(view!=null)for(String screen:owners)edge(state,EdgeType.INCLUDES,screen,view,Confidence.CONFIRMED,source);
             else if(target!=null) diagnostic(state,"Tiles 標籤目標未解析："+target,source,"TILES_REFERENCE_UNRESOLVED");
           }
           ComponentKind kind=Set.of("logic:redirect","logic:forward","html:rewrite").contains(name)?ComponentKind.LINK:kind(name,tag);
@@ -352,7 +364,8 @@ public final class StrutsProjectAnalyzer {
     for(var view:jsp.views()) if(view.kind()==JspAnalysis.ViewKind.JSP) {
       Set<String> sources=new TreeSet<>(projected.getOrDefault(view.path(),Set.of()));sources.add(view.path());
       collectIncludeSources(view.path(),jsp,state,new HashSet<>(),sources);
-      for(String path:sources) for(Control control:byView.getOrDefault(path,List.of())) addControl(view.path(),control,byView.getOrDefault(path,List.of()),state);
+      Set<String> owners=new TreeSet<>(state.tileFragmentOwners.getOrDefault(view.path(),Set.of()));String directOwner=state.screens.get(view.path());if(directOwner!=null)owners.add(directOwner);
+      for(String owner:owners)for(String path:sources)for(Control control:byView.getOrDefault(path,List.of()))addControl(owner,control,byView.getOrDefault(path,List.of()),state);
     }
   }
   private static void collectIncludeSources(String view,JspAnalysis jsp,State state,Set<String> seen,Set<String> sources) {
@@ -362,8 +375,7 @@ public final class StrutsProjectAnalyzer {
       if(!sources.add(child)) continue;collectIncludeSources(child,jsp,state,seen,sources);
     }
   }
-  private static void addControl(String viewPath,Control control,List<Control> peers,State state) {
-    String screen=state.screens.get(viewPath);if(screen==null) return;
+  private static void addControl(String screen,Control control,List<Control> peers,State state) {
     addNode(state,control.id(),NodeType.COMPONENT,control.label(),control.attributes(),control.source(),Confidence.CONFIRMED);
     edge(state,EdgeType.CONTAINS,screen,control.id(),Confidence.CONFIRMED,control.source());
     if(control.target()==null) return;
@@ -556,22 +568,51 @@ public final class StrutsProjectAnalyzer {
     } catch(Exception error) {diagnostic(state,"Tiles 設定無法解析",new SourceLocation(relative(state,file),1),"TILES_UNRESOLVED");}
     Map<String,Tile> resolved=new TreeMap<>();
     for(String name:tiles.keySet()) resolveTile(name,tiles,resolved,new HashSet<>(),state);
+    state.tiles.putAll(resolved);
+    Set<String> tileJspPaths=new TreeSet<>();
     for(Tile tile:resolved.values()) {
-      String screen=ApplicationGraph.id(NodeType.SCREEN,"tiles:"+tile.name()),viewId=ApplicationGraph.id(NodeType.VIEW,"tiles:"+tile.name());
-      state.screens.put(tile.name(),screen);state.tileViewIds.put(tile.name(),viewId);
+      String viewId=ApplicationGraph.id(NodeType.VIEW,"tiles:"+tile.name());state.tileViewIds.put(tile.name(),viewId);
       Confidence status=state.viewIds.containsKey(tile.template())?Confidence.CONFIRMED:Confidence.UNRESOLVED;
-      addNode(state,screen,NodeType.SCREEN,tile.name(),Map.of("view",tile.template(),"tilesDefinition","true"),tile.source(),status);
       addNode(state,viewId,NodeType.VIEW,tile.name(),Map.of("view",tile.template()),tile.source(),status);
+      if(tile.template().endsWith(".jsp"))tileJspPaths.add(tile.template());
+      for(String target:tile.puts().values())if(target.endsWith(".jsp"))tileJspPaths.add(target);
     }
     for(Tile tile:resolved.values()) {
-      String screen=state.screens.get(tile.name());
+      String viewId=state.tileViewIds.get(tile.name());
       List<String> targets=new ArrayList<>(tile.puts().values());targets.add(tile.template());
       for(String target:targets) {
-        String view=state.viewIds.getOrDefault(target,state.tileViewIds.get(target));
-        if(view!=null) edge(state,EdgeType.INCLUDES,screen,view,Confidence.CONFIRMED,tile.source());
-        else diagnostic(state,"Tiles 屬性目標未解析："+target,tile.source(),"TILES_REFERENCE_UNRESOLVED");
+        String referenced=state.viewIds.get(target);if(referenced==null)referenced=state.tileViewIds.get(target);
+        if(referenced!=null)edge(state,EdgeType.INCLUDES,viewId,referenced,Confidence.CONFIRMED,tile.source());
+        else if(target.endsWith(".jsp")||target.startsWith("/"))diagnostic(state,"Tiles 屬性目標未解析："+target,tile.source(),"TILES_REFERENCE_UNRESOLVED");
       }
     }
+    for(String path:tileJspPaths)removeImplicitScreen(path,state);
+  }
+
+  private static void removeImplicitScreen(String path,State state) {
+    String id=state.screens.remove(path);if(id==null)return;
+    state.nodes.remove(id);state.edges.entrySet().removeIf(entry->entry.getValue().from().equals(id)||entry.getValue().to().equals(id));
+    state.screens.entrySet().removeIf(entry->entry.getValue().equals(id));
+  }
+
+  private static String ensureTileScreen(String name,State state) {
+    String existing=state.screens.get(name);if(existing!=null)return existing;
+    Tile tile=state.tiles.get(name);if(tile==null)return null;
+    String screen=ApplicationGraph.id(NodeType.SCREEN,"tiles:"+tile.name()),viewId=state.tileViewIds.get(tile.name());
+    Confidence status=state.viewIds.containsKey(tile.template())?Confidence.CONFIRMED:Confidence.UNRESOLVED;
+    addNode(state,screen,NodeType.SCREEN,tile.name(),Map.of("view",tile.template(),"tilesDefinition","true"),tile.source(),status);state.screens.put(name,screen);
+    List<String> targets=new ArrayList<>(tile.puts().values());targets.add(tile.template());
+    for(String target:targets) {
+      String view=state.viewIds.get(target);if(view==null)view=state.tileViewIds.get(target);
+      if(view!=null)edge(state,EdgeType.INCLUDES,screen,view,Confidence.CONFIRMED,tile.source());
+      else if(target.endsWith(".jsp")||target.startsWith("/"))diagnostic(state,"Tiles 屬性目標未解析："+target,tile.source(),"TILES_REFERENCE_UNRESOLVED");
+      if(target.endsWith(".jsp")) {
+        state.tileFragmentOwners.computeIfAbsent(target,key->new TreeSet<>()).add(screen);
+        String targetView=state.viewIds.get(target);GraphNode targetViewNode=targetView==null?null:state.nodes.get(targetView);
+        if(targetViewNode!=null){String sourcePath=targetViewNode.attributes().get("view");if(sourcePath!=null)state.tileFragmentOwners.computeIfAbsent(sourcePath,key->new TreeSet<>()).add(screen);}
+      }
+    }
+    return screen;
   }
   private static Tile resolveTile(String name,Map<String,Tile> definitions,Map<String,Tile> resolved,Set<String> stack,State state) {
     if(resolved.containsKey(name)) return resolved.get(name);
@@ -618,6 +659,7 @@ public final class StrutsProjectAnalyzer {
     final Map<String,Behavior> behaviors=new TreeMap<>();final Map<String,ValidationRule> rules=new TreeMap<>();
     final Map<String,String> screens=new TreeMap<>(),viewIds=new TreeMap<>(),tileViewIds=new TreeMap<>(),beans=new TreeMap<>(),forms=new TreeMap<>();
     final Set<String> ambiguousTiles=new TreeSet<>();
+    final Map<String,Tile> tiles=new TreeMap<>();final Map<String,Set<String>> tileFragmentOwners=new TreeMap<>();
     final Map<String,List<Mapping>> routes=new TreeMap<>();final Map<String,String> endpointIds=new TreeMap<>(),globalForwards=new TreeMap<>();final Map<String,Boolean> inputForward=new TreeMap<>();final List<Mapping> actionMappings=new ArrayList<>();final List<PendingForward> pendingForwards=new ArrayList<>();ServletPattern servletPattern;
     final Map<String,StrutsSources.JavaType> types=new TreeMap<>();final Map<String,Set<String>> messages=new TreeMap<>();
     State(ProjectInventory inventory) {this.inventory=new ProjectInventory(inventory.root(),inventory.files().stream().sorted().toList(),inventory.technologies().stream().sorted().toList(),inventory.diagnostics().stream().sorted().toList(),inventory.contextPaths(),inventory.contextSettingsFile(),inventory.contextSettingsLine());}

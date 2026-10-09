@@ -27,14 +27,12 @@ class StrutsR16TilesBoundaryTest {
     file("src/main/webapp/WEB-INF/struts-config.xml","<struts-config><action-mappings><action path='/home' type='sample.Home'><forward name='ok' path='home.page'/><forward name='full' path='/WEB-INF/jsp/full.jsp'/></action></action-mappings></struts-config>");
 
     var graph=analyze();
-    Set<String> screenViews=new TreeSet<>();graph.nodes().stream().filter(node->node.type()==NodeType.SCREEN).forEach(node->screenViews.add(node.attributes().getOrDefault("view","")));
-    assertTrue(screenViews.stream().anyMatch(view->view.equals("/WEB-INF/jsp/tiles:home.page")||view.equals("home.page")),screenViews.toString());
-    assertTrue(screenViews.contains("/WEB-INF/jsp/full.jsp"),screenViews.toString());
-    assertFalse(screenViews.stream().anyMatch(view->view.contains("layout.jsp")||view.contains("body.jsp")||view.contains("unused.jsp")||view.contains("unused.page")),screenViews.toString());
+    Set<String> screenNames=new TreeSet<>();graph.nodes().stream().filter(node->node.type()==NodeType.SCREEN).forEach(node->screenNames.add(node.name()));
+    assertEquals(Set.of("full","home.page"),screenNames);
     var home=graph.nodes().stream().filter(node->node.type()==NodeType.SCREEN&&node.name().equals("home.page")).findFirst().orElseThrow();
     var contained=graph.relationships().stream().filter(edge->edge.type()==EdgeType.CONTAINS&&edge.from().equals(home.id())).map(edge->graph.nodes().stream().filter(node->node.id().equals(edge.to())).findFirst().orElseThrow()).toList();
-    assertTrue(contained.stream().anyMatch(node->node.source().file().endsWith("body.jsp")&&node.name().contains("body-action")),contained.toString());
-    assertTrue(contained.stream().anyMatch(node->node.source().file().endsWith("layout.jsp")&&node.name().contains("layout-action")),contained.toString());
+    assertTrue(contained.stream().anyMatch(node->node.source().file().endsWith("body.jsp")&&"body-action".equals(node.attributes().get("id"))),contained.toString());
+    assertTrue(contained.stream().anyMatch(node->node.source().file().endsWith("layout.jsp")&&"layout-action".equals(node.attributes().get("id"))),contained.toString());
     assertFalse(contained.stream().anyMatch(node->node.source().file().endsWith("unused.jsp")),contained.toString());
     assertTrue(graph.relationships().stream().anyMatch(edge->edge.type()==EdgeType.INCLUDES&&edge.from().equals(home.id())));
   }
