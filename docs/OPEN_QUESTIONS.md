@@ -275,3 +275,12 @@
   3. **行為不得遺失（新增不變量測試）**：對 `fixtures/wp10/struts1`，WP55 前輸出中每個行為的來源（檔案、行號、行為類型）集合，必須是 WP55 後輸出來源集合的子集；只允許因版型／片段不再重複列於多個畫面而**去重**。以單元或 E2E 測試鎖定此不變量。
   4. 完成 1–3 後，授權更新 `fixtures/wp10/golden/struts1.summary.json` 的 `screens` 與 `behaviors_by_type` 欄位為修正後實際輸出值（其他欄位與其他 golden 不變）。ADR 逐欄記錄舊值、新值，並以「移除的版型／片段畫面 → 去重的行為來源」對照表說明每個差異，證明沒有來源遺失，以及新期望在 WP55 前實作上失敗。
   5. 原則：R16 期間任何改動不得讓「沒有入口」的畫面或其行為從報表消失；「沒有入口」是要呈現給需求方的結論，不是刪除理由。
+
+## OQ-030 — WP10 Struts golden 與 OQ-027 mapping 診斷新增項目衝突
+
+- 情境：WP55 完成後，預設並行 E2E 的 `synthetic-project.e2e.mjs` 有 1 項失敗：`real source fixtures produce identical graph, packed HTML and shared-module md on consecutive runs`。`fixtures/wp10/struts1` 的 `web.xml` 宣告一個 ActionServlet，並有 `*.do`、`*.action` 兩個 servlet mapping；依 OQ-027「多個候選」規則，圖新增 `STRUTS_SERVLET_MAPPING_AMBIGUOUS` 與 `STRUTS_SERVLET_MAPPING_UNRESOLVED` 診斷。`struts1.summary.json` 尚無這兩項，但 OQ-029 只授權更新 `screens`、`behaviors_by_type`，明定其他欄位不得變動。
+- 可選方案 A：授權只更新 `fixtures/wp10/golden/struts1.summary.json` 的 `diagnostics_by_code`，新增上述兩個診斷的實際數量；其他 golden 欄位與其他 golden 不變。保留 mapping 不可唯一判定時必須產生診斷的 OQ-027 規則。
+- 可選方案 B：維持 golden 完全不動，並收窄 OQ-027：同一個已證明的 ActionServlet 有多個 URL pattern 時，不輸出 mapping 未證明診斷；此方案會改變 OQ-027「多個候選」規則，且須另定義 endpoint alias 與 confidence 行為。
+- 可選方案 C：維持 OQ-027 與 golden 不變，授權只調整 `synthetic-project.e2e.mjs` 摘要比對，將上述兩個 OQ-027 診斷排除於 golden summary 之外，另以專項測試鎖定診斷數量與內容；此方案會縮小該整合測試對診斷 golden 的覆蓋。
+- 影響範圍：WP10 `struts1` summary golden 與 OQ-027 mapping 診斷；不涉及 WP55 畫面／行為來源修正、其他 golden 或 Spring 分析。
+- 狀態：待需求方決定。完整 E2E 尚未全綠，WP55 停在此處；未更新 `diagnostics_by_code`、未修改既有 E2E 斷言。

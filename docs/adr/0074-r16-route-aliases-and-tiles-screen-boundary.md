@@ -8,7 +8,7 @@
 
 只有在 `web.xml` 能唯一證明 Struts ActionServlet mapping 時，action path 與公開 URL 才合併為同一個 endpoint。公開 URL 是 endpoint 的主要 `path`；`logicalPath` 與 `aliases` 保留 action path，呼叫來源只連到該 endpoint 一次。無法證明或 mapping 有多個候選時，維持 R16 前的 endpoint 候選與信心，另發出 mapping 未證明診斷。Viewer 的 API 全域搜尋同時檢查公開 path、logicalPath 與 aliases。
 
-Tiles definition 一律保留為 `VIEW`，只有 Struts forward 唯一指向的 definition 才建立 `SCREEN`。被 Tiles template 或 JSP-valued put 引用的 JSP 不因檔案存在而自動成為畫面；以 `/name.jsp` 表示的 web root 檔案與 `/WEB-INF/...` 檔案都依唯一來源檔解析。若 JSP 被 Struts forward 或 welcome-file 直接指向，仍建立獨立畫面。被使用的 template 與 JSP 片段維持 `VIEW`／`INCLUDES` 關係，片段控制項依 definition 歸屬到畫面；未被導向的 definition 不產生畫面或畫面控制項。
+Tiles definition 的畫面身分依 OQ-029（方案 C）判定：任何其他 definition 以 `extends` 指向的 definition，以及只由 `put`、`put-attribute` 或 `insert` 引用的 definition，屬版型／片段；其餘 definition 一律建立畫面，不要求存在入口。非 Tiles JSP 保持原畫面規則；沒有 page definition 引用的版型／片段仍保留為無入口畫面。被 page definition 引用的 JSP 元件與行為歸入該畫面，避免同一來源在版型及片段畫面重複計數。JSP 參照只在專案中唯一匹配時解析；無法唯一匹配時保留未解析診斷。
 
 Action forward 鏈導向畫面時，畫面另保留已證明的入口網址於通用 `routeAliases` 屬性；GraphIntegrityValidator 接受元件目標與此清單中的精確網址相符。沒有宣告的其他目標仍會被拒絕。這讓 `/start.do` 經 `/next.do` forward 到同一畫面的已知導覽可通過完整性檢查。
 
@@ -16,7 +16,19 @@ Action forward 鏈導向畫面時，畫面另保留已證明的入口網址於�
 
 - `StrutsR16RoutingTest` 覆蓋 mapping 已證明、缺少或多候選時的 endpoint 身分與診斷。
 - `r16-endpoint-alias-search.e2e.mjs` 驗證 API 全域搜尋可用 logical alias 與公開 path 找到同一 endpoint。
-- `StrutsR16TilesBoundaryTest.onlyForwardedTileDefinitionBecomesScreenAndItsJspControlsStayGrouped` 覆蓋 extends、JSP put、字串 put、被 forward 與未被 forward 的 definition、直接 forward JSP，以及 layout／fragment 控制項歸屬。
-- 同一測試也鎖定 web root `/header.jsp` 片段不成為畫面、但其按鈕仍歸到被導向 Tiles 畫面；舊版實際失敗為額外出現 `header` 畫面。
+- `StrutsR16TilesBoundaryTest` 覆蓋 page definition 與 standalone definition、extends 鏈、JSP put／put-attribute／insert、直接 forward JSP、未導向畫面保留、版型／片段元件與 JavaScript 行為歸屬，以及 JSP 行為來源集合不遺失。
+- WP10 `struts1` golden 只調整 `screens`：`6 → 2`，實際畫面為 `page.jsp` 與未導向頁面定義 `outer`。`behaviors_by_type` 的實際值與 golden 原值相同，逐欄如下：`CALL_API 49→49`、`NAVIGATE 12→12`、`OPEN_DIALOG 28→28`、`SELECT_CHANGE 2→2`、`SUBMIT_FORM 10→10`、`UI_STATE_CHANGE 20→20`、`UNKNOWN 25→25`、`VALIDATE 26→26`；這些欄位未改寫。其餘 golden 欄位與其他 golden 均未修改。
+- OQ-029 前的錯誤 WP55 實作 `0e39ee0` 使 `wp10FixtureKeepsUnroutedPageDefinitionAndDirectJspAsScreens` 期待 `{page, outer}`、實際只得 `{page}`；`everyUnreferencedPageDefinitionRemainsAScreenAndItsJspControlsStayGrouped` 也因未入口頁面及其片段來源被移除而失敗。新 golden 的 `screens=2` 在該實作上因此失敗；broken graph 的 behavior summary 為 `CALL_API 28`、`NAVIGATE 7`、`OPEN_DIALOG 22`、`SELECT_CHANGE 2`、`SUBMIT_FORM 9`、`UI_STATE_CHANGE 11`、`UNKNOWN 20`、`VALIDATE 19`，與新預期不同。
+- 來源不遺失不變量以 commit `27a5af6` 的 WP55 前圖建立 49 個 `(source file,line,behavior type)` tuple，修正後圖含 53 個 tuple；測試確認 49 個舊 tuple 全部保留。新增 tuple 來自 `workspace:config.json` 與 Struts config 證據，不是刪除來源的替代品。
+- 來源歸屬對照：
+
+| 移除的版型／片段畫面 | 依據 | 去重後仍保留的行為來源 |
+|---|---|---|
+| `base` | `tiles-defs.xml:1`，`child` extends `base`；`base` template 為 `layout.jsp`、body put 為 `page.jsp` | `WEB-INF/views/page.jsp:3–28` 與 `js/owned.min.js:1` 等來源仍歸到 `page`／`outer`；來源 tuple 測試逐項覆蓋全部 49 筆 |
+| `child` | `tiles-defs.xml:1`，`outer` extends `child` | 同上；繼承只合併畫面歸屬，不移除來源 |
+| `nested` | `tiles-defs.xml:1`，`outer` 以 `put-attribute` 引用 `nested`；其 path 為 `page.jsp` | `page.jsp:3–28` 的 component/behavior sources 保留在 `page`／`outer`；`page` 作為直接 JSP 畫面仍保留 |
+| `layout.jsp` 隱含畫面 | `base` 的模板引用；不是獨立 page definition | 該 fixture 的 layout 本身沒有額外行為來源；其頁面與 JS 行為仍由上述 49-tuple 不變量驗證 |
+- faces-example2 的 layout JSP `/layout.jsp` 不由 `.base` 的 `/layout.faces` 唯一映射；依 OQ-029 不猜測該檔案關係，故保留 `layout` 無入口畫面。其他明確 put 的 JSP 則歸入 page definition；實際例外及完整來源見 [R16 報告](../reports/R16.md)。
+- `everyUnreferencedPageDefinitionRemainsAScreenAndItsJspControlsStayGrouped` 新增對唯一 root JSP `/header.jsp` 解析的失敗斷言；舊輸出產生 `TILES_REFERENCE_UNRESOLVED`，修正後唯一檔案匹配成功，Tiles 未解析診斷由 35 降為 0。沒有放寬既有斷言或 fixture。
 - `GraphIntegrityValidatorTest.acceptsNavigationThroughAnExplicitScreenRouteAlias` 先行失敗（舊驗證回報 `Navigation target does not match screen route or view`），之後鎖定宣告過的畫面路由別名；`StrutsR16RoutingTest.actionLinkForwardChainDeclaresScreenRouteAliasForGraphValidation` 覆蓋完整 Struts forward 鏈。
 - R16 前已存在的測試與 fixture 未修改；OQ-028 授權的兩個 R16 新測試預期另記於 ADR 0073。
