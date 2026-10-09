@@ -42,8 +42,9 @@ export function classifyScreenEntry(graph:Graph):Map<string,ScreenEntryResult>{
    const sourceScreens=source.type==='SCREEN'?[source.id]:source.type==='COMPONENT'?(owners.get(source.id)||[]):[];
    const external=sourceScreens.filter(id=>id!==screen.id);
    if(!external.length)continue;
-   const evidence=[...(edge.evidence||[])],parsers=new Set(evidence.map((item:any)=>item?.parser));
-   const basis:ScreenEntryBasis|undefined=parsers.has('RouteTemplateInference')||parsers.has('RedirectInheritance')||parsers.has('JavaScriptUrlTemplateInference')?'TEMPLATE_INFERENCE':parsers.has('UrlResolution')?'STATIC_URL':undefined;
+   const evidence=[...(edge.evidence||[])],parsers=new Set(evidence.map((item:any)=>item?.parser)),sourceEvidence=(source.evidence||[]) as any[];
+   const staticComponentUrl=source.type==='COMPONENT'&&source.attributes?.targetStatus==='CONFIRMED'&&!!text(source.attributes?.target)&&sourceEvidence.some(item=>['UrlResolution','JspUrlVariableResolver'].includes(item?.parser)&&item?.resolution==='CONFIRMED');
+   const basis:ScreenEntryBasis|undefined=staticComponentUrl||parsers.has('UrlResolution')?'STATIC_URL':parsers.has('RouteTemplateInference')||parsers.has('RedirectInheritance')||parsers.has('JavaScriptUrlTemplateInference')?'TEMPLATE_INFERENCE':undefined;
    for(const sourceScreen of external)entries.push({screenId:sourceScreen,...(source.type==='COMPONENT'?{componentId:source.id}:{}),confidence,...(basis?{basis}:{}),evidence});
   }
   entries.sort((a,b)=>stable(a.screenId,b.screenId)||stable(a.componentId||'',b.componentId||'')||stable(a.confidence,b.confidence));

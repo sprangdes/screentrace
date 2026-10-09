@@ -54,5 +54,5 @@ test('WP45 excludes a single-region strategy when another evidence basis separat
   {...screen('owner-edit','/owners/edit'),source:{file:'WEB-INF/views/edit.jsp'}},
   {...screen('product-list','/products'),source:{file:'WEB-INF/views/products.jsp'}}
  ],relationships:[]};
- const index=indexGraph(data);assert.equal(chooseFeatureGroupingBasis(index),'url');assert.equal(groupFeatureRegions(index).length,3);
+ const index=indexGraph(data);assert.equal(chooseFeatureGroupingBasis(index),'url');assert.equal(groupFeatureRegions(index).length,2);
 });

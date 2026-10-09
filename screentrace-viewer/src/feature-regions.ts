@@ -51,7 +51,9 @@ function regionsForStrategy(index:Index,strategy:FeatureGroupingStrategy):Featur
 }
 /** Selects a single project-wide evidence basis by minimizing one-screen areas. */
 export function chooseFeatureGroupingBasis(index:Index):FeatureGroupingStrategy {
- return FEATURE_GROUPING_ORDER.map((strategy,rank)=>({strategy,rank,singletons:regionsForStrategy(index,strategy).filter(region=>region.screenIds.length===1).length})).sort((a,b)=>a.singletons-b.singletons||a.rank-b.rank)[0].strategy;
+ const candidates=FEATURE_GROUPING_ORDER.map((strategy,rank)=>{const regions=regionsForStrategy(index,strategy);return{strategy,rank,regionCount:regions.length,singletons:regions.filter(region=>region.screenIds.length===1).length};});
+ const informative=candidates.filter(candidate=>candidate.regionCount!==1||candidates.every(item=>item.regionCount===1));
+ return informative.sort((a,b)=>a.singletons-b.singletons||a.rank-b.rank)[0].strategy;
 }
 /** Every region in the result uses the same project-wide grouping strategy. */
 export function groupFeatureRegions(index:Index,strategy:FeatureGroupingStrategy=chooseFeatureGroupingBasis(index)):FeatureRegion[]{return regionsForStrategy(index,strategy);}
