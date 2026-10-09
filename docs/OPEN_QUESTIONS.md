@@ -267,4 +267,11 @@
 - 可選方案 A：授權只更新 `fixtures/wp10/golden/struts1.summary.json` 中上述七個 `behaviors_by_type` 欄位為實際輸出值，維持畫面數、其他欄位及其他 fixture golden 不變；在 ADR 逐處記錄舊值、新值、原因，並證明新期望在 WP55 前的實作上失敗。
 - 可選方案 B：不改既有 golden；要求 WP55 在移除未導向 Tiles 畫面的同時，保留這些畫面先前貢獻的全部行為數。需明確指定已移除畫面的行為應如何歸屬或呈現，避免以不存在的畫面作為行為來源或產生重複行為。
 - 影響範圍：WP55 的 Tiles 畫面與片段行為歸屬、`synthetic-project.e2e.mjs` 的逐欄 golden 比對，以及 R16 完整驗證停止條件。WP54/WP55 完成報告與八模組最終對照尚未產生；目前沒有修改 WP10 golden 或任何 R16 前測試／fixture。
-- 狀態：待需求方決定；R16 §0.3 要求遇到此類規格／基線衝突時停止該工作包，不得自行選擇方案。
+- 狀態：已決定（2026-10-10）；需求方不採 A、B，採方案 C（先修正規則，再更新 golden）。
+- 審查者判讀：`fixtures/wp10/struts1` 的 Tiles 定義為 `base`（path `layout.jsp`，put body `page.jsp`）、`child extends base`、`nested`（path `page.jsp`）、`outer extends child`（put-attribute `nested`）；所有 action 都直接 forward 到 `page.jsp`。依 OQ-025：`base`、`child` 被 `extends` → 版型；`nested` 只被 put → 片段；`layout.jsp` 為 definition path → 組成證據。**`outer` 未被 extends、未被 put，是完整頁面定義，只是沒有 forward 指向**，OQ-025 明定此類「依入口分類規則處理（可能為『完全找不到入口』）」，即**必須保留為畫面**。目前實作把它一併移除，結果 6 → 1，並使 `layout.jsp` 的行為消失；這違反 OQ-025，也違反產品目的——沒有入口的畫面正是需求方要找的候選，不得從報表消失。
+- 決定：
+  1. **畫面界線規則（明確化 OQ-025）**：Tiles definition 若被任何 definition `extends`，或只以 `put`／`put-attribute`／`insert` 被引用，屬版型或片段，不是畫面；其餘 definition 是**頁面定義**，一律是畫面（有 forward 指向者依入口分類為有入口，沒有者為「完全找不到入口」或依其他入口證據分類）。非 Tiles 的 JSP 畫面維持 R16 前規則，**不因沒有入口而移除**。版型／片段 JSP 的元件與行為歸入引用它們的頁面定義畫面（R14 WP46 片段群組）；若某版型或片段沒有任何頁面定義引用，則保留為畫面並標「完全找不到入口」，不得丟棄。
+  2. 依此規則，`fixtures/wp10/struts1` 預期畫面為 `page.jsp`（有入口）與 `outer`（完全找不到入口），共 2 個；若實際不同，報告逐一說明。
+  3. **行為不得遺失（新增不變量測試）**：對 `fixtures/wp10/struts1`，WP55 前輸出中每個行為的來源（檔案、行號、行為類型）集合，必須是 WP55 後輸出來源集合的子集；只允許因版型／片段不再重複列於多個畫面而**去重**。以單元或 E2E 測試鎖定此不變量。
+  4. 完成 1–3 後，授權更新 `fixtures/wp10/golden/struts1.summary.json` 的 `screens` 與 `behaviors_by_type` 欄位為修正後實際輸出值（其他欄位與其他 golden 不變）。ADR 逐欄記錄舊值、新值，並以「移除的版型／片段畫面 → 去重的行為來源」對照表說明每個差異，證明沒有來源遺失，以及新期望在 WP55 前實作上失敗。
+  5. 原則：R16 期間任何改動不得讓「沒有入口」的畫面或其行為從報表消失；「沒有入口」是要呈現給需求方的結論，不是刪除理由。
