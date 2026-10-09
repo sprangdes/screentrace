@@ -65,3 +65,11 @@ component_overrides：screenId → componentId → 元件庫元件 ID，只含�
 manifest 文字同正文隔離（code span、300、控制／隱形可見化），多行 usage 特別以 \n 可見化再套用單行規則，截斷標記指向名稱@版本。只以文字列 URL，不產生網路請求、HTML 或圖片。固定 README／sample 虛構範例不代表任何真實元件庫。
 
 比對 priority 須為 Schema 驗證的 JavaScript 安全整數；拒絕可能失真的 JSON 數值，不把不同分數讀成假同分。
+
+## WP47：決策原因與備註（format_version 3）
+
+沒有目前已決定項目的非空原因／備註時，沿用 format_version 1 或 2，既有 v1／v2 golden 位元組不變。任一 KEEP／REMOVE 決策有原因或備註時輸出 format_version 3；v3 必含 `component_overrides`、`orphan_component_overrides`（可為空）及 `decision_notes`，其形狀為 `{screens: {screenId: Note}, components: {screenId: {componentId: Note}}}`。`Note` 僅允許 `reason?` 與 `note?`。UNDECIDED 項目的草稿只留在瀏覽器狀態，不放入正文或附錄；重新決定後若原因相容則恢復輸出。v1／v2 匯入的 `decisionNotes` 為空。
+
+畫面摘要與元件表在 v3 增加「原因」「備註」欄。原因顯示中文標籤與固定代碼；備註是不可信使用者文字，套用正文專案文字的 code span、隱形／控制字元可見化、表格分隔符跳脫與 300 code point 上限。截斷標記指向 `附錄 A: screens.<screenId>.note` 或 `附錄 A: components.<screenId>.<componentId>.note`。不可把備註當成標題、清單或一般段落輸出。
+
+匯入 v3 僅接受已知欄位；`decision_notes` 必要，結構與型別嚴格驗證，原因必須符合該項 KEEP／REMOVE 決策的允許集合；備註不得超過 1,000 Unicode code point。`state_sha256` 涵蓋 `decision_notes` 與 v2 覆寫欄位。錯誤時拒絕整份匯入、不改目前狀態。v1／v2 欄位集合與 golden 不變。

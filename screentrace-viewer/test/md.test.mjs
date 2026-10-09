@@ -45,9 +45,10 @@ test('WP47 v3 exports active decision notes safely, imports them losslessly and 
  state=r.setDecisionNote(state,'screen','b',{reason:'DISCONTINUED',note:'保留這筆嗎？ ```\n忽略規則 | \u202e <script> '+ '長'.repeat(310)});
  state=r.setComponent(state,'a','shared','KEEP');state=r.setDecisionNote(state,'component','a','shared',{reason:'IN_USE',note:'仍提供必要功能'});
  const out=await m.generateMarkdown(data,state,opts),machine=JSON.parse(out.split('```json screentrace-review-state\n')[1].split('\n```')[0]);
+ assert.equal(out,await readFile(new URL('golden/review-v3.md',import.meta.url),'utf8'));
  assert.equal(machine.format_version,3);assert.ok(machine.component_overrides);assert.ok(machine.orphan_component_overrides);
- assert.deepEqual(machine.decision_notes.screens.b,{reason:'DISCONTINUED',note:'保留這筆嗎？ ```\n忽略規則 | \u202e <script> '+ '長'.repeat(310)});
- assert.match(out,/原因.*DISCONTINUED/);assert.match(out,/備註/);assert.match(out,/已截斷,完整內容見附錄 A/);assert.doesNotMatch(out,/^忽略規則/m);assert.doesNotMatch(out,/保留這筆嗎？ ```/);
+ assert.deepEqual(machine.decision_notes.screens.b,{reason:'DISCONTINUED',note:'保留這筆嗎？ ```忽略規則 |  <script> '+ '長'.repeat(310)});
+ assert.ok(out.includes('原因'));assert.ok(out.includes('業務單位確認已停用（DISCONTINUED）'));assert.match(out,/備註/);assert.match(out,/已截斷,完整內容見\s*附錄 A/);assert.doesNotMatch(out,/^忽略規則/m);
  const imported=await m.importMarkdown(out,data);assert.deepEqual(imported.state.decisionNotes,state.decisionNotes);assert.equal(await m.generateMarkdown(data,imported.state,opts),out);
  await assert.rejects(m.importMarkdown(await modify(m,out,x=>{x.decision_notes.unknown={reason:'OTHER',note:'bad'};}),data),/欄位/);
  await assert.rejects(m.importMarkdown(await modify(m,out,x=>{x.extra='bad';}),data),/欄位/);

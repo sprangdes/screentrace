@@ -5,22 +5,35 @@ import {callSources,Caller,rootTrigger} from '../usage';
 export const decisions=['UNDECIDED','KEEP','REMOVE'] as const;
 export type Decision=typeof decisions[number];
 export type EffectiveDecision=Decision|'INHERITED_REMOVE';
+export const reasonCodes={REMOVE:['DISCONTINUED','REPLACED','DEV_ONLY','OTHER'],KEEP:['IN_USE','COMPLIANCE','OTHER']} as const;
+export type ReasonCode=typeof reasonCodes.REMOVE[number]|typeof reasonCodes.KEEP[number];
+export interface DecisionNote {reason?:ReasonCode;note?:string}
+export interface DecisionNotes {screens:Record<string,DecisionNote>;components:Record<string,Record<string,DecisionNote>>}
 /** WP8 reuses this versioned, framework-neutral browser/Node contract. */
 export interface ReviewState {
  format:'screentrace-review';version:1;schemaVersion:'2.2';application:string;fingerprint:string;
  screenDecisions:Record<string,Decision>;
  componentDecisions:Record<string,Record<string,Decision>>;
+ decisionNotes?:DecisionNotes;
  manifest_sha256?:string;component_overrides?:Record<string,Record<string,string>>;orphan_component_overrides?:OverrideRecord[];
 }
 const own=(value:object,key:string)=>Object.prototype.hasOwnProperty.call(value,key);
 export function emptyReview(graph:Graph,fingerprint:string):ReviewState {
- requireGraph(graph);return {format:'screentrace-review',version:1,schemaVersion:'2.2',application:graph.application.name,fingerprint,screenDecisions:{},componentDecisions:{}};
+ requireGraph(graph);return {format:'screentrace-review',version:1,schemaVersion:'2.2',application:graph.application.name,fingerprint,screenDecisions:{},componentDecisions:{},decisionNotes:{screens:{},components:{}}};
 }
 export function screenDecision(state:ReviewState,id:string):Decision {return own(state.screenDecisions,id)?state.screenDecisions[id]:'UNDECIDED';}
 export function componentDecision(state:ReviewState,screen:string,component:string):Decision {const values=own(state.componentDecisions,screen)?state.componentDecisions[screen]:{};return own(values,component)?values[component]:'UNDECIDED';}
 function requireDecision(value:unknown):asserts value is Decision {if(!decisions.includes(value as Decision))throw Error('無效確認狀態');}
-export function setScreen(state:ReviewState,id:string,decision:Decision):ReviewState {requireDecision(decision);return {...state,screenDecisions:{...state.screenDecisions,[id]:decision}};}
-export function setComponent(state:ReviewState,screen:string,component:string,decision:Decision):ReviewState {requireDecision(decision);const current=own(state.componentDecisions,screen)?state.componentDecisions[screen]:{};return {...state,componentDecisions:{...state.componentDecisions,[screen]:{...current,[component]:decision}}};}
+const notesOf=(state:ReviewState):DecisionNotes=>state.decisionNotes||{screens:{},components:{}};
+const validReason=(decision:Decision,reason:unknown)=>decision==='UNDECIDED'||(reasonCodes[decision] as readonly string[]).includes(reason as string);
+function sanitizeDecisionNote(input:DecisionNote):DecisionNote {if(!input||typeof input!=='object'||Object.keys(input).some(key=>!['reason','note'].includes(key)))throw Error('決策原因／備註格式錯誤');const result:DecisionNote={};if(input.reason!==undefined){if(![...reasonCodes.KEEP,...reasonCodes.REMOVE].includes(input.reason as never))throw Error('無效決策原因');result.reason=input.reason;}if(input.note!==undefined){if(typeof input.note!=='string')throw Error('備註必須是文字');const note=input.note.replace(/[\p{Cc}\u202a-\u202e\u2066-\u2069]/gu,'');if(Array.from(note).length>1000)throw Error('備註不可超過 1,000 個字元');if(note)result.note=note;}return result;}
+const putNote=(notes:Record<string,DecisionNote>,id:string,note:DecisionNote)=>{const next={...notes};if(note.reason===undefined&&note.note===undefined)delete next[id];else next[id]=note;return next;};
+export function setDecisionNote(state:ReviewState,scope:'screen',screenId:string,note:DecisionNote):ReviewState;
+export function setDecisionNote(state:ReviewState,scope:'component',screenId:string,componentId:string,note:DecisionNote):ReviewState;
+export function setDecisionNote(state:ReviewState,scope:'screen'|'component',screenId:string,componentOrNote:string|DecisionNote,noteArg?:DecisionNote):ReviewState {const notes=notesOf(state),target=scope==='screen'?'screens':'components',component=scope==='component'?componentOrNote as string:undefined,input=(scope==='screen'?componentOrNote:noteArg) as DecisionNote,clean=sanitizeDecisionNote(input),decision=scope==='screen'?screenDecision(state,screenId):componentDecision(state,screenId,component!);if(clean.reason!==undefined&&!validReason(decision,clean.reason))throw Error('決策原因與目前決策不相符');if(scope==='screen')return {...state,decisionNotes:{...notes,screens:putNote(notes.screens,screenId,clean)}};const byScreen=own(notes.components,screenId)?notes.components[screenId]:{};return {...state,decisionNotes:{...notes,components:{...notes.components,[screenId]:putNote(byScreen,component!,clean)}}};}
+function clearIncompatibleReason(state:ReviewState,scope:'screen'|'component',screenId:string,componentId?:string,decision?:Decision):ReviewState {if(!decision||decision==='UNDECIDED')return state;const notes=notesOf(state),byScreen=own(notes.components,screenId)?notes.components[screenId]:{},old=scope==='screen'?(own(notes.screens,screenId)?notes.screens[screenId]:undefined):(own(byScreen,componentId!)?byScreen[componentId!]:undefined);if(!old?.reason||validReason(decision,old.reason))return state;const cleaned={...old};delete cleaned.reason;if(scope==='screen')return {...state,decisionNotes:{...notes,screens:putNote(notes.screens,screenId,cleaned)}};return {...state,decisionNotes:{...notes,components:{...notes.components,[screenId]:putNote(byScreen,componentId!,cleaned)}}};}
+export function setScreen(state:ReviewState,id:string,decision:Decision):ReviewState {requireDecision(decision);return clearIncompatibleReason({...state,screenDecisions:{...state.screenDecisions,[id]:decision},decisionNotes:notesOf(state)},'screen',id,undefined,decision);}
+export function setComponent(state:ReviewState,screen:string,component:string,decision:Decision):ReviewState {requireDecision(decision);const current=own(state.componentDecisions,screen)?state.componentDecisions[screen]:{};return clearIncompatibleReason({...state,componentDecisions:{...state.componentDecisions,[screen]:{...current,[component]:decision}},decisionNotes:notesOf(state)},'component',screen,component,decision);}
 /** Applies the existing per-screen/component decision to each selected key. */
 export function batchSetComponents(state:ReviewState,keys:{screenId:string;componentId:string}[],decision:Decision):ReviewState {return [...keys].sort((a,b)=>a.screenId<b.screenId?-1:a.screenId>b.screenId?1:a.componentId<b.componentId?-1:a.componentId>b.componentId?1:0).reduce((current,key)=>setComponent(current,key.screenId,key.componentId,decision),state);}
 export function effectiveComponent(state:ReviewState,screen:string,component:string):EffectiveDecision {return screenDecision(state,screen)==='REMOVE'?'INHERITED_REMOVE':componentDecision(state,screen,component);}
@@ -43,6 +56,7 @@ export function validateReview(value:unknown,graph:Graph,fingerprint:string,libr
  let result=emptyReview(graph,fingerprint);const dictionary=(v:unknown):Record<string,unknown>=>{if(!v||typeof v!=='object'||Array.isArray(v))throw Error('Review 決策必須為字典');return v as Record<string,unknown>;};
  for(const [id,decision]of Object.entries(dictionary(data.screenDecisions))){requireDecision(decision);result=setScreen(result,id,decision);}
  for(const [screen,components]of Object.entries(dictionary(data.componentDecisions)))for(const [component,decision]of Object.entries(dictionary(components))){requireDecision(decision);result=setComponent(result,screen,component,decision);}
+ if(data.decisionNotes!==undefined){const value=dictionary(data.decisionNotes);if(Object.keys(value).sort().join(',')!=='components,screens')throw Error('decisionNotes 欄位錯誤');for(const [screen,note]of Object.entries(dictionary(value.screens)))result=setDecisionNote(result,'screen',screen,note as DecisionNote);for(const [screen,components]of Object.entries(dictionary(value.components)))for(const [component,note]of Object.entries(dictionary(components)))result=setDecisionNote(result,'component',screen,component,note as DecisionNote);}
  if(data.component_overrides!==undefined||data.orphan_component_overrides!==undefined||data.manifest_sha256!==undefined){result={...result,manifest_sha256:data.manifest_sha256 as string,component_overrides:data.component_overrides as Record<string,Record<string,string>>,orphan_component_overrides:data.orphan_component_overrides as OverrideRecord[]};}
  return partitionOverrides(result,graph,library);
 }

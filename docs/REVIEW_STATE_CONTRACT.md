@@ -33,4 +33,10 @@ partitionOverrides 是唯一分區邏輯：把全部覆寫收集為帶來源摘�
 
 md 雙格式契約見 REVIEW_MD_CONTRACT；有效／orphan ID 同時可逆還原，v1 golden 不變。
 
+## WP47：決策原因與備註
+
+`decisionNotes` 為選用欄位，形狀固定為 `{screens: Record<screenId, Note>, components: Record<screenId, Record<componentId, Note>>}`；`Note` 只接受 `reason?`、`note?`。畫面移除原因限 `DISCONTINUED`、`REPLACED`、`DEV_ONLY`、`OTHER`；保留原因限 `IN_USE`、`COMPLIANCE`、`OTHER`。備註最多 1,000 個 Unicode code point；輸入時移除控制字元。舊 localStorage 沒有此欄位時載入空字典。
+
+切換保留／移除時，若舊原因不適用新決策則只清原因、保留備註。切為未決定時原因與備註留在本機狀態，介面收起且不匯出；重新作出相容決策時恢復。原因與備註仍使用畫面 ID 或 `(screenId, componentId)` 複合鍵，不建立合併鍵。驗證時拒絕未知欄位、原因與決策不相容、錯型別與超長備註；ID 以 own-property 字典處理。
+
 首次選用元件庫可讀同指紋的舊 WP8 key，保留決策後立即經共用分區；v1 md 匯入即使沒有覆寫，也正規化到目前 manifest 摘要 key。不得因匯入 v1 而退回未含摘要的暫存 key。
