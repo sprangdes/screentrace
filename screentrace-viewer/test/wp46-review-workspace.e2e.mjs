@@ -12,5 +12,6 @@ test('WP46 page review has a grouped queue, complete center preview, always-visi
   await decision.getByRole('radio',{name:'保留'}).click();assert.equal(await first.getAttribute('data-decision'),'UNDECIDED');
   await page.keyboard.press('x');assert.equal(await first.getAttribute('data-decision'),'REMOVE');await page.keyboard.press('u');assert.equal(await first.getAttribute('data-decision'),'UNDECIDED');
   assert.ok(await page.locator('[data-review-queue-component]').count());assert.match(await page.locator('.screen-review-actions').innerText(),/跟著畫面/);await decision.getByRole('radio',{name:'保留'}).click();await page.locator('.review-save-next').click();assert.equal(await queue.locator('[aria-current=page]').count(),1);assert.notEqual(await queue.locator('[aria-current=page]').getAttribute('data-review-queue-screen'),firstScreenId);
+  await page.getByRole('button',{name:/確認儀表板/}).click();const dashboard=page.locator('body > .review-progress-panel');await dashboard.waitFor({state:'visible'});assert.equal(await dashboard.evaluate(el=>el.parentElement===document.body),true);await page.keyboard.press('Escape');
  }finally{await browser.close()}
 });
