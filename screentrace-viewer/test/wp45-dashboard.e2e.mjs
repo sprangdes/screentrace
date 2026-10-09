@@ -12,3 +12,20 @@ test('WP45 starts on the six-page inventory dashboard and first tab clicks switc
   assert.match(await page.locator('.first-run-progress').innerText(),/1／3/);for(const width of [1440,1024,768,390]){await page.setViewportSize({width,height:900});assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),`document horizontal overflow at ${width}px`);}
  }finally{await browser.close();}
 });
+
+test('WP45 dashboard counts only API categories and omits unavailable analysis date',async()=>{
+ const data=fixture();
+ data.graph.nodes.find(item=>item.id==='ep').attributes.category='REST_API';
+ data.graph.nodes.find(item=>item.id==='unused').attributes.category='MVC_SCREEN';
+ data.graph.nodes.push(
+  {id:'redirect-api',type:'ENDPOINT',name:'redirect',attributes:{path:'/cart/',method:'GET',category:'REDIRECT'},source:{file:'CartController.java',line:12},confidence:'CONFIRMED',evidence:[]},
+  {id:'frontend-request',type:'ENDPOINT',name:'request',attributes:{path:'/rest/cart/{cartId}',method:'GET',origin:'javascript-request'},source:{file:'app.js',line:8},confidence:'CONFIRMED',evidence:[]}
+ );
+ data.manifest={};
+ const browser=await chromium.launch();try{const page=await browser.newPage({viewport:{width:1440,height:900}});await page.goto(await fileFixture(data));await page.locator('#app[data-ready=true]').waitFor();
+  const dashboard=page.locator('[data-dashboard]'),metrics=await dashboard.locator('.dashboard-metrics').innerText();
+  assert.match(metrics,/2 個 API/);assert.doesNotMatch(metrics,/分析日期未記錄/);
+  const unused=dashboard.locator('.suspicious-card').filter({has:page.getByRole('heading',{name:'找不到呼叫來源的 API'})});
+  assert.match(await unused.innerText(),/2 個 API/);assert.doesNotMatch(await unused.innerText(),/\/api\/unused|javascript-request/);
+ }finally{await browser.close();}
+});
