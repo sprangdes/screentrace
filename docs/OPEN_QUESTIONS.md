@@ -198,4 +198,5 @@
 - 可選方案 A：維持既有斷言不變，因此 A2 不改變這些已鎖定的 JS analyzer 輸出；A2 僅新增於明確授權的新輸出介面（需另定義其與既有 `behavior.url` 的邊界），否則無法達到「不得出現運算式原文」的要求。
 - 可選方案 B：授權只更新上述直接鎖定 URL 描述格式的斷言，將未知路徑段與 tainted path 預期改為 `{?}`（或明確指定全 URL 無法取得時的表示）；其他測試與斷言維持不變。此範圍不屬 R14 §2.4 預先授權的 API 狀態／入口數量 golden 變更。
 - 影響範圍：`screentrace-js` 的 CALL_API `url` 欄位、Java graph projection 的 endpoint path、路由樣板比對、A2 新增測試與 ADR 0010。未決定前不實作 A2。
-- 狀態：待需求方決定。
+- 狀態：已決定（2026-10-09）；需求方不採 A、B，採方案 C。
+- 決定（方案 C）：既有佔位符慣例不是捏造，維持不變，既有斷言一律不改——未知識別字段為 `{識別字名}`（INFERRED），整段網址無法取得時 `url === null`（UNRESOLVED），計算屬性 `obj[key]` 維持 UNRESOLVED。A2 縮小為：(1) 任何無法靜態取得的值不得序列化為字面 `null`／`undefined` 路徑段；函式參數比照未知識別字輸出 `{參數名}`。(2) 非計算的屬性存取（如 `$scope.cartId`、`item.product.productId`）輸出 `{最後一個屬性名}`（如 `{cartId}`、`{productId}`），不得把運算式原文放進路徑；原文只放 evidence。(3) JS analyzer 的 `behavior.url` 與 Java graph 投影出的 endpoint path 必須一致。新增測試只增不改。

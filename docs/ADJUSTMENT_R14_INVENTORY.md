@@ -282,7 +282,7 @@ eMusicStore 的部署 context path 為 `/eMusicStore`（需求方提供）。以
 驗收：上表 4 支端點都是 IN_USE，且全部來源為 INFERRED（介面顯示「推定使用中」）；deleteProduct 的元件同時保有導向 Product Inventory 的 INFERRED `NAVIGATES_TO`。
 
 **A2　JS 請求描述捏造了路徑段。** 無 context path 設定時，圖中出現 `PUT /eMusicStore/rest/cart/add/null`、`PUT /eMusicStore/rest/cart/remove/null`：`addToCart(productId)` 的參數 `productId` 無法靜態取得值，卻被寫成字面 `null`。這違反 CODEX_INSTRUCTIONS §0.4「不得捏造」。同時 `{$scope.cartId}` 把運算式原文放進路徑。
-補正：無法靜態取得值的段一律以固定佔位符 `{?}` 表示（例如 `/eMusicStore/rest/cart/add/{?}`），原始運算式只放 evidence；比對路由樣板時 `{?}` 視為單段萬用字元。同步修正 ADR 0010 描述與 JS 測試（新增「函式參數作為路徑段」「`$scope` 屬性作為路徑段」兩例）。
+補正（依 OQ-022 方案 C，2026-10-09 修訂）：既有佔位符慣例與斷言不變（未知識別字→`{名稱}`、整段未知→`url=null`）。只修正：函式參數不得變成 `null`，改輸出 `{參數名}`；非計算屬性存取輸出 `{最後一個屬性名}`，運算式原文只放 evidence；JS `behavior.url` 與 Java endpoint path 一致。新增「函式參數作為路徑段」「`$scope` 屬性作為路徑段」測試。路由比對時 `{名稱}` 段視為單段萬用字元。
 
 **A3　context path 提示（診斷，不自動套用）。** 當未解析的 JSP／JS 網址「去掉第一段後」能唯一比對到既有路由，且這樣的呼叫 ≥ 1 個時，輸出一則診斷 `CONTEXT_PATH_HINT`：列出候選前綴（例如 `/eMusicStore`）、可解析的呼叫數、各呼叫的來源檔與行號，並說明設定方式（`./bin/screentrace config`）。**不得**依此提示自動套用前綴或改變任何關係。顯示在報表「分析資訊」，並在 CLI 分析完成摘要中以一行提示。
 驗收：eMusicStore 無設定時出現此診斷，數量為 4；設定後不出現；PetClinic 不出現。
