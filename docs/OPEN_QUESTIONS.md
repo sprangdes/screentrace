@@ -250,3 +250,11 @@
 - 狀態：已決定（2026-10-09）；需求方不採 A、B，採方案 C。
 - 決定：該測試原 fixture 的 `web.xml` 只有名為 `action` 的 `servlet-mapping`，沒有宣告該 servlet 為 `org.apache.struts.action.ActionServlet`，依 OQ-024「servlet mapping 不可證明時不猜測、維持兩者分開並記診斷」，原斷言（兩個 endpoint、`CALLS` 皆為 `AMBIGUOUS`）在新規則下**仍是正確預期**。WP54 未提交修改中替該 fixture 補上 `<servlet-class>` 屬於變更既有測試前提，**必須還原**；`UrlLinkingTest.actionsReceiveApiAndFormCallersWithAllExtensionCandidates` 的 fixture 與斷言一律不改。另**新增**一個測試：同樣情境但 `web.xml` 完整宣告 ActionServlet 與 `*.do` mapping，預期合併為單一 endpoint、別名含 `/save` 與 `/save.do`、`CALLS` 為 `CONFIRMED`、並產生「mapping 已證明」的證據。若還原 fixture 後既有測試失敗，代表實作在 mapping 不可證明時仍做了合併，須修正實作而非測試。此原則同樣適用於 R16 其他既有測試：不得以修改既有 fixture 的方式繞過斷言。審查者檢視 WP54 未提交修改，另有三處同類變更**一併還原**：`StrutsCompletenessTest.base()` 新增的 `web.xml`、`StrutsCompletenessTest.respectsMultipleModulesDeclaredByWebXml` 中替 `<servlet>` 補上的 `servlet-name`／`servlet-class` 與 `servlet-mapping`、`StrutsProjectAnalyzerTest` 新增的 `web.xml`。
 - 補充規則：servlet mapping **可證明**（`web.xml` 宣告 `servlet-class` 為 ActionServlet〔或其子類別，需有原始碼證據〕且有對應 `servlet-mapping`）→ 依 OQ-024 合併別名、`CONFIRMED`。**不可證明**（缺 `web.xml`、缺 servlet 宣告、缺 mapping、多個候選）→ 行為與 R16 之前**完全相同**（既有的副檔名候選、端點命名如 `ANY /admin/edit.do`、`AMBIGUOUS` 信心皆不變），另加一則「servlet mapping 未證明」診斷。因此上述既有測試在原 fixture 下應全部通過；新增「可證明」情境的測試覆蓋合併行為。
+
+## OQ-028 — OQ-027 與先前新增 Struts 合成測試的預期衝突
+
+- 情境：OQ-027 方案 C 要求 mapping 缺少證據或有多個候選時，完全維持 R16 前的副檔名候選與信心；但先前 WP54 新增的 `StrutsR16RoutingTest.ambiguousActionServletMappingsDoNotGuessAnEndpointAlias` 斷言多候選只產生一個 endpoint，`missingServletMappingKeepsLogicalAndLiteralPublicTargetsSeparate` 斷言 `/save.do` endpoint 為 `UNRESOLVED`。依方案 C，前者應保留 `/save` 與 `/save.do` 兩個 endpoint，後者應沿用舊別名候選信心。還原所有舊 fixture 後，原有 `StrutsCompletenessTest`、`StrutsProjectAnalyzerTest` 與 `UrlLinkingTest` 已通過；上述兩個 R16 合成測試仍失敗。沒有修改既有 fixture 或斷言。
+- 可選方案 A：授權只更新上述兩個 R16 新增測試的斷言，使其鎖定方案 C 的舊行為；保留 fixture 不變，並繼續補上同一情境的 mapping 未證明診斷測試。原有基線測試完全不動。
+- 可選方案 B：保留這兩個測試目前的斷言，並修訂 OQ-027 方案 C，明確允許多候選只產生一個 endpoint，以及缺少 mapping 時將公開 URL 留為 `UNRESOLVED`；這會使該兩種情境不再符合「與 R16 之前完全相同」。
+- 影響範圍：WP54 的 servlet mapping 未證明／歧義輸出與新增合成測試。WP54 未完成；WP55 尚未開始。
+- 狀態：待決定。依 §0.3 暫停受影響的 WP54 工作包。
