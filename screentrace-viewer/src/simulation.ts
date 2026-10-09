@@ -51,7 +51,7 @@ export function simulationReasonText(reason:SimulationReason):string{return {
  AMBIGUOUS_CANDIDATES:'元件有多個候選：靜態分析無法確認唯一對應',
  ANCHOR_MISSING:'展開位置不完整：預覽與分析器的標記位置無法對照',
  DYNAMIC_OR_UNRESOLVED_SOURCE:'來源無法靜態確認：這個元素的來源尚未解析',
- OTHER:'配對原因尚未確認：需要分析人員協助',
+ OTHER:'配對原因尚未決定：需要分析人員協助',
  NO_KNOWN_BEHAVIOR:'沒有已知的行為：這個元素沒有被分析到會觸發的動作（可能由頁面腳本控制）',
  BEHAVIOR_AMBIGUOUS:'已記錄行為但無法確認結果：行為有歧義，無法證明此元素可模擬的結果',
  DESTINATION_UNRESOLVED:'已記錄行為但無法確認結果：行為目的未解析，沒有可證明的目的畫面或操作結果',
