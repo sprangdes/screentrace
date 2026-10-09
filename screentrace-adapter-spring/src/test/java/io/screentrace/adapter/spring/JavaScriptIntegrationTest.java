@@ -79,6 +79,17 @@ class JavaScriptIntegrationTest {
     assertTrue(graph.nodes().stream().anyMatch(n->n.type()==NodeType.ENDPOINT&&"/x/add/{productId}".equals(n.attributes().get("path"))));
     assertTrue(graph.nodes().stream().anyMatch(n->n.type()==NodeType.ENDPOINT&&"/x/cart/{cartId}".equals(n.attributes().get("path"))));
   }
+  @Test void configuredContextPathProjectionKeepsBehaviorUrlAndJavaEndpointPathIdentical() throws Exception {
+    var root=project("<script src='/app.js'></script>","");
+    Files.writeString(root.resolve("src/main/webapp/app.js"),"fetch('/shop/api/'+itemId);");
+    Files.writeString(root.resolve("Controller.java"),"import org.springframework.web.bind.annotation.*;@RestController class Controller {@GetMapping(\"/api/{id}\") String get(){return \"\";}}\n");
+    Files.writeString(root.resolve("application.properties"),"server.servlet.context-path=/shop\n");
+    var graph=new SpringMvcAnalyzer().analyze(new ProjectScanner().scan(root));var json=new com.fasterxml.jackson.databind.ObjectMapper();
+    var call=graph.behaviors().stream().filter(b->b.type()==BehaviorType.CALL_API).findFirst().orElseThrow();
+    var jsUrl=call.evidence().stream().filter(e->e.parser().equals("AcornStaticAnalyzer")).map(e->{try{return json.readTree(e.detail()).path("url").asText(null);}catch(Exception ignored){return null;}}).filter(Objects::nonNull).findFirst().orElseThrow();
+    var target=graph.nodes().stream().filter(n->n.id().equals(call.targetId())).findFirst().orElseThrow();
+    assertEquals(target.attributes().get("path"),jsUrl);
+  }
   @Test void angularUnknownControllerAndScopeDepthLimitRemainExplicitlyUnresolved() throws Exception {
     var root=project("<main ng-controller='Missing'><button id='unknown' ng-click='ghost()'>Unknown</button></main><main ng-controller='Chain'><button id='deep' ng-click='go0()'>Deep</button></main><script src='/app.js'></script>","");String chain=java.util.stream.IntStream.range(0,12).mapToObj(i->"$scope.go"+i+"=function(){"+(i==11?"fetch('/too-deep');":"$scope.go"+(i+1)+"();")+"};").reduce("",String::concat);Files.writeString(root.resolve("src/main/webapp/app.js"),"angular.module('shop').controller('Chain',function($scope){"+chain+"});");
     var graph=new SpringMvcAnalyzer().analyze(new ProjectScanner().scan(root));assertTrue(graph.diagnostics().stream().anyMatch(d->d.code().equals("ANGULAR_CONTROLLER_UNRESOLVED")),graph.diagnostics().toString());assertTrue(graph.diagnostics().stream().anyMatch(d->d.code().equals("ANGULAR_SCOPE_DEPTH_LIMIT")),graph.diagnostics().toString());assertFalse(graph.behaviors().stream().anyMatch(b->"/too-deep".equals(b.expression())));
