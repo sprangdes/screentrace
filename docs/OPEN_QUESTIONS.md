@@ -257,4 +257,6 @@
 - 可選方案 A：授權只更新上述兩個 R16 新增測試的斷言，使其鎖定方案 C 的舊行為；保留 fixture 不變，並繼續補上同一情境的 mapping 未證明診斷測試。原有基線測試完全不動。
 - 可選方案 B：保留這兩個測試目前的斷言，並修訂 OQ-027 方案 C，明確允許多候選只產生一個 endpoint，以及缺少 mapping 時將公開 URL 留為 `UNRESOLVED`；這會使該兩種情境不再符合「與 R16 之前完全相同」。
 - 影響範圍：WP54 的 servlet mapping 未證明／歧義輸出與新增合成測試。WP54 未完成；WP55 尚未開始。
-- 狀態：待決定。依 §0.3 暫停受影響的 WP54 工作包。
+- 狀態：已決定（2026-10-09）；需求方採方案 A。
+- 決定：`StrutsR16RoutingTest.ambiguousActionServletMappingsDoNotGuessAnEndpointAlias` 與 `missingServletMappingKeepsLogicalAndLiteralPublicTargetsSeparate` 是 R16 失敗測試提交（`f655446`）新增、早於 OQ-027 決定的測試，不屬於 R16 前的基線；授權更新其斷言以鎖定 OQ-027 方案 C（不可證明時與 R16 前行為相同），fixture 不變，並補上同情境的「servlet mapping 未證明」診斷斷言。在 ADR 記錄測試名稱、舊預期、新預期與原因。
+- 一般授權（R16 期間有效）：**R16 自 `f655446` 起新增的測試**，若與需求方之後的 OQ 決定衝突，可直接更新其斷言以符合決定並記入 ADR，不需停止；R16 前已存在的測試與 fixture 仍一律不得修改（OQ-027）。
