@@ -35,6 +35,7 @@ public final class StrutsProjectAnalyzer {
     resolveConfiguredForwards(state);
     readWelcomeFiles(state);
     addInteractions(jsp,state);
+    pruneUnroutedTilesScreens(state);
     parseValidation(state);
     parseActionForms(state);
     return GraphIntegrityValidator.requireAnalysis(io.screentrace.parser.jsp.UrlGraphContribution.enrich(JavaScriptGraphContribution.enrich(MarkupGraphContribution.enrich(ActionContracts.enrich(state.graph(),inventory),jsp),inventory),inventory));
@@ -609,6 +610,20 @@ public final class StrutsProjectAnalyzer {
     if(id==null)return;String screenId=id;
     state.nodes.remove(screenId);state.edges.entrySet().removeIf(entry->entry.getValue().from().equals(screenId)||entry.getValue().to().equals(screenId));
     state.screens.entrySet().removeIf(entry->entry.getValue().equals(screenId));
+  }
+
+  private static void pruneUnroutedTilesScreens(State state) {
+    if(state.tiles.isEmpty())return;
+    Set<String> destinations=state.edges.values().stream()
+        .filter(edge->Set.of(EdgeType.RENDERS,EdgeType.FORWARDS_TO,EdgeType.NAVIGATES_TO).contains(edge.type()))
+        .map(Relationship::to).collect(java.util.stream.Collectors.toSet());
+    Set<String> remove=state.nodes.values().stream()
+        .filter(node->node.type()==NodeType.SCREEN&&!"true".equals(node.attributes().get("tilesDefinition"))&&!destinations.contains(node.id()))
+        .map(GraphNode::id).collect(java.util.stream.Collectors.toSet());
+    if(remove.isEmpty())return;
+    remove.forEach(state.nodes::remove);
+    state.edges.entrySet().removeIf(entry->remove.contains(entry.getValue().from())||remove.contains(entry.getValue().to()));
+    state.screens.entrySet().removeIf(entry->remove.contains(entry.getValue()));
   }
 
   private static String ensureTileScreen(String name,State state) {
