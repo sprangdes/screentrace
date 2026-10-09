@@ -502,3 +502,17 @@ eMusicStore 的部署 context path 為 `/eMusicStore`（需求方提供）。以
 7. **功能地圖左側清單**：每列的三態按鈕改為與其他頁一致的「保留」「移除」兩個文字按鈕（再按一次取消＝未決定），與 WP46／WP48 相同的互動。
 
 收尾完成後，R14 報告補一段「最終驗收收尾」列出提交與 §5 驗證數字。
+
+---
+
+## 12. R14 結案抽查（需求方，2026-10-09）
+
+審查者以 HEAD（3c3e721）唯讀重新分析 eMusicStore（設定 `/eMusicStore`）抽查 §11.1。第 4–7 項確認完成；第 2 項的計數精簡完成。**R14 重新開啟**，完成下列兩項後才結案：
+
+1. **推定判定方向錯誤（§11.1 第 1、2 項未達預期）**：API 頁為「使用中 5、推定使用中 1、找不到呼叫來源 1」，首頁為「另有 1 個 API 的呼叫來源是推定的」。§11.1 第 2 項明定預期為 **使用中 1（`ANY /cart/`）、推定使用中 5、找不到呼叫來源 1**。
+   - 目前被標為「使用中」的 `GET`／`DELETE /rest/cart/{cartId}`、`PUT /rest/cart/add/{productId}`、`PUT /rest/cart/remove/{productId}`，呼叫來源是 `controller.js` 的 `'/eMusicStore/rest/cart/' + 運算式` 字串串接。依 §9.2，「JS 字串串接推定」屬於 `TEMPLATE_INFERENCE`，不是 `STATIC_URL`；設定 context path 只是讓前綴可被去除，不會讓動態段變成靜態。
+   - 只有整段網址都是常值（例如 `controller.js:32` 的 `'/eMusicStore/rest/cart/cartId'`）才算 `STATIC_URL`。若某支 API 同時有常值與串接來源，依 §11.1 第 2 項「至少一個 STATIC_URL 來源 → 使用中」處理，並在報告逐一列出每支 API 的每個來源及其 basis。
+   - 補 E2E／單元測試：以 eMusicStore 等價的合成 fixture（JS 串接呼叫 ＋ 常值呼叫 ＋ JSP 靜態連結），斷言三類各自的數字；不得只斷言「首頁＝API 頁」。
+2. **`REDIRECT` 仍以原始代碼顯示**：API 清單 `/cart/`、`deleteProduct/{productId}` 第二行仍是 `REDIRECT`。依 §11.1 第 3 項顯示「轉址」，原值放 tooltip。
+
+完成後：在 R14 報告「最終驗收收尾」補上 eMusicStore（有／無 context path）API 頁四類實測數字與逐 API 來源 basis 表；§5 完整驗證全綠後結案。另：收尾提交訊息前綴誤標為 `WP11:`，之後的提交請使用 `R14:`（既有提交不需改寫）。
