@@ -260,3 +260,11 @@
 - 狀態：已決定（2026-10-09）；需求方採方案 A。
 - 決定：`StrutsR16RoutingTest.ambiguousActionServletMappingsDoNotGuessAnEndpointAlias` 與 `missingServletMappingKeepsLogicalAndLiteralPublicTargetsSeparate` 是 R16 失敗測試提交（`f655446`）新增、早於 OQ-027 決定的測試，不屬於 R16 前的基線；授權更新其斷言以鎖定 OQ-027 方案 C（不可證明時與 R16 前行為相同），fixture 不變，並補上同情境的「servlet mapping 未證明」診斷斷言。在 ADR 記錄測試名稱、舊預期、新預期與原因。
 - 一般授權（R16 期間有效）：**R16 自 `f655446` 起新增的測試**，若與需求方之後的 OQ 決定衝突，可直接更新其斷言以符合決定並記入 ADR，不需停止；R16 前已存在的測試與 fixture 仍一律不得修改（OQ-027）。
+
+## OQ-029 — Tiles 畫面收斂與既有行為摘要 golden 衝突
+
+- 情境：WP55 依 OQ-025 只保留有明確入口的 Tiles 畫面，並移除未導向的版型／片段畫面。對既有 `fixtures/wp10/struts1` 合成專案，這使畫面數由 golden 的 6 降為 1；現有分析輸出也使行為摘要數量下降。完整預設並行 E2E 的 `real source fixtures produce identical graph, packed HTML and shared-module md on consecutive runs` 因 `struts1.first.behaviors_by_type.CALL_API` 失敗：預期 49、實際 28。其餘可見差異為 NAVIGATE 12→7、OPEN_DIALOG 28→22、SUBMIT_FORM 10→9、UI_STATE_CHANGE 20→11、UNKNOWN 25→20、VALIDATE 26→19；SELECT_CHANGE 維持 2。元件種類、API 總數與狀態分布、檢核規則數未在此測試的首個差異前顯示不一致。這些行為數欄位屬於 R16 前已有的 WP10 golden，不在 R16 §2.4 預先授權修改欄位內；不得為了讓 E2E 通過而自行改 golden 或放寬斷言。
+- 可選方案 A：授權只更新 `fixtures/wp10/golden/struts1.summary.json` 中上述七個 `behaviors_by_type` 欄位為實際輸出值，維持畫面數、其他欄位及其他 fixture golden 不變；在 ADR 逐處記錄舊值、新值、原因，並證明新期望在 WP55 前的實作上失敗。
+- 可選方案 B：不改既有 golden；要求 WP55 在移除未導向 Tiles 畫面的同時，保留這些畫面先前貢獻的全部行為數。需明確指定已移除畫面的行為應如何歸屬或呈現，避免以不存在的畫面作為行為來源或產生重複行為。
+- 影響範圍：WP55 的 Tiles 畫面與片段行為歸屬、`synthetic-project.e2e.mjs` 的逐欄 golden 比對，以及 R16 完整驗證停止條件。WP54/WP55 完成報告與八模組最終對照尚未產生；目前沒有修改 WP10 golden 或任何 R16 前測試／fixture。
+- 狀態：待需求方決定；R16 §0.3 要求遇到此類規格／基線衝突時停止該工作包，不得自行選擇方案。
