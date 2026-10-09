@@ -58,8 +58,8 @@ test('WP41 overview fit uses card and relation bounds, and refits after global n
   await page.locator('.canvas[data-fitted="true"]').waitFor();
   const coverage=async()=>page.evaluate(()=>{const canvas=document.querySelector('.canvas'),world=document.querySelector('.world'),cards=[...world.querySelectorAll('.screen-card')],zoom=Number(world.style.getPropertyValue('--canvas-zoom')||1);const rs=cards.map(e=>e.getBoundingClientRect()),left=Math.min(...rs.map(r=>r.left)),right=Math.max(...rs.map(r=>r.right)),top=Math.min(...rs.map(r=>r.top)),bottom=Math.max(...rs.map(r=>r.bottom)),w=Math.max(1,canvas.clientWidth-48),h=Math.max(1,canvas.clientHeight-80);return {width:(right-left)/w,height:(bottom-top)/h,zoom};});
   let before=await coverage();assert.ok(Math.max(before.width,before.height)>=.85,JSON.stringify(before));
-  await page.getByRole('checkbox',{name:'顯示全站導覽'}).check();await page.waitForFunction(()=>document.querySelectorAll('.relation-line.global-navigation').length>0);await page.waitForFunction(()=>Number(document.querySelector('.world')?.dataset.fitRevision)>=2);
-  await page.setViewportSize({width:1180,height:900});await page.waitForFunction(()=>Number(document.querySelector('.world')?.dataset.fitRevision)>=3);const after=await coverage();assert.ok(Math.max(after.width,after.height)>=.85,JSON.stringify(after));
+  const firstRevision=Number(await page.locator('.world').getAttribute('data-fit-revision')||0);await page.getByRole('checkbox',{name:'顯示全站導覽'}).check();await page.waitForFunction(()=>document.querySelectorAll('.relation-line.global-navigation').length>0);await page.waitForFunction(revision=>Number(document.querySelector('.world')?.dataset.fitRevision)>revision,firstRevision);
+  const secondRevision=Number(await page.locator('.world').getAttribute('data-fit-revision')||0);await page.setViewportSize({width:1180,height:900});await page.waitForFunction(revision=>Number(document.querySelector('.world')?.dataset.fitRevision)>revision,secondRevision);const after=await coverage();assert.ok(Math.max(after.width,after.height)>=.85,JSON.stringify(after));
  }finally{await browser.close();}
 });
 
