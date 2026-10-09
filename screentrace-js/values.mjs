@@ -51,7 +51,7 @@ export function resolveValue(node,{env,code,elValues={},globals=new Map(),seen=n
     }
    }
   }
-  return unknown(text(node,code));
+  return unknown(node.property.name);
  }
  if(node.type==='BinaryExpression'&&node.operator==='+') {
   const a=recur(node.left),b=recur(node.right);if(a.tainted||b.tainted)return unknown(text(node,code),true);

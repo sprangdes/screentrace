@@ -122,7 +122,7 @@ export function analyze(request) {
   function invoke(fn,args,ctx,call,declEnv,asHandler=false) {
    const key=unit.file+':'+fn.start;
    if(ctx.stack.includes(key)||ctx.depth>=maxDepth){emit('UNKNOWN',call,ctx,{callee:text(call,code)},'UNRESOLVED');diagnostics.push(diagnostic(unit.file,source(call).line,ctx.controllerName?'ANGULAR_SCOPE_DEPTH_LIMIT':ctx.stack.includes(key)?'JS_CALL_CYCLE':'JS_DEPTH_LIMIT','函式追蹤停止：'+text(call,code)));return;}
-   const env=environment(fn.body,declEnv);fn.params.forEach((p,i)=>{if(p.type==='Identifier')env.values.set(p.name,{resolved:args[i]??{value:null,status:'UNRESOLVED',known:false,tainted:true},at:0});});
+   const env=environment(fn.body,declEnv);fn.params.forEach((p,i)=>{if(p.type==='Identifier')env.values.set(p.name,{resolved:args[i]&&(args[i].value!==null||args[i].properties)?args[i]:{value:'{'+p.name+'}',status:'UNRESOLVED',known:false,tainted:false},at:0});});
    const next={...ctx,env,depth:asHandler?ctx.depth:ctx.depth+1,stack:[...ctx.stack,key]};
    if(/^validate/i.test(fn.id?.name??call.name??'')) {walk(fn.body,n=>{if(n.type==='IfStatement'){let ids=[];walk(n.test,c=>{if(c.type==='CallExpression'&&c.callee.type==='MemberExpression')ids.push(...select(selectorOf(c.callee.object,code),unitDom,ctx.triggerId));});let message=null;walk(n.consequent,c=>{if(c.type==='CallExpression'&&['alert','window.alert'].includes(calleeName(c.callee)))message=c.arguments[0]?.value??null;});for(const id of new Set(ids))rule('custom',n,{...next,guard:text(n.test,code)},id,message,{condition:text(n.test,code)});}});}
    visit(fn.body,next);

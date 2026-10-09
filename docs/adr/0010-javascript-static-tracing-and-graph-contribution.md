@@ -10,6 +10,8 @@ WP4 需從事件及載入入口追蹤應用函式，保留回呼的父子行為�
 
 字串、串接、template literal、單次初始化及物件常值屬性使用抽象值，不求值或呼叫目標函式。未知部分保留 {expr}／INFERRED；重新賦值、computed access、使用者輸入與 scriptlet 保持 UNRESOLVED。單次宣告後賦值只接受同一作用域的無條件初始化且先於使用。XHR 多個 open 候選全部保留為 AMBIGUOUS，不取最後一個。
 
+WP44 A2 修訂：既有未知識別字佔位符維持 `{識別字}`，整段 URL 無法取得仍以 `url=null`／UNRESOLVED 表示，computed access（例如 `obj[key]`）仍為 UNRESOLVED。追蹤函式時，無法靜態取得的參數值以參數名佔位（`{productId}`）；非 computed 屬性存取以最後一個屬性名佔位（`$scope.cartId` → `{cartId}`、`item.product.productId` → `{productId}`）。原始運算式只保留於 evidence，不序列化成 URL 路徑段。JS behavior 的 URL 與 Java graph 投影的 endpoint path 使用相同佔位符路徑；Java 路由樣板的 `{name}` 每段比對規則不變。此修訂不變更既有 `tracing.test.mjs` 斷言。
+
 相對 import／export 只從 SafeProjectFiles 已讀取的專案檔案映射取得 AST；不使用 import、require 或網路載入目標模組。module 匯出符號依檔案命名，私有符號不進入 classic script 全域。無法證明的匯入產生診斷。第三方內部仍依 ADR 0009 跳過。
 
 JavaScriptGraphContribution 透過受信任工具路徑的 Node CLI 與 JSON stdin/stdout 接入兩種 adapter；不啟動目標專案。載入來源為畫面；失敗的事件綁定以所屬畫面保留 selector 原文及 UNRESOLVED。靜態 DOM 中被事件匹配的普通容器可建立 OTHER 元件，附原標籤與來源證據。include 來源投影保留元件與使用畫面所有權。
