@@ -37,6 +37,10 @@ public final class RouteTemplateInference {
    String detail="原始樣板="+raw+"；正規化樣板="+normalized+"；context path 候選="+contextCandidates+"；候選路由="+compatible.stream().map(n->n.attributes().getOrDefault("path",n.id())).toList()+"；parser=RouteTemplateInference";
    ResolutionStatus status=targets.size()==1?ResolutionStatus.INFERRED:targets.size()>1?ResolutionStatus.AMBIGUOUS:ResolutionStatus.UNRESOLVED;
    List<AnalysisEvidence> proof=new ArrayList<>(b.evidence());proof.add(new AnalysisEvidence(source,"RouteTemplateInference",status,detail));
+   if(b.type()==BehaviorType.NAVIGATE&&compatible.size()==1) {
+    GraphNode endpoint=compatible.get(0);String callId=ApplicationGraph.id(NodeType.COMPONENT,EdgeType.TRIGGERS+":"+trigger.id()+":"+endpoint.id());Relationship oldCall=edges.get(callId);List<AnalysisEvidence> callProof=new ArrayList<>(proof);if(oldCall!=null)callProof.addAll(oldCall.evidence());
+    edges.put(callId,new Relationship(callId,EdgeType.TRIGGERS,trigger.id(),endpoint.id(),Confidence.INFERRED,source,callProof.stream().distinct().sorted().toList()));
+   }
    if(targets.size()==1) {
     removeSyntheticRequestEdge(edges,nodes,b);
     GraphNode target=targets.get(0);EdgeType edgeType=b.type()==BehaviorType.NAVIGATE?EdgeType.NAVIGATES_TO:trigger.type()==NodeType.SCREEN?EdgeType.CALLS:EdgeType.TRIGGERS;
