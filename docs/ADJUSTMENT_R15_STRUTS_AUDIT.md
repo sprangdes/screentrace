@@ -16,6 +16,8 @@
 
 修正：方法徽章依方法顯示（`ANY` → 「任何方法」，原值放 tooltip）；分類行 `REDIRECT` → 「轉址」（原值放 tooltip）。其他分類若有原始代碼外露（例如 `REST_API`、`MVC_SCREEN`），一併改為白話（「API」「畫面網址」），原值放 tooltip。
 
+預先授權（OQ-023 決定後補充）：只可修改**直接鎖定 API 清單方法徽章與分類標籤之文字或位置**的既有斷言（例如把檢查「轉址」的 selector 由方法徽章改到分類標籤），斷言的文字與 tooltip 內容不得放寬；每處依 R14 §2.4 格式記入 ADR。
+
 驗收：先提交失敗測試。E2E 斷言 API 頁可見文字不含 `REDIRECT`、`REST_API`、`MVC_SCREEN`，且方法徽章不出現「轉址」；tooltip 保留原值。
 
 ### WP52　ROADMAP 與文件狀態整理

@@ -208,4 +208,5 @@
 - 可選方案 A：維持既有斷言與目前畫面行為，取消 WP51 對 `ANY`／`REDIRECT` 列方法徽章的修正；分類仍須避免向使用者顯示原始 `REDIRECT`。
 - 可選方案 B：授權只將既有 E2E 的 selector 從 `[data-method]` 改為分類標籤 selector，保留「轉址」文字與 tooltip `REDIRECT` 的斷言內容；方法徽章另以 WP51 新測試驗證為「任何方法」並以 tooltip 保留 `ANY`。其他既有斷言不變。
 - 影響範圍：WP51 API 清單的 `ANY` 方法徽章與 `REDIRECT` 分類標籤；不改分析資料、API 狀態或 graph。
-- 狀態：待需求方決定。WP51 新失敗測試已獨立提交 `198a9c3`；尚未提交實作。
+- 狀態：已決定（2026-10-09）；需求方採方案 B。
+- 決定：`r14-redirect-category-label.e2e.mjs` 的該斷言是 R14 結案收尾時為錯誤呈現位置所寫，授權只將其 selector 由 `[data-method]` 改為分類標籤 selector，斷言內容（「轉址」文字、tooltip `REDIRECT`）不變；方法徽章由 WP51 新測試驗證為「任何方法」（tooltip `ANY`）。在 ADR 依 R14 §2.4 格式記錄。其他既有斷言不變。
