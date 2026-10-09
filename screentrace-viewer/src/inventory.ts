@@ -45,6 +45,8 @@ const isStaticRequestExpression=(detail:string|undefined):boolean=>{
 export function apiSourceBasis(graph:Graph,endpointId:string):ApiSourceBasis{
  const sources=(graph.relationships||[]).filter(edge=>edge.to===endpointId&&['CALLS','TRIGGERS'].includes(edge.type));
  if(!sources.length)return undefined;
+ const hasStaticBehavior=(graph.behaviors||[]).some((behavior:any)=>behavior.type==='CALL_API'&&behavior.targetId===endpointId&&isStaticRequestExpression(JSON.stringify({expression:behavior.expression})));
+ if(hasStaticBehavior)return 'STATIC_URL';
  const parserNames=new Set(['RouteTemplateInference','RedirectInheritance','JavaScriptUrlTemplateInference']);
  const hasStaticSource=(edge:any)=>{
   const evidence=[...(edge.evidence||[])],node=graph.nodes.find(item=>item.id===edge.from),nodeEvidence=node?.evidence||[];
