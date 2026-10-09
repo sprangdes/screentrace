@@ -183,3 +183,19 @@
 - R14 修訂（2026-10-09）：產生區域數為 1 的依據不得成為預設，除非網址前段、控制器類別與 JSP 目錄三種依據都只產生 1 個區域。其他排序、切換與命名規則不變；viewer 實作屬 WP45，本次未開始。
 - 範圍：viewer 分組與呈現，不改 Application Graph、分析結果、API 推導或 review state。PetClinic 與 eMusicStore 的選擇依據及各區域畫面數記入 R10 實際報告。
 - 舊規格：WP35 原先先依控制器／Action 分組，再按 URL 退補；因此出現 PetClinic 五個及 eMusicStore 三個單畫面區域。此分組假設由本決定取代。
+
+## OQ-021 — 只經由轉址到達的路由
+
+- 情境：`GET /cart/{cartId}` 只有由 `ANY /cart/` 的 handler 轉址到達；`/cart/` 本身有來自 View Product「View cart」的呼叫來源。依現行 R-API-1，`GET /cart/{cartId}` 沒有直接畫面或元件呼叫來源，會顯示為「找不到呼叫來源」，但使用者仍可經由轉址流程到達。
+- 可選方案 A：把可證明的轉址鏈視為推定呼叫來源，將來源畫面／元件沿轉址關係傳遞到目的路由，信心為 INFERRED。需在 Java 與 TypeScript 共用 API 向量加入只有轉址繼承來源、來源被移除、轉址鏈多候選等案例；兩端皆須對 `GET /cart/{cartId}` 得到相同 caller 與狀態。若來源決策為移除，依既有 R-API-2／3 規則重新推導目的 API 狀態。
+- 可選方案 B：維持 R-API 現狀，不將轉址來源繼承為 API caller；`GET /cart/{cartId}` 仍為 UNREFERENCED，僅在畫面或 API 詳情標示「由轉址到達」。新增的雙端向量只鎖定目前直接來源規則，轉址關係不改變 API 狀態。
+- 影響範圍：R-API-1～6 的 caller 定義、Java `ApiUsage`、TypeScript `deriveApiUsage`、共用 `docs/examples/api-usage-vectors.json`、API 詳情的轉址提示。不得把僅可到達的路由自行升為 IN_USE。
+- 狀態：待需求方決定；WP44 不實作此項。
+
+## OQ-022 — WP44 JavaScript 路徑佔位符與既有斷言範圍
+
+- 情境：WP44 補正 A2 要求任何無法靜態取得的 URL 路徑段輸出 `{?}`。現有 `screentrace-js/test/tracing.test.mjs` 的 `$http verb methods and configuration objects retain static route templates` 固定斷言 `/rest/cart/{cartId}` 與 `/rest/cart/add/{productId}`；這些值在該 fixture 中同樣無法靜態取得，依 A2 必須改為 `{?}`。另有既有測試將 tainted 路徑斷言為 `url === null`，也可能與顯示路徑佔位符的範圍衝突。
+- 可選方案 A：維持既有斷言不變，因此 A2 不改變這些已鎖定的 JS analyzer 輸出；A2 僅新增於明確授權的新輸出介面（需另定義其與既有 `behavior.url` 的邊界），否則無法達到「不得出現運算式原文」的要求。
+- 可選方案 B：授權只更新上述直接鎖定 URL 描述格式的斷言，將未知路徑段與 tainted path 預期改為 `{?}`（或明確指定全 URL 無法取得時的表示）；其他測試與斷言維持不變。此範圍不屬 R14 §2.4 預先授權的 API 狀態／入口數量 golden 變更。
+- 影響範圍：`screentrace-js` 的 CALL_API `url` 欄位、Java graph projection 的 endpoint path、路由樣板比對、A2 新增測試與 ADR 0010。未決定前不實作 A2。
+- 狀態：待需求方決定。
