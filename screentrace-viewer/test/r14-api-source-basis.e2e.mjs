@@ -10,6 +10,7 @@ function basisFixture(){
  const endpoints=[
   node('js-static','ENDPOINT','JS 常值 API',{path:'/api/literal',method:'GET',category:'REST_API'}),
   node('js-template','ENDPOINT','JS 樣板 API',{path:'/api/items/{itemId}',method:'GET',category:'REST_API'}),
+  node('nested-js-static','ENDPOINT','巢狀 JS 常值 API',{path:'/api/nested',method:'GET',category:'REST_API'}),
   node('jsp-static','ENDPOINT','JSP 靜態 API',{path:'/api/jsp',method:'GET',category:'REST_API'}),
   node('not-called','ENDPOINT','無呼叫來源 API',{path:'/api/unused',method:'GET',category:'REST_API'})
  ];
@@ -24,6 +25,8 @@ function basisFixture(){
   {parser:'AcornStaticAnalyzer',resolution:'INFERRED',source:{file:'web/controller.js',line:8},detail:JSON.stringify({expression:"$http.get('/api/items/' + itemId)",url:'/api/items/{itemId}',status:'INFERRED'})},
   {parser:'UrlResolution',resolution:'CONFIRMED',source:{file:'workspace:config.json',line:4},detail:'設定鍵=contextPaths；候選值=[/example]；採用值=/example'}
  ]);
+ addCaller('nested-js-caller','巢狀 JS 呼叫','nested-js-static','CALLS',[{parser:'RouteTemplateInference',resolution:'INFERRED',source:{file:'web/controller.js',line:10}}]);
+ data.graph.behaviors.push({id:'nested-js-static-behavior',type:'CALL_API',targetId:'nested-js-static',expression:"$http.get('/api/nested')",evidence:[{parser:'AcornStaticAnalyzer',resolution:'CONFIRMED',source:{file:'web/controller.js',line:11}}]});
  addCaller('jsp-static-caller','JSP 靜態連結','jsp-static','TRIGGERS',[{parser:'UrlResolution',resolution:'CONFIRMED',source:{file:'web/page.jsp',line:12},detail:'靜態網址=/api/jsp'}],{target:'/api/jsp',targetStatus:'CONFIRMED'});
  return data;
 }
@@ -36,8 +39,8 @@ test('R14 API source basis distinguishes literal JS/JSP sources from JS concaten
   assert.equal(inferredHome,1,'only the concatenated JS request is template inference');
   await page.locator('.primary-tabs button').nth(4).click();await page.locator('.api-page').waitFor();
   const filters=page.locator('.api-state-filters');
-  for(const [id,state]of [['js-static','使用中'],['js-template','推定使用中'],['jsp-static','使用中']])assert.match(await page.locator(`[data-api-row="${id}"]`).innerText(),new RegExp(state),id);
-  for(const [key,count]of [['IN_USE',2],['INFERRED_USAGE',1],['UNREFERENCED',1],['REMOVABLE',0]]){
+  for(const [id,state]of [['js-static','使用中'],['js-template','推定使用中'],['nested-js-static','使用中'],['jsp-static','使用中']])assert.match(await page.locator(`[data-api-row="${id}"]`).innerText(),new RegExp(state),id);
+  for(const [key,count]of [['IN_USE',3],['INFERRED_USAGE',1],['UNREFERENCED',1],['REMOVABLE',0]]){
    const value=await filters.locator(`[data-api-filter="${key}"]`).innerText();
    assert.equal(Number(value.match(/(\d+)/)[1]),count,key);
   }
