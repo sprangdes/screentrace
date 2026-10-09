@@ -17,10 +17,12 @@ test('sidebar screen decisions are quiet by default, reveal on hover/focus/long 
   await page.locator('[data-screen-list="a"]').focus();
   await page.waitForFunction(el=>getComputedStyle(el).opacity==='1',await choices.elementHandle());
   await page.keyboard.press('Tab');
-  assert.equal(await page.locator(':focus').getAttribute('data-decision'),'UNDECIDED');
+  assert.equal(await page.locator(':focus').getAttribute('data-decision'),'KEEP');
   await page.keyboard.press('ArrowRight');
-  assert.equal(await choices.locator('[data-decision="KEEP"]').getAttribute('aria-checked'),'true');
-  assert.equal(await choices.locator('[data-decision="KEEP"]').getAttribute('aria-pressed'),'true');
+  assert.equal(await choices.locator('[data-decision="REMOVE"]').getAttribute('aria-checked'),'true');
+  assert.equal(await choices.locator('[data-decision="REMOVE"]').getAttribute('aria-pressed'),'true');
+  await choices.locator('[data-decision="REMOVE"]').click();
+  assert.equal(await choices.locator('[data-decision="REMOVE"]').getAttribute('aria-checked'),'false');
   await page.locator('[data-screen-list="a"]').dispatchEvent('pointerdown',{pointerType:'touch',pointerId:9,isPrimary:true});
   await page.waitForFunction(el=>el.classList.contains('touch-revealed'),await row.elementHandle());
   assert.equal(await choices.evaluate(el=>getComputedStyle(el).opacity),'1');
