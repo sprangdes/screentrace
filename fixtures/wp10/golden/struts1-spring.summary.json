@@ -32,7 +32,7 @@
     "by_status": {
       "IN_USE": 28,
       "REMOVABLE": 0,
-      "UNREFERENCED": 13
+      "UNREFERENCED": 12
     }
   },
   "validation_rules_by_layer": {
