@@ -19,8 +19,8 @@ test('WP46 queue groups screens by suspicion, orders within groups, filters unde
  const result=screenReviewQueue(data.graph,regions,state,{groupByRegion:false,onlyUndecided:false});
  assert.deepEqual(result.map(group=>group.classification),['NO_ENTRY','ROUTE_ONLY','INFERRED_ENTRY','AUTO_REDIRECT','HAS_ENTRY']);
  assert.deepEqual(result[0].screens.map(item=>item.screenId),['no-route']);
- assert.deepEqual(result[4].screens.map(item=>item.screenId),['entry-a','entry-z']);
- assert.equal(result[4].screens[1].entryCount,2);
+ assert.deepEqual(result[4].screens.map(item=>item.screenId),['entry-a','confirmed','entry-z']);
+ assert.equal(result[4].screens[2].entryCount,4);
  const undecided=screenReviewQueue(data.graph,regions,state,{groupByRegion:true,onlyUndecided:true});
  assert.equal(undecided.some(group=>group.screens.some(item=>item.screenId==='no-route')),false);
  assert.ok(undecided.every(group=>group.regionName));
