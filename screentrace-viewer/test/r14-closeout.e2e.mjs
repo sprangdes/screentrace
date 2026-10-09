@@ -49,3 +49,9 @@ test('R14 closeout 4 report and help use 未決定 throughout visible UI',async(
   await page.locator('.topbar-more > summary').click();await page.locator('.review-help > summary').click();assert.doesNotMatch(await page.locator('.review-help').innerText(),/未確認/);assert.match(await page.locator('.review-help').innerText(),/未決定/);
  }finally{await browser.close();}
 });
+
+test('R14 closeout 5 functional map keeps the fixed status and entry legend visible',async()=>{
+ const browser=await chromium.launch();try{const page=await browser.newPage({viewport:{width:1440,height:900}});await page.goto(await fileFixture(fixture()));await page.locator('#app[data-ready=true]').waitFor();await page.locator('.primary-tabs button').nth(3).click();await page.locator('.canvas[data-fitted=true]').waitFor();
+  const legend=page.locator('.map-legend');assert.ok(await legend.isVisible());assert.deepEqual((await legend.locator('[data-legend-item]').allTextContents()).map(value=>value.trim()),['保留','移除','入口是推定的','找不到入口','系統自動導向']);const box=await legend.boundingBox();assert.ok(box&&box.x+box.width>1200&&box.y<120);
+ }finally{await browser.close();}
+});
