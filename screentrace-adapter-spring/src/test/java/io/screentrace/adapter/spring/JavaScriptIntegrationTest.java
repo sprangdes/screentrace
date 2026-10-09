@@ -51,4 +51,13 @@ class JavaScriptIntegrationTest {
     var graph=new SpringMvcAnalyzer().analyze(new ProjectScanner().scan(root));
     assertTrue(graph.behaviors().stream().anyMatch(b->b.type()==BehaviorType.CALL_API&&b.expression().equals("fetch('/line')")&&b.evidence().stream().anyMatch(e->e.source().file().endsWith("form.jsp")&&e.source().line()==3)));
   }
+  @Test void angularScopeHandlersAreBoundByControllerAndTraceNestedHttpCallsWithoutExecution() throws Exception {
+    var root=project("<div ng-controller='CartController'><button id='clear' ng-click='clearCart()'>Clear</button><form id='order' ng-submit='placeOrder()'></form><div ng-init='initCartId(7)'></div></div><script src='/app.js'></script>","");
+    Files.writeString(root.resolve("src/main/webapp/app.js"),"angular.module('shop').controller('CartController', function($scope){$scope.initCartId=function(id){$scope.refreshCart(id);};$scope.refreshCart=function(id){$http.get('/rest/cart/'+id);};$scope.clearCart=function(){$http({method:'DELETE',url:'/rest/cart/'+$scope.cartId});};$scope.placeOrder=function(){$http.put('/rest/cart/add/'+$scope.productId);};});");
+    var probe=root.resolve("executed-angular-probe");Files.writeString(root.resolve("src/main/webapp/never.js"),"require('node:fs').writeFileSync('"+probe+"','EXECUTED');");
+    var graph=new SpringMvcAnalyzer().analyze(new ProjectScanner().scan(root));assertFalse(Files.exists(probe));
+    assertTrue(graph.behaviors().stream().anyMatch(b->b.type()==BehaviorType.CALL_API&&b.event().equals("load")&&"INFERRED".equals(b.evidence().stream().filter(e->e.parser().equals("AcornStaticAnalyzer")).findFirst().orElseThrow().resolution().name())));
+    assertTrue(graph.behaviors().stream().anyMatch(b->b.type()==BehaviorType.CALL_API&&b.triggerId()!=null&&graph.nodes().stream().anyMatch(n->n.id().equals(b.triggerId())&&"clear".equals(n.attributes().get("id")))));
+    assertTrue(graph.diagnostics().stream().anyMatch(d->d.code().equals("ANGULAR_SCOPE_DEPTH_LIMIT"))==false);
+  }
 }

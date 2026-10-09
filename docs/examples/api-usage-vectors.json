@@ -1331,6 +1331,494 @@
       "diagnostics": [],
       "apiContracts": [],
       "validationRules": []
+    },
+    "inferred": {
+      "application": {
+        "name": "Fictional API vectors",
+        "path": ".",
+        "technologies": []
+      },
+      "schemaVersion": "2.2",
+      "nodes": [
+        {
+          "id": "s1",
+          "type": "SCREEN",
+          "name": "s1",
+          "attributes": {},
+          "source": {
+            "file": "fixture.jsp",
+            "line": 1
+          },
+          "confidence": "CONFIRMED",
+          "evidence": [
+            {
+              "source": {
+                "file": "fixture.jsp",
+                "line": 1
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        },
+        {
+          "id": "s2",
+          "type": "SCREEN",
+          "name": "s2",
+          "attributes": {},
+          "source": {
+            "file": "fixture.jsp",
+            "line": 1
+          },
+          "confidence": "CONFIRMED",
+          "evidence": [
+            {
+              "source": {
+                "file": "fixture.jsp",
+                "line": 1
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        },
+        {
+          "id": "api",
+          "type": "ENDPOINT",
+          "name": "api",
+          "attributes": {},
+          "source": {
+            "file": "fixture.jsp",
+            "line": 1
+          },
+          "confidence": "CONFIRMED",
+          "evidence": [
+            {
+              "source": {
+                "file": "fixture.jsp",
+                "line": 1
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        },
+        {
+          "id": "unused",
+          "type": "ENDPOINT",
+          "name": "unused",
+          "attributes": {},
+          "source": {
+            "file": "fixture.jsp",
+            "line": 1
+          },
+          "confidence": "CONFIRMED",
+          "evidence": [
+            {
+              "source": {
+                "file": "fixture.jsp",
+                "line": 1
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        }
+      ],
+      "relationships": [
+        {
+          "id": "inferred-0",
+          "type": "CALLS",
+          "from": "s1",
+          "to": "api",
+          "confidence": "INFERRED",
+          "source": {
+            "file": "fixture.jsp",
+            "line": 1
+          },
+          "evidence": [
+            {
+              "source": {
+                "file": "fixture.jsp",
+                "line": 1
+              },
+              "parser": "Fixture",
+              "resolution": "INFERRED",
+              "detail": "route-template inference"
+            }
+          ]
+        }
+      ],
+      "behaviors": [
+        {
+          "id": "null",
+          "triggerId": "s1",
+          "event": "click",
+          "type": "CALL_API",
+          "targetId": null,
+          "guard": null,
+          "parentId": null,
+          "expression": null,
+          "evidence": [
+            {
+              "source": {
+                "file": "fixture.jsp",
+                "line": 1
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        }
+      ],
+      "diagnostics": [],
+      "apiContracts": [],
+      "validationRules": []
+    },
+    "confirmed-inferred": {
+      "application": {
+        "name": "Fictional API vectors",
+        "path": ".",
+        "technologies": []
+      },
+      "schemaVersion": "2.2",
+      "nodes": [
+        {
+          "id": "s1",
+          "type": "SCREEN",
+          "name": "s1",
+          "attributes": {},
+          "source": {
+            "file": "fixture.jsp",
+            "line": 1
+          },
+          "confidence": "CONFIRMED",
+          "evidence": [
+            {
+              "source": {
+                "file": "fixture.jsp",
+                "line": 1
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        },
+        {
+          "id": "s2",
+          "type": "SCREEN",
+          "name": "s2",
+          "attributes": {},
+          "source": {
+            "file": "fixture.jsp",
+            "line": 1
+          },
+          "confidence": "CONFIRMED",
+          "evidence": [
+            {
+              "source": {
+                "file": "fixture.jsp",
+                "line": 1
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        },
+        {
+          "id": "api",
+          "type": "ENDPOINT",
+          "name": "api",
+          "attributes": {},
+          "source": {
+            "file": "fixture.jsp",
+            "line": 1
+          },
+          "confidence": "CONFIRMED",
+          "evidence": [
+            {
+              "source": {
+                "file": "fixture.jsp",
+                "line": 1
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        },
+        {
+          "id": "unused",
+          "type": "ENDPOINT",
+          "name": "unused",
+          "attributes": {},
+          "source": {
+            "file": "fixture.jsp",
+            "line": 1
+          },
+          "confidence": "CONFIRMED",
+          "evidence": [
+            {
+              "source": {
+                "file": "fixture.jsp",
+                "line": 1
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        }
+      ],
+      "relationships": [
+        {
+          "id": "inferred-0",
+          "type": "CALLS",
+          "from": "s1",
+          "to": "api",
+          "confidence": "CONFIRMED",
+          "source": {
+            "file": "fixture.jsp",
+            "line": 1
+          },
+          "evidence": [
+            {
+              "source": {
+                "file": "fixture.jsp",
+                "line": 1
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": "route-template inference"
+            }
+          ]
+        },
+        {
+          "id": "inferred-1",
+          "type": "CALLS",
+          "from": "s2",
+          "to": "api",
+          "confidence": "INFERRED",
+          "source": {
+            "file": "fixture.jsp",
+            "line": 2
+          },
+          "evidence": [
+            {
+              "source": {
+                "file": "fixture.jsp",
+                "line": 2
+              },
+              "parser": "Fixture",
+              "resolution": "INFERRED",
+              "detail": "route-template inference"
+            }
+          ]
+        }
+      ],
+      "behaviors": [
+        {
+          "id": "null",
+          "triggerId": "s1",
+          "event": "click",
+          "type": "CALL_API",
+          "targetId": null,
+          "guard": null,
+          "parentId": null,
+          "expression": null,
+          "evidence": [
+            {
+              "source": {
+                "file": "fixture.jsp",
+                "line": 1
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        }
+      ],
+      "diagnostics": [],
+      "apiContracts": [],
+      "validationRules": []
+    },
+    "inferred-shared": {
+      "application": {
+        "name": "Fictional API vectors",
+        "path": ".",
+        "technologies": []
+      },
+      "schemaVersion": "2.2",
+      "nodes": [
+        {
+          "id": "s1",
+          "type": "SCREEN",
+          "name": "s1",
+          "attributes": {},
+          "source": {
+            "file": "fixture.jsp",
+            "line": 1
+          },
+          "confidence": "CONFIRMED",
+          "evidence": [
+            {
+              "source": {
+                "file": "fixture.jsp",
+                "line": 1
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        },
+        {
+          "id": "s2",
+          "type": "SCREEN",
+          "name": "s2",
+          "attributes": {},
+          "source": {
+            "file": "fixture.jsp",
+            "line": 1
+          },
+          "confidence": "CONFIRMED",
+          "evidence": [
+            {
+              "source": {
+                "file": "fixture.jsp",
+                "line": 1
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        },
+        {
+          "id": "api",
+          "type": "ENDPOINT",
+          "name": "api",
+          "attributes": {},
+          "source": {
+            "file": "fixture.jsp",
+            "line": 1
+          },
+          "confidence": "CONFIRMED",
+          "evidence": [
+            {
+              "source": {
+                "file": "fixture.jsp",
+                "line": 1
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        },
+        {
+          "id": "unused",
+          "type": "ENDPOINT",
+          "name": "unused",
+          "attributes": {},
+          "source": {
+            "file": "fixture.jsp",
+            "line": 1
+          },
+          "confidence": "CONFIRMED",
+          "evidence": [
+            {
+              "source": {
+                "file": "fixture.jsp",
+                "line": 1
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        }
+      ],
+      "relationships": [
+        {
+          "id": "inferred-0",
+          "type": "CALLS",
+          "from": "s1",
+          "to": "api",
+          "confidence": "INFERRED",
+          "source": {
+            "file": "fixture.jsp",
+            "line": 1
+          },
+          "evidence": [
+            {
+              "source": {
+                "file": "fixture.jsp",
+                "line": 1
+              },
+              "parser": "Fixture",
+              "resolution": "INFERRED",
+              "detail": "route-template inference"
+            }
+          ]
+        },
+        {
+          "id": "inferred-1",
+          "type": "CALLS",
+          "from": "s2",
+          "to": "api",
+          "confidence": "INFERRED",
+          "source": {
+            "file": "fixture.jsp",
+            "line": 2
+          },
+          "evidence": [
+            {
+              "source": {
+                "file": "fixture.jsp",
+                "line": 2
+              },
+              "parser": "Fixture",
+              "resolution": "INFERRED",
+              "detail": "route-template inference"
+            }
+          ]
+        }
+      ],
+      "behaviors": [
+        {
+          "id": "null",
+          "triggerId": "s1",
+          "event": "click",
+          "type": "CALL_API",
+          "targetId": null,
+          "guard": null,
+          "parentId": null,
+          "expression": null,
+          "evidence": [
+            {
+              "source": {
+                "file": "fixture.jsp",
+                "line": 1
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        }
+      ],
+      "diagnostics": [],
+      "apiContracts": [],
+      "validationRules": []
     }
   },
   "cases": [
@@ -1942,6 +2430,103 @@
         "api": {
           "status": "UNREFERENCED",
           "callers": []
+        },
+        "unused": {
+          "status": "UNREFERENCED",
+          "callers": []
+        }
+      }
+    },
+    {
+      "id": "inferred-only-source",
+      "rules": [
+        "R-API-1",
+        "R-API-2",
+        "R-API-3",
+        "R-API-4"
+      ],
+      "graph": "inferred",
+      "screenDecisions": {},
+      "componentDecisions": {},
+      "expected": {
+        "api": {
+          "status": "IN_USE",
+          "callers": [
+            {
+              "screenId": "s1",
+              "componentId": null,
+              "behaviorId": null
+            }
+          ]
+        },
+        "unused": {
+          "status": "UNREFERENCED",
+          "callers": []
+        }
+      }
+    },
+    {
+      "id": "confirmed-and-inferred-sources",
+      "rules": [
+        "R-API-1",
+        "R-API-2",
+        "R-API-3",
+        "R-API-4"
+      ],
+      "graph": "confirmed-inferred",
+      "screenDecisions": {},
+      "componentDecisions": {},
+      "expected": {
+        "api": {
+          "status": "IN_USE",
+          "callers": [
+            {
+              "screenId": "s1",
+              "componentId": null,
+              "behaviorId": null
+            },
+            {
+              "screenId": "s2",
+              "componentId": null,
+              "behaviorId": null
+            }
+          ]
+        },
+        "unused": {
+          "status": "UNREFERENCED",
+          "callers": []
+        }
+      }
+    },
+    {
+      "id": "inferred-sources-removed",
+      "rules": [
+        "R-API-1",
+        "R-API-2",
+        "R-API-3",
+        "R-API-4"
+      ],
+      "graph": "inferred-shared",
+      "screenDecisions": {
+        "s1": "REMOVE",
+        "s2": "REMOVE"
+      },
+      "componentDecisions": {},
+      "expected": {
+        "api": {
+          "status": "REMOVABLE",
+          "callers": [
+            {
+              "screenId": "s1",
+              "componentId": null,
+              "behaviorId": null
+            },
+            {
+              "screenId": "s2",
+              "componentId": null,
+              "behaviorId": null
+            }
+          ]
         },
         "unused": {
           "status": "UNREFERENCED",
