@@ -12,3 +12,7 @@ test('WP48 grouped rows expand divergent actions and batch marks every composite
   await page.getByLabel('依按鈕名稱合併').uncheck();const counts=(await page.locator('.button-table-row-count').innerText()).match(/(\d+) 個按鈕 → (\d+) 列/);assert.ok(counts);assert.equal(counts[1],counts[2]);
  }finally{await browser.close();}
 });
+
+test('WP48 button table uses the full workspace when the screen queue and detail panel are hidden',async()=>{
+ const browser=await chromium.launch();try{const page=await browser.newPage({viewport:{width:1440,height:900}});await page.goto(await fileFixture(fixture()));await page.locator('#app[data-ready=true]').waitFor();const guide=page.locator('[data-first-run-guide]');if(await guide.isVisible())await guide.getByRole('button',{name:'略過'}).click();await page.locator('.primary-tabs button').nth(2).click();await page.locator('.button-table').waitFor();assert.equal(await page.locator('.shell>nav').isVisible(),false);assert.equal(await page.locator('.shell>aside').isVisible(),false);const rect=await page.locator('.shell>main').boundingBox();assert.ok(rect);assert.ok(rect.x<=40,`main should start at the left edge, got ${rect.x}px`);assert.ok(rect.width>=1360,`main should fill the 1440px workspace, got ${rect.width}px`);}finally{await browser.close();}
+});
