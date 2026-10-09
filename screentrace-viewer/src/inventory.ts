@@ -2,10 +2,12 @@ import {Graph} from './contracts';
 import {indexGraph} from './map';
 
 export type ScreenEntryClass='AUTO_REDIRECT'|'NO_ENTRY'|'ROUTE_ONLY'|'INFERRED_ENTRY'|'HAS_ENTRY';
+export type ScreenEntryBasis='STATIC_URL'|'TEMPLATE_INFERENCE';
 export interface ScreenEntry {
  screenId:string;
  componentId?:string;
  confidence:'CONFIRMED'|'INFERRED';
+ basis?:ScreenEntryBasis;
  evidence:unknown[];
 }
 export interface ScreenEntryResult {
@@ -40,14 +42,17 @@ export function classifyScreenEntry(graph:Graph):Map<string,ScreenEntryResult>{
    const sourceScreens=source.type==='SCREEN'?[source.id]:source.type==='COMPONENT'?(owners.get(source.id)||[]):[];
    const external=sourceScreens.filter(id=>id!==screen.id);
    if(!external.length)continue;
-   for(const sourceScreen of external)entries.push({screenId:sourceScreen,...(source.type==='COMPONENT'?{componentId:source.id}:{}),confidence,evidence:[...(edge.evidence||[])]});
+   const evidence=[...(edge.evidence||[])],parsers=new Set(evidence.map((item:any)=>item?.parser));
+   const basis:ScreenEntryBasis|undefined=parsers.has('RouteTemplateInference')||parsers.has('RedirectInheritance')||parsers.has('JavaScriptUrlTemplateInference')?'TEMPLATE_INFERENCE':parsers.has('UrlResolution')?'STATIC_URL':undefined;
+   for(const sourceScreen of external)entries.push({screenId:sourceScreen,...(source.type==='COMPONENT'?{componentId:source.id}:{}),confidence,...(basis?{basis}:{}),evidence});
   }
   entries.sort((a,b)=>stable(a.screenId,b.screenId)||stable(a.componentId||'',b.componentId||'')||stable(a.confidence,b.confidence));
   const autoRedirectEvidence:unknown[]=[];
   if(redirect){
    for(const node of graph.nodes)if(node.id===screen.id){autoRedirectEvidence.push(...(node.evidence||[]));break;}
   }
-  const classification:ScreenEntryClass=redirect?'AUTO_REDIRECT':!routes.length&&!entries.length?'NO_ENTRY':routes.length&&!entries.length?'ROUTE_ONLY':entries.length&&entries.every(entry=>entry.confidence==='INFERRED')?'INFERRED_ENTRY':'HAS_ENTRY';
+  const hasStaticUrl=entries.some(entry=>entry.basis==='STATIC_URL'),allTemplateInference=entries.length>0&&entries.every(entry=>entry.basis==='TEMPLATE_INFERENCE');
+  const classification:ScreenEntryClass=redirect?'AUTO_REDIRECT':!routes.length&&!entries.length?'NO_ENTRY':routes.length&&!entries.length?'ROUTE_ONLY':hasStaticUrl?'HAS_ENTRY':allTemplateInference?'INFERRED_ENTRY':entries.length&&entries.every(entry=>entry.confidence==='INFERRED')?'INFERRED_ENTRY':'HAS_ENTRY';
   result.set(screen.id,{screenId:screen.id,classification,routes,entries,autoRedirectEvidence});
  }
  return result;
