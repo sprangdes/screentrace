@@ -21,7 +21,7 @@ test('WP41 top bar exposes the added delivery action and overflow menu and overf
   assert.equal(await menu.locator('.review-help>summary').isVisible(),true,'help remains an available menu item');
   await menu.getByRole('menuitem',{name:/分析資訊/}).click();assert.equal(await page.locator('.information-drawer').evaluate(el=>el.open),true);
   await page.getByRole('button',{name:'關閉分析資訊'}).click();
-  if(await menu.evaluate(el=>el.open))await menuSummary.click();await menuSummary.focus();await page.keyboard.press('Enter');for(const expected of ['匯出 md','匯入 md','分析資訊 0','查看選取物件資訊','收合右側欄','標記說明','重新開啟引導']){await page.keyboard.press('ArrowDown');const active=await page.evaluate(()=>document.activeElement?.getAttribute('aria-label')||document.activeElement?.textContent?.trim()||'');assert.match(active,new RegExp(expected));}
+  if(await menu.evaluate(el=>el.open))await menuSummary.click();await menuSummary.focus();await page.keyboard.press('Enter');for(const expected of ['匯出 md','匯入 md','分析資訊 0','查看選取物件資訊','右側欄設定','標記說明','重新開啟引導']){await page.keyboard.press('ArrowDown');const active=await page.evaluate(()=>document.activeElement?.getAttribute('aria-label')||document.activeElement?.textContent?.trim()||'');assert.match(active,new RegExp(expected));}
   await page.keyboard.press('Escape');assert.equal(await menu.evaluate(el=>el.open),false);
   await page.keyboard.press('Escape');
  }finally{await browser.close();}
