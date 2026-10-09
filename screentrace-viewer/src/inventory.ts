@@ -1,5 +1,6 @@
 import {Graph} from './contracts';
 import {indexGraph} from './map';
+import {parse} from 'acorn';
 
 export type ScreenEntryClass='AUTO_REDIRECT'|'NO_ENTRY'|'ROUTE_ONLY'|'INFERRED_ENTRY'|'HAS_ENTRY';
 export type ScreenEntryBasis='STATIC_URL'|'TEMPLATE_INFERENCE';
@@ -20,6 +21,26 @@ export interface ScreenEntryResult {
 
 export type ApiSourceBasis='STATIC_URL'|'TEMPLATE_INFERENCE'|undefined;
 
+const isStaticRequestExpression=(detail:string|undefined):boolean=>{
+ if(!detail)return false;
+ try{
+  const evidence=JSON.parse(detail),expression=evidence?.expression;
+  if(typeof expression!=='string')return false;
+  const program=parse(expression,{ecmaVersion:'latest'}) as any;
+  const requestMethods=new Set(['get','post','put','patch','delete','head','options','request','fetch','ajax']);
+  const visit=(value:any):boolean=>{
+   if(!value||typeof value!=='object')return false;
+   if(value.type==='CallExpression'){
+    const callee=value.callee,method=callee?.type==='MemberExpression'&&!callee.computed?callee.property?.name:callee?.type==='Identifier'?callee.name:undefined;
+    const first=value.arguments?.[0];
+    if(requestMethods.has(method)&&first&&(first.type==='Literal'&&typeof first.value==='string'||first.type==='TemplateLiteral'&&first.expressions.length===0))return true;
+   }
+   return Object.keys(value).some(key=>key!=='start'&&key!=='end'&&key!=='loc'&&key!=='range'&&visit(value[key]));
+  };
+  return visit(program);
+ }catch{return false;}
+};
+
 /** Uses the same §9.2 evidence rules wherever API source basis is presented. */
 export function apiSourceBasis(graph:Graph,endpointId:string):ApiSourceBasis{
  const sources=(graph.relationships||[]).filter(edge=>edge.to===endpointId&&['CALLS','TRIGGERS'].includes(edge.type));
@@ -27,12 +48,13 @@ export function apiSourceBasis(graph:Graph,endpointId:string):ApiSourceBasis{
  const parserNames=new Set(['RouteTemplateInference','RedirectInheritance','JavaScriptUrlTemplateInference']);
  const hasStaticSource=(edge:any)=>{
   const evidence=[...(edge.evidence||[])],node=graph.nodes.find(item=>item.id===edge.from),nodeEvidence=node?.evidence||[];
-  const staticEvidence=[...evidence,...nodeEvidence].some((item:any)=>['UrlResolution','JspUrlVariableResolver'].includes(item?.parser)&&item?.resolution==='CONFIRMED');
-  const staticComponent=node?.type==='COMPONENT'&&node.attributes?.targetStatus==='CONFIRMED'&&!!text(node.attributes?.target)&&nodeEvidence.some((item:any)=>['UrlResolution','JspUrlVariableResolver'].includes(item?.parser)&&item?.resolution==='CONFIRMED');
-  return staticEvidence||staticComponent;
+  const staticEvidence=evidence.some((item:any)=>item?.parser==='UrlResolution'&&item?.resolution==='CONFIRMED'&&!String(item?.source?.file||'').startsWith('workspace:'));
+  const target=text(node?.attributes?.target),staticComponent=node?.type==='COMPONENT'&&node.attributes?.targetStatus==='CONFIRMED'&&!!target&&target!=='#'&&!target.includes('${')&&nodeEvidence.some((item:any)=>item?.parser==='JspUrlVariableResolver'&&item?.resolution==='CONFIRMED');
+  const staticJavaScript=evidence.some((item:any)=>item?.parser==='AcornStaticAnalyzer'&&isStaticRequestExpression(item?.detail));
+  return staticEvidence||staticComponent||staticJavaScript;
  };
  if(sources.some(hasStaticSource))return 'STATIC_URL';
- if(sources.every((edge:any)=>edge.confidence==='INFERRED'||[...(edge.evidence||[])].some((item:any)=>parserNames.has(item?.parser))))return 'TEMPLATE_INFERENCE';
+ if(sources.every((edge:any)=>edge.confidence==='INFERRED'||[...(edge.evidence||[])].some((item:any)=>parserNames.has(item?.parser))||[...(edge.evidence||[])].some((item:any)=>item?.parser==='AcornStaticAnalyzer'&&!isStaticRequestExpression(item?.detail))))return 'TEMPLATE_INFERENCE';
  return undefined;
 }
 
