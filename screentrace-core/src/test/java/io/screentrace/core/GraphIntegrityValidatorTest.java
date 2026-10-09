@@ -22,6 +22,15 @@ class GraphIntegrityValidatorTest {
     assertThrows(IllegalStateException.class, () -> GraphIntegrityValidator.validate(graph));
   }
 
+  @Test void acceptsNavigationThroughAnExplicitScreenRouteAlias() {
+    GraphNode screen = new GraphNode("screen", NodeType.SCREEN, "result", Map.of("view", "result.jsp", "routeAliases", "/start.do"), null, Confidence.CONFIRMED);
+    GraphNode button = new GraphNode("button", NodeType.COMPONENT, "Continue", Map.of("target", "/start.do"), null, Confidence.CONFIRMED);
+    var graph = new ApplicationGraph(new Application("sample", "/sample", List.of()), List.of(screen, button),
+        List.of(new Relationship("contains", EdgeType.CONTAINS, "screen", "button", Confidence.CONFIRMED, null),
+            new Relationship("navigation", EdgeType.NAVIGATES_TO, "button", "screen", Confidence.CONFIRMED, null)), List.of());
+    assertDoesNotThrow(() -> GraphIntegrityValidator.validate(graph));
+  }
+
   @Test void acceptsInferredNavigationDerivedFromAResolvedEndpoint() {
     GraphNode screen = new GraphNode("screen", NodeType.SCREEN, "owners", Map.of("route", "/owners"), null, Confidence.CONFIRMED);
     GraphNode detail = new GraphNode("detail", NodeType.SCREEN, "ownerDetails", Map.of("view", "owners/detail.jsp"), null, Confidence.CONFIRMED);

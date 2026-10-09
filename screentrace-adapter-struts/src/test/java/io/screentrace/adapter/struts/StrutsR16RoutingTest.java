@@ -136,6 +136,18 @@ class StrutsR16RoutingTest {
     assertFalse(graph.diagnostics().stream().anyMatch(diagnostic -> diagnostic.code().equals("STRUTS_FORWARD_UNRESOLVED")));
   }
 
+  @Test void actionLinkForwardChainDeclaresScreenRouteAliasForGraphValidation() throws Exception {
+    actionServlet("*.do", "/WEB-INF/struts-config.xml");
+    config("<action path=\"/start\" type=\"sample.StartAction\"><forward name=\"next\" path=\"/next.do\"/></action><action path=\"/next\" type=\"sample.NextAction\"><forward name=\"done\" path=\"/WEB-INF/next.jsp\"/></action>");
+    file("src/main/webapp/index.jsp", "<html:link action=\"/start.do\">Continue</html:link>");
+    file("src/main/webapp/WEB-INF/next.jsp", "<h1>Next</h1>");
+
+    var graph=analyze();
+    var destination=graph.nodes().stream().filter(node->node.type()==NodeType.SCREEN&&node.attributes().getOrDefault("view","").endsWith("next.jsp")).findFirst().orElseThrow();
+    assertTrue(destination.attributes().getOrDefault("routeAliases","").contains("/start.do"),destination.attributes().toString());
+    assertTrue(graph.relationships().stream().anyMatch(edge->edge.type()==EdgeType.NAVIGATES_TO&&edge.to().equals(destination.id())));
+  }
+
   @Test void welcomeFileAndLogicRedirectForwardCreateProvableScreenEntrances() throws Exception {
     actionServlet("*.do", "/WEB-INF/struts-config.xml");
     file("src/main/webapp/WEB-INF/web.xml", Files.readString(root.resolve("src/main/webapp/WEB-INF/web.xml")).replace("</web-app>", "<welcome-file-list><welcome-file>index.jsp</welcome-file></welcome-file-list></web-app>"));
