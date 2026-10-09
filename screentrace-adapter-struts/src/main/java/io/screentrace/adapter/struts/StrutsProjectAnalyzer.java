@@ -579,6 +579,11 @@ public final class StrutsProjectAnalyzer {
     for(String name:tiles.keySet()) resolveTile(name,tiles,resolved,new HashSet<>(),state);
     state.tiles.putAll(resolved);
     Set<String> tileJspPaths=new TreeSet<>();
+    for(Path file:state.inventory.files()) if(file.toString().endsWith(".jsp")) try {
+      String text=SafeProjectFiles.readUtf8Limited(state.inventory.root(),file,SafeProjectFiles.MAX_SOURCE_FILE_BYTES);
+      boolean tilesTagLibrary=text.contains("struts.apache.org/tags-tiles");
+      if(tilesTagLibrary&&MarkupTag.scan(text).stream().anyMatch(tag->!tag.closing()&&tag.name().endsWith(":insert")))tileJspPaths.add(relative(state,file));
+    } catch(Exception ignored) { }
     for(Tile tile:resolved.values()) {
       String viewId=ApplicationGraph.id(NodeType.VIEW,"tiles:"+tile.name());state.tileViewIds.put(tile.name(),viewId);
       Confidence status=state.viewIds.containsKey(tile.template())?Confidence.CONFIRMED:Confidence.UNRESOLVED;

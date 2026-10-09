@@ -43,7 +43,7 @@ class StrutsR16TilesBoundaryTest {
     file("src/main/webapp/WEB-INF/web.xml","<web-app><servlet><servlet-name>action</servlet-name><servlet-class>org.apache.struts.action.ActionServlet</servlet-class></servlet><servlet-mapping><servlet-name>action</servlet-name><url-pattern>*.do</url-pattern></servlet-mapping></web-app>");
     file("src/main/webapp/WEB-INF/struts-config.xml","<struts-config><action-mappings><action path='/home' type='sample.Home'><forward name='ok' path='/WEB-INF/jsp/home.jsp'/></action></action-mappings></struts-config>");
     file("src/main/webapp/WEB-INF/jsp/home.jsp","<h1>Home</h1>");
-    file("src/main/webapp/WEB-INF/jsp/orphan-layout.jsp","<tiles:insert attribute='body'/><button>Layout action</button>");
+    file("src/main/webapp/WEB-INF/jsp/orphan-layout.jsp","<%@ taglib prefix='tiles' uri='http://struts.apache.org/tags-tiles' %><tiles:insert attribute='body'/><button>Layout action</button>");
 
     var graph=analyze();
     assertFalse(graph.nodes().stream().anyMatch(node->node.type()==NodeType.SCREEN&&node.source().file().endsWith("orphan-layout.jsp")));
