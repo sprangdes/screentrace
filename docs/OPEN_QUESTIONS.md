@@ -210,3 +210,30 @@
 - 影響範圍：WP51 API 清單的 `ANY` 方法徽章與 `REDIRECT` 分類標籤；不改分析資料、API 狀態或 graph。
 - 狀態：已決定（2026-10-09）；需求方採方案 B。
 - 決定：`r14-redirect-category-label.e2e.mjs` 的該斷言是 R14 結案收尾時為錯誤呈現位置所寫，授權只將其 selector 由 `[data-method]` 改為分類標籤 selector，斷言內容（「轉址」文字、tooltip `REDIRECT`）不變；方法徽章由 WP51 新測試驗證為「任何方法」（tooltip `ANY`）。在 ADR 依 R14 §2.4 格式記錄。其他既有斷言不變。
+
+## OQ-024 — Struts action mapping 與 servlet URL 的 endpoint 身分
+
+- 情境：官方 Struts 1 範例在 `web.xml` 以 `*.do` 映射 ActionServlet；JSP 的 `html:form action="/SubmitLogon"` 與 action mapping `/SubmitLogon` 使用不含副檔名的邏輯 path。ScreenTrace 目前同時輸出 `/SubmitLogon` 與 `/SubmitLogon.do`，把前者列為使用中、後者列為找不到來源。Cookbook 有 24 組成對路徑，EL 範例 10 組；因此畫面與 API 清單會重複計數。
+- 可選方案 A：以 servlet mapping 展開後的公開 URL 作為單一 endpoint（例如 `/SubmitLogon.do`），把 JSP 邏輯 action path 的來源關聯到該 endpoint。
+- 可選方案 B：同時保留邏輯 path 與公開 URL，但明確表示為同一 endpoint 的別名，統計只計一次、呼叫來源共用。
+- 可選方案 C：保留目前兩筆 endpoint，各自呈現與推導狀態。
+- 影響範圍：Struts route 解析、JSP form/link 對應、API 狀態與 API 清單統計；不涉及 Spring URL 規則。
+- 狀態：待決定。稽核依據：R15 報告 WP53「誤判：表單呼叫來源被列為找不到」。
+
+## OQ-025 — Tiles layout/fragment 是否為可確認畫面
+
+- 情境：Struts Tiles 範例的 `.base`、`.loggedoff`、`.loggedon` definition 組成多個實際頁面；其 `header`、`footer`、`menu`、`body` JSP 是頁面片段。ScreenTrace 將部分 definition、layout 與 fragment 都列成獨立 screen，Faces 2 從 16 個 JSP 得到 25 個 screen。
+- 可選方案 A：只有被 action forward 到的完整 page definition 是 screen；layout 與 fragment 作為 screen 的組成證據。
+- 可選方案 B：所有 Tiles definition 都列為 screen，包括可重用 layout；JSP fragment 仍不單列。
+- 可選方案 C：每個 JSP 與 Tiles definition 都保留為 screen，並在 UI 明確標出「版型／片段」類型。
+- 影響範圍：Tiles adapter、screen count、入口分類、縮圖與功能地圖。
+- 狀態：待決定。稽核依據：R15 報告 WP53「多判：Tiles 版型與片段顯示成獨立畫面」。
+
+## OQ-026 — Struts + JSF 混合應用的元件支援範圍
+
+- 情境：Struts 1.3.10 官方 `faces-example1`／`faces-example2` 同時配置 `*.faces` FacesServlet 與 `*.do` ActionServlet。表單、導覽與按鈕主要使用 `<h:form>`、`<h:commandLink>`、`<h:commandButton>`，ScreenTrace 目前主要解析 Struts `html:*` tag，因而多數 action 呼叫列為找不到來源。
+- 可選方案 A：將 JSF tag 支援納入 Struts 1 範圍，解析可靜態證明的 navigation outcome 與 action binding；其他 JSF 執行期語義維持 UNRESOLVED。
+- 可選方案 B：Struts 支援僅限 Struts HTML/JSP tags；JSF 混合模組明確標示部分不支援，不把 JSF 元件列為已分析。
+- 可選方案 C：先保留現況，待有獨立 JSF adapter 工作包時再決定。
+- 影響範圍：JSP 元件掃描、`*.faces` URL mapping、JSF navigation/action 與 Struts endpoint caller 對應；不改動目標專案。
+- 狀態：待決定。稽核依據：R15 報告 WP53「漏判：JSF 元件不是 Struts `html:*`」。
