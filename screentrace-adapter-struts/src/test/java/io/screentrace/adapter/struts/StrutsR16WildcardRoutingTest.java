@@ -17,6 +17,7 @@ class StrutsR16WildcardRoutingTest {
     file("src/main/webapp/WEB-INF/web.xml","<web-app><servlet><servlet-name>a</servlet-name><servlet-class>org.apache.struts.action.ActionServlet</servlet-class><init-param><param-name>config</param-name><param-value>/WEB-INF/struts-config.xml</param-value></init-param></servlet><servlet-mapping><servlet-name>a</servlet-name><url-pattern>*.do</url-pattern></servlet-mapping></web-app>");
     file("src/main/webapp/WEB-INF/struts-config.xml","<struts-config><action-mappings>"+actions+"</action-mappings></struts-config>");
   }
+  private void strutsVersion(String version)throws Exception{file("pom.xml","<project><groupId>sample</groupId><artifactId>sample</artifactId><parent><groupId>org.apache.struts</groupId><artifactId>struts-apps</artifactId><version>"+version+"</version></parent></project>");}
 
   @Test void wildcardMappingAggregatesConcreteCallersAndSubstitutesForwardCapture(){
     assertDoesNotThrow(()->{
@@ -65,5 +66,32 @@ class StrutsR16WildcardRoutingTest {
       assertEquals("/TargetWidget.do",target.attributes().get("matchedPaths"));
       assertTrue(graph.relationships().stream().anyMatch(e->e.type()==EdgeType.CALLS&&e.to().equals(target.id())&&e.confidence()==Confidence.INFERRED&&e.evidence().stream().anyMatch(p->"RedirectInheritance".equals(p.parser()))));
     });
+  }
+
+  @Test void struts13UsesLastMatchingWildcardWhenSpecificMappingFollowsCatchAll()throws Exception{
+    strutsVersion("1.3.10");base("<action path='/*' type='sample.CatchAll'/><action path='/Edit*' type='sample.EditAction'/>");
+    file("src/main/webapp/menu.jsp","<html:link action='/EditUser.do'>Edit</html:link>");
+    var graph=analyze();var selected=graph.nodes().stream().filter(n->n.type()==NodeType.ENDPOINT&&"/Edit*.do".equals(n.attributes().get("path"))).findFirst().orElseThrow();
+    assertEquals(1,graph.relationships().stream().filter(e->e.type()==EdgeType.TRIGGERS&&e.to().equals(selected.id())).count());
+    assertEquals("/EditUser.do",selected.attributes().get("matchedPaths"));
+    assertFalse(graph.diagnostics().stream().anyMatch(d->d.code().equals("STRUTS_WILDCARD_VERSION_UNRESOLVED")));
+  }
+
+  @Test void struts13UsesLastMatchingWildcardWhenCatchAllFollowsSpecificMapping()throws Exception{
+    strutsVersion("1.3.10");base("<action path='/Edit*' type='sample.EditAction'/><action path='/*' type='sample.CatchAll'/>");
+    file("src/main/webapp/menu.jsp","<html:link action='/EditUser.do'>Edit</html:link>");
+    var graph=analyze();var selected=graph.nodes().stream().filter(n->n.type()==NodeType.ENDPOINT&&"/*.do".equals(n.attributes().get("path"))).findFirst().orElseThrow();
+    assertEquals(1,graph.relationships().stream().filter(e->e.type()==EdgeType.TRIGGERS&&e.to().equals(selected.id())).count());
+    assertEquals("/EditUser.do",selected.attributes().get("matchedPaths"));
+  }
+
+  @Test void unknownStrutsVersionMarksDifferingFirstAndLastWildcardMappingsAmbiguous()throws Exception{
+    base("<action path='/*' type='sample.CatchAll'/><action path='/Edit*' type='sample.EditAction'/>");
+    file("src/main/webapp/menu.jsp","<html:link action='/EditUser.do'>Edit</html:link>");
+    var graph=analyze();var candidates=graph.nodes().stream().filter(n->n.type()==NodeType.ENDPOINT&&Set.of("/*.do","/Edit*.do").contains(n.attributes().get("path"))).map(GraphNode::id).collect(java.util.stream.Collectors.toSet());
+    assertEquals(2,candidates.size());
+    assertEquals(candidates,graph.relationships().stream().filter(e->e.type()==EdgeType.TRIGGERS&&e.source().file().equals("src/main/webapp/menu.jsp")).map(Relationship::to).collect(java.util.stream.Collectors.toSet()));
+    assertTrue(graph.relationships().stream().filter(e->e.type()==EdgeType.TRIGGERS&&e.source().file().equals("src/main/webapp/menu.jsp")).allMatch(e->e.confidence()==Confidence.AMBIGUOUS));
+    assertTrue(graph.diagnostics().stream().anyMatch(d->d.code().equals("STRUTS_WILDCARD_VERSION_UNRESOLVED")&&d.message().contains("/*.do")&&d.message().contains("/Edit*.do")));
   }
 }
