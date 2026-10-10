@@ -32,12 +32,13 @@ class StrutsR16WildcardRoutingTest {
     });
   }
 
-  @Test void exactRouteWinsBeforeFirstMatchingWildcardAndWildcardOrderIsStable(){
+  @Test void exactRouteWinsBeforeLastMatchingWildcardAndStruts13UsesConfigurationOrder(){
     assertDoesNotThrow(()->{
+      strutsVersion("1.3.10");
       base("<action path='/Edit*' type='sample.FirstWildcard'/><action path='/EditUser*' type='sample.SecondWildcard'/><action path='/EditUser42' type='sample.ExactAction'/>");
       file("src/main/webapp/menu.jsp","<html:link action='/EditUser42.do'>Exact</html:link><html:link action='/EditUser77.do'>Wildcard</html:link>");
       var graph=analyze();var exact=graph.nodes().stream().filter(n->n.type()==NodeType.ENDPOINT&&"/EditUser42.do".equals(n.attributes().get("path"))).findFirst().orElseThrow();
-      var wildcard=graph.nodes().stream().filter(n->n.type()==NodeType.ENDPOINT&&"/Edit*.do".equals(n.attributes().get("path"))).findFirst().orElseThrow();
+      var wildcard=graph.nodes().stream().filter(n->n.type()==NodeType.ENDPOINT&&"/EditUser*.do".equals(n.attributes().get("path"))).findFirst().orElseThrow();
       assertEquals(1,graph.relationships().stream().filter(e->e.type()==EdgeType.TRIGGERS&&e.to().equals(exact.id())).count());
       assertEquals(1,graph.relationships().stream().filter(e->e.type()==EdgeType.TRIGGERS&&e.to().equals(wildcard.id())).count());
       assertEquals("/EditUser77.do",wildcard.attributes().get("matchedPaths"));
@@ -92,6 +93,6 @@ class StrutsR16WildcardRoutingTest {
     assertEquals(2,candidates.size());
     assertEquals(candidates,graph.relationships().stream().filter(e->e.type()==EdgeType.TRIGGERS&&e.source().file().equals("src/main/webapp/menu.jsp")).map(Relationship::to).collect(java.util.stream.Collectors.toSet()));
     assertTrue(graph.relationships().stream().filter(e->e.type()==EdgeType.TRIGGERS&&e.source().file().equals("src/main/webapp/menu.jsp")).allMatch(e->e.confidence()==Confidence.AMBIGUOUS));
-    assertTrue(graph.diagnostics().stream().anyMatch(d->d.code().equals("STRUTS_WILDCARD_VERSION_UNRESOLVED")&&d.message().contains("/*.do")&&d.message().contains("/Edit*.do")));
+    assertTrue(graph.diagnostics().stream().anyMatch(d->d.code().equals("STRUTS_WILDCARD_VERSION_UNRESOLVED")&&d.message().contains("/*（")&&d.message().contains("/Edit*（")));
   }
 }
