@@ -73,6 +73,8 @@ class StrutsR16WildcardRoutingTest {
     strutsVersion("1.3.10");base("<action path='/*' type='sample.CatchAll'/><action path='/Edit*' type='sample.EditAction'/>");
     file("src/main/webapp/menu.jsp","<html:link action='/EditUser.do'>Edit</html:link>");
     var graph=analyze();var selected=graph.nodes().stream().filter(n->n.type()==NodeType.ENDPOINT&&"/Edit*.do".equals(n.attributes().get("path"))).findFirst().orElseThrow();
+    var caller=graph.relationships().stream().filter(e->e.type()==EdgeType.TRIGGERS&&e.to().equals(selected.id())).findFirst().orElseThrow();
+    assertEquals(Confidence.CONFIRMED,caller.confidence());assertTrue(caller.evidence().stream().anyMatch(e->e.detail()!=null&&e.detail().contains("basis=STATIC_URL")));
     assertEquals(1,graph.relationships().stream().filter(e->e.type()==EdgeType.TRIGGERS&&e.to().equals(selected.id())).count());
     assertEquals("/EditUser.do",selected.attributes().get("matchedPaths"));
     assertFalse(graph.diagnostics().stream().anyMatch(d->d.code().equals("STRUTS_WILDCARD_VERSION_UNRESOLVED")));
