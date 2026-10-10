@@ -1,6 +1,7 @@
 package io.screentrace.parser.jsp;
 
 import java.util.ArrayList;
+import java.util.ArrayDeque;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -33,7 +34,7 @@ public final class MarkupTag {
   static List<MarkupTag> scanForAnchors(String source) {return scan(source,true);}
 
   private static List<MarkupTag> scan(String source,boolean anchors) {
-    List<MarkupTag> tags = new ArrayList<>();
+    List<MarkupTag> tags = new ArrayList<>();ArrayDeque<String> exampleContainers=new ArrayDeque<>();
     int line = 1, lineCursor = 0;
     for (int start = 0; start < source.length(); start++) {
       if ((source.startsWith("${",start) || source.startsWith("#{",start))) {
@@ -61,9 +62,19 @@ public final class MarkupTag {
       while (lineCursor < start) if (source.charAt(lineCursor++) == '\n') line++;
       String body = source.substring(start + 1, end).trim();
       MarkupTag tag = parse(body, line, start, end);
-      if (tag != null) tags.add(tag);
+      boolean outsideExample=exampleContainers.isEmpty();
+      if (tag != null) {
+        String name=tag.name().toLowerCase(Locale.ROOT);boolean example=name.equals("pre")||name.equals("code");
+        if(outsideExample) {tags.add(tag);if(example&&!tag.closing())exampleContainers.push(name);}
+        else if(example) {
+          if(tag.closing()) {
+            while(!exampleContainers.isEmpty())if(exampleContainers.pop().equals(name))break;
+            if(exampleContainers.isEmpty())tags.add(tag);
+          } else exampleContainers.push(name);
+        }
+      }
       start = end;
-      if (tag != null && !tag.closing() && (tag.name().equalsIgnoreCase("script") || tag.name().equalsIgnoreCase("style"))) {
+      if (outsideExample&&tag != null && !tag.closing() && (tag.name().equalsIgnoreCase("script") || tag.name().equalsIgnoreCase("style"))) {
         int close = source.toLowerCase(Locale.ROOT).indexOf("</" + tag.name().toLowerCase(Locale.ROOT), end + 1);
         if (close < 0) break;
         start = close - 1;

@@ -33,6 +33,7 @@ public final class StrutsProjectAnalyzer {
     if(inventory.strutsConfigFiles().isEmpty()) state.diagnostics.add(StrutsSources.diagnostic("找不到 Struts 1 設定檔",".",1,"STRUTS_CONFIG_MISSING"));
     for(Path config:inventory.strutsConfigFiles()) parseConfig(config,state);
     resolveConfiguredForwards(state);
+    suppressActionIncludeDiagnostics(jsp,state);
     readWelcomeFiles(state);
     materializeTileScreens(state);
     addInteractions(jsp,state);
@@ -449,7 +450,7 @@ public final class StrutsProjectAnalyzer {
   }
 
   private static void addInteractions(JspAnalysis jsp,State state) throws IOException {
-    Map<String,List<Control>> byView=new TreeMap<>();
+    Map<String,List<Control>> byView=new TreeMap<>();Map<String,List<ScreenLoadCall>> loadCallsByView=new TreeMap<>();
     for(Path file:state.inventory.files()) if(file.toString().endsWith(".jsp")||file.toString().endsWith(".jspf")||file.toString().endsWith(".html")||file.toString().endsWith(".htm")) {
       String path=relative(state,file);List<Control> controls=new ArrayList<>();
       try {
@@ -459,6 +460,13 @@ public final class StrutsProjectAnalyzer {
           String name=tag.name().toLowerCase(Locale.ROOT);
           if(tag.closing()) {if(Set.of("html:form","html-el:form","form","form:form").contains(name)) {action=null;formGroup=null;activeModule=null;}continue;}
           var source=new SourceLocation(path,tag.line());
+          if(isScreenLoadActionTag(name,tag)) {
+            String raw=screenLoadTarget(name,tag);String module=moduleFor(path,state);String explicit=tag.attribute("module");if(explicit!=null&&!explicit.isBlank())module=explicit;
+            String target=raw;
+            if(target!=null&&tag.attribute("action")!=null)target=normalizeStrutsAction(target,module,state);
+            else if(target!=null)target=resolveRelativeJspUrl(path,target);
+            if(target!=null)loadCallsByView.computeIfAbsent(path,ignored->new ArrayList<>()).add(new ScreenLoadCall(name,target,module,source));
+          }
           if(Set.of("tiles:insert","tiles:put").contains(name)) {
             String target=first(tag,"definition","page","value");String view=target==null?null:state.viewIds.get(target);
             if(view==null&&target!=null)view=state.tileViewIds.get(target);
@@ -466,7 +474,7 @@ public final class StrutsProjectAnalyzer {
             if(view!=null)for(String screen:owners)edge(state,EdgeType.INCLUDES,screen,view,Confidence.CONFIRMED,source);
             else if(target!=null) diagnostic(state,"Tiles 標籤目標未解析："+target,source,"TILES_REFERENCE_UNRESOLVED");
           }
-          ComponentKind kind=Set.of("logic:redirect","logic:forward","html:rewrite").contains(name)?ComponentKind.LINK:kind(name,tag);
+          ComponentKind kind=Set.of("logic:redirect","logic:forward","html:rewrite","html-el:rewrite").contains(name)?ComponentKind.LINK:kind(name,tag);
           if(kind==null) continue;
           if(kind==ComponentKind.FORM) action=first(tag,"action");
           String target=kind==ComponentKind.LINK?first(tag,"href","forward","page","action"):first(tag,"formaction");
@@ -512,8 +520,49 @@ public final class StrutsProjectAnalyzer {
       collectIncludeSources(view.path(),jsp,state,new HashSet<>(),sources);
       Set<String> owners=new TreeSet<>(state.tileFragmentOwners.getOrDefault(view.path(),Set.of()));String directOwner=state.screens.get(view.path());if(directOwner!=null)owners.add(directOwner);
       Set<String> modules=new TreeSet<>(state.jspModuleOwners.getOrDefault(view.path(),Set.of()));String pathModule=moduleFor(view.path(),state);if(!pathModule.isBlank())modules.add(pathModule);if(modules.isEmpty())modules.add("");
-      for(String owner:owners)for(String module:modules)for(String path:sources)for(Control control:byView.getOrDefault(path,List.of()))addControl(owner,control,byView.getOrDefault(path,List.of()),module,state);
+      for(String owner:owners)for(String module:modules)for(String path:sources) {
+        for(Control control:byView.getOrDefault(path,List.of()))addControl(owner,control,byView.getOrDefault(path,List.of()),module,state);
+        for(ScreenLoadCall call:loadCallsByView.getOrDefault(path,List.of()))recordScreenLoadCall(owner,call,module,state);
+      }
     }
+  }
+
+  private static boolean isScreenLoadActionTag(String name,MarkupTag tag) {
+    if(tag.closing())return false;
+    if(Set.of("jsp:forward","jsp:include").contains(name))return tag.attribute("page")!=null;
+    if(!Set.of("html:img","html-el:img","html:image","html-el:image","html:rewrite","html-el:rewrite").contains(name))return false;
+    return first(tag,"action","page","forward","src")!=null;
+  }
+  private static String screenLoadTarget(String name,MarkupTag tag) {
+    if(name.equals("jsp:forward")||name.equals("jsp:include"))return tag.attribute("page");
+    return first(tag,"action","page","forward","src");
+  }
+  private static void recordScreenLoadCall(String screenId,ScreenLoadCall call,String moduleContext,State state) {
+    if(!StrutsSources.literal(call.target())) {diagnostic(state,"畫面載入時的 action URL 未解析："+call.target(),call.source(),"STRUTS_TARGET_UNRESOLVED");return;}
+    String module=call.module().isBlank()?moduleContext:call.module();String target=call.target();
+    Control context=new Control("",call.tag(),Map.of("module",module),target,call.source(),null,null,null);
+    String resolved=moduleTarget(context,state),path=resolved.split("[?#]",2)[0];List<Mapping> mappings=state.routes.get(path);WildcardResolution wildcard=null;
+    if(mappings==null) {String logical=logicalPath(path,module,state);if(logical!=null)mappings=state.routes.get(logical);if(mappings==null){String concrete=logical==null?path:logical;wildcard=resolveWildcard(concrete,module,state);if(wildcard!=null&&wildcard.ambiguous()) {
+        for(WildcardMatch candidate:wildcard.candidates()) {String endpoint=state.endpointIds.getOrDefault(candidate.mapping().route(),StableGraphIds.endpoint("ANY",publicPath(candidate.mapping().route(),candidate.mapping().module(),state)));recordWildcardMatch(endpoint,path,candidate,state,call.source());edge(state,EdgeType.CALLS,screenId,endpoint,Confidence.AMBIGUOUS,call.source(),"basis=STATIC_URL；載入時來源="+call.tag()+"；"+wildcardAmbiguityDetail(wildcard,state));}
+        diagnostic(state,wildcardAmbiguityMessage(wildcard,state),call.source(),"STRUTS_WILDCARD_VERSION_UNRESOLVED");return;
+      }if(wildcard!=null&&!wildcard.candidates().isEmpty()) {WildcardMatch match=wildcard.candidates().get(0);mappings=List.of(match.mapping());}}
+    }
+    if(mappings==null||mappings.isEmpty())return;
+    for(Mapping mapping:mappings) {
+      String endpoint=wildcard==null?state.endpointIds.getOrDefault(path,state.endpointIds.getOrDefault(publicPath(mapping.route(),mapping.module(),state),StableGraphIds.endpoint("ANY",mapping.route()))):state.endpointIds.getOrDefault(mapping.route(),StableGraphIds.endpoint("ANY",publicPath(mapping.route(),mapping.module(),state)));
+      GraphNode endpointNode=state.nodes.get(endpoint);Confidence confidence=mappings.size()>1?Confidence.AMBIGUOUS:endpointNode==null?Confidence.UNRESOLVED:endpointNode.confidence();
+      if(wildcard!=null&&!wildcard.candidates().isEmpty())recordWildcardMatch(endpoint,path,wildcard.candidates().get(0),state,call.source());
+      edge(state,EdgeType.CALLS,screenId,endpoint,confidence,call.source(),"basis=STATIC_URL；載入時來源="+call.tag());
+    }
+  }
+  private static void suppressActionIncludeDiagnostics(JspAnalysis jsp,State state) {
+    Set<SourceLocation> actionIncludes=new HashSet<>();
+    for(JspAnalysis.Include include:jsp.includes()) {
+      String module=moduleFor(include.sourceViewPath(),state);String target=resolveRelativeJspUrl(include.sourceViewPath(),include.targetPath());
+      if(target==null)continue;String path=target.split("[?#]",2)[0];String logical=logicalPath(path,module,state);
+      if(state.routes.containsKey(path)||logical!=null&&state.routes.containsKey(logical)||resolveWildcard(logical==null?path:logical,module,state)!=null)actionIncludes.add(include.source());
+    }
+    if(!actionIncludes.isEmpty())state.diagnostics.removeIf(diagnostic->diagnostic.code().equals("JSP_UNRESOLVED")&&diagnostic.message().startsWith("JSP include cannot be found")&&actionIncludes.contains(diagnostic.source()));
   }
   private static void collectIncludeSources(String view,JspAnalysis jsp,State state,Set<String> seen,Set<String> sources) {
     if(!seen.add(view)) return;
@@ -1022,6 +1071,7 @@ public final class StrutsProjectAnalyzer {
   private record ServletMappingResolution(ServletMappingStatus status,List<ServletPattern> patterns,String owner) { }
   private record ServletPattern(String pattern,SourceLocation source,String servletName,String servletClass) { }
   private record Control(String id,String label,Map<String,String> attributes,String target,SourceLocation source,String field,String value,String formGroup) { }
+  private record ScreenLoadCall(String tag,String target,String module,SourceLocation source) { }
   private record Tile(String name,String template,String parent,Map<String,String> puts,SourceLocation source) { }
   private static final class State {
     final ProjectInventory inventory;
