@@ -26,10 +26,12 @@ import java.io.StringReader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.TreeMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -54,7 +56,9 @@ public final class SpringMvcAnalyzer {
         for (String message : inventory.diagnostics()) state.diagnostics.add(new Diagnostic(message, Confidence.UNRESOLVED, new SourceLocation(".", 1), "SOURCE_LIMIT", List.of()));
         JspAnalysis jsp = new JspProjectParser().analyze(inventory.root(), inventory.files());
         Set<String> includedViews = includedViewPaths(inventory.root(), jsp);
-        for (JspAnalysis.View view : jsp.views()) if (view.kind() != JspAnalysis.ViewKind.JSPF && !includedViews.contains(view.path())) addJspScreen(inventory.root().resolve(view.path()), state);
+        Set<String> tileTemplateViews = tileTemplateViews(jsp);
+        for (JspAnalysis.View view : jsp.views()) if (view.kind() != JspAnalysis.ViewKind.JSPF && !includedViews.contains(view.path())
+                && webPath(view.path()).map(path -> !tileTemplateViews.contains(path)).orElse(true)) addJspScreen(inventory.root().resolve(view.path()), state);
         addJspFragments(jsp, includedViews, state);
         addTilesDefinitions(jsp, state);
         discoverExceptionView(inventory, state);
@@ -371,8 +375,30 @@ public final class SpringMvcAnalyzer {
         }
     }
 
+    private static Set<String> tileTemplateViews(JspAnalysis jsp) {
+        Set<String> result = new TreeSet<>();
+        for (JspAnalysis.TilesDefinition definition : jsp.tilesDefinitions())
+            if (definition.template() != null && !definition.template().isBlank()) result.add(normalizeWebPath(definition.template()));
+        return result;
+    }
+
+    private static String normalizeWebPath(String path) {
+        String normalized = path.replace('\\', '/');
+        while (normalized.startsWith("/")) normalized = normalized.substring(1);
+        return "/" + normalized;
+    }
+
     private static void addTilesDefinitions(JspAnalysis jsp, State state) {
+        Set<String> names = jsp.tilesDefinitions().stream().map(JspAnalysis.TilesDefinition::name).collect(java.util.stream.Collectors.toSet());
+        Set<String> fragments = new HashSet<>();
         for (JspAnalysis.TilesDefinition definition : jsp.tilesDefinitions()) {
+            if (definition.parent() != null && !definition.parent().isBlank()) fragments.add(definition.parent());
+            for (JspAnalysis.TilesAttribute attribute : definition.attributes())
+                if (names.contains(attribute.value())) fragments.add(attribute.value());
+        }
+        for (JspAnalysis.Include include : jsp.includes()) if (names.contains(include.targetPath())) fragments.add(include.targetPath());
+        for (JspAnalysis.TilesDefinition definition : jsp.tilesDefinitions()) {
+            if (fragments.contains(definition.name())) continue;
             String id = ApplicationGraph.id(NodeType.SCREEN, "tiles:" + definition.name());
             addNode(state, new GraphNode(id, NodeType.SCREEN, definition.name(),
                     Map.of("tilesDefinition", "true", "template", definition.template()), definition.source(), Confidence.CONFIRMED));

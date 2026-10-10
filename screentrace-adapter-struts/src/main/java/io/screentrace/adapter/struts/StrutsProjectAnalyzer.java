@@ -115,15 +115,19 @@ public final class StrutsProjectAnalyzer {
         Map<String,String> localForwards=new TreeMap<>();for(Element item:StrutsSources.elements(action,"forward"))localForwards.put(item.getAttribute("name"),item.getAttribute("path"));
         Mapping mapping=new Mapping(route,type,handlerId,formId,action.getAttribute("parameter"),family,forwards,localForwards,forwardSources,input,module,source);
         state.actionMappings.add(mapping);
-        if(state.servletPattern!=null) {
-          String publicPath=publicPath(route,state),endpointId=StableGraphIds.endpoint("ANY",route);
-          var mappings=state.routes.computeIfAbsent(route,key->new ArrayList<>());mappings.add(mapping);state.endpointIds.put(route,endpointId);
-          state.routes.put(publicPath,mappings);state.endpointIds.put(publicPath,endpointId);
-          if(mappings.size()>1) diagnostic(state,"路由重複，保留所有處理器候選："+route,source,"DUPLICATE_ROUTE");
-          Map<String,String> endpointAttrs=new TreeMap<>();endpointAttrs.put("httpMethod","ANY");endpointAttrs.put("path",publicPath);endpointAttrs.put("category","ACTION");endpointAttrs.put("servletMappingStatus","PROVEN");
-          if(!publicPath.equals(route)){endpointAttrs.put("logicalPath",route);endpointAttrs.put("aliases",route);}
-          String proof="servlet mapping 已證明："+state.servletPattern.servletClass()+" → "+state.servletPattern.pattern();
-          addNode(state,endpointId,NodeType.ENDPOINT,"ANY "+publicPath,endpointAttrs,source,status,proof);
+        ServletMappingResolution servletMapping=state.servletMappings.get(module);
+        if(servletMapping!=null&&servletMapping.status()==ServletMappingStatus.PROVEN) {
+          List<String> publicPaths=servletMapping.patterns().stream().map(servletPattern->publicPath(route,servletPattern)).distinct().toList();
+          String primaryPath=publicPaths.get(0),endpointId=StableGraphIds.endpoint("ANY",route);
+          List<String> aliases=new ArrayList<>();aliases.add(route);aliases.addAll(publicPaths);
+          for(String alias:aliases) {
+            List<Mapping> routeMappings=state.routes.computeIfAbsent(alias,key->new ArrayList<>());routeMappings.add(mapping);state.endpointIds.put(alias,endpointId);
+            if(routeMappings.size()>1) diagnostic(state,"路由重複，保留所有處理器候選："+alias,source,"DUPLICATE_ROUTE");
+          }
+          Map<String,String> endpointAttrs=new TreeMap<>();endpointAttrs.put("httpMethod","ANY");endpointAttrs.put("path",primaryPath);endpointAttrs.put("category","ACTION");endpointAttrs.put("servletMappingStatus","PROVEN");
+          if(!primaryPath.equals(route)){endpointAttrs.put("logicalPath",route);endpointAttrs.put("aliases",String.join(",",aliases.stream().filter(alias->!alias.equals(primaryPath)).toList()));}
+          String proof=mappingProof(servletMapping);
+          addNode(state,endpointId,NodeType.ENDPOINT,"ANY "+primaryPath,endpointAttrs,source,Confidence.CONFIRMED,proof);
           edge(state,EdgeType.HANDLED_BY,endpointId,handlerId,status,source,proof);
         } else {
           for(String alias:endpointPaths(route)) {
@@ -153,31 +157,71 @@ public final class StrutsProjectAnalyzer {
   }
 
   private static void readServletMapping(State state) {
-    List<ServletPattern> patterns=new ArrayList<>();boolean sawActionServlet=false;
-    for(Path file:state.inventory.files()) if(file.getFileName().toString().equals("web.xml")) try {
-      String path=relative(state,file);Document document=readXml(file,state);Set<String> actionNames=new TreeSet<>();
+    List<Path> webXmls=state.inventory.files().stream().filter(file->file.getFileName().toString().equals("web.xml")).sorted().toList();
+    Document document=null;String webPath=".";List<ServletDefinition> actionServlets=new ArrayList<>();List<ServletPattern> patterns=new ArrayList<>();
+    if(!webXmls.isEmpty())try {
+      Path file=webXmls.get(0);webPath=relative(state,file);document=readXml(file,state);
       for(Element servlet:StrutsSources.elements(document,"servlet")) {
-        List<Element> names=StrutsSources.elements(servlet,"servlet-name"),classes=StrutsSources.elements(servlet,"servlet-class");
-        if(names.isEmpty()||classes.isEmpty())continue;
-        String type=classes.get(0).getTextContent().trim();
-        if(isActionServlet(type,state,new HashSet<>()))actionNames.add(names.get(0).getTextContent().trim());
+        List<Element> names=StrutsSources.elements(servlet,"servlet-name"),classes=StrutsSources.elements(servlet,"servlet-class");if(names.isEmpty()||classes.isEmpty())continue;
+        String name=names.get(0).getTextContent().trim(),type=classes.get(0).getTextContent().trim();if(!isActionServlet(type,state,new HashSet<>()))continue;
+        Map<String,List<String>> configs=new TreeMap<>();for(Element param:StrutsSources.elements(servlet,"init-param")) {
+          List<Element> keys=StrutsSources.elements(param,"param-name"),values=StrutsSources.elements(param,"param-value");if(keys.isEmpty()||values.isEmpty())continue;
+          String key=keys.get(0).getTextContent().trim();if(key.equals("config")||key.startsWith("config/"))configs.computeIfAbsent(key,value->new ArrayList<>()).addAll(Arrays.stream(values.get(0).getTextContent().split(",")).map(String::trim).filter(value->!value.isBlank()).toList());
+        }
+        actionServlets.add(new ServletDefinition(name,type,StrutsSources.source(webPath,servlet),configs));
       }
-      for(String name:actionNames)sawActionServlet=true;
       for(Element mapping:StrutsSources.elements(document,"servlet-mapping")) {
-        List<Element> names=StrutsSources.elements(mapping,"servlet-name");if(names.isEmpty()||!actionNames.contains(names.get(0).getTextContent().trim()))continue;
+        List<Element> names=StrutsSources.elements(mapping,"servlet-name");if(names.isEmpty())continue;String servletName=names.get(0).getTextContent().trim();
+        ServletDefinition servlet=actionServlets.stream().filter(candidate->candidate.name().equals(servletName)).findFirst().orElse(null);if(servlet==null)continue;
         for(Element pattern:StrutsSources.elements(mapping,"url-pattern")) {
-          String value=pattern.getTextContent().trim();if(value.startsWith("*.")&&value.length()>2||value.startsWith("/")&&value.endsWith("/*"))patterns.add(new ServletPattern(value,StrutsSources.source(path,pattern),servletClass(document,names.get(0).getTextContent().trim())));
+          String value=pattern.getTextContent().trim();if(value.startsWith("*.")&&value.length()>2||value.startsWith("/")&&value.endsWith("/*"))patterns.add(new ServletPattern(value,StrutsSources.source(webPath,pattern),servlet.name(),servlet.servletClass()));
         }
       }
-    } catch(Exception error) {diagnostic(state,"ActionServlet 的 web.xml 設定無法解析",new SourceLocation(relative(state,file),1),"STRUTS_SERVLET_MAPPING_UNRESOLVED");}
-    List<ServletPattern> unique=patterns.stream().collect(java.util.stream.Collectors.toMap(ServletPattern::pattern,value->value,(first,second)->first,TreeMap::new)).values().stream().toList();
-    if(unique.size()==1)state.servletPattern=unique.get(0);
-    else if(unique.size()>1)diagnostic(state,"ActionServlet 有多個 URL mapping，無法唯一判定公開網址；servlet mapping 未證明",unique.get(0).source(),"STRUTS_SERVLET_MAPPING_AMBIGUOUS");
-    if(unique.size()!=1&&!state.inventory.strutsConfigFiles().isEmpty()) {
-      SourceLocation source=state.inventory.files().stream().filter(file->file.getFileName().toString().equals("web.xml")).findFirst().map(file->new SourceLocation(relative(state,file),1)).orElse(new SourceLocation(".",1));
-      String reason=(sawActionServlet?"ActionServlet 沒有唯一可用 servlet-mapping":"找不到可證明的 ActionServlet servlet 宣告與 mapping")+"；servlet mapping 未證明";
-      diagnostic(state,reason,source,"STRUTS_SERVLET_MAPPING_UNRESOLVED");
+    } catch(Exception error) {diagnostic(state,"ActionServlet 的 web.xml 設定無法解析",new SourceLocation(webPath,1),"STRUTS_SERVLET_MAPPING_UNRESOLVED");}
+
+    Map<String,ServletMappingResolution> resolutions=new TreeMap<>();
+    for(Path config:state.inventory.strutsConfigFiles()) {
+      String module=moduleFor(relative(state,config),state);if(resolutions.containsKey(module))continue;
+      SourceLocation diagnosticSource=webXmls.isEmpty()?new SourceLocation(".",1):new SourceLocation(webPath,1);
+      List<ServletDefinition> candidates;
+      if(actionServlets.size()==1)candidates=List.of(actionServlets.get(0));
+      else candidates=actionServlets.stream().filter(servlet->configuresModule(servlet,module,relative(state,config))).toList();
+      if(candidates.size()>1||actionServlets.size()>1&&candidates.isEmpty()) {
+        List<ServletDefinition> listed=candidates.isEmpty()?actionServlets:candidates;
+        String names=listed.stream().map(servlet->servlet.name()+"（"+servlet.source().file()+":"+servlet.source().line()+"）").toList().toString();
+        diagnostic(state,"無法判定 module "+(module.isBlank()?"/":module)+" 由哪個 ActionServlet 處理；候選："+names,diagnosticSource,"STRUTS_SERVLET_MAPPING_AMBIGUOUS");
+        resolutions.put(module,new ServletMappingResolution(ServletMappingStatus.AMBIGUOUS,List.of(),names));continue;
+      }
+      if(candidates.size()!=1) {
+        diagnostic(state,"找不到可證明的 ActionServlet 宣告與 servlet mapping；servlet mapping 未證明",diagnosticSource,"STRUTS_SERVLET_MAPPING_UNRESOLVED");
+        resolutions.put(module,new ServletMappingResolution(ServletMappingStatus.UNRESOLVED,List.of(),"未證明"));continue;
+      }
+      ServletDefinition servlet=candidates.get(0);List<ServletPattern> ownedPatterns=patterns.stream().filter(pattern->pattern.servletName().equals(servlet.name())).distinct().toList();
+      if(ownedPatterns.isEmpty()) {
+        diagnostic(state,"ActionServlet "+servlet.name()+" 沒有 servlet-mapping；servlet mapping 未證明",servlet.source(),"STRUTS_SERVLET_MAPPING_UNRESOLVED");
+        resolutions.put(module,new ServletMappingResolution(ServletMappingStatus.UNRESOLVED,List.of(),servlet.name()));continue;
+      }
+      resolutions.put(module,new ServletMappingResolution(ServletMappingStatus.PROVEN,ownedPatterns,servlet.name()));
     }
+    state.servletMappings.putAll(resolutions);
+  }
+
+  private static boolean configuresModule(ServletDefinition servlet,String module,String configPath) {
+    for(var entry:servlet.configs().entrySet()) {
+      String configuredModule=entry.getKey().equals("config")?"":"/"+entry.getKey().substring("config/".length());
+      if(!configuredModule.equals(module))continue;
+      for(String value:entry.getValue())if(sameConfigPath(value,configPath))return true;
+    }
+    return false;
+  }
+
+  private static boolean sameConfigPath(String configured,String path) {
+    String left=configured.replace('\\','/'),right=path.replace('\\','/');
+    return left.equals(right)||right.endsWith(left.startsWith("/")?left:"/"+left);
+  }
+
+  private static String mappingProof(ServletMappingResolution resolution) {
+    return "servlet mapping 已證明："+resolution.patterns().get(0).servletClass()+" → "+String.join(", ",resolution.patterns().stream().map(ServletPattern::pattern).toList());
   }
 
   private static boolean isActionServlet(String className,State state,Set<String> visited) {
@@ -194,21 +238,27 @@ public final class StrutsProjectAnalyzer {
     return "";
   }
 
-  private static String publicPath(String route,State state) {
-    if(state.servletPattern==null)return route;
-    String pattern=state.servletPattern.pattern();
+  private static String publicPath(String route,String module,State state) {
+    ServletMappingResolution mapping=state.servletMappings.get(module);
+    return mapping==null||mapping.status()!=ServletMappingStatus.PROVEN?route:publicPath(route,mapping.patterns().get(0));
+  }
+
+  private static String publicPath(String route,ServletPattern servletPattern) {
+    String pattern=servletPattern.pattern();
     if(pattern.startsWith("*.")) {String suffix=pattern.substring(1);return route.endsWith(suffix)?route:route+suffix;}
     String prefix=pattern.substring(0,pattern.length()-1);
     return route.startsWith(prefix)?route:prefix+(route.startsWith("/")?route.substring(1):route);
   }
 
-  private static String logicalPath(String path,State state) {
+  private static String logicalPath(String path,String module,State state) {
     if(state.endpointIds.containsKey(path))return state.routes.containsKey(path)?state.routes.get(path).get(0).route():path;
-    if(state.servletPattern==null)return null;
-    String pattern=state.servletPattern.pattern();
-    if(pattern.startsWith("*.")) {String suffix=pattern.substring(1);return path.endsWith(suffix)?path.substring(0,path.length()-suffix.length()):null;}
-    String prefix=pattern.substring(0,pattern.length()-1);
-    return path.startsWith(prefix)?"/"+path.substring(prefix.length()):null;
+    ServletMappingResolution mapping=state.servletMappings.get(module);if(mapping==null||mapping.status()!=ServletMappingStatus.PROVEN)return null;
+    List<String> candidates=new ArrayList<>();for(ServletPattern servletPattern:mapping.patterns()) {
+      String pattern=servletPattern.pattern();
+      if(pattern.startsWith("*.")) {String suffix=pattern.substring(1);if(path.endsWith(suffix))candidates.add(path.substring(0,path.length()-suffix.length()));}
+      else {String prefix=pattern.substring(0,pattern.length()-1);if(path.startsWith(prefix))candidates.add("/"+path.substring(prefix.length()));}
+    }
+    List<String> unique=candidates.stream().distinct().toList();return unique.size()==1?unique.get(0):null;
   }
 
   private static String screenForView(String path,State state,SourceLocation source) {
@@ -242,11 +292,11 @@ public final class StrutsProjectAnalyzer {
         String value=welcome.getTextContent().trim();if(value.isBlank())continue;
         var source=StrutsSources.source(path,welcome);String screenId,route="/";
         if(value.endsWith(".do")||value.contains("/do/")) {
-          String normalized=logicalPath(value,state);List<Mapping> routes=normalized==null?List.of():state.routes.getOrDefault(normalized,List.of());
+          String normalized=logicalPath(value,"",state);List<Mapping> routes=normalized==null?List.of():state.routes.getOrDefault(normalized,List.of());
           if(routes.size()!=1){diagnostic(state,"welcome-file action 路由無法唯一解析："+value,source,"STRUTS_WELCOME_FILE_UNRESOLVED");continue;}
           List<String> targetScreens=resolveMappingScreens(routes.get(0),state,new LinkedHashSet<>(),0,source);
           if(targetScreens.size()!=1){diagnostic(state,"welcome-file action 目的畫面無法唯一解析："+value,source,"STRUTS_WELCOME_FILE_UNRESOLVED");continue;}
-          screenId=targetScreens.get(0);route=publicPath(normalized,state);
+          screenId=targetScreens.get(0);route=publicPath(normalized,routes.get(0).module(),state);
         } else {
           List<String> candidatePaths=new ArrayList<>();if(state.screens.containsKey(value))candidatePaths.add(value);
           for(Path sourceFile:state.inventory.files())if(sourceFile.getFileName().toString().equals(Path.of(value).getFileName().toString())) {String candidate=relative(state,sourceFile);if(candidate.endsWith("/"+value)||candidate.equals(value))candidatePaths.add(candidate);}
@@ -309,7 +359,7 @@ public final class StrutsProjectAnalyzer {
       String screen=ensureTileScreen(target,state);return screen==null?List.of():List.of(screen);
     }
     String direct=screenForView(target,state,source);if(direct!=null)return List.of(direct);
-    String logical=logicalPath(target,state);if(logical==null&&target.startsWith("/")&&!target.startsWith("/WEB-INF/")&&!target.contains(".jsp"))logical=module.isBlank()||target.startsWith(module+"/")?target:module+target;
+    String logical=logicalPath(target,module,state);if(logical==null&&target.startsWith("/")&&!target.startsWith("/WEB-INF/")&&!target.contains(".jsp"))logical=module.isBlank()||target.startsWith(module+"/")?target:module+target;
     if(logical==null)logical=target;
     List<Mapping> mappings=state.routes.getOrDefault(logical,List.of());
     if(mappings.isEmpty())return List.of();
@@ -322,7 +372,7 @@ public final class StrutsProjectAnalyzer {
     List<String> result=new ArrayList<>();
     for(String value:mapping.localForwards().values())result.addAll(resolveForwardScreens(value,mapping.module(),state,visited,depth+1,source));
     if(mapping.input()!=null&&!mapping.input().isBlank())result.addAll(resolveForwardScreens(mapping.input(),mapping.module(),state,visited,depth+1,source));
-    List<String> screens=result.stream().distinct().sorted().toList();String alias=publicPath(mapping.route(),state);
+    List<String> screens=result.stream().distinct().sorted().toList();String alias=publicPath(mapping.route(),mapping.module(),state);
     for(String screen:screens)addScreenRouteAlias(screen,alias,state);
     return screens;
   }
@@ -397,12 +447,13 @@ public final class StrutsProjectAnalyzer {
     if(control.target()==null) return;
     if(!StrutsSources.literal(control.target())) {diagnostic(state,"元件目標運算式未解析："+control.target(),control.source(),"STRUTS_TARGET_UNRESOLVED");unresolvedBehavior(control,state);return;}
     String resolvedTarget=moduleTarget(control,state),path=resolvedTarget.split("[?#]",2)[0];var mappings=state.routes.get(path);
-    if(mappings==null) {String target=state.screens.get(path);if(target!=null) {edge(state,EdgeType.NAVIGATES_TO,control.id(),target,Confidence.CONFIRMED,control.source());return;}String logical=logicalPath(path,state);if(logical!=null)mappings=state.routes.get(logical);}
+    String module=control.attributes().getOrDefault("module",moduleFor(control.source().file(),state));
+    if(mappings==null) {String target=state.screens.get(path);if(target!=null) {edge(state,EdgeType.NAVIGATES_TO,control.id(),target,Confidence.CONFIRMED,control.source());return;}String logical=logicalPath(path,module,state);if(logical!=null)mappings=state.routes.get(logical);}
     if(mappings==null) {
       if(path.endsWith(".do")||path.contains("/do/")){String endpoint=unmappedLiteralEndpoint(path,control,state);edge(state,EdgeType.TRIGGERS,control.id(),endpoint,Confidence.UNRESOLVED,control.source());unresolvedBehavior(control,state);return;}
       diagnostic(state,"元件路由未解析："+path,control.source(),"STRUTS_ROUTE_UNRESOLVED");unresolvedBehavior(control,state);return;
     }
-    String endpoint=state.endpointIds.getOrDefault(path,state.endpointIds.getOrDefault(publicPath(mappings.get(0).route(),state),StableGraphIds.endpoint("ANY",mappings.get(0).route())));Confidence status=mappings.size()==1?state.nodes.get(endpoint).confidence():Confidence.AMBIGUOUS;
+    String endpoint=state.endpointIds.getOrDefault(path,state.endpointIds.getOrDefault(publicPath(mappings.get(0).route(),mappings.get(0).module(),state),StableGraphIds.endpoint("ANY",mappings.get(0).route())));Confidence status=mappings.size()==1?state.nodes.get(endpoint).confidence():Confidence.AMBIGUOUS;
     if(mappings.size()==1) {
       Mapping mapping=mappings.get(0);
       if(mapping.formId()!=null) edge(state,EdgeType.BINDS_TO,control.id(),mapping.formId(),Confidence.CONFIRMED,control.source());
@@ -432,7 +483,7 @@ public final class StrutsProjectAnalyzer {
     edge(state,EdgeType.TRIGGERS,control.id(),endpoint,status,control.source());
     BehaviorType type="LINK".equals(control.attributes().get("kind"))?BehaviorType.NAVIGATE:BehaviorType.SUBMIT_FORM;
     String id=StableGraphIds.behavior(control.id(),"FORM".equals(control.attributes().get("kind"))?"submit":"click",type,control.target(),0);
-    String detail=state.servletPattern==null?null:"servlet mapping 已證明："+state.servletPattern.servletClass()+" → "+state.servletPattern.pattern();
+    ServletMappingResolution resolution=state.servletMappings.get(module);String detail=resolution!=null&&resolution.status()==ServletMappingStatus.PROVEN?mappingProof(resolution):null;
     state.behaviors.putIfAbsent(id,new Behavior(id,control.id(),"FORM".equals(control.attributes().get("kind"))?"submit":"click",type,endpoint,null,null,control.target(),evidence(control.source(),status,detail)));
   }
   private static String moduleTarget(Control control,State state) {
@@ -751,7 +802,10 @@ public final class StrutsProjectAnalyzer {
   private static void diagnostic(State state,String message,SourceLocation source,String code) {state.diagnostics.add(new Diagnostic(message,Confidence.UNRESOLVED,source,code,evidence(source,Confidence.UNRESOLVED,null)));}
   private record Mapping(String route,String type,String handlerId,String formId,String parameter,String family,Map<String,String> forwards,Map<String,String> localForwards,Map<String,SourceLocation> forwardSources,String input,String module,SourceLocation source) { }
   private record PendingForward(String ownerId,String module,String target,SourceLocation source) { }
-  private record ServletPattern(String pattern,SourceLocation source,String servletClass) { }
+  private enum ServletMappingStatus { PROVEN, AMBIGUOUS, UNRESOLVED }
+  private record ServletDefinition(String name,String servletClass,SourceLocation source,Map<String,List<String>> configs) { }
+  private record ServletMappingResolution(ServletMappingStatus status,List<ServletPattern> patterns,String owner) { }
+  private record ServletPattern(String pattern,SourceLocation source,String servletName,String servletClass) { }
   private record Control(String id,String label,Map<String,String> attributes,String target,SourceLocation source,String field,String value,String formGroup) { }
   private record Tile(String name,String template,String parent,Map<String,String> puts,SourceLocation source) { }
   private static final class State {
@@ -763,7 +817,7 @@ public final class StrutsProjectAnalyzer {
     final Map<String,Tile> tiles=new TreeMap<>();final Map<String,Set<String>> tileFragmentOwners=new TreeMap<>();
     final Set<String> tilePageDefinitions=new TreeSet<>(),tileStandaloneDefinitions=new TreeSet<>(),tilePageJspPaths=new TreeSet<>();
     final Map<String,Set<String>> tilePageOwners=new TreeMap<>();
-    final Map<String,List<Mapping>> routes=new TreeMap<>();final Map<String,String> endpointIds=new TreeMap<>(),globalForwards=new TreeMap<>();final Map<String,Boolean> inputForward=new TreeMap<>();final List<Mapping> actionMappings=new ArrayList<>();final List<PendingForward> pendingForwards=new ArrayList<>();ServletPattern servletPattern;
+    final Map<String,List<Mapping>> routes=new TreeMap<>();final Map<String,String> endpointIds=new TreeMap<>(),globalForwards=new TreeMap<>();final Map<String,Boolean> inputForward=new TreeMap<>();final List<Mapping> actionMappings=new ArrayList<>();final List<PendingForward> pendingForwards=new ArrayList<>();final Map<String,ServletMappingResolution> servletMappings=new TreeMap<>();
     final Map<String,StrutsSources.JavaType> types=new TreeMap<>();final Map<String,Set<String>> messages=new TreeMap<>();
     State(ProjectInventory inventory) {this.inventory=new ProjectInventory(inventory.root(),inventory.files().stream().sorted().toList(),inventory.technologies().stream().sorted().toList(),inventory.diagnostics().stream().sorted().toList(),inventory.contextPaths(),inventory.contextSettingsFile(),inventory.contextSettingsLine());}
     ApplicationGraph graph() {return new ApplicationGraph(new Application(inventory.root().getFileName().toString(),inventory.root().toString(),inventory.technologies()),List.copyOf(nodes.values()),List.copyOf(edges.values()),diagnostics,List.of(),ApplicationGraph.BEHAVIOR_SCHEMA_VERSION,List.copyOf(behaviors.values()),List.copyOf(rules.values()));}

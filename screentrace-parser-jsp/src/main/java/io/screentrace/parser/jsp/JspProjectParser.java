@@ -332,12 +332,16 @@ public final class JspProjectParser {
       for (int index = 0; index < nodes.getLength(); index++) {
         Element definition = (Element) nodes.item(index);
         List<JspAnalysis.TilesAttribute> attributes = new ArrayList<>();
-        NodeList attributeNodes = definition.getElementsByTagName("put-attribute");
-        for (int attributeIndex = 0; attributeIndex < attributeNodes.getLength(); attributeIndex++) {
-          Element attribute = (Element) attributeNodes.item(attributeIndex);
-          attributes.add(new JspAnalysis.TilesAttribute(attribute.getAttribute("name"), attribute.getAttribute("value")));
+        for (String putTag : List.of("put", "put-attribute")) {
+          NodeList attributeNodes = definition.getElementsByTagName(putTag);
+          for (int attributeIndex = 0; attributeIndex < attributeNodes.getLength(); attributeIndex++) {
+            Element attribute = (Element) attributeNodes.item(attributeIndex);
+            attributes.add(new JspAnalysis.TilesAttribute(attribute.getAttribute("name"), attribute.getAttribute("value")));
+          }
         }
-        definitions.add(new JspAnalysis.TilesDefinition(definition.getAttribute("name"), definition.getAttribute("template"),
+        String template = definition.getAttribute("template");
+        if (template.isBlank()) template = definition.getAttribute("path");
+        definitions.add(new JspAnalysis.TilesDefinition(definition.getAttribute("name"), template,
             attributes, new SourceLocation(relative, index<sourceTags.size()?sourceTags.get(index).line():1),definition.getAttribute("extends")));
       }
     } catch (Exception exception) {
