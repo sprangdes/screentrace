@@ -6,6 +6,15 @@ import java.nio.file.*;
 import java.util.*;
 import org.junit.jupiter.api.Test;
 class TilesMarkupTest {
+  @Test void definitionPathIsRetainedAsItsTemplatePath() throws Exception {
+    Path root=Files.createTempDirectory("tiles-path-template"),config=root.resolve("tiles.xml");
+    Files.writeString(config,"<tiles-definitions><definition name='layout' path='/WEB-INF/layout.jsp'><put name='body' value='/WEB-INF/page.jsp'/></definition></tiles-definitions>");
+    var jsp=new JspProjectParser().analyze(root,List.of(config));
+    var layout=jsp.tilesDefinitions().stream().filter(definition->definition.name().equals("layout")).findFirst().orElseThrow();
+    assertEquals("/WEB-INF/layout.jsp",layout.template());
+    assertEquals(List.of(new JspAnalysis.TilesAttribute("body","/WEB-INF/page.jsp")),layout.attributes());
+  }
+
   @Test void expandsExtendsNestedDefinitionsAndInsertPutWithActualDefinitionLines() throws Exception {
     Path root=Files.createTempDirectory("tiles-markup");Path config=root.resolve("tiles.xml"),layout=root.resolve("layout.jsp"),body=root.resolve("body.jsp"),page=root.resolve("page.jsp");
     Files.writeString(config,"<tiles-definitions>\n<definition name='base' template='/layout.jsp'/>\n<definition name='child' extends='base'><put-attribute name='body' value='nested'/></definition>\n<definition name='nested' template='/body.jsp'/>\n</tiles-definitions>");

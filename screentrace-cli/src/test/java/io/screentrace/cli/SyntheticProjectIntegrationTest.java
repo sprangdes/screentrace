@@ -83,6 +83,7 @@ class SyntheticProjectIntegrationTest {
                     assertArrayEquals(Files.readAllBytes(first.resolve(artifact)), Files.readAllBytes(second.resolve(artifact)), family+":"+artifact);
                 var graph = json.readValue(first.resolve("application-graph.json").toFile(), ApplicationGraph.class);
                 GraphIntegrityValidator.requireAnalysis(graph);
+                if (family.equals("struts1-spring")) assertR16ScreenAndBehaviorSourcesRemainRepresented(graph);
                 assertTrue(graph.nodes().stream().anyMatch(n -> n.type() == ApplicationGraph.NodeType.SCREEN), family);
                 assertTrue(graph.nodes().stream().anyMatch(n -> n.type() == ApplicationGraph.NodeType.COMPONENT && "BUTTON".equals(n.attributes().get("kind"))), family);
                 assertTrue(graph.behaviors().stream().anyMatch(b -> b.type() == ApplicationGraph.BehaviorType.CALL_API), family);
@@ -128,6 +129,43 @@ class SyntheticProjectIntegrationTest {
             assertFalse(Files.exists(rejected.resolve("application-graph.json")));
             assertFalse(Files.exists(rejected.resolve("report/screentrace-report.html")));
         } finally { System.setProperty("user.home", oldHome); }
+    }
+
+    private void assertR16ScreenAndBehaviorSourcesRemainRepresented(ApplicationGraph graph) throws Exception {
+        Set<String> beforeScreens = resourceLines("/wp10-struts1-spring-r16-before-screens.tsv");
+        Set<String> screenSources = new TreeSet<>();
+        graph.nodes().stream().filter(node -> node.type() == ApplicationGraph.NodeType.SCREEN)
+            .forEach(node -> screenSources.add(node.name()+"\t"+node.source().file()+"\t"+node.source().line()));
+        for (String row : beforeScreens) {
+            String[] fields = row.split("\\t", -1);
+            String screen = fields[0], file = fields[1], line = fields[2], disposition = fields[3];
+            if (disposition.equals("RETAIN_PAGE") || disposition.equals("UNROUTED_PAGE_DEFINITION")) {
+                assertTrue(screenSources.contains(screen+"\t"+file+"\t"+line), "R16 removed a non-template screen: "+row);
+            } else if (disposition.equals("PAGE_ROUTE_ALIAS")) {
+                assertTrue(graph.nodes().stream().anyMatch(node -> file.equals(node.source().file()) && line.equals(Integer.toString(node.source().line()))),
+                    "R16 removed the screen route source: "+row);
+            } else {
+                assertTrue(disposition.equals("TILE_DEFINITION_FRAGMENT") || disposition.equals("TEMPLATE_JSP"), row);
+                assertFalse(screenSources.contains(screen+"\t"+file+"\t"+line), "Tiles template must not be duplicated as a screen: "+row);
+            }
+        }
+
+        Set<String> beforeBehaviors = resourceLines("/wp10-struts1-spring-r16-before-behavior-sources.tsv");
+        Set<String> behaviorSources = new TreeSet<>();
+        for (var behavior : graph.behaviors()) for (var proof : behavior.evidence())
+            if (proof.source() != null && !proof.source().file().equals("."))
+                behaviorSources.add(proof.source().file()+"\t"+proof.source().line()+"\t"+behavior.type().name());
+        Set<String> missing = new TreeSet<>(beforeBehaviors);
+        missing.removeAll(behaviorSources);
+        assertTrue(missing.isEmpty(), "R16 removed behavior source tuples: "+missing);
+    }
+
+    private Set<String> resourceLines(String name) throws Exception {
+        try (var input = getClass().getResourceAsStream(name)) {
+            assertNotNull(input, name);
+            return new TreeSet<>(new String(input.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8)
+                .lines().filter(line -> !line.isBlank()).toList());
+        }
     }
 
     @Test void sameSourceRetainsUnspecifiedContextAndEveryConflictingContextCandidate() throws Exception {

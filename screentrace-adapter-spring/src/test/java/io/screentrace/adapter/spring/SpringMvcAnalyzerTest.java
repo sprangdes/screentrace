@@ -6,6 +6,7 @@ import io.screentrace.core.ApplicationGraph;
 import io.screentrace.scanner.ProjectScanner;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Set;
 import org.junit.jupiter.api.Test;
 
 class SpringMvcAnalyzerTest {
@@ -110,6 +111,35 @@ class SpringMvcAnalyzerTest {
         assertTrue(graph.relationships().stream().filter(edge -> edge.type() == ApplicationGraph.EdgeType.RENDERS)
                 .allMatch(edge -> edge.confidence() == ApplicationGraph.Confidence.CONFIRMED));
         assertTrue(graph.relationships().stream().anyMatch(edge -> edge.type() == ApplicationGraph.EdgeType.TRIGGERS));
+    }
+
+    @Test
+    void classifiesTilesTemplatesAndFragmentsWithoutAddingThemAsScreens() throws Exception {
+        Path root = Files.createTempDirectory("st-mvc-tiles-boundary");
+        Path tiles = root.resolve("src/main/webapp/WEB-INF/tiles.xml");
+        Files.createDirectories(tiles.getParent());
+        Files.writeString(root.resolve("pom.xml"), "<project><dependency><artifactId>spring-webmvc</artifactId></dependency></project>");
+        Files.writeString(tiles, """
+            <tiles-definitions>
+              <definition name="base" path="/WEB-INF/layout.jsp"><put name="body" value="/WEB-INF/home.jsp"/></definition>
+              <definition name="child" extends="base"/>
+              <definition name="fragment" path="/WEB-INF/fragment.jsp"/>
+              <definition name="home.page" extends="base"><put-attribute name="extra" value="fragment"/></definition>
+              <definition name="orphan.page" path="/WEB-INF/orphan.jsp"/>
+            </tiles-definitions>
+            """);
+        Files.writeString(root.resolve("src/main/webapp/WEB-INF/layout.jsp"), "<tiles:insert attribute=\"body\"/>");
+        Files.writeString(root.resolve("src/main/webapp/WEB-INF/home.jsp"), "<h1>Home</h1>");
+        Files.writeString(root.resolve("src/main/webapp/WEB-INF/fragment.jsp"), "<p>Fragment</p>");
+        Files.writeString(root.resolve("src/main/webapp/WEB-INF/orphan.jsp"), "<p>Orphan</p>");
+
+        ApplicationGraph graph = new SpringMvcAnalyzer().analyze(new ProjectScanner().scan(root));
+        Set<String> screens = graph.nodes().stream().filter(node -> node.type() == ApplicationGraph.NodeType.SCREEN)
+            .map(ApplicationGraph.GraphNode::name).collect(java.util.stream.Collectors.toSet());
+        assertTrue(screens.containsAll(Set.of("home.page", "orphan.page")), screens.toString());
+        assertTrue(java.util.Collections.disjoint(screens, Set.of("base", "child", "fragment")), screens.toString());
+        assertTrue(graph.nodes().stream().noneMatch(node -> node.type() == ApplicationGraph.NodeType.SCREEN
+            && node.attributes().getOrDefault("view", "").endsWith("layout.jsp")), screens.toString());
     }
 
     @Test
