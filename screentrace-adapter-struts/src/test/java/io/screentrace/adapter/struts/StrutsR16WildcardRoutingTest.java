@@ -26,7 +26,8 @@ class StrutsR16WildcardRoutingTest {
       var graph=analyze();var endpoint=graph.nodes().stream().filter(n->n.type()==NodeType.ENDPOINT&&"/View/**.do".equals(n.attributes().get("path"))).findFirst().orElseThrow();
       assertEquals(2,graph.relationships().stream().filter(e->e.type()==EdgeType.TRIGGERS&&e.to().equals(endpoint.id())).count());
       assertTrue(endpoint.attributes().getOrDefault("matchedPaths","").contains("/View/admin/item.do"));assertTrue(endpoint.attributes().getOrDefault("matchedPaths","").contains("/View/shop/list.do"));
-      assertTrue(graph.relationships().stream().anyMatch(e->e.type()==EdgeType.FORWARDS_TO&&graph.nodes().stream().anyMatch(n->n.id().equals(e.to())&&n.attributes().getOrDefault("view","").endsWith("pages/admin/item.jsp"))));
+      assertTrue(graph.nodes().stream().anyMatch(n->n.type()==NodeType.SCREEN&&n.attributes().getOrDefault("view","").endsWith("pages/admin/item.jsp")&&n.attributes().getOrDefault("routeAliases","").contains("/View/admin/item.do")),graph.nodes()+"\n"+graph.relationships()+"\n"+graph.diagnostics());
+      assertFalse(graph.diagnostics().stream().anyMatch(d->d.code().equals("STRUTS_FORWARD_UNRESOLVED")),graph.diagnostics().toString());
     });
   }
 

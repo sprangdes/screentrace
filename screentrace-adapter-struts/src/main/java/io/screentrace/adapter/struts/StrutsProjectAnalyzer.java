@@ -165,8 +165,8 @@ public final class StrutsProjectAnalyzer {
             edge(state,EdgeType.HANDLED_BY,endpointId,handlerId,routeStatus,source);
           }
         }
-        for(var entry:forwardSources.entrySet())state.pendingForwards.add(new PendingForward(handlerId,module,forwards.get(entry.getKey()),entry.getValue()));
-        if(!input.isBlank())state.pendingForwards.add(new PendingForward(handlerId,module,input,source));
+        for(var entry:forwardSources.entrySet())if(!hasWildcardSubstitution(route,forwards.get(entry.getKey())))state.pendingForwards.add(new PendingForward(handlerId,module,forwards.get(entry.getKey()),entry.getValue()));
+        if(!input.isBlank()&&!hasWildcardSubstitution(route,input))state.pendingForwards.add(new PendingForward(handlerId,module,input,source));
       }
     } catch(Exception error) {diagnostic(state,"Struts 設定無法解析："+error.getMessage(),new SourceLocation(path,1),"STRUTS_CONFIG_UNRESOLVED");}
   }
@@ -496,16 +496,17 @@ public final class StrutsProjectAnalyzer {
     if("SUBMIT".equals(control.attributes().get("kind"))&&control.attributes().get("formaction")==null&&control.formGroup()!=null)return;
     if(contextual.target()==null) return;
     if(!StrutsSources.literal(contextual.target())) {diagnostic(state,"元件目標運算式未解析："+contextual.target(),contextual.source(),"STRUTS_TARGET_UNRESOLVED");unresolvedBehavior(contextual,state);return;}
-    String resolvedTarget=moduleTarget(contextual,state),path=resolvedTarget.split("[?#]",2)[0];var mappings=state.routes.get(path);
+    String resolvedTarget=moduleTarget(contextual,state),path=resolvedTarget.split("[?#]",2)[0];var mappings=state.routes.get(path);WildcardMatch wildcardMatch=null;
     String module=contextual.attributes().getOrDefault("module",moduleContext==null?moduleFor(contextual.source().file(),state):moduleContext);
-    if(mappings==null) {String target=state.screens.get(path);if(target!=null) {edge(state,EdgeType.NAVIGATES_TO,control.id(),target,Confidence.CONFIRMED,control.source());return;}String logical=logicalPath(path,module,state);if(logical!=null)mappings=state.routes.get(logical);}
+    if(mappings==null) {String target=state.screens.get(path);if(target!=null) {edge(state,EdgeType.NAVIGATES_TO,control.id(),target,Confidence.CONFIRMED,control.source());return;}String logical=logicalPath(path,module,state);if(logical!=null)mappings=state.routes.get(logical);if(mappings==null){String concrete=logical==null?path:logical;wildcardMatch=firstWildcardMatch(concrete,module,state);if(wildcardMatch!=null)mappings=List.of(wildcardMatch.mapping());}}
     if(mappings==null) {
       if(path.endsWith(".do")||path.contains("/do/")){String endpoint=unmappedLiteralEndpoint(path,control,state);edge(state,EdgeType.TRIGGERS,control.id(),endpoint,Confidence.UNRESOLVED,control.source());unresolvedBehavior(control,state);return;}
       diagnostic(state,"元件路由未解析："+path,control.source(),"STRUTS_ROUTE_UNRESOLVED");unresolvedBehavior(control,state);return;
     }
     String endpoint=state.endpointIds.getOrDefault(path,state.endpointIds.getOrDefault(publicPath(mappings.get(0).route(),mappings.get(0).module(),state),StableGraphIds.endpoint("ANY",mappings.get(0).route())));Confidence status=mappings.size()==1?state.nodes.get(endpoint).confidence():Confidence.AMBIGUOUS;
+    if(wildcardMatch!=null){Mapping selected=wildcardMatch.mapping();endpoint=state.endpointIds.getOrDefault(selected.route(),StableGraphIds.endpoint("ANY",publicPath(selected.route(),selected.module(),state)));recordWildcardMatch(endpoint,path,wildcardMatch,state,control.source());status=state.nodes.get(endpoint)==null?Confidence.INFERRED:state.nodes.get(endpoint).confidence();}
     if(mappings.size()==1) {
-      Mapping mapping=mappings.get(0);
+      Mapping mapping=wildcardMatch==null?mappings.get(0):substituteWildcardValues(mappings.get(0),wildcardMatch);
       if(mapping.formId()!=null) edge(state,EdgeType.BINDS_TO,control.id(),mapping.formId(),Confidence.CONFIRMED,control.source());
       if(!mapping.family().isBlank()) {
         // A dispatch method adds a more specific endpoint below, but the public
@@ -557,6 +558,39 @@ public final class StrutsProjectAnalyzer {
     if(raw==null||!StrutsSources.literal(raw))return raw;String path=raw.split("[?#]",2)[0];if(path.isBlank())return path;if(!path.startsWith("/"))path="/"+path;
     if(module!=null&&!module.isBlank()&&!path.equals(module)&&!path.startsWith(module+"/"))path=module+path;
     return path;
+  }
+  private static WildcardMatch firstWildcardMatch(String path,String module,State state) {
+    for(Mapping mapping:state.actionMappings) {
+      if(!mapping.module().equals(Objects.toString(module,"")))continue;
+      WildcardMatch match=wildcardMatch(mapping.route(),path,mapping);
+      if(match!=null)return match;
+    }
+    return null;
+  }
+  private static boolean hasWildcardSubstitution(String route,String value) {return route!=null&&route.contains("*")&&value!=null&&java.util.regex.Pattern.compile("\\{[0-9]\\}").matcher(value).find();}
+  private static WildcardMatch wildcardMatch(String pattern,String path,Mapping mapping) {
+    StringBuilder regex=new StringBuilder("^");int captures=0;
+    for(int i=0;i<pattern.length();i++) {
+      char c=pattern.charAt(i);
+      if(c=='\\'&&i+1<pattern.length()){regex.append(java.util.regex.Pattern.quote(String.valueOf(pattern.charAt(++i))));continue;}
+      if(c=='*') {
+        boolean recursive=i+1<pattern.length()&&pattern.charAt(i+1)=='*';if(recursive)i++;
+        regex.append(recursive?"(.*)":"([^/]*)");captures++;continue;
+      }
+      regex.append(java.util.regex.Pattern.quote(String.valueOf(c)));
+    }
+    regex.append("$");var matcher=java.util.regex.Pattern.compile(regex.toString()).matcher(path);if(!matcher.matches())return null;
+    List<String> values=new ArrayList<>();for(int group=1;group<=captures;group++)values.add(matcher.group(group));
+    return new WildcardMatch(mapping,path,List.copyOf(values));
+  }
+  private static Mapping substituteWildcardValues(Mapping mapping,WildcardMatch match) {
+    List<String> captures=match.captures();java.util.function.Function<String,String> substitute=value->{if(value==null)return null;var matcher=java.util.regex.Pattern.compile("\\{([0-9])\\}").matcher(value);StringBuffer result=new StringBuffer();while(matcher.find()){int index=Integer.parseInt(matcher.group(1));String replacement=index==0?match.path():index<=captures.size()?captures.get(index-1):matcher.group();matcher.appendReplacement(result,java.util.regex.Matcher.quoteReplacement(replacement));}matcher.appendTail(result);return result.toString();};
+    Map<String,String> forwards=new TreeMap<>(),local=new TreeMap<>();mapping.forwards().forEach((key,value)->forwards.put(key,substitute.apply(value)));mapping.localForwards().forEach((key,value)->local.put(key,substitute.apply(value)));
+    return new Mapping(mapping.route(),substitute.apply(mapping.type()),mapping.handlerId(),mapping.formId(),substitute.apply(mapping.parameter()),mapping.family(),forwards,local,mapping.forwardSources(),substitute.apply(mapping.input()),mapping.module(),mapping.source());
+  }
+  private static void recordWildcardMatch(String endpoint,String path,WildcardMatch match,State state,SourceLocation source) {
+    GraphNode old=state.nodes.get(endpoint);if(old==null)return;Map<String,String> attributes=new TreeMap<>(old.attributes());Set<String> paths=new TreeSet<>();String previous=attributes.get("matchedPaths");if(previous!=null&&!previous.isBlank())paths.addAll(Arrays.asList(previous.split("\\u001f")));paths.add(path);attributes.put("matchedPaths",String.join("\u001f",paths));
+    List<AnalysisEvidence> proof=new ArrayList<>(old.evidence());proof.add(new AnalysisEvidence(source,PARSER,old.confidence().resolutionStatus(),"Struts 萬用字元="+match.mapping().route()+"；實際比對路徑="+path));state.nodes.put(endpoint,new GraphNode(old.id(),old.type(),old.name(),attributes,old.source(),old.confidence(),proof.stream().distinct().sorted().toList()));
   }
   private static String resolveRelativeJspUrl(String jspPath,String raw) {
     if(raw==null||!StrutsSources.literal(raw))return raw;String suffix="";int boundary=raw.length();int query=raw.indexOf('?'),fragment=raw.indexOf('#');if(query>=0)boundary=Math.min(boundary,query);if(fragment>=0)boundary=Math.min(boundary,fragment);suffix=raw.substring(boundary);String path=raw.substring(0,boundary);if(path.isBlank())return raw;
@@ -864,6 +898,7 @@ public final class StrutsProjectAnalyzer {
   }
   private static void diagnostic(State state,String message,SourceLocation source,String code) {state.diagnostics.add(new Diagnostic(message,Confidence.UNRESOLVED,source,code,evidence(source,Confidence.UNRESOLVED,null)));}
   private record Mapping(String route,String type,String handlerId,String formId,String parameter,String family,Map<String,String> forwards,Map<String,String> localForwards,Map<String,SourceLocation> forwardSources,String input,String module,SourceLocation source) { }
+  private record WildcardMatch(Mapping mapping,String path,List<String> captures) { }
   private record PendingForward(String ownerId,String module,String target,SourceLocation source) { }
   private enum ServletMappingStatus { PROVEN, AMBIGUOUS, UNRESOLVED }
   private record ServletDefinition(String name,String servletClass,SourceLocation source,Map<String,List<String>> configs) { }
