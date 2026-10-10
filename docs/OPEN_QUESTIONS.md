@@ -330,3 +330,4 @@
   1. `scripting-mailreader` 的 `/Delete*` 依證據維持「找不到呼叫來源」；報告寫明實際刪除流程由 `/EditSubscription?task=Delete`（命中 `/Edit*`）與 `/SaveSubscription.do` 承載。§6 驗收中「scripting-mailreader 的 `/Delete*` 為使用中」一句撤回；mailreader 的 `/Delete*` 驗收不變。
   2. 轉義的 HTML 文字（`&lt;`、`&gt;` 內、`<pre>`／`<code>` 內）不是呼叫來源，納入稽核規則與測試。
   3. 授權新增並實作：`<html:img action=…>`（以及 `html:image`、`html:rewrite` 等產生 action URL 的 tag）作為畫面載入時的呼叫來源（R-API-1(a)）；`<jsp:forward page=…>`、`<jsp:include page=…>` 指向 action 時作為呼叫來源（常值為 `STATIC_URL`）。先提交失敗測試；因此改變的 Struts 數量欄位依 OQ-031 處理。
+  4. 已完成：OQ-033 所列決定落地；三個新增測試先於實作提交。Struts parser 現將安全的 page-load action URL 建成畫面 `CALLS` 關係，並略過 escaped、`pre`、`code` 中的示例標記；view include 不會因 wildcard 被誤認為 action。八模組實測與驗證見 `docs/reports/R16.md`、ADR 0077。WP54 仍待需求方驗收。

@@ -26,7 +26,7 @@
 | R13 | WP43：畫面切換動畫 | 已驗收（2026-10-09，隨 R14 實測確認）；轉場仍保留舊預覽至新 iframe 載入、支援 reduced motion 與快速切換。證據：`wp43-transition.e2e.mjs` 中 `WP43 in-screen navigation keeps the old preview until the next iframe loads…`、`WP43 rapid navigation cancels pending switches…`；見 reports/R13.md。 |
 | R14 | WP44–WP50：功能盤點工作台（分析誤判修正、盤點首頁、逐頁確認、決策原因與備註、按鈕合併、地圖泳道、API 與交付清單） | WP44–WP50、§11.1 與 §12 抽查補正完成，R14 結案。最終 §5 驗證：305 Java（304 通過、1 跳過）、118 viewer、45 JS、43 capture、168 預設並行 E2E 全綠。§12 提交 `d090315`、`03db57b`、`cdb2353`、`b60683a`，先補失敗測試再修正；API basis 區分完整常值與動態串接，REDIRECT 類別顯示「轉址」。eMusicStore 實測：無 context path 為 1／1／5／0，有 `/eMusicStore` 為 2／4／1／0（使用中／推定使用中／找不到呼叫來源／可移除）。詳見 reports/R14.md、ADR 0067／0069／0070／0071。 |
 | R15 | WP51–WP53：API 轉址標示收尾、ROADMAP 狀態整理、Struts 1 官方範例唯讀實測稽核 | 已驗收（2026-10-09）；WP53 稽核發現 Struts 1 系統性誤判，OQ-024–026 已決定，修正於 R16。見 reports/R15.md、ADR 0072。 |
-| R16 | WP54–WP59：Struts URL 別名與 forward 正規化、Tiles 畫面界線、Validator／DispatchAction、訊息資源、JSF 標示、重新稽核 | WP55 通過；WP54 依 OQ-032 套用 Struts 1.3.x wildcard 最後匹配與版本證據。8 個官方模組已重跑，eMusicStore／PetClinic graph SHA-256 不變。剩餘 source audit 發現 OQ-033（scripting-mailreader 的 `/Delete*` 驗收與實際 route 不符，另有 image action／JSP forward 未建模）；WP54 仍待決，不進入 WP56。見 [reports/R16.md](reports/R16.md)、ADR 0076。 |
+| R16 | WP54–WP59：Struts URL 別名與 forward 正規化、Tiles 畫面界線、Validator／DispatchAction、訊息資源、JSF 標示、重新稽核 | WP55 通過；WP54 已完成 OQ-033 補正並待需求方重新驗收，未進入 WP56。八個官方模組實測更新 `html:img` 與 JSP forward/include 的頁面載入 caller，escaped／pre／code 範例排除；eMusicStore／PetClinic graph SHA-256 不變。完整驗證 352 Java（351 通過、1 跳過）、120 viewer、45 JS、43 capture、172 預設並行 E2E 全綠。見 [reports/R16.md](reports/R16.md)、ADR 0074–0077。 |
 
 | 里程碑 | 工作包 | 狀態 |
 |---|---|---|
