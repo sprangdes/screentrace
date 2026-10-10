@@ -36,6 +36,8 @@ public final class StrutsProjectAnalyzer {
     readWelcomeFiles(state);
     materializeTileScreens(state);
     addInteractions(jsp,state);
+    inheritActionCallers(state);
+    markInheritedActionTemplates(state);
     parseValidation(state);
     parseActionForms(state);
     ApplicationGraph enriched=GraphIntegrityValidator.requireAnalysis(io.screentrace.parser.jsp.UrlGraphContribution.enrich(JavaScriptGraphContribution.enrich(MarkupGraphContribution.enrich(ActionContracts.enrich(state.graph(),inventory),jsp),inventory),inventory));
@@ -366,7 +368,7 @@ public final class StrutsProjectAnalyzer {
       if(call.getArgument(0).isStringLiteralExpr()) {
         String target=mapping.forwards().get(call.getArgument(0).asStringLiteralExpr().asString());
         if(target==null) diagnostic(state,"找不到指定 forward："+call.getArgument(0),source,"STRUTS_FORWARD_UNRESOLVED");
-        else forward(target,mapping.handlerId(),mapping.module(),source,state);
+        else {state.actionForwardTargets.computeIfAbsent(mapping.handlerId(),ignored->new ArrayList<>()).add(new PendingForward(mapping.handlerId(),mapping.module(),target,source));forward(target,mapping.handlerId(),mapping.module(),source,state);}
       } else diagnostic(state,"forward 運算式無法靜態解析："+call.getArgument(0),source,"STRUTS_FORWARD_EXPRESSION");
     }
   }
@@ -506,7 +508,7 @@ public final class StrutsProjectAnalyzer {
     String endpoint=state.endpointIds.getOrDefault(path,state.endpointIds.getOrDefault(publicPath(mappings.get(0).route(),mappings.get(0).module(),state),StableGraphIds.endpoint("ANY",mappings.get(0).route())));Confidence status=mappings.size()==1?state.nodes.get(endpoint).confidence():Confidence.AMBIGUOUS;
     if(wildcardMatch!=null){Mapping selected=wildcardMatch.mapping();endpoint=state.endpointIds.getOrDefault(selected.route(),StableGraphIds.endpoint("ANY",publicPath(selected.route(),selected.module(),state)));recordWildcardMatch(endpoint,path,wildcardMatch,state,control.source());status=state.nodes.get(endpoint)==null?Confidence.INFERRED:state.nodes.get(endpoint).confidence();}
     if(mappings.size()==1) {
-      Mapping mapping=wildcardMatch==null?mappings.get(0):substituteWildcardValues(mappings.get(0),wildcardMatch);
+      Mapping mapping=wildcardMatch==null?mappings.get(0):wildcardMappingForCaller(mappings.get(0),wildcardMatch,endpoint,state);
       if(mapping.formId()!=null) edge(state,EdgeType.BINDS_TO,control.id(),mapping.formId(),Confidence.CONFIRMED,control.source());
       if(!mapping.family().isBlank()) {
         // A dispatch method adds a more specific endpoint below, but the public
@@ -589,8 +591,79 @@ public final class StrutsProjectAnalyzer {
     return new Mapping(mapping.route(),substitute.apply(mapping.type()),mapping.handlerId(),mapping.formId(),substitute.apply(mapping.parameter()),mapping.family(),forwards,local,mapping.forwardSources(),substitute.apply(mapping.input()),mapping.module(),mapping.source());
   }
   private static void recordWildcardMatch(String endpoint,String path,WildcardMatch match,State state,SourceLocation source) {
+    state.wildcardMatches.computeIfAbsent(match.mapping().route(),ignored->new TreeMap<>()).putIfAbsent(match.path(),match);
     GraphNode old=state.nodes.get(endpoint);if(old==null)return;Map<String,String> attributes=new TreeMap<>(old.attributes());Set<String> paths=new TreeSet<>();String previous=attributes.get("matchedPaths");if(previous!=null&&!previous.isBlank())paths.addAll(Arrays.asList(previous.split("\\u001f")));paths.add(path);attributes.put("matchedPaths",String.join("\u001f",paths));
     List<AnalysisEvidence> proof=new ArrayList<>(old.evidence());proof.add(new AnalysisEvidence(source,PARSER,old.confidence().resolutionStatus(),"Struts 萬用字元="+match.mapping().route()+"；實際比對路徑="+path));state.nodes.put(endpoint,new GraphNode(old.id(),old.type(),old.name(),attributes,old.source(),old.confidence(),proof.stream().distinct().sorted().toList()));
+  }
+  private static void inheritActionCallers(State state) {
+    for(Mapping base:state.actionMappings) {
+      String sourceEndpoint=state.endpointIds.get(base.route());if(sourceEndpoint==null)continue;
+      for(Mapping origin:mappingVariants(base,sourceEndpoint,state)) {
+        List<InheritanceTarget> starts=inheritanceTargets(origin,state);
+        for(InheritanceTarget start:starts)walkActionForward(origin,sourceEndpoint,start.target(),start.source(),List.of(origin),new LinkedHashSet<>(List.of(origin.route())),1,state);
+        for(PendingForward exception:state.pendingForwards)if(exception.ownerId().contains(":exception:")&&exception.module().equals(origin.module()))walkActionForward(origin,sourceEndpoint,exception.target(),exception.source(),List.of(origin),new LinkedHashSet<>(List.of(origin.route())),1,state);
+      }
+    }
+  }
+  private static List<InheritanceTarget> inheritanceTargets(Mapping mapping,State state) {
+    List<InheritanceTarget> result=new ArrayList<>();
+    mapping.localForwards().forEach((name,target)->result.add(new InheritanceTarget(target,mapping.forwardSources().getOrDefault(name,mapping.source()))));
+    if(mapping.input()!=null&&!mapping.input().isBlank())result.add(new InheritanceTarget(mapping.input(),mapping.source()));
+    result.addAll(state.actionForwardTargets.getOrDefault(mapping.handlerId(),List.of()).stream().map(item->new InheritanceTarget(item.target(),item.source())).toList());
+    return result.stream().distinct().toList();
+  }
+  private static void walkActionForward(Mapping origin,String sourceEndpoint,String rawTarget,SourceLocation targetSource,List<Mapping> chain,Set<String> visited,int depth,State state) {
+    if(depth>5){diagnostic(state,"Struts forward 繼承超過 5 跳，停止繼承",targetSource,"STRUTS_REDIRECT_DEPTH_LIMIT");return;}
+    if(rawTarget==null||rawTarget.isBlank()||!StrutsSources.literal(rawTarget))return;
+    String target=normalizeStrutsAction(rawTarget,origin.module(),state);if(target==null)return;target=target.split("[?#]",2)[0];
+    List<ActionMatch> destinations=resolveActionMappings(target,origin.module(),state);
+    if(destinations.size()>1){diagnostic(state,"Struts forward 目的 action 有多個候選，未繼承呼叫來源："+rawTarget+"；候選="+destinations.stream().map(item->item.mapping().route()+"（"+item.mapping().source().file()+":"+item.mapping().source().line()+"）").toList(),targetSource,"STRUTS_REDIRECT_AMBIGUOUS");return;}
+    ActionMatch actionMatch=destinations.isEmpty()?null:destinations.get(0);Mapping destination=actionMatch==null?null:actionMatch.mapping();
+    if(destination==null) {
+      String unresolvedPath=Objects.toString(logicalPath(target,origin.module(),state),target);boolean potential=target.endsWith(".do")||target.contains("/do/");
+      if(!potential)for(Mapping mapping:state.actionMappings)if(wildcardMatch(mapping.route(),unresolvedPath,mapping)!=null){potential=true;break;}
+      if(potential)diagnostic(state,"Struts forward 目的 action 無法唯一解析，未繼承呼叫來源："+rawTarget,targetSource,"STRUTS_REDIRECT_UNRESOLVED");
+      return;
+    }
+    if(visited.contains(destination.route())){diagnostic(state,"Struts forward 繼承鏈偵測到循環："+String.join(" → ",chain.stream().map(Mapping::route).toList())+" → "+destination.route(),targetSource,"STRUTS_REDIRECT_CYCLE");return;}
+    String endpoint=state.endpointIds.get(destination.route());if(endpoint==null)return;
+    if(actionMatch.wildcard()!=null){recordWildcardMatch(endpoint,target,actionMatch.wildcard(),state,targetSource);destination=wildcardMappingForCaller(destination,actionMatch.wildcard(),endpoint,state);}
+    List<Mapping> nextChain=new ArrayList<>(chain);nextChain.add(destination);
+    String detail="轉址鏈："+nextChain.stream().map(mapping->{String id=state.endpointIds.get(mapping.route());GraphNode endpointNode=id==null?null:state.nodes.get(id);String url=endpointNode==null?publicPath(mapping.route(),mapping.module(),state):endpointNode.attributes().getOrDefault("path",endpointNode.name());return mapping.route()+"（公開網址="+url+"；處理器="+mapping.type()+"；來源="+mapping.source().file()+":"+mapping.source().line()+"）";}).collect(java.util.stream.Collectors.joining(" → "))+"；forward="+rawTarget+"（"+targetSource.file()+":"+targetSource.line()+"）";
+    List<AnalysisEvidence> proof=new ArrayList<>();for(Mapping item:nextChain){proof.addAll(state.nodes.get(item.handlerId()).evidence());String mappedEndpoint=state.endpointIds.get(item.route());if(mappedEndpoint!=null&&state.nodes.containsKey(mappedEndpoint))proof.addAll(state.nodes.get(mappedEndpoint).evidence());}
+    proof.add(new AnalysisEvidence(targetSource,"RedirectInheritance",ResolutionStatus.INFERRED,detail));
+    String relationId=ApplicationGraph.id(NodeType.HANDLER,"STRUTS_REDIRECT_INHERITANCE:"+sourceEndpoint+":"+origin.handlerId()+":"+endpoint+":"+targetSource.file()+":"+targetSource.line());
+    state.edges.putIfAbsent(relationId,new Relationship(relationId,EdgeType.CALLS,origin.handlerId(),endpoint,Confidence.INFERRED,targetSource,proof.stream().distinct().sorted().toList()));
+    Set<String> nextVisited=new LinkedHashSet<>(visited);nextVisited.add(destination.route());
+    for(InheritanceTarget child:inheritanceTargets(destination,state))walkActionForward(origin,sourceEndpoint,child.target(),child.source(),nextChain,nextVisited,depth+1,state);
+  }
+  private static List<ActionMatch> resolveActionMappings(String target,String module,State state) {
+    String logical=logicalPath(target,module,state);String candidate=logical==null?target:logical;
+    List<Mapping> exact=state.routes.get(candidate);if(exact!=null&&!exact.isEmpty())return exact.stream().distinct().map(mapping->new ActionMatch(mapping,null)).toList();
+    WildcardMatch wildcard=firstWildcardMatch(candidate,module,state);return wildcard==null?List.of():List.of(new ActionMatch(wildcard.mapping(),wildcard));
+  }
+  private static List<Mapping> mappingVariants(Mapping mapping,String endpoint,State state) {
+    Map<String,WildcardMatch> matches=state.wildcardMatches.get(mapping.route());if(matches==null||matches.isEmpty())return List.of(mapping);
+    return matches.values().stream().map(match->wildcardMappingForCaller(mapping,match,endpoint,state)).toList();
+  }
+  private static Mapping wildcardMappingForCaller(Mapping mapping,WildcardMatch match,String endpoint,State state) {
+    Mapping effective=substituteWildcardValues(mapping,match);if(Objects.equals(effective.type(),mapping.type()))return effective;
+    String handlerId=ApplicationGraph.id(NodeType.HANDLER,mapping.handlerId()+":wildcard:"+match.path()+":"+effective.type());GraphNode base=state.nodes.get(mapping.handlerId());if(base==null)return effective;
+    Map<String,String> attributes=new TreeMap<>(base.attributes());attributes.put("actionType",effective.type());attributes.put("type",effective.type());attributes.put("path",match.path());if(effective.parameter()!=null)attributes.put("parameter",effective.parameter());
+    addNode(state,handlerId,NodeType.HANDLER,effective.type()+".execute()",attributes,mapping.source(),base.confidence(),"Struts wildcard substitutions；path="+match.path()+"；type="+effective.type()+"；parameter="+Objects.toString(effective.parameter(),""));
+    edge(state,EdgeType.HANDLED_BY,endpoint,handlerId,base.confidence(),mapping.source(),"萬用字元屬性替換；實際路徑="+match.path());
+    return new Mapping(effective.route(),effective.type(),handlerId,effective.formId(),effective.parameter(),effective.family(),effective.forwards(),effective.localForwards(),effective.forwardSources(),effective.input(),effective.module(),effective.source());
+  }
+  private static void markInheritedActionTemplates(State state) {
+    Set<String> extendsTargets=new TreeSet<>();
+    for(Mapping mapping:state.actionMappings){GraphNode handler=state.nodes.get(mapping.handlerId());if(handler==null)continue;String value=handler.attributes().get("extends");if(value==null||value.isBlank())continue;String normalized=value.startsWith("//")?value.substring(1):value;for(Mapping candidate:state.actionMappings)if(candidate.module().equals(mapping.module())&&(candidate.route().equals(normalized)||candidate.route().equals(mapping.module()+normalized)||Objects.equals(state.nodes.get(candidate.handlerId()).attributes().get("name"),value)))extendsTargets.add(candidate.route());}
+    for(Mapping mapping:state.actionMappings)if(extendsTargets.contains(mapping.route())){
+      String endpoint=state.endpointIds.get(mapping.route());GraphNode node=endpoint==null?null:state.nodes.get(endpoint);if(node==null)continue;
+      boolean hasCaller=state.edges.values().stream().anyMatch(edge->edge.to().equals(endpoint)&&Set.of(EdgeType.TRIGGERS,EdgeType.CALLS).contains(edge.type()));
+      if(hasCaller)continue;Map<String,String> attributes=new TreeMap<>(node.attributes());attributes.put("inheritedTemplate","true");attributes.put("templateAction",mapping.route());List<AnalysisEvidence> proof=new ArrayList<>(node.evidence());
+      for(Mapping child:state.actionMappings){GraphNode handler=state.nodes.get(child.handlerId());if(handler==null)continue;String value=handler.attributes().get("extends");if(value!=null&&(value.equals(mapping.route())||value.equals(mapping.route().replaceFirst("^/","//"))||value.startsWith("//")&&value.substring(1).equals(mapping.route())))proof.add(new AnalysisEvidence(handler.source(),PARSER,ResolutionStatus.CONFIRMED,"extends="+value+" 由="+child.route()+" 引用樣板="+mapping.route()));}
+      state.nodes.put(endpoint,new GraphNode(node.id(),node.type(),node.name(),attributes,node.source(),node.confidence(),proof.stream().distinct().sorted().toList()));
+    }
   }
   private static String resolveRelativeJspUrl(String jspPath,String raw) {
     if(raw==null||!StrutsSources.literal(raw))return raw;String suffix="";int boundary=raw.length();int query=raw.indexOf('?'),fragment=raw.indexOf('#');if(query>=0)boundary=Math.min(boundary,query);if(fragment>=0)boundary=Math.min(boundary,fragment);suffix=raw.substring(boundary);String path=raw.substring(0,boundary);if(path.isBlank())return raw;
@@ -899,6 +972,8 @@ public final class StrutsProjectAnalyzer {
   private static void diagnostic(State state,String message,SourceLocation source,String code) {state.diagnostics.add(new Diagnostic(message,Confidence.UNRESOLVED,source,code,evidence(source,Confidence.UNRESOLVED,null)));}
   private record Mapping(String route,String type,String handlerId,String formId,String parameter,String family,Map<String,String> forwards,Map<String,String> localForwards,Map<String,SourceLocation> forwardSources,String input,String module,SourceLocation source) { }
   private record WildcardMatch(Mapping mapping,String path,List<String> captures) { }
+  private record ActionMatch(Mapping mapping,WildcardMatch wildcard) { }
+  private record InheritanceTarget(String target,SourceLocation source) { }
   private record PendingForward(String ownerId,String module,String target,SourceLocation source) { }
   private enum ServletMappingStatus { PROVEN, AMBIGUOUS, UNRESOLVED }
   private record ServletDefinition(String name,String servletClass,SourceLocation source,Map<String,List<String>> configs) { }
@@ -916,7 +991,7 @@ public final class StrutsProjectAnalyzer {
     final Map<String,Set<String>> jspModuleOwners=new TreeMap<>();
     final Set<String> tilePageDefinitions=new TreeSet<>(),tileStandaloneDefinitions=new TreeSet<>(),tilePageJspPaths=new TreeSet<>();
     final Map<String,Set<String>> tilePageOwners=new TreeMap<>();
-    final Map<String,List<Mapping>> routes=new TreeMap<>();final Map<String,String> endpointIds=new TreeMap<>(),globalForwards=new TreeMap<>();final Map<String,Boolean> inputForward=new TreeMap<>();final List<Mapping> actionMappings=new ArrayList<>();final List<PendingForward> pendingForwards=new ArrayList<>();final Map<String,ServletMappingResolution> servletMappings=new TreeMap<>();
+    final Map<String,List<Mapping>> routes=new TreeMap<>();final Map<String,String> endpointIds=new TreeMap<>(),globalForwards=new TreeMap<>();final Map<String,Boolean> inputForward=new TreeMap<>();final List<Mapping> actionMappings=new ArrayList<>();final List<PendingForward> pendingForwards=new ArrayList<>();final Map<String,List<PendingForward>> actionForwardTargets=new TreeMap<>();final Map<String,Map<String,WildcardMatch>> wildcardMatches=new TreeMap<>();final Map<String,ServletMappingResolution> servletMappings=new TreeMap<>();
     final Map<String,StrutsSources.JavaType> types=new TreeMap<>();final Map<String,Set<String>> messages=new TreeMap<>();
     State(ProjectInventory inventory) {this.inventory=new ProjectInventory(inventory.root(),inventory.files().stream().sorted().toList(),inventory.technologies().stream().sorted().toList(),inventory.diagnostics().stream().sorted().toList(),inventory.contextPaths(),inventory.contextSettingsFile(),inventory.contextSettingsLine());}
     ApplicationGraph graph() {return new ApplicationGraph(new Application(inventory.root().getFileName().toString(),inventory.root().toString(),inventory.technologies()),List.copyOf(nodes.values()),List.copyOf(edges.values()),diagnostics,List.of(),ApplicationGraph.BEHAVIOR_SCHEMA_VERSION,List.copyOf(behaviors.values()),List.copyOf(rules.values()));}
