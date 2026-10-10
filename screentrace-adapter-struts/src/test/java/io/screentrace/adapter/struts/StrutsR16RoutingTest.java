@@ -309,4 +309,16 @@ class StrutsR16RoutingTest {
     assertTrue(graph.nodes().stream().anyMatch(node->node.type()==NodeType.ENDPOINT&&node.name().contains("mapping-foo?")),graph.nodes().toString());
     assertTrue(graph.relationships().stream().anyMatch(edge->edge.type()==EdgeType.TRIGGERS&&edge.to().equals(publicEndpoint.id())),graph.relationships().toString());
   }
+
+  @Test void strutsElTaglibStaticActionsRetainTheirEndpointCallers() throws Exception {
+    actionServlet("*.do", "/WEB-INF/struts-config.xml");
+    config("<action path='/save' type='sample.SaveAction'/><action path='/details' type='sample.DetailsAction'/>");
+    file("src/main/webapp/forms/page.jsp", "<html-el:form action='save.do'><html-el:submit>Save</html-el:submit></html-el:form><html-el:link action='/details.do?tab=main#top'>Details</html-el:link>");
+
+    var graph=analyze();
+    for(String path:List.of("/save.do","/details.do")) {
+      var endpoint=graph.nodes().stream().filter(node->node.type()==NodeType.ENDPOINT&&path.equals(node.attributes().get("path"))).findFirst().orElseThrow();
+      assertTrue(graph.relationships().stream().anyMatch(edge->edge.type()==EdgeType.TRIGGERS&&edge.to().equals(endpoint.id())),path+" "+graph.relationships());
+    }
+  }
 }
