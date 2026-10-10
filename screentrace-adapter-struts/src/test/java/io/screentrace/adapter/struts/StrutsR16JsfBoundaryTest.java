@@ -21,7 +21,7 @@ class StrutsR16JsfBoundaryTest {
     GraphNode jsfScreen=graph.nodes().stream().filter(node->node.type()==NodeType.SCREEN&&"src/main/webapp/home.jsp".equals(node.attributes().get("view"))).findFirst().orElseThrow();
     assertEquals("JSF",jsfScreen.attributes().get("unsupportedComponentFramework"));
     assertFalse(graph.nodes().stream().anyMatch(node->node.type()==NodeType.COMPONENT&&"h:commandButton".equals(node.attributes().get("tag"))));
-    Diagnostic diagnostic=graph.diagnostics().stream().filter(item->item.code().equals("UNSUPPORTED_COMPONENT_FRAMEWORK")).findFirst().orElseThrow();
+    Diagnostic diagnostic=graph.diagnostics().stream().filter(item->item.code().equals("UNSUPPORTED_COMPONENT_FRAMEWORK")&&item.source().file().endsWith("home.jsp")).findFirst().orElseThrow();
     assertEquals("src/main/webapp/home.jsp",diagnostic.source().file());assertEquals(2,diagnostic.source().line());
   }
 }

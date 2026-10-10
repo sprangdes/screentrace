@@ -11,6 +11,7 @@ import io.screentrace.scanner.SafeProjectFiles;
 import java.io.*;
 import java.nio.file.*;
 import java.util.*;
+import java.util.regex.*;
 import org.w3c.dom.*;
 
 /** Static Struts 1 analysis. No target bytecode or configuration plugins are loaded. */
@@ -29,6 +30,7 @@ public final class StrutsProjectAnalyzer {
     JspAnalysis jsp=new JspProjectParser().analyze(inventory.root(),inventory.files(),(bundle,key)->resolveMessage(state,bundle,key));
     state.diagnostics.addAll(jsp.diagnostics());
     for(var view:jsp.views()) addView(view,state);
+    markUnsupportedJsf(state,jsp);
     readTiles(state);
     if(inventory.strutsConfigFiles().isEmpty()) state.diagnostics.add(StrutsSources.diagnostic("找不到 Struts 1 設定檔",".",1,"STRUTS_CONFIG_MISSING"));
     for(Path config:inventory.strutsConfigFiles()) parseConfig(config,state);
@@ -81,6 +83,22 @@ public final class StrutsProjectAnalyzer {
       indexView(state.screens,view.path(),id);
     }
   }
+  private static void markUnsupportedJsf(State state,JspAnalysis jsp) {
+    for(Path file:state.inventory.files())if(file.getFileName().toString().equalsIgnoreCase("web.xml"))try {
+      String source=SafeProjectFiles.readUtf8Limited(state.inventory.root(),file,SafeProjectFiles.MAX_XML_FILE_BYTES);Matcher servlet=Pattern.compile("(?is)<servlet-class>\\s*[^<]*FacesServlet\\s*</servlet-class>").matcher(source);
+      if(servlet.find())state.diagnostics.add(new Diagnostic("偵測到 JSF FacesServlet；本階段不分析 JSF 元件",Confidence.UNRESOLVED,new SourceLocation(relative(state,file),lineAt(source,servlet.start())),"UNSUPPORTED_COMPONENT_FRAMEWORK",List.of()));
+    }catch(Exception ignored) { }
+    for(JspAnalysis.View view:jsp.views()) {
+      if(view.kind()==JspAnalysis.ViewKind.JSPF)continue;Path file=state.inventory.root().resolve(view.path());try {
+        String source=SafeProjectFiles.readUtf8Limited(state.inventory.root(),file,SafeProjectFiles.MAX_JSP_FILE_BYTES);
+        boolean declaration=Pattern.compile("(?is)<%@\\s*taglib\\b[^%]*jsf/(?:html|core)[^%]*%>|xmlns:[\\w-]+\\s*=\\s*[^\\s>]*jsf/(?:html|core)").matcher(source).find();
+        Matcher tag=Pattern.compile("(?i)<(?:h|f):[\\w-]+\\b").matcher(source);if(!declaration||!tag.find())continue;
+        String id=state.screens.get(view.path());if(id!=null){GraphNode screen=state.nodes.get(id);Map<String,String> attrs=new TreeMap<>(screen.attributes());attrs.put("unsupportedComponentFramework","JSF");state.nodes.put(id,new GraphNode(screen.id(),screen.type(),screen.name(),attrs,screen.source(),screen.confidence(),screen.evidence()));}
+        state.diagnostics.add(new Diagnostic("此畫面使用 JSF 元件；本階段不分析 JSF",Confidence.UNRESOLVED,new SourceLocation(view.path(),lineAt(source,tag.start())),"UNSUPPORTED_COMPONENT_FRAMEWORK",List.of()));
+      }catch(Exception ignored) { }
+    }
+  }
+  private static int lineAt(String source,int offset){int line=1;for(int i=0;i<Math.min(offset,source.length());i++)if(source.charAt(i)=='\n')line++;return line;}
   private static void collectFormProperties(String className,State state,Map<String,String> properties,List<AnalysisEvidence> proof,Set<String> seen) {
     if(className==null||!seen.add(className))return;var type=state.types.get(className);if(type==null)return;
     String parent=type.parent();int separator=type.name().lastIndexOf('.');

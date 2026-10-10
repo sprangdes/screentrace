@@ -7,6 +7,7 @@ import {collectElementStyles,thumbnailDataUri,captureOptions} from './element-st
 import {annotateConditions,annotateSource,convertControls,expressionList,markupTokens,replaceDynamicExpressions} from './preview-markup.mjs';
 import { deduplicateMappings, discoverSpringResourceMappings } from './spring-resource-mappings.mjs';
 import {loadStrutsMessageCatalog,renderStrutsMessages} from './struts-messages.mjs';
+import {renderUnsupportedJsfTags} from './unsupported-components.mjs';
 import { assertOutputPathWithin, createDirectoryWithin, readBufferLimited, readUtf8Limited, resolveExistingDirectoryWithin, resolveExistingFileWithin, writeBufferWithin } from './safe-files.mjs';
 
 const [targetArg, outputArg, ...extraArgs] = process.argv.slice(2);
@@ -226,6 +227,7 @@ async function renderJsp(screen) {
   source = source.replace(/<jsp:attribute\s+name=["']customScript["'][^>]*>[\s\S]*?<\/jsp:attribute>/g, '');
   source = await expandTags(source, { customScript: custom });
   source = renderStrutsMessages(source,strutsMessages);
+  source = renderUnsupportedJsfTags(source);
   const urls = {};
   source = source.replace(/<spring:url\b([^>]*?)\/>/g, (_, attributeText) => {
     const attributes = attrs(attributeText);

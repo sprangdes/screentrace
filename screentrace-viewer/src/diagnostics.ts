@@ -1,6 +1,6 @@
 import {element,text} from './text';
 export const diagnosticNames:Record<string,string>={
- ANALYSIS_DIAGNOSTIC:'一般分析診斷',UNKNOWN:'未分類診斷',UNKNOWN_CALL:'未知函式呼叫',UNSUPPORTED_FRAMEWORK:'不支援的框架',CONTEXT_PATH_HINT:'網址可能缺少部署前綴',
+ ANALYSIS_DIAGNOSTIC:'一般分析診斷',UNKNOWN:'未分類診斷',UNKNOWN_CALL:'未知函式呼叫',UNSUPPORTED_FRAMEWORK:'不支援的框架',UNSUPPORTED_COMPONENT_FRAMEWORK:'有 JSF 元件未分析',CONTEXT_PATH_HINT:'網址可能缺少部署前綴',
  ASSET_UNRESOLVED:'無法載入預覽資源',CONTEXT_PATH_UNSPECIFIED:'未設定部署前綴',CONTEXT_CONFIG_UNRESOLVED:'部署前綴設定未解析',
  FRAMEWORK_DETECTION_UNRESOLVED:'框架偵測未完成',JAVA_PARSE_UNRESOLVED:'Java 語法未完整解析',SOURCE_LIMIT:'來源檔案超過安全限制',
  ANGULAR_CONTROLLER_UNRESOLVED:'AngularJS 控制器函式未解析',ANGULAR_SCOPE_DEPTH_LIMIT:'AngularJS 函式追蹤達深度或循環限制',
