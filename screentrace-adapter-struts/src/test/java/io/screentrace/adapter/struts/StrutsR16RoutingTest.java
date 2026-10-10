@@ -300,13 +300,14 @@ class StrutsR16RoutingTest {
 
   @Test void dispatchActionCallerAlsoMarksThePublicActionMappingInUse() throws Exception {
     actionServlet("*.do", "/WEB-INF/struts-config.xml");
-    config("<action path='/mapping-foo' type='sample.MappingAction' parameter='doFoo'/>");
-    file("src/main/java/sample/MappingAction.java", "package sample; public class MappingAction extends org.apache.struts.actions.MappingDispatchAction { public org.apache.struts.action.ActionForward doFoo(org.apache.struts.action.ActionMapping m, org.apache.struts.action.ActionForm f, javax.servlet.http.HttpServletRequest q, javax.servlet.http.HttpServletResponse s){ return null; } }");
-    file("src/main/webapp/page.jsp", "<html:form action='/mapping-foo'><html:submit>Map</html:submit></html:form>");
+    config("<action path='/mapping-foo' type='sample.MappingAction' parameter='op'/>");
+    file("src/main/java/sample/MappingAction.java", "package sample; public class MappingAction extends org.apache.struts.actions.MappingDispatchAction { public org.apache.struts.action.ActionForward save(org.apache.struts.action.ActionMapping m, org.apache.struts.action.ActionForm f, javax.servlet.http.HttpServletRequest q, javax.servlet.http.HttpServletResponse s){ return null; } }");
+    file("src/main/webapp/page.jsp", "<html:form action='/mapping-foo'><html:submit property='op' value='save'>Map</html:submit></html:form>");
 
     var graph=analyze();
     var publicEndpoint=graph.nodes().stream().filter(node->node.type()==NodeType.ENDPOINT&&"/mapping-foo.do".equals(node.attributes().get("path"))).findFirst().orElseThrow();
-    assertTrue(graph.nodes().stream().anyMatch(node->node.type()==NodeType.ENDPOINT&&node.name().contains("mapping-foo?")),graph.nodes().toString());
+    var dispatchEndpoint=graph.nodes().stream().filter(node->node.type()==NodeType.ENDPOINT&&"save".equals(node.attributes().get("parameterValue"))).findFirst().orElseThrow(()->new AssertionError(graph.nodes().toString()));
+    assertTrue(graph.relationships().stream().anyMatch(edge->edge.type()==EdgeType.HANDLED_BY&&edge.from().equals(dispatchEndpoint.id())&&graph.nodes().stream().anyMatch(node->node.id().equals(edge.to())&&node.name().equals("sample.MappingAction.save()"))));
     assertTrue(graph.relationships().stream().anyMatch(edge->edge.type()==EdgeType.TRIGGERS&&edge.to().equals(publicEndpoint.id())),graph.relationships().toString());
   }
 
