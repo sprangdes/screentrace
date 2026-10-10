@@ -53,4 +53,17 @@ class StrutsR16WildcardRoutingTest {
       assertTrue(endpoints.stream().anyMatch(n->"/Literal\\*.do".equals(n.attributes().get("path"))&&n.attributes().getOrDefault("matchedPaths","").contains("/Literal*.do")));
     });
   }
+
+  @Test void wildcardCaptureSubstitutesActionTypeParameterInputAndForwardAction(){
+    assertDoesNotThrow(()->{
+      base("<action path='/Open*' type='sample.{1}Action' parameter='{1}' input='/pages/{1}.jsp'><forward name='next' path='/Target{1}.do'/></action><action path='/Target*' type='sample.TargetAction'/>");
+      file("src/main/webapp/menu.jsp","<html:link action='/OpenWidget.do'>Open</html:link>");file("src/main/webapp/pages/Widget.jsp","<h1>Widget</h1>");
+      var graph=analyze();var open=graph.nodes().stream().filter(n->n.type()==NodeType.ENDPOINT&&"/Open*.do".equals(n.attributes().get("path"))).findFirst().orElseThrow();
+      assertTrue(graph.relationships().stream().filter(e->e.type()==EdgeType.HANDLED_BY&&e.from().equals(open.id())).map(e->graph.nodes().stream().filter(n->n.id().equals(e.to())).findFirst().orElseThrow()).anyMatch(n->"sample.WidgetAction".equals(n.attributes().get("actionType"))&&"Widget".equals(n.attributes().get("parameter"))));
+      assertTrue(graph.nodes().stream().anyMatch(n->n.type()==NodeType.SCREEN&&n.attributes().getOrDefault("view","").endsWith("pages/Widget.jsp")&&n.attributes().getOrDefault("routeAliases","").contains("/OpenWidget.do")));
+      var target=graph.nodes().stream().filter(n->n.type()==NodeType.ENDPOINT&&"/Target*.do".equals(n.attributes().get("path"))).findFirst().orElseThrow();
+      assertEquals("/TargetWidget.do",target.attributes().get("matchedPaths"));
+      assertTrue(graph.relationships().stream().anyMatch(e->e.type()==EdgeType.CALLS&&e.to().equals(target.id())&&e.confidence()==Confidence.INFERRED&&e.evidence().stream().anyMatch(p->"RedirectInheritance".equals(p.parser()))));
+    });
+  }
 }
