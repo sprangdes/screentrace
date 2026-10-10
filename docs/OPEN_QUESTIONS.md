@@ -299,5 +299,5 @@
 - 可選方案 A：擴大 OQ-030 的 golden 授權，只更新 `fixtures/wp10/golden/struts1-spring.summary.json` 中經實際輸出證明改變的數量欄位；ADR 逐欄記錄舊值、新值及原因，並以舊實作證明新值會失敗。其餘欄位與其他 golden 不動。
 - 可選方案 B：維持所有其他 golden 不變，修訂 OQ-030 的適用條件，使 `struts1-spring` 仍維持原有 endpoint／API 數量。這需要明確說明如何與「單一 ActionServlet 處理全部 module」及「全部 mapping 為同一 endpoint 別名」共存，否則無法作不硬編碼的實作。
 - 影響範圍：OQ-030 的已證明 mapping 規則、`struts1-spring.summary.json`、預設並行 E2E 完整驗收及 WP55 停止點；未修改 `struts1-spring` golden。
-- 狀態：已決定（2026-10-10）；需求方採方案 A，並明確化授權範圍。
+- 狀態：已決定並完成（2026-10-10）；需求方採方案 A，並明確化授權範圍。實測 golden 更新、舊實作失敗證明與完整驗證記於 ADR 0074、R16 報告。
 - 決定：`struts1-spring` 只有一個 ActionServlet、宣告 `*.do` 與 `*.action`，屬 OQ-030 第 1 類，UNREFERENCED 12 → 9 是別名合併的預期結果。OQ-030 第 5 點「其他 golden 不變」寫得過窄，修訂為：**任何 Struts fixture（`fixtures/wp10/struts1`、`struts1-spring` 及其他含 Struts 的 fixture）的 golden 中，因 R16 的別名合併、forward 正規化、Tiles 畫面界線而改變的數量型欄位（畫面數、端點數、API 總數與狀態分布、行為數、診斷數）皆依 R16 §3 預先授權更新，不需停止**；條件是 ADR 逐欄記錄舊值、新值，並逐一列出造成差異的 endpoint／畫面／行為來源（例如哪些邏輯 path 與 `.do`／`.action` 公開 URL 合併、因而取得呼叫來源的 endpoint），證明新值在 R16 前實作上失敗，且沒有任何畫面或行為來源遺失（OQ-029 第 3、5 點）。**非 Struts 的 golden（Spring MVC、Spring Boot 等）任何欄位改變仍須停止**；eMusicStore、PetClinic 的 graph SHA-256 必須維持不變。
