@@ -324,4 +324,9 @@
 - 可選方案 A：維持證據優先，`scripting-mailreader /Delete*` 保持找不到呼叫來源；報告記錄實際刪除流程由 `/Edit*`、`/SaveSubscription.do` 承載。另授權 WP54 新增 `html:img` page-load resource caller 與 `<jsp:forward>` caller 的失敗測試及實作，更新 Struts 數量報告。
 - 可選方案 B：修訂 `/Delete*` 驗收，允許依 `task=Delete` 將 `/EditSubscription` 或 `/SaveSubscription.do` 的呼叫來源複製到 `/Delete*`；這會建立原始 URL 沒有發出的 endpoint 關係，並可能與 Struts ActionConfigMatcher 選路規則矛盾。
 - 影響範圍：WP54 wildcard 驗收、`scripting-mailreader` API 清單與 matchedPaths，以及剩餘端點 audit。目標官方模組與所有 fixture 均未修改。
-- 狀態：待決。WP54 未標為通過；完成本輪可獨立驗證項目後停止等待需求方決定。
+- 狀態：已決定（2026-10-10）；需求方採方案 A。
+- 審查者核對：`scripting-mailreader/Registration.jsp:167` 為 `<html:link action="/EditSubscription?task=Delete">`，依 OQ-032 命中 `/Edit*`；`tour.html:1914`、`:1970` 的 `/DeleteSubscription` 位於 `&lt;…&gt;` 轉義的範例程式碼中，不是可點擊連結。§6 驗收把 scripting-mailreader 視為與 mailreader 同型，是審查者錯誤。
+- 決定：
+  1. `scripting-mailreader` 的 `/Delete*` 依證據維持「找不到呼叫來源」；報告寫明實際刪除流程由 `/EditSubscription?task=Delete`（命中 `/Edit*`）與 `/SaveSubscription.do` 承載。§6 驗收中「scripting-mailreader 的 `/Delete*` 為使用中」一句撤回；mailreader 的 `/Delete*` 驗收不變。
+  2. 轉義的 HTML 文字（`&lt;`、`&gt;` 內、`<pre>`／`<code>` 內）不是呼叫來源，納入稽核規則與測試。
+  3. 授權新增並實作：`<html:img action=…>`（以及 `html:image`、`html:rewrite` 等產生 action URL 的 tag）作為畫面載入時的呼叫來源（R-API-1(a)）；`<jsp:forward page=…>`、`<jsp:include page=…>` 指向 action 時作為呼叫來源（常值為 `STATIC_URL`）。先提交失敗測試；因此改變的 Struts 數量欄位依 OQ-031 處理。
