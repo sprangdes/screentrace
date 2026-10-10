@@ -542,6 +542,7 @@ public final class StrutsProjectAnalyzer {
     String module=call.module().isBlank()?moduleContext:call.module();String target=call.target();
     Control context=new Control("",call.tag(),Map.of("module",module),target,call.source(),null,null,null);
     String resolved=moduleTarget(context,state),path=resolved.split("[?#]",2)[0];List<Mapping> mappings=state.routes.get(path);WildcardResolution wildcard=null;
+    if(isViewOrAssetPath(path))return;
     if(mappings==null) {String logical=logicalPath(path,module,state);if(logical!=null)mappings=state.routes.get(logical);if(mappings==null){String concrete=logical==null?path:logical;wildcard=resolveWildcard(concrete,module,state);if(wildcard!=null&&wildcard.ambiguous()) {
         for(WildcardMatch candidate:wildcard.candidates()) {String endpoint=state.endpointIds.getOrDefault(candidate.mapping().route(),StableGraphIds.endpoint("ANY",publicPath(candidate.mapping().route(),candidate.mapping().module(),state)));recordWildcardMatch(endpoint,path,candidate,state,call.source());edge(state,EdgeType.CALLS,screenId,endpoint,Confidence.AMBIGUOUS,call.source(),"basis=STATIC_URL；載入時來源="+call.tag()+"；"+wildcardAmbiguityDetail(wildcard,state));}
         diagnostic(state,wildcardAmbiguityMessage(wildcard,state),call.source(),"STRUTS_WILDCARD_VERSION_UNRESOLVED");return;
@@ -560,9 +561,13 @@ public final class StrutsProjectAnalyzer {
     for(JspAnalysis.Include include:jsp.includes()) {
       String module=moduleFor(include.sourceViewPath(),state);String target=resolveRelativeJspUrl(include.sourceViewPath(),include.targetPath());
       if(target==null)continue;String path=target.split("[?#]",2)[0];String logical=logicalPath(path,module,state);
+      if(isViewOrAssetPath(path))continue;
       if(state.routes.containsKey(path)||logical!=null&&state.routes.containsKey(logical)||resolveWildcard(logical==null?path:logical,module,state)!=null)actionIncludes.add(include.source());
     }
     if(!actionIncludes.isEmpty())state.diagnostics.removeIf(diagnostic->diagnostic.code().equals("JSP_UNRESOLVED")&&diagnostic.message().startsWith("JSP include cannot be found")&&actionIncludes.contains(diagnostic.source()));
+  }
+  private static boolean isViewOrAssetPath(String path) {
+    return path!=null&&path.toLowerCase(Locale.ROOT).matches(".*\\.(?:jsp|jspx|jspf|html?|png|gif|jpe?g|svg|css|js|woff2?|ico|pdf)$");
   }
   private static void collectIncludeSources(String view,JspAnalysis jsp,State state,Set<String> seen,Set<String> sources) {
     if(!seen.add(view)) return;
