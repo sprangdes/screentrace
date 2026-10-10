@@ -42,6 +42,7 @@ public final class StrutsProjectAnalyzer {
     parseValidation(state);
     parseActionForms(state);
     ApplicationGraph enriched=GraphIntegrityValidator.requireAnalysis(io.screentrace.parser.jsp.UrlGraphContribution.enrich(JavaScriptGraphContribution.enrich(MarkupGraphContribution.enrich(ActionContracts.enrich(state.graph(),inventory),jsp),inventory),inventory));
+    enriched=linkValidatorFields(enriched,state);
     return retainActionAndInlineEventEvidence(enriched,state);
   }
   private static ApplicationGraph retainActionAndInlineEventEvidence(ApplicationGraph graph,State state) {
@@ -388,7 +389,7 @@ public final class StrutsProjectAnalyzer {
   private static int sourceLine(Element element) {Object line=element.getUserData("line");return line instanceof Integer value?value:1;}
   private static String dispatchFamily(String type,State state,Set<String> seen) {
     String shortName=type.substring(type.lastIndexOf('.')+1);
-    if(Set.of("DispatchAction","LookupDispatchAction","MappingDispatchAction").contains(shortName)) return shortName;
+    if(Set.of("DispatchAction","LookupDispatchAction","MappingDispatchAction","EventDispatchAction").contains(shortName)) return shortName;
     if(!seen.add(type)) return "";
     var java=state.types.get(type);if(java==null) return "";
     String parent=java.parent();String direct=dispatchFamily(parent,state,seen);if(!direct.isBlank()) return direct;
@@ -582,7 +583,7 @@ public final class StrutsProjectAnalyzer {
     addNode(state,control.id(),NodeType.COMPONENT,control.label(),controlAttributes,control.source(),Confidence.CONFIRMED);
     String originalTarget=controlAttributes.get("originalTarget");if(originalTarget!=null&&!originalTarget.isBlank()){GraphNode old=state.nodes.get(control.id());List<AnalysisEvidence> proof=new ArrayList<>(old.evidence());proof.add(new AnalysisEvidence(control.source(),PARSER,ResolutionStatus.CONFIRMED,"原始網址="+originalTarget+"；正規化網址="+Objects.toString(control.target(),"")));state.nodes.put(old.id(),new GraphNode(old.id(),old.type(),old.name(),old.attributes(),old.source(),old.confidence(),proof.stream().distinct().toList()));}
     edge(state,EdgeType.CONTAINS,screen,control.id(),Confidence.CONFIRMED,control.source());
-    if("SUBMIT".equals(control.attributes().get("kind"))&&control.attributes().get("formaction")==null&&control.formGroup()!=null)return;
+    if("SUBMIT".equals(control.attributes().get("kind"))&&control.attributes().get("formaction")==null&&control.formGroup()!=null&&!dispatchSubmit(control,state))return;
     if(contextual.target()==null) return;
     if(!StrutsSources.literal(contextual.target())) {diagnostic(state,"元件目標運算式未解析："+contextual.target(),contextual.source(),"STRUTS_TARGET_UNRESOLVED");unresolvedBehavior(contextual,state);return;}
     String resolvedTarget=moduleTarget(contextual,state),path=resolvedTarget.split("[?#]",2)[0];var mappings=state.routes.get(path);WildcardMatch wildcardMatch=null;
@@ -643,6 +644,11 @@ public final class StrutsProjectAnalyzer {
       String prefix=values.get("prefix"),page=values.get("page");if(prefix!=null&&page!=null)return(prefix.endsWith("/")?prefix.substring(0,prefix.length()-1):prefix)+(page.startsWith("/")?page:"/"+page);
     }
     return target;
+  }
+  private static boolean dispatchSubmit(Control control,State state) {
+    if(control.target()==null)return false;String module=control.attributes().getOrDefault("module",moduleFor(control.source().file(),state));String path=moduleTarget(control,state).split("[?#]",2)[0];
+    List<Mapping> mappings=state.routes.get(path);if(mappings==null){String logical=logicalPath(path,module,state);if(logical!=null)mappings=state.routes.get(logical);}
+    return mappings!=null&&mappings.stream().anyMatch(mapping->!mapping.family().isBlank());
   }
   private static String normalizeStrutsAction(String raw,String module,State state) {
     if(raw==null||!StrutsSources.literal(raw))return raw;String path=raw.split("[?#]",2)[0];if(path.isBlank())return path;if(!path.startsWith("/"))path="/"+path;
@@ -813,6 +819,39 @@ public final class StrutsProjectAnalyzer {
   }
   private static ComponentKind kind(String name,MarkupTag tag) {
     return io.screentrace.parser.jsp.MarkupAnalysis.kind(name,tag.attributes());
+  }
+  private static ApplicationGraph linkValidatorFields(ApplicationGraph graph,State state) {
+    Map<String,GraphNode> nodes=new TreeMap<>();graph.nodes().forEach(node->nodes.put(node.id(),node));
+    List<Relationship> edges=graph.relationships();List<Diagnostic> diagnostics=new ArrayList<>(graph.diagnostics());List<ValidationRule> rules=new ArrayList<>();
+    for(ValidationRule rule:graph.validationRules()) {
+      AnalysisEvidence validatorEvidence=rule.evidence().stream().filter(e->"StrutsProjectAnalyzer".equals(e.parser())&&Objects.toString(e.detail(),"").startsWith("STRUTS_VALIDATOR;")).findFirst().orElse(null);
+      String formName=rule.parameters().get("form");String property=rule.fields().stream().filter(value->!nodes.containsKey(value)).findFirst().orElse(null);
+      if(validatorEvidence==null||formName==null||property==null){rules.add(rule);continue;}
+      Set<String> formModels=new TreeSet<>();state.forms.forEach((key,id)->{if(key.endsWith(":"+formName))formModels.add(id);});
+      List<Mapping> mappings=state.actionMappings.stream().filter(mapping->mapping.formId()!=null&&formModels.contains(mapping.formId())).toList();
+      Set<String> componentIds=new TreeSet<>(),screenIds=new TreeSet<>();
+      for(Mapping mapping:mappings) {
+        String endpoint=state.endpointIds.get(mapping.route());if(endpoint==null)continue;
+        for(Relationship call:edges)if(call.type()==EdgeType.TRIGGERS&&call.to().equals(endpoint)) {
+          GraphNode form=nodes.get(call.from());if(form==null||form.type()!=NodeType.COMPONENT||!"FORM".equals(form.attributes().get("kind")))continue;
+          for(GraphNode component:nodes.values())if(component.type()==NodeType.COMPONENT&&property.equals(component.attributes().get("field"))&&form.id().equals(component.attributes().get("formId"))) {
+            componentIds.add(component.id());
+            edges.stream().filter(owner->owner.type()==EdgeType.CONTAINS&&owner.to().equals(component.id())).map(Relationship::from).filter(id->nodes.containsKey(id)&&nodes.get(id).type()==NodeType.SCREEN).forEach(screenIds::add);
+          }
+        }
+      }
+      if(componentIds.isEmpty()) {
+        diagnostics.add(new Diagnostic("檢核欄位無法唯一對應到使用該 ActionForm 的畫面欄位："+formName+"."+property,Confidence.UNRESOLVED,validatorEvidence.source(),"VALIDATION_RULE_UNRESOLVED",List.of(new AnalysisEvidence(validatorEvidence.source(),"StrutsValidatorFieldBinding",ResolutionStatus.UNRESOLVED,"form="+formName+"；property="+property))));
+        List<AnalysisEvidence> unresolvedEvidence=new ArrayList<>(rule.evidence());unresolvedEvidence.add(new AnalysisEvidence(validatorEvidence.source(),"StrutsValidatorFieldBinding",ResolutionStatus.UNRESOLVED,"form="+formName+"；property="+property));
+        rules.add(new ValidationRule(rule.id(),rule.kind(),rule.fields(),rule.message(),rule.layer(),rule.parameters(),unresolvedEvidence));
+        continue;
+      }
+      List<String> fields=new ArrayList<>(rule.fields());fields.addAll(componentIds);
+      Map<String,String> parameters=new TreeMap<>(rule.parameters());parameters.put("componentIds",String.join("\u001f",componentIds));parameters.put("screenIds",String.join("\u001f",screenIds));
+      List<AnalysisEvidence> evidence=new ArrayList<>(rule.evidence());evidence.add(new AnalysisEvidence(validatorEvidence.source(),"StrutsValidatorFieldBinding",ResolutionStatus.CONFIRMED,"form="+formName+"；property="+property+"；畫面欄位="+componentIds+"；畫面="+screenIds));
+      rules.add(new ValidationRule(rule.id(),rule.kind(),fields,rule.message(),rule.layer(),parameters,evidence));
+    }
+    return new ApplicationGraph(graph.application(),graph.nodes(),graph.relationships(),diagnostics,graph.apiContracts(),graph.schemaVersion(),graph.behaviors(),rules);
   }
   private static void parseValidation(State state) {
     Map<String,Map<String,String>> definitions=new TreeMap<>();

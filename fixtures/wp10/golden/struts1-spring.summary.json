@@ -22,7 +22,7 @@
     "NAVIGATE": 24,
     "OPEN_DIALOG": 29,
     "SELECT_CHANGE": 3,
-    "SUBMIT_FORM": 12,
+    "SUBMIT_FORM": 16,
     "UI_STATE_CHANGE": 20,
     "UNKNOWN": 26,
     "VALIDATE": 32
