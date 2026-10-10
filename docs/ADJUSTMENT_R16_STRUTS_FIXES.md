@@ -158,3 +158,18 @@ R16 報告「仍未有呼叫來源的端點」表中，大多數原因只寫「�
 - eMusicStore、PetClinic graph SHA-256 不變；完整驗證全綠。授權沿用 OQ-028、OQ-031。
 
 完成後停止，等需求方重新驗收 WP54。
+
+---
+
+## 7. WP54 驗收通過（需求方，2026-10-10）
+
+審查者以 HEAD（37af887）唯讀重新分析 mailreader、scripting-mailreader、examples、faces-example2，以共用 `deriveApiUsage` 計算：
+
+| 模組 | 結果 |
+|---|---|
+| mailreader | `/Edit*`（matched：`/EditRegistration`、`/EditSubscription`）、`/Save*`（`/SaveRegistration`）、`/Delete*`（`/DeleteSubscription`）、`/MainMenu.do`、`/SubmitLogon.do` 皆為使用中；`//BaseAction` 標 `inheritedTemplate`，不列入找不到呼叫來源 |
+| scripting-mailreader | `/Edit*` 使用中（含 `?task=Delete` 連結）；`/Delete*` 依 OQ-033 維持找不到呼叫來源 |
+| examples | 使用中 100、找不到呼叫來源 3（`GET /` 系統預設首頁、`/validator/validateJsI18nExample.do`、`/dispatch/mappingLocale.do`，後兩者審查者搜尋原始碼確認無參照）；R15 時為 198，§5 前為 95 |
+| faces-example2 | `/welcome.do` 由 `index.jsp` 的 `jsp:forward` 取得呼叫來源 |
+
+**結論：WP54 通過。** 依 §2 順序繼續 WP56、WP57、WP58、WP59，於 WP59 完成後停止等待最終驗收。WP56–WP59 期間沿用 OQ-028（R16 新增測試）、OQ-031（Struts fixture 數量型欄位）授權；WP59 重新稽核的剩餘清單沿用 §6.2 第 5 點的搜尋範圍與 OQ-033 第 2 點（轉義文字不是呼叫來源）。
