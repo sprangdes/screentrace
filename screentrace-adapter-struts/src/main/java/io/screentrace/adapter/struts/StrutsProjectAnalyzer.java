@@ -518,7 +518,7 @@ public final class StrutsProjectAnalyzer {
     String target=control.target();String explicitModule=control.attributes().get("module");
     if(explicitModule!=null&&!explicitModule.isBlank()&&target.startsWith("/")) {
       String module=explicitModule.endsWith("/")?explicitModule.substring(0,explicitModule.length()-1):explicitModule;
-      if(!target.equals(module)&&!target.startsWith(module+"/"))target=module+target;
+      if(!target.startsWith(module+"/"))target=module+target;
     }
     String query=target.contains("?")?target.substring(target.indexOf('?')+1):"";
     if(!query.isBlank()) {
