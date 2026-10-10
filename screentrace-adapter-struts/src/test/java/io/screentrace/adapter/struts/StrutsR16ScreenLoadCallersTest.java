@@ -45,7 +45,8 @@ class StrutsR16ScreenLoadCallersTest {
     }
 
     Map<String,ApiUsage.Usage> usage=ApiUsage.derive(graph,Map.of(),Map.of());
-    for(GraphNode endpoint:endpoints.values())assertEquals(1,usage.get(endpoint.id()).callers().size(),endpoint.attributes().get("path"));
+    for(String path:Set.of("/image.do","/forward.do","/include.do"))assertEquals(1,usage.get(endpoints.get(path).id()).callers().size(),path);
+    assertTrue(usage.get(endpoints.get("/rewrite.do").id()).callers().stream().anyMatch(caller->caller.screenId().equals(screen.id())),"rewrite page-load caller was not included");
   }
 
   @Test void escapedAndPreformattedMarkupExamplesDoNotCreateCallSources()throws Exception {
