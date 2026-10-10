@@ -69,6 +69,11 @@ public final class StrutsProjectAnalyzer {
       String id=StableGraphIds.screen(view.path());
       addNode(state,id,NodeType.SCREEN,Path.of(view.path()).getFileName().toString().replaceFirst("\\.jsp$",""),Map.of("view",view.path()),view.source(),Confidence.CONFIRMED);
       indexView(state.screens,view.path(),id);
+    } else if(view.kind()==JspAnalysis.ViewKind.HTML&&view.path().replace('\\','/').startsWith("src/main/webapp/")) {
+      String id=StableGraphIds.screen(view.path());String publicUrl="/"+view.path().substring("src/main/webapp/".length());
+      Map<String,String> attributes=new TreeMap<>();attributes.put("view",view.path());attributes.put("route",publicUrl);
+      addNode(state,id,NodeType.SCREEN,Path.of(view.path()).getFileName().toString().replaceFirst("\\.(html|htm)$",""),attributes,view.source(),Confidence.CONFIRMED);
+      indexView(state.screens,view.path(),id);
     }
   }
   private static void collectFormProperties(String className,State state,Map<String,String> properties,List<AnalysisEvidence> proof,Set<String> seen) {
@@ -410,7 +415,7 @@ public final class StrutsProjectAnalyzer {
 
   private static void addInteractions(JspAnalysis jsp,State state) throws IOException {
     Map<String,List<Control>> byView=new TreeMap<>();
-    for(Path file:state.inventory.files()) if(file.toString().endsWith(".jsp")||file.toString().endsWith(".jspf")) {
+    for(Path file:state.inventory.files()) if(file.toString().endsWith(".jsp")||file.toString().endsWith(".jspf")||file.toString().endsWith(".html")||file.toString().endsWith(".htm")) {
       String path=relative(state,file);List<Control> controls=new ArrayList<>();
       try {
         String text=SafeProjectFiles.readUtf8Limited(state.inventory.root(),file,SafeProjectFiles.MAX_JSP_FILE_BYTES);
@@ -467,7 +472,7 @@ public final class StrutsProjectAnalyzer {
     // Reuse proven include projection so a shared fragment keeps one ID with several screen owners.
     Map<String,Set<String>> projected=new TreeMap<>();
     for(var item:jsp.interactions()) projected.computeIfAbsent(item.viewPath(),key->new TreeSet<>()).add(item.source().file());
-    for(var view:jsp.views()) if(view.kind()==JspAnalysis.ViewKind.JSP) {
+    for(var view:jsp.views()) if(view.kind()==JspAnalysis.ViewKind.JSP||view.kind()==JspAnalysis.ViewKind.HTML&&state.screens.containsKey(view.path())) {
       Set<String> sources=new TreeSet<>(projected.getOrDefault(view.path(),Set.of()));sources.add(view.path());
       collectIncludeSources(view.path(),jsp,state,new HashSet<>(),sources);
       Set<String> owners=new TreeSet<>(state.tileFragmentOwners.getOrDefault(view.path(),Set.of()));String directOwner=state.screens.get(view.path());if(directOwner!=null)owners.add(directOwner);
