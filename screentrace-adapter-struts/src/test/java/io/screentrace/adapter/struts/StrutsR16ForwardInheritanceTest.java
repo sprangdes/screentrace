@@ -54,4 +54,25 @@ class StrutsR16ForwardInheritanceTest {
       assertTrue(template.evidence().stream().anyMatch(p->Objects.toString(p.detail(),"").contains("extends")&&Objects.toString(p.detail(),"").contains("/ChildAction")));
     });
   }
+
+  @Test void doubleSlashBaseActionIsShownAsInheritedTemplate(){
+    assertDoesNotThrow(()->{
+      base("<action path='//BaseAction' type='sample.BaseAction'/><action path='/Delete*' type='sample.DeleteAction' extends='//BaseAction'/><action path='/Edit*' type='sample.EditAction' extends='//BaseAction'/>");
+      file("src/main/webapp/index.jsp","<h1>Home</h1>");var graph=analyze();var template=endpoint(graph,"//BaseAction.do");
+      assertEquals("true",template.attributes().get("inheritedTemplate"));
+      assertFalse(graph.relationships().stream().anyMatch(edge->edge.to().equals(template.id())&&Set.of(io.screentrace.core.ApplicationGraph.EdgeType.TRIGGERS,io.screentrace.core.ApplicationGraph.EdgeType.CALLS).contains(edge.type())));
+    });
+  }
+
+  @Test void globalForwardAndExceptionActionTargetsInheritCallersAsInferred(){
+    assertDoesNotThrow(()->{
+      file("src/main/webapp/WEB-INF/web.xml","<web-app><servlet><servlet-name>a</servlet-name><servlet-class>org.apache.struts.action.ActionServlet</servlet-class><init-param><param-name>config</param-name><param-value>/WEB-INF/struts-config.xml</param-value></init-param></servlet><servlet-mapping><servlet-name>a</servlet-name><url-pattern>*.do</url-pattern></servlet-mapping></web-app>");
+      file("src/main/webapp/WEB-INF/struts-config.xml","<struts-config><global-forwards><forward name='next' path='/globalTarget.do'/></global-forwards><global-exceptions><exception key='failure' type='sample.Failure' path='/errorTarget.do'/></global-exceptions><action-mappings><action path='/start' type='sample.StartAction'/><action path='/globalTarget' type='sample.GlobalTarget'/><action path='/errorTarget' type='sample.ErrorTarget'/></action-mappings></struts-config>");
+      file("src/main/java/sample/StartAction.java","package sample; class StartAction extends org.apache.struts.action.Action { public org.apache.struts.action.ActionForward execute(org.apache.struts.action.ActionMapping mapping, org.apache.struts.action.ActionForm form, javax.servlet.http.HttpServletRequest request, javax.servlet.http.HttpServletResponse response){ return mapping.findForward(\"next\"); } }");
+      file("src/main/webapp/index.jsp","<html:link action='/start.do'>Start</html:link>");
+      var graph=analyze();var global=endpoint(graph,"/globalTarget.do");var error=endpoint(graph,"/errorTarget.do");
+      assertTrue(graph.relationships().stream().anyMatch(edge->edge.type()==EdgeType.CALLS&&edge.to().equals(global.id())&&edge.confidence()==Confidence.INFERRED&&edge.evidence().stream().anyMatch(proof->"RedirectInheritance".equals(proof.parser())&&Objects.toString(proof.detail(),"").contains("next"))));
+      assertTrue(graph.relationships().stream().anyMatch(edge->edge.type()==EdgeType.CALLS&&edge.to().equals(error.id())&&edge.confidence()==Confidence.INFERRED&&edge.evidence().stream().anyMatch(proof->"RedirectInheritance".equals(proof.parser())&&Objects.toString(proof.detail(),"").contains("errorTarget"))));
+    });
+  }
 }
