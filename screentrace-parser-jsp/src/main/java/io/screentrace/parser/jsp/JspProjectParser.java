@@ -13,6 +13,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import javax.xml.XMLConstants;
@@ -34,6 +35,10 @@ public final class JspProjectParser {
   private static final Pattern JSTL_URL = Pattern.compile("(?is)<c:url\\b[^>]*?\\bvalue\\s*=\\s*(['\"])(.*?)\\1[^>]*/>");
 
   public JspAnalysis analyze(Path root, List<Path> files) throws IOException {
+    return analyze(root,files,(bundle,key)->null);
+  }
+
+  public JspAnalysis analyze(Path root, List<Path> files, StaticMessageResolver messages) throws IOException {
     List<JspAnalysis.View> views = new ArrayList<>();
     List<JspAnalysis.Interaction> interactions = new ArrayList<>();
     List<JspAnalysis.Include> includes = new ArrayList<>();
@@ -44,7 +49,7 @@ public final class JspProjectParser {
       String name = file.getFileName().toString();
       try {
         if (name.endsWith(".jsp") || name.endsWith(".jspf") || name.endsWith(".html") || name.endsWith(".htm")) {
-          parseJsp(root, file, views, interactions, includes, diagnostics, markup);
+          parseJsp(root, file, views, interactions, includes, diagnostics, markup,messages);
         } else if (name.endsWith(".xml") && SafeProjectFiles.readUtf8Limited(root, file, SafeProjectFiles.MAX_XML_FILE_BYTES).contains("tiles-definitions")) {
           parseTiles(root, file, tilesDefinitions, diagnostics);
         }
@@ -56,9 +61,11 @@ public final class JspProjectParser {
     return new JspAnalysis(views, expandIncludedInteractions(root, interactions, includes, diagnostics), includes, tilesDefinitions, diagnostics, markup);
   }
 
+  @FunctionalInterface public interface StaticMessageResolver { String resolve(String bundle,String key); }
+
   private static void parseJsp(Path root, Path file, List<JspAnalysis.View> views,
                                List<JspAnalysis.Interaction> interactions, List<JspAnalysis.Include> includes,
-                               List<Diagnostic> diagnostics, Map<String, MarkupAnalysis> markup) throws IOException {
+                               List<Diagnostic> diagnostics, Map<String, MarkupAnalysis> markup,StaticMessageResolver messages) throws IOException {
     String text = SafeProjectFiles.readUtf8Limited(root, file, SafeProjectFiles.MAX_JSP_FILE_BYTES);
     String relative = relative(root, file);
     JspTagFileExpander.Result tagExpansion=new JspTagFileExpander().expand(root,relative,text);
@@ -67,9 +74,9 @@ public final class JspProjectParser {
       String code=diagnostic.startsWith("JSP_TAG_CYCLE")?"JSP_TAG_CYCLE":diagnostic.startsWith("JSP_TAG_DEPTH_LIMIT")?"JSP_TAG_DEPTH_LIMIT":"JSP_TAG_UNRESOLVED";
       diagnostics.add(new Diagnostic("JSP 標籤檔展開受限："+diagnostic,Confidence.UNRESOLVED,new SourceLocation(relative,1),code,List.of()));
     }
-    markup.put(relative, withAnchors(StaticComponentNames.annotate(MarkupAnalysis.parse(relative, text),text),text,tagExpansion.anchors()));
+    markup.put(relative, withAnchors(StaticComponentNames.annotate(MarkupAnalysis.parse(relative, text),text,messages),text,tagExpansion.anchors()));
     JspAnalysis.ViewKind kind = relative.endsWith(".jspf") ? JspAnalysis.ViewKind.JSPF : relative.endsWith(".jsp") ? JspAnalysis.ViewKind.JSP : JspAnalysis.ViewKind.HTML;
-    views.add(new JspAnalysis.View(relative, kind, new SourceLocation(relative, 1)));
+    views.add(new JspAnalysis.View(relative, kind, new SourceLocation(relative, 1),messageTitle(text,messages)));
     UrlVariableResolver urls = new UrlVariableResolver(relative,text,includedWrites(root,relative,text,new java.util.HashSet<>()));
     UrlVariableResolver.Resolution activeFormResolution = null;
     Map<Integer,String> guards=markupGuards(text);
@@ -145,6 +152,13 @@ public final class JspProjectParser {
         interactions.set(i,new JspAnalysis.Interaction(item.viewPath(),item.type(),item.label(),item.target(),item.httpMethod(),item.source(),item.confidence(),item.submitsCurrentView(),item.originalExpression(),proof.stream().distinct().toList(),item.componentId()));
       }
     }
+  }
+
+  private static String messageTitle(String source,StaticMessageResolver messages) {
+    Matcher title=Pattern.compile("(?is)<title\\b[^>]*>(.*?)</title\\s*>").matcher(source);if(!title.find()||!title.group(1).toLowerCase(Locale.ROOT).contains("bean:message")||MarkupAnalysis.dynamic(title.group(1)))return null;
+    Matcher tag=Pattern.compile("(?is)<bean:message\\b([^>]*?)/?\\s*>").matcher(title.group(1));StringBuffer resolved=new StringBuffer();boolean found=false;
+    while(tag.find()){Map<String,String> attributes=new HashMap<>();Matcher attr=Pattern.compile("([\\w:-]+)\\s*=\\s*([\\x27\\x22])(.*?)\\2").matcher(tag.group(1));while(attr.find())attributes.put(attr.group(1),attr.group(3));String key=attributes.get("key"),value=key==null?null:messages.resolve(attributes.get("bundle"),key);if(value==null)value="（訊息 key："+Objects.toString(key,"未提供")+"）";tag.appendReplacement(resolved,Matcher.quoteReplacement(value));found=true;}tag.appendTail(resolved);
+    if(!found)return null;String label=resolved.toString().replaceAll("(?s)<[^>]*>","").replaceAll("\\s+"," ").strip();return label.isBlank()?null:label;
   }
 
   private static MarkupAnalysis withAnchors(MarkupAnalysis markup,String text,Map<Integer,String> anchors) {

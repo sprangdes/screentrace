@@ -1,6 +1,7 @@
 import test from 'node:test';import assert from 'node:assert/strict';import {chromium} from '../../screentrace-capture/node_modules/playwright/index.mjs';import {fileFixture,fixture,node} from './fixture.mjs';
 
-test('Struts ACTION endpoints use the readable Struts action category label',async()=>{
- const data=fixture();data.graph.nodes.push(node('struts-action','ENDPOINT','任何方法 /accounts/update',{path:'/accounts/update',httpMethod:'ANY',category:'ACTION'}));
- const browser=await chromium.launch();try{const page=await browser.newPage();await page.goto(await fileFixture(data));await page.getByRole('button',{name:'API',exact:true}).click();await page.locator('[data-endpoint-group="ALL"]').click();assert.equal(await page.locator('[data-api-row="struts-action"] .api-category').innerText(),'Struts 動作');}finally{await browser.close();}
+test('Struts ACTION endpoints use screen URL grouping when they render a screen, otherwise the Struts action label',async()=>{
+ const data=fixture();data.graph.nodes.push(node('struts-action','ENDPOINT','任何方法 /accounts/update',{path:'/accounts/update',httpMethod:'ANY',category:'ACTION'}),node('screen-action','ENDPOINT','任何方法 /accounts/view',{path:'/accounts/view',httpMethod:'ANY',category:'ACTION'}),node('screen-handler','HANDLER','ViewAction'));
+ data.graph.relationships.push({id:'handle-screen-action',type:'HANDLED_BY',from:'screen-action',to:'screen-handler'},{id:'render-screen-action',type:'RENDERS',from:'screen-handler',to:'a'});
+ const browser=await chromium.launch();try{const page=await browser.newPage();await page.goto(await fileFixture(data));await page.getByRole('button',{name:'API',exact:true}).click();await page.locator('[data-endpoint-group="ALL"]').click();assert.equal(await page.locator('[data-api-row="struts-action"] .api-category').innerText(),'Struts 動作');assert.equal(await page.locator('[data-api-row="screen-action"] .api-category').innerText(),'畫面網址');await page.locator('[data-endpoint-group="SCREEN"]').click();assert.equal(await page.locator('.api-row').count(),1);assert.equal(await page.locator('.api-row').getAttribute('data-api-row'),'screen-action');}finally{await browser.close();}
 });

@@ -26,7 +26,7 @@ public final class StrutsProjectAnalyzer {
     readSpringBeans(state);
     readMessages(state);
     readServletMapping(state);
-    JspAnalysis jsp=new JspProjectParser().analyze(inventory.root(),inventory.files());
+    JspAnalysis jsp=new JspProjectParser().analyze(inventory.root(),inventory.files(),(bundle,key)->resolveMessage(state,bundle,key));
     state.diagnostics.addAll(jsp.diagnostics());
     for(var view:jsp.views()) addView(view,state);
     readTiles(state);
@@ -71,7 +71,8 @@ public final class StrutsProjectAnalyzer {
     indexView(state.viewIds,view.path(),viewId);
     if(view.kind()==JspAnalysis.ViewKind.JSP) {
       String id=StableGraphIds.screen(view.path());
-      addNode(state,id,NodeType.SCREEN,Path.of(view.path()).getFileName().toString().replaceFirst("\\.jsp$",""),Map.of("view",view.path()),view.source(),Confidence.CONFIRMED);
+      Map<String,String> attributes=new TreeMap<>();attributes.put("view",view.path());if(view.displayName()!=null)attributes.put("messageTitle",view.displayName());
+      addNode(state,id,NodeType.SCREEN,view.displayName()==null?Path.of(view.path()).getFileName().toString().replaceFirst("\\.jsp$",""):view.displayName(),attributes,view.source(),Confidence.CONFIRMED);
       indexView(state.screens,view.path(),id);
     } else if(view.kind()==JspAnalysis.ViewKind.HTML&&view.path().replace('\\','/').startsWith("src/main/webapp/")) {
       String id=StableGraphIds.screen(view.path());String publicUrl="/"+view.path().substring("src/main/webapp/".length());
@@ -916,14 +917,31 @@ public final class StrutsProjectAnalyzer {
     }
   }
   private static void readMessages(State state) {
-    Set<String> bundles=new TreeSet<>();
+    List<MessageResource> resources=new ArrayList<>();
     for(Path config:state.inventory.strutsConfigFiles()) try {
-      for(Element resource:StrutsSources.elements(readXml(config,state),"message-resources")) bundles.add(resource.getAttribute("parameter").replace('.', '/'));
+      for(Element resource:StrutsSources.elements(readXml(config,state),"message-resources")) {
+        String parameter=resource.getAttribute("parameter").replace('.', '/'),key=resource.getAttribute("key");
+        if(parameter.isBlank())continue;
+        if(state.defaultMessageBundle==null&&key.isBlank())state.defaultMessageBundle=parameter;
+        resources.add(new MessageResource(key,parameter));
+        if(!key.isBlank())state.messageBundleAliases.put(key,parameter);
+      }
     } catch(Exception error) {diagnostic(state,"訊息資源設定未解析",new SourceLocation(relative(state,config),1),"MESSAGE_RESOURCE_UNRESOLVED");}
-    for(Path file:state.inventory.files()) if(file.toString().endsWith(".properties") && bundles.stream().anyMatch(bundle -> relative(state,file).endsWith(bundle+".properties") || relative(state,file).contains(bundle+"_"))) try {
+    for(MessageResource resource:resources) {
+      List<Path> matches=state.inventory.files().stream().filter(file->file.toString().endsWith(".properties")&&relative(state,file).endsWith(resource.parameter()+".properties")).sorted().toList();
+      Map<String,Set<String>> values=new TreeMap<>();
+      for(Path file:matches)try {
       Properties properties=new Properties();properties.load(new StringReader(SafeProjectFiles.readUtf8Limited(state.inventory.root(),file,SafeProjectFiles.MAX_SOURCE_FILE_BYTES)));
-      for(String key:properties.stringPropertyNames()) state.messages.computeIfAbsent(key,k->new TreeSet<>()).add(properties.getProperty(key));
-    } catch(Exception error) {diagnostic(state,"訊息資源無法讀取",new SourceLocation(relative(state,file),1),"MESSAGE_RESOURCE_UNRESOLVED");}
+        Map<String,String> bundle=state.messageBundles.computeIfAbsent(resource.parameter(),ignored->new TreeMap<>());
+        for(String key:properties.stringPropertyNames()) {String value=properties.getProperty(key);values.computeIfAbsent(key,ignored->new TreeSet<>()).add(value);bundle.putIfAbsent(key,value);state.messages.computeIfAbsent(key,k->new TreeSet<>()).add(value);}
+      } catch(Exception error) {diagnostic(state,"訊息資源無法讀取",new SourceLocation(relative(state,file),1),"MESSAGE_RESOURCE_UNRESOLVED");}
+      for(var entry:values.entrySet())if(entry.getValue().size()>1)state.messageBundles.getOrDefault(resource.parameter(),Map.of()).remove(entry.getKey());
+    }
+  }
+  private static String resolveMessage(State state,String bundle,String key) {
+    String selected=bundle==null||bundle.isBlank()?state.defaultMessageBundle:state.messageBundleAliases.getOrDefault(bundle,bundle.replace('.','/'));
+    String value=selected==null?null:state.messageBundles.getOrDefault(selected,Map.of()).get(key);
+    return value==null?"（訊息 key："+key+"）":value;
   }
   private static void readTiles(State state) {
     Map<String,Tile> tiles=new TreeMap<>();
@@ -1116,6 +1134,7 @@ public final class StrutsProjectAnalyzer {
   private record ServletPattern(String pattern,SourceLocation source,String servletName,String servletClass) { }
   private record Control(String id,String label,Map<String,String> attributes,String target,SourceLocation source,String field,String value,String formGroup) { }
   private record ScreenLoadCall(String tag,String target,String module,SourceLocation source) { }
+  private record MessageResource(String key,String parameter) { }
   private record Tile(String name,String template,String parent,Map<String,String> puts,SourceLocation source) { }
   private static final class State {
     final ProjectInventory inventory;
@@ -1129,7 +1148,7 @@ public final class StrutsProjectAnalyzer {
     final Set<String> tilePageDefinitions=new TreeSet<>(),tileStandaloneDefinitions=new TreeSet<>(),tilePageJspPaths=new TreeSet<>();
     final Map<String,Set<String>> tilePageOwners=new TreeMap<>();
     final Map<String,List<Mapping>> routes=new TreeMap<>();final Map<String,String> endpointIds=new TreeMap<>(),globalForwards=new TreeMap<>();final Map<String,Boolean> inputForward=new TreeMap<>();final List<Mapping> actionMappings=new ArrayList<>();final List<PendingForward> pendingForwards=new ArrayList<>(),exceptionForwards=new ArrayList<>();final Map<String,List<PendingForward>> actionForwardTargets=new TreeMap<>();final Map<String,Map<String,WildcardMatch>> wildcardMatches=new TreeMap<>();final Map<String,ServletMappingResolution> servletMappings=new TreeMap<>();
-    final Map<String,StrutsSources.JavaType> types=new TreeMap<>();final Map<String,Set<String>> messages=new TreeMap<>();
+    final Map<String,StrutsSources.JavaType> types=new TreeMap<>();final Map<String,Set<String>> messages=new TreeMap<>();final Map<String,Map<String,String>> messageBundles=new TreeMap<>();final Map<String,String> messageBundleAliases=new TreeMap<>();String defaultMessageBundle;
     State(ProjectInventory inventory) {this.inventory=new ProjectInventory(inventory.root(),inventory.files().stream().sorted().toList(),inventory.technologies().stream().sorted().toList(),inventory.diagnostics().stream().sorted().toList(),inventory.contextPaths(),inventory.contextSettingsFile(),inventory.contextSettingsLine());this.strutsVersion=detectStrutsVersion(this.inventory);}
     ApplicationGraph graph() {return new ApplicationGraph(new Application(inventory.root().getFileName().toString(),inventory.root().toString(),inventory.technologies()),List.copyOf(nodes.values()),List.copyOf(edges.values()),diagnostics,List.of(),ApplicationGraph.BEHAVIOR_SCHEMA_VERSION,List.copyOf(behaviors.values()),List.copyOf(rules.values()));}
   }

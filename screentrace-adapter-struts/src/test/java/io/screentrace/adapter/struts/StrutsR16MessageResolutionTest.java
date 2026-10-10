@@ -23,12 +23,17 @@ class StrutsR16MessageResolutionTest {
     file("src/main/resources/ApplicationResources.properties","screen.title=Account Settings\nbutton.save=Save changes\n");
     file("src/main/resources/ApplicationResources_zh_TW.properties","screen.title=繁體標題\nbutton.save=繁體按鈕\n");
     file("src/main/resources/ExtraMessages.properties","button.save=Secondary bundle value\n");
-    file("src/main/webapp/page.jsp","<html><head><title><bean:message key='screen.title'/></title></head><body><html:form action='/save'><button id='save'><bean:message bundle='secondary' key='button.save'/></button></html:form></body></html>");
+    file("src/main/webapp/page.jsp","<html><head><title><bean:message key='screen.title'/></title></head><body><html:form action='/save'><button id='save'><bean:message bundle='secondary' key='button.save'/></button><button id='default'><bean:message key='button.save'/></button><button id='missing'><bean:message key='missing.key'/></button></html:form></body></html>");
 
     ApplicationGraph graph=new StrutsProjectAnalyzer().analyze(new ProjectScanner().scan(root));
     var save=graph.nodes().stream().filter(node->node.type()==NodeType.COMPONENT&&"save".equals(node.attributes().get("id"))).findFirst().orElseThrow();
     assertEquals("Secondary bundle value",save.name());
     assertEquals("Secondary bundle value",save.attributes().get("visibleText"));
+    var defaultBundle=graph.nodes().stream().filter(node->node.type()==NodeType.COMPONENT&&"default".equals(node.attributes().get("id"))).findFirst().orElseThrow();
+    assertEquals("Save changes",defaultBundle.name());
+    var missing=graph.nodes().stream().filter(node->node.type()==NodeType.COMPONENT&&"missing".equals(node.attributes().get("id"))).findFirst().orElseThrow();
+    assertEquals("（訊息 key：missing.key）",missing.name());
+    assertEquals("Account Settings",graph.nodes().stream().filter(node->node.type()==NodeType.SCREEN&&"src/main/webapp/page.jsp".equals(node.attributes().get("view"))).findFirst().orElseThrow().name());
     assertTrue(graph.nodes().stream().filter(node->node.type()==NodeType.COMPONENT).noneMatch(node->node.name().contains("bean:message")));
   }
 }

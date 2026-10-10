@@ -6,6 +6,7 @@ import { chromium } from 'playwright';
 import {collectElementStyles,thumbnailDataUri,captureOptions} from './element-styles.mjs';
 import {annotateConditions,annotateSource,convertControls,expressionList,markupTokens,replaceDynamicExpressions} from './preview-markup.mjs';
 import { deduplicateMappings, discoverSpringResourceMappings } from './spring-resource-mappings.mjs';
+import {loadStrutsMessageCatalog,renderStrutsMessages} from './struts-messages.mjs';
 import { assertOutputPathWithin, createDirectoryWithin, readBufferLimited, readUtf8Limited, resolveExistingDirectoryWithin, resolveExistingFileWithin, writeBufferWithin } from './safe-files.mjs';
 
 const [targetArg, outputArg, ...extraArgs] = process.argv.slice(2);
@@ -25,6 +26,7 @@ const screenByHandler = new Map(graph.relationships.filter(edge => edge.type ===
 let webRoot = path.join(target, 'src/main/webapp');
 if(previewV2){for(const candidate of ['src/main/webapp','WebContent','web']){try{await resolveExistingDirectoryWithin(target,path.join(target,candidate));webRoot=path.join(target,candidate);break;}catch{}}}
 const tagRoot = path.join(webRoot, 'WEB-INF/tags');
+const strutsMessages=await loadStrutsMessageCatalog(target,webRoot);
 const htmlRoot = path.join(output, 'static-preview');
 const screenshotRoot = path.join(output, 'screenshots');
 const htmlRootReal = await createDirectoryWithin(output, htmlRoot);
@@ -223,6 +225,7 @@ async function renderJsp(screen) {
   const custom = source.match(/<jsp:attribute\s+name=["']customScript["'][^>]*>([\s\S]*?)<\/jsp:attribute>/)?.[1] || '';
   source = source.replace(/<jsp:attribute\s+name=["']customScript["'][^>]*>[\s\S]*?<\/jsp:attribute>/g, '');
   source = await expandTags(source, { customScript: custom });
+  source = renderStrutsMessages(source,strutsMessages);
   const urls = {};
   source = source.replace(/<spring:url\b([^>]*?)\/>/g, (_, attributeText) => {
     const attributes = attrs(attributeText);

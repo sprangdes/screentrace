@@ -23,7 +23,9 @@ public record JspAnalysis(List<View> views, List<Interaction> interactions, List
     this(views, interactions, includes, tilesDefinitions, diagnostics, java.util.Map.of());
   }
 
-  public record View(String path, ViewKind kind, SourceLocation source) { }
+  public record View(String path, ViewKind kind, SourceLocation source,String displayName) {
+    public View(String path,ViewKind kind,SourceLocation source){this(path,kind,source,null);}
+  }
 
   public enum ViewKind { JSP, JSPF, HTML }
 
