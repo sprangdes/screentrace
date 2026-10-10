@@ -127,3 +127,34 @@ R16 報告「仍未有呼叫來源的端點」表中，大多數原因只寫「�
 - 授權沿用 OQ-031（Struts fixture 數量型欄位）、OQ-028（R16 新增測試）；其餘衝突依 §0.3 停止。
 
 完成後停止，等需求方重新驗收 WP54。
+
+---
+
+## 6. WP54 第二次驗收回覆（需求方，2026-10-10）
+
+**結論：§5.1 六組已修正、逐筆稽核格式到位，examples 由 95 降為 15；但審查者以原始碼確認仍有系統性漏判，WP54 仍不通過。** 不得進入 WP56。
+
+### 6.1 審查者確認的漏判
+
+1. **靜態 HTML 頁的連結沒有成為呼叫來源**：examples 剩餘 15 筆中有 **11 筆**由 `exercise/index.html` 的 `<a href="...do">` 連入（例如第 55 行 `href="bean-write-2.do"`、第 111 行 `href="forward-redirect-default-module.do"`），包括 `/exercise/bean-write-2.do`、`forward-redirect-default(-module|-path).do`、`html-cancel.do`、`html-image.do`、`html-img.do`、`html-messages.do`、`html-multibox.do`、`html-select.do`、`html-setters.do`。§5.2 第 5 點的搜尋範圍漏列 `.html`（審查者規格疏漏），但產品本身也沒有解析這些靜態頁的連結。
+2. **Struts 萬用字元 action 沒有比對**：mailreader `WEB-INF/struts-config.xml:187–203` 的 `/Delete*`、`/Edit*`、`/Save*`，對應 `MainMenu.jsp:30`、`Welcome.jsp:30` 的 `html:link action="/EditRegistration"`、`Registration.jsp:39` 的 `html:form action="/SaveRegistration"`、`Registration.jsp:167` 的 `/DeleteSubscription`、`:173`／`:184` 的 `/EditSubscription`、`Subscription.jsp:43` 的 `/SaveSubscription`。這是 mailreader 最核心的帳號與訂閱流程，卻被列為「找不到呼叫來源」；報告寫「全模組原始碼中沒有任何參照」，是因為以字面 `Edit*` 搜尋。scripting-mailreader 相同。
+3. **forward 到另一個 action 時沒有繼承呼叫來源**：mailreader `/MainMenu.do` 是 `/SubmitLogon` 成功後的 forward 目的地（`struts-config.xml:151`），以及第 206 行另一個 action 的 forward 目的地。依 OQ-021，可證明且唯一的轉址／forward 目的地應以 INFERRED 繼承來源端點的呼叫來源；Spring 已實作，Struts 同樣適用。報告以「不是畫面元件直接呼叫來源」排除，與 OQ-021 不符。
+4. **只被 `extends` 的設定樣板被當成待確認端點**：mailreader `//BaseAction` 只被 `/Delete*`、`/Edit*`、`/Save*` 以 `extends="//BaseAction"` 繼承，是設定樣板。
+
+### 6.2 補正（先補失敗測試，再修正）
+
+1. **靜態 HTML 頁**：`webapp` 下的 `.html`／`.htm` 與 JSP 一樣是畫面（R16 前在 eMusicStore 的 `firstPage.html` 已是如此），其 `<a href>`、`<form action>` 依 §5.2 第 2 點以檔案所在公開 URL 目錄解析相對網址（含 module 前綴目錄），去除查詢字串後比對 action。
+2. **Struts 1 萬用字元比對**（決定性，不是猜測）：依 Struts 1.3 規則——先找完全相符的 action path；沒有時依 struts-config 內出現順序取第一個符合的萬用字元 mapping；`*` 比對 0 個以上不含 `/` 的字元，`**` 比對 0 個以上含 `/` 的字元，`\` 為跳脫；比對成功時 `{0}`–`{9}` 代入該 mapping 的 forward path、`parameter`、`type`、`input` 等屬性。每個萬用字元 mapping 是一個端點，呼叫來源為所有比對到它的連結／表單（basis `STATIC_URL`，連結本身為常值時），詳細資料列出實際比對到的具體 path（例如 `/EditRegistration`、`/EditSubscription`）；代入後的 forward 依具體 path 分別解析到畫面。
+3. **Struts forward 的呼叫來源繼承（OQ-021 適用於 Struts）**：action 的 forward／global forward／exception path 經 OQ-030 正規化後指向另一個 action 時，目的 action 端點以 INFERRED 繼承來源 action 端點的全部呼叫來源，規則同 OQ-021（唯一目的地才繼承、鏈長上限 5、偵測循環、證據記錄完整鏈）。
+4. **設定樣板**：只被其他 action 以 `extends` 引用、且沒有任何連結／表單／forward 指向的 action，在 API 頁與首頁顯示「被繼承的設定樣板」，不列入「找不到呼叫來源」與可疑清單；仍保留在畫面網址清單與 md。
+5. **稽核方法修正**：剩餘「找不到呼叫來源」的搜尋範圍擴大為該模組全部 `.jsp`、`.jspf`、`.tag`、`.html`、`.htm`、`.js`、`.java`、`.xml`、`.properties`；萬用字元端點改以「所有 action 參照依第 2 點規則比對」而非字面搜尋；命中為 server-side forward 時，必須說明 OQ-021 繼承為何不適用（例如目的地不唯一），不得只寫「不是畫面元件直接呼叫來源」。
+6. 合成 fixture：靜態 HTML 頁相對連結到 module action、萬用字元（`*`、`**`、完全相符優先、設定檔順序、`{1}` 代入 forward）、forward 到 action 的呼叫來源繼承、只被 extends 的 action。
+
+驗收：
+- examples 上述 11 筆為使用中；剩餘逐筆依第 5 點重新稽核。
+- mailreader 與 scripting-mailreader 的 `/Edit*`、`/Save*`、`/Delete*` 為使用中，詳細資料列出比對到的具體 path；`/MainMenu.do` 為推定使用中（繼承自 `/SubmitLogon` 等）；`//BaseAction` 顯示「被繼承的設定樣板」。
+- cookbook 的 `/Prepare*`、`/Source*`、`/Wildcard*` 依第 2 點重新判定並稽核。
+- 8 個模組的對照表、剩餘清單、forward 無法解析清單依新結果更新。
+- eMusicStore、PetClinic graph SHA-256 不變；完整驗證全綠。授權沿用 OQ-028、OQ-031。
+
+完成後停止，等需求方重新驗收 WP54。
