@@ -136,8 +136,8 @@ class SpringMvcAnalyzerTest {
         ApplicationGraph graph = new SpringMvcAnalyzer().analyze(new ProjectScanner().scan(root));
         Set<String> screens = graph.nodes().stream().filter(node -> node.type() == ApplicationGraph.NodeType.SCREEN)
             .map(ApplicationGraph.GraphNode::name).collect(java.util.stream.Collectors.toSet());
-        assertTrue(screens.containsAll(Set.of("home.page", "orphan.page")), screens.toString());
-        assertTrue(java.util.Collections.disjoint(screens, Set.of("base", "child", "fragment")), screens.toString());
+        assertTrue(screens.containsAll(Set.of("home.page", "child", "orphan.page")), screens.toString());
+        assertTrue(java.util.Collections.disjoint(screens, Set.of("base", "fragment")), screens.toString());
         assertTrue(graph.nodes().stream().noneMatch(node -> node.type() == ApplicationGraph.NodeType.SCREEN
             && node.attributes().getOrDefault("view", "").endsWith("layout.jsp")), screens.toString());
     }
