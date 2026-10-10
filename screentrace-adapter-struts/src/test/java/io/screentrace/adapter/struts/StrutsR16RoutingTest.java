@@ -218,6 +218,24 @@ class StrutsR16RoutingTest {
     assertTrue(graph.relationships().stream().anyMatch(edge -> edge.type() == EdgeType.NAVIGATES_TO && graph.nodes().stream().anyMatch(node -> node.id().equals(edge.to()) && node.type() == NodeType.SCREEN)),graph.relationships()+"\n"+graph.diagnostics());
   }
 
+  @Test void actionMatchingItsModulePrefixStillGetsTheModulePrefixInPublicUrl() throws Exception {
+    file("src/main/webapp/WEB-INF/web.xml", """
+        <web-app>
+          <servlet><servlet-name>action</servlet-name><servlet-class>org.apache.struts.action.ActionServlet</servlet-class>
+            <init-param><param-name>config/admin</param-name><param-value>/WEB-INF/struts-config-admin.xml</param-value></init-param>
+          </servlet>
+          <servlet-mapping><servlet-name>action</servlet-name><url-pattern>*.do</url-pattern></servlet-mapping>
+        </web-app>
+        """);
+    file("src/main/webapp/WEB-INF/struts-config-admin.xml", "<struts-config><action-mappings><action path=\"/admin\" forward=\"/admin/home.jsp\"/></action-mappings></struts-config>");
+    file("src/main/webapp/admin/index.jsp", "<html:link action=\"/admin\">Admin</html:link>");
+    file("src/main/webapp/admin/home.jsp", "<h1>Admin</h1>");
+
+    var graph = analyze();
+    var endpoint = graph.nodes().stream().filter(node -> node.type() == NodeType.ENDPOINT && "/admin/admin.do".equals(node.attributes().get("path"))).findFirst().orElseThrow();
+    assertTrue(graph.relationships().stream().anyMatch(edge -> edge.type() == EdgeType.TRIGGERS && edge.to().equals(endpoint.id())), graph.relationships()+"\n"+graph.diagnostics());
+  }
+
   @Test void missingServletMappingKeepsLogicalAndLiteralPublicTargetsSeparate() throws Exception {
     config("<action path=\"/save\" type=\"sample.SaveAction\"/>");
     file("src/main/webapp/form.jsp", "<html:form action=\"/save.do\"><html:submit value=\"Save\"/></html:form>");
