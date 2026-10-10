@@ -354,6 +354,37 @@ public final class StrutsProjectAnalyzer {
       }
     } catch(Exception error) {diagnostic(state,"Spring bean 設定無法解析",new SourceLocation(relative(state,file),1),"SPRING_BEAN_UNRESOLVED");}
   }
+
+  private static StrutsVersionEvidence detectStrutsVersion(ProjectInventory inventory) {
+    Map<String,SourceLocation> versions=new TreeMap<>();
+    for(Path file:inventory.files())try {
+      String relative=StrutsSources.relative(inventory.root(),file),name=file.getFileName().toString();
+      if(name.equals("pom.xml")) {
+        Document pom=StrutsSources.xml(SafeProjectFiles.readUtf8Limited(inventory.root(),file,SafeProjectFiles.MAX_XML_FILE_BYTES));
+        for(Element parent:StrutsSources.elements(pom,"parent")) addMavenStrutsVersion(parent,relative,versions);
+        for(Element dependency:StrutsSources.elements(pom,"dependency")) addMavenStrutsVersion(dependency,relative,versions);
+      } else if(name.equals("build.xml")||name.equals("build.properties")) {
+        String text=SafeProjectFiles.readUtf8Limited(inventory.root(),file,SafeProjectFiles.MAX_SOURCE_FILE_BYTES);String[] lines=text.split("\\R",-1);
+        for(int line=0;line<lines.length;line++) {
+          String value=lines[line];if(!value.toLowerCase(Locale.ROOT).contains("struts"))continue;
+          var matcher=java.util.regex.Pattern.compile("(?i)struts[.\\-_a-z0-9\\\"'= ]*?(?:value[=\\\"' ]*)?(1\\.\\d+\\.\\d+)").matcher(value);
+          if(matcher.find())versions.putIfAbsent(matcher.group(1),new SourceLocation(relative,line+1));
+        }
+      }
+      var library=java.util.regex.Pattern.compile("(?i).*struts-[a-z-]*?(\\d+\\.\\d+\\.\\d+).*\\.jar").matcher(name);
+      if(library.matches())versions.putIfAbsent(library.group(1),new SourceLocation(relative,1));
+    } catch(Exception ignored) { }
+    if(versions.size()!=1)return new StrutsVersionEvidence(null,null,versions.isEmpty()?"未找到可證明的 Struts 版本": "版本證據互相衝突："+versions.entrySet().stream().map(entry->entry.getKey()+"（"+entry.getValue().file()+":"+entry.getValue().line()+"）").toList());
+    var entry=versions.entrySet().iterator().next();return new StrutsVersionEvidence(entry.getKey(),entry.getValue(),entry.getKey()+"（"+entry.getValue().file()+":"+entry.getValue().line()+"）");
+  }
+  private static void addMavenStrutsVersion(Element declaration,String file,Map<String,SourceLocation> versions) {
+    String group=directText(declaration,"groupId"),artifact=directText(declaration,"artifactId"),version=directText(declaration,"version");
+    if(("org.apache.struts".equals(group)||artifact.startsWith("struts-"))&&version.matches("\\d+\\.\\d+\\.\\d+"))versions.putIfAbsent(version,new SourceLocation(file,sourceLine(declaration)));
+  }
+  private static String directText(Element parent,String name) {
+    for(Node child=parent.getFirstChild();child!=null;child=child.getNextSibling())if(child instanceof Element element&&name.equals(element.getTagName()))return element.getTextContent().trim();return "";
+  }
+  private static int sourceLine(Element element) {Object line=element.getUserData("line");return line instanceof Integer value?value:1;}
   private static String dispatchFamily(String type,State state,Set<String> seen) {
     String shortName=type.substring(type.lastIndexOf('.')+1);
     if(Set.of("DispatchAction","LookupDispatchAction","MappingDispatchAction").contains(shortName)) return shortName;
@@ -502,7 +533,8 @@ public final class StrutsProjectAnalyzer {
     if(!StrutsSources.literal(contextual.target())) {diagnostic(state,"元件目標運算式未解析："+contextual.target(),contextual.source(),"STRUTS_TARGET_UNRESOLVED");unresolvedBehavior(contextual,state);return;}
     String resolvedTarget=moduleTarget(contextual,state),path=resolvedTarget.split("[?#]",2)[0];var mappings=state.routes.get(path);WildcardMatch wildcardMatch=null;
     String module=contextual.attributes().getOrDefault("module",moduleContext==null?moduleFor(contextual.source().file(),state):moduleContext);
-    if(mappings==null) {String target=state.screens.get(path);if(target!=null) {edge(state,EdgeType.NAVIGATES_TO,control.id(),target,Confidence.CONFIRMED,control.source());return;}String logical=logicalPath(path,module,state);if(logical!=null)mappings=state.routes.get(logical);if(mappings==null){String concrete=logical==null?path:logical;wildcardMatch=firstWildcardMatch(concrete,module,state);if(wildcardMatch!=null)mappings=List.of(wildcardMatch.mapping());}}
+    WildcardResolution wildcardResolution=null;
+    if(mappings==null) {String target=state.screens.get(path);if(target!=null) {edge(state,EdgeType.NAVIGATES_TO,control.id(),target,Confidence.CONFIRMED,control.source());return;}String logical=logicalPath(path,module,state);if(logical!=null)mappings=state.routes.get(logical);if(mappings==null){String concrete=logical==null?path:logical;wildcardResolution=resolveWildcard(concrete,module,state);if(wildcardResolution!=null&&wildcardResolution.ambiguous()){for(WildcardMatch candidate:wildcardResolution.candidates()){String candidateEndpoint=state.endpointIds.getOrDefault(candidate.mapping().route(),StableGraphIds.endpoint("ANY",publicPath(candidate.mapping().route(),candidate.mapping().module(),state)));recordWildcardMatch(candidateEndpoint,path,candidate,state,control.source());edge(state,EdgeType.TRIGGERS,control.id(),candidateEndpoint,Confidence.AMBIGUOUS,control.source(),"basis=STATIC_URL；"+wildcardAmbiguityDetail(wildcardResolution,state));}diagnostic(state,wildcardAmbiguityMessage(wildcardResolution,state),control.source(),"STRUTS_WILDCARD_VERSION_UNRESOLVED");unresolvedBehavior(contextual,state);return;}if(wildcardResolution!=null&&!wildcardResolution.candidates().isEmpty()){wildcardMatch=wildcardResolution.candidates().get(0);mappings=List.of(wildcardMatch.mapping());}}}
     if(mappings==null) {
       if(path.endsWith(".do")||path.contains("/do/")){String endpoint=unmappedLiteralEndpoint(path,control,state);edge(state,EdgeType.TRIGGERS,control.id(),endpoint,Confidence.UNRESOLVED,control.source());unresolvedBehavior(control,state);return;}
       diagnostic(state,"元件路由未解析："+path,control.source(),"STRUTS_ROUTE_UNRESOLVED");unresolvedBehavior(control,state);return;
@@ -538,10 +570,10 @@ public final class StrutsProjectAnalyzer {
         for(String destination:destinations){if(status==Confidence.CONFIRMED)addScreenRouteAlias(destination,control.attributes().get("target"),state);edge(state,EdgeType.NAVIGATES_TO,control.id(),destination,status,control.source());}
       }
     }
-    edge(state,EdgeType.TRIGGERS,control.id(),endpoint,status,control.source(),module.isBlank()?null:"module="+module);
+    String callDetail="basis=STATIC_URL"+(module.isBlank()?"":"；module="+module);edge(state,EdgeType.TRIGGERS,control.id(),endpoint,status,control.source(),callDetail);
     BehaviorType type="LINK".equals(control.attributes().get("kind"))?BehaviorType.NAVIGATE:BehaviorType.SUBMIT_FORM;
     String behaviorExpression=control.attributes().getOrDefault("originalTarget",control.target());String id=StableGraphIds.behavior(control.id(),"FORM".equals(control.attributes().get("kind"))?"submit":"click",type,behaviorExpression+(module.isBlank()?"":"|module="+module),0);
-    ServletMappingResolution resolution=state.servletMappings.get(module);String detail=resolution!=null&&resolution.status()==ServletMappingStatus.PROVEN?mappingProof(resolution):null;
+    ServletMappingResolution resolution=state.servletMappings.get(module);String detail=callDetail+(resolution!=null&&resolution.status()==ServletMappingStatus.PROVEN?"；"+mappingProof(resolution):"");
     List<AnalysisEvidence> callEvidence=new ArrayList<>(evidence(control.source(),status,detail));if(!Objects.equals(behaviorExpression,control.target()))callEvidence.add(new AnalysisEvidence(control.source(),PARSER,status.resolutionStatus(),"原始目標="+behaviorExpression+"；正規化="+control.target()));if(!module.isBlank())callEvidence.add(new AnalysisEvidence(control.source(),PARSER,status.resolutionStatus(),"module="+module));
     state.behaviors.putIfAbsent(id,new Behavior(id,control.id(),"FORM".equals(control.attributes().get("kind"))?"submit":"click",type,endpoint,null,null,behaviorExpression,callEvidence));
   }
@@ -563,14 +595,20 @@ public final class StrutsProjectAnalyzer {
     if(module!=null&&!module.isBlank()&&!path.equals(module)&&!path.startsWith(module+"/"))path=module+path;
     return path;
   }
-  private static WildcardMatch firstWildcardMatch(String path,String module,State state) {
-    for(Mapping mapping:state.actionMappings) {
-      if(!mapping.module().equals(Objects.toString(module,"")))continue;
-      WildcardMatch match=wildcardMatch(mapping.route(),path,mapping);
-      if(match!=null)return match;
-    }
-    return null;
+  private static WildcardResolution resolveWildcard(String path,String module,State state) {
+    List<WildcardMatch> matches=new ArrayList<>();
+    for(Mapping mapping:state.actionMappings)if(mapping.module().equals(Objects.toString(module,""))){WildcardMatch match=wildcardMatch(mapping.route(),path,mapping);if(match!=null)matches.add(match);}
+    if(matches.isEmpty())return null;
+    WildcardMatch first=matches.get(0),last=matches.get(matches.size()-1);
+    if(first.mapping().route().equals(last.mapping().route()))return new WildcardResolution(List.of(last),false);
+    if(state.strutsVersion.isVersion13())return new WildcardResolution(List.of(last),false);
+    return new WildcardResolution(List.of(first,last),true);
   }
+  private static String wildcardAmbiguityDetail(WildcardResolution resolution,State state) {
+    return "Struts 版本無法證明為 1.3.x；首個符合="+wildcardCandidateText(resolution.candidates().get(0))+"；最後符合="+wildcardCandidateText(resolution.candidates().get(resolution.candidates().size()-1))+"；版本證據="+state.strutsVersion.description();
+  }
+  private static String wildcardCandidateText(WildcardMatch match) {return match.mapping().route()+"（"+match.mapping().source().file()+":"+match.mapping().source().line()+"；實際路徑="+match.path()+"）";}
+  private static String wildcardAmbiguityMessage(WildcardResolution resolution,State state) {return "萬用字元 action 的首末匹配 mapping 不同，且 Struts 版本無法證明為 1.3.x；候選："+resolution.candidates().stream().map(StrutsProjectAnalyzer::wildcardCandidateText).toList()+"；版本證據="+state.strutsVersion.description();}
   private static boolean hasWildcardSubstitution(String route,String value) {return route!=null&&route.contains("*")&&value!=null&&java.util.regex.Pattern.compile("\\{[0-9]\\}").matcher(value).find();}
   private static WildcardMatch wildcardMatch(String pattern,String path,Mapping mapping) {
     StringBuilder regex=new StringBuilder("^");int captures=0;
@@ -619,7 +657,7 @@ public final class StrutsProjectAnalyzer {
     if(rawTarget==null||rawTarget.isBlank()||!StrutsSources.literal(rawTarget))return;
     String target=normalizeStrutsAction(rawTarget,origin.module(),state);if(target==null)return;target=target.split("[?#]",2)[0];
     List<ActionMatch> destinations=resolveActionMappings(target,origin.module(),state);
-    if(destinations.size()>1){diagnostic(state,"Struts forward 目的 action 有多個候選，未繼承呼叫來源："+rawTarget+"；候選="+destinations.stream().map(item->item.mapping().route()+"（"+item.mapping().source().file()+":"+item.mapping().source().line()+"）").toList(),targetSource,"STRUTS_REDIRECT_AMBIGUOUS");return;}
+    if(destinations.size()>1){if(destinations.stream().allMatch(item->item.wildcard()!=null))diagnostic(state,"萬用字元 action 的首末匹配 mapping 不同，且 Struts 版本無法證明為 1.3.x；候選="+destinations.stream().map(item->wildcardCandidateText(item.wildcard())).toList()+"；版本證據="+state.strutsVersion.description(),targetSource,"STRUTS_WILDCARD_VERSION_UNRESOLVED");diagnostic(state,"Struts forward 目的 action 有多個候選，未繼承呼叫來源："+rawTarget+"；候選="+destinations.stream().map(item->item.mapping().route()+"（"+item.mapping().source().file()+":"+item.mapping().source().line()+"）").toList(),targetSource,"STRUTS_REDIRECT_AMBIGUOUS");return;}
     ActionMatch actionMatch=destinations.isEmpty()?null:destinations.get(0);Mapping destination=actionMatch==null?null:actionMatch.mapping();
     if(destination==null) {
       String unresolvedPath=Objects.toString(logicalPath(target,origin.module(),state),target);boolean potential=target.endsWith(".do")||target.contains("/do/");
@@ -642,7 +680,7 @@ public final class StrutsProjectAnalyzer {
   private static List<ActionMatch> resolveActionMappings(String target,String module,State state) {
     String logical=logicalPath(target,module,state);String candidate=logical==null?target:logical;
     List<Mapping> exact=state.routes.get(candidate);if(exact!=null&&!exact.isEmpty())return exact.stream().distinct().map(mapping->new ActionMatch(mapping,null)).toList();
-    WildcardMatch wildcard=firstWildcardMatch(candidate,module,state);return wildcard==null?List.of():List.of(new ActionMatch(wildcard.mapping(),wildcard));
+    WildcardResolution wildcard=resolveWildcard(candidate,module,state);return wildcard==null?List.of():wildcard.candidates().stream().map(match->new ActionMatch(match.mapping(),match)).toList();
   }
   private static List<Mapping> mappingVariants(Mapping mapping,String endpoint,State state) {
     Map<String,WildcardMatch> matches=state.wildcardMatches.get(mapping.route());if(matches==null||matches.isEmpty())return List.of(mapping);
@@ -974,6 +1012,8 @@ public final class StrutsProjectAnalyzer {
   private static void diagnostic(State state,String message,SourceLocation source,String code) {state.diagnostics.add(new Diagnostic(message,Confidence.UNRESOLVED,source,code,evidence(source,Confidence.UNRESOLVED,null)));}
   private record Mapping(String route,String type,String handlerId,String formId,String parameter,String family,Map<String,String> forwards,Map<String,String> localForwards,Map<String,SourceLocation> forwardSources,String input,String module,SourceLocation source) { }
   private record WildcardMatch(Mapping mapping,String path,List<String> captures) { }
+  private record WildcardResolution(List<WildcardMatch> candidates,boolean ambiguous) { }
+  private record StrutsVersionEvidence(String version,SourceLocation source,String description) {boolean isVersion13(){return version!=null&&version.matches("1\\.3\\.\\d+");}}
   private record ActionMatch(Mapping mapping,WildcardMatch wildcard) { }
   private record InheritanceTarget(String target,SourceLocation source) { }
   private record PendingForward(String ownerId,String module,String target,SourceLocation source) { }
@@ -985,6 +1025,7 @@ public final class StrutsProjectAnalyzer {
   private record Tile(String name,String template,String parent,Map<String,String> puts,SourceLocation source) { }
   private static final class State {
     final ProjectInventory inventory;
+    final StrutsVersionEvidence strutsVersion;
     final Map<String,GraphNode> nodes=new TreeMap<>();final Map<String,Relationship> edges=new TreeMap<>();final List<Diagnostic> diagnostics=new ArrayList<>();
     final Map<String,Behavior> behaviors=new TreeMap<>();final Map<String,ValidationRule> rules=new TreeMap<>();
     final Map<String,String> screens=new TreeMap<>(),viewIds=new TreeMap<>(),tileViewIds=new TreeMap<>(),beans=new TreeMap<>(),forms=new TreeMap<>();
@@ -995,7 +1036,7 @@ public final class StrutsProjectAnalyzer {
     final Map<String,Set<String>> tilePageOwners=new TreeMap<>();
     final Map<String,List<Mapping>> routes=new TreeMap<>();final Map<String,String> endpointIds=new TreeMap<>(),globalForwards=new TreeMap<>();final Map<String,Boolean> inputForward=new TreeMap<>();final List<Mapping> actionMappings=new ArrayList<>();final List<PendingForward> pendingForwards=new ArrayList<>(),exceptionForwards=new ArrayList<>();final Map<String,List<PendingForward>> actionForwardTargets=new TreeMap<>();final Map<String,Map<String,WildcardMatch>> wildcardMatches=new TreeMap<>();final Map<String,ServletMappingResolution> servletMappings=new TreeMap<>();
     final Map<String,StrutsSources.JavaType> types=new TreeMap<>();final Map<String,Set<String>> messages=new TreeMap<>();
-    State(ProjectInventory inventory) {this.inventory=new ProjectInventory(inventory.root(),inventory.files().stream().sorted().toList(),inventory.technologies().stream().sorted().toList(),inventory.diagnostics().stream().sorted().toList(),inventory.contextPaths(),inventory.contextSettingsFile(),inventory.contextSettingsLine());}
+    State(ProjectInventory inventory) {this.inventory=new ProjectInventory(inventory.root(),inventory.files().stream().sorted().toList(),inventory.technologies().stream().sorted().toList(),inventory.diagnostics().stream().sorted().toList(),inventory.contextPaths(),inventory.contextSettingsFile(),inventory.contextSettingsLine());this.strutsVersion=detectStrutsVersion(this.inventory);}
     ApplicationGraph graph() {return new ApplicationGraph(new Application(inventory.root().getFileName().toString(),inventory.root().toString(),inventory.technologies()),List.copyOf(nodes.values()),List.copyOf(edges.values()),diagnostics,List.of(),ApplicationGraph.BEHAVIOR_SCHEMA_VERSION,List.copyOf(behaviors.values()),List.copyOf(rules.values()));}
   }
 }

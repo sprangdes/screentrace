@@ -316,3 +316,12 @@
   2. 版本條件：此行為以 Struts 1.3.10 原始碼證實。目標專案的 Struts 版本可由建置檔或函式庫證明為 1.3.x 時，依第 1 點，basis 依連結本身（常值為 `STATIC_URL`）。版本無法證明或非 1.3.x，且「第一個符合」與「最後一個符合」結果不同時，不猜測：標 `AMBIGUOUS`，列出兩個候選 mapping 與版本證據不足的診斷；結果相同時照常處理。
   3. 測試：`/*` 在前、`/Edit*` 在後（取 `/Edit*`）；反向順序（取 `/*`）；完全相符優先於任何萬用字元；版本不明且首末不同時為 AMBIGUOUS。
   4. 驗收維持 §6 原文：mailreader／scripting-mailreader 的 `/Edit*`、`/Save*`、`/Delete*` 為使用中並列出比對到的具體 path。
+
+## OQ-033 — wildcard 驗收要求與實際 JSP/HTML 呼叫來源不一致
+
+- 情境：OQ-032 驗收要求 `scripting-mailreader` 的 `/Delete*` 為使用中並列出具體 matched path，但實際可執行 UI 的 `Registration.jsp:167` 為 `<html:link action="/EditSubscription?task=Delete">`，按 Struts 1.3 wildcard 規則命中 `/Edit*`。`SaveSubscription.gv:80–83` 依表單 task 執行刪除，route 是 `/SaveSubscription.do`。字串 `/DeleteSubscription` 只在 `tour.html:1914、1970` 的 escaped code sample 出現，不是可點擊連結；`Delete{1}.gv` 也不存在。把這些文件內容當作 `/Delete*` caller 會產生假陽性。
+- 同輪逐筆稽核另發現 `examples/exercise/html-img.jsp:48` 的 `<html:img action="/html-img-action" />` 是靜態 image action request，而 `faces-example2/index.jsp:23` 有 `<jsp:forward page="welcome.do"/>`。兩者目前未表示為 endpoint caller。JSF／Struts-Faces 的 source（如 `s:form`、`h:outputLink`）依 OQ-026／WP58 明確不分析。
+- 可選方案 A：維持證據優先，`scripting-mailreader /Delete*` 保持找不到呼叫來源；報告記錄實際刪除流程由 `/Edit*`、`/SaveSubscription.do` 承載。另授權 WP54 新增 `html:img` page-load resource caller 與 `<jsp:forward>` caller 的失敗測試及實作，更新 Struts 數量報告。
+- 可選方案 B：修訂 `/Delete*` 驗收，允許依 `task=Delete` 將 `/EditSubscription` 或 `/SaveSubscription.do` 的呼叫來源複製到 `/Delete*`；這會建立原始 URL 沒有發出的 endpoint 關係，並可能與 Struts ActionConfigMatcher 選路規則矛盾。
+- 影響範圍：WP54 wildcard 驗收、`scripting-mailreader` API 清單與 matchedPaths，以及剩餘端點 audit。目標官方模組與所有 fixture 均未修改。
+- 狀態：待決。WP54 未標為通過；完成本輪可獨立驗證項目後停止等待需求方決定。

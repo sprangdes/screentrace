@@ -50,7 +50,7 @@ export function apiSourceBasis(graph:Graph,endpointId:string):ApiSourceBasis{
  const parserNames=new Set(['RouteTemplateInference','RedirectInheritance','JavaScriptUrlTemplateInference']);
  const hasStaticSource=(edge:any)=>{
   const evidence=[...(edge.evidence||[])],node=graph.nodes.find(item=>item.id===edge.from),nodeEvidence=node?.evidence||[];
-  const staticEvidence=evidence.some((item:any)=>item?.parser==='UrlResolution'&&item?.resolution==='CONFIRMED'&&!String(item?.source?.file||'').startsWith('workspace:'));
+  const staticEvidence=evidence.some((item:any)=>(item?.parser==='UrlResolution'&&item?.resolution==='CONFIRMED'&&!String(item?.source?.file||'').startsWith('workspace:'))||item?.detail?.split('；').some((part:string)=>part.trim()==='basis=STATIC_URL'));
   const target=text(node?.attributes?.target),staticComponent=node?.type==='COMPONENT'&&node.attributes?.targetStatus==='CONFIRMED'&&!!target&&target!=='#'&&!target.includes('${')&&nodeEvidence.some((item:any)=>item?.parser==='JspUrlVariableResolver'&&item?.resolution==='CONFIRMED');
   const staticJavaScript=evidence.some((item:any)=>item?.parser==='AcornStaticAnalyzer'&&isStaticRequestExpression(item?.detail));
   return staticEvidence||staticComponent||staticJavaScript;
