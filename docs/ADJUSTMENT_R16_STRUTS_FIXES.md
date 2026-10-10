@@ -173,3 +173,32 @@ R16 報告「仍未有呼叫來源的端點」表中，大多數原因只寫「�
 | faces-example2 | `/welcome.do` 由 `index.jsp` 的 `jsp:forward` 取得呼叫來源 |
 
 **結論：WP54 通過。** 依 §2 順序繼續 WP56、WP57、WP58、WP59，於 WP59 完成後停止等待最終驗收。WP56–WP59 期間沿用 OQ-028（R16 新增測試）、OQ-031（Struts fixture 數量型欄位）授權；WP59 重新稽核的剩餘清單沿用 §6.2 第 5 點的搜尋範圍與 OQ-033 第 2 點（轉義文字不是呼叫來源）。
+
+---
+
+## 8. R16 最終驗收回覆（需求方，2026-10-11）
+
+審查者以 HEAD（508073b）唯讀重新分析 mailreader、examples、faces-example1、faces-example2、cookbook（審查者環境中靜態預覽與截圖均正常產生），並以 Chromium 開啟 faces-example2 報表。
+
+**結論：WP54、WP55 維持通過；WP59 稽核文件到位；WP56、WP57、WP58 各有未達驗收的項目，R16 尚不能結案。** 完成 §8.2 後停止，等需求方驗收。
+
+已確認達成：mailreader LogonForm 的 username required、password required／minlength／maxlength 已綁定到 Logon 畫面欄位；8 個模組的畫面與元件名稱、屬性中沒有 `<bean:message`／`<s:message`／`<h:`；faces-example1／2 有 `UNSUPPORTED_COMPONENT_FRAMEWORK` 診斷與首頁 JSF 提醒；非 JSF 模組沒有提醒；Spring 專案 graph 雜湊不變。
+
+### 8.1 未達驗收的項目（原始碼證據）
+
+1. **DispatchAction 方法名沒有出現（WP56 第 2 點）**：examples `dispatch/dispatch.jsp:63–80` 四個表單各以 `<input type="hidden" name="dispatchMethod" value="doFoo|doBar|doInvalid|execute" />` 指定方法（`WEB-INF/dispatch/struts-config.xml` 的 `parameter="dispatchMethod"`）。實際 graph 中四個 `SUBMIT_FORM` 行為都只有 `/dispatch/dispatch-submit`，沒有任何方法名（graph 中搜尋 `doFoo` 無結果）。R16 報告以「合成測試鎖定方法分派」帶過，但合成 fixture 使用 `html:hidden property`，真實範例用的是一般 HTML `<input name>`。
+2. **原始 tag 與內部屬性外露（WP57 第 2 點、WP58）**：faces-example2 首頁「完全找不到入口」卡片顯示 `<s:message key="layout.title" data-st-source-file="src/main/webapp/layout.jsp" data-st-source-line="32"/>`——既是原始 tag，也外露 ScreenTrace 內部的 `data-st-*` 屬性。
+3. **JSF 提醒的畫面數過少（WP58）**：提醒寫「2 個畫面使用 JSF 元件」，但 faces-example2 實際有 8 個 JSP 使用 `h:`／`f:` tag：loggedoff、layout、loggedon、layout1、logon、registration、mainMenu、subscription。
+4. **`*.faces` 網址沒有對應回 JSP，導致版型被當成畫面（WP55 延伸）**：`WEB-INF/tiles-defs.xml:28` 的 `.base` 為 `page="/layout.faces"`。`.faces` 是 FacesServlet 的 servlet mapping，指向 `layout.jsp`；分析器未正規化，`layout.jsp` 沒被認出是被 `.base` 使用的版型，反而列為「完全找不到入口」。這是 URL 對應，不是解析 JSF 元件，屬本輪範圍。
+5. **萬用字元 action 的 `name` 屬性沒有代入，造成 Validator 規則未綁定（WP56 第 1 點延伸）**：mailreader `/Save*` 以 `extends="//BaseAction"` 繼承 `struts-config.xml:176` 的 `name="{1}Form"`；`/SaveRegistration` 應得 `RegistrationForm`。目前 RegistrationForm 的 5 條規則（username、fullName、fromAddress、replyToAddress 等）都是 `VALIDATION_RULE_UNRESOLVED`（「無法唯一對應到使用該 ActionForm 的畫面欄位」）。
+
+### 8.2 補正（先補失敗測試，再修正；每項的合成 fixture 必須重現真實範例的寫法）
+
+1. **DispatchAction 參數來源**：除 `html:hidden`／`html:select`／`html:submit property` 外，一般 HTML `<input type="hidden|submit|image|radio" name=…>`、`<button name=… value=…>`、`<select name=…>` 的常值也作為分派參數來源；同一表單內有多個候選時全部列出（AMBIGUOUS），不擇一。若 action 類別原始碼可讀，標示該方法是否存在（例如 `doInvalid` 不存在時顯示「類別中找不到此方法」）；無法讀取則只顯示名稱。驗收：examples `dispatch.jsp` 四個送出分別顯示 `doFoo`、`doBar`、`doInvalid`、`execute`。
+2. **不外露原始 tag 與內部屬性**：畫面名稱、按鈕名稱、卡片、縮圖替代文字、判斷依據等所有可見文字，不得含有 `<…>` 形式的原始 tag 或 `data-st-` 屬性。Struts-Faces 的 `<s:message key=…>` 依 WP57 的訊息資源規則解析（與 `bean:message` 相同）；無法解析時顯示「（訊息 key：<key>）」。結構性 E2E：8 個模組報表的可見文字與 `title`／`alt`／`aria-label` 中不得出現 `data-st-`、`<bean:`、`<s:`、`<h:`、`<f:`、`<html:`。
+3. **JSF 畫面數**：一個畫面若其本身的 JSP，或組成它的版型／片段 JSP 含 JSF tag（`h:`、`f:`、Struts-Faces `s:`，或 taglib uri 為 JSF 者），即計入「使用 JSF 元件的畫面」。報告列出 faces-example1／2 每個被計入的畫面與依據檔案。出現在首頁「可能已經沒在用」卡片中的 JSF 畫面，列內加註「使用 JSF，未分析」。
+4. **FacesServlet 網址對應**：依 `web.xml` 的 FacesServlet `servlet-mapping`（副檔名型如 `*.faces`、前綴型如 `/faces/*`）與 `javax.faces.DEFAULT_SUFFIX`（未設定時為 `.jsp`）把 `/layout.faces` 正規化為 `/layout.jsp`，供 Tiles 畫面界線、forward 與連結解析使用。不解析 JSF 元件本身（OQ-026 不變）；mapping 無法證明時不猜測並記診斷。驗收：faces-example2 的 `layout.jsp` 依 OQ-025 判為 `.base` 的版型，不再是畫面；報告更新畫面清單與版型／片段清單。
+5. **萬用字元代入完整化**：依 Struts 1.3.10 `ActionConfigMatcher.convertActionConfig` 的實際代入欄位（實作時引用原始碼行號），對比對到的具體 path 代入 `{0}`–`{9}`，包含經 `extends` 繼承而來的屬性（先套用繼承，再代入）。驗收：mailreader `/SaveRegistration` 的 form 為 `RegistrationForm`，RegistrationForm 的規則綁定到 Registration 畫面欄位；`VALIDATION_RULE_UNRESOLVED` 修正前後數字與剩餘各筆原因列入報告。
+6. **報告**：WP56–WP58 的每一項驗收都要以**真實範例的實測結果**佐證（圖中的具體值），不得只引用合成測試名稱。
+
+授權沿用 OQ-028、OQ-031；Spring 專案 graph 雜湊必須不變；完整驗證（E2E 預設並行）全綠。完成後停止，等需求方驗收。
