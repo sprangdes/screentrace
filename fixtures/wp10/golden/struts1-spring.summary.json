@@ -1,5 +1,5 @@
 {
-  "screens": 7,
+  "screens": 3,
   "components_by_kind": {
     "BUTTON": 16,
     "CHECKBOX": 3,
@@ -28,11 +28,11 @@
     "VALIDATE": 32
   },
   "apis": {
-    "total": 40,
+    "total": 37,
     "by_status": {
       "IN_USE": 28,
       "REMOVABLE": 0,
-      "UNREFERENCED": 12
+      "UNREFERENCED": 9
     }
   },
   "validation_rules_by_layer": {
@@ -55,6 +55,6 @@
     "STRUTS_TARGET_UNRESOLVED": 11,
     "UNKNOWN_CALL": 4,
     "URL_METHOD_MISMATCH": 7,
-    "URL_UNRESOLVED": 11
+    "URL_UNRESOLVED": 19
   }
 }
