@@ -30,9 +30,9 @@
   "apis": {
     "total": 25,
     "by_status": {
-      "IN_USE": 20,
+      "IN_USE": 22,
       "REMOVABLE": 0,
-      "UNREFERENCED": 5
+      "UNREFERENCED": 3
     }
   },
   "validation_rules_by_layer": {
@@ -53,6 +53,6 @@
     "STRUTS_ROUTE_UNRESOLVED": 3,
     "STRUTS_TARGET_UNRESOLVED": 11,
     "UNKNOWN_CALL": 4,
-    "URL_UNRESOLVED": 9
+    "URL_UNRESOLVED": 13
   }
 }
