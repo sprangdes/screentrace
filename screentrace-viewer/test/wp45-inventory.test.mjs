@@ -50,3 +50,10 @@ test('WP45 classifies entry confidence from URL acquisition evidence, not relati
  assert.equal(result.get('static-target').classification,'HAS_ENTRY');
  assert.equal(result.get('template-target').classification,'INFERRED_ENTRY');
 });
+
+test('Struts wildcard callers retain STATIC_URL basis from their explicit source evidence',async()=>{
+ const {apiSourceBasis}=await ownModule('inventory');
+ const data=fixture();data.graph.nodes.push(node('wildcard-endpoint','ENDPOINT','ANY /Edit*.do',{path:'/Edit*.do'}));
+ data.graph.relationships.push({id:'struts-static-caller',type:'TRIGGERS',from:'shared',to:'wildcard-endpoint',confidence:'CONFIRMED',evidence:[{source:{file:'Menu.jsp',line:30},parser:'StrutsProjectAnalyzer',resolution:'CONFIRMED',detail:'basis=STATIC_URL；萬用字元=/Edit*；實際路徑=/EditRegistration'}]});
+ assert.equal(apiSourceBasis(data.graph,'wildcard-endpoint'),'STATIC_URL');
+});
