@@ -112,7 +112,7 @@ JavaScript AST 分析模組 screentrace-js 已建立（WP4 增量一）；單一
 
 ### screentrace-adapter-struts
 
-解析 Struts 1 設定、Action Mapping、ActionForm、local/global forward，以及 Spring XML-managed Action；消費共用 JSP contribution 後建立圖關係。WP2 新增具真實行號的設定、Dyna form-property、plugins/exceptions、多模組前綴、Dispatch/Lookup/Mapping 方法解析、Validator / ActionForm 檢核、Tiles 繼承與巢狀 include，以及 Struts 2 的完整拒絕。新 Struts 圖使用 schema 2.2；詳細規則與未解析界線見 [ADR 0003](adr/0003-struts-static-resolution.md)。
+解析 Struts 1 設定、Action Mapping、ActionForm、local/global forward，以及 Spring XML-managed Action；消費共用 JSP contribution 後建立圖關係。模組 servlet mapping 與邏輯 action path 會保留為同一 endpoint 的別名；forward、welcome-file、JSP action 標記、萬用字元 mapping 與 dispatch method 僅在規則及來源可證明時解析。Validator 規則會連到對應表單欄位，message resource 可提供靜態名稱與預覽文字。JSF／Struts-Faces 元件不轉成已解析的 graph 元件；分析器以診斷與受影響畫面標記此邊界。WP2 與 R16 的合成測試涵蓋設定行號、Dyna form-property、plugins/exceptions、多模組前綴、Dispatch/Lookup/Mapping/EventDispatch、Validator / ActionForm 檢核、Tiles 繼承與巢狀 include，以及 Struts 2 的完整拒絕。新 Struts 圖使用 schema 2.2；詳細規則與未解析界線見 [ADR 0003](adr/0003-struts-static-resolution.md)、[ADR 0078](adr/0078-r16-validator-field-binding-and-dispatch-actions.md)、[ADR 0079](adr/0079-r16-struts-messages-and-action-category.md) 與 [ADR 0080](adr/0080-r16-jsf-mixed-module-boundary.md)。
 
 ### screentrace-report
 

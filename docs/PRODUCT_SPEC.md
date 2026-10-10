@@ -33,6 +33,8 @@ Analyze applications using technologies such as:
 
 and reconstruct their screen flows.
 
+Struts 1 analysis correlates servlet mappings and logical action paths into one endpoint with documented URL aliases. It reads module mappings, forwards, welcome files, JSP form/link/action tags, Validator rules, and dispatch-method parameters when their values are statically provable. Configured message bundles provide screen and component labels. JSF and Struts-Faces components in mixed applications are not analyzed; the report identifies affected screens and warns that their interactions may be missing. An absent static caller is a review lead, not proof that a screen or endpoint is unused.
+
 ### 2.2 Customer-facing system walkthrough
 
 Generate an interactive representation that can be used to explain:
