@@ -301,3 +301,12 @@
 - 影響範圍：OQ-030 的已證明 mapping 規則、`struts1-spring.summary.json`、預設並行 E2E 完整驗收及 WP55 停止點；未修改 `struts1-spring` golden。
 - 狀態：已決定並完成（2026-10-10）；需求方採方案 A，並明確化授權範圍。實測 golden 更新、舊實作失敗證明與完整驗證記於 ADR 0074、R16 報告。
 - 決定：`struts1-spring` 只有一個 ActionServlet、宣告 `*.do` 與 `*.action`，屬 OQ-030 第 1 類，UNREFERENCED 12 → 9 是別名合併的預期結果。OQ-030 第 5 點「其他 golden 不變」寫得過窄，修訂為：**任何 Struts fixture（`fixtures/wp10/struts1`、`struts1-spring` 及其他含 Struts 的 fixture）的 golden 中，因 R16 的別名合併、forward 正規化、Tiles 畫面界線而改變的數量型欄位（畫面數、端點數、API 總數與狀態分布、行為數、診斷數）皆依 R16 §3 預先授權更新，不需停止**；條件是 ADR 逐欄記錄舊值、新值，並逐一列出造成差異的 endpoint／畫面／行為來源（例如哪些邏輯 path 與 `.do`／`.action` 公開 URL 合併、因而取得呼叫來源的 endpoint），證明新值在 R16 前實作上失敗，且沒有任何畫面或行為來源遺失（OQ-029 第 3、5 點）。**非 Struts 的 golden（Spring MVC、Spring Boot 等）任何欄位改變仍須停止**；eMusicStore、PetClinic 的 graph SHA-256 必須維持不變。
+
+## OQ-032 — Struts wildcard 首個匹配規則與官方 mailreader 驗收衝突
+
+- 情境：WP54 §6.2.2 要求萬用字元 mapping 依 `struts-config.xml` 出現順序取「第一個符合者」。官方 mailreader 的 `struts-config.xml:109` 先宣告 `path="/*"`，再於 `:187`、`:193`、`:199` 宣告 `/Delete*`、`/Edit*`、`/Save*`。因此按第一個匹配規則，`/EditRegistration`、`/SaveRegistration` 等單層路徑先匹配 `/*`，不會到達後續特定 mapping；`/SaveSubscription` 則先由 exact mapping 命中。WP54 驗收卻要求三個特定 wildcard endpoint 全部使用中並列出這些具體 caller path。
+- 衝突證據：R15 已取得的 Struts 1.3.10 原始碼 `src/core/src/main/java/org/apache/struts/config/ActionConfigMatcher.java:117-129` 會依序檢查所有 wildcard，且每次匹配都覆寫目前 ActionConfig，因此實際採用最後一個匹配項；這與 WP54 §6.2.2 寫的「第一個」不同，卻能解釋 mailreader 的特定 mapping 為何接收這些呼叫。當前分析器按明文的第一個匹配規則執行，mailreader 實測中 `/Edit*`、`/Save*`、`/Delete*` 沒有 matchedPaths，呼叫落在較早的 `/*` endpoint。
+- 可選方案 A：把 §6.2.2 修訂為「exact route 優先；否則依 Struts 1.3 實際行為取最後一個符合的 wildcard mapping」，保留 mailreader 預期與 `ActionConfigMatcher` 原始碼一致。新測試涵蓋 `/*` 在前、`/Edit*` 等較具體 wildcard 在後，以及反向設定順序。
+- 可選方案 B：維持「第一個符合者」的規則；修訂 mailreader／scripting-mailreader 驗收，不再要求 `/Edit*`、`/Save*`、`/Delete*` 取得由較早 `/*` 攔截的呼叫來源，改列實際第一個匹配 mapping 與具體 path。
+- 影響範圍：wildcard caller 歸屬、mailreader 與 scripting-mailreader 的 API 狀態、matchedPaths 詳細資料及八模組剩餘項目稽核。沒有修改目標範例或既有斷言。
+- 狀態：待需求方決定。WP54 其餘不依賴 wildcard 優先序的補正已完成並有實測；在此決定前不改 wildcard 規則，也不宣稱 WP54 驗收完成。
