@@ -57,4 +57,15 @@ class StrutsR16ScreenLoadCallersTest {
     Set<String> targets=graph.relationships().stream().filter(edge->Set.of(EdgeType.CALLS,EdgeType.TRIGGERS).contains(edge.type())).map(Relationship::to).map(id->graph.nodes().stream().filter(node->node.id().equals(id)).findFirst().orElseThrow()).filter(node->node.type()==NodeType.ENDPOINT).map(node->node.attributes().get("path")).collect(java.util.stream.Collectors.toSet());
     assertTrue(targets.isEmpty(),"escaped or preformatted examples became call sources: "+targets);
   }
+
+  @Test void jspIncludeOfAViewIsNotAnActionCallerEvenWhenCatchAllWildcardExists()throws Exception {
+    base("<action path='/*' type='sample.CatchAll'/>");
+    file("src/main/webapp/page.jsp","<jsp:include page='Footer.jsp'/>");
+    file("src/main/webapp/Footer.jsp","<footer>Footer</footer>");
+
+    ApplicationGraph graph=analyze();
+    GraphNode screen=graph.nodes().stream().filter(node->node.type()==NodeType.SCREEN&&node.attributes().getOrDefault("view","").endsWith("page.jsp")).findFirst().orElseThrow();
+    GraphNode wildcard=graph.nodes().stream().filter(node->node.type()==NodeType.ENDPOINT&&"/*.do".equals(node.attributes().get("path"))).findFirst().orElseThrow();
+    assertFalse(graph.relationships().stream().anyMatch(edge->edge.type()==EdgeType.CALLS&&edge.from().equals(screen.id())&&edge.to().equals(wildcard.id())));
+  }
 }
