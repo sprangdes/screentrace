@@ -38,7 +38,28 @@ public final class StrutsProjectAnalyzer {
     addInteractions(jsp,state);
     parseValidation(state);
     parseActionForms(state);
-    return GraphIntegrityValidator.requireAnalysis(io.screentrace.parser.jsp.UrlGraphContribution.enrich(JavaScriptGraphContribution.enrich(MarkupGraphContribution.enrich(ActionContracts.enrich(state.graph(),inventory),jsp),inventory),inventory));
+    ApplicationGraph enriched=GraphIntegrityValidator.requireAnalysis(io.screentrace.parser.jsp.UrlGraphContribution.enrich(JavaScriptGraphContribution.enrich(MarkupGraphContribution.enrich(ActionContracts.enrich(state.graph(),inventory),jsp),inventory),inventory));
+    return retainActionAndInlineEventEvidence(enriched,state);
+  }
+  private static ApplicationGraph retainActionAndInlineEventEvidence(ApplicationGraph graph,State state) {
+    Map<String,GraphNode> nodes=new TreeMap<>();graph.nodes().forEach(node->nodes.put(node.id(),node));
+    Map<String,Behavior> behaviors=new TreeMap<>();graph.behaviors().forEach(behavior->behaviors.put(behavior.id(),behavior));
+    for(Mapping mapping:state.actionMappings) {
+      String publicRoute=publicPath(mapping.route(),mapping.module(),state);
+      for(var entry:new ArrayList<>(behaviors.entrySet())) {
+        Behavior behavior=entry.getValue();GraphNode target=behavior.targetId()==null?null:nodes.get(behavior.targetId());
+        if(behavior.type()!=BehaviorType.SUBMIT_FORM||target==null||!publicRoute.equals(target.attributes().get("path")))continue;
+        List<AnalysisEvidence> proof=new ArrayList<>(behavior.evidence());proof.add(new AnalysisEvidence(mapping.source(),PARSER,ResolutionStatus.CONFIRMED,"Struts action mapping="+mapping.route()));
+        behaviors.put(entry.getKey(),new Behavior(behavior.id(),behavior.triggerId(),behavior.event(),behavior.type(),behavior.targetId(),behavior.guard(),behavior.parentId(),behavior.expression(),proof.stream().distinct().toList()));
+      }
+    }
+    for(GraphNode component:nodes.values()) {
+      String expression=component.attributes().get("event.click");if(component.type()!=NodeType.COMPONENT||expression==null||!expression.matches("[A-Za-z_$][A-Za-z0-9_$]*\\s*\\(.*\\)"))continue;
+      String id=StableGraphIds.behavior(component.id(),"click",BehaviorType.UNKNOWN,expression,0);if(behaviors.containsKey(id))continue;
+      SourceLocation source=new SourceLocation(component.source().file(),Integer.parseInt(component.attributes().getOrDefault("eventLine.click",Integer.toString(component.source().line()))));
+      behaviors.put(id,new Behavior(id,component.id(),"click",BehaviorType.UNKNOWN,null,null,null,expression,evidence(source,Confidence.UNRESOLVED,"保留原始事件；靜態追蹤結果不代表完整執行結果")));
+    }
+    return new ApplicationGraph(graph.application(),graph.nodes(),graph.relationships(),graph.diagnostics(),graph.apiContracts(),graph.schemaVersion(),List.copyOf(behaviors.values()),graph.validationRules());
   }
   private static void addView(JspAnalysis.View view,State state) {
     String viewId=ApplicationGraph.id(NodeType.VIEW,view.path());
