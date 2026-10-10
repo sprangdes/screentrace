@@ -88,3 +88,42 @@ R15 WP53 稽核通過（MD5 相符；環境無 gpg，簽章未驗證，接受為
 - 不把 Apache 範例原始碼或衍生資料加入 repo；不建置、執行或修改範例程式。
 - 不硬編碼範例專案的路徑、類別名、action 名或畫面名。
 - 不新增模式或全域開關；報表仍須完全離線。
+
+---
+
+## 5. WP54／WP55 驗收回覆（需求方，2026-10-10）
+
+**結論：WP55（Tiles 畫面界線）通過；WP54 不通過，需補正後重新驗收，不得進入 WP56。**
+
+已通過：別名合併與 servlet mapping 三類（OQ-030）、mailreader `/SubmitLogon.do` 為單一使用中端點、blank 首頁 welcome-file 入口、Tiles 版型／片段清單與 OQ-029 行為來源不變量、faces-example2 畫面數、Spring 專案 graph SHA-256 不變、完整驗證全綠。
+
+### 5.1 審查者以原始碼確認的殘留誤判
+
+R16 報告「仍未有呼叫來源的端點」表中，大多數原因只寫「支援的靜態分析未找到可證明的呼叫來源」。審查者在 examples 原始碼搜尋，下列端點實際上有明確的表單或連結指向（路徑相對於 `src/apps/examples/src/main/webapp`）：
+
+| 端點 | 原始碼中的呼叫來源 | 推測原因 |
+|---|---|---|
+| `/validator/registration-submit.do` | `validator/registration.jsp:41`、`validator/jsRegistration.jsp:40`：`<html:form action="registration-submit">` | action 沒有開頭 `/`；Struts 會補上 `/` 再對應 action，分析器未正規化 |
+| `/dispatch/lookup-submit.do` | `dispatch/lookup.jsp:63`：`<html:form action="lookup-submit">` | 同上 |
+| `/dispatch/mapping-foo.do` | `dispatch/mapping.jsp:63`：`<html:form action="mapping-foo">` | 同上 |
+| `/exercise/logic-forward-test-forward.do` | `exercise/logic-forward.jsp:29`：`<html:link action="/logic-forward-test-forward?value=test">` | action 含查詢字串，比對前未去除 |
+| `/exercise/logic-forward.do` | `exercise/logic-redirect-test-action.jsp:18`：`<logic:redirect action="/logic-forward"/>`；`exercise/logic-forward.jsp:28`：`<a href="logic-forward.do?value=test">` | WP54 第 5 點要求的 `logic:redirect action=` 未生效；相對 `href`（含查詢字串）未依 JSP 所在路徑解析 |
+| `/exercise/html-cancel-false.do`（及同檔 `html-cancel-exception`、`html-cancel-true`） | `exercise/html-cancel.jsp:51、70、87`：`<html:form action="/html-cancel-false">` 等 | 有開頭 `/`、位於 exercise 模組目錄仍未對上，可能是 JSP 未歸入正確的 Struts module |
+
+### 5.2 補正（先補失敗測試，再修正）
+
+1. **Struts tag 的 action 正規化**：`html:form`／`html:link`／`html:rewrite`／`logic:redirect`／`logic:forward` 的 `action=` 依 Struts 規則處理：沒有開頭 `/` 時補上；去除查詢字串與 `#` 片段後再比對 action path；若帶有 servlet mapping 的副檔名（如 `.do`）依 OQ-030 正規化。查詢字串內容保留於 evidence。
+2. **相對 `href`／`src`**：一般 HTML `<a href>`、`<form action>` 的相對網址，依 JSP 的公開 URL 目錄解析（含 module 前綴），去除查詢字串後比對；JSP 公開 URL 無法證明時維持 UNRESOLVED。
+3. **JSP 所屬 module**：位於某 module 前綴目錄下（例如 `/exercise/`）的 JSP，以及被該 module 的 forward 指向的 JSP，屬於該 module；module-relative 的 action 依該 module 解析。同一 JSP 同時被多個 module forward 時，依各 module 分別建立關係（不擇一）並記 evidence。
+4. **welcome-file 端點的呈現**：`GET /` 這類由 welcome-file 構成的入口，在首頁與 API 頁不列為「找不到呼叫來源」，顯示「系統預設首頁」（同 R14 §7.4 自動導向的呈現方式）。
+5. **剩餘項目必須有實際原因**：R16 報告中每一筆仍「找不到呼叫來源」的端點，都要附**實際搜尋結果**：以 action path 的最後一段（含與不含副檔名）在該模組全部 JSP、JS、Java、XML 中搜尋（可用 repo 外的稽核腳本，不加入產品程式），列出每個命中處（檔案:行號、原文片段）與「為何不構成呼叫來源」；沒有命中則寫「全模組原始碼中沒有任何參照」。不得再使用通用說明句。
+6. 合成 fixture：無開頭 `/` 的 `html:form action`、帶查詢字串的 `html:link action`、`logic:redirect action=`、module 目錄下 JSP 的相對 `href`、同一 JSP 被兩個 module forward。
+
+驗收：
+- 上表 6 組端點全部有呼叫來源（使用中）。
+- examples「找不到呼叫來源」端點數由 95 下降；報告附修正前後逐筆對照，剩餘每一筆依第 5 點附搜尋結果。
+- 其他 7 個模組同樣依第 5 點重寫「仍未有呼叫來源的端點」表。
+- eMusicStore、PetClinic graph SHA-256 不變；完整驗證全綠。
+- 授權沿用 OQ-031（Struts fixture 數量型欄位）、OQ-028（R16 新增測試）；其餘衝突依 §0.3 停止。
+
+完成後停止，等需求方重新驗收 WP54。
