@@ -123,7 +123,9 @@ public final class StrutsProjectAnalyzer {
         var source=StrutsSources.source(path,exception);
         String id=ApplicationGraph.id(NodeType.HANDLER,path+":exception:"+exception.getAttribute("key")+":"+source.line());
         addNode(state,id,NodeType.HANDLER,"例外處理",StrutsSources.attributes(exception),source,Confidence.CONFIRMED);
-        state.pendingForwards.add(new PendingForward(id,module,exception.getAttribute("path"),source));
+        PendingForward target=new PendingForward(id,module,exception.getAttribute("path"),source);
+        state.pendingForwards.add(target);
+        state.exceptionForwards.add(target);
       }
       for(Element action:StrutsSources.elements(document,"action")) {
         String route=module+action.getAttribute("path");if(action.getAttribute("path").isBlank()) continue;
@@ -601,7 +603,7 @@ public final class StrutsProjectAnalyzer {
       for(Mapping origin:mappingVariants(base,sourceEndpoint,state)) {
         List<InheritanceTarget> starts=inheritanceTargets(origin,state);
         for(InheritanceTarget start:starts)walkActionForward(origin,sourceEndpoint,start.target(),start.source(),List.of(origin),new LinkedHashSet<>(List.of(origin.route())),1,state);
-        for(PendingForward exception:state.pendingForwards)if(exception.ownerId().contains(":exception:")&&exception.module().equals(origin.module()))walkActionForward(origin,sourceEndpoint,exception.target(),exception.source(),List.of(origin),new LinkedHashSet<>(List.of(origin.route())),1,state);
+        for(PendingForward exception:state.exceptionForwards)if(exception.module().equals(origin.module()))walkActionForward(origin,sourceEndpoint,exception.target(),exception.source(),List.of(origin),new LinkedHashSet<>(List.of(origin.route())),1,state);
       }
     }
   }
@@ -656,7 +658,7 @@ public final class StrutsProjectAnalyzer {
   }
   private static void markInheritedActionTemplates(State state) {
     Set<String> extendsTargets=new TreeSet<>();
-    for(Mapping mapping:state.actionMappings){GraphNode handler=state.nodes.get(mapping.handlerId());if(handler==null)continue;String value=handler.attributes().get("extends");if(value==null||value.isBlank())continue;String normalized=value.startsWith("//")?value.substring(1):value;for(Mapping candidate:state.actionMappings)if(candidate.module().equals(mapping.module())&&(candidate.route().equals(normalized)||candidate.route().equals(mapping.module()+normalized)||Objects.equals(state.nodes.get(candidate.handlerId()).attributes().get("name"),value)))extendsTargets.add(candidate.route());}
+    for(Mapping mapping:state.actionMappings){GraphNode handler=state.nodes.get(mapping.handlerId());if(handler==null)continue;String value=handler.attributes().get("extends");if(value==null||value.isBlank())continue;String normalized=value.startsWith("//")?value.substring(1):value;for(Mapping candidate:state.actionMappings)if(candidate.module().equals(mapping.module())&&(candidate.route().equals(value)||candidate.route().equals(normalized)||candidate.route().equals(mapping.module()+normalized)||Objects.equals(state.nodes.get(candidate.handlerId()).attributes().get("name"),value)))extendsTargets.add(candidate.route());}
     for(Mapping mapping:state.actionMappings)if(extendsTargets.contains(mapping.route())){
       String endpoint=state.endpointIds.get(mapping.route());GraphNode node=endpoint==null?null:state.nodes.get(endpoint);if(node==null)continue;
       boolean hasCaller=state.edges.values().stream().anyMatch(edge->edge.to().equals(endpoint)&&Set.of(EdgeType.TRIGGERS,EdgeType.CALLS).contains(edge.type()));
@@ -991,7 +993,7 @@ public final class StrutsProjectAnalyzer {
     final Map<String,Set<String>> jspModuleOwners=new TreeMap<>();
     final Set<String> tilePageDefinitions=new TreeSet<>(),tileStandaloneDefinitions=new TreeSet<>(),tilePageJspPaths=new TreeSet<>();
     final Map<String,Set<String>> tilePageOwners=new TreeMap<>();
-    final Map<String,List<Mapping>> routes=new TreeMap<>();final Map<String,String> endpointIds=new TreeMap<>(),globalForwards=new TreeMap<>();final Map<String,Boolean> inputForward=new TreeMap<>();final List<Mapping> actionMappings=new ArrayList<>();final List<PendingForward> pendingForwards=new ArrayList<>();final Map<String,List<PendingForward>> actionForwardTargets=new TreeMap<>();final Map<String,Map<String,WildcardMatch>> wildcardMatches=new TreeMap<>();final Map<String,ServletMappingResolution> servletMappings=new TreeMap<>();
+    final Map<String,List<Mapping>> routes=new TreeMap<>();final Map<String,String> endpointIds=new TreeMap<>(),globalForwards=new TreeMap<>();final Map<String,Boolean> inputForward=new TreeMap<>();final List<Mapping> actionMappings=new ArrayList<>();final List<PendingForward> pendingForwards=new ArrayList<>(),exceptionForwards=new ArrayList<>();final Map<String,List<PendingForward>> actionForwardTargets=new TreeMap<>();final Map<String,Map<String,WildcardMatch>> wildcardMatches=new TreeMap<>();final Map<String,ServletMappingResolution> servletMappings=new TreeMap<>();
     final Map<String,StrutsSources.JavaType> types=new TreeMap<>();final Map<String,Set<String>> messages=new TreeMap<>();
     State(ProjectInventory inventory) {this.inventory=new ProjectInventory(inventory.root(),inventory.files().stream().sorted().toList(),inventory.technologies().stream().sorted().toList(),inventory.diagnostics().stream().sorted().toList(),inventory.contextPaths(),inventory.contextSettingsFile(),inventory.contextSettingsLine());}
     ApplicationGraph graph() {return new ApplicationGraph(new Application(inventory.root().getFileName().toString(),inventory.root().toString(),inventory.technologies()),List.copyOf(nodes.values()),List.copyOf(edges.values()),diagnostics,List.of(),ApplicationGraph.BEHAVIOR_SCHEMA_VERSION,List.copyOf(behaviors.values()),List.copyOf(rules.values()));}

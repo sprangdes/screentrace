@@ -71,8 +71,8 @@ class StrutsR16ForwardInheritanceTest {
       file("src/main/java/sample/StartAction.java","package sample; class StartAction extends org.apache.struts.action.Action { public org.apache.struts.action.ActionForward execute(org.apache.struts.action.ActionMapping mapping, org.apache.struts.action.ActionForm form, javax.servlet.http.HttpServletRequest request, javax.servlet.http.HttpServletResponse response){ return mapping.findForward(\"next\"); } }");
       file("src/main/webapp/index.jsp","<html:link action='/start.do'>Start</html:link>");
       var graph=analyze();var global=endpoint(graph,"/globalTarget.do");var error=endpoint(graph,"/errorTarget.do");
-      assertTrue(graph.relationships().stream().anyMatch(edge->edge.type()==EdgeType.CALLS&&edge.to().equals(global.id())&&edge.confidence()==Confidence.INFERRED&&edge.evidence().stream().anyMatch(proof->"RedirectInheritance".equals(proof.parser())&&Objects.toString(proof.detail(),"").contains("next"))));
-      assertTrue(graph.relationships().stream().anyMatch(edge->edge.type()==EdgeType.CALLS&&edge.to().equals(error.id())&&edge.confidence()==Confidence.INFERRED&&edge.evidence().stream().anyMatch(proof->"RedirectInheritance".equals(proof.parser())&&Objects.toString(proof.detail(),"").contains("errorTarget"))));
+      assertTrue(graph.relationships().stream().anyMatch(edge->edge.type()==EdgeType.CALLS&&edge.to().equals(global.id())&&edge.confidence()==Confidence.INFERRED&&edge.evidence().stream().anyMatch(proof->"RedirectInheritance".equals(proof.parser())&&Objects.toString(proof.detail(),"").contains("/start.do")&&proof.detail().contains("/globalTarget.do")&&proof.detail().contains("StartAction.java"))),graph.relationships()+"\n"+graph.diagnostics());
+      assertTrue(graph.relationships().stream().anyMatch(edge->edge.type()==EdgeType.CALLS&&edge.to().equals(error.id())&&edge.confidence()==Confidence.INFERRED&&edge.evidence().stream().anyMatch(proof->"RedirectInheritance".equals(proof.parser())&&Objects.toString(proof.detail(),"").contains("/errorTarget.do")&&proof.detail().contains("struts-config.xml"))),graph.relationships()+"\n"+graph.diagnostics());
     });
   }
 }
