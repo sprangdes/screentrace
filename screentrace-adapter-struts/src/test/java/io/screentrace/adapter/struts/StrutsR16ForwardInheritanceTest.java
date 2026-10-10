@@ -45,4 +45,13 @@ class StrutsR16ForwardInheritanceTest {
       var graph=analyze();assertTrue(graph.diagnostics().stream().anyMatch(d->d.code().equals("STRUTS_REDIRECT_CYCLE")));assertTrue(graph.diagnostics().stream().anyMatch(d->d.code().equals("STRUTS_REDIRECT_DEPTH_LIMIT")));
     });
   }
+
+  @Test void actionReferencedOnlyByExtendsIsMarkedAsInheritedTemplate(){
+    assertDoesNotThrow(()->{
+      base("<action path='/BaseAction' type='sample.BaseAction'/><action path='/ChildAction' type='sample.ChildAction' extends='/BaseAction'/>");
+      file("src/main/webapp/index.jsp","<h1>Home</h1>");var graph=analyze();var template=endpoint(graph,"/BaseAction.do");
+      assertEquals("true",template.attributes().get("inheritedTemplate"));
+      assertTrue(template.evidence().stream().anyMatch(p->Objects.toString(p.detail(),"").contains("extends")&&Objects.toString(p.detail(),"").contains("/ChildAction")));
+    });
+  }
 }
