@@ -218,6 +218,25 @@ class StrutsR16RoutingTest {
     assertTrue(graph.relationships().stream().anyMatch(edge -> edge.type() == EdgeType.NAVIGATES_TO && graph.nodes().stream().anyMatch(node -> node.id().equals(edge.to()) && node.type() == NodeType.SCREEN)),graph.relationships()+"\n"+graph.diagnostics());
   }
 
+  @Test void staticHtmlScreensResolveRelativeActionLinksAndFormsWithinTheirModule() throws Exception {
+    file("src/main/webapp/WEB-INF/web.xml", """
+        <web-app><servlet><servlet-name>action</servlet-name><servlet-class>org.apache.struts.action.ActionServlet</servlet-class>
+          <init-param><param-name>config/admin</param-name><param-value>/WEB-INF/struts-config-admin.xml</param-value></init-param>
+        </servlet><servlet-mapping><servlet-name>action</servlet-name><url-pattern>*.do</url-pattern></servlet-mapping></web-app>
+        """);
+    file("src/main/webapp/WEB-INF/struts-config-admin.xml", "<struts-config><action-mappings><action path=\"/edit\" type=\"sample.EditAction\"/><action path=\"/save\" type=\"sample.SaveAction\"/></action-mappings></struts-config>");
+    file("src/main/webapp/admin/index.html", "<a href=\"edit.do?from=menu\">Edit</a><form action=\"save.do?from=form\"><button type=\"submit\">Save</button></form>");
+
+    var graph = analyze();
+    var screen = graph.nodes().stream().filter(node -> node.type() == NodeType.SCREEN && node.attributes().getOrDefault("view", "").endsWith("admin/index.html")).findFirst().orElseThrow();
+    var components = graph.relationships().stream().filter(edge -> edge.type() == EdgeType.CONTAINS && edge.from().equals(screen.id())).map(edge -> graph.nodes().stream().filter(node -> node.id().equals(edge.to())).findFirst().orElseThrow()).toList();
+    assertTrue(components.stream().anyMatch(node -> node.attributes().getOrDefault("target", "").equals("/admin/edit.do")));
+    assertTrue(components.stream().anyMatch(node -> node.attributes().getOrDefault("target", "").equals("/admin/save.do")));
+    var endpointIds = graph.nodes().stream().filter(node -> node.type() == NodeType.ENDPOINT && Set.of("/admin/edit.do", "/admin/save.do").contains(node.attributes().get("path"))).map(GraphNode::id).collect(java.util.stream.Collectors.toSet());
+    assertEquals(2, endpointIds.size());
+    assertEquals(2, graph.relationships().stream().filter(edge -> edge.type() == EdgeType.TRIGGERS && components.stream().anyMatch(component -> component.id().equals(edge.from())) && endpointIds.contains(edge.to())).count());
+  }
+
   @Test void actionMatchingItsModulePrefixStillGetsTheModulePrefixInPublicUrl() throws Exception {
     file("src/main/webapp/WEB-INF/web.xml", """
         <web-app>
