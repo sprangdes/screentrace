@@ -145,15 +145,18 @@ public final class StrutsProjectAnalyzer {
     } catch(Exception error) {diagnostic(state,"Struts 設定無法解析："+error.getMessage(),new SourceLocation(path,1),"STRUTS_CONFIG_UNRESOLVED");}
   }
   private static String moduleFor(String path,State state) {
+    List<String> modules=new ArrayList<>();
     for(Path file:state.inventory.files()) if(file.getFileName().toString().equals("web.xml")) try {
       for(Element parameter:StrutsSources.elements(readXml(file,state),"init-param")) {
         var names=StrutsSources.elements(parameter,"param-name");var values=StrutsSources.elements(parameter,"param-value");
         if(names.isEmpty()||values.isEmpty()) continue;
         String name=names.get(0).getTextContent().trim();if(!name.startsWith("config/")) continue;
-        for(String value:values.get(0).getTextContent().split(",")) if(path.endsWith(value.trim())) return "/"+name.substring("config/".length());
+        String module="/"+name.substring("config/".length());modules.add(module);
+        for(String value:values.get(0).getTextContent().split(",")) if(path.endsWith(value.trim())) return module;
       }
     } catch(Exception error) {diagnostic(state,"web.xml 模組設定無法解析",new SourceLocation(relative(state,file),1),"MODULE_CONFIG_UNRESOLVED");}
-    return "";
+    String clean=path.replace('\\','/');
+    return modules.stream().filter(module->clean.contains(module+"/")).max(Comparator.comparingInt(String::length)).orElse("");
   }
 
   private static void readServletMapping(State state) {
@@ -346,7 +349,7 @@ public final class StrutsProjectAnalyzer {
     if(!StrutsSources.literal(target)){diagnostic(state,"forward 無法靜態解析："+target,source,"STRUTS_FORWARD_UNRESOLVED");return;}
     List<String> screens=resolveForwardScreens(target,module,state,new LinkedHashSet<>(),0,source);
     if(screens.isEmpty()){diagnostic(state,"forward 無法對應 JSP / Tiles 畫面："+target,source,"STRUTS_FORWARD_UNRESOLVED");return;}
-    for(String screen:screens)edge(state,EdgeType.FORWARDS_TO,owner,screen,Confidence.CONFIRMED,source);
+    for(String screen:screens){edge(state,EdgeType.FORWARDS_TO,owner,screen,Confidence.CONFIRMED,source);String view=state.nodes.get(screen)==null?null:state.nodes.get(screen).attributes().get("view");if(view!=null&&!module.isBlank())state.jspModuleOwners.computeIfAbsent(view,key->new TreeSet<>()).add(module);}
   }
   private static List<String> resolveForwardScreens(String target,String module,State state,Set<String> visited,int depth,SourceLocation source) {
     if(depth>=5){diagnostic(state,"forward 鏈超過 5 層",source,"STRUTS_FORWARD_DEPTH");return List.of();}
@@ -393,7 +396,7 @@ public final class StrutsProjectAnalyzer {
         String action=null,formGroup=null,activeModule=null;Map<String,Integer> occurrences=new HashMap<>();
         for(MarkupTag tag:MarkupTag.scan(text)) {
           String name=tag.name().toLowerCase(Locale.ROOT);
-          if(tag.closing()) {if(Set.of("html:form","form","form:form").contains(name)) {action=null;formGroup=null;activeModule=null;}continue;}
+          if(tag.closing()) {if(Set.of("html:form","html-el:form","form","form:form").contains(name)) {action=null;formGroup=null;activeModule=null;}continue;}
           var source=new SourceLocation(path,tag.line());
           if(Set.of("tiles:insert","tiles:put").contains(name)) {
             String target=first(tag,"definition","page","value");String view=target==null?null:state.viewIds.get(target);
@@ -407,16 +410,32 @@ public final class StrutsProjectAnalyzer {
           if(kind==ComponentKind.FORM) action=first(tag,"action");
           String target=kind==ComponentKind.LINK?first(tag,"href","forward","page","action"):first(tag,"formaction");
           if(Set.of("logic:redirect","logic:forward").contains(name))target=first(tag,"forward","page","action","href");
+          boolean inheritedFormAction=kind==ComponentKind.SUBMIT&&target==null&&action!=null;
           String module=moduleFor(path,state);if(target!=null&&tag.attribute("forward")!=null&&!target.startsWith("/")&&!target.contains("."))target=state.globalForwards.getOrDefault(module+":"+target,target);
           if(kind==ComponentKind.FORM)activeModule=tag.attribute("module");
           if(target==null&&(kind==ComponentKind.FORM||kind==ComponentKind.SUBMIT)) target=action;
           Map<String,String> attrs=new TreeMap<>(tag.attributes());attrs.put("tag",name);attrs.put("kind",kind.name());attrs.put("componentType",kind==ComponentKind.FORM||kind==ComponentKind.SUBMIT?"FORM_SUBMIT":kind==ComponentKind.LINK?"NAVIGATION":kind.name());
-          String moduleValue=tag.attribute("module")!=null?tag.attribute("module"):activeModule;if(moduleValue!=null)attrs.put("module",moduleValue);
+          if(inheritedFormAction)attrs.put("strutsInheritedFormAction","true");
+          String moduleValue=tag.attribute("module")!=null?tag.attribute("module"):activeModule;if(moduleValue==null||moduleValue.isBlank())moduleValue=module;if(moduleValue!=null&&!moduleValue.isBlank())attrs.put("module",moduleValue);
+          String originalTarget=target;
+          if(kind==ComponentKind.FORM){String formAction=action;action=(name.equals("html:form")||name.equals("html-el:form")||name.equals("form:form"))?normalizeStrutsAction(action,moduleValue,state):action!=null&&!action.startsWith("/")&&!action.contains(":")?resolveRelativeJspUrl(path,action):action;if(action!=null){target=action;attrs.put("originalTarget",formAction);attrs.put("target",action);}}
+          else if(target!=null){
+            if(Set.of("html:link","html-el:link","html:rewrite","html-el:rewrite","logic:redirect","logic:forward").contains(name)&&tag.attribute("action")!=null)target=normalizeStrutsAction(target,moduleValue,state);
+            else if((name.equals("a")||name.equals("form"))&&!target.startsWith("/")&&!target.startsWith("#")&&!target.contains(":")&&tag.attribute("action")==null)target=resolveRelativeJspUrl(path,target);
+            if(target!=null){attrs.put("target",target);if(!Objects.equals(originalTarget,target))attrs.put("originalTarget",originalTarget);}
+          }
           if(target!=null) attrs.put("target",target);
           String occurrenceKey=name+new TreeMap<>(tag.attributes());int occurrence=occurrences.merge(occurrenceKey,1,Integer::sum)-1;
           String id=StableGraphIds.component(path,kind,identityAttributes(tag,name),occurrence);
           var resolved=jsp.interactions().stream().filter(i->id.equals(i.componentId())).findFirst();
-          if(resolved.isPresent()&&!resolved.get().submitsCurrentView()) {target=resolved.get().target();attrs.put("target",target);if(resolved.get().originalExpression()!=null)attrs.put("originalExpression",resolved.get().originalExpression());}
+          if(resolved.isPresent()&&!resolved.get().submitsCurrentView()) {target=resolved.get().target();if(resolved.get().originalExpression()!=null)attrs.put("originalExpression",resolved.get().originalExpression());}
+          if(kind==ComponentKind.FORM&&action!=null)target=action;
+          if(target!=null){
+            if(Set.of("html:link","html-el:link","html:rewrite","html-el:rewrite","logic:redirect","logic:forward").contains(name)&&tag.attribute("action")!=null)target=normalizeStrutsAction(tag.attribute("action"),moduleValue,state);
+            else if((name.equals("html:submit")||name.equals("html:button")||name.equals("button")||name.equals("input"))&&tag.attribute("formaction")==null&&action!=null)target=action;
+            else if((name.equals("a")||name.equals("form"))&&!target.startsWith("/")&&!target.startsWith("#")&&!target.contains(":")&&tag.attribute("action")==null)target=resolveRelativeJspUrl(path,target);
+            attrs.put("target",target);
+          }
           if(kind==ComponentKind.FORM) formGroup=id;
           String label=first(tag,"value","title","id","name","property");if(label==null) label=name;
           controls.add(new Control(id,label,attrs,target,source,first(tag,"property","name"),first(tag,"value"),formGroup));
@@ -431,7 +450,8 @@ public final class StrutsProjectAnalyzer {
       Set<String> sources=new TreeSet<>(projected.getOrDefault(view.path(),Set.of()));sources.add(view.path());
       collectIncludeSources(view.path(),jsp,state,new HashSet<>(),sources);
       Set<String> owners=new TreeSet<>(state.tileFragmentOwners.getOrDefault(view.path(),Set.of()));String directOwner=state.screens.get(view.path());if(directOwner!=null)owners.add(directOwner);
-      for(String owner:owners)for(String path:sources)for(Control control:byView.getOrDefault(path,List.of()))addControl(owner,control,byView.getOrDefault(path,List.of()),state);
+      Set<String> modules=new TreeSet<>(state.jspModuleOwners.getOrDefault(view.path(),Set.of()));String pathModule=moduleFor(view.path(),state);if(!pathModule.isBlank())modules.add(pathModule);if(modules.isEmpty())modules.add("");
+      for(String owner:owners)for(String module:modules)for(String path:sources)for(Control control:byView.getOrDefault(path,List.of()))addControl(owner,control,byView.getOrDefault(path,List.of()),module,state);
     }
   }
   private static void collectIncludeSources(String view,JspAnalysis jsp,State state,Set<String> seen,Set<String> sources) {
@@ -441,13 +461,17 @@ public final class StrutsProjectAnalyzer {
       if(!sources.add(child)) continue;collectIncludeSources(child,jsp,state,seen,sources);
     }
   }
-  private static void addControl(String screen,Control control,List<Control> peers,State state) {
-    addNode(state,control.id(),NodeType.COMPONENT,control.label(),control.attributes(),control.source(),Confidence.CONFIRMED);
+  private static void addControl(String screen,Control control,List<Control> peers,String moduleContext,State state) {
+    Map<String,String> controlAttributes=new TreeMap<>(control.attributes());if((controlAttributes.get("module")==null||controlAttributes.get("module").isBlank())&&moduleContext!=null&&!moduleContext.isBlank())controlAttributes.put("module",moduleContext);
+    Control contextual=new Control(control.id(),control.label(),controlAttributes,control.target(),control.source(),control.field(),control.value(),control.formGroup());
+    addNode(state,control.id(),NodeType.COMPONENT,control.label(),controlAttributes,control.source(),Confidence.CONFIRMED);
+    String originalTarget=controlAttributes.get("originalTarget");if(originalTarget!=null&&!originalTarget.isBlank()){GraphNode old=state.nodes.get(control.id());List<AnalysisEvidence> proof=new ArrayList<>(old.evidence());proof.add(new AnalysisEvidence(control.source(),PARSER,ResolutionStatus.CONFIRMED,"原始網址="+originalTarget+"；正規化網址="+Objects.toString(control.target(),"")));state.nodes.put(old.id(),new GraphNode(old.id(),old.type(),old.name(),old.attributes(),old.source(),old.confidence(),proof.stream().distinct().toList()));}
     edge(state,EdgeType.CONTAINS,screen,control.id(),Confidence.CONFIRMED,control.source());
-    if(control.target()==null) return;
-    if(!StrutsSources.literal(control.target())) {diagnostic(state,"元件目標運算式未解析："+control.target(),control.source(),"STRUTS_TARGET_UNRESOLVED");unresolvedBehavior(control,state);return;}
-    String resolvedTarget=moduleTarget(control,state),path=resolvedTarget.split("[?#]",2)[0];var mappings=state.routes.get(path);
-    String module=control.attributes().getOrDefault("module",moduleFor(control.source().file(),state));
+    if("SUBMIT".equals(control.attributes().get("kind"))&&control.attributes().get("formaction")==null&&control.formGroup()!=null)return;
+    if(contextual.target()==null) return;
+    if(!StrutsSources.literal(contextual.target())) {diagnostic(state,"元件目標運算式未解析："+contextual.target(),contextual.source(),"STRUTS_TARGET_UNRESOLVED");unresolvedBehavior(contextual,state);return;}
+    String resolvedTarget=moduleTarget(contextual,state),path=resolvedTarget.split("[?#]",2)[0];var mappings=state.routes.get(path);
+    String module=contextual.attributes().getOrDefault("module",moduleContext==null?moduleFor(contextual.source().file(),state):moduleContext);
     if(mappings==null) {String target=state.screens.get(path);if(target!=null) {edge(state,EdgeType.NAVIGATES_TO,control.id(),target,Confidence.CONFIRMED,control.source());return;}String logical=logicalPath(path,module,state);if(logical!=null)mappings=state.routes.get(logical);}
     if(mappings==null) {
       if(path.endsWith(".do")||path.contains("/do/")){String endpoint=unmappedLiteralEndpoint(path,control,state);edge(state,EdgeType.TRIGGERS,control.id(),endpoint,Confidence.UNRESOLVED,control.source());unresolvedBehavior(control,state);return;}
@@ -458,6 +482,9 @@ public final class StrutsProjectAnalyzer {
       Mapping mapping=mappings.get(0);
       if(mapping.formId()!=null) edge(state,EdgeType.BINDS_TO,control.id(),mapping.formId(),Confidence.CONFIRMED,control.source());
       if(!mapping.family().isBlank()) {
+        // A dispatch method adds a more specific endpoint below, but the public
+        // action mapping itself is still called by this form and must retain its caller.
+        edge(state,EdgeType.TRIGGERS,control.id(),state.endpointIds.getOrDefault(path,endpoint),status,control.source());
         String value=mapping.family().equals("MappingDispatchAction")?mapping.parameter():requestParameter(control,peers,mapping.parameter());
         String method=resolveMethod(mapping,value,state);
         var type=method==null?null:typeWithMethod(mapping.type(),method,state,new HashSet<>());
@@ -480,11 +507,12 @@ public final class StrutsProjectAnalyzer {
         for(String destination:destinations){if(status==Confidence.CONFIRMED)addScreenRouteAlias(destination,control.attributes().get("target"),state);edge(state,EdgeType.NAVIGATES_TO,control.id(),destination,status,control.source());}
       }
     }
-    edge(state,EdgeType.TRIGGERS,control.id(),endpoint,status,control.source());
+    edge(state,EdgeType.TRIGGERS,control.id(),endpoint,status,control.source(),module.isBlank()?null:"module="+module);
     BehaviorType type="LINK".equals(control.attributes().get("kind"))?BehaviorType.NAVIGATE:BehaviorType.SUBMIT_FORM;
-    String id=StableGraphIds.behavior(control.id(),"FORM".equals(control.attributes().get("kind"))?"submit":"click",type,control.target(),0);
+    String behaviorExpression=control.attributes().getOrDefault("originalTarget",control.target());String id=StableGraphIds.behavior(control.id(),"FORM".equals(control.attributes().get("kind"))?"submit":"click",type,behaviorExpression+(module.isBlank()?"":"|module="+module),0);
     ServletMappingResolution resolution=state.servletMappings.get(module);String detail=resolution!=null&&resolution.status()==ServletMappingStatus.PROVEN?mappingProof(resolution):null;
-    state.behaviors.putIfAbsent(id,new Behavior(id,control.id(),"FORM".equals(control.attributes().get("kind"))?"submit":"click",type,endpoint,null,null,control.target(),evidence(control.source(),status,detail)));
+    List<AnalysisEvidence> callEvidence=new ArrayList<>(evidence(control.source(),status,detail));if(!Objects.equals(behaviorExpression,control.target()))callEvidence.add(new AnalysisEvidence(control.source(),PARSER,status.resolutionStatus(),"原始目標="+behaviorExpression+"；正規化="+control.target()));if(!module.isBlank())callEvidence.add(new AnalysisEvidence(control.source(),PARSER,status.resolutionStatus(),"module="+module));
+    state.behaviors.putIfAbsent(id,new Behavior(id,control.id(),"FORM".equals(control.attributes().get("kind"))?"submit":"click",type,endpoint,null,null,behaviorExpression,callEvidence));
   }
   private static String moduleTarget(Control control,State state) {
     String target=control.target();String explicitModule=control.attributes().get("module");
@@ -498,6 +526,15 @@ public final class StrutsProjectAnalyzer {
       String prefix=values.get("prefix"),page=values.get("page");if(prefix!=null&&page!=null)return(prefix.endsWith("/")?prefix.substring(0,prefix.length()-1):prefix)+(page.startsWith("/")?page:"/"+page);
     }
     return target;
+  }
+  private static String normalizeStrutsAction(String raw,String module,State state) {
+    if(raw==null||!StrutsSources.literal(raw))return raw;String path=raw.split("[?#]",2)[0];if(path.isBlank())return path;if(!path.startsWith("/"))path="/"+path;
+    if(module!=null&&!module.isBlank()&&!path.equals(module)&&!path.startsWith(module+"/"))path=module+path;
+    return path;
+  }
+  private static String resolveRelativeJspUrl(String jspPath,String raw) {
+    if(raw==null||!StrutsSources.literal(raw))return raw;String suffix="";int boundary=raw.length();int query=raw.indexOf('?'),fragment=raw.indexOf('#');if(query>=0)boundary=Math.min(boundary,query);if(fragment>=0)boundary=Math.min(boundary,fragment);suffix=raw.substring(boundary);String path=raw.substring(0,boundary);if(path.isBlank())return raw;
+    String normalized=Path.of(jspPath).getParent().resolve(path).normalize().toString().replace('\\','/');String webRoot="src/main/webapp/";if(normalized.startsWith(webRoot))normalized="/"+normalized.substring(webRoot.length());else if(!normalized.startsWith("/"))return raw;return normalized+suffix;
   }
   private static String switchActionTarget(String target) {String query=target.contains("?")?target.substring(target.indexOf('?')+1):"";Map<String,String> values=new TreeMap<>();for(String pair:query.split("&")){String[] parts=pair.split("=",2);if(parts.length==2)values.put(parts[0],parts[1]);}String prefix=values.get("prefix"),page=values.get("page");return prefix==null||page==null?null:(prefix.endsWith("/")?prefix.substring(0,prefix.length()-1):prefix)+(page.startsWith("/")?page:"/"+page);}
   private static String unmappedLiteralEndpoint(String path,Control control,State state) {
@@ -514,7 +551,7 @@ public final class StrutsProjectAnalyzer {
     }
     if(name.equals(control.field())&&control.value()!=null) return control.value();
     Set<String> values=new TreeSet<>();
-    for(Control peer:peers) if(Objects.equals(control.formGroup(),peer.formGroup())&&name.equals(peer.field())&&peer.value()!=null&&"html:hidden".equals(peer.attributes().get("tag"))) values.add(peer.value());
+    for(Control peer:peers) if(Objects.equals(control.formGroup(),peer.formGroup())&&name.equals(peer.field())&&peer.value()!=null&&("html:hidden".equals(peer.attributes().get("tag"))||"SUBMIT".equals(peer.attributes().get("kind")))) values.add(peer.value());
     return values.size()==1?values.iterator().next():null;
   }
   private static boolean validDispatchSignature(MethodDeclaration method) {
@@ -815,6 +852,7 @@ public final class StrutsProjectAnalyzer {
     final Map<String,String> screens=new TreeMap<>(),viewIds=new TreeMap<>(),tileViewIds=new TreeMap<>(),beans=new TreeMap<>(),forms=new TreeMap<>();
     final Set<String> ambiguousTiles=new TreeSet<>();
     final Map<String,Tile> tiles=new TreeMap<>();final Map<String,Set<String>> tileFragmentOwners=new TreeMap<>();
+    final Map<String,Set<String>> jspModuleOwners=new TreeMap<>();
     final Set<String> tilePageDefinitions=new TreeSet<>(),tileStandaloneDefinitions=new TreeSet<>(),tilePageJspPaths=new TreeSet<>();
     final Map<String,Set<String>> tilePageOwners=new TreeMap<>();
     final Map<String,List<Mapping>> routes=new TreeMap<>();final Map<String,String> endpointIds=new TreeMap<>(),globalForwards=new TreeMap<>();final Map<String,Boolean> inputForward=new TreeMap<>();final List<Mapping> actionMappings=new ArrayList<>();final List<PendingForward> pendingForwards=new ArrayList<>();final Map<String,ServletMappingResolution> servletMappings=new TreeMap<>();

@@ -89,7 +89,7 @@ public record MarkupAnalysis(List<Component> components, List<Event> events,
   public static ComponentKind kind(String tag, Map<String,String> attrs) {
     if (tag.equals("dialog") || "dialog".equals(attrs.get("role")) || Arrays.asList(Objects.toString(attrs.get("class"),"").split("\\s+")).contains("modal")) return ComponentKind.MODAL;
     String local = tag.contains(":")?tag.substring(tag.indexOf(':')+1):tag;
-    if (tag.contains(":") && !(tag.startsWith("html:")||tag.startsWith("form:"))) return attrs.keySet().stream().anyMatch(k->k.startsWith("on"))?ComponentKind.OTHER:null;
+    if (tag.contains(":") && !(tag.startsWith("html:")||tag.startsWith("html-el:")||tag.startsWith("form:"))) return attrs.keySet().stream().anyMatch(k->k.startsWith("on"))?ComponentKind.OTHER:null;
     return switch (local) {
       case "form" -> ComponentKind.FORM;
       case "a", "link" -> tag.equals("link")?null:ComponentKind.LINK;
