@@ -283,7 +283,7 @@
 - 可選方案 B：維持 golden 完全不動，並收窄 OQ-027：同一個已證明的 ActionServlet 有多個 URL pattern 時，不輸出 mapping 未證明診斷；此方案會改變 OQ-027「多個候選」規則，且須另定義 endpoint alias 與 confidence 行為。
 - 可選方案 C：維持 OQ-027 與 golden 不變，授權只調整 `synthetic-project.e2e.mjs` 摘要比對，將上述兩個 OQ-027 診斷排除於 golden summary 之外，另以專項測試鎖定診斷數量與內容；此方案會縮小該整合測試對診斷 golden 的覆蓋。
 - 影響範圍：WP10 `struts1` summary golden 與 OQ-027 mapping 診斷；不涉及 WP55 畫面／行為來源修正、其他 golden 或 Spring 分析。
-- 狀態：已決定（2026-10-10）；需求方不採 A、B、C，採方案 D（明確化 OQ-027 的「多個候選」）。
+- 狀態：已決定（2026-10-10）；需求方不採 A、B、C，採方案 D（明確化 OQ-027 的「多個候選」）。實作與核准的 `struts1` golden 已完成；完整 E2E 發現另一個既有 golden 衝突，見 OQ-031。
 - 審查者判讀：`fixtures/wp10/struts1` 只宣告**一個** ActionServlet，同時映射 `*.do` 與 `*.action`。兩個 pattern 都由同一個 servlet 處理，`/save.do`、`/save.action` 都確定送到 `/save` action，沒有不確定性。OQ-027「多個候選」的本意是**無法判定由哪一個 servlet 處理**，是審查者當時寫得不夠精確。
 - 決定（取代 OQ-027 中「多個候選」的文字，其餘不變）：
   1. **可證明**：某個 Struts module 由唯一一個已宣告的 ActionServlet 處理（以 `servlet-class` 與該 servlet 的 `config`／`config/<module>` init-param 判定；只有一個 ActionServlet 時，它處理全部 module），且該 servlet 有一個以上 `servlet-mapping`。此時 action 的邏輯 path 與**每一個** pattern 展開的公開 URL 都是同一 endpoint 的別名，`CONFIRMED`，不產生 mapping 診斷。主要顯示的公開 URL 取 `web.xml` 中該 servlet 第一個 `servlet-mapping`（文件順序，決定性）；其餘列為別名，搜尋任一別名都可找到。
@@ -292,3 +292,12 @@
   4. 同一個 `web.xml` 的同一個狀況**只輸出一種**代碼（2 與 3 互斥），不得同時輸出兩種。
   5. 依此規則 `fixtures/wp10/struts1` 屬第 1 類，不產生 mapping 診斷；因別名合併而改變的端點數、API 狀態分布、診斷數屬 R16 §3 預先授權的數量型期望，可更新 `struts1.summary.json` 的對應欄位，並在 ADR 逐欄記錄舊值、新值與原因（其餘欄位與其他 golden 不變）。R16 自 `f655446` 起新增、與本決定衝突的測試依 OQ-028 一般授權更新；R16 前的既有測試與 fixture 仍不得修改。
   6. 新增合成測試：單一 ActionServlet 兩個 pattern（第 1 類，三個別名、CONFIRMED、無診斷）；兩個 ActionServlet 對同一 module 不明（第 2 類，只有 AMBIGUOUS）；有 ActionServlet 無 mapping（第 3 類，只有 UNRESOLVED）。
+
+## OQ-031 — OQ-030 alias 合併與 struts1-spring golden 衝突
+
+- 情境：OQ-030 規定只有一個 ActionServlet 時涵蓋全部 module，並把 action logical path 與該 servlet 每個 mapping 的公開 URL 合併成同一 endpoint。`fixtures/wp10/struts1-spring/src/main/webapp/WEB-INF/web.xml` 也只有一個 ActionServlet，宣告 `*.do` 與 `*.action`；因此符合可證明條件。預設並行 E2E 的 `real source fixtures produce identical graph, packed HTML and shared-module md on consecutive runs` 現在在 `struts1-spring.first.apis.by_status.UNREFERENCED` 失敗：golden 預期 12，實際 9。更新 golden 將違反 OQ-030 對「其他 golden 不變」的限制；保留 golden 則完整驗證不能全綠。
+- 可選方案 A：擴大 OQ-030 的 golden 授權，只更新 `fixtures/wp10/golden/struts1-spring.summary.json` 中經實際輸出證明改變的數量欄位；ADR 逐欄記錄舊值、新值及原因，並以舊實作證明新值會失敗。其餘欄位與其他 golden 不動。
+- 可選方案 B：維持所有其他 golden 不變，修訂 OQ-030 的適用條件，使 `struts1-spring` 仍維持原有 endpoint／API 數量。這需要明確說明如何與「單一 ActionServlet 處理全部 module」及「全部 mapping 為同一 endpoint 別名」共存，否則無法作不硬編碼的實作。
+- 影響範圍：OQ-030 的已證明 mapping 規則、`struts1-spring.summary.json`、預設並行 E2E 完整驗收及 WP55 停止點；未修改 `struts1-spring` golden。
+- 狀態：已決定（2026-10-10）；需求方採方案 A，並明確化授權範圍。
+- 決定：`struts1-spring` 只有一個 ActionServlet、宣告 `*.do` 與 `*.action`，屬 OQ-030 第 1 類，UNREFERENCED 12 → 9 是別名合併的預期結果。OQ-030 第 5 點「其他 golden 不變」寫得過窄，修訂為：**任何 Struts fixture（`fixtures/wp10/struts1`、`struts1-spring` 及其他含 Struts 的 fixture）的 golden 中，因 R16 的別名合併、forward 正規化、Tiles 畫面界線而改變的數量型欄位（畫面數、端點數、API 總數與狀態分布、行為數、診斷數）皆依 R16 §3 預先授權更新，不需停止**；條件是 ADR 逐欄記錄舊值、新值，並逐一列出造成差異的 endpoint／畫面／行為來源（例如哪些邏輯 path 與 `.do`／`.action` 公開 URL 合併、因而取得呼叫來源的 endpoint），證明新值在 R16 前實作上失敗，且沒有任何畫面或行為來源遺失（OQ-029 第 3、5 點）。**非 Struts 的 golden（Spring MVC、Spring Boot 等）任何欄位改變仍須停止**；eMusicStore、PetClinic 的 graph SHA-256 必須維持不變。
