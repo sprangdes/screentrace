@@ -309,4 +309,10 @@
 - 可選方案 A：把 §6.2.2 修訂為「exact route 優先；否則依 Struts 1.3 實際行為取最後一個符合的 wildcard mapping」，保留 mailreader 預期與 `ActionConfigMatcher` 原始碼一致。新測試涵蓋 `/*` 在前、`/Edit*` 等較具體 wildcard 在後，以及反向設定順序。
 - 可選方案 B：維持「第一個符合者」的規則；修訂 mailreader／scripting-mailreader 驗收，不再要求 `/Edit*`、`/Save*`、`/Delete*` 取得由較早 `/*` 攔截的呼叫來源，改列實際第一個匹配 mapping 與具體 path。
 - 影響範圍：wildcard caller 歸屬、mailreader 與 scripting-mailreader 的 API 狀態、matchedPaths 詳細資料及八模組剩餘項目稽核。沒有修改目標範例或既有斷言。
-- 狀態：待需求方決定。WP54 其餘不依賴 wildcard 優先序的補正已完成並有實測；在此決定前不改 wildcard 規則，也不宣稱 WP54 驗收完成。
+- 狀態：已決定（2026-10-10）；需求方採方案 A，附版本條件。
+- 審查者核對：`ActionConfigMatcher.java` 建構子依 struts-config 順序建立 `compiledPaths`（第 63–92 行），`match()` 逐一檢查且比對成功即覆寫 `config`、迴圈不中斷（第 117–129 行），因此 Struts 1.3.10 實際採用**最後一個**符合的萬用字元 mapping。§6.2.2「第一個符合」為審查者錯誤，以官方實作為準。
+- 決定：
+  1. 規則：先找完全相符的 action path；沒有時，依 struts-config 出現順序檢查全部萬用字元 mapping，取**最後一個**符合者（同 1.3.10 `ActionConfigMatcher`）。實作時另核對 `ModuleConfigImpl.findActionConfigs()` 回傳順序即設定檔順序，並在 ADR 引用行號。
+  2. 版本條件：此行為以 Struts 1.3.10 原始碼證實。目標專案的 Struts 版本可由建置檔或函式庫證明為 1.3.x 時，依第 1 點，basis 依連結本身（常值為 `STATIC_URL`）。版本無法證明或非 1.3.x，且「第一個符合」與「最後一個符合」結果不同時，不猜測：標 `AMBIGUOUS`，列出兩個候選 mapping 與版本證據不足的診斷；結果相同時照常處理。
+  3. 測試：`/*` 在前、`/Edit*` 在後（取 `/Edit*`）；反向順序（取 `/*`）；完全相符優先於任何萬用字元；版本不明且首末不同時為 AMBIGUOUS。
+  4. 驗收維持 §6 原文：mailreader／scripting-mailreader 的 `/Edit*`、`/Save*`、`/Delete*` 為使用中並列出比對到的具體 path。

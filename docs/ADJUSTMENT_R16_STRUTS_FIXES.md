@@ -144,7 +144,7 @@ R16 報告「仍未有呼叫來源的端點」表中，大多數原因只寫「�
 ### 6.2 補正（先補失敗測試，再修正）
 
 1. **靜態 HTML 頁**：`webapp` 下的 `.html`／`.htm` 與 JSP 一樣是畫面（R16 前在 eMusicStore 的 `firstPage.html` 已是如此），其 `<a href>`、`<form action>` 依 §5.2 第 2 點以檔案所在公開 URL 目錄解析相對網址（含 module 前綴目錄），去除查詢字串後比對 action。
-2. **Struts 1 萬用字元比對**（決定性，不是猜測）：依 Struts 1.3 規則——先找完全相符的 action path；沒有時依 struts-config 內出現順序取第一個符合的萬用字元 mapping；`*` 比對 0 個以上不含 `/` 的字元，`**` 比對 0 個以上含 `/` 的字元，`\` 為跳脫；比對成功時 `{0}`–`{9}` 代入該 mapping 的 forward path、`parameter`、`type`、`input` 等屬性。每個萬用字元 mapping 是一個端點，呼叫來源為所有比對到它的連結／表單（basis `STATIC_URL`，連結本身為常值時），詳細資料列出實際比對到的具體 path（例如 `/EditRegistration`、`/EditSubscription`）；代入後的 forward 依具體 path 分別解析到畫面。
+2. **Struts 1 萬用字元比對**（決定性，不是猜測）：依 Struts 1.3 規則——先找完全相符的 action path；沒有時依 struts-config 內出現順序檢查全部萬用字元 mapping，取**最後一個**符合者（依 OQ-032：Struts 1.3.10 `ActionConfigMatcher` 實際行為；版本不明且首末結果不同時標 AMBIGUOUS）；`*` 比對 0 個以上不含 `/` 的字元，`**` 比對 0 個以上含 `/` 的字元，`\` 為跳脫；比對成功時 `{0}`–`{9}` 代入該 mapping 的 forward path、`parameter`、`type`、`input` 等屬性。每個萬用字元 mapping 是一個端點，呼叫來源為所有比對到它的連結／表單（basis `STATIC_URL`，連結本身為常值時），詳細資料列出實際比對到的具體 path（例如 `/EditRegistration`、`/EditSubscription`）；代入後的 forward 依具體 path 分別解析到畫面。
 3. **Struts forward 的呼叫來源繼承（OQ-021 適用於 Struts）**：action 的 forward／global forward／exception path 經 OQ-030 正規化後指向另一個 action 時，目的 action 端點以 INFERRED 繼承來源 action 端點的全部呼叫來源，規則同 OQ-021（唯一目的地才繼承、鏈長上限 5、偵測循環、證據記錄完整鏈）。
 4. **設定樣板**：只被其他 action 以 `extends` 引用、且沒有任何連結／表單／forward 指向的 action，在 API 頁與首頁顯示「被繼承的設定樣板」，不列入「找不到呼叫來源」與可疑清單；仍保留在畫面網址清單與 md。
 5. **稽核方法修正**：剩餘「找不到呼叫來源」的搜尋範圍擴大為該模組全部 `.jsp`、`.jspf`、`.tag`、`.html`、`.htm`、`.js`、`.java`、`.xml`、`.properties`；萬用字元端點改以「所有 action 參照依第 2 點規則比對」而非字面搜尋；命中為 server-side forward 時，必須說明 OQ-021 繼承為何不適用（例如目的地不唯一），不得只寫「不是畫面元件直接呼叫來源」。
