@@ -110,18 +110,49 @@ class StrutsR16RoutingTest {
     assertFalse(endpoints.get(0).attributes().get("path").endsWith(".do"));
   }
 
-  @Test void ambiguousActionServletMappingsDoNotGuessAnEndpointAlias() throws Exception {
+  @Test void oneActionServletWithTwoPatternsMergesAllPublicAliasesAsConfirmedWithoutDiagnostics() throws Exception {
     actionServlet("*.do", "/WEB-INF/struts-config.xml");
     file("src/main/webapp/WEB-INF/web.xml", Files.readString(root.resolve("src/main/webapp/WEB-INF/web.xml")).replace("</web-app>", "<servlet-mapping><servlet-name>action</servlet-name><url-pattern>/do/*</url-pattern></servlet-mapping></web-app>"));
     config("<action path=\"/save\" type=\"sample.SaveAction\"/>");
 
     var graph = analyze();
-    assertTrue(graph.diagnostics().stream().anyMatch(diagnostic -> diagnostic.code().equals("STRUTS_SERVLET_MAPPING_AMBIGUOUS")));
     var endpoints=graph.nodes().stream().filter(node -> node.type() == NodeType.ENDPOINT).toList();
-    assertEquals(2, endpoints.size());
-    assertTrue(endpoints.stream().anyMatch(node -> "/save".equals(node.attributes().get("path")) && node.confidence()==Confidence.INFERRED));
-    assertTrue(endpoints.stream().anyMatch(node -> "/save.do".equals(node.attributes().get("path")) && node.confidence()==Confidence.INFERRED));
-    assertTrue(graph.diagnostics().stream().anyMatch(diagnostic -> diagnostic.code().equals("STRUTS_SERVLET_MAPPING_UNRESOLVED") && diagnostic.message().contains("未證明")));
+    assertEquals(1, endpoints.size());
+    assertEquals("/save.do", endpoints.get(0).attributes().get("path"), "the first web.xml pattern is the primary public URL");
+    assertEquals(Set.of("/save", "/do/save"), new HashSet<>(Arrays.asList(endpoints.get(0).attributes().get("aliases").split(","))));
+    assertEquals(Confidence.CONFIRMED, endpoints.get(0).confidence());
+    assertTrue(graph.diagnostics().stream().noneMatch(diagnostic -> diagnostic.code().startsWith("STRUTS_SERVLET_MAPPING_")));
+  }
+
+  @Test void twoActionServletsForTheSameModuleProduceOnlyAmbiguousMappingDiagnostic() throws Exception {
+    file("src/main/webapp/WEB-INF/web.xml", """
+        <web-app>
+          <servlet><servlet-name>actionA</servlet-name><servlet-class>org.apache.struts.action.ActionServlet</servlet-class><init-param><param-name>config</param-name><param-value>/WEB-INF/struts-config.xml</param-value></init-param></servlet>
+          <servlet><servlet-name>actionB</servlet-name><servlet-class>org.apache.struts.action.ActionServlet</servlet-class><init-param><param-name>config</param-name><param-value>/WEB-INF/struts-config.xml</param-value></init-param></servlet>
+          <servlet-mapping><servlet-name>actionA</servlet-name><url-pattern>*.do</url-pattern></servlet-mapping>
+          <servlet-mapping><servlet-name>actionB</servlet-name><url-pattern>/do/*</url-pattern></servlet-mapping>
+        </web-app>
+        """);
+    config("<action path=\"/save\" type=\"sample.SaveAction\"/>");
+
+    var graph = analyze();
+    assertTrue(graph.diagnostics().stream().anyMatch(diagnostic -> diagnostic.code().equals("STRUTS_SERVLET_MAPPING_AMBIGUOUS") && diagnostic.message().contains("actionA") && diagnostic.message().contains("actionB") && diagnostic.message().contains("web.xml")));
+    assertEquals(1, graph.diagnostics().stream().filter(diagnostic -> diagnostic.code().startsWith("STRUTS_SERVLET_MAPPING_")).count());
+    assertTrue(graph.nodes().stream().anyMatch(node -> node.type() == NodeType.ENDPOINT && node.attributes().get("path").equals("/save.do")));
+  }
+
+  @Test void declaredActionServletWithoutMappingProducesOnlyUnresolvedMappingDiagnostic() throws Exception {
+    file("src/main/webapp/WEB-INF/web.xml", """
+        <web-app><servlet><servlet-name>action</servlet-name><servlet-class>org.apache.struts.action.ActionServlet</servlet-class>
+          <init-param><param-name>config</param-name><param-value>/WEB-INF/struts-config.xml</param-value></init-param>
+        </servlet></web-app>
+        """);
+    config("<action path=\"/save\" type=\"sample.SaveAction\"/>");
+
+    var graph = analyze();
+    assertTrue(graph.diagnostics().stream().anyMatch(diagnostic -> diagnostic.code().equals("STRUTS_SERVLET_MAPPING_UNRESOLVED")));
+    assertEquals(1, graph.diagnostics().stream().filter(diagnostic -> diagnostic.code().startsWith("STRUTS_SERVLET_MAPPING_")).count());
+    assertFalse(graph.diagnostics().stream().anyMatch(diagnostic -> diagnostic.code().equals("STRUTS_SERVLET_MAPPING_AMBIGUOUS")));
   }
 
   @Test void publicUrlForwardResolvesThroughTheMappedActionToItsView() throws Exception {
