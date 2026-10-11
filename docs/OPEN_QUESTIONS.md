@@ -338,4 +338,6 @@
 - 可選方案 A：授權只調整上述既有測試的斷言，驗證 `child` 以版型 VIEW 保留、且不作為獨立 SCREEN；fixture 不變。ADR 記錄測試名稱、舊預期、新預期與 OQ-029 依據。
 - 可選方案 B：維持既有測試與斷言，修訂 OQ-029，允許被 extends 的 definition 同時列為 SCREEN；這會使「被任何 definition extends 即為版型」不再成立，並改變 WP55／WP58 對 Tiles 畫面的計數與呈現。
 - 影響範圍：WP58 的 JSF／Tiles 全套驗收與 R14 §5 完整 Maven 驗證。已新增的 WP58 fixture 使用被 extends 的 `.base`，預期它只作版型而不列 SCREEN；既有 fixture 與斷言尚未修改。
-- 狀態：待需求方決定。完整驗證目前被該既有斷言阻擋；其餘項目不宣告完成。
+- 狀態：已決定（2026-10-11）；需求方不採 A、B，採方案 C。
+- 審查者判讀：`StrutsCompletenessTest.java:113` 的斷言為 `graph.nodes().stream().anyMatch(n->n.name().equals("child")&&"/WEB-INF/jsp/layout.jsp".equals(n.attributes().get("view")))`，只要求圖中**存在任一類型**、名稱為 `child` 且 `view` 為 `layout.jsp` 的節點，**沒有要求它是 SCREEN**。OQ-029 的「版型不是畫面」與此斷言不衝突：版型以非畫面節點（VIEW／版型證據）保留名稱與 `view` 屬性即可通過。WP55 提交時完整驗證全綠，正是如此通過；現在失敗代表工作區未提交修改把版型節點移除，或移除了其 `name`／`view` 屬性，屬實作退化。
+- 決定：既有測試與 fixture 不改；修正實作，使被 extends 的 Tiles definition 依 OQ-029 不是 SCREEN，但仍以版型節點保留於圖中（保留 `name`、`view`、來源與 extends 關係），供組成證據、片段群組與稽核使用。WP58 新增的 faces fixture（R16 新增測試）若斷言「`.base` 不是 SCREEN」，與本決定一致；若斷言「圖中完全沒有 `.base` 節點」，依 OQ-028 一般授權改為只斷言非 SCREEN。
