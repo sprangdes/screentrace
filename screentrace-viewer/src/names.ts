@@ -14,9 +14,20 @@ export function screenNames(screens:Node[],hints:Map<string,NameHint>,routes:Map
  const names=new Map<string,string>();
  for(const screen of sorted){const hint=hints.get(screen.id)||{},title=clean(hint.title),heading=clean(hint.heading),duplicate=!!title&&counts.get(title)!>1;
  const fallback=screen.attributes.view||screen.attributes.viewIdentifier||screen.source?.file||screen.name;
- names.set(screen.id,title&&counts.get(title)===1?title:heading&&counts.get(heading)===1?heading:duplicate||screen.attributes.view?humanizeName(fallback):clean(screen.attributes.screenName||screen.name)||humanizeName(fallback));}
- const groups=new Map<string,string[]>();for(const [id,name]of names)groups.set(name,[...(groups.get(name)||[]),id]);
- for(const [name,ids]of groups)if(ids.length>1)for(const id of ids)names.set(id,`${name}（${routes.get(id)?.[0]||'沒有已知 URL'}）`);
- const used=new Set<string>();for(const [id,base]of names){let name=base,n=1;while(used.has(name))name=`${base}（${++n}）`;used.add(name);names.set(id,name);}
+ const tileName=screen.attributes.tilesDefinition==='true'?clean(screen.attributes.screenName||screen.name):'';
+ names.set(screen.id,tileName|| (title&&counts.get(title)===1?title:heading&&counts.get(heading)===1?heading:duplicate||screen.attributes.view?humanizeName(fallback):clean(screen.attributes.screenName||screen.name)||humanizeName(fallback)));}
+ const byId=new Map(screens.map(screen=>[screen.id,screen])),groups=new Map<string,string[]>();for(const [id,name]of names)groups.set(name,[...(groups.get(name)||[]),id]);
+ for(const [name,ids]of groups)if(ids.length>1){
+  const candidates=new Map(ids.map(id=>{const screen=byId.get(id),source=screen?.attributes.screenNameSourcePath||screen?.attributes.view||screen?.source?.file;return[id,[routes.get(id)?.[0],clean(screen?.attributes.tilesDefinitionName).replace(/^\.+/,''),sourceFileName(source),sourceDirectoryName(source)]];}));
+  for(const id of ids){const available=candidates.get(id)!.filter(Boolean),unique=available.find(value=>ids.filter(other=>candidates.get(other)!.includes(value)).length===1);if(unique)names.set(id,`${name}（${unique}）`);}
+ }
  return names;
+}
+function sourceDirectoryName(path?:string):string {
+ const parts=String(path||'').replaceAll('\\','/').split('/').filter(Boolean);if(parts.length<2)return '';
+ const directory=parts.at(-2)!;return directory==='views'||directory==='jsp'||directory==='webapp'?'':humanizeName(directory);
+}
+function sourceFileName(path?:string):string {
+ const filename=String(path||'').replaceAll('\\','/').split('/').filter(Boolean).at(-1)||'';
+ return filename?humanizeName(filename):'';
 }

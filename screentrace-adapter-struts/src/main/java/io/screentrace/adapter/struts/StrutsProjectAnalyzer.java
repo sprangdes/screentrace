@@ -1129,6 +1129,80 @@ public final class StrutsProjectAnalyzer {
     String resolved=tileJspViewPath(tile.template(),state);return resolved==null?tile.template():resolved;
   }
 
+  private static TileScreenName tileScreenName(Tile tile,State state) {
+    String title=staticTileTitle(tile.puts().get("title"),state);
+    if(title!=null)return new TileScreenName(title,"Tiles title put",tile.source().file());
+    String body=tilePrimaryBodyPath(tile,state,new HashSet<>());
+    String bodyName=body==null?null:staticJspPageName(body,state);
+    if(bodyName!=null)return new TileScreenName(bodyName,"body JSP",body);
+    return new TileScreenName(humanizeTileDefinition(tile.name()),"Tiles definition name",tile.source().file());
+  }
+
+  private static String staticTileTitle(String value,State state) {
+    if(value==null||value.isBlank())return null;String candidate=value.strip();
+    Matcher message=Pattern.compile("(?is)^<(?:bean|s):message\\b([^>]*)/?>$").matcher(candidate);
+    if(message.matches()) {
+      Map<String,String> attributes=tagAttributes(message.group(1));String key=attributes.get("key");
+      if(key==null)return null;String resolved=resolveMessage(state,attributes.get("bundle"),key);return resolved.startsWith("（訊息 key：")?null:cleanScreenName(resolved);
+    }
+    if(candidate.matches("(?s).*\\$\\{|.*#\\{|.*<%.*"))return null;
+    Set<String> translations=state.messages.get(candidate);if(translations!=null&&translations.size()==1)return cleanScreenName(translations.iterator().next());
+    if(candidate.contains("<")||candidate.contains(">"))return null;
+    return cleanScreenName(candidate);
+  }
+
+  private static String tilePrimaryBodyPath(Tile tile,State state,Set<String> seen) {
+    if(!seen.add(tile.name()))return null;
+    String target=tile.puts().get("body");
+    if(target==null||target.isBlank()) {
+      List<String> content=tile.puts().entrySet().stream().filter(entry->!Set.of("title","header","footer","menu").contains(entry.getKey().toLowerCase(Locale.ROOT))).map(Map.Entry::getValue).filter(value->value!=null&&!value.isBlank()).distinct().toList();
+      if(content.size()!=1)return null;target=content.get(0);
+    }
+    Tile nested=state.tiles.get(target);if(nested!=null)return tilePrimaryBodyPath(nested,state,seen);
+    if(!(target.endsWith(".jsp")||target.endsWith(".jspf")||target.endsWith(".faces")))return null;
+    return tileJspViewPath(target,state);
+  }
+
+  private static String staticJspPageName(String path,State state) {
+    try {
+      String source=SafeProjectFiles.readUtf8Limited(state.inventory.root(),state.inventory.root().resolve(path),SafeProjectFiles.MAX_JSP_FILE_BYTES)
+          .replaceAll("(?s)<%--.*?--%>","").replaceAll("(?s)<!--.*?-->","").replaceAll("(?s)<%(?!@).*?%>","");
+      Matcher title=Pattern.compile("(?is)<title\\b[^>]*>(.*?)</title\\s*>").matcher(source);
+      if(title.find()){String name=staticMarkupLabel(title.group(1),state);if(name!=null)return name;}
+      Matcher heading=Pattern.compile("(?is)<h1\\b[^>]*>(.*?)</h1\\s*>").matcher(source);
+      while(heading.find()){String name=staticMarkupLabel(heading.group(1),state);if(name!=null)return name;}
+    }catch(IOException|SecurityException ignored) { }
+    return null;
+  }
+
+  private static String staticMarkupLabel(String markup,State state) {
+    if(markup.matches("(?is).*<(?:c:choose|c:when|c:if|c:forEach)\\b.*")||markup.matches("(?s).*\\$\\{|.*#\\{|.*<%.*"))return null;
+    Matcher message=Pattern.compile("(?is)<(bean|s):message\\b([^>]*)/?>").matcher(markup);StringBuffer resolved=new StringBuffer();
+    while(message.find()) {
+      Map<String,String> attributes=tagAttributes(message.group(2));String key=attributes.get("key"),label=key==null?null:resolveMessage(state,attributes.get("bundle"),key);
+      if(label==null||label.startsWith("（訊息 key："))return null;
+      message.appendReplacement(resolved,Matcher.quoteReplacement(label));
+    }
+    message.appendTail(resolved);String label=resolved.toString().replaceAll("(?is)<[^>]*>"," ").replaceAll("&amp;","&").replaceAll("&lt;","<").replaceAll("&gt;",">").replaceAll("&quot;","\"").replaceAll("&#39;","'");
+    return cleanScreenName(label);
+  }
+
+  private static Map<String,String> tagAttributes(String source) {
+    Map<String,String> result=new TreeMap<>();Matcher attribute=Pattern.compile("([\\w:-]+)\\s*=\\s*(['\"])(.*?)\\2").matcher(source);
+    while(attribute.find())result.put(attribute.group(1).toLowerCase(Locale.ROOT),attribute.group(3));return result;
+  }
+
+  private static String cleanScreenName(String value) {
+    String cleaned=value==null?"":value.replaceAll("\\$\\{[^{}]*}|#\\{[^{}]*}|<%.*?%>"," ").replaceAll("\\s+"," ").strip();return cleaned.isBlank()?null:cleaned;
+  }
+
+  private static String humanizeTileDefinition(String value) {
+    String name=value==null?"":value.replaceFirst("^\\.+","").replaceAll("([a-z0-9])([A-Z])","$1 $2").replaceAll("([A-Z])([A-Z][a-z])","$1 $2").replaceAll("[._-]+"," ").replaceAll("\\s+"," ").strip();
+    if(name.isBlank())return "未命名畫面";StringBuilder result=new StringBuilder();boolean capitalize=true;
+    for(char character:name.toCharArray()){if(Character.isWhitespace(character)){result.append(character);capitalize=true;}else{result.append(capitalize?Character.toUpperCase(character):character);capitalize=false;}}
+    return result.toString();
+  }
+
   private static boolean isTilesLayoutPath(String path,State state) {
     return state.tiles.values().stream().map(tile->resolvedTileTemplate(tile,state)).anyMatch(path::equals);
   }
@@ -1191,8 +1265,8 @@ public final class StrutsProjectAnalyzer {
     Tile tile=state.tiles.get(name);if(tile==null)return null;
     String screen=ApplicationGraph.id(NodeType.SCREEN,"tiles:"+tile.name()),viewId=state.tileViewIds.get(tile.name());
     String template=resolvedTileTemplate(tile,state);Confidence status=state.viewIds.containsKey(template)?Confidence.CONFIRMED:Confidence.UNRESOLVED;
-    Map<String,String> attributes=new TreeMap<>();attributes.put("view",template);attributes.put("tilesDefinition","true");if(!Objects.equals(template,tile.template()))attributes.put("originalView",tile.template());
-    addNode(state,screen,NodeType.SCREEN,tile.name(),attributes,tile.source(),status);state.screens.put(name,screen);
+    TileScreenName display=tileScreenName(tile,state);Map<String,String> attributes=new TreeMap<>();attributes.put("view",template);attributes.put("tilesDefinition","true");attributes.put("tilesDefinitionName",tile.name());attributes.put("screenNameSource",display.source());attributes.put("screenNameSourcePath",display.path());if(!Objects.equals(template,tile.template()))attributes.put("originalView",tile.template());
+    addNode(state,screen,NodeType.SCREEN,display.name(),attributes,tile.source(),status);state.screens.put(name,screen);
     List<String> targets=new ArrayList<>(tile.puts().values());targets.add(tile.template());
     for(String target:targets) {
       String view=tileViewId(target,state);if(view==null)view=state.tileViewIds.get(target);
@@ -1256,6 +1330,7 @@ public final class StrutsProjectAnalyzer {
   private record MessageResource(String key,String parameter) { }
   private record FacesSuffixMapping(String defaultSuffix,SourceLocation source) { }
   private record Tile(String name,String template,String parent,Map<String,String> puts,SourceLocation source) { }
+  private record TileScreenName(String name,String source,String path) { }
   private static final class State {
     final ProjectInventory inventory;
     final StrutsVersionEvidence strutsVersion;

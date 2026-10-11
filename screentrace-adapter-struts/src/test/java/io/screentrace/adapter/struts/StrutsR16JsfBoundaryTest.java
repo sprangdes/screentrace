@@ -32,7 +32,7 @@ class StrutsR16JsfBoundaryTest {
     file("src/main/webapp/layout.jsp","<%@ taglib prefix='h' uri='http://java.sun.com/jsf/html' %><h:panelGroup>Layout</h:panelGroup>");
     file("src/main/webapp/home.jsp","<html><body><a href='/home.faces'>Home</a></body></html>");
     ApplicationGraph graph=new StrutsProjectAnalyzer().analyze(new ProjectScanner().scan(root));
-    GraphNode page=graph.nodes().stream().filter(node->node.type()==NodeType.SCREEN&&".home".equals(node.name())).findFirst().orElseThrow();
+    GraphNode page=graph.nodes().stream().filter(node->node.type()==NodeType.SCREEN&&"Home".equals(node.name())).findFirst().orElseThrow();
     assertEquals("JSF",page.attributes().get("unsupportedComponentFramework"));
     assertFalse(graph.nodes().stream().anyMatch(node->node.type()==NodeType.SCREEN&&".base".equals(node.name())));
     assertFalse(graph.nodes().stream().anyMatch(node->node.type()==NodeType.SCREEN&&node.id().equals(io.screentrace.core.StableGraphIds.screen("src/main/webapp/layout.jsp"))));
@@ -49,7 +49,7 @@ class StrutsR16JsfBoundaryTest {
     file("src/main/webapp/layout.jsp","<html>must not be guessed</html>");file("src/main/webapp/home.jsp","Home");
     ApplicationGraph graph=new StrutsProjectAnalyzer().analyze(new ProjectScanner().scan(root));
     assertTrue(graph.diagnostics().stream().anyMatch(item->item.code().equals("JSF_ROUTE_UNRESOLVED")),graph.diagnostics().toString());
-    GraphNode page=graph.nodes().stream().filter(node->node.type()==NodeType.SCREEN&&".home".equals(node.name())).findFirst().orElseThrow();
+    GraphNode page=graph.nodes().stream().filter(node->node.type()==NodeType.SCREEN&&"Home".equals(node.name())).findFirst().orElseThrow();
     assertFalse(graph.relationships().stream().anyMatch(edge->edge.type()==EdgeType.INCLUDES&&graph.nodes().stream().anyMatch(node->node.id().equals(edge.to())&&"src/main/webapp/layout.jsp".equals(node.attributes().get("view")))));
   }
 

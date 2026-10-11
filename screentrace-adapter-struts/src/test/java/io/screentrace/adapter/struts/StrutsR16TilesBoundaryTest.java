@@ -29,8 +29,8 @@ class StrutsR16TilesBoundaryTest {
     assertNotNull(project,"repository root");assertTrue(Files.isDirectory(project),project.toString());
     var graph=new StrutsProjectAnalyzer().analyze(new ProjectScanner().scan(project));
     Map<String,GraphNode> screens=new TreeMap<>();graph.nodes().stream().filter(node->node.type()==NodeType.SCREEN).forEach(node->screens.put(node.name(),node));
-    assertEquals(Set.of("page","Outer"),screens.keySet());
-    var outer=screens.get("outer");
+    assertEquals(Set.of("page","合成訂單畫面"),screens.keySet());
+    var outer=screens.get("合成訂單畫面");
     assertTrue(outer.source().file().endsWith("tiles-defs.xml"));
     assertFalse(graph.relationships().stream().anyMatch(edge->Set.of(EdgeType.RENDERS,EdgeType.FORWARDS_TO).contains(edge.type())&&edge.to().equals(outer.id())));
     assertTrue(graph.relationships().stream().anyMatch(edge->edge.type()==EdgeType.CONTAINS&&edge.from().equals(outer.id())),"unrouted page definition must retain its controls");
@@ -49,17 +49,17 @@ class StrutsR16TilesBoundaryTest {
 
     var graph=analyze();
     Set<String> screenNames=new TreeSet<>();graph.nodes().stream().filter(node->node.type()==NodeType.SCREEN).forEach(node->screenNames.add(node.name()));
-    assertEquals(Set.of("full","home.page","unused.page"),screenNames);
-    var home=graph.nodes().stream().filter(node->node.type()==NodeType.SCREEN&&node.name().equals("home.page")).findFirst().orElseThrow();
+    assertEquals(Set.of("full","Home Page","Unused Page"),screenNames);
+    var home=graph.nodes().stream().filter(node->node.type()==NodeType.SCREEN&&node.name().equals("Home Page")).findFirst().orElseThrow();
     var contained=graph.relationships().stream().filter(edge->edge.type()==EdgeType.CONTAINS&&edge.from().equals(home.id())).map(edge->graph.nodes().stream().filter(node->node.id().equals(edge.to())).findFirst().orElseThrow()).toList();
     assertTrue(contained.stream().anyMatch(node->node.source().file().endsWith("body.jsp")&&"body-action".equals(node.attributes().get("id"))),contained.toString());
     assertTrue(contained.stream().anyMatch(node->node.source().file().endsWith("layout.jsp")&&"layout-action".equals(node.attributes().get("id"))),contained.toString());
     assertTrue(contained.stream().anyMatch(node->node.source().file().endsWith("header.jsp")&&"header-action".equals(node.attributes().get("id"))),contained.toString());
-    for(String name:List.of("home.page","unused.page")) {
+    for(String name:List.of("Home Page","Unused Page")) {
       var owner=graph.nodes().stream().filter(node->node.type()==NodeType.SCREEN&&node.name().equals(name)).findFirst().orElseThrow();
       assertTrue(graph.behaviors().stream().anyMatch(behavior->behavior.triggerId().equals(owner.id())&&behavior.type()==BehaviorType.CALL_API&&behavior.expression().contains("/layout-api")),name+" must own the shared layout script behavior");
     }
-    var unused=graph.nodes().stream().filter(node->node.type()==NodeType.SCREEN&&node.name().equals("unused.page")).findFirst().orElseThrow();
+    var unused=graph.nodes().stream().filter(node->node.type()==NodeType.SCREEN&&node.name().equals("Unused Page")).findFirst().orElseThrow();
     assertFalse(graph.relationships().stream().anyMatch(edge->Set.of(EdgeType.RENDERS,EdgeType.FORWARDS_TO).contains(edge.type())&&edge.to().equals(unused.id())));
     assertTrue(graph.relationships().stream().anyMatch(edge->edge.type()==EdgeType.CONTAINS&&edge.from().equals(unused.id())&&graph.nodes().stream().anyMatch(node->node.id().equals(edge.to())&&node.source().file().endsWith("unused.jsp"))),graph.nodes().toString());
     assertTrue(graph.relationships().stream().anyMatch(edge->edge.type()==EdgeType.INCLUDES&&edge.from().equals(home.id())));
@@ -88,8 +88,8 @@ class StrutsR16TilesBoundaryTest {
 
     var graph=analyze();
     Set<String> screens=new TreeSet<>();graph.nodes().stream().filter(node->node.type()==NodeType.SCREEN).forEach(node->screens.add(node.name()));
-    assertEquals(Set.of("home.page"),screens);
-    var home=graph.nodes().stream().filter(node->node.type()==NodeType.SCREEN&&node.name().equals("home.page")).findFirst().orElseThrow();
+    assertEquals(Set.of("Home Page"),screens);
+    var home=graph.nodes().stream().filter(node->node.type()==NodeType.SCREEN&&node.name().equals("Home Page")).findFirst().orElseThrow();
     assertTrue(graph.relationships().stream().anyMatch(edge->edge.type()==EdgeType.CONTAINS&&edge.from().equals(home.id())&&graph.nodes().stream().anyMatch(node->node.id().equals(edge.to())&&node.source().file().endsWith("orphan-layout.jsp")&&"layout-action".equals(node.attributes().get("id")))));
     assertTrue(graph.behaviors().stream().anyMatch(behavior->behavior.triggerId().equals(home.id())&&behavior.type()==BehaviorType.CALL_API&&behavior.expression().contains("/insert-layout-api")));
   }
@@ -102,7 +102,7 @@ class StrutsR16TilesBoundaryTest {
     file("src/main/webapp/WEB-INF/jsp/page.jsp","<h1>Page</h1>");
 
     var graph=analyze();
-    var layout=graph.nodes().stream().filter(node->node.type()==NodeType.SCREEN&&node.name().equals("base")).findFirst().orElseThrow();
+    var layout=graph.nodes().stream().filter(node->node.type()==NodeType.SCREEN&&node.id().equals(ApplicationGraph.id(NodeType.SCREEN,"tiles:base"))).findFirst().orElseThrow();
     assertTrue(graph.relationships().stream().anyMatch(edge->edge.type()==EdgeType.CONTAINS&&edge.from().equals(layout.id())&&graph.nodes().stream().anyMatch(node->node.id().equals(edge.to())&&"layout-action".equals(node.attributes().get("id")))),graph.nodes().toString()+"\n"+graph.relationships().toString());
     assertFalse(graph.relationships().stream().anyMatch(edge->edge.type()==EdgeType.RENDERS&&edge.to().equals(layout.id())));
     assertTrue(graph.behaviors().stream().anyMatch(behavior->behavior.triggerId().equals(layout.id())&&behavior.type()==BehaviorType.CALL_API&&behavior.expression().contains("/tiles-layout-api")),graph.behaviors()+"\n"+graph.diagnostics());
@@ -141,13 +141,16 @@ class StrutsR16TilesBoundaryTest {
     assertEquals("Resource Home Title",names.get(".homePage"),names.toString());
     assertEquals("Body Resource Heading",names.get(".bodyPage"),names.toString());
     assertEquals("Main Menu",names.get(".mainMenu"),names.toString());
+    assertEquals("Tiles title put",graph.nodes().stream().filter(node->node.id().equals(ApplicationGraph.id(NodeType.SCREEN,"tiles:.homePage"))).findFirst().orElseThrow().attributes().get("screenNameSource"));
+    assertEquals("body JSP",graph.nodes().stream().filter(node->node.id().equals(ApplicationGraph.id(NodeType.SCREEN,"tiles:.bodyPage"))).findFirst().orElseThrow().attributes().get("screenNameSource"));
+    assertEquals("Tiles definition name",graph.nodes().stream().filter(node->node.id().equals(ApplicationGraph.id(NodeType.SCREEN,"tiles:.mainMenu"))).findFirst().orElseThrow().attributes().get("screenNameSource"));
     assertFalse(names.values().stream().anyMatch(name->name.startsWith("Layout")),names.toString());
   }
 
-  @Test void wp10OuterPageDefinitionUsesHumanizedName()throws Exception{
+  @Test void wp10OuterPageDefinitionUsesBodyJspReadableName()throws Exception{
     Path project=null;for(Path candidate=Path.of("").toAbsolutePath();candidate!=null;candidate=candidate.getParent())if(Files.isRegularFile(candidate.resolve("pom.xml"))&&Files.isDirectory(candidate.resolve("screentrace-core"))){project=candidate.resolve("fixtures/wp10/struts1");break;}
     assertNotNull(project,"repository root");var graph=new StrutsProjectAnalyzer().analyze(new ProjectScanner().scan(project));
-    assertTrue(graph.nodes().stream().anyMatch(node->node.type()==NodeType.SCREEN&&node.name().equals("Outer")&&node.source().file().endsWith("tiles-defs.xml")),graph.nodes().toString());
+    assertTrue(graph.nodes().stream().anyMatch(node->node.type()==NodeType.SCREEN&&node.name().equals("合成訂單畫面")&&node.source().file().endsWith("tiles-defs.xml")),graph.nodes().toString());
   }
 
   @Test void referencedRootTemplateWithoutEntryIsNotAnIndependentScreen()throws Exception{
@@ -159,7 +162,7 @@ class StrutsR16TilesBoundaryTest {
 
     var graph=analyze();
     assertFalse(graph.nodes().stream().anyMatch(node->node.type()==NodeType.SCREEN&&node.source().file().endsWith("layout.jsp")),graph.nodes().stream().filter(node->node.type()==NodeType.SCREEN).toList().toString());
-    var page=graph.nodes().stream().filter(node->node.type()==NodeType.SCREEN&&node.name().equals("home.page")).findFirst().orElseThrow();
+    var page=graph.nodes().stream().filter(node->node.type()==NodeType.SCREEN&&node.name().equals("Home Page")).findFirst().orElseThrow();
     assertTrue(graph.relationships().stream().anyMatch(edge->edge.type()==EdgeType.CONTAINS&&edge.from().equals(page.id())&&graph.nodes().stream().anyMatch(node->node.id().equals(edge.to())&&node.source().file().endsWith("layout.jsp")&&"layout-action".equals(node.attributes().get("id")))));
   }
 
@@ -171,7 +174,7 @@ class StrutsR16TilesBoundaryTest {
     file("src/main/webapp/WEB-INF/jsp/page.jsp","<h1>Page</h1>");
 
     var graph=analyze();
-    var layout=graph.nodes().stream().filter(node->node.type()==NodeType.SCREEN&&node.name().equals("base")).findFirst().orElseThrow();
+    var layout=graph.nodes().stream().filter(node->node.type()==NodeType.SCREEN&&node.id().equals(ApplicationGraph.id(NodeType.SCREEN,"tiles:base"))).findFirst().orElseThrow();
     assertTrue(graph.behaviors().stream().anyMatch(behavior->behavior.triggerId().equals(layout.id())&&behavior.type()==BehaviorType.CALL_API&&behavior.expression().contains("/tiles-layout-api")),graph.behaviors()+"\n"+graph.diagnostics());
   }
 }
