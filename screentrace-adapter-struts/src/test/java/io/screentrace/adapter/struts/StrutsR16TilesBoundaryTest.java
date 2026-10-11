@@ -125,6 +125,31 @@ class StrutsR16TilesBoundaryTest {
     assertTrue(graph.relationships().stream().anyMatch(edge->edge.type()==EdgeType.INCLUDES&&edge.from().equals(pageView.id())&&edge.to().equals(baseView.id())&&edge.evidence().stream().anyMatch(proof->proof.detail()!=null&&proof.detail().contains("extends=base"))));
   }
 
+  @Test void tilePageNamesPreferInheritedTitleThenBodyHeadingThenHumanizedDefinition()throws Exception{
+    file("src/main/webapp/WEB-INF/web.xml","<web-app><servlet><servlet-name>action</servlet-name><servlet-class>org.apache.struts.action.ActionServlet</servlet-class></servlet><servlet-mapping><servlet-name>action</servlet-name><url-pattern>*.do</url-pattern></servlet-mapping></web-app>");
+    file("src/main/webapp/WEB-INF/struts-config.xml","<struts-config><message-resources parameter='messages'/><action-mappings><action path='/home' type='sample.Home'><forward name='home' path='.homePage'/></action></action-mappings></struts-config>");
+    file("src/main/resources/messages.properties","screen.title=Resource Home Title\n");
+    file("tiles-defs.xml","<tiles-definitions><definition name='.base' path='/layout.jsp'><put name='title' value='screen.title'/><put name='body' value='/title-body.jsp'/></definition><definition name='.homePage' extends='.base'/><definition name='.bodyPage' extends='.bodyLayout'><put name='body' value='/heading-body.jsp'/></definition><definition name='.bodyLayout' path='/layout.jsp'/><definition name='.mainMenu' path='/empty.jsp'/></tiles-definitions>");
+    file("src/main/webapp/layout.jsp","<html><head><title>Layout Must Never Become A Page Name</title></head><body><tiles:insert attribute='body'/></body></html>");
+    file("src/main/webapp/title-body.jsp","<h1>Body Heading Must Lose To Definition Title</h1>");
+    file("src/main/webapp/heading-body.jsp","<h1><bean:message key='screen.heading'/></h1>");
+    file("src/main/webapp/empty.jsp","<p>No readable page title</p>");
+    file("src/main/resources/messages.properties","screen.title=Resource Home Title\nscreen.heading=Body Resource Heading\n");
+
+    var graph=analyze();
+    Map<String,String> names=new TreeMap<>();for(String definition:List.of(".homePage",".bodyPage",".mainMenu")){String id=ApplicationGraph.id(NodeType.SCREEN,"tiles:"+definition);var screen=graph.nodes().stream().filter(node->node.id().equals(id)).findFirst().orElseThrow();names.put(definition,screen.name());}
+    assertEquals("Resource Home Title",names.get(".homePage"),names.toString());
+    assertEquals("Body Resource Heading",names.get(".bodyPage"),names.toString());
+    assertEquals("Main Menu",names.get(".mainMenu"),names.toString());
+    assertFalse(names.values().stream().anyMatch(name->name.startsWith("Layout")),names.toString());
+  }
+
+  @Test void wp10OuterPageDefinitionUsesHumanizedName()throws Exception{
+    Path project=null;for(Path candidate=Path.of("").toAbsolutePath();candidate!=null;candidate=candidate.getParent())if(Files.isRegularFile(candidate.resolve("pom.xml"))&&Files.isDirectory(candidate.resolve("screentrace-core"))){project=candidate.resolve("fixtures/wp10/struts1");break;}
+    assertNotNull(project,"repository root");var graph=new StrutsProjectAnalyzer().analyze(new ProjectScanner().scan(project));
+    assertTrue(graph.nodes().stream().anyMatch(node->node.type()==NodeType.SCREEN&&node.name().equals("Outer")&&node.source().file().endsWith("tiles-defs.xml")),graph.nodes().toString());
+  }
+
   @Test void referencedRootTemplateWithoutEntryIsNotAnIndependentScreen()throws Exception{
     file("src/main/webapp/WEB-INF/web.xml","<web-app><servlet><servlet-name>action</servlet-name><servlet-class>org.apache.struts.action.ActionServlet</servlet-class></servlet><servlet-mapping><servlet-name>action</servlet-name><url-pattern>*.do</url-pattern></servlet-mapping></web-app>");
     file("src/main/webapp/WEB-INF/struts-config.xml","<struts-config><action-mappings><action path='/home' type='sample.Home'><forward name='ok' path='home.page'/></action></action-mappings></struts-config>");
