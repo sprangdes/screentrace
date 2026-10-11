@@ -29,7 +29,7 @@ class StrutsR16TilesBoundaryTest {
     assertNotNull(project,"repository root");assertTrue(Files.isDirectory(project),project.toString());
     var graph=new StrutsProjectAnalyzer().analyze(new ProjectScanner().scan(project));
     Map<String,GraphNode> screens=new TreeMap<>();graph.nodes().stream().filter(node->node.type()==NodeType.SCREEN).forEach(node->screens.put(node.name(),node));
-    assertEquals(Set.of("page","outer"),screens.keySet());
+    assertEquals(Set.of("page","Outer"),screens.keySet());
     var outer=screens.get("outer");
     assertTrue(outer.source().file().endsWith("tiles-defs.xml"));
     assertFalse(graph.relationships().stream().anyMatch(edge->Set.of(EdgeType.RENDERS,EdgeType.FORWARDS_TO).contains(edge.type())&&edge.to().equals(outer.id())));
