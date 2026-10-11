@@ -1,4 +1,4 @@
-import test from 'node:test';import assert from 'node:assert/strict';import {readFile} from 'node:fs/promises';import {chromium} from '../../screentrace-capture/node_modules/playwright/index.mjs';import {fileFixture,fixture} from './fixture.mjs';import {startReviewDownload} from './review-export.mjs';
+import test from 'node:test';import assert from 'node:assert/strict';import {readFile} from 'node:fs/promises';import {chromium} from '../../screentrace-capture/node_modules/playwright/index.mjs';import {fileFixture,fixture,node} from './fixture.mjs';import {startReviewDownload} from './review-export.mjs';
 
 test('JSF analysis limit appears on dashboard, affected screen review and Markdown §8 only',async()=>{
  const data=fixture();data.graph.nodes.find(item=>item.id==='a').attributes.unsupportedComponentFramework='JSF';data.graph.relationships.forEach(edge=>{edge.confidence='CONFIRMED';edge.evidence=[{source:{file:'pages/home.jsp',line:1},parser:'Fixture',resolution:'CONFIRMED'}];});data.graph.diagnostics=[{code:'UNSUPPORTED_COMPONENT_FRAMEWORK',message:'JSF 元件未分析',confidence:'UNRESOLVED',source:{file:'pages/home.jsp',line:4}}];
@@ -6,3 +6,5 @@ test('JSF analysis limit appears on dashboard, affected screen review and Markdo
 });
 
 test('non-JSF projects do not show a JSF reminder',async()=>{const browser=await chromium.launch();try{const page=await browser.newPage();await page.goto(await fileFixture(fixture()));assert.equal(await page.locator('[data-jsf-reminder]').count(),0);}finally{await browser.close();}});
+
+test('JSF screen in the suspicious homepage list is explicitly labeled unanalysed',async()=>{const data=fixture();data.graph.nodes.push(node('unlinked-jsf','SCREEN','Orders',{unsupportedComponentFramework:'JSF',view:'WEB-INF/Orders.jsp'}));const browser=await chromium.launch();try{const page=await browser.newPage();await page.goto(await fileFixture(data));const row=page.locator('[data-suspicious-target="screen"][data-target-id="unlinked-jsf"]');assert.equal(await row.count(),1);assert.match(await row.innerText(),/使用 JSF，未分析/);}finally{await browser.close();}});

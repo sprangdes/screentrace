@@ -155,8 +155,8 @@ public final class JspProjectParser {
   }
 
   private static String messageTitle(String source,StaticMessageResolver messages) {
-    Matcher title=Pattern.compile("(?is)<title\\b[^>]*>(.*?)</title\\s*>").matcher(source);if(!title.find()||!title.group(1).toLowerCase(Locale.ROOT).contains("bean:message")||MarkupAnalysis.dynamic(title.group(1)))return null;
-    Matcher tag=Pattern.compile("(?is)<bean:message\\b([^>]*?)/?\\s*>").matcher(title.group(1));StringBuffer resolved=new StringBuffer();boolean found=false;
+    Matcher title=Pattern.compile("(?is)<title\\b[^>]*>(.*?)</title\\s*>").matcher(source);if(!title.find()||!Pattern.compile("(?i)<(?:bean|s):message\\b").matcher(title.group(1)).find()||MarkupAnalysis.dynamic(title.group(1)))return null;
+    Matcher tag=Pattern.compile("(?is)<(?:bean|s):message\\b([^>]*?)/?\\s*>").matcher(title.group(1));StringBuffer resolved=new StringBuffer();boolean found=false;
     while(tag.find()){Map<String,String> attributes=new HashMap<>();Matcher attr=Pattern.compile("([\\w:-]+)\\s*=\\s*([\\x27\\x22])(.*?)\\2").matcher(tag.group(1));while(attr.find())attributes.put(attr.group(1),attr.group(3));String key=attributes.get("key"),value=key==null?null:messages.resolve(attributes.get("bundle"),key);if(value==null)value="（訊息 key："+Objects.toString(key,"未提供")+"）";tag.appendReplacement(resolved,Matcher.quoteReplacement(value));found=true;}tag.appendTail(resolved);
     if(!found)return null;String label=resolved.toString().replaceAll("(?s)<[^>]*>","").replaceAll("\\s+"," ").strip();return label.isBlank()?null:label;
   }

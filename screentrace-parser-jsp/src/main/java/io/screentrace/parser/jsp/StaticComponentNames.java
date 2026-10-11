@@ -40,7 +40,7 @@ final class StaticComponentNames {
    if(!tag.closing()){
     if(Set.of("script","style").contains(name)||tag.attributes().containsKey("hidden")||"true".equalsIgnoreCase(tag.attribute("aria-hidden"))||Objects.toString(tag.attribute("style"),"").matches("(?is).*?(?:display\\s*:\\s*none|visibility\\s*:\\s*hidden).*")){
      if(!selfClosing(body,tag)&&!VOID.contains(name)){int end=close(tags,i,body);if(end<0)return null;cursor=tags.get(end).end()+1;i=end;continue;}
-    }else if(name.equals("bean:message")){
+    }else if(name.equals("bean:message")||name.equals("s:message")){
      String key=tag.attribute("key"),resolved=key==null?null:messages.resolve(tag.attribute("bundle"),key);if(resolved==null)return null;text.append(resolved);
     }else if(name.equals("spring:message")){
      if(tag.attribute("code")!=null||!acceptable(tag.attribute("text")))return null;text.append(tag.attribute("text"));

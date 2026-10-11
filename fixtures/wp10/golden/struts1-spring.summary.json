@@ -19,10 +19,10 @@
   },
   "behaviors_by_type": {
     "CALL_API": 61,
-    "NAVIGATE": 24,
+    "NAVIGATE": 25,
     "OPEN_DIALOG": 29,
     "SELECT_CHANGE": 3,
-    "SUBMIT_FORM": 16,
+    "SUBMIT_FORM": 19,
     "UI_STATE_CHANGE": 20,
     "UNKNOWN": 26,
     "VALIDATE": 32

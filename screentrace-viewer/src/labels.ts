@@ -14,7 +14,8 @@ export interface LabelContext {
 const normalize=(value:unknown)=>typeof value==='string'?value.trim().replace(/\s+/gu,' '):'';
 const serialLabel=/^(?:按鈕|連結|下拉選單|表單|文字欄位)\s*\d+$/u;
 const expression=/(?:\$\{|#\{|<%)/;
-const technical=(value:string,node:Node)=>!value||value===node.id||expression.test(value)||/^(?:a|button|input|page|open|notempty|[a-z]|\d+)$/i.test(value)||serialLabel.test(value)||/^[a-z][a-z0-9]*(?:[-_][a-z0-9]+)+$/iu.test(value);
+const unsafeSourceMarkup=/(?:data-st-|<\/?[a-z][\w.-]*:[^>]*>|<\/?[a-z][\w.-]*\b[^>]*\bdata-st-[^>]*>)/iu;
+const technical=(value:string,node:Node)=>!value||value===node.id||expression.test(value)||unsafeSourceMarkup.test(value)||/^(?:a|button|input|page|open|notempty|[a-z]|\d+)$/i.test(value)||serialLabel.test(value)||/^[a-z][a-z0-9]*(?:[-_][a-z0-9]+)+$/iu.test(value);
 function humanize(value:string):string{return value.replace(/([a-z0-9])([A-Z])/gu,'$1 $2').split(/[-_\s]+/u).filter(Boolean).map(part=>part[0].toLocaleUpperCase()+part.slice(1)).join(' ');}
 function location(context:LabelContext):string|undefined{
  if(context.globalNavigation)return '導覽列';
@@ -39,7 +40,7 @@ export function componentLabel(node:Node&{displayLabel?:string},context:LabelCon
   const heading=normalize(context.formHeading)||normalize(context.submitText)||normalize(a.formHeading)||normalize(a.submitText);
   if(heading)label=`${heading} 表單`;
  }
- if(!label){const candidates=[normalize(a.name),normalize(a.id),...(context.dynamicContent?[]:[normalize(node.name)])],match=candidates.find(value=>value&&!expression.test(value)&&!serialLabel.test(value)&&!/^(?:a|button|input|page|open|notempty|[a-z]|\d+)$/i.test(value)&&!/^component:[0-9a-f-]+$/i.test(value));if(match){label=humanize(match);label+=` ${kind}`;}}
+ if(!label){const candidates=[normalize(a.name),normalize(a.id),...(context.dynamicContent?[]:[normalize(node.name)])],match=candidates.find(value=>value&&!expression.test(value)&&!unsafeSourceMarkup.test(value)&&!serialLabel.test(value)&&!/^(?:a|button|input|page|open|notempty|[a-z]|\d+)$/i.test(value)&&!/^component:[0-9a-f-]+$/i.test(value));if(match){label=humanize(match);label+=` ${kind}`;}}
  let positionFallback=false;
  if(!label){const place=location(context);positionFallback=!!place;label=place?`${kind}（${positionPhrase(place)}）`:`${kind}（無文字）`;}
  if(positionFallback&&context.knownDestination)label+=`，前往 ${normalize(context.knownDestination)}`;

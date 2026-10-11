@@ -1,7 +1,9 @@
 import {Node} from './contracts';
 export interface NameHint {title?:string;heading?:string}
-const clean=(value?:string)=>String(value||'').replace(/\$\{[^{}]*\}|#\{[^{}]*\}|<%[\s\S]*?%>/g,'動態內容').replace(/\s+/g,' ').trim();
+const unsafeSourceMarkup=/(?:data-st-|<\/?[a-z][\w.-]*:[^>]*>|<\/?[a-z][\w.-]*\b[^>]*\bdata-st-[^>]*>)/iu;
+const clean=(value?:string)=>{const text=String(value||'');if(unsafeSourceMarkup.test(text))return '';return text.replace(/\$\{[^{}]*\}|#\{[^{}]*\}|<%[\s\S]*?%>/g,'動態內容').replace(/\s+/g,' ').trim();};
 export function humanizeName(value:string):string {
+ if(unsafeSourceMarkup.test(value))return '未命名畫面';
  const filename=value.split(/[\\/]/).at(-1)!.replace(/\.[^.]+$/,'');
  return clean(filename.replace(/([a-z0-9])([A-Z])/g,'$1 $2').replace(/([A-Z])([A-Z][a-z])/g,'$1 $2').replace(/[_-]+/g,' ')).replace(/\b[a-z]/g,s=>s.toUpperCase())||'未命名畫面';
 }

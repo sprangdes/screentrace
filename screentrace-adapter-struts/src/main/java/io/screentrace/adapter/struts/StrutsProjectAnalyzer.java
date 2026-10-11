@@ -27,10 +27,10 @@ public final class StrutsProjectAnalyzer {
     readSpringBeans(state);
     readMessages(state);
     readServletMapping(state);
+    readFacesServletMappings(state);
     JspAnalysis jsp=new JspProjectParser().analyze(inventory.root(),inventory.files(),(bundle,key)->resolveMessage(state,bundle,key));
     state.diagnostics.addAll(jsp.diagnostics());
     for(var view:jsp.views()) addView(view,state);
-    markUnsupportedJsf(state,jsp);
     readTiles(state);
     if(inventory.strutsConfigFiles().isEmpty()) state.diagnostics.add(StrutsSources.diagnostic("找不到 Struts 1 設定檔",".",1,"STRUTS_CONFIG_MISSING"));
     for(Path config:inventory.strutsConfigFiles()) parseConfig(config,state);
@@ -38,6 +38,7 @@ public final class StrutsProjectAnalyzer {
     suppressActionIncludeDiagnostics(jsp,state);
     readWelcomeFiles(state);
     materializeTileScreens(state);
+    markUnsupportedJsf(state,jsp);
     addInteractions(jsp,state);
     inheritActionCallers(state);
     markInheritedActionTemplates(state);
@@ -88,15 +89,49 @@ public final class StrutsProjectAnalyzer {
       String source=SafeProjectFiles.readUtf8Limited(state.inventory.root(),file,SafeProjectFiles.MAX_XML_FILE_BYTES);Matcher servlet=Pattern.compile("(?is)<servlet-class>\\s*[^<]*FacesServlet\\s*</servlet-class>").matcher(source);
       if(servlet.find())state.diagnostics.add(new Diagnostic("偵測到 JSF FacesServlet；本階段不分析 JSF 元件",Confidence.UNRESOLVED,new SourceLocation(relative(state,file),lineAt(source,servlet.start())),"UNSUPPORTED_COMPONENT_FRAMEWORK",List.of()));
     }catch(Exception ignored) { }
-    for(JspAnalysis.View view:jsp.views()) {
-      if(view.kind()==JspAnalysis.ViewKind.JSPF)continue;Path file=state.inventory.root().resolve(view.path());try {
-        String source=SafeProjectFiles.readUtf8Limited(state.inventory.root(),file,SafeProjectFiles.MAX_JSP_FILE_BYTES);
-        boolean declaration=Pattern.compile("(?is)<%@\\s*taglib\\b[^%]*jsf/(?:html|core)[^%]*%>|xmlns:[\\w-]+\\s*=\\s*[^\\s>]*jsf/(?:html|core)").matcher(source).find();
-        Matcher tag=Pattern.compile("(?i)<(?:h|f):[\\w-]+\\b").matcher(source);if(!declaration||!tag.find())continue;
-        String id=state.screens.get(view.path());if(id!=null){GraphNode screen=state.nodes.get(id);Map<String,String> attrs=new TreeMap<>(screen.attributes());attrs.put("unsupportedComponentFramework","JSF");state.nodes.put(id,new GraphNode(screen.id(),screen.type(),screen.name(),attrs,screen.source(),screen.confidence(),screen.evidence()));}
-        state.diagnostics.add(new Diagnostic("此畫面使用 JSF 元件；本階段不分析 JSF",Confidence.UNRESOLVED,new SourceLocation(view.path(),lineAt(source,tag.start())),"UNSUPPORTED_COMPONENT_FRAMEWORK",List.of()));
-      }catch(Exception ignored) { }
+    for(GraphNode screen:new ArrayList<>(state.nodes.values()))if(screen.type()==NodeType.SCREEN) {
+      Set<String> paths=new TreeSet<>();String view=screen.attributes().get("view");
+      if(view!=null&&view.endsWith(".jsp"))paths.add(view);
+      if("true".equals(screen.attributes().get("tilesDefinition")))paths.addAll(tileJspPaths(screen.name(),state));
+      for(var entry:state.tileFragmentOwners.entrySet())if(entry.getValue().contains(screen.id()))paths.add(entry.getKey());
+      for(String path:paths) {
+        Path file=state.inventory.root().resolve(path);try {
+          String source=SafeProjectFiles.readUtf8Limited(state.inventory.root(),file,SafeProjectFiles.MAX_JSP_FILE_BYTES);
+          Map<String,String> prefixes=new TreeMap<>();Matcher declarations=Pattern.compile("(?is)<%@\\s*taglib\\b([^%]*)%>|xmlns:([\\w-]+)\\s*=\\s*['\"]([^'\"]+)['\"]").matcher(source);
+          while(declarations.find()) {
+            if(declarations.group(1)!=null) {Matcher prefix=Pattern.compile("(?i)prefix\\s*=\\s*['\"]([^'\"]+)['\"]").matcher(declarations.group(1));Matcher uri=Pattern.compile("(?i)uri\\s*=\\s*['\"]([^'\"]+)['\"]").matcher(declarations.group(1));if(prefix.find()&&uri.find())prefixes.put(prefix.group(1),uri.group(1));}
+            else prefixes.put(declarations.group(2),declarations.group(3));
+          }
+          Set<String> jsfPrefixes=new TreeSet<>();prefixes.forEach((prefix,uri)->{if(uri.toLowerCase(Locale.ROOT).contains("jsf/html")||uri.toLowerCase(Locale.ROOT).contains("jsf/core"))jsfPrefixes.add(prefix);});
+          if(jsfPrefixes.isEmpty())continue;Matcher tag=Pattern.compile("(?i)<("+String.join("|",jsfPrefixes.stream().map(Pattern::quote).toList())+"):[\\w-]+\\b").matcher(source);if(!tag.find())continue;
+          GraphNode current=state.nodes.get(screen.id());if(current!=null&&!"JSF".equals(current.attributes().get("unsupportedComponentFramework"))){Map<String,String> attrs=new TreeMap<>(current.attributes());attrs.put("unsupportedComponentFramework","JSF");state.nodes.put(current.id(),new GraphNode(current.id(),current.type(),current.name(),attrs,current.source(),current.confidence(),current.evidence()));}
+          SourceLocation sourceLocation=new SourceLocation(path,lineAt(source,tag.start()));
+          if(state.diagnostics.stream().noneMatch(item->item.code().equals("UNSUPPORTED_COMPONENT_FRAMEWORK")&&item.source().equals(sourceLocation)))state.diagnostics.add(new Diagnostic("此畫面或其版型／片段使用 JSF 元件；本階段不分析 JSF",Confidence.UNRESOLVED,sourceLocation,"UNSUPPORTED_COMPONENT_FRAMEWORK",List.of(new AnalysisEvidence(sourceLocation,PARSER,ResolutionStatus.UNRESOLVED,"畫面="+screen.name()+"；JSF 標籤="+tag.group()))));
+        }catch(Exception ignored) { }
+      }
     }
+  }
+  private static void readFacesServletMappings(State state) {
+    List<Path> webXmls=state.inventory.files().stream().filter(file->file.getFileName().toString().equals("web.xml")).sorted().toList();
+    for(Path file:webXmls)try {
+      Document document=readXml(file,state);String webPath=relative(state,file);Map<String,String> servlets=new TreeMap<>();
+      for(Element servlet:StrutsSources.elements(document,"servlet")){List<Element> names=StrutsSources.elements(servlet,"servlet-name"),classes=StrutsSources.elements(servlet,"servlet-class");if(!names.isEmpty()&&!classes.isEmpty())servlets.put(names.get(0).getTextContent().trim(),classes.get(0).getTextContent().trim());}
+      List<String> faces=servlets.entrySet().stream().filter(entry->entry.getValue().endsWith("FacesServlet")).map(Map.Entry::getKey).toList();
+      List<String> suffixes=new ArrayList<>();for(Element parameter:StrutsSources.elements(document,"context-param")){List<Element> names=StrutsSources.elements(parameter,"param-name"),values=StrutsSources.elements(parameter,"param-value");if(!names.isEmpty()&&!values.isEmpty()&&names.get(0).getTextContent().trim().equals("javax.faces.DEFAULT_SUFFIX"))suffixes.addAll(Arrays.stream(values.get(0).getTextContent().split(",")).map(String::trim).filter(value->value.matches("\\.[A-Za-z0-9]+") ).toList());}
+      String defaultSuffix=suffixes.isEmpty()?".jsp":suffixes.stream().distinct().count()==1?suffixes.get(0):null;
+      for(Element mapping:StrutsSources.elements(document,"servlet-mapping")){List<Element> names=StrutsSources.elements(mapping,"servlet-name");if(names.isEmpty()||!faces.contains(names.get(0).getTextContent().trim()))continue;
+        for(Element pattern:StrutsSources.elements(mapping,"url-pattern")){String value=pattern.getTextContent().trim();if(value.startsWith("*.")&&value.length()>2)state.facesMappings.computeIfAbsent(value.substring(1),ignored->new ArrayList<>()).add(new FacesSuffixMapping(defaultSuffix,StrutsSources.source(webPath,pattern)));}
+      }
+    }catch(Exception error){diagnostic(state,"FacesServlet 網址對應無法安全解析",new SourceLocation(relative(state,file),1),"JSF_ROUTE_UNRESOLVED");}
+  }
+  private static String normalizeFacesPath(String target,State state) {
+    if(target==null)return null;String[] parts=target.split("([?#])",2);String path=parts[0];String suffix=path.substring(path.lastIndexOf('/')+1);
+    int dot=suffix.lastIndexOf('.');String extension=dot>=0?suffix.substring(dot):null;
+    boolean facesLike=extension!=null&&(".faces".equalsIgnoreCase(extension)||state.facesMappings.containsKey(extension));
+    if(!facesLike)return target;
+    List<FacesSuffixMapping> candidates=state.facesMappings.getOrDefault(extension,List.of());List<String> defaults=candidates.stream().map(FacesSuffixMapping::defaultSuffix).filter(Objects::nonNull).distinct().toList();
+    if(candidates.isEmpty()||defaults.size()!=1){SourceLocation source=candidates.isEmpty()?new SourceLocation(".",1):candidates.get(0).source();String key=target+"|"+source.file();if(state.facesDiagnostics.add(key))diagnostic(state,"FacesServlet 網址對應無法證明或有多個候選，未猜測副檔名："+target,source,"JSF_ROUTE_UNRESOLVED");return null;}
+    return path.substring(0,path.length()-extension.length())+defaults.get(0)+(parts.length>1?target.substring(path.length()):"");
   }
   private static int lineAt(String source,int offset){int line=1;for(int i=0;i<Math.min(offset,source.length());i++)if(source.charAt(i)=='\n')line++;return line;}
   private static void collectFormProperties(String className,State state,Map<String,String> properties,List<AnalysisEvidence> proof,Set<String> seen) {
@@ -316,14 +351,15 @@ public final class StrutsProjectAnalyzer {
   }
 
   private static String screenForView(String path,State state,SourceLocation source) {
-    String direct=state.screens.get(path);if(direct!=null)return direct;
-    String indexed=state.viewIds.get(path);
-    if(indexed==null){List<String> candidates=state.viewIds.entrySet().stream().filter(entry->entry.getKey().endsWith(path)).map(Map.Entry::getValue).distinct().toList();if(candidates.size()==1)indexed=candidates.get(0);}
-    if(indexed!=null){String viewPath=state.nodes.get(indexed).attributes().get("view");if(viewPath!=null)return ensureJspScreen(viewPath,state);}
-    if(!path.startsWith("/"))return null;
-    List<String> matches=state.nodes.values().stream().filter(node->node.type()==NodeType.SCREEN&&node.attributes().getOrDefault("view","").endsWith(path)).map(GraphNode::id).distinct().toList();
+    String resolvedPath=normalizeFacesPath(path,state);if(resolvedPath==null)return null;
+    String direct=state.screens.get(resolvedPath);if(direct!=null)return direct;
+    String indexed=state.viewIds.get(resolvedPath);
+    if(indexed==null){List<String> candidates=state.viewIds.entrySet().stream().filter(entry->entry.getKey().endsWith(resolvedPath)).map(Map.Entry::getValue).distinct().toList();if(candidates.size()==1)indexed=candidates.get(0);}
+    if(indexed!=null){String viewPath=state.nodes.get(indexed).attributes().get("view");if(viewPath!=null)return isTilesLayoutPath(viewPath,state)?null:ensureJspScreen(viewPath,state);}
+    if(!resolvedPath.startsWith("/"))return null;
+    List<String> matches=state.nodes.values().stream().filter(node->node.type()==NodeType.SCREEN&&node.attributes().getOrDefault("view","").endsWith(resolvedPath)).map(GraphNode::id).distinct().toList();
     if(matches.size()==1)return matches.get(0);
-    if(matches.size()>1)diagnostic(state,"forward JSP 路徑對應多個畫面："+path,source,"STRUTS_FORWARD_AMBIGUOUS");
+    if(matches.size()>1)diagnostic(state,"forward JSP 路徑對應多個畫面："+resolvedPath,source,"STRUTS_FORWARD_AMBIGUOUS");
     return null;
   }
 
@@ -436,14 +472,15 @@ public final class StrutsProjectAnalyzer {
   private static List<String> resolveForwardScreens(String target,String module,State state,Set<String> visited,int depth,SourceLocation source) {
     if(depth>=5){diagnostic(state,"forward 鏈超過 5 層",source,"STRUTS_FORWARD_DEPTH");return List.of();}
     String named=state.globalForwards.get(module+":"+target);if(named!=null&&!named.equals(target))return resolveForwardScreens(named,module,state,visited,depth+1,source);
-    if(state.tiles.containsKey(target)){
-      if(state.tilePageDefinitions.contains(target)||state.tileStandaloneDefinitions.contains(target)){String screen=ensureTileScreen(target,state);return screen==null?List.of():List.of(screen);}
-      Set<String> owners=state.tilePageOwners.entrySet().stream().filter(entry->entry.getValue().contains(target)).map(Map.Entry::getKey).collect(java.util.stream.Collectors.toCollection(TreeSet::new));
+    String normalizedFaces=normalizeFacesPath(target,state);if(normalizedFaces==null)return List.of();final String resolvedTarget=normalizedFaces;
+    if(state.tiles.containsKey(resolvedTarget)){
+      if(state.tilePageDefinitions.contains(resolvedTarget)||state.tileStandaloneDefinitions.contains(resolvedTarget)){String screen=ensureTileScreen(resolvedTarget,state);return screen==null?List.of():List.of(screen);}
+      Set<String> owners=state.tilePageOwners.entrySet().stream().filter(entry->entry.getValue().contains(resolvedTarget)).map(Map.Entry::getKey).collect(java.util.stream.Collectors.toCollection(TreeSet::new));
       if(owners.size()==1){String screen=ensureTileScreen(owners.iterator().next(),state);return screen==null?List.of():List.of(screen);}
-      if(owners.size()>1){diagnostic(state,"forward 目標對應多個 Tiles 頁面定義："+target,source,"STRUTS_FORWARD_AMBIGUOUS");return List.of();}
-      String screen=ensureTileScreen(target,state);return screen==null?List.of():List.of(screen);
+      if(owners.size()>1){diagnostic(state,"forward 目標對應多個 Tiles 頁面定義："+resolvedTarget,source,"STRUTS_FORWARD_AMBIGUOUS");return List.of();}
+      String screen=ensureTileScreen(resolvedTarget,state);return screen==null?List.of():List.of(screen);
     }
-    String direct=screenForView(target,state,source);if(direct!=null)return List.of(direct);
+    String direct=screenForView(resolvedTarget,state,source);if(direct!=null)return List.of(direct);
     String logical=logicalPath(target,module,state);if(logical==null&&target.startsWith("/")&&!target.startsWith("/WEB-INF/")&&!target.contains(".jsp"))logical=module.isBlank()||target.startsWith(module+"/")?target:module+target;
     if(logical==null)logical=target;
     List<Mapping> mappings=state.routes.getOrDefault(logical,List.of());
@@ -504,6 +541,7 @@ public final class StrutsProjectAnalyzer {
           if(kind==ComponentKind.FORM)activeModule=tag.attribute("module");
           if(target==null&&(kind==ComponentKind.FORM||kind==ComponentKind.SUBMIT)) target=action;
           Map<String,String> attrs=new TreeMap<>(tag.attributes());attrs.put("tag",name);attrs.put("kind",kind.name());attrs.put("componentType",kind==ComponentKind.FORM||kind==ComponentKind.SUBMIT?"FORM_SUBMIT":kind==ComponentKind.LINK?"NAVIGATION":kind.name());
+          if(name.equals("select")&&tag.attribute("name")!=null)attrs.put("dispatchParameterValues",selectOptionValues(text,tag));
           if(inheritedFormAction)attrs.put("strutsInheritedFormAction","true");
           String moduleValue=tag.attribute("module")!=null?tag.attribute("module"):activeModule;if(moduleValue==null||moduleValue.isBlank())moduleValue=module;if(moduleValue!=null&&!moduleValue.isBlank())attrs.put("module",moduleValue);
           String originalTarget=target;
@@ -511,6 +549,7 @@ public final class StrutsProjectAnalyzer {
           else if(target!=null){
             if(Set.of("html:link","html-el:link","html:rewrite","html-el:rewrite","logic:redirect","logic:forward").contains(name)&&tag.attribute("action")!=null)target=normalizeStrutsAction(target,moduleValue,state);
             else if((name.equals("a")||name.equals("form"))&&!target.startsWith("/")&&!target.startsWith("#")&&!target.contains(":")&&tag.attribute("action")==null)target=resolveRelativeJspUrl(path,target);
+            if(target!=null&&target.toLowerCase(Locale.ROOT).endsWith(".faces")){String facesTarget=normalizeFacesPath(target,state);if(facesTarget!=null&&!facesTarget.equals(target)){originalTarget=target;target=facesTarget;}}
             if(target!=null){attrs.put("target",target);if(!Objects.equals(originalTarget,target))attrs.put("originalTarget",originalTarget);}
           }
           if(target!=null) attrs.put("target",target);
@@ -519,6 +558,7 @@ public final class StrutsProjectAnalyzer {
           var resolved=jsp.interactions().stream().filter(i->id.equals(i.componentId())).findFirst();
           if(resolved.isPresent()&&!resolved.get().submitsCurrentView()) {target=resolved.get().target();if(resolved.get().originalExpression()!=null)attrs.put("originalExpression",resolved.get().originalExpression());}
           if(kind==ComponentKind.FORM&&action!=null)target=action;
+          if(target!=null&&target.toLowerCase(Locale.ROOT).endsWith(".faces")){String facesTarget=normalizeFacesPath(target,state);if(facesTarget!=null&&!facesTarget.equals(target)){attrs.put("originalTarget",target);target=facesTarget;}}
           if(target!=null){
             if(Set.of("html:link","html-el:link","html:rewrite","html-el:rewrite","logic:redirect","logic:forward").contains(name)&&tag.attribute("action")!=null)target=normalizeStrutsAction(tag.attribute("action"),moduleValue,state);
             else if((name.equals("html:submit")||name.equals("html:button")||name.equals("button")||name.equals("input"))&&tag.attribute("formaction")==null&&action!=null)target=action;
@@ -615,6 +655,7 @@ public final class StrutsProjectAnalyzer {
     }
     String endpoint=state.endpointIds.getOrDefault(path,state.endpointIds.getOrDefault(publicPath(mappings.get(0).route(),mappings.get(0).module(),state),StableGraphIds.endpoint("ANY",mappings.get(0).route())));Confidence status=mappings.size()==1?state.nodes.get(endpoint).confidence():Confidence.AMBIGUOUS;
     if(wildcardMatch!=null){Mapping selected=wildcardMatch.mapping();endpoint=state.endpointIds.getOrDefault(selected.route(),StableGraphIds.endpoint("ANY",publicPath(selected.route(),selected.module(),state)));recordWildcardMatch(endpoint,path,wildcardMatch,state,control.source());status=state.nodes.get(endpoint)==null?Confidence.INFERRED:state.nodes.get(endpoint).confidence();}
+    String dispatchDetail=null;
     if(mappings.size()==1) {
       Mapping mapping=wildcardMatch==null?mappings.get(0):wildcardMappingForCaller(mappings.get(0),wildcardMatch,endpoint,state);
       if(mapping.formId()!=null) edge(state,EdgeType.BINDS_TO,control.id(),mapping.formId(),Confidence.CONFIRMED,control.source());
@@ -622,15 +663,33 @@ public final class StrutsProjectAnalyzer {
         // A dispatch method adds a more specific endpoint below, but the public
         // action mapping itself is still called by this form and must retain its caller.
         edge(state,EdgeType.TRIGGERS,control.id(),state.endpointIds.getOrDefault(path,endpoint),status,control.source());
-        String value=mapping.family().equals("MappingDispatchAction")?mapping.parameter():requestParameter(control,peers,mapping.parameter());
+        Set<String> parameterValues=mapping.family().equals("MappingDispatchAction")?Set.of(Objects.toString(mapping.parameter(),"")):requestParameters(control,peers,mapping.parameter());
+        if(parameterValues.size()>1) {
+          status=Confidence.AMBIGUOUS;
+          String candidates=String.join(", ",parameterValues);
+          diagnostic(state,"Dispatch 參數有多個常值候選，未選擇方法："+candidates,control.source(),"STRUTS_DISPATCH_AMBIGUOUS");
+          controlAttributes.put("dispatchCandidates",String.join("\u001f",parameterValues));
+          controlAttributes.put("dispatchResolution","AMBIGUOUS");
+          GraphNode previous=state.nodes.get(control.id());
+          if(previous!=null)state.nodes.put(control.id(),new GraphNode(previous.id(),previous.type(),previous.name(),controlAttributes,previous.source(),previous.confidence(),previous.evidence()));
+        }
+        String value=parameterValues.size()==1?parameterValues.iterator().next():null;
         String method=resolveMethod(mapping,value,state);
         var type=method==null?null:typeWithMethod(mapping.type(),method,state,new HashSet<>());
-        if(type==null) {
+        if(parameterValues.size()>1) {
+          // The form remains a caller of the route; no candidate method is selected.
+        } else if(type==null) {
           status=Confidence.UNRESOLVED;diagnostic(state,"Dispatch 方法未解析；parameter="+mapping.parameter()+"，值="+Objects.toString(value,"—"),control.source(),"STRUTS_DISPATCH_UNRESOLVED");
+          if(value!=null) {
+            dispatchDetail="分派到 "+value+"（"+dispatchMethodStatus(mapping,value,state)+"）";
+            controlAttributes.put("dispatchMethod",value);controlAttributes.put("dispatchMethodStatus",dispatchMethodStatus(mapping,value,state));
+          }
         } else {
           String handlerId=ApplicationGraph.id(NodeType.HANDLER,mapping.type()+"#"+method);
           MethodDeclaration declaration=type.declaration().getMethodsByName(method).stream().filter(StrutsProjectAnalyzer::validDispatchSignature).findFirst().orElseThrow();var source=new SourceLocation(type.source().file(),declaration.getBegin().map(p->p.line).orElse(1));
           addNode(state,handlerId,NodeType.HANDLER,mapping.type()+"."+method+"()",Map.of("class",mapping.type(),"method",method),source,Confidence.CONFIRMED);
+          dispatchDetail="分派到 "+method;
+          controlAttributes.put("dispatchMethod",method);controlAttributes.put("dispatchMethodStatus","方法存在");
           endpoint=StableGraphIds.endpoint("ANY",path+"?"+mapping.parameter()+"="+value);
           addNode(state,endpoint,NodeType.ENDPOINT,"ANY "+path+"?"+mapping.parameter()+"="+value,Map.of("httpMethod","ANY","path",path,"parameter",mapping.parameter(),"parameterValue",value),control.source(),status);
           edge(state,EdgeType.HANDLED_BY,endpoint,handlerId,status,source);
@@ -646,7 +705,11 @@ public final class StrutsProjectAnalyzer {
     }
     String callDetail="basis=STATIC_URL"+(module.isBlank()?"":"；module="+module);edge(state,EdgeType.TRIGGERS,control.id(),endpoint,status,control.source(),callDetail);
     BehaviorType type="LINK".equals(control.attributes().get("kind"))?BehaviorType.NAVIGATE:BehaviorType.SUBMIT_FORM;
-    String behaviorExpression=control.attributes().getOrDefault("originalTarget",control.target());String id=StableGraphIds.behavior(control.id(),"FORM".equals(control.attributes().get("kind"))?"submit":"click",type,behaviorExpression+(module.isBlank()?"":"|module="+module),0);
+    String behaviorExpression=control.attributes().getOrDefault("originalTarget",control.target());
+    if(dispatchDetail!=null)behaviorExpression=behaviorExpression+"；"+dispatchDetail;
+    String dispatchCandidates=controlAttributes.get("dispatchCandidates");
+    if(dispatchCandidates!=null)behaviorExpression=behaviorExpression+"；分派候選（有歧義）="+String.join("、",dispatchCandidates.split("\u001f"));
+    String id=StableGraphIds.behavior(control.id(),"FORM".equals(control.attributes().get("kind"))?"submit":"click",type,behaviorExpression+(module.isBlank()?"":"|module="+module),0);
     ServletMappingResolution resolution=state.servletMappings.get(module);String detail=callDetail+(resolution!=null&&resolution.status()==ServletMappingStatus.PROVEN?"；"+mappingProof(resolution):"");
     List<AnalysisEvidence> callEvidence=new ArrayList<>(evidence(control.source(),status,detail));if(!Objects.equals(behaviorExpression,control.target()))callEvidence.add(new AnalysisEvidence(control.source(),PARSER,status.resolutionStatus(),"原始目標="+behaviorExpression+"；正規化="+control.target()));if(!module.isBlank())callEvidence.add(new AnalysisEvidence(control.source(),PARSER,status.resolutionStatus(),"module="+module));
     state.behaviors.putIfAbsent(id,new Behavior(id,control.id(),"FORM".equals(control.attributes().get("kind"))?"submit":"click",type,endpoint,null,null,behaviorExpression,callEvidence));
@@ -668,6 +731,12 @@ public final class StrutsProjectAnalyzer {
     if(control.target()==null)return false;String module=control.attributes().getOrDefault("module",moduleFor(control.source().file(),state));String path=moduleTarget(control,state).split("[?#]",2)[0];
     List<Mapping> mappings=state.routes.get(path);if(mappings==null){String logical=logicalPath(path,module,state);if(logical!=null)mappings=state.routes.get(logical);}
     return mappings!=null&&mappings.stream().anyMatch(mapping->!mapping.family().isBlank());
+  }
+  private static String selectOptionValues(String source,MarkupTag select) {
+    int end=source.toLowerCase(Locale.ROOT).indexOf("</select",select.end());if(end<0)return "";
+    Matcher options=Pattern.compile("(?is)<option\\b([^>]*)>").matcher(source.substring(select.end(),end));Set<String> values=new TreeSet<>();
+    while(options.find()) {Matcher value=Pattern.compile("(?is)\\bvalue\\s*=\\s*(['\"])(.*?)\\1").matcher(options.group(1));if(value.find()&&StrutsSources.literal(value.group(2)))values.add(value.group(2));}
+    return String.join("\u001f",values);
   }
   private static String normalizeStrutsAction(String raw,String module,State state) {
     if(raw==null||!StrutsSources.literal(raw))return raw;String path=raw.split("[?#]",2)[0];if(path.isBlank())return path;if(!path.startsWith("/"))path="/"+path;
@@ -704,10 +773,23 @@ public final class StrutsProjectAnalyzer {
     List<String> values=new ArrayList<>();for(int group=1;group<=captures;group++)values.add(matcher.group(group));
     return new WildcardMatch(mapping,path,List.copyOf(values));
   }
-  private static Mapping substituteWildcardValues(Mapping mapping,WildcardMatch match) {
+  private static Mapping substituteWildcardValues(Mapping mapping,WildcardMatch match,State state) {
     List<String> captures=match.captures();java.util.function.Function<String,String> substitute=value->{if(value==null)return null;var matcher=java.util.regex.Pattern.compile("\\{([0-9])\\}").matcher(value);StringBuffer result=new StringBuffer();while(matcher.find()){int index=Integer.parseInt(matcher.group(1));String replacement=index==0?match.path():index<=captures.size()?captures.get(index-1):matcher.group();matcher.appendReplacement(result,java.util.regex.Matcher.quoteReplacement(replacement));}matcher.appendTail(result);return result.toString();};
-    Map<String,String> forwards=new TreeMap<>(),local=new TreeMap<>();mapping.forwards().forEach((key,value)->forwards.put(key,substitute.apply(value)));mapping.localForwards().forEach((key,value)->local.put(key,substitute.apply(value)));
-    return new Mapping(mapping.route(),substitute.apply(mapping.type()),mapping.handlerId(),mapping.formId(),substitute.apply(mapping.parameter()),mapping.family(),forwards,local,mapping.forwardSources(),substitute.apply(mapping.input()),mapping.module(),mapping.source());
+    Map<String,String> effectiveAttributes=new TreeMap<>();effectiveActionAttributes(mapping,state,new LinkedHashSet<>()).forEach((key,value)->effectiveAttributes.put(key,substitute.apply(value)));
+    Map<String,String> forwards=new TreeMap<>(),local=new TreeMap<>();Mapping parent=extendedMapping(mapping,state);if(parent!=null){forwards.putAll(parent.forwards());local.putAll(parent.localForwards());}forwards.putAll(mapping.forwards());local.putAll(mapping.localForwards());forwards.replaceAll((key,value)->substitute.apply(value));local.replaceAll((key,value)->substitute.apply(value));
+    String effectiveType=Objects.toString(effectiveAttributes.getOrDefault("type",effectiveAttributes.get("actionType")),mapping.type()),effectiveName=effectiveAttributes.get("name");
+    String formId=effectiveName==null||effectiveName.isBlank()?mapping.formId():state.forms.getOrDefault(mapping.module()+":"+effectiveName,mapping.formId());
+    String parameter=Objects.toString(effectiveAttributes.get("parameter"),mapping.parameter()),input=Objects.toString(effectiveAttributes.get("input"),mapping.input());
+    String handlerId=ApplicationGraph.id(NodeType.HANDLER,mapping.handlerId()+":wildcard:"+match.path()+":"+effectiveType+":"+Objects.toString(formId,""));GraphNode old=state.nodes.get(mapping.handlerId());
+    if(old!=null){Map<String,String> attrs=new TreeMap<>(old.attributes());attrs.putAll(effectiveAttributes);attrs.put("actionType",effectiveType);attrs.put("type",effectiveType);attrs.put("path",match.path());if(formId!=null)attrs.put("name",effectiveName);addNode(state,handlerId,NodeType.HANDLER,effectiveType+".execute()",attrs,mapping.source(),old.confidence(),"Struts extends 先繼承後代入萬用字元；實際路徑="+match.path()+"；name="+Objects.toString(effectiveName,""));}
+    return new Mapping(mapping.route(),effectiveType,handlerId,formId,parameter,dispatchFamily(effectiveType,state,new HashSet<>()),forwards,local,mapping.forwardSources(),input,mapping.module(),mapping.source());
+  }
+  private static Map<String,String> effectiveActionAttributes(Mapping mapping,State state,Set<String> visited) {
+    if(!visited.add(mapping.route()))return new TreeMap<>();Map<String,String> result=new TreeMap<>();Mapping parent=extendedMapping(mapping,state);if(parent!=null)result.putAll(effectiveActionAttributes(parent,state,visited));GraphNode handler=state.nodes.get(mapping.handlerId());if(handler!=null)for(var item:handler.attributes().entrySet())if(!Set.of("module","actionType").contains(item.getKey()))result.put(item.getKey(),item.getValue());return result;
+  }
+  private static Mapping extendedMapping(Mapping mapping,State state) {
+    GraphNode handler=state.nodes.get(mapping.handlerId());String value=handler==null?null:handler.attributes().get("extends");if(value==null||value.isBlank())return null;String normalized=value.startsWith("//")?value.substring(1):value;
+    return state.actionMappings.stream().filter(candidate->candidate!=mapping&&candidate.module().equals(mapping.module())&&(candidate.route().equals(value)||candidate.route().equals(normalized)||candidate.route().equals(mapping.module()+normalized)||Objects.equals(state.nodes.get(candidate.handlerId()).attributes().get("name"),value))).findFirst().orElse(null);
   }
   private static void recordWildcardMatch(String endpoint,String path,WildcardMatch match,State state,SourceLocation source) {
     state.wildcardMatches.computeIfAbsent(match.mapping().route(),ignored->new TreeMap<>()).putIfAbsent(match.path(),match);
@@ -766,12 +848,9 @@ public final class StrutsProjectAnalyzer {
     return matches.values().stream().map(match->wildcardMappingForCaller(mapping,match,endpoint,state)).toList();
   }
   private static Mapping wildcardMappingForCaller(Mapping mapping,WildcardMatch match,String endpoint,State state) {
-    Mapping effective=substituteWildcardValues(mapping,match);if(Objects.equals(effective.type(),mapping.type()))return effective;
-    String handlerId=ApplicationGraph.id(NodeType.HANDLER,mapping.handlerId()+":wildcard:"+match.path()+":"+effective.type());GraphNode base=state.nodes.get(mapping.handlerId());if(base==null)return effective;
-    Map<String,String> attributes=new TreeMap<>(base.attributes());attributes.put("actionType",effective.type());attributes.put("type",effective.type());attributes.put("path",match.path());if(effective.parameter()!=null)attributes.put("parameter",effective.parameter());
-    addNode(state,handlerId,NodeType.HANDLER,effective.type()+".execute()",attributes,mapping.source(),base.confidence(),"Struts wildcard substitutions；path="+match.path()+"；type="+effective.type()+"；parameter="+Objects.toString(effective.parameter(),""));
-    edge(state,EdgeType.HANDLED_BY,endpoint,handlerId,base.confidence(),mapping.source(),"萬用字元屬性替換；實際路徑="+match.path());
-    return new Mapping(effective.route(),effective.type(),handlerId,effective.formId(),effective.parameter(),effective.family(),effective.forwards(),effective.localForwards(),effective.forwardSources(),effective.input(),effective.module(),effective.source());
+    Mapping effective=substituteWildcardValues(mapping,match,state);GraphNode base=state.nodes.get(mapping.handlerId());if(base==null)return effective;
+    edge(state,EdgeType.HANDLED_BY,endpoint,effective.handlerId(),base.confidence(),mapping.source(),"萬用字元屬性替換；實際路徑="+match.path());
+    return effective;
   }
   private static void markInheritedActionTemplates(State state) {
     Set<String> extendsTargets=new TreeSet<>();
@@ -797,14 +876,24 @@ public final class StrutsProjectAnalyzer {
     String id=StableGraphIds.behavior(control.id(),"click",BehaviorType.UNKNOWN,control.target(),0);
     state.behaviors.putIfAbsent(id,new Behavior(id,control.id(),"click",BehaviorType.UNKNOWN,null,null,null,control.target(),evidence(control.source(),Confidence.UNRESOLVED,null)));
   }
-  private static String requestParameter(Control control,List<Control> peers,String name) {
+  private static Set<String> requestParameters(Control control,List<Control> peers,String name) {
+    if(name==null||name.isBlank())return Set.of();
     if(control.target().contains("?")) for(String pair:control.target().substring(control.target().indexOf('?')+1).split("&")) {
-      String[] values=pair.split("=",2);if(values.length==2&&values[0].equals(name)&&StrutsSources.literal(values[1])) return values[1];
+      String[] values=pair.split("=",2);if(values.length==2&&values[0].equals(name)&&StrutsSources.literal(values[1])) return Set.of(values[1]);
     }
-    if(name.equals(control.field())&&control.value()!=null) return control.value();
+    if(name.equals(control.field())&&control.value()!=null) return Set.of(control.value());
     Set<String> values=new TreeSet<>();
-    for(Control peer:peers) if(Objects.equals(control.formGroup(),peer.formGroup())&&name.equals(peer.field())&&peer.value()!=null&&("html:hidden".equals(peer.attributes().get("tag"))||"SUBMIT".equals(peer.attributes().get("kind")))) values.add(peer.value());
-    return values.size()==1?values.iterator().next():null;
+    for(Control peer:peers) if(Objects.equals(control.formGroup(),peer.formGroup())&&name.equals(peer.field())) {
+      String tag=peer.attributes().get("tag"),kind=peer.attributes().get("kind");
+      if(peer.value()!=null&&Set.of("html:hidden","html-el:hidden","input","button","html:submit","html-el:submit","submit").contains(tag))values.add(peer.value());
+      if("RADIO".equals(kind)&&peer.value()!=null)values.add(peer.value());
+      String optionValues=peer.attributes().get("dispatchParameterValues");if(optionValues!=null&&!optionValues.isBlank())values.addAll(Arrays.asList(optionValues.split("\u001f")));
+    }
+    return Collections.unmodifiableSet(values);
+  }
+  private static String dispatchMethodStatus(Mapping mapping,String value,State state) {
+    String method=resolveMethod(mapping,value,state);if(method==null)return "找不到此方法";
+    return typeWithMethod(mapping.type(),method,state,new HashSet<>())==null?"類別中找不到此方法":"方法存在";
   }
   private static boolean validDispatchSignature(MethodDeclaration method) {
     if(!method.isPublic() || method.getParameters().size()!=4) return false;
@@ -847,7 +936,7 @@ public final class StrutsProjectAnalyzer {
       String formName=rule.parameters().get("form");String property=rule.fields().stream().filter(value->!nodes.containsKey(value)).findFirst().orElse(null);
       if(validatorEvidence==null||formName==null||property==null){rules.add(rule);continue;}
       Set<String> formModels=new TreeSet<>();state.forms.forEach((key,id)->{if(key.endsWith(":"+formName))formModels.add(id);});
-      List<Mapping> mappings=state.actionMappings.stream().filter(mapping->mapping.formId()!=null&&formModels.contains(mapping.formId())).toList();
+      List<Mapping> mappings=state.actionMappings.stream().flatMap(mapping->{String endpoint=state.endpointIds.get(mapping.route());return (endpoint==null?List.of(mapping):mappingVariants(mapping,endpoint,state)).stream();}).filter(mapping->mapping.formId()!=null&&formModels.contains(mapping.formId())).toList();
       Set<String> componentIds=new TreeSet<>(),screenIds=new TreeSet<>();
       for(Mapping mapping:mappings) {
         String endpoint=state.endpointIds.get(mapping.route());if(endpoint==null)continue;
@@ -965,7 +1054,7 @@ public final class StrutsProjectAnalyzer {
     Map<String,Tile> tiles=new TreeMap<>();
     for(Path file:state.inventory.tilesConfigFiles()) try {
       String path=relative(state,file);for(Element definition:StrutsSources.elements(readXml(file,state),"definition")) {
-        String name=definition.getAttribute("name"),template=definition.hasAttribute("template")?definition.getAttribute("template"):definition.getAttribute("path");
+        String name=definition.getAttribute("name"),template=definition.hasAttribute("template")?definition.getAttribute("template"):definition.hasAttribute("page")?definition.getAttribute("page"):definition.getAttribute("path");
         Map<String,String> puts=new TreeMap<>();
         for(String tag:List.of("put","put-attribute")) for(Element item:StrutsSources.elements(definition,tag)) puts.put(item.getAttribute("name"),item.getAttribute("value"));
         if(tiles.containsKey(name)) {diagnostic(state,"Tiles 定義重複："+name,StrutsSources.source(path,definition),"TILES_AMBIGUOUS");tiles.remove(name);state.ambiguousTiles.add(name);continue;}
@@ -991,11 +1080,13 @@ public final class StrutsProjectAnalyzer {
     for(String name:resolved.keySet())if(state.tilePageOwners.values().stream().noneMatch(owners->owners.contains(name)))state.tileStandaloneDefinitions.add(name);
     for(Tile tile:resolved.values()) {
       String viewId=ApplicationGraph.id(NodeType.VIEW,"tiles:"+tile.name());state.tileViewIds.put(tile.name(),viewId);
-      Confidence status=state.viewIds.containsKey(tile.template())?Confidence.CONFIRMED:Confidence.UNRESOLVED;
-      addNode(state,viewId,NodeType.VIEW,tile.name(),Map.of("view",tile.template()),tile.source(),status);
+      String template=resolvedTileTemplate(tile,state),displayView=tile.parent().isBlank()?template:tile.template();Confidence status=state.viewIds.containsKey(template)?Confidence.CONFIRMED:Confidence.UNRESOLVED;
+      Map<String,String> attributes=new TreeMap<>();attributes.put("view",displayView);if(!Objects.equals(displayView,template))attributes.put("resolvedView",template);if(!tile.parent().isBlank())attributes.put("extends",tile.parent());if(tile.parent().isBlank()&&!Objects.equals(template,tile.template()))attributes.put("originalView",tile.template());
+      addNode(state,viewId,NodeType.VIEW,tile.name(),attributes,tile.source(),status);
     }
     for(Tile tile:resolved.values()) {
       String viewId=state.tileViewIds.get(tile.name());
+      String parentViewId=state.tileViewIds.get(tile.parent());if(parentViewId!=null)edge(state,EdgeType.INCLUDES,viewId,parentViewId,Confidence.CONFIRMED,tile.source(),"Tiles definition extends="+tile.parent());
       List<String> targets=new ArrayList<>(tile.puts().values());targets.add(tile.template());
       for(String target:targets) {
         String referenced=tileViewId(target,state);if(referenced==null)referenced=state.tileViewIds.get(target);
@@ -1009,7 +1100,7 @@ public final class StrutsProjectAnalyzer {
     if(!seen.add(name))return;owners.add(name);Tile tile=state.tiles.get(name);if(tile==null)return;
     if(state.tiles.containsKey(tile.parent()))collectTileDefinitions(tile.parent(),state,owners,seen);
     List<String> targets=new ArrayList<>(tile.puts().values());targets.add(tile.template());
-    for(String value:targets)if(state.tiles.containsKey(value))collectTileDefinitions(value,state,owners,seen);else if(value.endsWith(".jsp")||value.endsWith(".jspf"))for(String inserted:tileInsertDefinitions(value,state))collectTileDefinitions(inserted,state,owners,seen);
+    for(String value:targets)if(state.tiles.containsKey(value))collectTileDefinitions(value,state,owners,seen);else if(value.endsWith(".jsp")||value.endsWith(".jspf")||value.endsWith(".faces"))for(String inserted:tileInsertDefinitions(value,state))collectTileDefinitions(inserted,state,owners,seen);
   }
 
   private static Set<String> tileInsertDefinitions(String target,State state) {
@@ -1022,20 +1113,29 @@ public final class StrutsProjectAnalyzer {
   }
 
   private static String tileJspViewPath(String target,State state) {
-    String viewId=state.viewIds.get(target);
+    String resolvedTarget=normalizeFacesPath(target,state);if(resolvedTarget==null)return null;
+    String viewId=state.viewIds.get(resolvedTarget);
     if(viewId==null) {
-      List<String> candidates=state.viewIds.entrySet().stream().filter(entry->entry.getKey().endsWith(target)).map(Map.Entry::getValue).distinct().toList();
+      List<String> candidates=state.viewIds.entrySet().stream().filter(entry->entry.getKey().endsWith(resolvedTarget)).map(Map.Entry::getValue).distinct().toList();
       if(candidates.size()==1)viewId=candidates.get(0);
     }
-    GraphNode view=viewId==null?null:state.nodes.get(viewId);if(view!=null)return view.attributes().get("view");
-    String suffix=target.startsWith("/")?target.substring(1):target;
+    GraphNode view=viewId==null?null:state.nodes.get(viewId);if(view!=null)return view.attributes().getOrDefault("resolvedView",view.attributes().get("view"));
+    String suffix=resolvedTarget.startsWith("/")?resolvedTarget.substring(1):resolvedTarget;
     List<String> paths=state.inventory.files().stream().filter(file->relative(state,file).endsWith(suffix)).map(file->relative(state,file)).distinct().toList();
     return paths.size()==1?paths.get(0):null;
   }
 
+  private static String resolvedTileTemplate(Tile tile,State state) {
+    String resolved=tileJspViewPath(tile.template(),state);return resolved==null?tile.template():resolved;
+  }
+
+  private static boolean isTilesLayoutPath(String path,State state) {
+    return state.tiles.values().stream().map(tile->resolvedTileTemplate(tile,state)).anyMatch(path::equals);
+  }
+
   private static String tileViewId(String target,State state) {
     String viewId=state.viewIds.get(target);
-    if(viewId==null&&(target.endsWith(".jsp")||target.endsWith(".jspf"))) {
+    if(viewId==null&&(target.endsWith(".jsp")||target.endsWith(".jspf")||target.endsWith(".faces"))) {
       String path=tileJspViewPath(target,state);if(path!=null)viewId=state.viewIds.get(path);
     }
     return viewId;
@@ -1074,7 +1174,7 @@ public final class StrutsProjectAnalyzer {
     List<String> targets=new ArrayList<>(tile.puts().values());targets.add(tile.template());
     for(String target:targets) {
       if(state.tiles.containsKey(target))collectTileJspPaths(target,state,seen,paths);
-      else if(target.endsWith(".jsp")||target.endsWith(".jspf")) {String path=tileJspViewPath(target,state);if(path!=null){paths.add(path);for(String inserted:tileInsertDefinitions(path,state))collectTileJspPaths(inserted,state,seen,paths);}}
+      else if(target.endsWith(".jsp")||target.endsWith(".jspf")||target.endsWith(".faces")) {String path=tileJspViewPath(target,state);if(path!=null){paths.add(path);for(String inserted:tileInsertDefinitions(path,state))collectTileJspPaths(inserted,state,seen,paths);}}
     }
   }
 
@@ -1090,8 +1190,9 @@ public final class StrutsProjectAnalyzer {
     String existing=state.screens.get(name);if(existing!=null)return existing;
     Tile tile=state.tiles.get(name);if(tile==null)return null;
     String screen=ApplicationGraph.id(NodeType.SCREEN,"tiles:"+tile.name()),viewId=state.tileViewIds.get(tile.name());
-    Confidence status=state.viewIds.containsKey(tile.template())?Confidence.CONFIRMED:Confidence.UNRESOLVED;
-    addNode(state,screen,NodeType.SCREEN,tile.name(),Map.of("view",tile.template(),"tilesDefinition","true"),tile.source(),status);state.screens.put(name,screen);
+    String template=resolvedTileTemplate(tile,state);Confidence status=state.viewIds.containsKey(template)?Confidence.CONFIRMED:Confidence.UNRESOLVED;
+    Map<String,String> attributes=new TreeMap<>();attributes.put("view",template);attributes.put("tilesDefinition","true");if(!Objects.equals(template,tile.template()))attributes.put("originalView",tile.template());
+    addNode(state,screen,NodeType.SCREEN,tile.name(),attributes,tile.source(),status);state.screens.put(name,screen);
     List<String> targets=new ArrayList<>(tile.puts().values());targets.add(tile.template());
     for(String target:targets) {
       String view=tileViewId(target,state);if(view==null)view=state.tileViewIds.get(target);
@@ -1153,6 +1254,7 @@ public final class StrutsProjectAnalyzer {
   private record Control(String id,String label,Map<String,String> attributes,String target,SourceLocation source,String field,String value,String formGroup) { }
   private record ScreenLoadCall(String tag,String target,String module,SourceLocation source) { }
   private record MessageResource(String key,String parameter) { }
+  private record FacesSuffixMapping(String defaultSuffix,SourceLocation source) { }
   private record Tile(String name,String template,String parent,Map<String,String> puts,SourceLocation source) { }
   private static final class State {
     final ProjectInventory inventory;
@@ -1165,7 +1267,7 @@ public final class StrutsProjectAnalyzer {
     final Map<String,Set<String>> jspModuleOwners=new TreeMap<>();
     final Set<String> tilePageDefinitions=new TreeSet<>(),tileStandaloneDefinitions=new TreeSet<>(),tilePageJspPaths=new TreeSet<>();
     final Map<String,Set<String>> tilePageOwners=new TreeMap<>();
-    final Map<String,List<Mapping>> routes=new TreeMap<>();final Map<String,String> endpointIds=new TreeMap<>(),globalForwards=new TreeMap<>();final Map<String,Boolean> inputForward=new TreeMap<>();final List<Mapping> actionMappings=new ArrayList<>();final List<PendingForward> pendingForwards=new ArrayList<>(),exceptionForwards=new ArrayList<>();final Map<String,List<PendingForward>> actionForwardTargets=new TreeMap<>();final Map<String,Map<String,WildcardMatch>> wildcardMatches=new TreeMap<>();final Map<String,ServletMappingResolution> servletMappings=new TreeMap<>();
+    final Map<String,List<Mapping>> routes=new TreeMap<>();final Map<String,String> endpointIds=new TreeMap<>(),globalForwards=new TreeMap<>();final Map<String,Boolean> inputForward=new TreeMap<>();final List<Mapping> actionMappings=new ArrayList<>();final List<PendingForward> pendingForwards=new ArrayList<>(),exceptionForwards=new ArrayList<>();final Map<String,List<PendingForward>> actionForwardTargets=new TreeMap<>();final Map<String,Map<String,WildcardMatch>> wildcardMatches=new TreeMap<>();final Map<String,ServletMappingResolution> servletMappings=new TreeMap<>();final Map<String,List<FacesSuffixMapping>> facesMappings=new TreeMap<>();final Set<String> facesDiagnostics=new HashSet<>();
     final Map<String,StrutsSources.JavaType> types=new TreeMap<>();final Map<String,Set<String>> messages=new TreeMap<>();final Map<String,Map<String,String>> messageBundles=new TreeMap<>();final Map<String,String> messageBundleAliases=new TreeMap<>();String defaultMessageBundle;
     State(ProjectInventory inventory) {this.inventory=new ProjectInventory(inventory.root(),inventory.files().stream().sorted().toList(),inventory.technologies().stream().sorted().toList(),inventory.diagnostics().stream().sorted().toList(),inventory.contextPaths(),inventory.contextSettingsFile(),inventory.contextSettingsLine());this.strutsVersion=detectStrutsVersion(this.inventory);}
     ApplicationGraph graph() {return new ApplicationGraph(new Application(inventory.root().getFileName().toString(),inventory.root().toString(),inventory.technologies()),List.copyOf(nodes.values()),List.copyOf(edges.values()),diagnostics,List.of(),ApplicationGraph.BEHAVIOR_SCHEMA_VERSION,List.copyOf(behaviors.values()),List.copyOf(rules.values()));}
