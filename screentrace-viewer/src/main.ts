@@ -92,7 +92,12 @@ try {
  modes.setAttribute('role','group');modes.setAttribute('aria-label','清單顯示方式');modes.append(listButton,filesButton);
  const chips=element('div',undefined,'chips');chips.setAttribute('role','group');chips.setAttribute('aria-label','依狀態篩選');
  const notices=element('div',undefined,'sidebar-notices'),list=element('div',undefined,'screen-list');
- nav.append(searchBox,modes,chips,notices,list);
+ const sidebarHeader=element('div',undefined,'sidebar-header'),collapseList=iconButton('收起畫面清單','chevronLeft');
+ sidebarHeader.append(element('h2','畫面清單'),collapseList);
+ const rail=element('button',undefined,'sidebar-rail');rail.setAttribute('aria-label','展開畫面清單');rail.title='展開畫面清單';
+ rail.append(icon('chevronRight'),element('span','畫面清單'));
+ const sidebarBody=element('div',undefined,'sidebar-body');sidebarBody.append(sidebarHeader,searchBox,modes,chips,notices,list);
+ nav.append(rail,sidebarBody);
  shell.append(nav,main,panel);
  if(restored.warning&&!restored.warning.includes('覆寫'))notices.append(element('p',restored.warning,'notice'));
  if(initial.dropped)notices.append(element('p','先前的進度含已不再使用的欄位（原因、備註、元件庫對應），已略過；保留／移除標記不受影響。','notice'));
@@ -150,6 +155,11 @@ try {
   if(!list.childElementCount)list.append(element('p','沒有符合的畫面','empty-list'));
  };
 
+ // The screen list collapses into a rail on its own edge; zooming into a screen collapses it, returning restores it.
+ let listCollapsed=false,overviewCollapsed=false,wasZoomed=false;
+ const syncList=()=>{shell.dataset.sidebar=listCollapsed?'collapsed':'expanded';rail.setAttribute('aria-expanded','false');collapseList.setAttribute('aria-expanded','true');};
+ const setList=(collapsed:boolean)=>{listCollapsed=collapsed;if(!wasZoomed)overviewCollapsed=collapsed;syncList();(collapsed?rail:search).focus();};
+ rail.onclick=()=>setList(false);collapseList.onclick=()=>setList(true);
  const renderPanel=()=>{
   if(page==='api'||!current){emptyScreenPanel(panel);return;}
   const shown=panel.querySelector<HTMLDetailsElement>(`[data-screen-panel="${CSS.escape(current)}"] .panel-buttons`);
@@ -203,10 +213,6 @@ try {
   preview.append(own,notice);
   const scroll=history.current?.screenId===id?history.current.scroll:0;
   viewer=prototypeViewer(index,payload,id,preview,own,history,{back:()=>showCanvas(),focus:target=>openScreen(target),move:delta=>{const visit=history.move(delta,viewerScroll());if(visit)openScreen(visit.screenId,{push:false});},scroll});
-  const listToggle=element('button',undefined,'list-toggle');listToggle.append(element('span','清單'));
-  const syncToggle=()=>{const open=shell.dataset.sidebar==='open';listToggle.setAttribute('aria-pressed',String(open));listToggle.setAttribute('aria-label',open?'收起畫面清單':'顯示畫面清單');listToggle.title=listToggle.getAttribute('aria-label')!;};
-  listToggle.onclick=()=>{if(shell.dataset.sidebar==='open')delete shell.dataset.sidebar;else shell.dataset.sidebar='open';syncToggle();};
-  syncToggle();viewer.querySelector('.prototype-back')?.after(listToggle);
   host.replaceChildren(viewer);
  };
  const highlightTriggers=(triggers:string[]|undefined)=>{
@@ -224,7 +230,10 @@ try {
 
  const render=()=>{
   shell.dataset.page=page;
-  const zoomed=page==='screens'&&!!current;shell.dataset.focus=String(zoomed);if(!zoomed)delete shell.dataset.sidebar;
+  const zoomed=page==='screens'&&!!current;
+  if(zoomed&&!wasZoomed){overviewCollapsed=listCollapsed;listCollapsed=true;}
+  else if(!zoomed&&wasZoomed)listCollapsed=overviewCollapsed;
+  wasZoomed=zoomed;syncList();
   screensTab.setAttribute('aria-current',page==='screens'?'page':'false');apiTab.setAttribute('aria-current',page==='api'?'page':'false');
   renderProgress();renderSidebar();renderPanel();
   if(page==='api'){
@@ -302,7 +311,7 @@ try {
   }
   if(editable)return;
   const key=event.key.toLowerCase();
-  if(key==='/'){event.preventDefault();if(page!=='screens'){page='screens';render();}if(shell.dataset.focus==='true')shell.dataset.sidebar='open';search.focus();return;}
+  if(key==='/'){event.preventDefault();if(page!=='screens'){page='screens';render();}if(listCollapsed){listCollapsed=false;syncList();}search.focus();return;}
   if(key==='n'&&page==='screens'){event.preventDefault();nextUndecided();return;}
   const value=({k:'KEEP',x:'REMOVE',u:'UNDECIDED'} as Record<string,Decision>)[key];
   if(!value||page!=='screens'||!current)return;

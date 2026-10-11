@@ -27,7 +27,7 @@ export async function openScreen(page,id){
 
 /** While a screen is zoomed in, the screen list is collapsed; open it the way a person would. */
 export async function showList(page){
- if(await page.locator('.sidebar').isVisible())return;
- await page.locator('.list-toggle').click();
- await page.locator('.sidebar').waitFor();
+ if(await page.locator('.sidebar-body').isVisible())return;
+ await page.locator('.sidebar-rail').click();
+ await page.locator('.sidebar-body').waitFor();
 }

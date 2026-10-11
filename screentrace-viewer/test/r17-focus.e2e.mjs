@@ -99,23 +99,32 @@ test('R17 WP63 clicks act like the real page: links navigate, forms submit witho
  }finally{await browser.close();}
 });
 
-test('R17 WP62 zooming in collapses the screen list to enlarge the preview; the list button brings it back',async()=>{
+test('R17 WP62 zooming in collapses the screen list into a rail on its own edge; the rail and its collapse button control it',async()=>{
  const {browser,page}=await open();
  try{
-  const sidebar=page.locator('.sidebar');
-  assert.equal(await sidebar.isVisible(),true);
+  const body=page.locator('.sidebar-body'),rail=page.locator('.sidebar-rail');
+  assert.equal(await body.isVisible(),true);assert.equal(await rail.isVisible(),false);
+  assert.equal(await page.locator('.prototype-toolbar .list-toggle').count(),0);
   await page.locator('.screen-card[data-screen="a"]').click();await ready(page);
-  assert.equal(await sidebar.isVisible(),false);
-  const toggle=page.locator('.list-toggle');
-  assert.equal(await toggle.getAttribute('aria-pressed'),'false');
-  await toggle.click();
-  assert.equal(await sidebar.isVisible(),true);assert.equal(await toggle.getAttribute('aria-pressed'),'true');
-  await toggle.click();assert.equal(await sidebar.isVisible(),false);
-  await page.locator('body').click({position:{x:5,y:5}});await page.keyboard.press('/');
-  assert.equal(await sidebar.isVisible(),true);
+  assert.equal(await body.isVisible(),false);assert.equal(await rail.isVisible(),true);
+  assert.match(await rail.innerText(),/畫面清單/);
+  const before=await page.locator('.focus-layer').evaluate(l=>l.offsetWidth);
+  await rail.click();
+  assert.equal(await body.isVisible(),true);
+  await page.waitForFunction(width=>document.querySelector('.focus-layer').offsetWidth<width,before);
+  await page.getByRole('button',{name:'收起畫面清單'}).click();
+  assert.equal(await body.isVisible(),false);
+  await page.locator('body').click({position:{x:600,y:20}});await page.keyboard.press('/');
+  assert.equal(await body.isVisible(),true);
   await page.getByRole('searchbox',{name:'搜尋 URL 或畫面名稱'}).press('Escape');
+  assert.equal(await page.locator('.canvas').getAttribute('data-mode'),'focus');
   await page.locator('.prototype-back').click();
   await page.waitForFunction(()=>document.querySelector('.canvas').dataset.mode==='overview');
-  assert.equal(await sidebar.isVisible(),true);
+  assert.equal(await body.isVisible(),true);
+  await page.getByRole('button',{name:'收起畫面清單'}).click();
+  await page.locator('.screen-card[data-screen="a"]').click();await ready(page);
+  await page.locator('.prototype-back').click();
+  await page.waitForFunction(()=>document.querySelector('.canvas').dataset.mode==='overview');
+  assert.equal(await body.isVisible(),false,'a list collapsed on the overview stays collapsed after returning');
  }finally{await browser.close();}
 });
