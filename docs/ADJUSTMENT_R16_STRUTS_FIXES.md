@@ -202,3 +202,27 @@ R16 報告「仍未有呼叫來源的端點」表中，大多數原因只寫「�
 6. **報告**：WP56–WP58 的每一項驗收都要以**真實範例的實測結果**佐證（圖中的具體值），不得只引用合成測試名稱。
 
 授權沿用 OQ-028、OQ-031；Spring 專案 graph 雜湊必須不變；完整驗證（E2E 預設並行）全綠。完成後停止，等需求方驗收。
+
+---
+
+## 9. R16 最終驗收（需求方，2026-10-11）
+
+審查者以 HEAD（7d4e624）唯讀重新分析 mailreader、examples、faces-example1、faces-example2，並以 Chromium 開啟 faces-example2 報表檢查 6 個分頁。
+
+**結論：§8.1 五項全數達成，R16 有條件通過。** 完成 §9.1 收尾後，§5 完整驗證全綠即結案，不需再停等驗收；在 R16 報告與 ROADMAP 註記。
+
+已確認：
+- DispatchAction：examples `dispatch.jsp` 四個送出顯示「分派到 doFoo／doBar／execute」，`doInvalid` 顯示「類別中找不到此方法」。
+- Validator：mailreader RegistrationForm 5 條規則全部綁定到 Registration 畫面欄位（萬用字元 `{1}Form` 經 extends 代入）；`VALIDATION_RULE_UNRESOLVED` 17 → 12。
+- 可見文字與 `title`／`alt`／`aria-label` 在 6 個分頁皆無 `data-st-` 或原始 tag。
+- JSF 提醒「7 個畫面使用 JSF 元件」，可疑卡片中的 JSF 畫面加註「使用 JSF，未分析」。
+- faces-example2 `layout.jsp` 不再是獨立畫面；被 extends 的 definition 以非 SCREEN 節點保留（OQ-034）。
+
+### 9.1 收尾：Tiles 頁面畫面名稱（OQ-025 命名規則未落實）
+
+faces-example2 的逐頁確認佇列中，Tiles 頁面定義都顯示為「Layout（/editRegistration.do）（3）」「Layout（/logoff.do）」等——名稱取自共用版型 `layout.jsp`，再以網址與序號區分。需求方無法分辨哪個是註冊頁、哪個是主選單。OQ-025 已規定命名來源，依此修正（先補失敗測試）：
+
+1. 頁面定義畫面的名稱優先序：(a) 該 definition（含 extends 繼承後）`put name="title"` 的常值，或經訊息資源解析的值；(b) `body`（或唯一的主要內容 put）JSP 依 R12 WP42 規則得到的可讀名稱（title／h1、`bean:message`／`s:message` 解析值）；(c) definition 名稱人性化（去掉開頭 `.`，例如 `.mainMenu` → 「Main Menu」）。**不得**使用版型 JSP 的名稱；網址只放在畫面網址欄，不放進名稱。
+2. 同名時才依 R12 規則加區分（例如所在功能區域或網址），不用流水號。
+3. 驗收：faces-example2 每個頁面定義畫面的名稱逐一列入報告，並附命名來源（title put／body JSP／definition 名稱）；佇列、首頁、功能地圖、交付清單與 md 中不再出現以「Layout」開頭、只靠網址區分的畫面名稱；`fixtures/wp10/struts1` 的 `outer` 依同規則命名。
+4. 授權沿用 OQ-028、OQ-031；Spring 專案 graph 雜湊不變；完整驗證（E2E 預設並行）全綠。
