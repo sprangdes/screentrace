@@ -331,3 +331,11 @@
   2. 轉義的 HTML 文字（`&lt;`、`&gt;` 內、`<pre>`／`<code>` 內）不是呼叫來源，納入稽核規則與測試。
   3. 授權新增並實作：`<html:img action=…>`（以及 `html:image`、`html:rewrite` 等產生 action URL 的 tag）作為畫面載入時的呼叫來源（R-API-1(a)）；`<jsp:forward page=…>`、`<jsp:include page=…>` 指向 action 時作為呼叫來源（常值為 `STATIC_URL`）。先提交失敗測試；因此改變的 Struts 數量欄位依 OQ-031 處理。
   4. 已完成：OQ-033 所列決定落地；三個新增測試先於實作提交。Struts parser 現將安全的 page-load action URL 建成畫面 `CALLS` 關係，並略過 escaped、`pre`、`code` 中的示例標記；view include 不會因 wildcard 被誤認為 action。八模組實測與驗證見 `docs/reports/R16.md`、ADR 0077。WP54 仍待需求方驗收。
+
+## OQ-034 — WP58 Tiles 界線規則與既有測試斷言衝突
+
+- 情境：WP58 的 Faces 範例合成 fixture 讓完整 Maven 驗證觸發既有測試 `StrutsCompletenessTest.expandsInheritedNestedTilesAndJspTileInsert`（`StrutsCompletenessTest.java:113`）。此測試於 `f32c76de`（2026-10-02）加入；fixture 中 `child` extends `base`，而 `outer` 又 extends `child`。測試要求 graph 有一個名為 `child` 且 `view=/WEB-INF/jsp/layout.jsp` 的 SCREEN。OQ-029 明定「被任何 definition extends 的 definition 屬版型，不是畫面」，因此 WP55／WP58 的正確 graph 應將 `child` 保留為 VIEW／版型，而非 SCREEN。沒有任何實作可以同時滿足此既有 SCREEN 斷言與 OQ-029 的 Tiles 畫面界線。
+- 可選方案 A：授權只調整上述既有測試的斷言，驗證 `child` 以版型 VIEW 保留、且不作為獨立 SCREEN；fixture 不變。ADR 記錄測試名稱、舊預期、新預期與 OQ-029 依據。
+- 可選方案 B：維持既有測試與斷言，修訂 OQ-029，允許被 extends 的 definition 同時列為 SCREEN；這會使「被任何 definition extends 即為版型」不再成立，並改變 WP55／WP58 對 Tiles 畫面的計數與呈現。
+- 影響範圍：WP58 的 JSF／Tiles 全套驗收與 R14 §5 完整 Maven 驗證。已新增的 WP58 fixture 使用被 extends 的 `.base`，預期它只作版型而不列 SCREEN；既有 fixture 與斷言尚未修改。
+- 狀態：待需求方決定。完整驗證目前被該既有斷言阻擋；其餘項目不宣告完成。
