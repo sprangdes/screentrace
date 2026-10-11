@@ -83,6 +83,29 @@ class StrutsR16ValidationDispatchTest {
     assertTrue(graph.diagnostics().stream().anyMatch(d->d.code().equals("STRUTS_DISPATCH_AMBIGUOUS")&&d.message().contains("doFoo")&&d.message().contains("doBar")));
   }
 
+  @Test void dispatchActionCollectsNamedButtonAndSelectOptionValuesAsAmbiguousCandidates() throws Exception {
+    base("<struts-config><action-mappings><action path='/dispatch' type='sample.Dispatch' parameter='dispatchMethod'/></action-mappings></struts-config>");
+    file("src/main/java/sample/Dispatch.java","package sample; public class Dispatch extends org.apache.struts.actions.DispatchAction { public org.apache.struts.action.ActionForward doFoo(org.apache.struts.action.ActionMapping m, org.apache.struts.action.ActionForm f, javax.servlet.http.HttpServletRequest q, javax.servlet.http.HttpServletResponse s){return null;} public org.apache.struts.action.ActionForward doBar(org.apache.struts.action.ActionMapping m, org.apache.struts.action.ActionForm f, javax.servlet.http.HttpServletRequest q, javax.servlet.http.HttpServletResponse s){return null;} public org.apache.struts.action.ActionForward doInvalid(org.apache.struts.action.ActionMapping m, org.apache.struts.action.ActionForm f, javax.servlet.http.HttpServletRequest q, javax.servlet.http.HttpServletResponse s){return null;} public org.apache.struts.action.ActionForward execute(org.apache.struts.action.ActionMapping m, org.apache.struts.action.ActionForm f, javax.servlet.http.HttpServletRequest q, javax.servlet.http.HttpServletResponse s){return null;} }");
+    file("src/main/webapp/dispatch.jsp","<form action='/dispatch'><select name='dispatchMethod'><option value='doFoo'>Foo</option><option value='doBar'>Bar</option></select><button name='dispatchMethod' value='doInvalid'>Invalid</button><input type='submit' name='dispatchMethod' value='execute'></form>");
+    ApplicationGraph graph=analyze();
+    Diagnostic ambiguous=graph.diagnostics().stream().filter(item->item.code().equals("STRUTS_DISPATCH_AMBIGUOUS")).findFirst().orElseThrow();
+    for(String candidate:List.of("doFoo","doBar","doInvalid","execute"))assertTrue(ambiguous.message().contains(candidate),ambiguous.message());
+    Behavior submit=graph.behaviors().stream().filter(item->item.type()==BehaviorType.SUBMIT_FORM&&item.evidence().stream().anyMatch(e->e.resolution()==ResolutionStatus.AMBIGUOUS)).findFirst().orElseThrow();
+    assertTrue(submit.expression().contains("doFoo")&&submit.expression().contains("doBar")&&submit.expression().contains("doInvalid")&&submit.expression().contains("execute"),submit.toString());
+  }
+
+  @Test void resolvedDispatchLinkDoesNotDuplicateMarkupBehavior() throws Exception {
+    base("<struts-config><action-mappings><action path='/dispatch' type='sample.Dispatch' parameter='dispatchMethod'/></action-mappings></struts-config>");
+    file("src/main/java/sample/Dispatch.java","package sample; public class Dispatch extends org.apache.struts.actions.DispatchAction { public org.apache.struts.action.ActionForward doFoo(org.apache.struts.action.ActionMapping m, org.apache.struts.action.ActionForm f, javax.servlet.http.HttpServletRequest q, javax.servlet.http.HttpServletResponse s){return null;} }");
+    file("src/main/webapp/dispatch.jsp","<html:form action='/dispatch'><html:submit property='dispatchMethod' value='doFoo'/><html:link action='/dispatch?dispatchMethod=doFoo'>Run</html:link></html:form>");
+    ApplicationGraph graph=analyze();
+    GraphNode link=graph.nodes().stream().filter(node->node.type()==NodeType.COMPONENT&&"LINK".equals(node.attributes().get("kind"))&&node.source().file().endsWith("dispatch.jsp")).findFirst().orElseThrow();
+    List<Behavior> behaviors=graph.behaviors().stream().filter(item->item.triggerId().equals(link.id())&&item.type()==BehaviorType.NAVIGATE).toList();
+    assertEquals(1,behaviors.size(),behaviors.toString());
+    assertTrue(behaviors.get(0).targetId()!=null,behaviors.toString());
+    assertTrue(behaviors.get(0).expression().contains("doFoo"),behaviors.toString());
+  }
+
   @Test void wildcardInheritedNameIsSubstitutedBeforeValidatorFieldBinding() throws Exception {
     base("<struts-config><form-beans><form-bean name='RegistrationForm' type='sample.RegistrationForm'/></form-beans><action-mappings><action path='//BaseAction' type='sample.BaseAction' name='{1}Form'/><action path='/Save*' type='sample.SaveAction' extends='//BaseAction' input='/registration.jsp'/></action-mappings></struts-config>");
     file("src/main/java/sample/RegistrationForm.java","package sample; public class RegistrationForm extends org.apache.struts.validator.ValidatorForm { public String getUsername(){return null;} }");
@@ -92,7 +115,7 @@ class StrutsR16ValidationDispatchTest {
 
     ApplicationGraph graph=analyze();
     ValidationRule rule=graph.validationRules().stream().filter(item->item.parameters().getOrDefault("form","").equals("RegistrationForm")&&item.fields().contains("username")).findFirst().orElseThrow();
-    assertEquals(ResolutionStatus.CONFIRMED,rule.evidence().stream().filter(e->e.parser().equals("StrutsValidatorFieldBinding")).map(AnalysisEvidence::resolution).findFirst().orElse(null));
+    assertEquals(ResolutionStatus.CONFIRMED,rule.evidence().stream().filter(e->e.parser().equals("StrutsValidatorFieldBinding")).map(AnalysisEvidence::resolution).findFirst().orElse(null),rule.toString());
     assertTrue(rule.parameters().getOrDefault("screenIds","").contains(StableGraphIds.screen("src/main/webapp/registration.jsp")),rule.toString());
     assertTrue(rule.parameters().getOrDefault("componentIds","").contains(graph.nodes().stream().filter(n->n.type()==NodeType.COMPONENT&&"username".equals(n.attributes().get("property"))).findFirst().orElseThrow().id()),rule.toString());
   }
