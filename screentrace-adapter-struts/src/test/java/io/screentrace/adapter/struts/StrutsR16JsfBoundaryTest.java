@@ -52,7 +52,7 @@ class StrutsR16JsfBoundaryTest {
 
   @Test void ordinaryForwardPathDoesNotRequireFacesSuffixMapping()throws Exception{
     file("src/main/webapp/WEB-INF/web.xml","<web-app><servlet><servlet-name>action</servlet-name><servlet-class>org.apache.struts.action.ActionServlet</servlet-class></servlet><servlet-mapping><servlet-name>action</servlet-name><url-pattern>*.do</url-pattern></servlet-mapping></web-app>");
-    file("src/main/webapp/WEB-INF/struts-config.xml","<struts-config><action-mappings><action path='/open' type='sample.OpenAction'><forward name='success' path='/home'/></action></action-mappings></struts-config>");
+    file("src/main/webapp/WEB-INF/struts-config.xml","<struts-config><action-mappings><action path='/open' type='sample.OpenAction'><forward name='success' path='home'/></action></action-mappings></struts-config>");
     file("src/main/webapp/home.jsp","<html><body>Home</body></html>");
     ApplicationGraph graph=new StrutsProjectAnalyzer().analyze(new ProjectScanner().scan(root));
     assertNotNull(graph);
