@@ -203,6 +203,10 @@ try {
   preview.append(own,notice);
   const scroll=history.current?.screenId===id?history.current.scroll:0;
   viewer=prototypeViewer(index,payload,id,preview,own,history,{back:()=>showCanvas(),focus:target=>openScreen(target),move:delta=>{const visit=history.move(delta,viewerScroll());if(visit)openScreen(visit.screenId,{push:false});},scroll});
+  const listToggle=element('button',undefined,'list-toggle');listToggle.append(element('span','清單'));
+  const syncToggle=()=>{const open=shell.dataset.sidebar==='open';listToggle.setAttribute('aria-pressed',String(open));listToggle.setAttribute('aria-label',open?'收起畫面清單':'顯示畫面清單');listToggle.title=listToggle.getAttribute('aria-label')!;};
+  listToggle.onclick=()=>{if(shell.dataset.sidebar==='open')delete shell.dataset.sidebar;else shell.dataset.sidebar='open';syncToggle();};
+  syncToggle();viewer.querySelector('.prototype-back')?.after(listToggle);
   host.replaceChildren(viewer);
  };
  const highlightTriggers=(triggers:string[]|undefined)=>{
@@ -220,6 +224,7 @@ try {
 
  const render=()=>{
   shell.dataset.page=page;
+  const zoomed=page==='screens'&&!!current;shell.dataset.focus=String(zoomed);if(!zoomed)delete shell.dataset.sidebar;
   screensTab.setAttribute('aria-current',page==='screens'?'page':'false');apiTab.setAttribute('aria-current',page==='api'?'page':'false');
   renderProgress();renderSidebar();renderPanel();
   if(page==='api'){
@@ -289,6 +294,7 @@ try {
   const target=event.target as Element|null,editable=target?.closest?.('input,textarea,select,[contenteditable="true"]');
   if(event.altKey&&['ArrowLeft','ArrowRight'].includes(event.key)&&page==='screens'&&current){event.preventDefault();const visit=history.move(event.key==='ArrowLeft'?-1:1,viewerScroll());if(visit)openScreen(visit.screenId,{push:false});return;}
   if(event.altKey||event.ctrlKey||event.metaKey)return;
+  if(event.key==='Escape'&&editable){(target as HTMLElement).blur();return;}
   if(event.key==='Escape'){
    if(simulation?.closeDialog())return;
    if(page==='screens'&&current){event.preventDefault();showCanvas();}
@@ -296,7 +302,7 @@ try {
   }
   if(editable)return;
   const key=event.key.toLowerCase();
-  if(key==='/'){event.preventDefault();if(page!=='screens'){page='screens';render();}search.focus();return;}
+  if(key==='/'){event.preventDefault();if(page!=='screens'){page='screens';render();}if(shell.dataset.focus==='true')shell.dataset.sidebar='open';search.focus();return;}
   if(key==='n'&&page==='screens'){event.preventDefault();nextUndecided();return;}
   const value=({k:'KEEP',x:'REMOVE',u:'UNDECIDED'} as Record<string,Decision>)[key];
   if(!value||page!=='screens'||!current)return;

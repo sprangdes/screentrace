@@ -213,8 +213,12 @@ export function canvas(index:Index,payload:Payload,options:CanvasOptions):Canvas
   const size=entries[0]?.contentRect;if(!size)return;
   const changed=!!observed&&(size.width!==observed.width||size.height!==observed.height);observed={width:size.width,height:size.height};
   if(!changed)return;
-  if(focused){({zoom,x,y}=transformFor(focused));apply();placeLayer();if(!layer.hidden)drawLines(focused);}
-  else if(!options.transform)fit();
+  if(focused){
+   // Leave a running zoom animation alone when the target is unchanged (e.g. the sidebar collapsed as the zoom started).
+   const target=transformFor(focused);if(target.zoom!==zoom||target.x!==x||target.y!==y){({zoom,x,y}=target);apply();}
+   placeLayer();if(!layer.hidden)drawLines(focused);
+  }
+  else if(!options.transform&&!overview)fit();
  }).observe(viewport);
  requestAnimationFrame(()=>{if(options.transform){viewport.dataset.fitted='true';apply();}else fit();});
  return {element:viewport,update,focus,exit,get focused(){return focused;}};

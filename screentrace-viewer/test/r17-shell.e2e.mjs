@@ -1,3 +1,4 @@
+import {showList} from './decision-controls.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
@@ -100,7 +101,7 @@ test('R17 buttons are collapsed by default, follow the screen, and keep-to-remov
   await radio(page,'a','REMOVE').click();
   assert.equal(await section.locator('[data-component-row="save"] .inherited-tag').innerText(),'隨畫面移除');
   assert.equal(await section.locator('[data-component-row="shared"] .inherited-tag').count(),0);
-  await page.locator('.screen-list [data-screen-list="b"]').click();
+  await showList(page);await page.locator('.screen-list [data-screen-list="b"]').click();
   await radio(page,'b','REMOVE').click();
   assert.match(await page.locator('[data-screen-panel="b"] .notice.conflict').innerText(),/保留的「共用按鈕[^」]*」會前往已標記移除的「乙」/);
   await page.locator('.progress-button').click();

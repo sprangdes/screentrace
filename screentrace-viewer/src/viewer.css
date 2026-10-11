@@ -52,6 +52,10 @@ h1,h2,h3{margin:0}
 /* layout */
 .shell{display:grid;grid-template-columns:260px minmax(0,1fr) 340px;height:calc(100vh - 56px)}
 .shell[data-page=api]{grid-template-columns:minmax(0,1fr)}
+.shell[data-focus=true]:not([data-sidebar=open]){grid-template-columns:minmax(0,1fr) 340px}
+.shell[data-focus=true]:not([data-sidebar=open]) .sidebar{display:none}
+.list-toggle{display:inline-flex;align-items:center;gap:4px;padding:6px 10px}
+.list-toggle[aria-pressed=true]{background:var(--primary-soft);border-color:var(--primary);color:var(--primary)}
 .shell[data-page=api] .sidebar,.shell[data-page=api] .details-panel{display:none}
 .sidebar,.details-panel{background:white;overflow:auto;padding:12px}
 .sidebar{border-right:1px solid var(--gray-200);display:flex;flex-direction:column;gap:10px}
@@ -221,10 +225,12 @@ g.is-active .focus-line.unresolved{stroke:#a16207}
 
 @media (max-width:1180px){
  .shell{grid-template-columns:220px minmax(0,1fr) 300px}
+ .shell[data-focus=true]:not([data-sidebar=open]){grid-template-columns:minmax(0,1fr) 300px}
  #application,.save-status{display:none}
 }
 @media (max-width:1024px){
  .shell{grid-template-columns:200px minmax(0,1fr) 280px}
+ .shell[data-focus=true]:not([data-sidebar=open]){grid-template-columns:minmax(0,1fr) 280px}
  .topbar{gap:8px;padding:0 8px}
  .page-tab{padding:6px 8px}
 }

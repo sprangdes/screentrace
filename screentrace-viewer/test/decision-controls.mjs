@@ -20,6 +20,14 @@ export async function openScreen(page,id){
  const tab=page.locator('.page-tab[data-page="screens"]');
  if(await tab.getAttribute('aria-current')!=='page')await tab.click();
  if(await page.locator(`[data-screen-panel="${id}"]`).count())return;
+ await showList(page);
  await page.locator(`.screen-list [data-screen-list="${id}"],.file-tree [data-screen-list="${id}"]`).first().click();
  await page.locator(`[data-screen-panel="${id}"]`).waitFor();
+}
+
+/** While a screen is zoomed in, the screen list is collapsed; open it the way a person would. */
+export async function showList(page){
+ if(await page.locator('.sidebar').isVisible())return;
+ await page.locator('.list-toggle').click();
+ await page.locator('.sidebar').waitFor();
 }

@@ -98,3 +98,24 @@ test('R17 WP63 clicks act like the real page: links navigate, forms submit witho
   await page.waitForFunction(()=>document.querySelector('.canvas').dataset.focused==='c');
  }finally{await browser.close();}
 });
+
+test('R17 WP62 zooming in collapses the screen list to enlarge the preview; the list button brings it back',async()=>{
+ const {browser,page}=await open();
+ try{
+  const sidebar=page.locator('.sidebar');
+  assert.equal(await sidebar.isVisible(),true);
+  await page.locator('.screen-card[data-screen="a"]').click();await ready(page);
+  assert.equal(await sidebar.isVisible(),false);
+  const toggle=page.locator('.list-toggle');
+  assert.equal(await toggle.getAttribute('aria-pressed'),'false');
+  await toggle.click();
+  assert.equal(await sidebar.isVisible(),true);assert.equal(await toggle.getAttribute('aria-pressed'),'true');
+  await toggle.click();assert.equal(await sidebar.isVisible(),false);
+  await page.locator('body').click({position:{x:5,y:5}});await page.keyboard.press('/');
+  assert.equal(await sidebar.isVisible(),true);
+  await page.getByRole('searchbox',{name:'搜尋 URL 或畫面名稱'}).press('Escape');
+  await page.locator('.prototype-back').click();
+  await page.waitForFunction(()=>document.querySelector('.canvas').dataset.mode==='overview');
+  assert.equal(await sidebar.isVisible(),true);
+ }finally{await browser.close();}
+});
