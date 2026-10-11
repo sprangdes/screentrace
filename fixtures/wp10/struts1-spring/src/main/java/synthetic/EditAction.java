@@ -1,0 +1,1 @@
+package synthetic; import org.apache.struts.actions.DispatchAction; class EditAction extends DispatchAction { public ActionForward save(ActionMapping mapping,ActionForm form,HttpServletRequest request,HttpServletResponse response){return mapping.findForward("ok");} Object other(ActionMapping mapping,String dynamic){return mapping.findForward(dynamic);} }

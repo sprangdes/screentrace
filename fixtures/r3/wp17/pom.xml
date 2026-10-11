@@ -1,0 +1,1 @@
+<project><modelVersion>4.0.0</modelVersion><groupId>example</groupId><artifactId>wp17-fixture</artifactId><version>1</version><dependencies><dependency><groupId>org.springframework</groupId><artifactId>spring-webmvc</artifactId><version>6.1.0</version></dependency></dependencies></project>

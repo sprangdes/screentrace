@@ -1,0 +1,71 @@
+package io.screentrace.core;
+
+import io.screentrace.core.ApplicationGraph.*;
+import java.util.*;
+
+/** Pure R-API-1..6 derivation. UNREFERENCED never authorizes removal. */
+public final class ApiUsage {
+  private ApiUsage() { }
+  public enum Decision { KEEP, REMOVE, UNDECIDED }
+  public enum Status { IN_USE, REMOVABLE, UNREFERENCED }
+  /** Component decisions belong to one rendered screen, even for shared include components. */
+  public record ComponentKey(String screenId, String componentId) { }
+  public record Caller(String screenId,String componentId,String behaviorId) implements Comparable<Caller> {
+    @Override public int compareTo(Caller other) {
+      int result=screenId.compareTo(other.screenId);
+      if(result==0) result=Objects.toString(componentId,"").compareTo(Objects.toString(other.componentId,""));
+      if(result==0) result=Objects.toString(behaviorId,"").compareTo(Objects.toString(other.behaviorId,""));
+      return result;
+    }
+  }
+  public record Usage(Status status,List<Caller> callers) { }
+  public static Map<String,Usage> derive(ApplicationGraph graph,Map<String,Decision> screenDecisions,Map<ComponentKey,Decision> componentDecisions) {
+    Map<String,GraphNode> nodes=new HashMap<>();graph.nodes().forEach(node->nodes.put(node.id(),node));
+    Map<String,Set<String>> owners=new TreeMap<>();
+    graph.relationships().stream().filter(e->e.type()==EdgeType.CONTAINS && nodes.containsKey(e.from()) && nodes.get(e.from()).type()==NodeType.SCREEN)
+        .forEach(e->owners.computeIfAbsent(e.to(),id->new TreeSet<>()).add(e.from()));
+    Map<String,SortedSet<Caller>> callers=new TreeMap<>();
+    graph.nodes().stream().filter(n->n.type()==NodeType.ENDPOINT).forEach(n->callers.put(n.id(),new TreeSet<>()));
+    for(Relationship edge:graph.relationships()) if(edge.to()!=null && callers.containsKey(edge.to()) && (edge.type()==EdgeType.CALLS||edge.type()==EdgeType.TRIGGERS)) {
+      GraphNode from=nodes.get(edge.from());
+      if(from==null) continue;
+      if(from.type()==NodeType.SCREEN && graph.behaviors().stream().noneMatch(b -> b.type()==BehaviorType.CALL_API && from.id().equals(b.triggerId()) && edge.to().equals(b.targetId()))) callers.get(edge.to()).add(new Caller(from.id(),null,null));
+      if(from.type()==NodeType.COMPONENT && graph.behaviors().stream().noneMatch(b -> b.type()==BehaviorType.CALL_API && from.id().equals(b.triggerId()) && edge.to().equals(b.targetId())))
+        for(String screen:owners.getOrDefault(from.id(),Set.of())) callers.get(edge.to()).add(new Caller(screen,from.id(),null));
+    }
+    Map<String,Behavior> behaviors=new TreeMap<>();graph.behaviors().forEach(b->behaviors.put(b.id(),b));
+    for(Behavior behavior:graph.behaviors()) if(behavior.type()==BehaviorType.CALL_API && behavior.targetId()!=null && callers.containsKey(behavior.targetId())) {
+      Behavior parent=behavior;Set<String> seen=new HashSet<>();
+      while(parent.triggerId()==null && parent.parentId()!=null && seen.add(parent.id()) && behaviors.containsKey(parent.parentId())) parent=behaviors.get(parent.parentId());
+      GraphNode trigger=nodes.get(parent.triggerId());if(trigger==null) continue;
+      if(trigger.type()==NodeType.SCREEN) callers.get(behavior.targetId()).add(new Caller(trigger.id(),null,behavior.id()));
+      if(trigger.type()==NodeType.COMPONENT) for(String screen:owners.getOrDefault(trigger.id(),Set.of())) callers.get(behavior.targetId()).add(new Caller(screen,trigger.id(),behavior.id()));
+    }
+    // A proven redirect/forward is represented by an inferred HANDLER -> ENDPOINT
+    // CALLS edge. Transfer only callers already present on its source route; route
+    // reachability by itself never creates a caller.
+    Map<String,Set<String>> redirects=new TreeMap<>();
+    for(Relationship edge:graph.relationships()) if(edge.type()==EdgeType.CALLS&&edge.confidence()==Confidence.INFERRED
+        &&edge.evidence().stream().anyMatch(e->"RedirectInheritance".equals(e.parser()))
+        &&callers.containsKey(edge.to())&&nodes.get(edge.from())!=null&&nodes.get(edge.from()).type()==NodeType.HANDLER) {
+      for(Relationship handled:graph.relationships()) if(handled.type()==EdgeType.HANDLED_BY&&handled.to().equals(edge.from())&&callers.containsKey(handled.from()))
+        redirects.computeIfAbsent(handled.from(),id->new TreeSet<>()).add(edge.to());
+    }
+    record Hop(String endpoint,Caller caller,int depth,Set<String> visited) { }
+    ArrayDeque<Hop> queue=new ArrayDeque<>();
+    for(var entry:callers.entrySet()) for(Caller caller:List.copyOf(entry.getValue())) queue.add(new Hop(entry.getKey(),caller,0,Set.of(entry.getKey())));
+    while(!queue.isEmpty()) {
+      Hop hop=queue.removeFirst();if(hop.depth()>=5)continue;
+      for(String destination:redirects.getOrDefault(hop.endpoint(),Set.of())) if(!hop.visited().contains(destination)) {
+        callers.get(destination).add(hop.caller());Set<String> visited=new HashSet<>(hop.visited());visited.add(destination);
+        queue.addLast(new Hop(destination,hop.caller(),hop.depth()+1,Set.copyOf(visited)));
+      }
+    }
+    Map<String,Usage> result=new TreeMap<>();
+    callers.forEach((id,values)->{
+      boolean removed=!values.isEmpty()&&values.stream().allMatch(c->screenDecisions.get(c.screenId())==Decision.REMOVE || c.componentId()!=null&&componentDecisions.get(new ComponentKey(c.screenId(),c.componentId()))==Decision.REMOVE);
+      result.put(id,new Usage(values.isEmpty()?Status.UNREFERENCED:removed?Status.REMOVABLE:Status.IN_USE,List.copyOf(values)));
+    });
+    return Collections.unmodifiableMap(result);
+  }
+}

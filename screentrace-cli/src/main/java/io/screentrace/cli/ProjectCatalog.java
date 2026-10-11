@@ -6,6 +6,7 @@ import java.nio.file.Path;
 import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Stream;
+import io.screentrace.scanner.RealPaths;
 
 /** Finds direct-child projects and their independently stored analysis outputs. */
 final class ProjectCatalog {
@@ -16,7 +17,7 @@ final class ProjectCatalog {
     try (Stream<Path> children = Files.list(settings.projectRoot())) {
       return children.filter(path -> Files.isDirectory(path) && !Files.isSymbolicLink(path))
           .filter(path -> !path.getFileName().toString().startsWith("."))
-          .filter(path -> !path.toAbsolutePath().normalize().equals(settings.outputRoot()))
+          .filter(path -> !sameRealPath(path, settings.outputRoot()))
           .map(path -> project(path, settings.outputRoot()))
           .sorted(Comparator.comparing(Project::name, String.CASE_INSENSITIVE_ORDER))
           .toList();
@@ -48,10 +49,15 @@ final class ProjectCatalog {
     return regular(analysis.resolve("application-graph.json"))
         && regular(analysis.resolve("prototype-model.json"))
         && regular(analysis.resolve("preview-model.json"))
-        && regular(analysis.resolve("report/index.html"));
+        && (regular(analysis.resolve("report/screentrace-report.html")) || regular(analysis.resolve("report/index.html")));
   }
 
   private static boolean regular(Path path) {
     return Files.isRegularFile(path) && !Files.isSymbolicLink(path);
+  }
+
+  private static boolean sameRealPath(Path left, Path right) {
+    try { return RealPaths.isSame(left, right); }
+    catch (IOException ignored) { return false; }
   }
 }

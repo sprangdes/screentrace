@@ -1,0 +1,7 @@
+base	src/main/webapp/WEB-INF/tiles-defs.xml	1	TILE_DEFINITION_FRAGMENT
+child	src/main/webapp/WEB-INF/tiles-defs.xml	1	TILE_DEFINITION_FRAGMENT
+layout	src/main/webapp/WEB-INF/views/layout.jsp	1	TEMPLATE_JSP
+nested	src/main/webapp/WEB-INF/tiles-defs.xml	1	TILE_DEFINITION_FRAGMENT
+合成訂單畫面	src/main/webapp/WEB-INF/tiles-defs.xml	1	UNROUTED_PAGE_DEFINITION
+page	src/main/java/synthetic/PageController.java	4	PAGE_ROUTE_ALIAS
+page	src/main/webapp/WEB-INF/views/page.jsp	1	RETAIN_PAGE

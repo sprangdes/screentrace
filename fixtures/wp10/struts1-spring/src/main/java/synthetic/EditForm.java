@@ -1,0 +1,1 @@
+package synthetic; class EditForm extends ActionForm {String email; Object validate(){ActionErrors errors=new ActionErrors();errors.add("email",new ActionMessage("email.required"));if(runtimeFlag)errors.add("conditional",new ActionMessage("conditional.bad"));return errors;} }

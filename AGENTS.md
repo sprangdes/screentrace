@@ -249,6 +249,7 @@ Prefer small deterministic test fixtures over large application snapshots.
 Before implementing a task:
 
 1. Read `AGENTS.md`.
+   Read `docs/CODEX_INSTRUCTIONS.md` and `docs/REQUIREMENTS.md` when present; current adjustment work follows the milestone order and stop conditions in those instructions.
 2. Read `docs/PRODUCT_SPEC.md`.
 3. Read `docs/ARCHITECTURE.md`.
 4. Check `docs/ROADMAP.md` for current phase.

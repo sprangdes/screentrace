@@ -1,0 +1,1 @@
+package synthetic;import org.springframework.validation.*;class InputValidator implements Validator {public boolean supports(Class<?> type){return Input.class.equals(type);}public void validate(Object input,Errors errors){if(input==null){errors.rejectValue("email","email.invalid","電子郵件不正確");}}}

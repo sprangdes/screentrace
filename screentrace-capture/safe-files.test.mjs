@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdtemp, mkdir, symlink, writeFile, rm } from 'node:fs/promises';
+import { mkdtemp, mkdir, symlink, writeFile, rm, realpath } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
@@ -33,4 +33,30 @@ test('refuses output symlinks and traversal', async () => {
   await assert.rejects(assertOutputPathWithin(root, path.join(root, '..', 'escaped.txt')));
   await assert.rejects(assertOutputPathWithin(root, path.join(root, 'linked', 'escaped.txt')));
   await assert.rejects(createDirectoryWithin(root, path.join(root, 'linked', 'new-dir')));
+});
+
+test('accepts a configured output root through its root symlink while keeping child symlinks forbidden', async () => {
+  const parent = await mkdtemp(path.join(os.tmpdir(), 'screentrace-output-alias-'));
+  const actual = path.join(parent, 'actual');
+  const alias = path.join(parent, 'alias');
+  await mkdir(actual);
+  await symlink(actual, alias);
+  const file = path.join(alias, 'report.html');
+  assert.equal(await assertOutputPathWithin(alias, file), file);
+  assert.equal(await createDirectoryWithin(alias, path.join(alias, 'nested')), await realpath(path.join(actual, 'nested')));
+  await symlink(path.join(actual, 'nested'), path.join(actual, 'child-link'));
+  await assert.rejects(assertOutputPathWithin(alias, path.join(alias, 'child-link', 'report.html')));
+  await rm(parent, { recursive: true, force: true });
+});
+
+test('containment treats a sibling sharing the root name prefix as outside', async () => {
+  const parent = await mkdtemp(path.join(os.tmpdir(), 'screentrace-boundary-'));
+  const root = path.join(parent, 'output');
+  const sibling = path.join(parent, 'output-private');
+  await mkdir(root);
+  await mkdir(sibling);
+  await writeFile(path.join(sibling, 'report.html'), 'private');
+  await assert.rejects(resolveExistingFileWithin(root, path.join(sibling, 'report.html')));
+  await assert.rejects(assertOutputPathWithin(root, path.join(sibling, 'report.html')));
+  await rm(parent, { recursive: true, force: true });
 });

@@ -1,0 +1,1 @@
+<struts-config><action-mappings><action path="/save" type="synthetic.ApiAction"/></action-mappings></struts-config>

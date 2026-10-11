@@ -1,0 +1,180 @@
+package io.screentrace.adapter.struts;
+
+import static org.junit.jupiter.api.Assertions.*;
+
+import io.screentrace.core.ApplicationGraph;
+import io.screentrace.core.ApplicationGraph.*;
+import io.screentrace.scanner.ProjectScanner;
+import java.nio.file.*;
+import java.util.*;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+
+class StrutsR16TilesBoundaryTest {
+  @TempDir Path root;
+
+  private void file(String path,String text)throws Exception{Path target=root.resolve(path);Files.createDirectories(target.getParent());Files.writeString(target,text);}
+  private ApplicationGraph analyze()throws Exception{return new StrutsProjectAnalyzer().analyze(new ProjectScanner().scan(root));}
+
+  @Test void wp10BehaviorSourceTuplesBeforeWp55RemainPresentAfterTilesDeduplication()throws Exception{
+    Path project=null;for(Path candidate=Path.of("").toAbsolutePath();candidate!=null;candidate=candidate.getParent())if(Files.isRegularFile(candidate.resolve("pom.xml"))&&Files.isDirectory(candidate.resolve("screentrace-core"))){project=candidate.resolve("fixtures/wp10/struts1");break;}
+    assertNotNull(project,"repository root");var graph=new StrutsProjectAnalyzer().analyze(new ProjectScanner().scan(project));
+    Set<String> before;try(var input=getClass().getResourceAsStream("/wp10-struts1-wp55-before-behavior-sources.txt")){assertNotNull(input);before=new TreeSet<>(new String(input.readAllBytes(),java.nio.charset.StandardCharsets.UTF_8).lines().filter(line->!line.isBlank()).toList());}
+    Set<String> after=new TreeSet<>();for(var behavior:graph.behaviors())for(var proof:behavior.evidence())if(proof.source()!=null&&!proof.source().file().equals("."))after.add(proof.source().file()+"\t"+proof.source().line()+"\t"+behavior.type().name());
+    Set<String> missing=new TreeSet<>(before);missing.removeAll(after);assertTrue(missing.isEmpty(),"WP55 removed behavior source tuples: "+missing);
+  }
+
+  @Test void wp10FixtureKeepsUnroutedPageDefinitionAndDirectJspAsScreens()throws Exception{
+    Path project=null;for(Path candidate=Path.of("").toAbsolutePath();candidate!=null;candidate=candidate.getParent())if(Files.isRegularFile(candidate.resolve("pom.xml"))&&Files.isDirectory(candidate.resolve("screentrace-core"))){project=candidate.resolve("fixtures/wp10/struts1");break;}
+    assertNotNull(project,"repository root");assertTrue(Files.isDirectory(project),project.toString());
+    var graph=new StrutsProjectAnalyzer().analyze(new ProjectScanner().scan(project));
+    Map<String,GraphNode> screens=new TreeMap<>();graph.nodes().stream().filter(node->node.type()==NodeType.SCREEN).forEach(node->screens.put(node.name(),node));
+    assertEquals(Set.of("page","合成訂單畫面"),screens.keySet());
+    var outer=screens.get("合成訂單畫面");
+    assertTrue(outer.source().file().endsWith("tiles-defs.xml"));
+    assertFalse(graph.relationships().stream().anyMatch(edge->Set.of(EdgeType.RENDERS,EdgeType.FORWARDS_TO).contains(edge.type())&&edge.to().equals(outer.id())));
+    assertTrue(graph.relationships().stream().anyMatch(edge->edge.type()==EdgeType.CONTAINS&&edge.from().equals(outer.id())),"unrouted page definition must retain its controls");
+  }
+
+  @Test void everyUnreferencedPageDefinitionRemainsAScreenAndItsJspControlsStayGrouped()throws Exception{
+    file("src/main/webapp/WEB-INF/web.xml","<web-app><servlet><servlet-name>action</servlet-name><servlet-class>org.apache.struts.action.ActionServlet</servlet-class></servlet><servlet-mapping><servlet-name>action</servlet-name><url-pattern>*.do</url-pattern></servlet-mapping></web-app>");
+    file("src/main/webapp/WEB-INF/struts-config.xml","<struts-config><action-mappings><action path='/home' type='sample.Home'><forward name='ok' path='home.page'/></action></action-mappings></struts-config>");
+    file("tiles-defs.xml","<tiles-definitions><definition name='base' path='/WEB-INF/jsp/layout.jsp'><put name='body' value='/WEB-INF/jsp/body.jsp'/><put name='header' value='/header.jsp'/></definition><definition name='home.page' extends='base'><put-attribute name='heading' value='Home'/></definition><definition name='unused.page' extends='base'><put name='body' value='/WEB-INF/jsp/unused.jsp'/></definition></tiles-definitions>");
+    file("src/main/webapp/WEB-INF/jsp/layout.jsp","<tiles:insert page='/WEB-INF/jsp/body.jsp'/><button id='layout-action'>Layout action</button><script>fetch('/layout-api')</script>");
+    file("src/main/webapp/WEB-INF/jsp/body.jsp","<button id='body-action'>Body action</button>");
+    file("src/main/webapp/WEB-INF/jsp/unused.jsp","<button id='unused-action'>Unused</button>");
+    file("src/main/webapp/WEB-INF/jsp/full.jsp","<h1>Full page</h1>");
+    file("src/main/webapp/header.jsp","<button id='header-action'>Header action</button>");
+    file("src/main/webapp/WEB-INF/struts-config.xml","<struts-config><action-mappings><action path='/home' type='sample.Home'><forward name='ok' path='home.page'/><forward name='full' path='/WEB-INF/jsp/full.jsp'/></action></action-mappings></struts-config>");
+
+    var graph=analyze();
+    Set<String> screenNames=new TreeSet<>();graph.nodes().stream().filter(node->node.type()==NodeType.SCREEN).forEach(node->screenNames.add(node.name()));
+    assertEquals(Set.of("full","Home Page","Unused Page"),screenNames);
+    var home=graph.nodes().stream().filter(node->node.type()==NodeType.SCREEN&&node.name().equals("Home Page")).findFirst().orElseThrow();
+    var contained=graph.relationships().stream().filter(edge->edge.type()==EdgeType.CONTAINS&&edge.from().equals(home.id())).map(edge->graph.nodes().stream().filter(node->node.id().equals(edge.to())).findFirst().orElseThrow()).toList();
+    assertTrue(contained.stream().anyMatch(node->node.source().file().endsWith("body.jsp")&&"body-action".equals(node.attributes().get("id"))),contained.toString());
+    assertTrue(contained.stream().anyMatch(node->node.source().file().endsWith("layout.jsp")&&"layout-action".equals(node.attributes().get("id"))),contained.toString());
+    assertTrue(contained.stream().anyMatch(node->node.source().file().endsWith("header.jsp")&&"header-action".equals(node.attributes().get("id"))),contained.toString());
+    for(String name:List.of("Home Page","Unused Page")) {
+      var owner=graph.nodes().stream().filter(node->node.type()==NodeType.SCREEN&&node.name().equals(name)).findFirst().orElseThrow();
+      assertTrue(graph.behaviors().stream().anyMatch(behavior->behavior.triggerId().equals(owner.id())&&behavior.type()==BehaviorType.CALL_API&&behavior.expression().contains("/layout-api")),name+" must own the shared layout script behavior");
+    }
+    var unused=graph.nodes().stream().filter(node->node.type()==NodeType.SCREEN&&node.name().equals("Unused Page")).findFirst().orElseThrow();
+    assertFalse(graph.relationships().stream().anyMatch(edge->Set.of(EdgeType.RENDERS,EdgeType.FORWARDS_TO).contains(edge.type())&&edge.to().equals(unused.id())));
+    assertTrue(graph.relationships().stream().anyMatch(edge->edge.type()==EdgeType.CONTAINS&&edge.from().equals(unused.id())&&graph.nodes().stream().anyMatch(node->node.id().equals(edge.to())&&node.source().file().endsWith("unused.jsp"))),graph.nodes().toString());
+    assertTrue(graph.relationships().stream().anyMatch(edge->edge.type()==EdgeType.INCLUDES&&edge.from().equals(home.id())));
+    assertFalse(graph.diagnostics().stream().anyMatch(diagnostic->diagnostic.code().equals("TILES_REFERENCE_UNRESOLVED")&&diagnostic.message().contains("/header.jsp")),graph.diagnostics().toString());
+  }
+
+  @Test void unreferencedTileFragmentsAndOrdinaryJspRemainScreens()throws Exception{
+    file("src/main/webapp/WEB-INF/web.xml","<web-app><servlet><servlet-name>action</servlet-name><servlet-class>org.apache.struts.action.ActionServlet</servlet-class></servlet><servlet-mapping><servlet-name>action</servlet-name><url-pattern>*.do</url-pattern></servlet-mapping></web-app>");
+    file("src/main/webapp/WEB-INF/struts-config.xml","<struts-config><action-mappings><action path='/home' type='sample.Home'><forward name='ok' path='home.page'/></action></action-mappings></struts-config>");
+    file("tiles-defs.xml","<tiles-definitions><definition name='home.page' path='/WEB-INF/jsp/home.jsp'/></tiles-definitions>");
+    file("src/main/webapp/WEB-INF/jsp/home.jsp","<h1>Home</h1>");
+    file("src/main/webapp/WEB-INF/jsp/orphan-layout.jsp","<%@ taglib prefix='tiles' uri='http://struts.apache.org/tags-tiles' %><tiles:insert attribute='body'/><button>Layout action</button>");
+    file("src/main/webapp/WEB-INF/jsp/unrouted-fragment.jsp","<p>Fragment only</p>");
+
+    var graph=analyze();
+    assertTrue(graph.nodes().stream().anyMatch(node->node.type()==NodeType.SCREEN&&node.source().file().endsWith("orphan-layout.jsp")));
+    assertTrue(graph.nodes().stream().anyMatch(node->node.type()==NodeType.SCREEN&&node.source().file().endsWith("unrouted-fragment.jsp")),graph.nodes().stream().filter(node->node.type()==NodeType.SCREEN).toList().toString());
+  }
+
+  @Test void pageDefinitionOwnsTilesDefinitionInsertedByItsJsp()throws Exception{
+    file("src/main/webapp/WEB-INF/web.xml","<web-app><servlet><servlet-name>action</servlet-name><servlet-class>org.apache.struts.action.ActionServlet</servlet-class></servlet><servlet-mapping><servlet-name>action</servlet-name><url-pattern>*.do</url-pattern></servlet-mapping></web-app>");
+    file("src/main/webapp/WEB-INF/struts-config.xml","<struts-config><action-mappings><action path='/home' type='sample.Home'><forward name='ok' path='home.page'/></action></action-mappings></struts-config>");
+    file("tiles-defs.xml","<tiles-definitions><definition name='home.page' path='/WEB-INF/jsp/home.jsp'/><definition name='orphan.layout' path='/WEB-INF/jsp/orphan-layout.jsp'/></tiles-definitions>");
+    file("src/main/webapp/WEB-INF/jsp/home.jsp","<tiles:insert definition='orphan.layout'/><h1>Home</h1>");
+    file("src/main/webapp/WEB-INF/jsp/orphan-layout.jsp","<button id='layout-action'>Shared layout</button><script>fetch('/insert-layout-api')</script>");
+
+    var graph=analyze();
+    Set<String> screens=new TreeSet<>();graph.nodes().stream().filter(node->node.type()==NodeType.SCREEN).forEach(node->screens.add(node.name()));
+    assertEquals(Set.of("Home Page"),screens);
+    var home=graph.nodes().stream().filter(node->node.type()==NodeType.SCREEN&&node.name().equals("Home Page")).findFirst().orElseThrow();
+    assertTrue(graph.relationships().stream().anyMatch(edge->edge.type()==EdgeType.CONTAINS&&edge.from().equals(home.id())&&graph.nodes().stream().anyMatch(node->node.id().equals(edge.to())&&node.source().file().endsWith("orphan-layout.jsp")&&"layout-action".equals(node.attributes().get("id")))));
+    assertTrue(graph.behaviors().stream().anyMatch(behavior->behavior.triggerId().equals(home.id())&&behavior.type()==BehaviorType.CALL_API&&behavior.expression().contains("/insert-layout-api")));
+  }
+
+  @Test void unreferencedTileTemplateRetainsItsOwnScreenAndControls()throws Exception{
+    file("src/main/webapp/WEB-INF/web.xml","<web-app><servlet><servlet-name>action</servlet-name><servlet-class>org.apache.struts.action.ActionServlet</servlet-class></servlet><servlet-mapping><servlet-name>action</servlet-name><url-pattern>*.do</url-pattern></servlet-mapping></web-app>");
+    file("src/main/webapp/WEB-INF/struts-config.xml","<struts-config><action-mappings><action path='/home' type='sample.Home'><forward name='ok' path='/WEB-INF/jsp/page.jsp'/></action></action-mappings></struts-config>");
+    file("tiles-defs.xml","<tiles-definitions><definition name='base' path='/WEB-INF/jsp/layout.jsp'><put name='body' value='/WEB-INF/jsp/page.jsp'/></definition></tiles-definitions>");
+    file("src/main/webapp/WEB-INF/jsp/layout.jsp","<%@ taglib prefix='tiles' uri='http://struts.apache.org/tags-tiles' %><tiles:insert attribute='body'/><button id='layout-action'>Shared action</button><script>fetch('/tiles-layout-api')</script>");
+    file("src/main/webapp/WEB-INF/jsp/page.jsp","<h1>Page</h1>");
+
+    var graph=analyze();
+    var layout=graph.nodes().stream().filter(node->node.type()==NodeType.SCREEN&&node.id().equals(ApplicationGraph.id(NodeType.SCREEN,"tiles:base"))).findFirst().orElseThrow();
+    assertTrue(graph.relationships().stream().anyMatch(edge->edge.type()==EdgeType.CONTAINS&&edge.from().equals(layout.id())&&graph.nodes().stream().anyMatch(node->node.id().equals(edge.to())&&"layout-action".equals(node.attributes().get("id")))),graph.nodes().toString()+"\n"+graph.relationships().toString());
+    assertFalse(graph.relationships().stream().anyMatch(edge->edge.type()==EdgeType.RENDERS&&edge.to().equals(layout.id())));
+    assertTrue(graph.behaviors().stream().anyMatch(behavior->behavior.triggerId().equals(layout.id())&&behavior.type()==BehaviorType.CALL_API&&behavior.expression().contains("/tiles-layout-api")),graph.behaviors()+"\n"+graph.diagnostics());
+  }
+
+  @Test void extendedTileDefinitionRemainsAsAuditableNonScreenNode()throws Exception{
+    file("src/main/webapp/WEB-INF/web.xml","<web-app><servlet><servlet-name>action</servlet-name><servlet-class>org.apache.struts.action.ActionServlet</servlet-class></servlet><servlet-mapping><servlet-name>action</servlet-name><url-pattern>*.do</url-pattern></servlet-mapping></web-app>");
+    file("src/main/webapp/WEB-INF/struts-config.xml","<struts-config><action-mappings><action path='/home' type='sample.Home'><forward name='ok' path='home.page'/></action></action-mappings></struts-config>");
+    file("tiles-defs.xml","<tiles-definitions><definition name='base' path='/WEB-INF/jsp/layout.jsp'/><definition name='home.page' extends='base'/></tiles-definitions>");
+    file("src/main/webapp/WEB-INF/jsp/layout.jsp","<tiles:insert attribute='body'/>");
+
+    var graph=analyze();
+    var baseView=graph.nodes().stream().filter(node->node.type()==NodeType.VIEW&&node.name().equals("base")).findFirst().orElseThrow();
+    assertEquals("src/main/webapp/WEB-INF/jsp/layout.jsp",baseView.attributes().get("view"));
+    assertEquals("tiles-defs.xml",baseView.source().file());
+    assertFalse(graph.nodes().stream().anyMatch(node->node.type()==NodeType.SCREEN&&node.name().equals("base")));
+    var pageView=graph.nodes().stream().filter(node->node.type()==NodeType.VIEW&&node.name().equals("home.page")).findFirst().orElseThrow();
+    assertEquals("/WEB-INF/jsp/layout.jsp",pageView.attributes().get("view"));
+    assertEquals("base",pageView.attributes().get("extends"));
+    assertTrue(graph.relationships().stream().anyMatch(edge->edge.type()==EdgeType.INCLUDES&&edge.from().equals(pageView.id())&&edge.to().equals(baseView.id())&&edge.evidence().stream().anyMatch(proof->proof.detail()!=null&&proof.detail().contains("extends=base"))));
+  }
+
+  @Test void tilePageNamesPreferInheritedTitleThenBodyHeadingThenHumanizedDefinition()throws Exception{
+    file("src/main/webapp/WEB-INF/web.xml","<web-app><servlet><servlet-name>action</servlet-name><servlet-class>org.apache.struts.action.ActionServlet</servlet-class></servlet><servlet-mapping><servlet-name>action</servlet-name><url-pattern>*.do</url-pattern></servlet-mapping></web-app>");
+    file("src/main/webapp/WEB-INF/struts-config.xml","<struts-config><message-resources parameter='messages'/><action-mappings><action path='/home' type='sample.Home'><forward name='home' path='.homePage'/></action></action-mappings></struts-config>");
+    file("src/main/resources/messages.properties","screen.title=Resource Home Title\n");
+    file("tiles-defs.xml","<tiles-definitions><definition name='.base' path='/layout.jsp'><put name='title' value='screen.title'/><put name='body' value='/title-body.jsp'/></definition><definition name='.homePage' extends='.base'/><definition name='.bodyPage' extends='.bodyLayout'><put name='body' value='/heading-body.jsp'/></definition><definition name='.bodyLayout' path='/layout.jsp'/><definition name='.mainMenu' path='/empty.jsp'/></tiles-definitions>");
+    file("src/main/webapp/layout.jsp","<html><head><title>Layout Must Never Become A Page Name</title></head><body><tiles:insert attribute='body'/></body></html>");
+    file("src/main/webapp/title-body.jsp","<h1>Body Heading Must Lose To Definition Title</h1>");
+    file("src/main/webapp/heading-body.jsp","<h1><bean:message key='screen.heading'/></h1>");
+    file("src/main/webapp/empty.jsp","<p>No readable page title</p>");
+    file("src/main/resources/messages.properties","screen.title=Resource Home Title\nscreen.heading=Body Resource Heading\n");
+
+    var graph=analyze();
+    Map<String,String> names=new TreeMap<>();for(String definition:List.of(".homePage",".bodyPage",".mainMenu")){String id=ApplicationGraph.id(NodeType.SCREEN,"tiles:"+definition);var screen=graph.nodes().stream().filter(node->node.id().equals(id)).findFirst().orElseThrow();names.put(definition,screen.name());}
+    assertEquals("Resource Home Title",names.get(".homePage"),names.toString());
+    assertEquals("Body Resource Heading",names.get(".bodyPage"),names.toString());
+    assertEquals("Main Menu",names.get(".mainMenu"),names.toString());
+    assertEquals("Tiles title put",graph.nodes().stream().filter(node->node.id().equals(ApplicationGraph.id(NodeType.SCREEN,"tiles:.homePage"))).findFirst().orElseThrow().attributes().get("screenNameSource"));
+    assertEquals("body JSP",graph.nodes().stream().filter(node->node.id().equals(ApplicationGraph.id(NodeType.SCREEN,"tiles:.bodyPage"))).findFirst().orElseThrow().attributes().get("screenNameSource"));
+    assertEquals("Tiles definition name",graph.nodes().stream().filter(node->node.id().equals(ApplicationGraph.id(NodeType.SCREEN,"tiles:.mainMenu"))).findFirst().orElseThrow().attributes().get("screenNameSource"));
+    assertFalse(names.values().stream().anyMatch(name->name.startsWith("Layout")),names.toString());
+  }
+
+  @Test void wp10OuterPageDefinitionUsesBodyJspReadableName()throws Exception{
+    Path project=null;for(Path candidate=Path.of("").toAbsolutePath();candidate!=null;candidate=candidate.getParent())if(Files.isRegularFile(candidate.resolve("pom.xml"))&&Files.isDirectory(candidate.resolve("screentrace-core"))){project=candidate.resolve("fixtures/wp10/struts1");break;}
+    assertNotNull(project,"repository root");var graph=new StrutsProjectAnalyzer().analyze(new ProjectScanner().scan(project));
+    assertTrue(graph.nodes().stream().anyMatch(node->node.type()==NodeType.SCREEN&&node.name().equals("合成訂單畫面")&&node.source().file().endsWith("tiles-defs.xml")),graph.nodes().toString());
+  }
+
+  @Test void referencedRootTemplateWithoutEntryIsNotAnIndependentScreen()throws Exception{
+    file("src/main/webapp/WEB-INF/web.xml","<web-app><servlet><servlet-name>action</servlet-name><servlet-class>org.apache.struts.action.ActionServlet</servlet-class></servlet><servlet-mapping><servlet-name>action</servlet-name><url-pattern>*.do</url-pattern></servlet-mapping></web-app>");
+    file("src/main/webapp/WEB-INF/struts-config.xml","<struts-config><action-mappings><action path='/home' type='sample.Home'><forward name='ok' path='home.page'/></action></action-mappings></struts-config>");
+    file("tiles-defs.xml","<tiles-definitions><definition name='base' path='/layout.jsp'><put name='body' value='/body.jsp'/></definition><definition name='home.page' extends='base'/></tiles-definitions>");
+    file("src/main/webapp/layout.jsp","<tiles:insert attribute='body'/><button id='layout-action'>Layout</button>");
+    file("src/main/webapp/body.jsp","<button id='body-action'>Body</button>");
+
+    var graph=analyze();
+    assertFalse(graph.nodes().stream().anyMatch(node->node.type()==NodeType.SCREEN&&node.source().file().endsWith("layout.jsp")),graph.nodes().stream().filter(node->node.type()==NodeType.SCREEN).toList().toString());
+    var page=graph.nodes().stream().filter(node->node.type()==NodeType.SCREEN&&node.name().equals("Home Page")).findFirst().orElseThrow();
+    assertTrue(graph.relationships().stream().anyMatch(edge->edge.type()==EdgeType.CONTAINS&&edge.from().equals(page.id())&&graph.nodes().stream().anyMatch(node->node.id().equals(edge.to())&&node.source().file().endsWith("layout.jsp")&&"layout-action".equals(node.attributes().get("id")))));
+  }
+
+  @Test void standaloneTileTemplateScriptRemainsAttachedToItsUnroutedScreen()throws Exception{
+    file("src/main/webapp/WEB-INF/web.xml","<web-app><servlet><servlet-name>action</servlet-name><servlet-class>org.apache.struts.action.ActionServlet</servlet-class></servlet><servlet-mapping><servlet-name>action</servlet-name><url-pattern>*.do</url-pattern></servlet-mapping></web-app>");
+    file("src/main/webapp/WEB-INF/struts-config.xml","<struts-config><action-mappings><action path='/home' type='sample.Home'><forward name='ok' path='/WEB-INF/jsp/page.jsp'/></action></action-mappings></struts-config>");
+    file("tiles-defs.xml","<tiles-definitions><definition name='base' path='/WEB-INF/jsp/layout.jsp'><put name='body' value='/WEB-INF/jsp/page.jsp'/></definition></tiles-definitions>");
+    file("src/main/webapp/WEB-INF/jsp/layout.jsp","<%@ taglib prefix='tiles' uri='http://struts.apache.org/tags-tiles' %><tiles:insert attribute='body'/><script>fetch('/tiles-layout-api')</script>");
+    file("src/main/webapp/WEB-INF/jsp/page.jsp","<h1>Page</h1>");
+
+    var graph=analyze();
+    var layout=graph.nodes().stream().filter(node->node.type()==NodeType.SCREEN&&node.id().equals(ApplicationGraph.id(NodeType.SCREEN,"tiles:base"))).findFirst().orElseThrow();
+    assertTrue(graph.behaviors().stream().anyMatch(behavior->behavior.triggerId().equals(layout.id())&&behavior.type()==BehaviorType.CALL_API&&behavior.expression().contains("/tiles-layout-api")),graph.behaviors()+"\n"+graph.diagnostics());
+  }
+}

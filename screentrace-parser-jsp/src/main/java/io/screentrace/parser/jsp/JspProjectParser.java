@@ -13,6 +13,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import javax.xml.XMLConstants;
@@ -30,22 +31,25 @@ import org.xml.sax.SAXParseException;
 public final class JspProjectParser {
   private static final String PARSER = "JspProjectParser";
   public static final String CURRENT_VIEW_TARGET = "<current-view>";
-  private static final Pattern INLINE_SPRING_URL_LINK = Pattern.compile(
-      "(?is)<a\\b.*?\\bhref\\s*=\\s*(['\"])\\s*<spring:url\\b.*?\\bvalue\\s*=\\s*(['\"])([^'\"${}<>]+)\\2.*?/>\\s*\\1");
   private static final Pattern JSP_COMMENT = Pattern.compile("(?s)<%--.*?--%>");
   private static final Pattern JSTL_URL = Pattern.compile("(?is)<c:url\\b[^>]*?\\bvalue\\s*=\\s*(['\"])(.*?)\\1[^>]*/>");
 
   public JspAnalysis analyze(Path root, List<Path> files) throws IOException {
+    return analyze(root,files,(bundle,key)->null);
+  }
+
+  public JspAnalysis analyze(Path root, List<Path> files, StaticMessageResolver messages) throws IOException {
     List<JspAnalysis.View> views = new ArrayList<>();
     List<JspAnalysis.Interaction> interactions = new ArrayList<>();
     List<JspAnalysis.Include> includes = new ArrayList<>();
     List<JspAnalysis.TilesDefinition> tilesDefinitions = new ArrayList<>();
     List<Diagnostic> diagnostics = new ArrayList<>();
-    for (Path file : files) {
+    Map<String, MarkupAnalysis> markup = new java.util.TreeMap<>();
+    for (Path file : files.stream().sorted(java.util.Comparator.comparing(p->relative(root,p))).toList()) {
       String name = file.getFileName().toString();
       try {
-        if (name.endsWith(".jsp") || name.endsWith(".jspf")) {
-          parseJsp(root, file, views, interactions, includes, diagnostics);
+        if (name.endsWith(".jsp") || name.endsWith(".jspf") || name.endsWith(".html") || name.endsWith(".htm")) {
+          parseJsp(root, file, views, interactions, includes, diagnostics, markup,messages);
         } else if (name.endsWith(".xml") && SafeProjectFiles.readUtf8Limited(root, file, SafeProjectFiles.MAX_XML_FILE_BYTES).contains("tiles-definitions")) {
           parseTiles(root, file, tilesDefinitions, diagnostics);
         }
@@ -53,21 +57,35 @@ public final class JspProjectParser {
         diagnostics.add(unresolved("Source file was skipped: " + exception.getMessage(), new SourceLocation(relative(root, file), 1)));
       }
     }
-    return new JspAnalysis(views, expandIncludedInteractions(root, interactions, includes, diagnostics), includes, tilesDefinitions, diagnostics);
+    tilesDefinitions=resolveTiles(tilesDefinitions,diagnostics);
+    return new JspAnalysis(views, expandIncludedInteractions(root, interactions, includes, diagnostics), includes, tilesDefinitions, diagnostics, markup);
   }
+
+  @FunctionalInterface public interface StaticMessageResolver { String resolve(String bundle,String key); }
 
   private static void parseJsp(Path root, Path file, List<JspAnalysis.View> views,
                                List<JspAnalysis.Interaction> interactions, List<JspAnalysis.Include> includes,
-                               List<Diagnostic> diagnostics) throws IOException {
-    String text = preprocess(SafeProjectFiles.readUtf8Limited(root, file, SafeProjectFiles.MAX_JSP_FILE_BYTES));
+                               List<Diagnostic> diagnostics, Map<String, MarkupAnalysis> markup,StaticMessageResolver messages) throws IOException {
+    String text = SafeProjectFiles.readUtf8Limited(root, file, SafeProjectFiles.MAX_JSP_FILE_BYTES);
     String relative = relative(root, file);
-    JspAnalysis.ViewKind kind = relative.endsWith(".jspf") ? JspAnalysis.ViewKind.JSPF : JspAnalysis.ViewKind.JSP;
-    views.add(new JspAnalysis.View(relative, kind, new SourceLocation(relative, 1)));
-    Map<String, String> urls = new HashMap<>();
+    JspTagFileExpander.Result tagExpansion=new JspTagFileExpander().expand(root,relative,text);
+    text=tagExpansion.text();
+    for(String diagnostic:tagExpansion.diagnostics()) {
+      String code=diagnostic.startsWith("JSP_TAG_CYCLE")?"JSP_TAG_CYCLE":diagnostic.startsWith("JSP_TAG_DEPTH_LIMIT")?"JSP_TAG_DEPTH_LIMIT":"JSP_TAG_UNRESOLVED";
+      diagnostics.add(new Diagnostic("JSP 標籤檔展開受限："+diagnostic,Confidence.UNRESOLVED,new SourceLocation(relative,1),code,List.of()));
+    }
+    markup.put(relative, withAnchors(StaticComponentNames.annotate(MarkupAnalysis.parse(relative, text),text,messages),text,tagExpansion.anchors()));
+    JspAnalysis.ViewKind kind = relative.endsWith(".jspf") ? JspAnalysis.ViewKind.JSPF : relative.endsWith(".jsp") ? JspAnalysis.ViewKind.JSP : JspAnalysis.ViewKind.HTML;
+    views.add(new JspAnalysis.View(relative, kind, new SourceLocation(relative, 1),messageTitle(text,messages)));
+    UrlVariableResolver urls = new UrlVariableResolver(relative,text,includedWrites(root,relative,text,new java.util.HashSet<>()));
+    UrlVariableResolver.Resolution activeFormResolution = null;
+    Map<Integer,String> guards=markupGuards(text);
+    Map<Integer,Boolean> repeats=markupRepeats(text);
+    Map<String,Integer> componentOccurrences = new HashMap<>();
     String activeFormTarget = null;
     String activeFormMethod = null;
     boolean activeFormSubmitsCurrentView = false;
-    inlineSpringUrlLinks(text, relative, interactions, diagnostics);
+
     for (MarkupTag tag : MarkupTag.scan(text)) {
       SourceLocation source = new SourceLocation(relative, tag.line());
       String tagName = tag.name().toLowerCase(Locale.ROOT);
@@ -79,24 +97,40 @@ public final class JspProjectParser {
         }
         continue;
       }
+      var componentKind=MarkupAnalysis.kind(tagName,tag.attributes());
+      String componentId=null;
+      if(componentKind!=null) {
+        var identity=new java.util.TreeMap<>(tag.attributes());identity.put("tag",tagName);
+        String key=componentKind+identity.toString();
+        componentId=io.screentrace.core.StableGraphIds.component(relative,componentKind,identity,componentOccurrences.merge(key,1,Integer::sum)-1);
+      }
+      int interactionStart = interactions.size();
+      UrlVariableResolver.Resolution resolution = null;
       switch (tagName) {
-        case "spring:url", "c:url" -> registerUrl(tag, urls);
-        case "jsp:include", "@include" -> include(relative, target(tag, "page", "file"), source, includes, diagnostics);
+        case "spring:url", "c:url" -> { }
+        case "jsp:include", "@include", "tiles:insert", "tiles:put", "tiles:insertdefinition", "tiles:insertattribute" -> {
+          int before=includes.size();include(relative,target(tag,"page","file","definition","value","template"),source,includes,diagnostics);
+          if(includes.size()>before) {var item=includes.get(before);includes.set(before,new JspAnalysis.Include(item.sourceViewPath(),item.targetPath(),item.source(),item.confidence(),guards.get(tag.end()),repeats.getOrDefault(tag.end(),false)));}
+        }
         case "form", "html:form", "form:form" -> {
-          activeFormTarget = resolvedTarget(target(tag, "action"), urls);
+          activeFormResolution = urls.resolve(target(tag, "action"),tag);
+          resolution = activeFormResolution;
+          activeFormTarget = resolution.value();
           activeFormMethod = method(tag);
           activeFormSubmitsCurrentView = activeFormTarget == null;
           interaction(relative, JspAnalysis.InteractionType.FORM_SUBMIT, tag, activeFormTarget, activeFormMethod, source,
               activeFormSubmitsCurrentView, interactions, diagnostics);
         }
         case "a", "html:link" -> {
-          String resolved = resolvedTarget(target(tag, "href", "page", "action"), urls);
+          resolution = urls.resolve(target(tag,"href","page","action"),tag);
+          String resolved = resolution.value();
           interaction(relative, linkType(tag, resolved), interactionLabel(tag, text), resolved, "GET", source,
               false, interactions, diagnostics);
         }
         case "button", "input", "html:submit", "html:button", "form:button" -> {
-          String action = resolvedTarget(target(tag, "formaction", "action"), urls);
-          if (action == null && submitsForm(tag) && activeFormTarget != null) action = activeFormTarget;
+          resolution = urls.resolve(target(tag,"formaction","action"),tag);
+          String action = resolution.value();
+          if (action == null && submitsForm(tag) && activeFormTarget != null) { action = activeFormTarget; resolution = activeFormResolution; }
           boolean submitsCurrentView = action == null && submitsForm(tag) && activeFormSubmitsCurrentView;
           String label = interactionLabel(tag, text);
           interaction(relative, submitsForm(tag) ? JspAnalysis.InteractionType.FORM_SUBMIT : JspAnalysis.InteractionType.UNKNOWN,
@@ -105,33 +139,75 @@ public final class JspProjectParser {
         }
         default -> { }
       }
+      if(resolution != null) for(int i=interactionStart;i<interactions.size();i++) {
+        var item=interactions.get(i);
+        interactions.set(i,new JspAnalysis.Interaction(item.viewPath(),item.type(),item.label(),item.target(),item.httpMethod(),item.source(),item.confidence(),item.submitsCurrentView(),resolution.originalExpression(),resolution.definitions(),componentId));
+      }
+    }
+    for(int i=0;i<interactions.size();i++) {
+      JspAnalysis.Interaction item=interactions.get(i);
+      List<io.screentrace.core.ApplicationGraph.AnalysisEvidence> tagEvidence=tagExpansion.definitionEvidence().get(item.source().line());
+      if(item.viewPath().equals(relative)&&tagEvidence!=null&&!tagEvidence.isEmpty()) {
+        List<io.screentrace.core.ApplicationGraph.AnalysisEvidence> proof=new ArrayList<>(item.definitionEvidence());proof.addAll(tagEvidence);
+        interactions.set(i,new JspAnalysis.Interaction(item.viewPath(),item.type(),item.label(),item.target(),item.httpMethod(),item.source(),item.confidence(),item.submitsCurrentView(),item.originalExpression(),proof.stream().distinct().toList(),item.componentId()));
+      }
     }
   }
 
-  private static void registerUrl(MarkupTag tag, Map<String, String> urls) {
-    String variable = tag.attribute("var");
-    String value = tag.attribute("value");
-    if (variable != null && literal(value)) urls.put(variable, value);
+  private static String messageTitle(String source,StaticMessageResolver messages) {
+    Matcher title=Pattern.compile("(?is)<title\\b[^>]*>(.*?)</title\\s*>").matcher(source);if(!title.find()||!Pattern.compile("(?i)<(?:bean|s):message\\b").matcher(title.group(1)).find()||MarkupAnalysis.dynamic(title.group(1)))return null;
+    Matcher tag=Pattern.compile("(?is)<(?:bean|s):message\\b([^>]*?)/?\\s*>").matcher(title.group(1));StringBuffer resolved=new StringBuffer();boolean found=false;
+    while(tag.find()){Map<String,String> attributes=new HashMap<>();Matcher attr=Pattern.compile("([\\w:-]+)\\s*=\\s*([\\x27\\x22])(.*?)\\2").matcher(tag.group(1));while(attr.find())attributes.put(attr.group(1),attr.group(3));String key=attributes.get("key"),value=key==null?null:messages.resolve(attributes.get("bundle"),key);if(value==null)value="（訊息 key："+Objects.toString(key,"未提供")+"）";tag.appendReplacement(resolved,Matcher.quoteReplacement(value));found=true;}tag.appendTail(resolved);
+    if(!found)return null;String label=resolved.toString().replaceAll("(?s)<[^>]*>","").replaceAll("\\s+"," ").strip();return label.isBlank()?null:label;
   }
 
-  private static String resolvedTarget(String target, Map<String, String> urls) {
-    if (target != null && target.stripLeading().startsWith("<spring:url")) return null;
-    if (target == null || !target.startsWith("${") || !target.endsWith("}")) return target;
-    String expression = target.substring(2, target.length() - 1).trim();
-    String variable = expression;
-    int argumentStart = expression.lastIndexOf('(');
-    if (argumentStart >= 0 && expression.endsWith(")")) variable = expression.substring(argumentStart + 1, expression.length() - 1).trim();
-    return urls.getOrDefault(variable, target);
-  }
-
-  private static void inlineSpringUrlLinks(String text, String viewPath, List<JspAnalysis.Interaction> interactions,
-                                           List<Diagnostic> diagnostics) {
-    Matcher matcher = INLINE_SPRING_URL_LINK.matcher(text);
-    while (matcher.find()) {
-      SourceLocation source = new SourceLocation(viewPath, line(text, matcher.start()));
-      interaction(viewPath, JspAnalysis.InteractionType.NAVIGATION, "a", matcher.group(3).trim(), "GET", source,
-          false, interactions, diagnostics);
+  private static MarkupAnalysis withAnchors(MarkupAnalysis markup,String text,Map<Integer,String> anchors) {
+    List<MarkupAnalysis.Component> components=new ArrayList<>();int index=0;
+    for(var token:MarkupTag.scan(text)) {
+      if(token.closing()||MarkupAnalysis.kind(token.name().toLowerCase(Locale.ROOT),token.attributes())==null)continue;
+      var c=markup.components().get(index++);var attrs=new java.util.TreeMap<>(c.attributes());
+      String anchor=anchors.get(token.start());if(anchor!=null)attrs.put("expansionAnchor",anchor);
+      components.add(new MarkupAnalysis.Component(c.id(),c.kind(),c.tag(),attrs,c.source(),c.guard(),c.repeated(),c.formId(),c.model(),c.field(),c.bindingStatus()));
     }
+    return new MarkupAnalysis(components,markup.events(),markup.rules(),markup.behaviors());
+  }
+
+  private static Map<Integer,Boolean> markupRepeats(String text) {
+    Map<Integer,Boolean> result=new HashMap<>();List<String> loops=new ArrayList<>();
+    for(MarkupTag tag:MarkupTag.scan(text)) {
+      String name=tag.name().toLowerCase(Locale.ROOT);
+      if(tag.closing()) {for(int i=loops.size()-1;i>=0;i--)if(loops.get(i).equals(name)){loops.subList(i,loops.size()).clear();break;}continue;}
+      result.put(tag.end(),!loops.isEmpty());
+      if(java.util.Set.of("c:foreach","logic:iterate").contains(name)&&text.charAt(tag.end()-1)!='/')loops.add(name);
+    }
+    return result;
+  }
+
+  private static Map<Integer,String> markupGuards(String text) {
+    Map<Integer,String> guards=new HashMap<>();List<MarkupTag> scopes=new ArrayList<>();
+    for(MarkupTag tag:MarkupTag.scan(text)) {
+      if(tag.closing()) {for(int i=scopes.size()-1;i>=0;i--) if(scopes.get(i).name().equalsIgnoreCase(tag.name())) {scopes.subList(i,scopes.size()).clear();break;}continue;}
+      String guard=scopes.stream().map(MarkupAnalysis::condition).reduce((a,b)->a+" && "+b).orElse(null);if(guard!=null)guards.put(tag.end(),guard);
+      if(MarkupAnalysis.isConditional(tag.name()) && text.charAt(tag.end()-1)!='/')scopes.add(tag);
+    }
+    return guards;
+  }
+
+  static java.util.Set<String> includedWrites(Path root,String path,String text,java.util.Set<String> visited) {
+    java.util.Set<String> result=new java.util.HashSet<>();
+    if(!visited.add(path)||visited.size()>SafeProjectFiles.MAX_DIRECTORY_DEPTH) return java.util.Set.of("*");
+    for(MarkupTag tag:MarkupTag.scan(text)) if(!tag.closing() && java.util.Set.of("@include","jsp:include").contains(tag.name().toLowerCase(Locale.ROOT))) {
+      String target=target(tag,"file","page");String child=literal(target)?resolveInclude(root,path,target):null;
+      if(child==null) {result.add("*");continue;}
+      try {
+        String included=SafeProjectFiles.readUtf8Limited(root,root.resolve(child),SafeProjectFiles.MAX_JSP_FILE_BYTES);
+        for(MarkupTag nested:MarkupTag.scan(included)) if(!nested.closing() && nested.attribute("var")!=null)
+          result.add(MarkupAnalysis.dynamic(nested.attribute("var"))?"*":nested.attribute("var"));
+        if(included.replaceAll("(?s)<%--.*?--%>","").matches("(?s).*<%(?!@).*")) result.add("*");
+        result.addAll(includedWrites(root,child,included,visited));
+      } catch(IOException|SecurityException error) {result.add("*");}
+    }
+    visited.remove(path);return result;
   }
 
   private static void include(String sourcePath, String target, SourceLocation source, List<JspAnalysis.Include> includes,
@@ -163,8 +239,8 @@ public final class JspProjectParser {
     Map<String, List<String>> included = new HashMap<>();
     for (JspAnalysis.Include include : includes) {
       String resolved = resolveInclude(root, include.sourceViewPath(), include.targetPath());
-      if (resolved == null) diagnostics.add(unresolved("JSP include cannot be found: " + include.targetPath(), include.source()));
-      else included.computeIfAbsent(include.sourceViewPath(), ignored -> new ArrayList<>()).add(resolved);
+      if (resolved == null && (include.targetPath().contains("/") || include.targetPath().endsWith(".jsp") || include.targetPath().endsWith(".jspf"))) diagnostics.add(unresolved("JSP include cannot be found: " + include.targetPath(), include.source()));
+      else if(resolved!=null) included.computeIfAbsent(include.sourceViewPath(), ignored -> new ArrayList<>()).add(resolved);
     }
     List<JspAnalysis.Interaction> expanded = new ArrayList<>(interactions);
     byView.keySet().stream().filter(path -> path.endsWith(".jsp")).forEach(view -> collectIncluded(view, view, included, byView,
@@ -177,7 +253,7 @@ public final class JspProjectParser {
     if (!stack.add(current)) return;
     for (String child : included.getOrDefault(current, List.of())) {
       for (JspAnalysis.Interaction item : byView.getOrDefault(child, List.of())) result.add(new JspAnalysis.Interaction(screen,
-          item.type(), item.label(), item.target(), item.httpMethod(), item.source(), item.confidence(), item.submitsCurrentView()));
+          item.type(), item.label(), item.target(), item.httpMethod(), item.source(), item.confidence(), item.submitsCurrentView(),item.originalExpression(),item.definitionEvidence(),item.componentId()));
       collectIncluded(screen, child, included, byView, stack, result);
     }
     stack.remove(current);
@@ -237,8 +313,11 @@ public final class JspProjectParser {
   }
 
   private static boolean submitsForm(MarkupTag tag) {
-    String type = tag.attribute("type");
-    return type == null || type.isBlank() || type.equalsIgnoreCase("submit");
+    String name=tag.name().toLowerCase(Locale.ROOT),type=tag.attribute("type");
+    if(name.equals("html:submit")||name.equals("html:cancel"))return true;
+    if(name.equals("html:button")||name.equals("html:reset"))return false;
+    if(name.equals("input"))return type!=null&&(type.equalsIgnoreCase("submit")||type.equalsIgnoreCase("image"));
+    return type==null||type.isBlank()||type.equalsIgnoreCase("submit");
   }
 
   private static String interactionLabel(MarkupTag tag, String source) {
@@ -260,22 +339,49 @@ public final class JspProjectParser {
                                  List<Diagnostic> diagnostics) {
     String relative = relative(root, file);
     try {
-      Document document = secureDocument(SafeProjectFiles.xmlWithoutExternalDoctype(SafeProjectFiles.readUtf8Limited(root, file, SafeProjectFiles.MAX_XML_FILE_BYTES)));
+      String text=SafeProjectFiles.readUtf8Limited(root,file,SafeProjectFiles.MAX_XML_FILE_BYTES);
+      Document document = secureDocument(SafeProjectFiles.xmlWithoutExternalDoctype(text));
+      List<MarkupTag> sourceTags=MarkupTag.scan(text).stream().filter(t->!t.closing()&&t.name().equals("definition")).toList();
       NodeList nodes = document.getElementsByTagName("definition");
       for (int index = 0; index < nodes.getLength(); index++) {
         Element definition = (Element) nodes.item(index);
         List<JspAnalysis.TilesAttribute> attributes = new ArrayList<>();
-        NodeList attributeNodes = definition.getElementsByTagName("put-attribute");
-        for (int attributeIndex = 0; attributeIndex < attributeNodes.getLength(); attributeIndex++) {
-          Element attribute = (Element) attributeNodes.item(attributeIndex);
-          attributes.add(new JspAnalysis.TilesAttribute(attribute.getAttribute("name"), attribute.getAttribute("value")));
+        for (String putTag : List.of("put", "put-attribute")) {
+          NodeList attributeNodes = definition.getElementsByTagName(putTag);
+          for (int attributeIndex = 0; attributeIndex < attributeNodes.getLength(); attributeIndex++) {
+            Element attribute = (Element) attributeNodes.item(attributeIndex);
+            attributes.add(new JspAnalysis.TilesAttribute(attribute.getAttribute("name"), attribute.getAttribute("value")));
+          }
         }
-        definitions.add(new JspAnalysis.TilesDefinition(definition.getAttribute("name"), definition.getAttribute("template"),
-            attributes, new SourceLocation(relative, 1)));
+        String template = definition.getAttribute("template");
+        if (template.isBlank()) template = definition.getAttribute("path");
+        definitions.add(new JspAnalysis.TilesDefinition(definition.getAttribute("name"), template,
+            attributes, new SourceLocation(relative, index<sourceTags.size()?sourceTags.get(index).line():1),definition.getAttribute("extends")));
       }
     } catch (Exception exception) {
       diagnostics.add(unresolved("Unable to parse Tiles configuration: " + exception.getMessage(), new SourceLocation(relative, 1)));
     }
+  }
+
+  private static List<JspAnalysis.TilesDefinition> resolveTiles(List<JspAnalysis.TilesDefinition> input,List<Diagnostic> diagnostics) {
+    Map<String,JspAnalysis.TilesDefinition> definitions=new java.util.TreeMap<>(),resolved=new java.util.TreeMap<>();java.util.Set<String> duplicates=new java.util.HashSet<>();
+    for(var definition:input) {if(definitions.putIfAbsent(definition.name(),definition)!=null) {duplicates.add(definition.name());diagnostics.add(new Diagnostic("Tiles 定義重複："+definition.name(),Confidence.AMBIGUOUS,definition.source(),"TILES_AMBIGUOUS",List.of(new io.screentrace.core.ApplicationGraph.AnalysisEvidence(definition.source(),PARSER,io.screentrace.core.ApplicationGraph.ResolutionStatus.AMBIGUOUS,null))));}}
+    duplicates.forEach(definitions::remove);
+    for(String name:definitions.keySet()) resolveTile(name,definitions,resolved,new java.util.HashSet<>(),diagnostics);
+    return List.copyOf(resolved.values());
+  }
+  private static JspAnalysis.TilesDefinition resolveTile(String name,Map<String,JspAnalysis.TilesDefinition> definitions,Map<String,JspAnalysis.TilesDefinition> resolved,java.util.Set<String> stack,List<Diagnostic> diagnostics) {
+    if(resolved.containsKey(name))return resolved.get(name);var current=definitions.get(name);
+    if(current==null)return null;
+    if(!stack.add(name)) {diagnostics.add(unresolved("Tiles 繼承循環："+name,current.source()));return null;}
+    Map<String,JspAnalysis.TilesAttribute> attrs=new java.util.TreeMap<>();String template=current.template();
+    if(!current.parent().isBlank()) {
+      var parent=resolveTile(current.parent(),definitions,resolved,stack,diagnostics);
+      if(parent==null) {diagnostics.add(unresolved("Tiles 父定義未解析："+current.parent(),current.source()));stack.remove(name);return null;}
+      parent.attributes().forEach(a->attrs.put(a.name(),a));if(template.isBlank())template=parent.template();
+    }
+    current.attributes().forEach(a->attrs.put(a.name(),a));
+    var result=new JspAnalysis.TilesDefinition(current.name(),template,List.copyOf(attrs.values()),current.source(),current.parent());resolved.put(name,result);stack.remove(name);return result;
   }
 
   private static Document secureDocument(String xml) throws Exception {

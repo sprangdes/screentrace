@@ -7,6 +7,7 @@
   </parent>
   <artifactId>screentrace-adapter-struts</artifactId>
   <dependencies>
+    <dependency><groupId>com.github.javaparser</groupId><artifactId>javaparser-core</artifactId></dependency>
     <dependency><groupId>io.screentrace</groupId><artifactId>screentrace-core</artifactId><version>${project.version}</version></dependency>
     <dependency><groupId>io.screentrace</groupId><artifactId>screentrace-scanner</artifactId><version>${project.version}</version></dependency>
     <dependency><groupId>io.screentrace</groupId><artifactId>screentrace-parser-jsp</artifactId><version>${project.version}</version></dependency>

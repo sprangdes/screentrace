@@ -14,9 +14,13 @@ import java.nio.charset.StandardCharsets;
  */
 @JsonInclude(JsonInclude.Include.NON_EMPTY)
 public record ApplicationGraph(Application application, List<GraphNode> nodes, List<Relationship> relationships,
-                               List<Diagnostic> diagnostics, List<ApiContract> apiContracts, String schemaVersion) {
+                               List<Diagnostic> diagnostics, List<ApiContract> apiContracts, String schemaVersion,
+                               List<Behavior> behaviors, List<ValidationRule> validationRules) {
+  /** Historical missing-version default only; new analyses must use BEHAVIOR_SCHEMA_VERSION. */
+  @Deprecated
   public static final String CURRENT_SCHEMA_VERSION = "2.1";
-  public static final Set<String> SUPPORTED_SCHEMA_VERSIONS = Set.of("1.0", "2.0", CURRENT_SCHEMA_VERSION);
+  public static final String BEHAVIOR_SCHEMA_VERSION = "2.2";
+  public static final Set<String> SUPPORTED_SCHEMA_VERSIONS = Set.of("1.0", "2.0", CURRENT_SCHEMA_VERSION, BEHAVIOR_SCHEMA_VERSION);
 
   @JsonCreator
   public ApplicationGraph {
@@ -25,20 +29,33 @@ public record ApplicationGraph(Application application, List<GraphNode> nodes, L
     relationships = sorted(relationships);
     diagnostics = sorted(diagnostics);
     apiContracts = sorted(apiContracts);
+    behaviors = sorted(behaviors);
+    validationRules = sorted(validationRules);
   }
 
-  /** Source-compatible constructor for adapters written against schema 1. */
+  /** Historical data/fixture compatibility only. New analysis must use the full schema-2.2 constructor. */
+  @Deprecated
+  public ApplicationGraph(Application application, List<GraphNode> nodes, List<Relationship> relationships,
+                          List<Diagnostic> diagnostics, List<ApiContract> apiContracts, String schemaVersion) {
+    this(application, nodes, relationships, diagnostics, apiContracts, schemaVersion, List.of(), List.of());
+  }
+
+  /** Historical data/fixture compatibility only; never use for new adapter output. */
+  @Deprecated
   public ApplicationGraph(Application application, List<GraphNode> nodes, List<Relationship> relationships,
                           List<Diagnostic> diagnostics) {
     this(application, nodes, relationships, diagnostics, List.of(), CURRENT_SCHEMA_VERSION);
   }
 
-  /** Source-compatible constructor for schema 2 producers that do not emit API contracts. */
+  /** Historical data/fixture compatibility only; never use for new adapter output. */
+  @Deprecated
   public ApplicationGraph(Application application, List<GraphNode> nodes, List<Relationship> relationships,
                           List<Diagnostic> diagnostics, String schemaVersion) {
     this(application, nodes, relationships, diagnostics, List.of(), schemaVersion);
   }
 
+  /** Missing versions are interpreted only as historical data, never as strict schema 2.2. */
+  @Deprecated
   private static String normalizeSchemaVersion(String version) {
     String value = version == null || version.isBlank() ? CURRENT_SCHEMA_VERSION : version;
     if (!SUPPORTED_SCHEMA_VERSIONS.contains(value)) {
@@ -67,7 +84,7 @@ public record ApplicationGraph(Application application, List<GraphNode> nodes, L
                           SourceLocation source, Confidence confidence, List<AnalysisEvidence> evidence)
       implements Comparable<GraphNode> {
     public GraphNode {
-      attributes = attributes == null ? Map.of() : Map.copyOf(new TreeMap<>(attributes));
+      attributes = attributes == null ? Map.of() : Collections.unmodifiableMap(new TreeMap<>(attributes));
       evidence = normalizedEvidence(evidence, source, confidence);
     }
 
@@ -115,13 +132,13 @@ public record ApplicationGraph(Application application, List<GraphNode> nodes, L
                                  String detail) implements Comparable<AnalysisEvidence> {
     public AnalysisEvidence {
       parser = parser == null || parser.isBlank() ? "UNKNOWN" : parser;
-      resolution = resolution == null ? ResolutionStatus.INFERRED : resolution;
+      resolution = resolution == null ? ResolutionStatus.UNRESOLVED : resolution;
     }
 
     @Override public int compareTo(AnalysisEvidence other) {
       String thisSource = source == null ? "" : source.file() + ":" + source.line();
       String otherSource = other.source == null ? "" : other.source.file() + ":" + other.source.line();
-      return (thisSource + parser + resolution).compareTo(otherSource + other.parser + other.resolution);
+      return (thisSource + parser + resolution + Objects.toString(detail, "")).compareTo(otherSource + other.parser + other.resolution + Objects.toString(other.detail, ""));
     }
   }
 
@@ -152,6 +169,34 @@ public record ApplicationGraph(Application application, List<GraphNode> nodes, L
   public record Field(String name, String type, String location, boolean required,
                       SourceLocation source, Confidence confidence) implements Comparable<Field> {
     @Override public int compareTo(Field other) { return (location + ":" + name).compareTo(other.location + ":" + other.name); }
+  }
+
+  public enum ComponentKind {
+    BUTTON, LINK, SUBMIT, TEXT_INPUT, TEXTAREA, SELECT, CHECKBOX, RADIO, DATE_PICKER,
+    FILE_INPUT, MULTI_SELECT, FORM, MODAL, TABLE, OTHER
+  }
+  public enum BehaviorType {
+    NAVIGATE, SUBMIT_FORM, CALL_API, OPEN_DIALOG, VALIDATE, UI_STATE_CHANGE, SELECT_CHANGE, UNKNOWN
+  }
+  /** Framework names are retained in evidence detail, never in this classification. */
+  public enum ValidationLayer { MARKUP, CLIENT, SERVER }
+
+  public record Behavior(String id, String triggerId, String event, BehaviorType type, String targetId,
+                         String guard, String parentId, String expression, List<AnalysisEvidence> evidence)
+      implements Comparable<Behavior> {
+    public Behavior { evidence = sorted(evidence); }
+    @Override public int compareTo(Behavior other) { return id.compareTo(other.id); }
+  }
+
+  public record ValidationRule(String id, String kind, List<String> fields, String message,
+                               ValidationLayer layer, Map<String, String> parameters,
+                               List<AnalysisEvidence> evidence) implements Comparable<ValidationRule> {
+    public ValidationRule {
+      fields = sorted(fields);
+      parameters = parameters == null ? Map.of() : Collections.unmodifiableMap(new TreeMap<>(parameters));
+      evidence = sorted(evidence);
+    }
+    @Override public int compareTo(ValidationRule other) { return id.compareTo(other.id); }
   }
 
   public enum NodeType {

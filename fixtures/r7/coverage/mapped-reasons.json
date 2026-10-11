@@ -1,0 +1,14 @@
+{
+  "description": "自行撰寫的 petclinic 風格案例；不含真實專案原始碼",
+  "cases": [
+    {"name":"menu","tag":"button","reason":"NO_KNOWN_BEHAVIOR"},
+    {"name":"hidden","tag":"input","reason":"NO_KNOWN_BEHAVIOR"},
+    {"name":"ambiguous-submit","tag":"button","type":"SUBMIT_FORM","event":"submit","resolution":"AMBIGUOUS","reason":"BEHAVIOR_AMBIGUOUS"},
+    {"name":"unknown-destination","tag":"a","type":"NAVIGATE","resolution":"UNRESOLVED","reason":"DESTINATION_UNRESOLVED"},
+    {"name":"data-only-navigation","tag":"a","type":"NAVIGATE","target":"ep","resolution":"CONFIRMED","reason":"DESTINATION_UNRESOLVED"},
+    {"name":"unsupported-state","tag":"button","type":"UI_STATE_CHANGE","target":"b","resolution":"CONFIRMED","reason":"UNSUPPORTED_SIMULATION"},
+    {"name":"submit-event-button","tag":"button","type":"SUBMIT_FORM","event":"submit","target":"b","resolution":"CONFIRMED","reason":"UNSUPPORTED_SIMULATION"},
+    {"name":"known-navigation","tag":"a","type":"NAVIGATE","target":"b","resolution":"INFERRED","reason":null},
+    {"name":"known-api","tag":"button","type":"CALL_API","target":"ep","resolution":"CONFIRMED","reason":null}
+  ]
+}

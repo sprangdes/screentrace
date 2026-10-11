@@ -1,0 +1,638 @@
+{
+  "projects": [
+    "struts1",
+    "struts1-spring",
+    "spring-mvc-jsp",
+    "spring-boot-jsp",
+    "struts2-rejected"
+  ],
+  "cases": [
+    {
+      "id": "WP2.1",
+      "file": "struts2-rejected/src/main/webapp/WEB-INF/struts.xml",
+      "tokens": [
+        "<struts>"
+      ]
+    },
+    {
+      "id": "WP2.1-dependency",
+      "file": "struts2-rejected/pom.xml",
+      "tokens": [
+        "struts2-core"
+      ]
+    },
+    {
+      "id": "WP2.1-package",
+      "file": "struts2-rejected/src/main/java/synthetic/UnsupportedAction.java",
+      "tokens": [
+        "org.apache.struts2"
+      ]
+    },
+    {
+      "id": "WP2.2",
+      "file": "struts1/src/main/webapp/WEB-INF/struts-config.xml",
+      "tokens": [
+        "path=",
+        "type=",
+        "name=",
+        "scope=",
+        "validate=",
+        "input=",
+        "parameter=",
+        "global-forwards",
+        "global-exceptions",
+        "DynaActionForm",
+        "form-property",
+        "ValidatorPlugIn",
+        "TilesPlugin"
+      ]
+    },
+    {
+      "id": "WP2.2-modules",
+      "file": "struts1/src/main/webapp/WEB-INF/web.xml",
+      "tokens": [
+        "config/admin",
+        "struts-config-admin.xml",
+        "*.do",
+        "*.action"
+      ]
+    },
+    {
+      "id": "WP2.3",
+      "file": "struts1/src/main/java/synthetic/EditAction.java",
+      "tokens": [
+        "DispatchAction",
+        "save("
+      ]
+    },
+    {
+      "id": "WP2.3-lookup",
+      "file": "struts1/src/main/java/synthetic/LookupAction.java",
+      "tokens": [
+        "LookupDispatchAction",
+        "getKeyMethodMap"
+      ]
+    },
+    {
+      "id": "WP2.3-mapping",
+      "file": "struts1/src/main/java/synthetic/MappingAction.java",
+      "tokens": [
+        "MappingDispatchAction"
+      ]
+    },
+    {
+      "id": "WP2.4",
+      "file": "struts1/src/main/webapp/WEB-INF/validation.xml",
+      "tokens": [
+        "form-validation",
+        "field property=",
+        "required,minlength"
+      ]
+    },
+    {
+      "id": "WP2.4-rules",
+      "file": "struts1/src/main/webapp/WEB-INF/validator-rules.xml",
+      "tokens": [
+        "validator name=",
+        "classname="
+      ]
+    },
+    {
+      "id": "WP2.5",
+      "file": "struts1/src/main/java/synthetic/EditForm.java",
+      "tokens": [
+        "ActionErrors",
+        "errors.add",
+        "if(runtimeFlag)"
+      ]
+    },
+    {
+      "id": "WP2.6",
+      "file": "struts1/src/main/java/synthetic/EditAction.java",
+      "tokens": [
+        "mapping.findForward(\"ok\")",
+        "mapping.findForward(dynamic)"
+      ]
+    },
+    {
+      "id": "WP2.7",
+      "file": "struts1/src/main/webapp/WEB-INF/tiles-defs.xml",
+      "tokens": [
+        "extends=",
+        "put-attribute",
+        "nested"
+      ]
+    },
+    {
+      "id": "WP2.7-insert",
+      "file": "struts1/src/main/webapp/WEB-INF/views/layout.jsp",
+      "tokens": [
+        "tiles:insert",
+        "tiles:put"
+      ]
+    },
+    {
+      "id": "WP2.8",
+      "file": "struts1/src/main/webapp/WEB-INF/views/page.jsp",
+      "tokens": [
+        "html:text",
+        "html:password",
+        "html:textarea",
+        "html:select",
+        "html:options",
+        "html:optionsCollection",
+        "html:checkbox",
+        "html:multibox",
+        "html:radio",
+        "html:file",
+        "html:hidden",
+        "html:submit",
+        "html:button",
+        "html:cancel",
+        "html:reset",
+        "html:link",
+        "html:form",
+        "bean:write",
+        "logic:present",
+        "logic:notPresent",
+        "logic:equal"
+      ]
+    },
+    {
+      "id": "WP2.9",
+      "file": "struts1-spring/src/main/webapp/WEB-INF/applicationContext.xml",
+      "tokens": [
+        "/managed",
+        "synthetic.ManagedAction"
+      ]
+    },
+    {
+      "id": "WP3.1",
+      "file": "spring-mvc-jsp/src/main/webapp/WEB-INF/views/page.jsp",
+      "tokens": [
+        "<%@ include",
+        "jsp:include",
+        "<%= dynamicTarget",
+        "${unknownUrl}"
+      ]
+    },
+    {
+      "id": "WP3.1-nested",
+      "file": "spring-mvc-jsp/src/main/webapp/WEB-INF/views/parts/one.jspf",
+      "tokens": [
+        "include file=\"two.jspf\""
+      ]
+    },
+    {
+      "id": "WP3.2",
+      "file": "spring-mvc-jsp/src/main/webapp/WEB-INF/views/page.jsp",
+      "tokens": [
+        "textarea",
+        "select",
+        "checkbox",
+        "radio",
+        "type=\"date\"",
+        "type=\"file\"",
+        "multiple",
+        "table",
+        "dialog",
+        "class=\"other\"",
+        "form:input",
+        "form:password",
+        "form:textarea",
+        "form:select",
+        "form:option",
+        "form:options",
+        "form:checkbox",
+        "form:checkboxes",
+        "form:radiobutton",
+        "form:radiobuttons",
+        "form:hidden",
+        "form:form"
+      ]
+    },
+    {
+      "id": "WP3.3",
+      "file": "spring-mvc-jsp/src/main/webapp/WEB-INF/views/page.jsp",
+      "tokens": [
+        "required",
+        "pattern=",
+        "min=",
+        "max=",
+        "minlength=",
+        "maxlength=",
+        "type=\"email\"",
+        "type=\"url\"",
+        "type=\"number\"",
+        "type=\"date\""
+      ]
+    },
+    {
+      "id": "WP3.4",
+      "file": "spring-mvc-jsp/src/main/webapp/WEB-INF/views/page.jsp",
+      "tokens": [
+        "c:if",
+        "c:choose",
+        "c:when",
+        "c:otherwise",
+        "c:forEach"
+      ]
+    },
+    {
+      "id": "WP3.4-logic",
+      "file": "struts1/src/main/webapp/WEB-INF/views/page.jsp",
+      "tokens": [
+        "logic:present",
+        "logic:notPresent",
+        "logic:equal",
+        "logic:notEqual",
+        "logic:empty",
+        "logic:notEmpty",
+        "logic:greaterThan",
+        "logic:lessThan",
+        "logic:iterate"
+      ]
+    },
+    {
+      "id": "WP3.5",
+      "file": "spring-mvc-jsp/src/main/webapp/WEB-INF/views/page.jsp",
+      "tokens": [
+        "data-toggle=\"modal\"",
+        "data-bs-toggle=\"modal\"",
+        "class=\"modal\"",
+        "role=\"dialog\"",
+        "<dialog"
+      ]
+    },
+    {
+      "id": "WP3.6",
+      "file": "spring-mvc-jsp/src/main/webapp/WEB-INF/views/page.jsp",
+      "tokens": [
+        "name=\"email\"",
+        "path=\"email\"",
+        "modelAttribute=\"input\""
+      ]
+    },
+    {
+      "id": "WP3.6-struts",
+      "file": "struts1/src/main/webapp/WEB-INF/views/page.jsp",
+      "tokens": [
+        "property=\"email\""
+      ]
+    },
+    {
+      "id": "WP3.7",
+      "file": "spring-mvc-jsp/src/main/webapp/WEB-INF/views/page.jsp",
+      "tokens": [
+        "onclick=",
+        "onchange=",
+        "onsubmit="
+      ]
+    },
+    {
+      "id": "WP3.8",
+      "file": "spring-mvc-jsp/src/main/webapp/WEB-INF/views/page.jsp",
+      "tokens": [
+        "c:url",
+        "spring:url",
+        "${literalUrl}",
+        "${fn:escapeXml(literalUrl)}",
+        "{name}",
+        "c:param",
+        "spring:param",
+        "${changed}",
+        "${branched}",
+        "fn:unknown",
+        "fn:toUpperCase",
+        "${includedUrl}",
+        "c:set",
+        "${setUrl}"
+      ]
+    },
+    {
+      "id": "WP4.1",
+      "file": "spring-mvc-jsp/src/main/webapp/js/module.js",
+      "tokens": [
+        "import ",
+        "export ",
+        "?.",
+        "??"
+      ]
+    },
+    {
+      "id": "WP4.1-recovery",
+      "file": "spring-mvc-jsp/src/main/webapp/WEB-INF/views/page.jsp",
+      "tokens": [
+        "const = ;"
+      ]
+    },
+    {
+      "id": "WP4.2",
+      "file": "spring-mvc-jsp/src/main/webapp/WEB-INF/views/page.jsp",
+      "tokens": [
+        "<script>",
+        "<script src=",
+        "javascript:send()",
+        "${pageContext.request.contextPath}",
+        "${scriptUrl}",
+        "${springScript}"
+      ]
+    },
+    {
+      "id": "WP4.3",
+      "file": "spring-mvc-jsp/src/main/webapp/WEB-INF/views/page.jsp",
+      "tokens": [
+        "jquery.min.js",
+        "bootstrap.min.js",
+        "jquery-ui.js",
+        "jquery.validate.js",
+        "select2.js",
+        "datepicker.js"
+      ]
+    },
+    {
+      "id": "WP4.4",
+      "file": "spring-mvc-jsp/src/main/webapp/js/owned.min.js",
+      "tokens": [
+        "location.href",
+        "location.assign",
+        "location.replace",
+        "window.location",
+        "history.pushState",
+        "window.open",
+        ".submit()",
+        "$.ajax",
+        "$.get(",
+        "$.post(",
+        "$.getJSON",
+        ".load(",
+        "fetch(",
+        "XMLHttpRequest",
+        "axios",
+        "alert(",
+        "confirm(",
+        "prompt(",
+        ".modal(",
+        ".dialog(",
+        ".validate(",
+        "validateEmail",
+        "setCustomValidity",
+        ".show(",
+        ".hide(",
+        ".toggle(",
+        ".addClass(",
+        ".removeClass(",
+        ".tab(",
+        ".collapse(",
+        ".change("
+      ]
+    },
+    {
+      "id": "WP4.5",
+      "file": "spring-mvc-jsp/src/main/webapp/js/owned.min.js",
+      "tokens": [
+        "$('#review-button')",
+        "$('.choice')",
+        "$('[name=email]')",
+        "$('button')",
+        "$('#container button')",
+        "$(this)",
+        ".on('click','.choice'",
+        "addEventListener",
+        "onclick="
+      ]
+    },
+    {
+      "id": "WP4.6",
+      "file": "spring-mvc-jsp/src/main/webapp/js/owned.min.js",
+      "tokens": [
+        "function send",
+        "function(){send();}",
+        "go(){action();}",
+        "success:",
+        ".done(",
+        ".then(",
+        "cycleA",
+        "cycleB",
+        "depth10",
+        "depth11"
+      ]
+    },
+    {
+      "id": "WP4.7",
+      "file": "spring-mvc-jsp/src/main/webapp/js/owned.min.js",
+      "tokens": [
+        "const base=",
+        "var suffix=",
+        "config.url",
+        "`${base}/template`",
+        "'${unknownContext}/api/exact'",
+        "unknown",
+        "eval(",
+        "obj[x]",
+        "document.querySelector"
+      ]
+    },
+    {
+      "id": "WP4.8",
+      "file": "spring-mvc-jsp/src/main/webapp/js/owned.min.js",
+      "tokens": [
+        "method:",
+        "type:",
+        "data:{email:x,amount:1}",
+        "serialize()"
+      ]
+    },
+    {
+      "id": "WP4.9",
+      "file": "struts1/src/main/webapp/js/owned.min.js",
+      "tokens": [
+        "function send",
+        "globalThis.wp10Probe"
+      ]
+    },
+    {
+      "id": "WP4.10",
+      "file": "spring-mvc-jsp/src/main/webapp/WEB-INF/views/page.jsp",
+      "tokens": [
+        "<script>globalThis.wp10Probe"
+      ]
+    },
+    {
+      "id": "WP4.11",
+      "file": "spring-mvc-jsp/src/main/webapp/js/owned.min.js",
+      "tokens": [
+        "fetch(config.url",
+        "ready(",
+        "'load'",
+        "#missing-element"
+      ]
+    },
+    {
+      "id": "WP5.1",
+      "file": "spring-mvc-jsp/src/main/java/synthetic/ApiController.java",
+      "tokens": [
+        "/api/exact",
+        "/api/items/{id}",
+        "/api/wild/*",
+        "/api/deep/**",
+        "/api/ambiguous/{id}",
+        "/api/ambiguous/7"
+      ]
+    },
+    {
+      "id": "WP5.1-decorations",
+      "file": "spring-mvc-jsp/src/main/webapp/WEB-INF/views/page.jsp",
+      "tokens": [
+        ";jsessionid=123?q=1#x",
+        "method:'POST'"
+      ]
+    },
+    {
+      "id": "WP5.2",
+      "file": "spring-boot-jsp/src/main/resources/application.properties",
+      "tokens": [
+        "server.servlet.context-path=/fixture"
+      ]
+    },
+    {
+      "id": "WP5.2-yaml",
+      "file": "spring-boot-jsp/src/main/resources/application.yml",
+      "tokens": [
+        "context-path: /fixture"
+      ]
+    },
+    {
+      "id": "WP5.3",
+      "file": "spring-mvc-jsp/src/main/webapp/WEB-INF/views/page.jsp",
+      "tokens": [
+        "action=\"/fixture/save\"",
+        "fetch("
+      ]
+    },
+    {
+      "id": "WP5.4",
+      "file": "spring-mvc-jsp/src/main/java/synthetic/ApiController.java",
+      "tokens": [
+        "@RestController",
+        "ResponseEntity",
+        "@RequestBody"
+      ]
+    },
+    {
+      "id": "WP5.4-body",
+      "file": "spring-mvc-jsp/src/main/java/synthetic/BodyController.java",
+      "tokens": [
+        "@ResponseBody"
+      ]
+    },
+    {
+      "id": "WP5.4-action",
+      "file": "struts1/src/main/java/synthetic/ApiAction.java",
+      "tokens": [
+        "extends Action",
+        "getParameter"
+      ]
+    },
+    {
+      "id": "WP5.5",
+      "file": "spring-mvc-jsp/src/main/java/synthetic/ApiController.java",
+      "tokens": [
+        "@Valid",
+        "@Validated"
+      ]
+    },
+    {
+      "id": "WP5.5-javax",
+      "file": "spring-mvc-jsp/src/main/java/synthetic/LegacyInput.java",
+      "tokens": [
+        "javax.validation.constraints",
+        "@NotNull",
+        "@Size",
+        "@Min",
+        "@Max",
+        "@DecimalMin",
+        "@DecimalMax",
+        "@Digits",
+        "@AssertTrue",
+        "@AssertFalse",
+        "@Past",
+        "@Future"
+      ]
+    },
+    {
+      "id": "WP5.5-jakarta",
+      "file": "spring-mvc-jsp/src/main/java/synthetic/ModernInput.java",
+      "tokens": [
+        "jakarta.validation.constraints",
+        "@NotBlank",
+        "@NotEmpty",
+        "@Email",
+        "@Pattern",
+        "@Positive",
+        "@PositiveOrZero",
+        "@Negative",
+        "@NegativeOrZero",
+        "@PastOrPresent",
+        "@FutureOrPresent"
+      ]
+    },
+    {
+      "id": "WP5.5-binder",
+      "file": "spring-mvc-jsp/src/main/java/synthetic/PageController.java",
+      "tokens": [
+        "@InitBinder",
+        "addValidators"
+      ]
+    },
+    {
+      "id": "WP5.5-validator",
+      "file": "spring-mvc-jsp/src/main/java/synthetic/InputValidator.java",
+      "tokens": [
+        "implements Validator",
+        "rejectValue"
+      ]
+    },
+    {
+      "id": "WP5.6",
+      "file": "spring-mvc-jsp/src/main/java/synthetic/ApiController.java",
+      "tokens": [
+        "@GetMapping",
+        "@PostMapping",
+        "@RequestMapping",
+        "RequestMethod.PUT",
+        "Reply",
+        "consumes="
+      ]
+    },
+    {
+      "id": "WP5.7",
+      "file": "spring-mvc-jsp/pom.xml",
+      "tokens": [
+        "spring-webmvc"
+      ]
+    },
+    {
+      "id": "WP3.1-custom-comments",
+      "file": "spring-mvc-jsp/src/main/webapp/WEB-INF/views/page.jsp",
+      "tokens": [
+        "<sample:badge",
+        "<!-- 自行撰寫"
+      ]
+    },
+    {
+      "id": "WP4.2-script-boundaries",
+      "file": "spring-mvc-jsp/src/main/webapp/WEB-INF/views/page.jsp",
+      "tokens": [
+        "${undefinedPrefix}/js/context.js",
+        "${pageContext.servletContext.contextPath}",
+        "/js/missing.js",
+        "/x${undefinedPrefix}",
+        "http://${undefinedPrefix}",
+        "//${undefinedPrefix}",
+        "${one}${two}",
+        "${definedPrefix}"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,1 @@
+<project><modelVersion>4.0.0</modelVersion><groupId>synthetic</groupId><artifactId>spring-boot-jsp</artifactId><version>1-sample</version><dependencies><dependency><artifactId>spring-webmvc</artifactId></dependency><dependency><artifactId>spring-boot</artifactId></dependency></dependencies></project>

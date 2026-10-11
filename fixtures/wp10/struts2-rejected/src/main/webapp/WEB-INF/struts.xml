@@ -1,0 +1,1 @@
+<struts><package name="sample"><action name="sample" class="synthetic.UnsupportedAction"/></package></struts>

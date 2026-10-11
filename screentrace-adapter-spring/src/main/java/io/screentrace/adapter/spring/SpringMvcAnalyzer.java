@@ -8,8 +8,6 @@ import com.github.javaparser.ast.expr.AnnotationExpr;
 import com.github.javaparser.ast.expr.Expression;
 import com.github.javaparser.ast.expr.NormalAnnotationExpr;
 import com.github.javaparser.ast.expr.SingleMemberAnnotationExpr;
-import com.github.javaparser.ast.expr.ObjectCreationExpr;
-import com.github.javaparser.ast.body.VariableDeclarator;
 import io.screentrace.core.ApplicationGraph;
 import io.screentrace.core.ApplicationGraph.Confidence;
 import io.screentrace.core.ApplicationGraph.Diagnostic;
@@ -22,15 +20,18 @@ import io.screentrace.scanner.ProjectScanner.ProjectInventory;
 import io.screentrace.scanner.SafeProjectFiles;
 import io.screentrace.parser.jsp.JspAnalysis;
 import io.screentrace.parser.jsp.JspProjectParser;
+import io.screentrace.parser.jsp.MarkupGraphContribution;
 import java.io.IOException;
 import java.io.StringReader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.TreeMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -55,17 +56,26 @@ public final class SpringMvcAnalyzer {
         for (String message : inventory.diagnostics()) state.diagnostics.add(new Diagnostic(message, Confidence.UNRESOLVED, new SourceLocation(".", 1), "SOURCE_LIMIT", List.of()));
         JspAnalysis jsp = new JspProjectParser().analyze(inventory.root(), inventory.files());
         Set<String> includedViews = includedViewPaths(inventory.root(), jsp);
-        for (JspAnalysis.View view : jsp.views()) if (view.kind() == JspAnalysis.ViewKind.JSP && !includedViews.contains(view.path())) addJspScreen(inventory.root().resolve(view.path()), state);
+        Set<String> tileTemplateViews = tileTemplateViews(jsp);
+        for (JspAnalysis.View view : jsp.views()) if (view.kind() != JspAnalysis.ViewKind.JSPF && !includedViews.contains(view.path())
+                && webPath(view.path()).map(path -> !tileTemplateViews.contains(path)).orElse(true)) addJspScreen(inventory.root().resolve(view.path()), state);
         addJspFragments(jsp, includedViews, state);
         addTilesDefinitions(jsp, state);
         discoverExceptionView(inventory, state);
         parseXmlControllers(inventory, state);
         for (Path java : inventory.javaFiles()) parseController(java, state);
+        SpringControllerFlow.resolve(state.nodes,state.edges,state.diagnostics,state.returnTargets,
+            io.screentrace.parser.jsp.UrlResolution.context(inventory,List.of()));
         addJspInteractions(jsp, state);
         addJspIncludes(jsp, state);
         state.diagnostics.addAll(jsp.diagnostics());
-        return new ApplicationGraph(new ApplicationGraph.Application(inventory.root().getFileName().toString(), inventory.root().toString(), inventory.technologies()),
-                state.nodes, state.edges, state.diagnostics, state.apiContracts, ApplicationGraph.CURRENT_SCHEMA_VERSION);
+        ApplicationGraph graph = new ApplicationGraph(new ApplicationGraph.Application(inventory.root().getFileName().toString(), inventory.root().toString(), inventory.technologies()),
+                state.nodes, state.edges, state.diagnostics, state.apiContracts, ApplicationGraph.BEHAVIOR_SCHEMA_VERSION, List.of(), List.of());
+        graph=MarkupGraphContribution.enrich(graph,jsp);
+        graph=SpringFormBindings.bind(graph,inventory);
+        var completed=SpringControllerFlow.project(SpringServerValidation.enrich(io.screentrace.parser.jsp.UrlGraphContribution.enrich(io.screentrace.parser.jsp.JavaScriptGraphContribution.enrich(MarkupGraphContribution.enrich(graph,jsp),inventory),inventory),inventory));
+        completed=io.screentrace.parser.jsp.RouteTemplateInference.enrich(completed,inventory);
+        return io.screentrace.core.GraphIntegrityValidator.requireAnalysis(SpringSecurityRedirects.enrich(completed,inventory));
     }
 
     private static void discoverExceptionView(ProjectInventory inventory, State state) {
@@ -126,7 +136,7 @@ public final class SpringMvcAnalyzer {
                 for (MethodDeclaration method : type.getMethods()) {
                     AnnotationExpr mapping = method.getAnnotations().stream().filter(a -> MAPPINGS.contains(a.getNameAsString())).findFirst().orElse(null);
                     if (mapping != null) addMapping(type, method, mapping, relative, bases, constants,
-                        rest || annotation(method, "ResponseBody") != null, state);
+                        rest || annotation(type,"ResponseBody")!=null || annotation(method, "ResponseBody") != null || method.getType().isClassOrInterfaceType()&&method.getType().asClassOrInterfaceType().getNameAsString().equals("ResponseEntity") || (annotation(type,"ResponseStatus")!=null||annotation(method,"ResponseStatus")!=null)&&method.getType().isVoidType(), state);
                 }
             }
         } catch (IOException | RuntimeException exception) {
@@ -141,7 +151,13 @@ public final class SpringMvcAnalyzer {
         addNode(state, new GraphNode(handlerId, NodeType.HANDLER, handlerName, Map.of("class", type.getNameAsString(), "method", method.getNameAsString()), source, Confidence.CONFIRMED));
         List<String> children = paths(mapping);
         if (children.isEmpty()) children = List.of("");
-        List<String> views = rest ? List.of() : returnedViews(method, constants);
+        var returns=rest?List.<SpringControllerReturns.Target>of():SpringControllerReturns.extract(method,relative,type.getNameAsString(),constants);
+        List<String> views = returns.stream().filter(t->t.kind()!=SpringControllerReturns.Kind.UNKNOWN)
+            .map(t->t.kind()==SpringControllerReturns.Kind.VIEW?t.value():(t.kind()==SpringControllerReturns.Kind.FORWARD?"forward:":"redirect:")+t.value()).distinct().toList();
+        for(var target:returns) {
+            if(target.kind()==SpringControllerReturns.Kind.UNKNOWN)SpringControllerFlow.unresolved(state.diagnostics,target,"無法證明常值或未改寫的回傳物件");
+            else if(target.kind()!=SpringControllerReturns.Kind.VIEW)state.returnTargets.add(new SpringControllerFlow.Pending(handlerId,httpMethod(mapping),target));
+        }
         for (String base : bases) for (String child : children) {
             String path = join(base, child);
             String endpointId = ApplicationGraph.id(NodeType.ENDPOINT, httpMethod(mapping) + " " + path + ":" + handlerId);
@@ -152,9 +168,11 @@ public final class SpringMvcAnalyzer {
             state.endpoints.add(endpoint);
             edge(state, EdgeType.HANDLED_BY, endpointId, handlerId, Confidence.CONFIRMED, source);
             state.apiContracts.add(state.contracts.contract(endpointId, method, mapping, source, views));
-            for (String view : views.stream().filter(view -> !view.startsWith("redirect:")).distinct().toList()) {
-                String screenId = screenForView(view, source, state);
-                edge(state, EdgeType.RENDERS, handlerId, screenId, resolvedScreenId(view, state) != null ? Confidence.CONFIRMED : Confidence.INFERRED, source);
+            for (var target : returns.stream().filter(t->t.kind()==SpringControllerReturns.Kind.VIEW).toList()) {
+                String view=target.value();String screenId = screenForView(view, target.source(), state);
+                Confidence confidence=resolvedScreenId(view, state) != null ? Confidence.CONFIRMED : Confidence.INFERRED;
+                String returnId=ApplicationGraph.id(NodeType.COMPONENT,"RENDERS:"+handlerId+":"+screenId+":"+target.source().line()+":"+target.expression());
+                if(state.edges.stream().noneMatch(e->e.id().equals(returnId)))state.edges.add(new Relationship(returnId,EdgeType.RENDERS,handlerId,screenId,confidence,target.source(),target.evidence()));
                 state.endpointsByScreen.computeIfAbsent(screenId, ignored -> new ArrayList<>()).add(endpoint);
                 state.screensByEndpoint.computeIfAbsent(endpointId, ignored -> new ArrayList<>()).add(screenId);
             }
@@ -357,8 +375,30 @@ public final class SpringMvcAnalyzer {
         }
     }
 
+    private static Set<String> tileTemplateViews(JspAnalysis jsp) {
+        Set<String> result = new TreeSet<>();
+        for (JspAnalysis.TilesDefinition definition : jsp.tilesDefinitions())
+            if (definition.template() != null && !definition.template().isBlank()) result.add(normalizeWebPath(definition.template()));
+        return result;
+    }
+
+    private static String normalizeWebPath(String path) {
+        String normalized = path.replace('\\', '/');
+        while (normalized.startsWith("/")) normalized = normalized.substring(1);
+        return "/" + normalized;
+    }
+
     private static void addTilesDefinitions(JspAnalysis jsp, State state) {
+        Set<String> names = jsp.tilesDefinitions().stream().map(JspAnalysis.TilesDefinition::name).collect(java.util.stream.Collectors.toSet());
+        Set<String> fragments = new HashSet<>();
         for (JspAnalysis.TilesDefinition definition : jsp.tilesDefinitions()) {
+            if (definition.parent() != null && !definition.parent().isBlank()) fragments.add(definition.parent());
+            for (JspAnalysis.TilesAttribute attribute : definition.attributes())
+                if (names.contains(attribute.value())) fragments.add(attribute.value());
+        }
+        for (JspAnalysis.Include include : jsp.includes()) if (names.contains(include.targetPath())) fragments.add(include.targetPath());
+        for (JspAnalysis.TilesDefinition definition : jsp.tilesDefinitions()) {
+            if (fragments.contains(definition.name())) continue;
             String id = ApplicationGraph.id(NodeType.SCREEN, "tiles:" + definition.name());
             addNode(state, new GraphNode(id, NodeType.SCREEN, definition.name(),
                     Map.of("tilesDefinition", "true", "template", definition.template()), definition.source(), Confidence.CONFIRMED));
@@ -367,16 +407,19 @@ public final class SpringMvcAnalyzer {
     }
 
     private static void addJspInteractions(JspAnalysis jsp, State state) {
-        for (JspAnalysis.Interaction interaction : jsp.interactions()) {
+        for (JspAnalysis.Interaction rawInteraction : jsp.interactions()) {
+            JspAnalysis.Interaction interaction=resolveRelativeJspTarget(rawInteraction,state);
             String screenId = state.screensByView.get(interaction.viewPath());
             if (screenId == null) continue;
-            String id = ApplicationGraph.id(NodeType.COMPONENT, interaction.viewPath() + ":" + interaction.source().line() + ":" + interaction.target());
+            String id = interaction.componentId()!=null?interaction.componentId():ApplicationGraph.id(NodeType.COMPONENT, interaction.viewPath() + ":" + interaction.source().line() + ":" + interaction.target());
             Map<String, String> attributes = new TreeMap<>();
             attributes.put("componentType", interaction.type().name());
             attributes.put("target", interaction.target());
+            attributes.put("targetStatus",interaction.confidence().name());
+            if(interaction.originalExpression()!=null)attributes.put("originalExpression",interaction.originalExpression());
             if (!interaction.viewPath().equals(interaction.source().file())) attributes.put("includedBy", interaction.viewPath());
             if (interaction.httpMethod() != null) attributes.put("httpMethod", interaction.httpMethod());
-            addNode(state, new GraphNode(id, NodeType.COMPONENT, interaction.label(), attributes, interaction.source(), interaction.confidence()));
+            addNode(state, new GraphNode(id, NodeType.COMPONENT, interaction.label(), attributes, interaction.source(), interaction.confidence(), interactionEvidence(interaction)));
             edge(state, EdgeType.CONTAINS, screenId, id, Confidence.CONFIRMED, interaction.source());
             if (interaction.confidence() == Confidence.UNRESOLVED || !canTriggerEndpoint(interaction.type())) continue;
             for (EndpointMatch match : endpointsFor(interaction, screenId, state)) {
@@ -389,6 +432,43 @@ public final class SpringMvcAnalyzer {
             String next = state.screensByView.get(interaction.target());
             if (next != null) edge(state, EdgeType.NAVIGATES_TO, id, next, Confidence.CONFIRMED, interaction.source());
         }
+    }
+
+    private static JspAnalysis.Interaction resolveRelativeJspTarget(JspAnalysis.Interaction interaction,State state) {
+        String raw=interaction.target();
+        if(raw==null||raw.isBlank()||raw.startsWith("/")||raw.startsWith("#")||raw.contains("://")||raw.startsWith("//")
+            ||raw.equals(JspProjectParser.CURRENT_VIEW_TARGET)
+            ||raw.contains("${")||raw.contains("#{")||raw.contains("<%")||raw.matches("(?i)^[a-z][a-z0-9+.-]*:.*"))return interaction;
+        String screenId=state.screensByView.get(interaction.viewPath());if(screenId==null)return unresolvedRelative(interaction,state,List.of(),"找不到來源畫面");
+        List<EndpointReference> routes=state.endpointsByScreen.getOrDefault(screenId,List.of()).stream()
+            .collect(java.util.stream.Collectors.toMap(EndpointReference::path,e->e,(a,b)->a,TreeMap::new)).values().stream().toList();
+        if(routes.size()!=1) {
+            if(routes.isEmpty())return unresolvedRelative(interaction,state,routes,"找不到可證明的 controller 路由");
+            List<ApplicationGraph.AnalysisEvidence> proof=new ArrayList<>(interaction.definitionEvidence());
+            routes.forEach(route->{GraphNode endpoint=state.nodes.stream().filter(n->n.id().equals(route.id())).findFirst().orElse(null);if(endpoint!=null)proof.add(new ApplicationGraph.AnalysisEvidence(endpoint.source(),"SpringMvcRelativeJspUrl",ApplicationGraph.ResolutionStatus.AMBIGUOUS,"JSP 相對 URL 的來源畫面有多個 controller 路由"));});
+            state.diagnostics.add(new Diagnostic("JSP 相對 URL 的 controller 路由不唯一："+raw,Confidence.AMBIGUOUS,interaction.source(),"JSP_ROUTE_AMBIGUOUS",proof));
+            return new JspAnalysis.Interaction(interaction.viewPath(),interaction.type(),interaction.label(),raw,interaction.httpMethod(),interaction.source(),Confidence.AMBIGUOUS,interaction.submitsCurrentView(),interaction.originalExpression(),proof,interaction.componentId());
+        }
+        String route=routes.get(0).path();int slash=route.lastIndexOf('/');String parent=slash<=0?"":route.substring(0,slash);
+        String resolved=(parent+"/"+raw).replaceAll("/{2,}","/");
+        GraphNode endpoint=state.nodes.stream().filter(n->n.id().equals(routes.get(0).id())).findFirst().orElse(null);
+        List<ApplicationGraph.AnalysisEvidence> proof=new ArrayList<>(interaction.definitionEvidence());
+        proof.add(new ApplicationGraph.AnalysisEvidence(interaction.source(),"SpringMvcRelativeJspUrl",ApplicationGraph.ResolutionStatus.INFERRED,"相對 URL 以唯一渲染此畫面的 controller 路由目錄解析："+route+" → "+resolved));
+        if(endpoint!=null)proof.add(new ApplicationGraph.AnalysisEvidence(endpoint.source(),"SpringMvcRelativeJspUrl",ApplicationGraph.ResolutionStatus.INFERRED,"來源 controller 路由"));
+        return new JspAnalysis.Interaction(interaction.viewPath(),interaction.type(),interaction.label(),resolved,interaction.httpMethod(),interaction.source(),Confidence.INFERRED,interaction.submitsCurrentView(),interaction.originalExpression(),proof,interaction.componentId());
+    }
+
+    private static JspAnalysis.Interaction unresolvedRelative(JspAnalysis.Interaction interaction,State state,List<EndpointReference> routes,String reason) {
+        List<ApplicationGraph.AnalysisEvidence> proof=new ArrayList<>(interaction.definitionEvidence());
+        routes.forEach(route->{GraphNode endpoint=state.nodes.stream().filter(n->n.id().equals(route.id())).findFirst().orElse(null);if(endpoint!=null)proof.add(new ApplicationGraph.AnalysisEvidence(endpoint.source(),"SpringMvcRelativeJspUrl",ApplicationGraph.ResolutionStatus.UNRESOLVED,reason));});
+        proof.add(new ApplicationGraph.AnalysisEvidence(interaction.source(),"SpringMvcRelativeJspUrl",ApplicationGraph.ResolutionStatus.UNRESOLVED,reason+"；保留原始相對 URL："+interaction.target()));
+        state.diagnostics.add(new Diagnostic("JSP 相對 URL 無法以唯一 controller 路由解析："+interaction.target(),Confidence.UNRESOLVED,interaction.source(),"JSP_ROUTE_UNRESOLVED",proof));
+        return new JspAnalysis.Interaction(interaction.viewPath(),interaction.type(),interaction.label(),interaction.target(),interaction.httpMethod(),interaction.source(),Confidence.UNRESOLVED,interaction.submitsCurrentView(),interaction.originalExpression(),proof,interaction.componentId());
+    }
+
+    private static List<ApplicationGraph.AnalysisEvidence> interactionEvidence(JspAnalysis.Interaction interaction) {
+        List<ApplicationGraph.AnalysisEvidence> proof=new ArrayList<>(interaction.definitionEvidence());
+        proof.add(new ApplicationGraph.AnalysisEvidence(interaction.source(),"JspProjectParser",interaction.confidence().resolutionStatus(),"原始運算式："+interaction.originalExpression()));return proof;
     }
 
     private static boolean canTriggerEndpoint(JspAnalysis.InteractionType type) {
@@ -490,34 +570,19 @@ public final class SpringMvcAnalyzer {
     }
     private static Map<String, String> viewConstants(ClassOrInterfaceDeclaration type) {
         Map<String, String> values = new HashMap<>();
-        type.getFields().forEach(field -> field.getVariables().forEach(variable -> variable.getInitializer().filter(Expression::isStringLiteralExpr)
+        type.getFields().stream().filter(field->field.isFinal()).forEach(field -> field.getVariables().forEach(variable -> variable.getInitializer().filter(Expression::isStringLiteralExpr)
                 .ifPresent(value -> values.put(variable.getNameAsString(), value.asStringLiteralExpr().asString()))));
         return values;
     }
-    private static List<String> returnedViews(MethodDeclaration method, Map<String, String> constants) {
-        Map<String, String> modelAndViews = new HashMap<>();
-        for (VariableDeclarator variable : method.findAll(VariableDeclarator.class)) {
-            variable.getInitializer().filter(Expression::isObjectCreationExpr).map(Expression::asObjectCreationExpr).filter(creation -> creation.getType().getNameAsString().equals("ModelAndView"))
-                    .filter(creation -> !creation.getArguments().isEmpty() && creation.getArgument(0).isStringLiteralExpr())
-                    .ifPresent(creation -> modelAndViews.put(variable.getNameAsString(), creation.getArgument(0).asStringLiteralExpr().asString()));
-        }
-        List<String> views = new ArrayList<>();
-        for (Expression expression : method.findAll(com.github.javaparser.ast.stmt.ReturnStmt.class).stream().flatMap(r -> r.getExpression().stream()).toList()) {
-            if (expression.isStringLiteralExpr()) views.add(expression.asStringLiteralExpr().asString());
-            else if (expression.isNameExpr()) {
-                String name = expression.asNameExpr().getNameAsString();
-                if (constants.containsKey(name)) views.add(constants.get(name));
-                if (modelAndViews.containsKey(name)) views.add(modelAndViews.get(name));
-            } else if (expression.isObjectCreationExpr()) {
-                ObjectCreationExpr creation = expression.asObjectCreationExpr();
-                if (creation.getType().getNameAsString().equals("ModelAndView") && !creation.getArguments().isEmpty() && creation.getArgument(0).isStringLiteralExpr()) views.add(creation.getArgument(0).asStringLiteralExpr().asString());
-            }
-        }
-        return views;
-    }
     private static String join(String base, String child) { String path = (base + "/" + child).replaceAll("/{2,}", "/"); return path.isEmpty() ? "/" : path.startsWith("/") ? path : "/" + path; }
-    private static void addNode(State state, GraphNode node) { if (state.nodes.stream().noneMatch(n -> n.id().equals(node.id()))) state.nodes.add(node); }
-    private static void edge(State state, EdgeType type, String from, String to, Confidence confidence, SourceLocation source) { String id = ApplicationGraph.id(NodeType.COMPONENT, type + ":" + from + ":" + to); if (state.edges.stream().noneMatch(e -> e.id().equals(id))) state.edges.add(new Relationship(id, type, from, to, confidence, source)); }
+    private static void addNode(State state, GraphNode node) {
+        if(state.nodes.stream().noneMatch(n->n.id().equals(node.id()))) {
+            List<ApplicationGraph.AnalysisEvidence> proof=node.evidence().stream().map(e->Set.of("UNKNOWN","LEGACY").contains(e.parser())?
+                new ApplicationGraph.AnalysisEvidence(e.source(),"SpringMvcAnalyzer",e.resolution(),e.detail()):e).toList();
+            state.nodes.add(new GraphNode(node.id(),node.type(),node.name(),node.attributes(),node.source(),node.confidence(),proof));
+        }
+    }
+    private static void edge(State state, EdgeType type, String from, String to, Confidence confidence, SourceLocation source) { String id = ApplicationGraph.id(NodeType.COMPONENT, type + ":" + from + ":" + to); if (state.edges.stream().noneMatch(e -> e.id().equals(id))) state.edges.add(new Relationship(id,type,from,to,confidence,source,List.of(new ApplicationGraph.AnalysisEvidence(source,"SpringMvcAnalyzer",confidence.resolutionStatus(),null)))); }
     private static final class State {
         private final Path root; private final List<GraphNode> nodes = new ArrayList<>(); private final List<Relationship> edges = new ArrayList<>(); private final List<Diagnostic> diagnostics = new ArrayList<>();
         private final List<ApplicationGraph.ApiContract> apiContracts = new ArrayList<>(); private final ApiContractExtractor contracts;
@@ -525,6 +590,7 @@ public final class SpringMvcAnalyzer {
         private final Map<String, List<EndpointReference>> endpointsByScreen = new HashMap<>();
         private final Map<String, List<String>> screensByEndpoint = new HashMap<>(); private final Map<String, String> screensByView = new HashMap<>();
         private final Map<String, String> fragmentsByPath = new HashMap<>(); private final List<ViewResolver> viewResolvers = new ArrayList<>();
+        private final List<SpringControllerFlow.Pending> returnTargets=new ArrayList<>();
         private String defaultExceptionView;
         private State(Path root, List<Path> javaFiles) { this.root = root; this.contracts = new ApiContractExtractor(root, javaFiles); }
     }

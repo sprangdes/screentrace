@@ -27,7 +27,10 @@ async function resolveExistingWithin(root, candidate, kind) {
   if (kind === 'file' ? !info.isFile() : !info.isDirectory()) throw new Error(`Expected regular ${kind}: ${candidate}`);
   return resolved;
 }
-function within(root, candidate) { return candidate === root || candidate.startsWith(root + path.sep); }
+function within(root, candidate) {
+  const relative = path.relative(root, candidate);
+  return relative === '' || (relative !== '..' && !relative.startsWith(`..${path.sep}`) && !path.isAbsolute(relative));
+}
 
 export async function assertOutputPathWithin(root, candidate) {
   const rootReal = await realpath(root);

@@ -10,14 +10,89 @@ import java.util.*;
 public final class GraphIntegrityValidator {
   private GraphIntegrityValidator() { }
 
+  /** Gate for newly analyzed graphs; historical consumers use validate explicitly. */
+  public static ApplicationGraph requireAnalysis(ApplicationGraph graph) {
+    if (!ApplicationGraph.BEHAVIOR_SCHEMA_VERSION.equals(graph.schemaVersion()))
+      throw new IllegalArgumentException("新分析需要 schema 2.2，收到 schema " + graph.schemaVersion() + "；歷史資料不得靜默升版");
+    validate(graph);
+    return graph;
+  }
+
   public static void validate(ApplicationGraph graph) {
     List<String> errors = new ArrayList<>();
     validateSchema(graph, errors);
     Map<String, GraphNode> nodes = validateNodes(graph.nodes(), errors);
     validateRelationships(graph.relationships(), nodes, errors);
     validateApiContracts(graph.apiContracts(), nodes, errors);
+    validateBehaviors(graph, nodes, errors);
+    if (ApplicationGraph.BEHAVIOR_SCHEMA_VERSION.equals(graph.schemaVersion())) validateStrictEvidence(graph, errors);
     if (!errors.isEmpty()) {
       throw new IllegalStateException("Application graph validation failed:\n - " + String.join("\n - ", errors));
+    }
+  }
+
+  private static void validateStrictEvidence(ApplicationGraph graph, List<String> errors) {
+    for (GraphNode node : graph.nodes()) {
+      requireEvidence(node.id(), node.evidence(), errors);
+      if(node.source()!=null&&!validSource(node.source().file()))errors.add("Invalid node source: "+node.id());
+      if (node.type() == NodeType.COMPONENT) {
+        try { ApplicationGraph.ComponentKind.valueOf(node.attributes().getOrDefault("kind", "")); }
+        catch (IllegalArgumentException invalid) { errors.add("Missing or invalid component kind: " + node.id()); }
+      }
+    }
+    for (Relationship edge : graph.relationships()) {requireEvidence(edge.id(), edge.evidence(), errors);if(edge.source()!=null&&!validSource(edge.source().file()))errors.add("Invalid relationship source: "+edge.id());}
+  }
+
+  private static void requireEvidence(String owner, List<ApplicationGraph.AnalysisEvidence> evidence, List<String> errors) {
+    if (evidence.isEmpty()) errors.add("Missing evidence: " + owner);
+    for (var item : evidence) {
+      if (item.source() == null || item.source().line()<1 || !validSource(item.source().file())) errors.add("Missing or invalid source: " + owner);
+      if (item.parser() == null || item.parser().isBlank() || Set.of("UNKNOWN", "LEGACY").contains(item.parser())) errors.add("Missing parser: " + owner);
+      if (item.resolution() == null) errors.add("Missing resolution: " + owner);
+    }
+  }
+
+  private static boolean validSource(String file) {
+    if(file==null||file.isBlank()||file.contains(".."))return false;
+    if(file.startsWith("workspace:")){String name=file.substring("workspace:".length());return !name.isBlank()&&!name.contains("/")&&!name.contains("\\")&&!name.contains(":");}
+    return !file.startsWith("/")&&!file.startsWith("\\")&&!file.startsWith("~")&&!file.contains(":");
+  }
+
+  private static void validateBehaviors(ApplicationGraph graph, Map<String, GraphNode> nodes, List<String> errors) {
+    Map<String, ApplicationGraph.Behavior> behaviors = new HashMap<>();
+    Map<String, ApplicationGraph.ValidationRule> rules = new HashMap<>();
+    for (var rule : graph.validationRules()) {
+      if (rule.id() == null || rule.id().isBlank() || rules.put(rule.id(), rule) != null || nodes.containsKey(rule.id())) errors.add("Duplicate or blank validation id: " + rule.id());
+      if (rule.kind() == null || rule.kind().isBlank() || rule.fields().isEmpty() || rule.layer() == null) errors.add("Incomplete validation rule: " + rule.id());
+      requireEvidence(rule.id(), rule.evidence(), errors);
+    }
+    for (var behavior : graph.behaviors()) {
+      if (behavior.id() == null || behavior.id().isBlank() || behaviors.put(behavior.id(), behavior) != null || nodes.containsKey(behavior.id()) || rules.containsKey(behavior.id())) errors.add("Duplicate or blank behavior id: " + behavior.id());
+      if (behavior.event() == null || behavior.event().isBlank() || behavior.type() == null) errors.add("Incomplete behavior: " + behavior.id());
+      GraphNode trigger = nodes.get(behavior.triggerId());
+      if (behavior.triggerId() != null && (trigger == null || !Set.of(NodeType.COMPONENT, NodeType.SCREEN).contains(trigger.type()))) errors.add("Invalid behavior trigger: " + behavior.id());
+      if (behavior.triggerId() == null && behavior.parentId() == null) errors.add("Behavior has no trigger or parent: " + behavior.id());
+      requireEvidence(behavior.id(), behavior.evidence(), errors);
+      if (behavior.targetId() != null) {
+        GraphNode target = nodes.get(behavior.targetId());
+        boolean valid = behavior.type() != null && switch (behavior.type()) {
+          case VALIDATE -> rules.containsKey(behavior.targetId());
+          case NAVIGATE -> target != null && Set.of(NodeType.SCREEN, NodeType.ENDPOINT).contains(target.type());
+          case CALL_API, SUBMIT_FORM -> target != null && target.type() == NodeType.ENDPOINT;
+          case OPEN_DIALOG -> target != null && target.type() == NodeType.COMPONENT && "MODAL".equals(target.attributes().get("kind"));
+          default -> target != null || rules.containsKey(behavior.targetId());
+        };
+        if (!valid) errors.add("Invalid behavior target: " + behavior.id());
+      }
+    }
+    for (var behavior : graph.behaviors()) {
+      Set<String> seen = new HashSet<>();
+      var current = behavior;
+      while (current.parentId() != null) {
+        if (!seen.add(current.id())) { errors.add("Behavior parent cycle: " + behavior.id()); break; }
+        current = behaviors.get(current.parentId());
+        if (current == null) { errors.add("Unknown behavior parent: " + behavior.id()); break; }
+      }
     }
   }
 
@@ -124,8 +199,9 @@ public final class GraphIntegrityValidator {
     String target = from.attributes().get("target");
     String route = to.attributes().get("route");
     String view = to.attributes().get("view");
-    if (edge.confidence() == ApplicationGraph.Confidence.CONFIRMED && target != null && !target.equals(route) && !target.equals(view)) {
-      errors.add("Navigation target does not match screen route or view: " + edge.id());
+    Set<String> routeAliases = new HashSet<>(Arrays.asList(to.attributes().getOrDefault("routeAliases", "").split("\\u001f")));
+    if (edge.confidence() == ApplicationGraph.Confidence.CONFIRMED && target != null && !target.equals(route) && !target.equals(view) && !routeAliases.contains(target)) {
+      errors.add("Navigation target does not match screen route or view: " + edge.id() + " (target=" + target + ", route=" + route + ", view=" + view + ", routeAliases=" + routeAliases + ")");
     }
   }
 }

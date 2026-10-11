@@ -7,22 +7,43 @@ import java.util.List;
 
 /** Framework-neutral, deterministic contribution extracted from JSP-family source artifacts. */
 public record JspAnalysis(List<View> views, List<Interaction> interactions, List<Include> includes,
-                          List<TilesDefinition> tilesDefinitions, List<Diagnostic> diagnostics) {
+                          List<TilesDefinition> tilesDefinitions, List<Diagnostic> diagnostics,
+                          java.util.Map<String, MarkupAnalysis> markup) {
   public JspAnalysis {
     views = List.copyOf(views);
     interactions = List.copyOf(interactions);
     includes = List.copyOf(includes);
     tilesDefinitions = List.copyOf(tilesDefinitions);
     diagnostics = List.copyOf(diagnostics);
+    markup = java.util.Collections.unmodifiableMap(new java.util.TreeMap<>(markup));
   }
 
-  public record View(String path, ViewKind kind, SourceLocation source) { }
+  public JspAnalysis(List<View> views, List<Interaction> interactions, List<Include> includes,
+                     List<TilesDefinition> tilesDefinitions, List<Diagnostic> diagnostics) {
+    this(views, interactions, includes, tilesDefinitions, diagnostics, java.util.Map.of());
+  }
 
-  public enum ViewKind { JSP, JSPF }
+  public record View(String path, ViewKind kind, SourceLocation source,String displayName) {
+    public View(String path,ViewKind kind,SourceLocation source){this(path,kind,source,null);}
+  }
+
+  public enum ViewKind { JSP, JSPF, HTML }
 
   public record Interaction(String viewPath, InteractionType type, String label, String target,
                             String httpMethod, SourceLocation source, Confidence confidence,
-                            boolean submitsCurrentView) { }
+                            boolean submitsCurrentView, String originalExpression,
+                            List<io.screentrace.core.ApplicationGraph.AnalysisEvidence> definitionEvidence, String componentId) {
+    public Interaction(String viewPath, InteractionType type, String label, String target,
+                       String httpMethod, SourceLocation source, Confidence confidence, boolean submitsCurrentView,
+                       String originalExpression, List<io.screentrace.core.ApplicationGraph.AnalysisEvidence> definitionEvidence) {
+      this(viewPath,type,label,target,httpMethod,source,confidence,submitsCurrentView,originalExpression,definitionEvidence,null);
+    }
+    public Interaction { definitionEvidence = List.copyOf(definitionEvidence); }
+    public Interaction(String viewPath, InteractionType type, String label, String target,
+                       String httpMethod, SourceLocation source, Confidence confidence, boolean submitsCurrentView) {
+      this(viewPath,type,label,target,httpMethod,source,confidence,submitsCurrentView,target,List.of());
+    }
+  }
 
   /** Semantic interaction classification; presentation markup is retained separately by consumers. */
   public enum InteractionType {
@@ -30,11 +51,21 @@ public record JspAnalysis(List<View> views, List<Interaction> interactions, List
   }
 
   public record Include(String sourceViewPath, String targetPath, SourceLocation source,
-                        Confidence confidence) { }
+                        Confidence confidence, String guard, boolean repeated) {
+    public Include(String sourceViewPath,String targetPath,SourceLocation source,Confidence confidence,String guard) {
+      this(sourceViewPath,targetPath,source,confidence,guard,false);
+    }
+    public Include(String sourceViewPath,String targetPath,SourceLocation source,Confidence confidence) {
+      this(sourceViewPath,targetPath,source,confidence,null);
+    }
+  }
 
   public record TilesDefinition(String name, String template, List<TilesAttribute> attributes,
-                                SourceLocation source) {
+                                SourceLocation source, String parent) {
     public TilesDefinition { attributes = List.copyOf(attributes); }
+    public TilesDefinition(String name,String template,List<TilesAttribute> attributes,SourceLocation source) {
+      this(name,template,attributes,source,"");
+    }
   }
 
   public record TilesAttribute(String name, String value) { }

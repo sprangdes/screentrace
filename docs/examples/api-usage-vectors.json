@@ -1,0 +1,4417 @@
+{
+  "format_version": 1,
+  "graphs": {
+    "null": {
+      "application": {
+        "name": "Fictional API vectors",
+        "path": ".",
+        "technologies": []
+      },
+      "schemaVersion": "2.2",
+      "nodes": [
+        {
+          "id": "s1",
+          "type": "SCREEN",
+          "name": "s1",
+          "attributes": {},
+          "source": {
+            "file": "fixture.jsp",
+            "line": 1
+          },
+          "confidence": "CONFIRMED",
+          "evidence": [
+            {
+              "source": {
+                "file": "fixture.jsp",
+                "line": 1
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        },
+        {
+          "id": "s2",
+          "type": "SCREEN",
+          "name": "s2",
+          "attributes": {},
+          "source": {
+            "file": "fixture.jsp",
+            "line": 1
+          },
+          "confidence": "CONFIRMED",
+          "evidence": [
+            {
+              "source": {
+                "file": "fixture.jsp",
+                "line": 1
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        },
+        {
+          "id": "c",
+          "type": "COMPONENT",
+          "name": "c",
+          "attributes": {
+            "kind": "BUTTON"
+          },
+          "source": {
+            "file": "fixture.jsp",
+            "line": 1
+          },
+          "confidence": "CONFIRMED",
+          "evidence": [
+            {
+              "source": {
+                "file": "fixture.jsp",
+                "line": 1
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        },
+        {
+          "id": "api",
+          "type": "ENDPOINT",
+          "name": "api",
+          "attributes": {},
+          "source": {
+            "file": "fixture.jsp",
+            "line": 1
+          },
+          "confidence": "CONFIRMED",
+          "evidence": [
+            {
+              "source": {
+                "file": "fixture.jsp",
+                "line": 1
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        },
+        {
+          "id": "unused",
+          "type": "ENDPOINT",
+          "name": "unused",
+          "attributes": {},
+          "source": {
+            "file": "fixture.jsp",
+            "line": 1
+          },
+          "confidence": "CONFIRMED",
+          "evidence": [
+            {
+              "source": {
+                "file": "fixture.jsp",
+                "line": 1
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        }
+      ],
+      "relationships": [],
+      "behaviors": [
+        {
+          "id": "null",
+          "triggerId": "s1",
+          "event": "click",
+          "type": "CALL_API",
+          "targetId": null,
+          "guard": null,
+          "parentId": null,
+          "expression": null,
+          "evidence": [
+            {
+              "source": {
+                "file": "fixture.jsp",
+                "line": 1
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        }
+      ],
+      "diagnostics": [],
+      "apiContracts": [],
+      "validationRules": []
+    },
+    "mixed": {
+      "application": {
+        "name": "Fictional API vectors",
+        "path": ".",
+        "technologies": []
+      },
+      "schemaVersion": "2.2",
+      "nodes": [
+        {
+          "id": "s1",
+          "type": "SCREEN",
+          "name": "s1",
+          "attributes": {},
+          "source": {
+            "file": "fixture.jsp",
+            "line": 1
+          },
+          "confidence": "CONFIRMED",
+          "evidence": [
+            {
+              "source": {
+                "file": "fixture.jsp",
+                "line": 1
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        },
+        {
+          "id": "s2",
+          "type": "SCREEN",
+          "name": "s2",
+          "attributes": {},
+          "source": {
+            "file": "fixture.jsp",
+            "line": 1
+          },
+          "confidence": "CONFIRMED",
+          "evidence": [
+            {
+              "source": {
+                "file": "fixture.jsp",
+                "line": 1
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        },
+        {
+          "id": "c",
+          "type": "COMPONENT",
+          "name": "c",
+          "attributes": {
+            "kind": "BUTTON"
+          },
+          "source": {
+            "file": "fixture.jsp",
+            "line": 1
+          },
+          "confidence": "CONFIRMED",
+          "evidence": [
+            {
+              "source": {
+                "file": "fixture.jsp",
+                "line": 1
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        },
+        {
+          "id": "api",
+          "type": "ENDPOINT",
+          "name": "api",
+          "attributes": {},
+          "source": {
+            "file": "fixture.jsp",
+            "line": 1
+          },
+          "confidence": "CONFIRMED",
+          "evidence": [
+            {
+              "source": {
+                "file": "fixture.jsp",
+                "line": 1
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        },
+        {
+          "id": "unused",
+          "type": "ENDPOINT",
+          "name": "unused",
+          "attributes": {},
+          "source": {
+            "file": "fixture.jsp",
+            "line": 1
+          },
+          "confidence": "CONFIRMED",
+          "evidence": [
+            {
+              "source": {
+                "file": "fixture.jsp",
+                "line": 1
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        }
+      ],
+      "relationships": [],
+      "behaviors": [
+        {
+          "id": "null",
+          "triggerId": "s1",
+          "event": "click",
+          "type": "CALL_API",
+          "targetId": null,
+          "guard": null,
+          "parentId": null,
+          "expression": null,
+          "evidence": [
+            {
+              "source": {
+                "file": "fixture.jsp",
+                "line": 1
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        },
+        {
+          "id": "load",
+          "triggerId": "s1",
+          "event": "ready",
+          "type": "CALL_API",
+          "targetId": "api",
+          "guard": null,
+          "parentId": null,
+          "expression": null,
+          "evidence": [
+            {
+              "source": {
+                "file": "fixture.jsp",
+                "line": 1
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        }
+      ],
+      "diagnostics": [],
+      "apiContracts": [],
+      "validationRules": []
+    },
+    "shared": {
+      "application": {
+        "name": "Fictional API vectors",
+        "path": ".",
+        "technologies": []
+      },
+      "schemaVersion": "2.2",
+      "nodes": [
+        {
+          "id": "s1",
+          "type": "SCREEN",
+          "name": "s1",
+          "attributes": {},
+          "source": {
+            "file": "fixture.jsp",
+            "line": 1
+          },
+          "confidence": "CONFIRMED",
+          "evidence": [
+            {
+              "source": {
+                "file": "fixture.jsp",
+                "line": 1
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        },
+        {
+          "id": "s2",
+          "type": "SCREEN",
+          "name": "s2",
+          "attributes": {},
+          "source": {
+            "file": "fixture.jsp",
+            "line": 1
+          },
+          "confidence": "CONFIRMED",
+          "evidence": [
+            {
+              "source": {
+                "file": "fixture.jsp",
+                "line": 1
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        },
+        {
+          "id": "c",
+          "type": "COMPONENT",
+          "name": "c",
+          "attributes": {
+            "kind": "BUTTON"
+          },
+          "source": {
+            "file": "fixture.jsp",
+            "line": 1
+          },
+          "confidence": "CONFIRMED",
+          "evidence": [
+            {
+              "source": {
+                "file": "fixture.jsp",
+                "line": 1
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        },
+        {
+          "id": "api",
+          "type": "ENDPOINT",
+          "name": "api",
+          "attributes": {},
+          "source": {
+            "file": "fixture.jsp",
+            "line": 1
+          },
+          "confidence": "CONFIRMED",
+          "evidence": [
+            {
+              "source": {
+                "file": "fixture.jsp",
+                "line": 1
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        },
+        {
+          "id": "unused",
+          "type": "ENDPOINT",
+          "name": "unused",
+          "attributes": {},
+          "source": {
+            "file": "fixture.jsp",
+            "line": 1
+          },
+          "confidence": "CONFIRMED",
+          "evidence": [
+            {
+              "source": {
+                "file": "fixture.jsp",
+                "line": 1
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        }
+      ],
+      "relationships": [
+        {
+          "id": "own1",
+          "type": "CONTAINS",
+          "from": "s1",
+          "to": "c",
+          "confidence": "CONFIRMED",
+          "source": {
+            "file": "fixture.jsp",
+            "line": 1
+          },
+          "evidence": [
+            {
+              "source": {
+                "file": "fixture.jsp",
+                "line": 1
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        },
+        {
+          "id": "own2",
+          "type": "CONTAINS",
+          "from": "s2",
+          "to": "c",
+          "confidence": "CONFIRMED",
+          "source": {
+            "file": "fixture.jsp",
+            "line": 1
+          },
+          "evidence": [
+            {
+              "source": {
+                "file": "fixture.jsp",
+                "line": 1
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        },
+        {
+          "id": "call",
+          "type": "TRIGGERS",
+          "from": "c",
+          "to": "api",
+          "confidence": "CONFIRMED",
+          "source": {
+            "file": "fixture.jsp",
+            "line": 1
+          },
+          "evidence": [
+            {
+              "source": {
+                "file": "fixture.jsp",
+                "line": 1
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        }
+      ],
+      "behaviors": [],
+      "diagnostics": [],
+      "apiContracts": [],
+      "validationRules": []
+    },
+    "load": {
+      "application": {
+        "name": "Fictional API vectors",
+        "path": ".",
+        "technologies": []
+      },
+      "schemaVersion": "2.2",
+      "nodes": [
+        {
+          "id": "s1",
+          "type": "SCREEN",
+          "name": "s1",
+          "attributes": {},
+          "source": {
+            "file": "fixture.jsp",
+            "line": 1
+          },
+          "confidence": "CONFIRMED",
+          "evidence": [
+            {
+              "source": {
+                "file": "fixture.jsp",
+                "line": 1
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        },
+        {
+          "id": "s2",
+          "type": "SCREEN",
+          "name": "s2",
+          "attributes": {},
+          "source": {
+            "file": "fixture.jsp",
+            "line": 1
+          },
+          "confidence": "CONFIRMED",
+          "evidence": [
+            {
+              "source": {
+                "file": "fixture.jsp",
+                "line": 1
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        },
+        {
+          "id": "c",
+          "type": "COMPONENT",
+          "name": "c",
+          "attributes": {
+            "kind": "BUTTON"
+          },
+          "source": {
+            "file": "fixture.jsp",
+            "line": 1
+          },
+          "confidence": "CONFIRMED",
+          "evidence": [
+            {
+              "source": {
+                "file": "fixture.jsp",
+                "line": 1
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        },
+        {
+          "id": "api",
+          "type": "ENDPOINT",
+          "name": "api",
+          "attributes": {},
+          "source": {
+            "file": "fixture.jsp",
+            "line": 1
+          },
+          "confidence": "CONFIRMED",
+          "evidence": [
+            {
+              "source": {
+                "file": "fixture.jsp",
+                "line": 1
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        },
+        {
+          "id": "unused",
+          "type": "ENDPOINT",
+          "name": "unused",
+          "attributes": {},
+          "source": {
+            "file": "fixture.jsp",
+            "line": 1
+          },
+          "confidence": "CONFIRMED",
+          "evidence": [
+            {
+              "source": {
+                "file": "fixture.jsp",
+                "line": 1
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        }
+      ],
+      "relationships": [
+        {
+          "id": "own1",
+          "type": "CONTAINS",
+          "from": "s1",
+          "to": "c",
+          "confidence": "CONFIRMED",
+          "source": {
+            "file": "fixture.jsp",
+            "line": 1
+          },
+          "evidence": [
+            {
+              "source": {
+                "file": "fixture.jsp",
+                "line": 1
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        },
+        {
+          "id": "own2",
+          "type": "CONTAINS",
+          "from": "s2",
+          "to": "c",
+          "confidence": "CONFIRMED",
+          "source": {
+            "file": "fixture.jsp",
+            "line": 1
+          },
+          "evidence": [
+            {
+              "source": {
+                "file": "fixture.jsp",
+                "line": 1
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        },
+        {
+          "id": "call",
+          "type": "TRIGGERS",
+          "from": "c",
+          "to": "api",
+          "confidence": "CONFIRMED",
+          "source": {
+            "file": "fixture.jsp",
+            "line": 1
+          },
+          "evidence": [
+            {
+              "source": {
+                "file": "fixture.jsp",
+                "line": 1
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        },
+        {
+          "id": "load-edge",
+          "type": "CALLS",
+          "from": "s1",
+          "to": "api",
+          "confidence": "CONFIRMED",
+          "source": {
+            "file": "fixture.jsp",
+            "line": 1
+          },
+          "evidence": [
+            {
+              "source": {
+                "file": "fixture.jsp",
+                "line": 1
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        }
+      ],
+      "behaviors": [
+        {
+          "id": "load",
+          "triggerId": "s1",
+          "event": "ready",
+          "type": "CALL_API",
+          "targetId": "api",
+          "guard": null,
+          "parentId": null,
+          "expression": null,
+          "evidence": [
+            {
+              "source": {
+                "file": "fixture.jsp",
+                "line": 1
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        }
+      ],
+      "diagnostics": [],
+      "apiContracts": [],
+      "validationRules": []
+    },
+    "unresolved": {
+      "application": {
+        "name": "Fictional API vectors",
+        "path": ".",
+        "technologies": []
+      },
+      "schemaVersion": "2.2",
+      "nodes": [
+        {
+          "id": "s1",
+          "type": "SCREEN",
+          "name": "s1",
+          "attributes": {},
+          "source": {
+            "file": "fixture.jsp",
+            "line": 1
+          },
+          "confidence": "CONFIRMED",
+          "evidence": [
+            {
+              "source": {
+                "file": "fixture.jsp",
+                "line": 1
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        },
+        {
+          "id": "s2",
+          "type": "SCREEN",
+          "name": "s2",
+          "attributes": {},
+          "source": {
+            "file": "fixture.jsp",
+            "line": 1
+          },
+          "confidence": "CONFIRMED",
+          "evidence": [
+            {
+              "source": {
+                "file": "fixture.jsp",
+                "line": 1
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        },
+        {
+          "id": "c",
+          "type": "COMPONENT",
+          "name": "c",
+          "attributes": {
+            "kind": "BUTTON"
+          },
+          "source": {
+            "file": "fixture.jsp",
+            "line": 1
+          },
+          "confidence": "CONFIRMED",
+          "evidence": [
+            {
+              "source": {
+                "file": "fixture.jsp",
+                "line": 1
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        },
+        {
+          "id": "api",
+          "type": "ENDPOINT",
+          "name": "api",
+          "attributes": {},
+          "source": {
+            "file": "fixture.jsp",
+            "line": 1
+          },
+          "confidence": "CONFIRMED",
+          "evidence": [
+            {
+              "source": {
+                "file": "fixture.jsp",
+                "line": 1
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        },
+        {
+          "id": "unused",
+          "type": "ENDPOINT",
+          "name": "unused",
+          "attributes": {},
+          "source": {
+            "file": "fixture.jsp",
+            "line": 1
+          },
+          "confidence": "CONFIRMED",
+          "evidence": [
+            {
+              "source": {
+                "file": "fixture.jsp",
+                "line": 1
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        }
+      ],
+      "relationships": [],
+      "behaviors": [
+        {
+          "id": "failed",
+          "triggerId": "s1",
+          "event": "click",
+          "type": "CALL_API",
+          "targetId": "api",
+          "guard": null,
+          "parentId": null,
+          "expression": null,
+          "evidence": [
+            {
+              "source": {
+                "file": "fixture.jsp",
+                "line": 1
+              },
+              "parser": "Fixture",
+              "resolution": "UNRESOLVED",
+              "detail": null
+            }
+          ]
+        }
+      ],
+      "diagnostics": [],
+      "apiContracts": [],
+      "validationRules": []
+    },
+    "callback": {
+      "application": {
+        "name": "Fictional API vectors",
+        "path": ".",
+        "technologies": []
+      },
+      "schemaVersion": "2.2",
+      "nodes": [
+        {
+          "id": "s1",
+          "type": "SCREEN",
+          "name": "s1",
+          "attributes": {},
+          "source": {
+            "file": "fixture.jsp",
+            "line": 1
+          },
+          "confidence": "CONFIRMED",
+          "evidence": [
+            {
+              "source": {
+                "file": "fixture.jsp",
+                "line": 1
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        },
+        {
+          "id": "s2",
+          "type": "SCREEN",
+          "name": "s2",
+          "attributes": {},
+          "source": {
+            "file": "fixture.jsp",
+            "line": 1
+          },
+          "confidence": "CONFIRMED",
+          "evidence": [
+            {
+              "source": {
+                "file": "fixture.jsp",
+                "line": 1
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        },
+        {
+          "id": "c",
+          "type": "COMPONENT",
+          "name": "c",
+          "attributes": {
+            "kind": "BUTTON"
+          },
+          "source": {
+            "file": "fixture.jsp",
+            "line": 1
+          },
+          "confidence": "CONFIRMED",
+          "evidence": [
+            {
+              "source": {
+                "file": "fixture.jsp",
+                "line": 1
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        },
+        {
+          "id": "api",
+          "type": "ENDPOINT",
+          "name": "api",
+          "attributes": {},
+          "source": {
+            "file": "fixture.jsp",
+            "line": 1
+          },
+          "confidence": "CONFIRMED",
+          "evidence": [
+            {
+              "source": {
+                "file": "fixture.jsp",
+                "line": 1
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        },
+        {
+          "id": "unused",
+          "type": "ENDPOINT",
+          "name": "unused",
+          "attributes": {},
+          "source": {
+            "file": "fixture.jsp",
+            "line": 1
+          },
+          "confidence": "CONFIRMED",
+          "evidence": [
+            {
+              "source": {
+                "file": "fixture.jsp",
+                "line": 1
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        }
+      ],
+      "relationships": [
+        {
+          "id": "own1",
+          "type": "CONTAINS",
+          "from": "s1",
+          "to": "c",
+          "confidence": "CONFIRMED",
+          "source": {
+            "file": "fixture.jsp",
+            "line": 1
+          },
+          "evidence": [
+            {
+              "source": {
+                "file": "fixture.jsp",
+                "line": 1
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        },
+        {
+          "id": "own2",
+          "type": "CONTAINS",
+          "from": "s2",
+          "to": "c",
+          "confidence": "CONFIRMED",
+          "source": {
+            "file": "fixture.jsp",
+            "line": 1
+          },
+          "evidence": [
+            {
+              "source": {
+                "file": "fixture.jsp",
+                "line": 1
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        },
+        {
+          "id": "call",
+          "type": "TRIGGERS",
+          "from": "c",
+          "to": "api",
+          "confidence": "CONFIRMED",
+          "source": {
+            "file": "fixture.jsp",
+            "line": 1
+          },
+          "evidence": [
+            {
+              "source": {
+                "file": "fixture.jsp",
+                "line": 1
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        }
+      ],
+      "behaviors": [
+        {
+          "id": "ajax",
+          "triggerId": "c",
+          "event": "click",
+          "type": "CALL_API",
+          "targetId": "api",
+          "guard": null,
+          "parentId": null,
+          "expression": null,
+          "evidence": [
+            {
+              "source": {
+                "file": "fixture.jsp",
+                "line": 1
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        },
+        {
+          "id": "child",
+          "triggerId": null,
+          "event": "click",
+          "type": "CALL_API",
+          "targetId": "api",
+          "guard": null,
+          "parentId": "ajax",
+          "expression": null,
+          "evidence": [
+            {
+              "source": {
+                "file": "fixture.jsp",
+                "line": 1
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        }
+      ],
+      "diagnostics": [],
+      "apiContracts": [],
+      "validationRules": []
+    },
+    "null-edges": {
+      "application": {
+        "name": "Fictional API vectors",
+        "path": ".",
+        "technologies": []
+      },
+      "schemaVersion": "2.2",
+      "nodes": [
+        {
+          "id": "s1",
+          "type": "SCREEN",
+          "name": "s1",
+          "attributes": {},
+          "source": {
+            "file": "fixture.jsp",
+            "line": 1
+          },
+          "confidence": "CONFIRMED",
+          "evidence": [
+            {
+              "source": {
+                "file": "fixture.jsp",
+                "line": 1
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        },
+        {
+          "id": "s2",
+          "type": "SCREEN",
+          "name": "s2",
+          "attributes": {},
+          "source": {
+            "file": "fixture.jsp",
+            "line": 1
+          },
+          "confidence": "CONFIRMED",
+          "evidence": [
+            {
+              "source": {
+                "file": "fixture.jsp",
+                "line": 1
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        },
+        {
+          "id": "c",
+          "type": "COMPONENT",
+          "name": "c",
+          "attributes": {
+            "kind": "BUTTON"
+          },
+          "source": {
+            "file": "fixture.jsp",
+            "line": 1
+          },
+          "confidence": "CONFIRMED",
+          "evidence": [
+            {
+              "source": {
+                "file": "fixture.jsp",
+                "line": 1
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        },
+        {
+          "id": "api",
+          "type": "ENDPOINT",
+          "name": "api",
+          "attributes": {},
+          "source": {
+            "file": "fixture.jsp",
+            "line": 1
+          },
+          "confidence": "CONFIRMED",
+          "evidence": [
+            {
+              "source": {
+                "file": "fixture.jsp",
+                "line": 1
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        },
+        {
+          "id": "unused",
+          "type": "ENDPOINT",
+          "name": "unused",
+          "attributes": {},
+          "source": {
+            "file": "fixture.jsp",
+            "line": 1
+          },
+          "confidence": "CONFIRMED",
+          "evidence": [
+            {
+              "source": {
+                "file": "fixture.jsp",
+                "line": 1
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        }
+      ],
+      "relationships": [
+        {
+          "id": "null-call",
+          "type": "CALLS",
+          "from": "s1",
+          "to": null,
+          "confidence": "CONFIRMED",
+          "source": {
+            "file": "fixture.jsp",
+            "line": 1
+          },
+          "evidence": [
+            {
+              "source": {
+                "file": "fixture.jsp",
+                "line": 1
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        },
+        {
+          "id": "null-trigger",
+          "type": "TRIGGERS",
+          "from": "c",
+          "to": null,
+          "confidence": "CONFIRMED",
+          "source": {
+            "file": "fixture.jsp",
+            "line": 1
+          },
+          "evidence": [
+            {
+              "source": {
+                "file": "fixture.jsp",
+                "line": 1
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        },
+        {
+          "id": "valid",
+          "type": "CALLS",
+          "from": "s1",
+          "to": "api",
+          "confidence": "CONFIRMED",
+          "source": {
+            "file": "fixture.jsp",
+            "line": 1
+          },
+          "evidence": [
+            {
+              "source": {
+                "file": "fixture.jsp",
+                "line": 1
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        }
+      ],
+      "behaviors": [],
+      "diagnostics": [],
+      "apiContracts": [],
+      "validationRules": []
+    },
+    "inferred": {
+      "application": {
+        "name": "Fictional API vectors",
+        "path": ".",
+        "technologies": []
+      },
+      "schemaVersion": "2.2",
+      "nodes": [
+        {
+          "id": "s1",
+          "type": "SCREEN",
+          "name": "s1",
+          "attributes": {},
+          "source": {
+            "file": "fixture.jsp",
+            "line": 1
+          },
+          "confidence": "CONFIRMED",
+          "evidence": [
+            {
+              "source": {
+                "file": "fixture.jsp",
+                "line": 1
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        },
+        {
+          "id": "s2",
+          "type": "SCREEN",
+          "name": "s2",
+          "attributes": {},
+          "source": {
+            "file": "fixture.jsp",
+            "line": 1
+          },
+          "confidence": "CONFIRMED",
+          "evidence": [
+            {
+              "source": {
+                "file": "fixture.jsp",
+                "line": 1
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        },
+        {
+          "id": "api",
+          "type": "ENDPOINT",
+          "name": "api",
+          "attributes": {},
+          "source": {
+            "file": "fixture.jsp",
+            "line": 1
+          },
+          "confidence": "CONFIRMED",
+          "evidence": [
+            {
+              "source": {
+                "file": "fixture.jsp",
+                "line": 1
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        },
+        {
+          "id": "unused",
+          "type": "ENDPOINT",
+          "name": "unused",
+          "attributes": {},
+          "source": {
+            "file": "fixture.jsp",
+            "line": 1
+          },
+          "confidence": "CONFIRMED",
+          "evidence": [
+            {
+              "source": {
+                "file": "fixture.jsp",
+                "line": 1
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        }
+      ],
+      "relationships": [
+        {
+          "id": "inferred-0",
+          "type": "CALLS",
+          "from": "s1",
+          "to": "api",
+          "confidence": "INFERRED",
+          "source": {
+            "file": "fixture.jsp",
+            "line": 1
+          },
+          "evidence": [
+            {
+              "source": {
+                "file": "fixture.jsp",
+                "line": 1
+              },
+              "parser": "Fixture",
+              "resolution": "INFERRED",
+              "detail": "route-template inference"
+            }
+          ]
+        }
+      ],
+      "behaviors": [
+        {
+          "id": "null",
+          "triggerId": "s1",
+          "event": "click",
+          "type": "CALL_API",
+          "targetId": null,
+          "guard": null,
+          "parentId": null,
+          "expression": null,
+          "evidence": [
+            {
+              "source": {
+                "file": "fixture.jsp",
+                "line": 1
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        }
+      ],
+      "diagnostics": [],
+      "apiContracts": [],
+      "validationRules": []
+    },
+    "confirmed-inferred": {
+      "application": {
+        "name": "Fictional API vectors",
+        "path": ".",
+        "technologies": []
+      },
+      "schemaVersion": "2.2",
+      "nodes": [
+        {
+          "id": "s1",
+          "type": "SCREEN",
+          "name": "s1",
+          "attributes": {},
+          "source": {
+            "file": "fixture.jsp",
+            "line": 1
+          },
+          "confidence": "CONFIRMED",
+          "evidence": [
+            {
+              "source": {
+                "file": "fixture.jsp",
+                "line": 1
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        },
+        {
+          "id": "s2",
+          "type": "SCREEN",
+          "name": "s2",
+          "attributes": {},
+          "source": {
+            "file": "fixture.jsp",
+            "line": 1
+          },
+          "confidence": "CONFIRMED",
+          "evidence": [
+            {
+              "source": {
+                "file": "fixture.jsp",
+                "line": 1
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        },
+        {
+          "id": "api",
+          "type": "ENDPOINT",
+          "name": "api",
+          "attributes": {},
+          "source": {
+            "file": "fixture.jsp",
+            "line": 1
+          },
+          "confidence": "CONFIRMED",
+          "evidence": [
+            {
+              "source": {
+                "file": "fixture.jsp",
+                "line": 1
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        },
+        {
+          "id": "unused",
+          "type": "ENDPOINT",
+          "name": "unused",
+          "attributes": {},
+          "source": {
+            "file": "fixture.jsp",
+            "line": 1
+          },
+          "confidence": "CONFIRMED",
+          "evidence": [
+            {
+              "source": {
+                "file": "fixture.jsp",
+                "line": 1
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        }
+      ],
+      "relationships": [
+        {
+          "id": "inferred-0",
+          "type": "CALLS",
+          "from": "s1",
+          "to": "api",
+          "confidence": "CONFIRMED",
+          "source": {
+            "file": "fixture.jsp",
+            "line": 1
+          },
+          "evidence": [
+            {
+              "source": {
+                "file": "fixture.jsp",
+                "line": 1
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": "route-template inference"
+            }
+          ]
+        },
+        {
+          "id": "inferred-1",
+          "type": "CALLS",
+          "from": "s2",
+          "to": "api",
+          "confidence": "INFERRED",
+          "source": {
+            "file": "fixture.jsp",
+            "line": 2
+          },
+          "evidence": [
+            {
+              "source": {
+                "file": "fixture.jsp",
+                "line": 2
+              },
+              "parser": "Fixture",
+              "resolution": "INFERRED",
+              "detail": "route-template inference"
+            }
+          ]
+        }
+      ],
+      "behaviors": [
+        {
+          "id": "null",
+          "triggerId": "s1",
+          "event": "click",
+          "type": "CALL_API",
+          "targetId": null,
+          "guard": null,
+          "parentId": null,
+          "expression": null,
+          "evidence": [
+            {
+              "source": {
+                "file": "fixture.jsp",
+                "line": 1
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        }
+      ],
+      "diagnostics": [],
+      "apiContracts": [],
+      "validationRules": []
+    },
+    "inferred-shared": {
+      "application": {
+        "name": "Fictional API vectors",
+        "path": ".",
+        "technologies": []
+      },
+      "schemaVersion": "2.2",
+      "nodes": [
+        {
+          "id": "s1",
+          "type": "SCREEN",
+          "name": "s1",
+          "attributes": {},
+          "source": {
+            "file": "fixture.jsp",
+            "line": 1
+          },
+          "confidence": "CONFIRMED",
+          "evidence": [
+            {
+              "source": {
+                "file": "fixture.jsp",
+                "line": 1
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        },
+        {
+          "id": "s2",
+          "type": "SCREEN",
+          "name": "s2",
+          "attributes": {},
+          "source": {
+            "file": "fixture.jsp",
+            "line": 1
+          },
+          "confidence": "CONFIRMED",
+          "evidence": [
+            {
+              "source": {
+                "file": "fixture.jsp",
+                "line": 1
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        },
+        {
+          "id": "api",
+          "type": "ENDPOINT",
+          "name": "api",
+          "attributes": {},
+          "source": {
+            "file": "fixture.jsp",
+            "line": 1
+          },
+          "confidence": "CONFIRMED",
+          "evidence": [
+            {
+              "source": {
+                "file": "fixture.jsp",
+                "line": 1
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        },
+        {
+          "id": "unused",
+          "type": "ENDPOINT",
+          "name": "unused",
+          "attributes": {},
+          "source": {
+            "file": "fixture.jsp",
+            "line": 1
+          },
+          "confidence": "CONFIRMED",
+          "evidence": [
+            {
+              "source": {
+                "file": "fixture.jsp",
+                "line": 1
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        }
+      ],
+      "relationships": [
+        {
+          "id": "inferred-0",
+          "type": "CALLS",
+          "from": "s1",
+          "to": "api",
+          "confidence": "INFERRED",
+          "source": {
+            "file": "fixture.jsp",
+            "line": 1
+          },
+          "evidence": [
+            {
+              "source": {
+                "file": "fixture.jsp",
+                "line": 1
+              },
+              "parser": "Fixture",
+              "resolution": "INFERRED",
+              "detail": "route-template inference"
+            }
+          ]
+        },
+        {
+          "id": "inferred-1",
+          "type": "CALLS",
+          "from": "s2",
+          "to": "api",
+          "confidence": "INFERRED",
+          "source": {
+            "file": "fixture.jsp",
+            "line": 2
+          },
+          "evidence": [
+            {
+              "source": {
+                "file": "fixture.jsp",
+                "line": 2
+              },
+              "parser": "Fixture",
+              "resolution": "INFERRED",
+              "detail": "route-template inference"
+            }
+          ]
+        }
+      ],
+      "behaviors": [
+        {
+          "id": "null",
+          "triggerId": "s1",
+          "event": "click",
+          "type": "CALL_API",
+          "targetId": null,
+          "guard": null,
+          "parentId": null,
+          "expression": null,
+          "evidence": [
+            {
+              "source": {
+                "file": "fixture.jsp",
+                "line": 1
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        }
+      ],
+      "diagnostics": [],
+      "apiContracts": [],
+      "validationRules": []
+    },
+    "redirect-single": {
+      "application": {
+        "name": "Redirect vectors",
+        "path": ".",
+        "technologies": []
+      },
+      "schemaVersion": "2.2",
+      "nodes": [
+        {
+          "id": "screen",
+          "type": "SCREEN",
+          "name": "View Product",
+          "attributes": {},
+          "source": {
+            "file": "redirect-fixture.java",
+            "line": 1
+          },
+          "confidence": "CONFIRMED",
+          "evidence": [
+            {
+              "source": {
+                "file": "redirect-fixture.java",
+                "line": 1
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        },
+        {
+          "id": "button",
+          "type": "COMPONENT",
+          "name": "View cart",
+          "attributes": {
+            "kind": "LINK"
+          },
+          "source": {
+            "file": "redirect-fixture.java",
+            "line": 2
+          },
+          "confidence": "CONFIRMED",
+          "evidence": [
+            {
+              "source": {
+                "file": "redirect-fixture.java",
+                "line": 2
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        },
+        {
+          "id": "e0",
+          "type": "ENDPOINT",
+          "name": "GET /route0",
+          "attributes": {
+            "path": "/route0",
+            "httpMethod": "GET"
+          },
+          "source": {
+            "file": "redirect-fixture.java",
+            "line": 10
+          },
+          "confidence": "CONFIRMED",
+          "evidence": [
+            {
+              "source": {
+                "file": "redirect-fixture.java",
+                "line": 10
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        },
+        {
+          "id": "h0",
+          "type": "HANDLER",
+          "name": "CartController.h0",
+          "attributes": {
+            "method": "h0"
+          },
+          "source": {
+            "file": "redirect-fixture.java",
+            "line": 30
+          },
+          "confidence": "CONFIRMED",
+          "evidence": [
+            {
+              "source": {
+                "file": "redirect-fixture.java",
+                "line": 30
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        },
+        {
+          "id": "e1",
+          "type": "ENDPOINT",
+          "name": "GET /route1",
+          "attributes": {
+            "path": "/route1",
+            "httpMethod": "GET"
+          },
+          "source": {
+            "file": "redirect-fixture.java",
+            "line": 11
+          },
+          "confidence": "CONFIRMED",
+          "evidence": [
+            {
+              "source": {
+                "file": "redirect-fixture.java",
+                "line": 11
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        },
+        {
+          "id": "unused",
+          "type": "ENDPOINT",
+          "name": "unused",
+          "attributes": {
+            "path": "/unused",
+            "httpMethod": "GET"
+          },
+          "source": {
+            "file": "redirect-fixture.java",
+            "line": 99
+          },
+          "confidence": "CONFIRMED",
+          "evidence": [
+            {
+              "source": {
+                "file": "redirect-fixture.java",
+                "line": 99
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        }
+      ],
+      "relationships": [
+        {
+          "id": "owner",
+          "type": "CONTAINS",
+          "from": "screen",
+          "to": "button",
+          "confidence": "CONFIRMED",
+          "source": {
+            "file": "redirect-fixture.java",
+            "line": 2
+          },
+          "evidence": [
+            {
+              "source": {
+                "file": "redirect-fixture.java",
+                "line": 2
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        },
+        {
+          "id": "entry",
+          "type": "TRIGGERS",
+          "from": "button",
+          "to": "e0",
+          "confidence": "CONFIRMED",
+          "source": {
+            "file": "redirect-fixture.java",
+            "line": 2
+          },
+          "evidence": [
+            {
+              "source": {
+                "file": "redirect-fixture.java",
+                "line": 2
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        },
+        {
+          "id": "handled0",
+          "type": "HANDLED_BY",
+          "from": "e0",
+          "to": "h0",
+          "confidence": "CONFIRMED",
+          "source": {
+            "file": "redirect-fixture.java",
+            "line": 10
+          },
+          "evidence": [
+            {
+              "source": {
+                "file": "redirect-fixture.java",
+                "line": 10
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        },
+        {
+          "id": "redirect0",
+          "type": "CALLS",
+          "from": "h0",
+          "to": "e1",
+          "confidence": "INFERRED",
+          "source": {
+            "file": "redirect-fixture.java",
+            "line": 30
+          },
+          "evidence": [
+            {
+              "source": {
+                "file": "redirect-fixture.java",
+                "line": 30
+              },
+              "parser": "RedirectInheritance",
+              "resolution": "INFERRED",
+              "detail": "h0 → e1; redirect:/route1"
+            }
+          ]
+        }
+      ],
+      "diagnostics": [],
+      "apiContracts": [],
+      "behaviors": [],
+      "validationRules": []
+    },
+    "redirect-ambiguous": {
+      "application": {
+        "name": "Redirect vectors",
+        "path": ".",
+        "technologies": []
+      },
+      "schemaVersion": "2.2",
+      "nodes": [
+        {
+          "id": "screen",
+          "type": "SCREEN",
+          "name": "View Product",
+          "attributes": {},
+          "source": {
+            "file": "redirect-fixture.java",
+            "line": 1
+          },
+          "confidence": "CONFIRMED",
+          "evidence": [
+            {
+              "source": {
+                "file": "redirect-fixture.java",
+                "line": 1
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        },
+        {
+          "id": "button",
+          "type": "COMPONENT",
+          "name": "View cart",
+          "attributes": {
+            "kind": "LINK"
+          },
+          "source": {
+            "file": "redirect-fixture.java",
+            "line": 2
+          },
+          "confidence": "CONFIRMED",
+          "evidence": [
+            {
+              "source": {
+                "file": "redirect-fixture.java",
+                "line": 2
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        },
+        {
+          "id": "e0",
+          "type": "ENDPOINT",
+          "name": "GET /route0",
+          "attributes": {
+            "path": "/route0",
+            "httpMethod": "GET"
+          },
+          "source": {
+            "file": "redirect-fixture.java",
+            "line": 10
+          },
+          "confidence": "CONFIRMED",
+          "evidence": [
+            {
+              "source": {
+                "file": "redirect-fixture.java",
+                "line": 10
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        },
+        {
+          "id": "h0",
+          "type": "HANDLER",
+          "name": "CartController.h0",
+          "attributes": {
+            "method": "h0"
+          },
+          "source": {
+            "file": "redirect-fixture.java",
+            "line": 30
+          },
+          "confidence": "CONFIRMED",
+          "evidence": [
+            {
+              "source": {
+                "file": "redirect-fixture.java",
+                "line": 30
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        },
+        {
+          "id": "e1",
+          "type": "ENDPOINT",
+          "name": "GET /route1",
+          "attributes": {
+            "path": "/route1",
+            "httpMethod": "GET"
+          },
+          "source": {
+            "file": "redirect-fixture.java",
+            "line": 11
+          },
+          "confidence": "CONFIRMED",
+          "evidence": [
+            {
+              "source": {
+                "file": "redirect-fixture.java",
+                "line": 11
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        },
+        {
+          "id": "e2",
+          "type": "ENDPOINT",
+          "name": "GET /route2",
+          "attributes": {
+            "path": "/route2",
+            "httpMethod": "GET"
+          },
+          "source": {
+            "file": "redirect-fixture.java",
+            "line": 12
+          },
+          "confidence": "CONFIRMED",
+          "evidence": [
+            {
+              "source": {
+                "file": "redirect-fixture.java",
+                "line": 12
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        },
+        {
+          "id": "unused",
+          "type": "ENDPOINT",
+          "name": "unused",
+          "attributes": {
+            "path": "/unused",
+            "httpMethod": "GET"
+          },
+          "source": {
+            "file": "redirect-fixture.java",
+            "line": 99
+          },
+          "confidence": "CONFIRMED",
+          "evidence": [
+            {
+              "source": {
+                "file": "redirect-fixture.java",
+                "line": 99
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        }
+      ],
+      "relationships": [
+        {
+          "id": "owner",
+          "type": "CONTAINS",
+          "from": "screen",
+          "to": "button",
+          "confidence": "CONFIRMED",
+          "source": {
+            "file": "redirect-fixture.java",
+            "line": 2
+          },
+          "evidence": [
+            {
+              "source": {
+                "file": "redirect-fixture.java",
+                "line": 2
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        },
+        {
+          "id": "entry",
+          "type": "TRIGGERS",
+          "from": "button",
+          "to": "e0",
+          "confidence": "CONFIRMED",
+          "source": {
+            "file": "redirect-fixture.java",
+            "line": 2
+          },
+          "evidence": [
+            {
+              "source": {
+                "file": "redirect-fixture.java",
+                "line": 2
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        },
+        {
+          "id": "handled0",
+          "type": "HANDLED_BY",
+          "from": "e0",
+          "to": "h0",
+          "confidence": "CONFIRMED",
+          "source": {
+            "file": "redirect-fixture.java",
+            "line": 10
+          },
+          "evidence": [
+            {
+              "source": {
+                "file": "redirect-fixture.java",
+                "line": 10
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        },
+        {
+          "id": "redirect0",
+          "type": "CALLS",
+          "from": "h0",
+          "to": "e1",
+          "confidence": "AMBIGUOUS",
+          "source": {
+            "file": "redirect-fixture.java",
+            "line": 30
+          },
+          "evidence": [
+            {
+              "source": {
+                "file": "redirect-fixture.java",
+                "line": 30
+              },
+              "parser": "RedirectInheritance",
+              "resolution": "AMBIGUOUS",
+              "detail": "h0 → e1; redirect:/route1"
+            }
+          ]
+        }
+      ],
+      "diagnostics": [],
+      "apiContracts": [],
+      "behaviors": [],
+      "validationRules": []
+    },
+    "redirect-cycle": {
+      "application": {
+        "name": "Redirect vectors",
+        "path": ".",
+        "technologies": []
+      },
+      "schemaVersion": "2.2",
+      "nodes": [
+        {
+          "id": "screen",
+          "type": "SCREEN",
+          "name": "View Product",
+          "attributes": {},
+          "source": {
+            "file": "redirect-fixture.java",
+            "line": 1
+          },
+          "confidence": "CONFIRMED",
+          "evidence": [
+            {
+              "source": {
+                "file": "redirect-fixture.java",
+                "line": 1
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        },
+        {
+          "id": "button",
+          "type": "COMPONENT",
+          "name": "View cart",
+          "attributes": {
+            "kind": "LINK"
+          },
+          "source": {
+            "file": "redirect-fixture.java",
+            "line": 2
+          },
+          "confidence": "CONFIRMED",
+          "evidence": [
+            {
+              "source": {
+                "file": "redirect-fixture.java",
+                "line": 2
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        },
+        {
+          "id": "e0",
+          "type": "ENDPOINT",
+          "name": "GET /route0",
+          "attributes": {
+            "path": "/route0",
+            "httpMethod": "GET"
+          },
+          "source": {
+            "file": "redirect-fixture.java",
+            "line": 10
+          },
+          "confidence": "CONFIRMED",
+          "evidence": [
+            {
+              "source": {
+                "file": "redirect-fixture.java",
+                "line": 10
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        },
+        {
+          "id": "h0",
+          "type": "HANDLER",
+          "name": "CartController.h0",
+          "attributes": {
+            "method": "h0"
+          },
+          "source": {
+            "file": "redirect-fixture.java",
+            "line": 30
+          },
+          "confidence": "CONFIRMED",
+          "evidence": [
+            {
+              "source": {
+                "file": "redirect-fixture.java",
+                "line": 30
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        },
+        {
+          "id": "e1",
+          "type": "ENDPOINT",
+          "name": "GET /route1",
+          "attributes": {
+            "path": "/route1",
+            "httpMethod": "GET"
+          },
+          "source": {
+            "file": "redirect-fixture.java",
+            "line": 11
+          },
+          "confidence": "CONFIRMED",
+          "evidence": [
+            {
+              "source": {
+                "file": "redirect-fixture.java",
+                "line": 11
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        },
+        {
+          "id": "h1",
+          "type": "HANDLER",
+          "name": "CartController.h1",
+          "attributes": {
+            "method": "h1"
+          },
+          "source": {
+            "file": "redirect-fixture.java",
+            "line": 31
+          },
+          "confidence": "CONFIRMED",
+          "evidence": [
+            {
+              "source": {
+                "file": "redirect-fixture.java",
+                "line": 31
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        },
+        {
+          "id": "unused",
+          "type": "ENDPOINT",
+          "name": "unused",
+          "attributes": {
+            "path": "/unused",
+            "httpMethod": "GET"
+          },
+          "source": {
+            "file": "redirect-fixture.java",
+            "line": 99
+          },
+          "confidence": "CONFIRMED",
+          "evidence": [
+            {
+              "source": {
+                "file": "redirect-fixture.java",
+                "line": 99
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        }
+      ],
+      "relationships": [
+        {
+          "id": "owner",
+          "type": "CONTAINS",
+          "from": "screen",
+          "to": "button",
+          "confidence": "CONFIRMED",
+          "source": {
+            "file": "redirect-fixture.java",
+            "line": 2
+          },
+          "evidence": [
+            {
+              "source": {
+                "file": "redirect-fixture.java",
+                "line": 2
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        },
+        {
+          "id": "entry",
+          "type": "TRIGGERS",
+          "from": "button",
+          "to": "e0",
+          "confidence": "CONFIRMED",
+          "source": {
+            "file": "redirect-fixture.java",
+            "line": 2
+          },
+          "evidence": [
+            {
+              "source": {
+                "file": "redirect-fixture.java",
+                "line": 2
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        },
+        {
+          "id": "handled0",
+          "type": "HANDLED_BY",
+          "from": "e0",
+          "to": "h0",
+          "confidence": "CONFIRMED",
+          "source": {
+            "file": "redirect-fixture.java",
+            "line": 10
+          },
+          "evidence": [
+            {
+              "source": {
+                "file": "redirect-fixture.java",
+                "line": 10
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        },
+        {
+          "id": "redirect0",
+          "type": "CALLS",
+          "from": "h0",
+          "to": "e1",
+          "confidence": "INFERRED",
+          "source": {
+            "file": "redirect-fixture.java",
+            "line": 30
+          },
+          "evidence": [
+            {
+              "source": {
+                "file": "redirect-fixture.java",
+                "line": 30
+              },
+              "parser": "RedirectInheritance",
+              "resolution": "INFERRED",
+              "detail": "h0 → e1; redirect:/route1"
+            }
+          ]
+        },
+        {
+          "id": "handled1",
+          "type": "HANDLED_BY",
+          "from": "e1",
+          "to": "h1",
+          "confidence": "CONFIRMED",
+          "source": {
+            "file": "redirect-fixture.java",
+            "line": 11
+          },
+          "evidence": [
+            {
+              "source": {
+                "file": "redirect-fixture.java",
+                "line": 11
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        },
+        {
+          "id": "redirect1",
+          "type": "CALLS",
+          "from": "h1",
+          "to": "e2",
+          "confidence": "INFERRED",
+          "source": {
+            "file": "redirect-fixture.java",
+            "line": 31
+          },
+          "evidence": [
+            {
+              "source": {
+                "file": "redirect-fixture.java",
+                "line": 31
+              },
+              "parser": "RedirectInheritance",
+              "resolution": "INFERRED",
+              "detail": "h1 → e2; redirect:/route2"
+            }
+          ]
+        }
+      ],
+      "diagnostics": [],
+      "apiContracts": [],
+      "behaviors": [],
+      "validationRules": []
+    },
+    "redirect-limit": {
+      "application": {
+        "name": "Redirect vectors",
+        "path": ".",
+        "technologies": []
+      },
+      "schemaVersion": "2.2",
+      "nodes": [
+        {
+          "id": "screen",
+          "type": "SCREEN",
+          "name": "View Product",
+          "attributes": {},
+          "source": {
+            "file": "redirect-fixture.java",
+            "line": 1
+          },
+          "confidence": "CONFIRMED",
+          "evidence": [
+            {
+              "source": {
+                "file": "redirect-fixture.java",
+                "line": 1
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        },
+        {
+          "id": "button",
+          "type": "COMPONENT",
+          "name": "View cart",
+          "attributes": {
+            "kind": "LINK"
+          },
+          "source": {
+            "file": "redirect-fixture.java",
+            "line": 2
+          },
+          "confidence": "CONFIRMED",
+          "evidence": [
+            {
+              "source": {
+                "file": "redirect-fixture.java",
+                "line": 2
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        },
+        {
+          "id": "e0",
+          "type": "ENDPOINT",
+          "name": "GET /route0",
+          "attributes": {
+            "path": "/route0",
+            "httpMethod": "GET"
+          },
+          "source": {
+            "file": "redirect-fixture.java",
+            "line": 10
+          },
+          "confidence": "CONFIRMED",
+          "evidence": [
+            {
+              "source": {
+                "file": "redirect-fixture.java",
+                "line": 10
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        },
+        {
+          "id": "h0",
+          "type": "HANDLER",
+          "name": "CartController.h0",
+          "attributes": {
+            "method": "h0"
+          },
+          "source": {
+            "file": "redirect-fixture.java",
+            "line": 30
+          },
+          "confidence": "CONFIRMED",
+          "evidence": [
+            {
+              "source": {
+                "file": "redirect-fixture.java",
+                "line": 30
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        },
+        {
+          "id": "e1",
+          "type": "ENDPOINT",
+          "name": "GET /route1",
+          "attributes": {
+            "path": "/route1",
+            "httpMethod": "GET"
+          },
+          "source": {
+            "file": "redirect-fixture.java",
+            "line": 11
+          },
+          "confidence": "CONFIRMED",
+          "evidence": [
+            {
+              "source": {
+                "file": "redirect-fixture.java",
+                "line": 11
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        },
+        {
+          "id": "h1",
+          "type": "HANDLER",
+          "name": "CartController.h1",
+          "attributes": {
+            "method": "h1"
+          },
+          "source": {
+            "file": "redirect-fixture.java",
+            "line": 31
+          },
+          "confidence": "CONFIRMED",
+          "evidence": [
+            {
+              "source": {
+                "file": "redirect-fixture.java",
+                "line": 31
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        },
+        {
+          "id": "e2",
+          "type": "ENDPOINT",
+          "name": "GET /route2",
+          "attributes": {
+            "path": "/route2",
+            "httpMethod": "GET"
+          },
+          "source": {
+            "file": "redirect-fixture.java",
+            "line": 12
+          },
+          "confidence": "CONFIRMED",
+          "evidence": [
+            {
+              "source": {
+                "file": "redirect-fixture.java",
+                "line": 12
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        },
+        {
+          "id": "h2",
+          "type": "HANDLER",
+          "name": "CartController.h2",
+          "attributes": {
+            "method": "h2"
+          },
+          "source": {
+            "file": "redirect-fixture.java",
+            "line": 32
+          },
+          "confidence": "CONFIRMED",
+          "evidence": [
+            {
+              "source": {
+                "file": "redirect-fixture.java",
+                "line": 32
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        },
+        {
+          "id": "e3",
+          "type": "ENDPOINT",
+          "name": "GET /route3",
+          "attributes": {
+            "path": "/route3",
+            "httpMethod": "GET"
+          },
+          "source": {
+            "file": "redirect-fixture.java",
+            "line": 13
+          },
+          "confidence": "CONFIRMED",
+          "evidence": [
+            {
+              "source": {
+                "file": "redirect-fixture.java",
+                "line": 13
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        },
+        {
+          "id": "h3",
+          "type": "HANDLER",
+          "name": "CartController.h3",
+          "attributes": {
+            "method": "h3"
+          },
+          "source": {
+            "file": "redirect-fixture.java",
+            "line": 33
+          },
+          "confidence": "CONFIRMED",
+          "evidence": [
+            {
+              "source": {
+                "file": "redirect-fixture.java",
+                "line": 33
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        },
+        {
+          "id": "e4",
+          "type": "ENDPOINT",
+          "name": "GET /route4",
+          "attributes": {
+            "path": "/route4",
+            "httpMethod": "GET"
+          },
+          "source": {
+            "file": "redirect-fixture.java",
+            "line": 14
+          },
+          "confidence": "CONFIRMED",
+          "evidence": [
+            {
+              "source": {
+                "file": "redirect-fixture.java",
+                "line": 14
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        },
+        {
+          "id": "h4",
+          "type": "HANDLER",
+          "name": "CartController.h4",
+          "attributes": {
+            "method": "h4"
+          },
+          "source": {
+            "file": "redirect-fixture.java",
+            "line": 34
+          },
+          "confidence": "CONFIRMED",
+          "evidence": [
+            {
+              "source": {
+                "file": "redirect-fixture.java",
+                "line": 34
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        },
+        {
+          "id": "e5",
+          "type": "ENDPOINT",
+          "name": "GET /route5",
+          "attributes": {
+            "path": "/route5",
+            "httpMethod": "GET"
+          },
+          "source": {
+            "file": "redirect-fixture.java",
+            "line": 15
+          },
+          "confidence": "CONFIRMED",
+          "evidence": [
+            {
+              "source": {
+                "file": "redirect-fixture.java",
+                "line": 15
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        },
+        {
+          "id": "h5",
+          "type": "HANDLER",
+          "name": "CartController.h5",
+          "attributes": {
+            "method": "h5"
+          },
+          "source": {
+            "file": "redirect-fixture.java",
+            "line": 35
+          },
+          "confidence": "CONFIRMED",
+          "evidence": [
+            {
+              "source": {
+                "file": "redirect-fixture.java",
+                "line": 35
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        },
+        {
+          "id": "e6",
+          "type": "ENDPOINT",
+          "name": "GET /route6",
+          "attributes": {
+            "path": "/route6",
+            "httpMethod": "GET"
+          },
+          "source": {
+            "file": "redirect-fixture.java",
+            "line": 16
+          },
+          "confidence": "CONFIRMED",
+          "evidence": [
+            {
+              "source": {
+                "file": "redirect-fixture.java",
+                "line": 16
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        },
+        {
+          "id": "h6",
+          "type": "HANDLER",
+          "name": "CartController.h6",
+          "attributes": {
+            "method": "h6"
+          },
+          "source": {
+            "file": "redirect-fixture.java",
+            "line": 36
+          },
+          "confidence": "CONFIRMED",
+          "evidence": [
+            {
+              "source": {
+                "file": "redirect-fixture.java",
+                "line": 36
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        },
+        {
+          "id": "e7",
+          "type": "ENDPOINT",
+          "name": "GET /route7",
+          "attributes": {
+            "path": "/route7",
+            "httpMethod": "GET"
+          },
+          "source": {
+            "file": "redirect-fixture.java",
+            "line": 17
+          },
+          "confidence": "CONFIRMED",
+          "evidence": [
+            {
+              "source": {
+                "file": "redirect-fixture.java",
+                "line": 17
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        },
+        {
+          "id": "unused",
+          "type": "ENDPOINT",
+          "name": "unused",
+          "attributes": {
+            "path": "/unused",
+            "httpMethod": "GET"
+          },
+          "source": {
+            "file": "redirect-fixture.java",
+            "line": 99
+          },
+          "confidence": "CONFIRMED",
+          "evidence": [
+            {
+              "source": {
+                "file": "redirect-fixture.java",
+                "line": 99
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        }
+      ],
+      "relationships": [
+        {
+          "id": "owner",
+          "type": "CONTAINS",
+          "from": "screen",
+          "to": "button",
+          "confidence": "CONFIRMED",
+          "source": {
+            "file": "redirect-fixture.java",
+            "line": 2
+          },
+          "evidence": [
+            {
+              "source": {
+                "file": "redirect-fixture.java",
+                "line": 2
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        },
+        {
+          "id": "entry",
+          "type": "TRIGGERS",
+          "from": "button",
+          "to": "e0",
+          "confidence": "CONFIRMED",
+          "source": {
+            "file": "redirect-fixture.java",
+            "line": 2
+          },
+          "evidence": [
+            {
+              "source": {
+                "file": "redirect-fixture.java",
+                "line": 2
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        },
+        {
+          "id": "handled0",
+          "type": "HANDLED_BY",
+          "from": "e0",
+          "to": "h0",
+          "confidence": "CONFIRMED",
+          "source": {
+            "file": "redirect-fixture.java",
+            "line": 10
+          },
+          "evidence": [
+            {
+              "source": {
+                "file": "redirect-fixture.java",
+                "line": 10
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        },
+        {
+          "id": "redirect0",
+          "type": "CALLS",
+          "from": "h0",
+          "to": "e1",
+          "confidence": "INFERRED",
+          "source": {
+            "file": "redirect-fixture.java",
+            "line": 30
+          },
+          "evidence": [
+            {
+              "source": {
+                "file": "redirect-fixture.java",
+                "line": 30
+              },
+              "parser": "RedirectInheritance",
+              "resolution": "INFERRED",
+              "detail": "h0 → e1; redirect:/route1"
+            }
+          ]
+        },
+        {
+          "id": "handled1",
+          "type": "HANDLED_BY",
+          "from": "e1",
+          "to": "h1",
+          "confidence": "CONFIRMED",
+          "source": {
+            "file": "redirect-fixture.java",
+            "line": 11
+          },
+          "evidence": [
+            {
+              "source": {
+                "file": "redirect-fixture.java",
+                "line": 11
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        },
+        {
+          "id": "redirect1",
+          "type": "CALLS",
+          "from": "h1",
+          "to": "e2",
+          "confidence": "INFERRED",
+          "source": {
+            "file": "redirect-fixture.java",
+            "line": 31
+          },
+          "evidence": [
+            {
+              "source": {
+                "file": "redirect-fixture.java",
+                "line": 31
+              },
+              "parser": "RedirectInheritance",
+              "resolution": "INFERRED",
+              "detail": "h1 → e2; redirect:/route2"
+            }
+          ]
+        },
+        {
+          "id": "handled2",
+          "type": "HANDLED_BY",
+          "from": "e2",
+          "to": "h2",
+          "confidence": "CONFIRMED",
+          "source": {
+            "file": "redirect-fixture.java",
+            "line": 12
+          },
+          "evidence": [
+            {
+              "source": {
+                "file": "redirect-fixture.java",
+                "line": 12
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        },
+        {
+          "id": "redirect2",
+          "type": "CALLS",
+          "from": "h2",
+          "to": "e3",
+          "confidence": "INFERRED",
+          "source": {
+            "file": "redirect-fixture.java",
+            "line": 32
+          },
+          "evidence": [
+            {
+              "source": {
+                "file": "redirect-fixture.java",
+                "line": 32
+              },
+              "parser": "RedirectInheritance",
+              "resolution": "INFERRED",
+              "detail": "h2 → e3; redirect:/route3"
+            }
+          ]
+        },
+        {
+          "id": "handled3",
+          "type": "HANDLED_BY",
+          "from": "e3",
+          "to": "h3",
+          "confidence": "CONFIRMED",
+          "source": {
+            "file": "redirect-fixture.java",
+            "line": 13
+          },
+          "evidence": [
+            {
+              "source": {
+                "file": "redirect-fixture.java",
+                "line": 13
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        },
+        {
+          "id": "redirect3",
+          "type": "CALLS",
+          "from": "h3",
+          "to": "e4",
+          "confidence": "INFERRED",
+          "source": {
+            "file": "redirect-fixture.java",
+            "line": 33
+          },
+          "evidence": [
+            {
+              "source": {
+                "file": "redirect-fixture.java",
+                "line": 33
+              },
+              "parser": "RedirectInheritance",
+              "resolution": "INFERRED",
+              "detail": "h3 → e4; redirect:/route4"
+            }
+          ]
+        },
+        {
+          "id": "handled4",
+          "type": "HANDLED_BY",
+          "from": "e4",
+          "to": "h4",
+          "confidence": "CONFIRMED",
+          "source": {
+            "file": "redirect-fixture.java",
+            "line": 14
+          },
+          "evidence": [
+            {
+              "source": {
+                "file": "redirect-fixture.java",
+                "line": 14
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        },
+        {
+          "id": "redirect4",
+          "type": "CALLS",
+          "from": "h4",
+          "to": "e5",
+          "confidence": "INFERRED",
+          "source": {
+            "file": "redirect-fixture.java",
+            "line": 34
+          },
+          "evidence": [
+            {
+              "source": {
+                "file": "redirect-fixture.java",
+                "line": 34
+              },
+              "parser": "RedirectInheritance",
+              "resolution": "INFERRED",
+              "detail": "h4 → e5; redirect:/route5"
+            }
+          ]
+        },
+        {
+          "id": "handled5",
+          "type": "HANDLED_BY",
+          "from": "e5",
+          "to": "h5",
+          "confidence": "CONFIRMED",
+          "source": {
+            "file": "redirect-fixture.java",
+            "line": 15
+          },
+          "evidence": [
+            {
+              "source": {
+                "file": "redirect-fixture.java",
+                "line": 15
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        },
+        {
+          "id": "redirect5",
+          "type": "CALLS",
+          "from": "h5",
+          "to": "e6",
+          "confidence": "INFERRED",
+          "source": {
+            "file": "redirect-fixture.java",
+            "line": 35
+          },
+          "evidence": [
+            {
+              "source": {
+                "file": "redirect-fixture.java",
+                "line": 35
+              },
+              "parser": "RedirectInheritance",
+              "resolution": "INFERRED",
+              "detail": "h5 → e6; redirect:/route6"
+            }
+          ]
+        },
+        {
+          "id": "handled6",
+          "type": "HANDLED_BY",
+          "from": "e6",
+          "to": "h6",
+          "confidence": "CONFIRMED",
+          "source": {
+            "file": "redirect-fixture.java",
+            "line": 16
+          },
+          "evidence": [
+            {
+              "source": {
+                "file": "redirect-fixture.java",
+                "line": 16
+              },
+              "parser": "Fixture",
+              "resolution": "CONFIRMED",
+              "detail": null
+            }
+          ]
+        },
+        {
+          "id": "redirect6",
+          "type": "CALLS",
+          "from": "h6",
+          "to": "e7",
+          "confidence": "INFERRED",
+          "source": {
+            "file": "redirect-fixture.java",
+            "line": 36
+          },
+          "evidence": [
+            {
+              "source": {
+                "file": "redirect-fixture.java",
+                "line": 36
+              },
+              "parser": "RedirectInheritance",
+              "resolution": "INFERRED",
+              "detail": "h6 → e7; redirect:/route7"
+            }
+          ]
+        }
+      ],
+      "diagnostics": [],
+      "apiContracts": [],
+      "behaviors": [],
+      "validationRules": []
+    }
+  },
+  "cases": [
+    {
+      "id": "null-target-only",
+      "rules": [
+        "R-API-5",
+        "R-API-6"
+      ],
+      "graph": "null",
+      "screenDecisions": {},
+      "componentDecisions": {},
+      "expected": {
+        "api": {
+          "status": "UNREFERENCED",
+          "callers": []
+        },
+        "unused": {
+          "status": "UNREFERENCED",
+          "callers": []
+        }
+      }
+    },
+    {
+      "id": "null-with-valid-load",
+      "rules": [
+        "R-API-1",
+        "R-API-4"
+      ],
+      "graph": "mixed",
+      "screenDecisions": {},
+      "componentDecisions": {},
+      "expected": {
+        "api": {
+          "status": "IN_USE",
+          "callers": [
+            {
+              "screenId": "s1",
+              "componentId": null,
+              "behaviorId": "load"
+            }
+          ]
+        },
+        "unused": {
+          "status": "UNREFERENCED",
+          "callers": []
+        }
+      }
+    },
+    {
+      "id": "null-with-removed-load",
+      "rules": [
+        "R-API-2",
+        "R-API-3"
+      ],
+      "graph": "mixed",
+      "screenDecisions": {
+        "s1": "REMOVE"
+      },
+      "componentDecisions": {},
+      "expected": {
+        "api": {
+          "status": "REMOVABLE",
+          "callers": [
+            {
+              "screenId": "s1",
+              "componentId": null,
+              "behaviorId": "load"
+            }
+          ]
+        },
+        "unused": {
+          "status": "UNREFERENCED",
+          "callers": []
+        }
+      }
+    },
+    {
+      "id": "shared-no-decisions",
+      "rules": [
+        "R-API-1",
+        "R-API-4"
+      ],
+      "graph": "shared",
+      "screenDecisions": {},
+      "componentDecisions": {},
+      "expected": {
+        "api": {
+          "status": "IN_USE",
+          "callers": [
+            {
+              "screenId": "s1",
+              "componentId": "c",
+              "behaviorId": null
+            },
+            {
+              "screenId": "s2",
+              "componentId": "c",
+              "behaviorId": null
+            }
+          ]
+        },
+        "unused": {
+          "status": "UNREFERENCED",
+          "callers": []
+        }
+      }
+    },
+    {
+      "id": "shared-second-keep",
+      "rules": [
+        "R-API-1",
+        "R-API-4"
+      ],
+      "graph": "shared",
+      "screenDecisions": {},
+      "componentDecisions": {
+        "s1": {
+          "c": "REMOVE"
+        },
+        "s2": {
+          "c": "KEEP"
+        }
+      },
+      "expected": {
+        "api": {
+          "status": "IN_USE",
+          "callers": [
+            {
+              "screenId": "s1",
+              "componentId": "c",
+              "behaviorId": null
+            },
+            {
+              "screenId": "s2",
+              "componentId": "c",
+              "behaviorId": null
+            }
+          ]
+        },
+        "unused": {
+          "status": "UNREFERENCED",
+          "callers": []
+        }
+      }
+    },
+    {
+      "id": "shared-second-undecided",
+      "rules": [
+        "R-API-1",
+        "R-API-4"
+      ],
+      "graph": "shared",
+      "screenDecisions": {},
+      "componentDecisions": {
+        "s1": {
+          "c": "REMOVE"
+        },
+        "s2": {
+          "c": "UNDECIDED"
+        }
+      },
+      "expected": {
+        "api": {
+          "status": "IN_USE",
+          "callers": [
+            {
+              "screenId": "s1",
+              "componentId": "c",
+              "behaviorId": null
+            },
+            {
+              "screenId": "s2",
+              "componentId": "c",
+              "behaviorId": null
+            }
+          ]
+        },
+        "unused": {
+          "status": "UNREFERENCED",
+          "callers": []
+        }
+      }
+    },
+    {
+      "id": "shared-second-missing",
+      "rules": [
+        "R-API-4"
+      ],
+      "graph": "shared",
+      "screenDecisions": {},
+      "componentDecisions": {
+        "s1": {
+          "c": "REMOVE"
+        }
+      },
+      "expected": {
+        "api": {
+          "status": "IN_USE",
+          "callers": [
+            {
+              "screenId": "s1",
+              "componentId": "c",
+              "behaviorId": null
+            },
+            {
+              "screenId": "s2",
+              "componentId": "c",
+              "behaviorId": null
+            }
+          ]
+        },
+        "unused": {
+          "status": "UNREFERENCED",
+          "callers": []
+        }
+      }
+    },
+    {
+      "id": "all-components-removed",
+      "rules": [
+        "R-API-2",
+        "R-API-3"
+      ],
+      "graph": "shared",
+      "screenDecisions": {},
+      "componentDecisions": {
+        "s1": {
+          "c": "REMOVE"
+        },
+        "s2": {
+          "c": "REMOVE"
+        }
+      },
+      "expected": {
+        "api": {
+          "status": "REMOVABLE",
+          "callers": [
+            {
+              "screenId": "s1",
+              "componentId": "c",
+              "behaviorId": null
+            },
+            {
+              "screenId": "s2",
+              "componentId": "c",
+              "behaviorId": null
+            }
+          ]
+        },
+        "unused": {
+          "status": "UNREFERENCED",
+          "callers": []
+        }
+      }
+    },
+    {
+      "id": "screen-removal-inherits-over-keep",
+      "rules": [
+        "R-API-2",
+        "R-API-3"
+      ],
+      "graph": "shared",
+      "screenDecisions": {
+        "s1": "REMOVE"
+      },
+      "componentDecisions": {
+        "s1": {
+          "c": "KEEP"
+        },
+        "s2": {
+          "c": "REMOVE"
+        }
+      },
+      "expected": {
+        "api": {
+          "status": "REMOVABLE",
+          "callers": [
+            {
+              "screenId": "s1",
+              "componentId": "c",
+              "behaviorId": null
+            },
+            {
+              "screenId": "s2",
+              "componentId": "c",
+              "behaviorId": null
+            }
+          ]
+        },
+        "unused": {
+          "status": "UNREFERENCED",
+          "callers": []
+        }
+      }
+    },
+    {
+      "id": "all-screens-removed-unused-not-authorized",
+      "rules": [
+        "R-API-2",
+        "R-API-3",
+        "R-API-5",
+        "R-API-6"
+      ],
+      "graph": "shared",
+      "screenDecisions": {
+        "s1": "REMOVE",
+        "s2": "REMOVE"
+      },
+      "componentDecisions": {},
+      "expected": {
+        "api": {
+          "status": "REMOVABLE",
+          "callers": [
+            {
+              "screenId": "s1",
+              "componentId": "c",
+              "behaviorId": null
+            },
+            {
+              "screenId": "s2",
+              "componentId": "c",
+              "behaviorId": null
+            }
+          ]
+        },
+        "unused": {
+          "status": "UNREFERENCED",
+          "callers": []
+        }
+      }
+    },
+    {
+      "id": "load-survives-component-removal",
+      "rules": [
+        "R-API-1",
+        "R-API-4"
+      ],
+      "graph": "load",
+      "screenDecisions": {},
+      "componentDecisions": {
+        "s1": {
+          "c": "REMOVE"
+        },
+        "s2": {
+          "c": "REMOVE"
+        }
+      },
+      "expected": {
+        "api": {
+          "status": "IN_USE",
+          "callers": [
+            {
+              "screenId": "s1",
+              "componentId": null,
+              "behaviorId": "load"
+            },
+            {
+              "screenId": "s1",
+              "componentId": "c",
+              "behaviorId": null
+            },
+            {
+              "screenId": "s2",
+              "componentId": "c",
+              "behaviorId": null
+            }
+          ]
+        },
+        "unused": {
+          "status": "UNREFERENCED",
+          "callers": []
+        }
+      }
+    },
+    {
+      "id": "load-and-components-removed",
+      "rules": [
+        "R-API-2",
+        "R-API-3"
+      ],
+      "graph": "load",
+      "screenDecisions": {
+        "s1": "REMOVE"
+      },
+      "componentDecisions": {
+        "s2": {
+          "c": "REMOVE"
+        }
+      },
+      "expected": {
+        "api": {
+          "status": "REMOVABLE",
+          "callers": [
+            {
+              "screenId": "s1",
+              "componentId": null,
+              "behaviorId": "load"
+            },
+            {
+              "screenId": "s1",
+              "componentId": "c",
+              "behaviorId": null
+            },
+            {
+              "screenId": "s2",
+              "componentId": "c",
+              "behaviorId": null
+            }
+          ]
+        },
+        "unused": {
+          "status": "UNREFERENCED",
+          "callers": []
+        }
+      }
+    },
+    {
+      "id": "unresolved-binding-retains-source",
+      "rules": [
+        "R-API-1",
+        "R-API-4"
+      ],
+      "graph": "unresolved",
+      "screenDecisions": {},
+      "componentDecisions": {},
+      "expected": {
+        "api": {
+          "status": "IN_USE",
+          "callers": [
+            {
+              "screenId": "s1",
+              "componentId": null,
+              "behaviorId": "failed"
+            }
+          ]
+        },
+        "unused": {
+          "status": "UNREFERENCED",
+          "callers": []
+        }
+      }
+    },
+    {
+      "id": "unresolved-binding-screen-removed",
+      "rules": [
+        "R-API-2",
+        "R-API-3"
+      ],
+      "graph": "unresolved",
+      "screenDecisions": {
+        "s1": "REMOVE"
+      },
+      "componentDecisions": {},
+      "expected": {
+        "api": {
+          "status": "REMOVABLE",
+          "callers": [
+            {
+              "screenId": "s1",
+              "componentId": null,
+              "behaviorId": "failed"
+            }
+          ]
+        },
+        "unused": {
+          "status": "UNREFERENCED",
+          "callers": []
+        }
+      }
+    },
+    {
+      "id": "callbacks-follow-shared-owner",
+      "rules": [
+        "R-API-1",
+        "R-API-4"
+      ],
+      "graph": "callback",
+      "screenDecisions": {},
+      "componentDecisions": {
+        "s1": {
+          "c": "REMOVE"
+        },
+        "s2": {
+          "c": "KEEP"
+        }
+      },
+      "expected": {
+        "api": {
+          "status": "IN_USE",
+          "callers": [
+            {
+              "screenId": "s1",
+              "componentId": "c",
+              "behaviorId": "ajax"
+            },
+            {
+              "screenId": "s1",
+              "componentId": "c",
+              "behaviorId": "child"
+            },
+            {
+              "screenId": "s2",
+              "componentId": "c",
+              "behaviorId": "ajax"
+            },
+            {
+              "screenId": "s2",
+              "componentId": "c",
+              "behaviorId": "child"
+            }
+          ]
+        },
+        "unused": {
+          "status": "UNREFERENCED",
+          "callers": []
+        }
+      }
+    },
+    {
+      "id": "callbacks-inherit-screen-removal",
+      "rules": [
+        "R-API-2",
+        "R-API-3"
+      ],
+      "graph": "callback",
+      "screenDecisions": {
+        "s2": "REMOVE"
+      },
+      "componentDecisions": {
+        "s1": {
+          "c": "REMOVE"
+        },
+        "s2": {
+          "c": "KEEP"
+        }
+      },
+      "expected": {
+        "api": {
+          "status": "REMOVABLE",
+          "callers": [
+            {
+              "screenId": "s1",
+              "componentId": "c",
+              "behaviorId": "ajax"
+            },
+            {
+              "screenId": "s1",
+              "componentId": "c",
+              "behaviorId": "child"
+            },
+            {
+              "screenId": "s2",
+              "componentId": "c",
+              "behaviorId": "ajax"
+            },
+            {
+              "screenId": "s2",
+              "componentId": "c",
+              "behaviorId": "child"
+            }
+          ]
+        },
+        "unused": {
+          "status": "UNREFERENCED",
+          "callers": []
+        }
+      }
+    },
+    {
+      "id": "null-edge-targets-skipped",
+      "rules": [
+        "R-API-1",
+        "R-API-4"
+      ],
+      "graph": "null-edges",
+      "screenDecisions": {},
+      "componentDecisions": {},
+      "expected": {
+        "api": {
+          "status": "IN_USE",
+          "callers": [
+            {
+              "screenId": "s1",
+              "componentId": null,
+              "behaviorId": null
+            }
+          ]
+        },
+        "unused": {
+          "status": "UNREFERENCED",
+          "callers": []
+        }
+      }
+    },
+    {
+      "id": "no-callers-even-screens-removed",
+      "rules": [
+        "R-API-5",
+        "R-API-6"
+      ],
+      "graph": "null",
+      "screenDecisions": {
+        "s1": "REMOVE",
+        "s2": "REMOVE"
+      },
+      "componentDecisions": {},
+      "expected": {
+        "api": {
+          "status": "UNREFERENCED",
+          "callers": []
+        },
+        "unused": {
+          "status": "UNREFERENCED",
+          "callers": []
+        }
+      }
+    },
+    {
+      "id": "inferred-only-source",
+      "rules": [
+        "R-API-1",
+        "R-API-2",
+        "R-API-3",
+        "R-API-4"
+      ],
+      "graph": "inferred",
+      "screenDecisions": {},
+      "componentDecisions": {},
+      "expected": {
+        "api": {
+          "status": "IN_USE",
+          "callers": [
+            {
+              "screenId": "s1",
+              "componentId": null,
+              "behaviorId": null
+            }
+          ]
+        },
+        "unused": {
+          "status": "UNREFERENCED",
+          "callers": []
+        }
+      }
+    },
+    {
+      "id": "confirmed-and-inferred-sources",
+      "rules": [
+        "R-API-1",
+        "R-API-2",
+        "R-API-3",
+        "R-API-4"
+      ],
+      "graph": "confirmed-inferred",
+      "screenDecisions": {},
+      "componentDecisions": {},
+      "expected": {
+        "api": {
+          "status": "IN_USE",
+          "callers": [
+            {
+              "screenId": "s1",
+              "componentId": null,
+              "behaviorId": null
+            },
+            {
+              "screenId": "s2",
+              "componentId": null,
+              "behaviorId": null
+            }
+          ]
+        },
+        "unused": {
+          "status": "UNREFERENCED",
+          "callers": []
+        }
+      }
+    },
+    {
+      "id": "inferred-sources-removed",
+      "rules": [
+        "R-API-1",
+        "R-API-2",
+        "R-API-3",
+        "R-API-4"
+      ],
+      "graph": "inferred-shared",
+      "screenDecisions": {
+        "s1": "REMOVE",
+        "s2": "REMOVE"
+      },
+      "componentDecisions": {},
+      "expected": {
+        "api": {
+          "status": "REMOVABLE",
+          "callers": [
+            {
+              "screenId": "s1",
+              "componentId": null,
+              "behaviorId": null
+            },
+            {
+              "screenId": "s2",
+              "componentId": null,
+              "behaviorId": null
+            }
+          ]
+        },
+        "unused": {
+          "status": "UNREFERENCED",
+          "callers": []
+        }
+      }
+    },
+    {
+      "id": "redirect-only-source-inherited",
+      "rules": [
+        "R-API-1",
+        "R-API-4"
+      ],
+      "graph": "redirect-single",
+      "screenDecisions": {},
+      "componentDecisions": {},
+      "expected": {
+        "e0": {
+          "status": "IN_USE",
+          "callers": [
+            {
+              "screenId": "screen",
+              "componentId": "button",
+              "behaviorId": null
+            }
+          ]
+        },
+        "e1": {
+          "status": "IN_USE",
+          "callers": [
+            {
+              "screenId": "screen",
+              "componentId": "button",
+              "behaviorId": null
+            }
+          ]
+        },
+        "unused": {
+          "status": "UNREFERENCED",
+          "callers": []
+        }
+      }
+    },
+    {
+      "id": "redirect-inherited-source-removed",
+      "rules": [
+        "R-API-2",
+        "R-API-3"
+      ],
+      "graph": "redirect-single",
+      "screenDecisions": {},
+      "componentDecisions": {
+        "screen": {
+          "button": "REMOVE"
+        }
+      },
+      "expected": {
+        "e0": {
+          "status": "REMOVABLE",
+          "callers": [
+            {
+              "screenId": "screen",
+              "componentId": "button",
+              "behaviorId": null
+            }
+          ]
+        },
+        "e1": {
+          "status": "REMOVABLE",
+          "callers": [
+            {
+              "screenId": "screen",
+              "componentId": "button",
+              "behaviorId": null
+            }
+          ]
+        },
+        "unused": {
+          "status": "UNREFERENCED",
+          "callers": []
+        }
+      }
+    },
+    {
+      "id": "redirect-ambiguous-destination-not-inherited",
+      "rules": [
+        "R-API-1",
+        "R-API-5"
+      ],
+      "graph": "redirect-ambiguous",
+      "screenDecisions": {},
+      "componentDecisions": {},
+      "expected": {
+        "e0": {
+          "status": "IN_USE",
+          "callers": [
+            {
+              "screenId": "screen",
+              "componentId": "button",
+              "behaviorId": null
+            }
+          ]
+        },
+        "e1": {
+          "status": "UNREFERENCED",
+          "callers": []
+        },
+        "e2": {
+          "status": "UNREFERENCED",
+          "callers": []
+        },
+        "unused": {
+          "status": "UNREFERENCED",
+          "callers": []
+        }
+      }
+    },
+    {
+      "id": "redirect-cycle-terminates-without-inventing-sources",
+      "rules": [
+        "R-API-1",
+        "R-API-4",
+        "R-API-5"
+      ],
+      "graph": "redirect-cycle",
+      "screenDecisions": {},
+      "componentDecisions": {},
+      "expected": {
+        "e0": {
+          "status": "IN_USE",
+          "callers": [
+            {
+              "screenId": "screen",
+              "componentId": "button",
+              "behaviorId": null
+            }
+          ]
+        },
+        "e1": {
+          "status": "IN_USE",
+          "callers": [
+            {
+              "screenId": "screen",
+              "componentId": "button",
+              "behaviorId": null
+            }
+          ]
+        },
+        "unused": {
+          "status": "UNREFERENCED",
+          "callers": []
+        }
+      }
+    },
+    {
+      "id": "redirect-chain-stops-after-five-hops",
+      "rules": [
+        "R-API-1",
+        "R-API-4",
+        "R-API-5"
+      ],
+      "graph": "redirect-limit",
+      "screenDecisions": {},
+      "componentDecisions": {},
+      "expected": {
+        "e0": {
+          "status": "IN_USE",
+          "callers": [
+            {
+              "screenId": "screen",
+              "componentId": "button",
+              "behaviorId": null
+            }
+          ]
+        },
+        "e1": {
+          "status": "IN_USE",
+          "callers": [
+            {
+              "screenId": "screen",
+              "componentId": "button",
+              "behaviorId": null
+            }
+          ]
+        },
+        "e2": {
+          "status": "IN_USE",
+          "callers": [
+            {
+              "screenId": "screen",
+              "componentId": "button",
+              "behaviorId": null
+            }
+          ]
+        },
+        "e3": {
+          "status": "IN_USE",
+          "callers": [
+            {
+              "screenId": "screen",
+              "componentId": "button",
+              "behaviorId": null
+            }
+          ]
+        },
+        "e4": {
+          "status": "IN_USE",
+          "callers": [
+            {
+              "screenId": "screen",
+              "componentId": "button",
+              "behaviorId": null
+            }
+          ]
+        },
+        "e5": {
+          "status": "IN_USE",
+          "callers": [
+            {
+              "screenId": "screen",
+              "componentId": "button",
+              "behaviorId": null
+            }
+          ]
+        },
+        "e6": {
+          "status": "UNREFERENCED",
+          "callers": []
+        },
+        "e7": {
+          "status": "UNREFERENCED",
+          "callers": []
+        },
+        "unused": {
+          "status": "UNREFERENCED",
+          "callers": []
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,228 @@
+# ScreenTrace 第十六輪調整指示（R16：Struts 1 分析修正）
+
+給 Codex 執行。執行前依 AGENTS.md §10 讀取 `AGENTS.md`、`docs/CODEX_INSTRUCTIONS.md`、`docs/REQUIREMENTS.md`、`docs/ROADMAP.md`、`docs/reports/R15.md`（WP53 稽核）、`docs/OPEN_QUESTIONS.md` 的 OQ-024、OQ-025、OQ-026（需求方已決定）、`docs/ADJUSTMENT_R14_INVENTORY.md` §2、§9.2。REQUIREMENTS §1 原文與 §2 決策不得更動。R3–R15 的「不要做」與「停止條件」仍適用。
+
+## 0. 需求方的結論
+
+R15 WP53 稽核通過（MD5 相符；環境無 gpg，簽章未驗證，接受為環境限制）。稽核證明 **Struts 1——V1 的主要目標——目前有系統性誤判**：官方 mailreader 的登入表單送出的 `/SubmitLogon.do` 被列為「找不到呼叫來源」，blank 的系統首頁被列為「完全找不到入口」。需求方若照報表刪除，會刪掉正在使用的功能。本輪修正這些問題。
+
+審查者另於原始碼確認兩個稽核未點出的共同原因，併入本輪：
+
+1. **forward／redirect 的 path 常寫成公開 URL**：例如 blank `WEB-INF/struts-config.xml` 的 global forward `welcome` 為 `path="/Welcome.do"`，mailreader `SubmitLogon` 的 `Success` forward 為 `path="/MainMenu.do"`。這類 path 要先依 servlet mapping 正規化回 action `/Welcome`、`/MainMenu`，再沿該 action 找到畫面；這很可能是大量 `STRUTS_FORWARD_UNRESOLVED` 的來源。
+2. **`web.xml` 的 welcome-file 是系統入口**：blank `WEB-INF/web.xml` 的 `<welcome-file>index.jsp</welcome-file>`。被 welcome-file 指向的畫面是入口，不是「找不到入口」。
+
+## 1. 實測對象與證據規則
+
+- 實測對象：R15 已下載並通過 MD5 比對的 Apache Struts 1.3.10 原始碼包中 8 個範例模組（R15 報告列出），repo 外唯讀使用；若暫存檔已不存在，依 R15 §53.1 重新取得（下載前取得使用者同意）。
+- **不得**把 Apache 範例原始碼、截圖或衍生資料加入 repo。每個修正都要有**自行撰寫**的最小合成 fixture（重現同一種模式即可，不複製範例程式碼）。
+- 以 R15 報告的人工原始碼基準為驗收依據；修正後每個模組都要重新對照，數字由實際分析取得，不得調整規則去湊數。
+
+## 2. 工作包
+
+順序：**WP54 → WP55 → 停止驗收 → WP56 → WP57 → WP58 → WP59 → 停止驗收**。每項先提交失敗測試，再實作；提交訊息前綴 `R16:`。
+
+### WP54　Struts URL 身分、forward 正規化與入口（OQ-024 方案 B）
+
+1. **Servlet mapping**：讀 `web.xml` 中 ActionServlet 的 `servlet-mapping`，支援副檔名型（`*.do` 等任意副檔名）與路徑前綴型（`/do/*` 等）。多個 ActionServlet mapping 或無法證明時，不猜測，記診斷。
+2. **端點別名**：action path（`/SubmitLogon`）與公開 URL（`/SubmitLogon.do`）為同一 endpoint 的別名，只產生一個端點身分，呼叫來源共用、統計只計一次。介面主要顯示公開 URL，別名列在詳細資料；URL 搜尋以兩種形式都能找到。若 graph schema 需要別名欄位，依 schema 規則處理並記 ADR。
+3. **forward／redirect／exception path 正規化**：`<forward path>`、`<global-forwards>`、`<exception path>`、action 的 `forward=`／`input=` 屬性中，符合 servlet mapping 的公開 URL 先還原為 action path，再沿該 action 的 forward 解析到畫面（鏈長上限沿用 OQ-021 的 5，偵測循環）。`input` 為 forward 名稱或 Tiles definition 時依 Struts 規則解析（`controller inputForward` 設定須讀取）。
+4. **Struts module**：`web.xml` 中 ActionServlet 的 `config/<module>` init-param 定義 module 前綴；module 內 JSP 的 `html:form action`、`html:link action`、`html:rewrite action` 以該 module 前綴解析；跨 module 的 `module=` 屬性與 `SwitchAction` 依 Struts 規則處理。（examples 模組有 9 份 module config，是主要驗收對象。）
+5. **JSP 中的導覽 tag**：`logic:redirect`／`logic:forward`（`forward=`、`page=`、`action=`、`href=`）、`html:link`／`html:rewrite` 的 `forward=`（global forward 名稱）、`page=`、`action=` 皆建立導覽關係；常值者為 `STATIC_URL`，含 EL／scriptlet 者依 R14 §2.1 推定或維持 UNRESOLVED。
+6. **welcome-file**：`web.xml` `welcome-file-list` 指向的畫面視為入口（入口來源標「系統預設首頁（web.xml welcome-file）」，basis `STATIC_URL`），在判斷依據顯示檔名與行號。welcome-file 指向 `.do` 時依第 3 點正規化。
+
+驗收（實測，數字記入報告）：
+- blank：Index 為有入口（welcome-file），Welcome 為有入口（`index.jsp` 的 `logic:redirect` → global forward `welcome` → `/Welcome` → `/pages/Welcome.jsp`）；`/Welcome` 只有一個端點且非「找不到呼叫來源」。
+- mailreader：`/SubmitLogon` 與 `/SubmitLogon.do` 只出現一筆，狀態為使用中，來源為 Logon 畫面的表單；全模組不得再有成對的邏輯 path／公開 URL 端點。
+- cookbook、el-example、faces-example1：R15 報告列出的 24、10、7 組成對路徑全部合併。
+- examples：`/exercise/html-multibox-submit`、`/dispatch/dispatch-submit` 各為單一端點且有呼叫來源；報告列出 examples「找不到呼叫來源」端點修正前後的數字，並逐一說明剩下的每一筆為何仍找不到（例如確實沒有 JSP 指向，或屬 JSF）。
+- 各模組 `STRUTS_FORWARD_UNRESOLVED` 修正前後數字；剩下的每一筆列出原始 forward 與原因。
+- 合成 fixture 測試：副檔名型與路徑前綴型 mapping、forward 寫成 `.do`、多 module、`logic:redirect forward=`、welcome-file、mapping 無法證明時不猜測。
+
+### WP55　Tiles 畫面界線（OQ-025 方案 A）
+
+依 OQ-025 決定實作。驗收：
+- faces-example2 的畫面數等於「被 forward 指向的 page definition 與直接 forward 的 JSP」數（報告逐一列出，並與 R15 人工基準對照）；`.base`、`.loggedoff`、`.loggedon`、`layout` 不再是畫面。
+- 片段 JSP 的按鈕歸入所屬畫面的片段群組，不遺失。
+- `TILES_REFERENCE_UNRESOLVED` 修正前後數字與剩下各筆原因。
+- 合成 fixture：extends 鏈、put 為 JSP 與 put 為字串、被 forward 與未被 forward 的 page definition。
+
+**WP54、WP55 完成後停止**，以 8 個模組重新產生報表，報告附「R15 人工基準 → 修正前 → 修正後」對照表，等需求方驗收。
+
+### WP56　Validator 規則落到表單、DispatchAction 分派
+
+1. **Validator**：依 Struts 規則把 `validation.xml` 的 `<form name>` 對到 form-bean 名稱（ValidatorForm／DynaValidatorForm）或 action path（ValidatorActionForm／DynaValidatorActionForm），再對到使用該 action 的 `html:form`，`<field property>` 對到表單內同名欄位；`depends` 與 `msg`／`arg` 的訊息 key 依 WP57 解析。對不到時記診斷並保留規則。驗收：mailreader LogonForm 的 username required、password required／minlength／maxlength 出現在 Logon 畫面對應欄位；各模組 `VALIDATION_RULE_UNRESOLVED` 修正前後數字與剩下各筆原因。
+2. **DispatchAction／LookupDispatchAction／MappingDispatchAction／EventDispatchAction**：依 action 的 `parameter` 找到表單中同名欄位（hidden、select、submit 的 `property`）之常值，建立「分派到 `<方法名>`」的行為；LookupDispatchAction 以訊息 key 對照。非常值者 UNRESOLVED。驗收：examples `dispatch.jsp` 的 4 個送出各自顯示分派的方法名。
+
+### WP57　訊息資源與名稱
+
+1. 讀 `message-resources`（含 module 與 `key=` 指定的多組 bundle）對應的 `.properties`（預設 locale 檔；有多個 locale 時只用無 locale 後綴者，其餘列為候選不擇一）。
+2. `bean:message key=`（含 `bundle=`）在**畫面名稱、按鈕名稱、靜態預覽文字**中以 bundle 值取代；key 找不到時顯示「（訊息 key：<key>）」，不得顯示 `<bean:message ...>` 原始 tag。含 EL／`arg` 的動態訊息以範例值填入並沿用既有「示意畫面」說明。
+3. 畫面名稱規則沿用 R12 WP42，`bean:message` 解析值視同可見文字。
+4. API 頁：Struts action 端點若有任一 forward 解析到畫面，分類為「畫面網址」；否則顯示「Struts 動作」（原值放 tooltip），不得顯示「其他」。
+
+驗收：mailreader 首頁與逐頁確認的畫面名稱、按鈕名稱為 `ApplicationResources.properties` 的值；8 個模組的報表可見文字中沒有 `<bean:message`、`<s:message`、`<h:` 原始 tag 字串（JSF 依 WP58 另行標示，不顯示原始 tag）。
+
+### WP58　JSF 混合模組標示（OQ-026 方案 B）
+
+依 OQ-026 決定實作：診斷、首頁提醒、逐頁確認提醒、md §8 列出，JSF 元件不計為已解析。卡片與縮圖不得出現 JSF 原始 tag 字串（以「（JSF 元件，未分析）」之類固定文字表示）。驗收：faces-example1／2 首頁出現提醒，數字為實際含 JSF 元件的畫面數；非 JSF 模組不出現。
+
+### WP59　重新稽核與文件
+
+1. 以 8 個模組重新執行 R15 §53.3 的全部比對項，報告附「R15 人工基準 → R15 實測 → R16 實測」三欄對照表，以及首頁「可能已經沒在用」中每一項的原始碼判讀（是否確實沒在用）。
+2. 以 Chromium 1440×900 實際開啟 mailreader、examples、faces-example2 的首頁、逐頁確認、API 頁，記錄觀察（截圖留在 repo 外）。
+3. 更新 `docs/PRODUCT_SPEC.md` 的 Struts 支援描述、`docs/ARCHITECTURE.md`（若 schema 或 adapter 有變）、`docs/USER_GUIDE.md`（JSF 提醒、別名顯示）、ROADMAP、`docs/reports/R16.md`、ADR（編號接續）。
+
+**WP59 完成後停止**，等需求方最終驗收。
+
+## 3. 測試與停止點
+
+每次提交前執行 R14 §5 完整驗證（E2E 預設並行）；基線以 R15 結束時為準（305 Java、118 viewer、45 JS、43 capture、169 E2E），只增不減。eMusicStore、PetClinic 的 API 狀態與入口分類不得因本輪改變（Spring 專案不受 Struts 規則影響）；在報告附兩者修正前後對照以證明。
+
+預先授權（同 R14 §2.4 格式）：只可修改因本輪新增的別名合併、forward 正規化、Tiles 畫面界線而改變的 Struts fixture **數量型期望值**（畫面數、端點數、API 狀態分布、診斷數），每處在 ADR 逐處記錄並證明新期望在舊實作上失敗。其他斷言衝突依 §0.3 停止並寫入 OPEN_QUESTIONS（OQ-027 起）。
+
+## 4. 不要做的事
+
+- 不解析 JSF 元件（OQ-026）；不支援 Struts 2（偵測到仍以 `UNSUPPORTED_FRAMEWORK` 拒絕）。
+- 不猜測 servlet mapping、context path 或訊息 bundle；無法證明者維持 UNRESOLVED 並記診斷。
+- 不把 INFERRED 升級為 CONFIRMED；不以文字相似度或 LLM 對應。
+- 不把 Apache 範例原始碼或衍生資料加入 repo；不建置、執行或修改範例程式。
+- 不硬編碼範例專案的路徑、類別名、action 名或畫面名。
+- 不新增模式或全域開關；報表仍須完全離線。
+
+---
+
+## 5. WP54／WP55 驗收回覆（需求方，2026-10-10）
+
+**結論：WP55（Tiles 畫面界線）通過；WP54 不通過，需補正後重新驗收，不得進入 WP56。**
+
+已通過：別名合併與 servlet mapping 三類（OQ-030）、mailreader `/SubmitLogon.do` 為單一使用中端點、blank 首頁 welcome-file 入口、Tiles 版型／片段清單與 OQ-029 行為來源不變量、faces-example2 畫面數、Spring 專案 graph SHA-256 不變、完整驗證全綠。
+
+### 5.1 審查者以原始碼確認的殘留誤判
+
+R16 報告「仍未有呼叫來源的端點」表中，大多數原因只寫「支援的靜態分析未找到可證明的呼叫來源」。審查者在 examples 原始碼搜尋，下列端點實際上有明確的表單或連結指向（路徑相對於 `src/apps/examples/src/main/webapp`）：
+
+| 端點 | 原始碼中的呼叫來源 | 推測原因 |
+|---|---|---|
+| `/validator/registration-submit.do` | `validator/registration.jsp:41`、`validator/jsRegistration.jsp:40`：`<html:form action="registration-submit">` | action 沒有開頭 `/`；Struts 會補上 `/` 再對應 action，分析器未正規化 |
+| `/dispatch/lookup-submit.do` | `dispatch/lookup.jsp:63`：`<html:form action="lookup-submit">` | 同上 |
+| `/dispatch/mapping-foo.do` | `dispatch/mapping.jsp:63`：`<html:form action="mapping-foo">` | 同上 |
+| `/exercise/logic-forward-test-forward.do` | `exercise/logic-forward.jsp:29`：`<html:link action="/logic-forward-test-forward?value=test">` | action 含查詢字串，比對前未去除 |
+| `/exercise/logic-forward.do` | `exercise/logic-redirect-test-action.jsp:18`：`<logic:redirect action="/logic-forward"/>`；`exercise/logic-forward.jsp:28`：`<a href="logic-forward.do?value=test">` | WP54 第 5 點要求的 `logic:redirect action=` 未生效；相對 `href`（含查詢字串）未依 JSP 所在路徑解析 |
+| `/exercise/html-cancel-false.do`（及同檔 `html-cancel-exception`、`html-cancel-true`） | `exercise/html-cancel.jsp:51、70、87`：`<html:form action="/html-cancel-false">` 等 | 有開頭 `/`、位於 exercise 模組目錄仍未對上，可能是 JSP 未歸入正確的 Struts module |
+
+### 5.2 補正（先補失敗測試，再修正）
+
+1. **Struts tag 的 action 正規化**：`html:form`／`html:link`／`html:rewrite`／`logic:redirect`／`logic:forward` 的 `action=` 依 Struts 規則處理：沒有開頭 `/` 時補上；去除查詢字串與 `#` 片段後再比對 action path；若帶有 servlet mapping 的副檔名（如 `.do`）依 OQ-030 正規化。查詢字串內容保留於 evidence。
+2. **相對 `href`／`src`**：一般 HTML `<a href>`、`<form action>` 的相對網址，依 JSP 的公開 URL 目錄解析（含 module 前綴），去除查詢字串後比對；JSP 公開 URL 無法證明時維持 UNRESOLVED。
+3. **JSP 所屬 module**：位於某 module 前綴目錄下（例如 `/exercise/`）的 JSP，以及被該 module 的 forward 指向的 JSP，屬於該 module；module-relative 的 action 依該 module 解析。同一 JSP 同時被多個 module forward 時，依各 module 分別建立關係（不擇一）並記 evidence。
+4. **welcome-file 端點的呈現**：`GET /` 這類由 welcome-file 構成的入口，在首頁與 API 頁不列為「找不到呼叫來源」，顯示「系統預設首頁」（同 R14 §7.4 自動導向的呈現方式）。
+5. **剩餘項目必須有實際原因**：R16 報告中每一筆仍「找不到呼叫來源」的端點，都要附**實際搜尋結果**：以 action path 的最後一段（含與不含副檔名）在該模組全部 JSP、JS、Java、XML 中搜尋（可用 repo 外的稽核腳本，不加入產品程式），列出每個命中處（檔案:行號、原文片段）與「為何不構成呼叫來源」；沒有命中則寫「全模組原始碼中沒有任何參照」。不得再使用通用說明句。
+6. 合成 fixture：無開頭 `/` 的 `html:form action`、帶查詢字串的 `html:link action`、`logic:redirect action=`、module 目錄下 JSP 的相對 `href`、同一 JSP 被兩個 module forward。
+
+驗收：
+- 上表 6 組端點全部有呼叫來源（使用中）。
+- examples「找不到呼叫來源」端點數由 95 下降；報告附修正前後逐筆對照，剩餘每一筆依第 5 點附搜尋結果。
+- 其他 7 個模組同樣依第 5 點重寫「仍未有呼叫來源的端點」表。
+- eMusicStore、PetClinic graph SHA-256 不變；完整驗證全綠。
+- 授權沿用 OQ-031（Struts fixture 數量型欄位）、OQ-028（R16 新增測試）；其餘衝突依 §0.3 停止。
+
+完成後停止，等需求方重新驗收 WP54。
+
+---
+
+## 6. WP54 第二次驗收回覆（需求方，2026-10-10）
+
+**結論：§5.1 六組已修正、逐筆稽核格式到位，examples 由 95 降為 15；但審查者以原始碼確認仍有系統性漏判，WP54 仍不通過。** 不得進入 WP56。
+
+### 6.1 審查者確認的漏判
+
+1. **靜態 HTML 頁的連結沒有成為呼叫來源**：examples 剩餘 15 筆中有 **11 筆**由 `exercise/index.html` 的 `<a href="...do">` 連入（例如第 55 行 `href="bean-write-2.do"`、第 111 行 `href="forward-redirect-default-module.do"`），包括 `/exercise/bean-write-2.do`、`forward-redirect-default(-module|-path).do`、`html-cancel.do`、`html-image.do`、`html-img.do`、`html-messages.do`、`html-multibox.do`、`html-select.do`、`html-setters.do`。§5.2 第 5 點的搜尋範圍漏列 `.html`（審查者規格疏漏），但產品本身也沒有解析這些靜態頁的連結。
+2. **Struts 萬用字元 action 沒有比對**：mailreader `WEB-INF/struts-config.xml:187–203` 的 `/Delete*`、`/Edit*`、`/Save*`，對應 `MainMenu.jsp:30`、`Welcome.jsp:30` 的 `html:link action="/EditRegistration"`、`Registration.jsp:39` 的 `html:form action="/SaveRegistration"`、`Registration.jsp:167` 的 `/DeleteSubscription`、`:173`／`:184` 的 `/EditSubscription`、`Subscription.jsp:43` 的 `/SaveSubscription`。這是 mailreader 最核心的帳號與訂閱流程，卻被列為「找不到呼叫來源」；報告寫「全模組原始碼中沒有任何參照」，是因為以字面 `Edit*` 搜尋。scripting-mailreader 相同。
+3. **forward 到另一個 action 時沒有繼承呼叫來源**：mailreader `/MainMenu.do` 是 `/SubmitLogon` 成功後的 forward 目的地（`struts-config.xml:151`），以及第 206 行另一個 action 的 forward 目的地。依 OQ-021，可證明且唯一的轉址／forward 目的地應以 INFERRED 繼承來源端點的呼叫來源；Spring 已實作，Struts 同樣適用。報告以「不是畫面元件直接呼叫來源」排除，與 OQ-021 不符。
+4. **只被 `extends` 的設定樣板被當成待確認端點**：mailreader `//BaseAction` 只被 `/Delete*`、`/Edit*`、`/Save*` 以 `extends="//BaseAction"` 繼承，是設定樣板。
+
+### 6.2 補正（先補失敗測試，再修正）
+
+1. **靜態 HTML 頁**：`webapp` 下的 `.html`／`.htm` 與 JSP 一樣是畫面（R16 前在 eMusicStore 的 `firstPage.html` 已是如此），其 `<a href>`、`<form action>` 依 §5.2 第 2 點以檔案所在公開 URL 目錄解析相對網址（含 module 前綴目錄），去除查詢字串後比對 action。
+2. **Struts 1 萬用字元比對**（決定性，不是猜測）：依 Struts 1.3 規則——先找完全相符的 action path；沒有時依 struts-config 內出現順序檢查全部萬用字元 mapping，取**最後一個**符合者（依 OQ-032：Struts 1.3.10 `ActionConfigMatcher` 實際行為；版本不明且首末結果不同時標 AMBIGUOUS）；`*` 比對 0 個以上不含 `/` 的字元，`**` 比對 0 個以上含 `/` 的字元，`\` 為跳脫；比對成功時 `{0}`–`{9}` 代入該 mapping 的 forward path、`parameter`、`type`、`input` 等屬性。每個萬用字元 mapping 是一個端點，呼叫來源為所有比對到它的連結／表單（basis `STATIC_URL`，連結本身為常值時），詳細資料列出實際比對到的具體 path（例如 `/EditRegistration`、`/EditSubscription`）；代入後的 forward 依具體 path 分別解析到畫面。
+3. **Struts forward 的呼叫來源繼承（OQ-021 適用於 Struts）**：action 的 forward／global forward／exception path 經 OQ-030 正規化後指向另一個 action 時，目的 action 端點以 INFERRED 繼承來源 action 端點的全部呼叫來源，規則同 OQ-021（唯一目的地才繼承、鏈長上限 5、偵測循環、證據記錄完整鏈）。
+4. **設定樣板**：只被其他 action 以 `extends` 引用、且沒有任何連結／表單／forward 指向的 action，在 API 頁與首頁顯示「被繼承的設定樣板」，不列入「找不到呼叫來源」與可疑清單；仍保留在畫面網址清單與 md。
+5. **稽核方法修正**：剩餘「找不到呼叫來源」的搜尋範圍擴大為該模組全部 `.jsp`、`.jspf`、`.tag`、`.html`、`.htm`、`.js`、`.java`、`.xml`、`.properties`；萬用字元端點改以「所有 action 參照依第 2 點規則比對」而非字面搜尋；命中為 server-side forward 時，必須說明 OQ-021 繼承為何不適用（例如目的地不唯一），不得只寫「不是畫面元件直接呼叫來源」。
+6. 合成 fixture：靜態 HTML 頁相對連結到 module action、萬用字元（`*`、`**`、完全相符優先、設定檔順序、`{1}` 代入 forward）、forward 到 action 的呼叫來源繼承、只被 extends 的 action。
+
+驗收：
+- examples 上述 11 筆為使用中；剩餘逐筆依第 5 點重新稽核。
+- mailreader 與 scripting-mailreader 的 `/Edit*`、`/Save*`、`/Delete*` 為使用中，詳細資料列出比對到的具體 path；`/MainMenu.do` 為推定使用中（繼承自 `/SubmitLogon` 等）；`//BaseAction` 顯示「被繼承的設定樣板」。
+- cookbook 的 `/Prepare*`、`/Source*`、`/Wildcard*` 依第 2 點重新判定並稽核。
+- 8 個模組的對照表、剩餘清單、forward 無法解析清單依新結果更新。
+- eMusicStore、PetClinic graph SHA-256 不變；完整驗證全綠。授權沿用 OQ-028、OQ-031。
+
+完成後停止，等需求方重新驗收 WP54。
+
+---
+
+## 7. WP54 驗收通過（需求方，2026-10-10）
+
+審查者以 HEAD（37af887）唯讀重新分析 mailreader、scripting-mailreader、examples、faces-example2，以共用 `deriveApiUsage` 計算：
+
+| 模組 | 結果 |
+|---|---|
+| mailreader | `/Edit*`（matched：`/EditRegistration`、`/EditSubscription`）、`/Save*`（`/SaveRegistration`）、`/Delete*`（`/DeleteSubscription`）、`/MainMenu.do`、`/SubmitLogon.do` 皆為使用中；`//BaseAction` 標 `inheritedTemplate`，不列入找不到呼叫來源 |
+| scripting-mailreader | `/Edit*` 使用中（含 `?task=Delete` 連結）；`/Delete*` 依 OQ-033 維持找不到呼叫來源 |
+| examples | 使用中 100、找不到呼叫來源 3（`GET /` 系統預設首頁、`/validator/validateJsI18nExample.do`、`/dispatch/mappingLocale.do`，後兩者審查者搜尋原始碼確認無參照）；R15 時為 198，§5 前為 95 |
+| faces-example2 | `/welcome.do` 由 `index.jsp` 的 `jsp:forward` 取得呼叫來源 |
+
+**結論：WP54 通過。** 依 §2 順序繼續 WP56、WP57、WP58、WP59，於 WP59 完成後停止等待最終驗收。WP56–WP59 期間沿用 OQ-028（R16 新增測試）、OQ-031（Struts fixture 數量型欄位）授權；WP59 重新稽核的剩餘清單沿用 §6.2 第 5 點的搜尋範圍與 OQ-033 第 2 點（轉義文字不是呼叫來源）。
+
+---
+
+## 8. R16 最終驗收回覆（需求方，2026-10-11）
+
+審查者以 HEAD（508073b）唯讀重新分析 mailreader、examples、faces-example1、faces-example2、cookbook（審查者環境中靜態預覽與截圖均正常產生），並以 Chromium 開啟 faces-example2 報表。
+
+**結論：WP54、WP55 維持通過；WP59 稽核文件到位；WP56、WP57、WP58 各有未達驗收的項目，R16 尚不能結案。** 完成 §8.2 後停止，等需求方驗收。
+
+已確認達成：mailreader LogonForm 的 username required、password required／minlength／maxlength 已綁定到 Logon 畫面欄位；8 個模組的畫面與元件名稱、屬性中沒有 `<bean:message`／`<s:message`／`<h:`；faces-example1／2 有 `UNSUPPORTED_COMPONENT_FRAMEWORK` 診斷與首頁 JSF 提醒；非 JSF 模組沒有提醒；Spring 專案 graph 雜湊不變。
+
+### 8.1 未達驗收的項目（原始碼證據）
+
+1. **DispatchAction 方法名沒有出現（WP56 第 2 點）**：examples `dispatch/dispatch.jsp:63–80` 四個表單各以 `<input type="hidden" name="dispatchMethod" value="doFoo|doBar|doInvalid|execute" />` 指定方法（`WEB-INF/dispatch/struts-config.xml` 的 `parameter="dispatchMethod"`）。實際 graph 中四個 `SUBMIT_FORM` 行為都只有 `/dispatch/dispatch-submit`，沒有任何方法名（graph 中搜尋 `doFoo` 無結果）。R16 報告以「合成測試鎖定方法分派」帶過，但合成 fixture 使用 `html:hidden property`，真實範例用的是一般 HTML `<input name>`。
+2. **原始 tag 與內部屬性外露（WP57 第 2 點、WP58）**：faces-example2 首頁「完全找不到入口」卡片顯示 `<s:message key="layout.title" data-st-source-file="src/main/webapp/layout.jsp" data-st-source-line="32"/>`——既是原始 tag，也外露 ScreenTrace 內部的 `data-st-*` 屬性。
+3. **JSF 提醒的畫面數過少（WP58）**：提醒寫「2 個畫面使用 JSF 元件」，但 faces-example2 實際有 8 個 JSP 使用 `h:`／`f:` tag：loggedoff、layout、loggedon、layout1、logon、registration、mainMenu、subscription。
+4. **`*.faces` 網址沒有對應回 JSP，導致版型被當成畫面（WP55 延伸）**：`WEB-INF/tiles-defs.xml:28` 的 `.base` 為 `page="/layout.faces"`。`.faces` 是 FacesServlet 的 servlet mapping，指向 `layout.jsp`；分析器未正規化，`layout.jsp` 沒被認出是被 `.base` 使用的版型，反而列為「完全找不到入口」。這是 URL 對應，不是解析 JSF 元件，屬本輪範圍。
+5. **萬用字元 action 的 `name` 屬性沒有代入，造成 Validator 規則未綁定（WP56 第 1 點延伸）**：mailreader `/Save*` 以 `extends="//BaseAction"` 繼承 `struts-config.xml:176` 的 `name="{1}Form"`；`/SaveRegistration` 應得 `RegistrationForm`。目前 RegistrationForm 的 5 條規則（username、fullName、fromAddress、replyToAddress 等）都是 `VALIDATION_RULE_UNRESOLVED`（「無法唯一對應到使用該 ActionForm 的畫面欄位」）。
+
+### 8.2 補正（先補失敗測試，再修正；每項的合成 fixture 必須重現真實範例的寫法）
+
+1. **DispatchAction 參數來源**：除 `html:hidden`／`html:select`／`html:submit property` 外，一般 HTML `<input type="hidden|submit|image|radio" name=…>`、`<button name=… value=…>`、`<select name=…>` 的常值也作為分派參數來源；同一表單內有多個候選時全部列出（AMBIGUOUS），不擇一。若 action 類別原始碼可讀，標示該方法是否存在（例如 `doInvalid` 不存在時顯示「類別中找不到此方法」）；無法讀取則只顯示名稱。驗收：examples `dispatch.jsp` 四個送出分別顯示 `doFoo`、`doBar`、`doInvalid`、`execute`。
+2. **不外露原始 tag 與內部屬性**：畫面名稱、按鈕名稱、卡片、縮圖替代文字、判斷依據等所有可見文字，不得含有 `<…>` 形式的原始 tag 或 `data-st-` 屬性。Struts-Faces 的 `<s:message key=…>` 依 WP57 的訊息資源規則解析（與 `bean:message` 相同）；無法解析時顯示「（訊息 key：<key>）」。結構性 E2E：8 個模組報表的可見文字與 `title`／`alt`／`aria-label` 中不得出現 `data-st-`、`<bean:`、`<s:`、`<h:`、`<f:`、`<html:`。
+3. **JSF 畫面數**：一個畫面若其本身的 JSP，或組成它的版型／片段 JSP 含 JSF tag（`h:`、`f:`、Struts-Faces `s:`，或 taglib uri 為 JSF 者），即計入「使用 JSF 元件的畫面」。報告列出 faces-example1／2 每個被計入的畫面與依據檔案。出現在首頁「可能已經沒在用」卡片中的 JSF 畫面，列內加註「使用 JSF，未分析」。
+4. **FacesServlet 網址對應**：依 `web.xml` 的 FacesServlet `servlet-mapping`（副檔名型如 `*.faces`、前綴型如 `/faces/*`）與 `javax.faces.DEFAULT_SUFFIX`（未設定時為 `.jsp`）把 `/layout.faces` 正規化為 `/layout.jsp`，供 Tiles 畫面界線、forward 與連結解析使用。不解析 JSF 元件本身（OQ-026 不變）；mapping 無法證明時不猜測並記診斷。驗收：faces-example2 的 `layout.jsp` 依 OQ-025 判為 `.base` 的版型，不再是畫面；報告更新畫面清單與版型／片段清單。
+5. **萬用字元代入完整化**：依 Struts 1.3.10 `ActionConfigMatcher.convertActionConfig` 的實際代入欄位（實作時引用原始碼行號），對比對到的具體 path 代入 `{0}`–`{9}`，包含經 `extends` 繼承而來的屬性（先套用繼承，再代入）。驗收：mailreader `/SaveRegistration` 的 form 為 `RegistrationForm`，RegistrationForm 的規則綁定到 Registration 畫面欄位；`VALIDATION_RULE_UNRESOLVED` 修正前後數字與剩餘各筆原因列入報告。
+6. **報告**：WP56–WP58 的每一項驗收都要以**真實範例的實測結果**佐證（圖中的具體值），不得只引用合成測試名稱。
+
+授權沿用 OQ-028、OQ-031；Spring 專案 graph 雜湊必須不變；完整驗證（E2E 預設並行）全綠。完成後停止，等需求方驗收。
+
+---
+
+## 9. R16 最終驗收（需求方，2026-10-11）
+
+審查者以 HEAD（7d4e624）唯讀重新分析 mailreader、examples、faces-example1、faces-example2，並以 Chromium 開啟 faces-example2 報表檢查 6 個分頁。
+
+**結論：§8.1 五項全數達成，R16 有條件通過。** 完成 §9.1 收尾後，§5 完整驗證全綠即結案，不需再停等驗收；在 R16 報告與 ROADMAP 註記。
+
+已確認：
+- DispatchAction：examples `dispatch.jsp` 四個送出顯示「分派到 doFoo／doBar／execute」，`doInvalid` 顯示「類別中找不到此方法」。
+- Validator：mailreader RegistrationForm 5 條規則全部綁定到 Registration 畫面欄位（萬用字元 `{1}Form` 經 extends 代入）；`VALIDATION_RULE_UNRESOLVED` 17 → 12。
+- 可見文字與 `title`／`alt`／`aria-label` 在 6 個分頁皆無 `data-st-` 或原始 tag。
+- JSF 提醒「7 個畫面使用 JSF 元件」，可疑卡片中的 JSF 畫面加註「使用 JSF，未分析」。
+- faces-example2 `layout.jsp` 不再是獨立畫面；被 extends 的 definition 以非 SCREEN 節點保留（OQ-034）。
+
+### 9.1 收尾：Tiles 頁面畫面名稱（OQ-025 命名規則未落實）
+
+faces-example2 的逐頁確認佇列中，Tiles 頁面定義都顯示為「Layout（/editRegistration.do）（3）」「Layout（/logoff.do）」等——名稱取自共用版型 `layout.jsp`，再以網址與序號區分。需求方無法分辨哪個是註冊頁、哪個是主選單。OQ-025 已規定命名來源，依此修正（先補失敗測試）：
+
+1. 頁面定義畫面的名稱優先序：(a) 該 definition（含 extends 繼承後）`put name="title"` 的常值，或經訊息資源解析的值；(b) `body`（或唯一的主要內容 put）JSP 依 R12 WP42 規則得到的可讀名稱（title／h1、`bean:message`／`s:message` 解析值）；(c) definition 名稱人性化（去掉開頭 `.`，例如 `.mainMenu` → 「Main Menu」）。**不得**使用版型 JSP 的名稱；網址只放在畫面網址欄，不放進名稱。
+2. 同名時才依 R12 規則加區分（例如所在功能區域或網址），不用流水號。
+3. 驗收：faces-example2 每個頁面定義畫面的名稱逐一列入報告，並附命名來源（title put／body JSP／definition 名稱）；佇列、首頁、功能地圖、交付清單與 md 中不再出現以「Layout」開頭、只靠網址區分的畫面名稱；`fixtures/wp10/struts1` 的 `outer` 依同規則命名。
+4. 授權沿用 OQ-028、OQ-031；Spring 專案 graph 雜湊不變；完整驗證（E2E 預設並行）全綠。

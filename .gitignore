@@ -5,3 +5,9 @@
 # IntelliJ IDEA workspace files
 .idea/
 *.iml
+
+# Generated standalone viewer bundle
+screentrace-viewer/dist/
+
+# Default analysis output of `./bin/screentrace <project-path>`
+/analyze/

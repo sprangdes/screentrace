@@ -1,0 +1,501 @@
+{
+  "components" : [ {
+    "id" : "component:d90f1521-6f9e-3787-932d-9a2b3162607d",
+    "kind" : "FORM",
+    "tag" : "form:form",
+    "attributes" : {
+      "action" : "${dynamic}",
+      "modelattribute" : "order",
+      "onsubmit" : "return validateOrder()"
+    },
+    "source" : {
+      "file" : "views/order.jsp",
+      "line" : 5
+    },
+    "guard" : null,
+    "repeated" : false,
+    "formId" : "component:d90f1521-6f9e-3787-932d-9a2b3162607d",
+    "model" : "order",
+    "field" : null,
+    "bindingStatus" : "UNRESOLVED"
+  }, {
+    "id" : "component:08a3a858-20fe-32e9-a391-dfc93dfc1d65",
+    "kind" : "TEXT_INPUT",
+    "tag" : "input",
+    "attributes" : {
+      "id" : "email",
+      "maxlength" : "60",
+      "minlength" : "3",
+      "name" : "email",
+      "pattern" : ".+@.+",
+      "required" : "",
+      "type" : "email"
+    },
+    "source" : {
+      "file" : "views/order.jsp",
+      "line" : 6
+    },
+    "guard" : "${visible}",
+    "repeated" : false,
+    "formId" : "component:d90f1521-6f9e-3787-932d-9a2b3162607d",
+    "model" : "order",
+    "field" : "email",
+    "bindingStatus" : "UNRESOLVED"
+  }, {
+    "id" : "component:92772685-7958-37ab-8de6-cd45a2d01fda",
+    "kind" : "TEXT_INPUT",
+    "tag" : "form:input",
+    "attributes" : {
+      "path" : "title"
+    },
+    "source" : {
+      "file" : "views/order.jsp",
+      "line" : 7
+    },
+    "guard" : "${flag}",
+    "repeated" : false,
+    "formId" : "component:d90f1521-6f9e-3787-932d-9a2b3162607d",
+    "model" : "order",
+    "field" : "title",
+    "bindingStatus" : "UNRESOLVED"
+  }, {
+    "id" : "component:4bf8ffa3-1e75-38bc-9016-e6cc0b5a2511",
+    "kind" : "TEXT_INPUT",
+    "tag" : "html:password",
+    "attributes" : {
+      "property" : "password"
+    },
+    "source" : {
+      "file" : "views/order.jsp",
+      "line" : 7
+    },
+    "guard" : "c:otherwise{}",
+    "repeated" : false,
+    "formId" : "component:d90f1521-6f9e-3787-932d-9a2b3162607d",
+    "model" : "order",
+    "field" : "password",
+    "bindingStatus" : "UNRESOLVED"
+  }, {
+    "id" : "component:0b0ff50e-6844-325a-8d23-452db55bb06c",
+    "kind" : "MULTI_SELECT",
+    "tag" : "select",
+    "attributes" : {
+      "multiple" : "",
+      "name" : "tags",
+      "onchange" : "loadOptions(this)"
+    },
+    "source" : {
+      "file" : "views/order.jsp",
+      "line" : 8
+    },
+    "guard" : null,
+    "repeated" : true,
+    "formId" : "component:d90f1521-6f9e-3787-932d-9a2b3162607d",
+    "model" : "order",
+    "field" : "tags",
+    "bindingStatus" : "UNRESOLVED"
+  }, {
+    "id" : "component:eac60810-7ea7-3aae-92a3-40a63fb09552",
+    "kind" : "TEXTAREA",
+    "tag" : "textarea",
+    "attributes" : {
+      "name" : "notes"
+    },
+    "source" : {
+      "file" : "views/order.jsp",
+      "line" : 9
+    },
+    "guard" : "logic:present{name=order}",
+    "repeated" : false,
+    "formId" : "component:d90f1521-6f9e-3787-932d-9a2b3162607d",
+    "model" : "order",
+    "field" : "notes",
+    "bindingStatus" : "UNRESOLVED"
+  }, {
+    "id" : "component:37df0dd8-0d16-3e7a-a4a6-0fe4ebfb8b2b",
+    "kind" : "CHECKBOX",
+    "tag" : "input",
+    "attributes" : {
+      "name" : "enabled",
+      "type" : "checkbox"
+    },
+    "source" : {
+      "file" : "views/order.jsp",
+      "line" : 10
+    },
+    "guard" : "logic:notPresent{name=order}",
+    "repeated" : false,
+    "formId" : "component:d90f1521-6f9e-3787-932d-9a2b3162607d",
+    "model" : "order",
+    "field" : "enabled",
+    "bindingStatus" : "UNRESOLVED"
+  }, {
+    "id" : "component:a85bda2e-827c-3c10-bb7a-8b6fe2bc007c",
+    "kind" : "RADIO",
+    "tag" : "input",
+    "attributes" : {
+      "name" : "state",
+      "type" : "radio"
+    },
+    "source" : {
+      "file" : "views/order.jsp",
+      "line" : 11
+    },
+    "guard" : "logic:equal{name=order, property=state, value=open}",
+    "repeated" : false,
+    "formId" : "component:d90f1521-6f9e-3787-932d-9a2b3162607d",
+    "model" : "order",
+    "field" : "state",
+    "bindingStatus" : "UNRESOLVED"
+  }, {
+    "id" : "component:893f51ca-0117-3c58-b24a-7b2971fd7461",
+    "kind" : "DATE_PICKER",
+    "tag" : "input",
+    "attributes" : {
+      "max" : "2030-01-01",
+      "min" : "2020-01-01",
+      "name" : "date",
+      "type" : "date"
+    },
+    "source" : {
+      "file" : "views/order.jsp",
+      "line" : 12
+    },
+    "guard" : null,
+    "repeated" : false,
+    "formId" : "component:d90f1521-6f9e-3787-932d-9a2b3162607d",
+    "model" : "order",
+    "field" : "date",
+    "bindingStatus" : "UNRESOLVED"
+  }, {
+    "id" : "component:e674a31c-fb7d-34cd-a029-ae0a8c4d5d31",
+    "kind" : "SELECT",
+    "tag" : "select",
+    "attributes" : {
+      "name" : "state"
+    },
+    "source" : {
+      "file" : "views/order.jsp",
+      "line" : 13
+    },
+    "guard" : null,
+    "repeated" : false,
+    "formId" : "component:d90f1521-6f9e-3787-932d-9a2b3162607d",
+    "model" : "order",
+    "field" : "state",
+    "bindingStatus" : "UNRESOLVED"
+  }, {
+    "id" : "component:3cbbc3e1-9c63-3f4d-ab30-fb7baf93acf7",
+    "kind" : "FILE_INPUT",
+    "tag" : "input",
+    "attributes" : {
+      "name" : "file",
+      "type" : "file"
+    },
+    "source" : {
+      "file" : "views/order.jsp",
+      "line" : 13
+    },
+    "guard" : null,
+    "repeated" : false,
+    "formId" : "component:d90f1521-6f9e-3787-932d-9a2b3162607d",
+    "model" : "order",
+    "field" : "file",
+    "bindingStatus" : "UNRESOLVED"
+  }, {
+    "id" : "component:28b03f11-90cf-3904-bcb0-c2b73c483567",
+    "kind" : "SUBMIT",
+    "tag" : "input",
+    "attributes" : {
+      "type" : "submit"
+    },
+    "source" : {
+      "file" : "views/order.jsp",
+      "line" : 13
+    },
+    "guard" : null,
+    "repeated" : false,
+    "formId" : "component:d90f1521-6f9e-3787-932d-9a2b3162607d",
+    "model" : "order",
+    "field" : null,
+    "bindingStatus" : "UNRESOLVED"
+  }, {
+    "id" : "component:d7750a0d-7517-312a-b467-687e71462819",
+    "kind" : "BUTTON",
+    "tag" : "button",
+    "attributes" : {
+      "data-bs-target" : "#details",
+      "data-bs-toggle" : "modal",
+      "type" : "button"
+    },
+    "source" : {
+      "file" : "views/order.jsp",
+      "line" : 13
+    },
+    "guard" : null,
+    "repeated" : false,
+    "formId" : "component:d90f1521-6f9e-3787-932d-9a2b3162607d",
+    "model" : "order",
+    "field" : null,
+    "bindingStatus" : "UNRESOLVED"
+  }, {
+    "id" : "component:c2fce9dc-6c07-37ca-842d-520a92cdaddd",
+    "kind" : "LINK",
+    "tag" : "a",
+    "attributes" : {
+      "href" : "${target}",
+      "onclick" : "navigate()"
+    },
+    "source" : {
+      "file" : "views/order.jsp",
+      "line" : 14
+    },
+    "guard" : null,
+    "repeated" : false,
+    "formId" : "component:d90f1521-6f9e-3787-932d-9a2b3162607d",
+    "model" : "order",
+    "field" : null,
+    "bindingStatus" : "UNRESOLVED"
+  }, {
+    "id" : "component:6925aaf7-f2c3-38b9-ab03-8206f94350ba",
+    "kind" : "OTHER",
+    "tag" : "input",
+    "attributes" : {
+      "name" : "token",
+      "type" : "hidden"
+    },
+    "source" : {
+      "file" : "views/order.jsp",
+      "line" : 14
+    },
+    "guard" : null,
+    "repeated" : false,
+    "formId" : "component:d90f1521-6f9e-3787-932d-9a2b3162607d",
+    "model" : "order",
+    "field" : "token",
+    "bindingStatus" : "UNRESOLVED"
+  }, {
+    "id" : "component:60dff32f-2cbe-33f8-af5f-aa75d660314b",
+    "kind" : "TABLE",
+    "tag" : "table",
+    "attributes" : {
+      "id" : "items"
+    },
+    "source" : {
+      "file" : "views/order.jsp",
+      "line" : 14
+    },
+    "guard" : null,
+    "repeated" : false,
+    "formId" : "component:d90f1521-6f9e-3787-932d-9a2b3162607d",
+    "model" : "order",
+    "field" : null,
+    "bindingStatus" : "UNRESOLVED"
+  }, {
+    "id" : "component:8de87d97-be3d-3bdd-8301-6599935d0571",
+    "kind" : "MODAL",
+    "tag" : "dialog",
+    "attributes" : {
+      "id" : "details"
+    },
+    "source" : {
+      "file" : "views/order.jsp",
+      "line" : 16
+    },
+    "guard" : null,
+    "repeated" : false,
+    "formId" : null,
+    "model" : null,
+    "field" : null,
+    "bindingStatus" : "UNRESOLVED"
+  } ],
+  "events" : [ {
+    "componentId" : "component:d90f1521-6f9e-3787-932d-9a2b3162607d",
+    "event" : "submit",
+    "expression" : "return validateOrder()",
+    "source" : {
+      "file" : "views/order.jsp",
+      "line" : 5
+    }
+  }, {
+    "componentId" : "component:0b0ff50e-6844-325a-8d23-452db55bb06c",
+    "event" : "change",
+    "expression" : "loadOptions(this)",
+    "source" : {
+      "file" : "views/order.jsp",
+      "line" : 8
+    }
+  }, {
+    "componentId" : "component:c2fce9dc-6c07-37ca-842d-520a92cdaddd",
+    "event" : "click",
+    "expression" : "navigate()",
+    "source" : {
+      "file" : "views/order.jsp",
+      "line" : 14
+    }
+  } ],
+  "rules" : [ {
+    "id" : "validation:011d9dc4-9eb0-3a7a-bf0c-9147eb718305",
+    "kind" : "pattern",
+    "fields" : [ "component:08a3a858-20fe-32e9-a391-dfc93dfc1d65" ],
+    "message" : null,
+    "layer" : "MARKUP",
+    "parameters" : {
+      "value" : ".+@.+"
+    },
+    "evidence" : [ {
+      "source" : {
+        "file" : "views/order.jsp",
+        "line" : 6
+      },
+      "parser" : "JspMarkupParser",
+      "resolution" : "CONFIRMED",
+      "detail" : "HTML5 屬性：pattern"
+    } ]
+  }, {
+    "id" : "validation:2123e4b6-1d82-3265-acac-2ad2368e6a04",
+    "kind" : "minlength",
+    "fields" : [ "component:08a3a858-20fe-32e9-a391-dfc93dfc1d65" ],
+    "message" : null,
+    "layer" : "MARKUP",
+    "parameters" : {
+      "value" : "3"
+    },
+    "evidence" : [ {
+      "source" : {
+        "file" : "views/order.jsp",
+        "line" : 6
+      },
+      "parser" : "JspMarkupParser",
+      "resolution" : "CONFIRMED",
+      "detail" : "HTML5 屬性：minlength"
+    } ]
+  }, {
+    "id" : "validation:3756cf25-523a-30b0-9314-aa759570a763",
+    "kind" : "required",
+    "fields" : [ "component:08a3a858-20fe-32e9-a391-dfc93dfc1d65" ],
+    "message" : null,
+    "layer" : "MARKUP",
+    "parameters" : {
+      "value" : ""
+    },
+    "evidence" : [ {
+      "source" : {
+        "file" : "views/order.jsp",
+        "line" : 6
+      },
+      "parser" : "JspMarkupParser",
+      "resolution" : "CONFIRMED",
+      "detail" : "HTML5 屬性：required"
+    } ]
+  }, {
+    "id" : "validation:54e0cbf1-9f69-3102-99c3-2bd9e3ae1f06",
+    "kind" : "email",
+    "fields" : [ "component:08a3a858-20fe-32e9-a391-dfc93dfc1d65" ],
+    "message" : null,
+    "layer" : "MARKUP",
+    "parameters" : {
+      "value" : "email"
+    },
+    "evidence" : [ {
+      "source" : {
+        "file" : "views/order.jsp",
+        "line" : 6
+      },
+      "parser" : "JspMarkupParser",
+      "resolution" : "CONFIRMED",
+      "detail" : "HTML5 屬性：email"
+    } ]
+  }, {
+    "id" : "validation:828a2802-626e-35c4-b6c0-0e2b3e8d48d0",
+    "kind" : "min",
+    "fields" : [ "component:893f51ca-0117-3c58-b24a-7b2971fd7461" ],
+    "message" : null,
+    "layer" : "MARKUP",
+    "parameters" : {
+      "value" : "2020-01-01"
+    },
+    "evidence" : [ {
+      "source" : {
+        "file" : "views/order.jsp",
+        "line" : 12
+      },
+      "parser" : "JspMarkupParser",
+      "resolution" : "CONFIRMED",
+      "detail" : "HTML5 屬性：min"
+    } ]
+  }, {
+    "id" : "validation:9ced5ca1-3741-38bc-ab9c-03c983b0144e",
+    "kind" : "max",
+    "fields" : [ "component:893f51ca-0117-3c58-b24a-7b2971fd7461" ],
+    "message" : null,
+    "layer" : "MARKUP",
+    "parameters" : {
+      "value" : "2030-01-01"
+    },
+    "evidence" : [ {
+      "source" : {
+        "file" : "views/order.jsp",
+        "line" : 12
+      },
+      "parser" : "JspMarkupParser",
+      "resolution" : "CONFIRMED",
+      "detail" : "HTML5 屬性：max"
+    } ]
+  }, {
+    "id" : "validation:d9cf6342-d01b-33b1-a7d3-bf347722132d",
+    "kind" : "date",
+    "fields" : [ "component:893f51ca-0117-3c58-b24a-7b2971fd7461" ],
+    "message" : null,
+    "layer" : "MARKUP",
+    "parameters" : {
+      "value" : "date"
+    },
+    "evidence" : [ {
+      "source" : {
+        "file" : "views/order.jsp",
+        "line" : 12
+      },
+      "parser" : "JspMarkupParser",
+      "resolution" : "CONFIRMED",
+      "detail" : "HTML5 屬性：date"
+    } ]
+  }, {
+    "id" : "validation:e87a9ca2-0330-3425-aba9-a2cdd2b701ae",
+    "kind" : "maxlength",
+    "fields" : [ "component:08a3a858-20fe-32e9-a391-dfc93dfc1d65" ],
+    "message" : null,
+    "layer" : "MARKUP",
+    "parameters" : {
+      "value" : "60"
+    },
+    "evidence" : [ {
+      "source" : {
+        "file" : "views/order.jsp",
+        "line" : 6
+      },
+      "parser" : "JspMarkupParser",
+      "resolution" : "CONFIRMED",
+      "detail" : "HTML5 屬性：maxlength"
+    } ]
+  } ],
+  "behaviors" : [ {
+    "id" : "behavior:b998a70d-526b-3739-a73b-c4d11a55299a",
+    "triggerId" : "component:d7750a0d-7517-312a-b467-687e71462819",
+    "event" : "click",
+    "type" : "OPEN_DIALOG",
+    "targetId" : "component:8de87d97-be3d-3bdd-8301-6599935d0571",
+    "guard" : null,
+    "parentId" : null,
+    "expression" : "#details",
+    "evidence" : [ {
+      "source" : {
+        "file" : "views/order.jsp",
+        "line" : 13
+      },
+      "parser" : "JspMarkupParser",
+      "resolution" : "CONFIRMED",
+      "detail" : "彈窗標記；候選：[component:8de87d97-be3d-3bdd-8301-6599935d0571]"
+    } ]
+  } ]
+}

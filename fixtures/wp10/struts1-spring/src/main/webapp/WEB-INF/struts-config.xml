@@ -1,0 +1,14 @@
+<struts-config>
+<form-beans><form-bean name="editForm" type="synthetic.EditForm"/><form-bean name="dynamicForm" type="org.apache.struts.action.DynaActionForm"><form-property name="email" type="java.lang.String" initial=""/></form-bean></form-beans>
+<global-forwards><forward name="home" path="/WEB-INF/views/page.jsp"/></global-forwards><global-exceptions><exception key="error" type="synthetic.Failure" path="/WEB-INF/views/page.jsp"/></global-exceptions>
+<action-mappings>
+<action path="/page" forward="/WEB-INF/views/page.jsp"/>
+<action path="/save" type="synthetic.EditAction" name="editForm" scope="request" validate="true" input="/WEB-INF/views/page.jsp" parameter="op"><forward name="ok" path="/WEB-INF/views/page.jsp"/></action>
+<action path="/lookup" type="synthetic.LookupAction" name="editForm" parameter="op"><forward name="ok" path="/WEB-INF/views/page.jsp"/></action>
+<action path="/mapping" type="synthetic.MappingAction" parameter="save"><forward name="ok" path="/WEB-INF/views/page.jsp"/></action>
+<action path="/api/exact" type="synthetic.ApiAction"><forward name="ok" path="/WEB-INF/views/page.jsp"/></action>
+<action path="/managed" type="/managed"><forward name="ok" path="/WEB-INF/views/page.jsp"/></action></action-mappings>
+<message-resources parameter="Messages"/>
+<plug-in className="org.apache.struts.validator.ValidatorPlugIn"><set-property property="pathnames" value="/WEB-INF/validation.xml"/></plug-in>
+<plug-in className="org.apache.struts.tiles.TilesPlugin"><set-property property="definitions-config" value="/WEB-INF/tiles-defs.xml"/></plug-in>
+</struts-config>

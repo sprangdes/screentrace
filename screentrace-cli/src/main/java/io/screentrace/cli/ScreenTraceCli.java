@@ -1,105 +1,185 @@
 package io.screentrace.cli;
 
-import com.sun.net.httpserver.HttpExchange;
-import com.sun.net.httpserver.HttpServer;
 import io.screentrace.adapter.spring.SpringProjectAnalyzer;
 import io.screentrace.adapter.struts.StrutsProjectAnalyzer;
 import io.screentrace.core.ApplicationGraph;
 import io.screentrace.core.ApplicationGraphMerger;
-import io.screentrace.report.ReportGenerator;
-import io.screentrace.report.ReviewResultGenerator;
+import io.screentrace.report.SingleHtmlAnalysisWriter;
+import io.screentrace.report.PreviewResourceBoundaryException;
 import io.screentrace.scanner.ProjectScanner;
 import io.screentrace.scanner.SafeProjectFiles;
 import java.awt.Desktop;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
-import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
-import java.util.UUID;
 import java.util.concurrent.TimeUnit;
-import java.security.MessageDigest;
-import java.util.Base64;
-import java.nio.charset.StandardCharsets;
 import java.util.logging.Logger;
+import org.jline.terminal.Terminal;
+import org.jline.terminal.TerminalBuilder;
 
-/** Interactive entry point plus scriptable analyze, report, export, and config commands. */
+/** Interactive entry point plus scriptable analyze, report, and config commands. */
 public final class ScreenTraceCli {
-  static final int MAX_OVERLAY_BYTES = 1_048_576;
-  static final long MAX_SERVED_FILE_BYTES = 64L * 1024 * 1024;
-  static final InetAddress REPORT_ADDRESS = InetAddress.getLoopbackAddress();
-  private static final String INDEX_FILE = "index.html";
-  private static final String JSON_CONTENT_TYPE = "application/json";
-  private static final String HTML_CONTENT_TYPE = "text/html; charset=utf-8";
   private static final Logger LOGGER = Logger.getLogger(ScreenTraceCli.class.getName());
 
   public static void main(String[] args) throws IOException, InterruptedException {
+    int status;
+    try { status=run(args); }
+    catch (PreviewResourceBoundaryException rejected) {
+      status=reportRejectedPreviewResource(rejected,System.err);
+    }
+    if(status!=0)System.exit(status);
+  }
+
+  static int reportRejectedPreviewResource(PreviewResourceBoundaryException rejected, java.io.PrintStream error) {
+    error.println(rejected.getMessage());
+    return 2;
+  }
+
+  private static int run(String[] args) throws IOException, InterruptedException {
+    if(args.length>0&&args[0].equals("library")){System.out.println(LibraryCommands.run(args,WorkspaceSettings.defaultFile().getParent()));return 0;}
     Command command = Command.parse(args);
-    try (InteractiveConsole console = new InteractiveConsole()) {
-      WorkspaceSettings settings = command.action() == Action.CONFIG ? configure(console) : loadOrConfigure(console);
-      if (command.action() == Action.CONFIG) return;
-      ProjectCatalog catalog = new ProjectCatalog();
-      if (command.action() == Action.INTERACTIVE) {
-        runInteractive(console, settings, catalog);
-        return;
+    if(command.action()==Action.PATH)return analyzePath(command.projectName());
+    if(command.action()==Action.INTERACTIVE||command.action()==Action.CONFIG){
+      if(!interactiveTerminalAvailable())return command.action()==Action.CONFIG?failConfigWithoutTerminal():failForMissingTerminal();
+      try(InteractiveConsole console=new InteractiveConsole()){
+        if(command.action()==Action.CONFIG)configure(console);
+        else runInteractive(console,new ProjectCatalog());
       }
-      List<ProjectCatalog.Project> projects = command.action() == Action.ANALYZE
-          ? catalog.allProjects(settings) : catalog.analyzedProjects(settings);
-      ProjectCatalog.Project project;
-      try {
-        project = selectProject(console, catalog, projects, command.projectName());
-      } catch (InteractiveConsole.SelectionCancelledException ignored) {
-        return;
+      return 0;
+    }
+    boolean configured=hasConfiguredWorkspace();
+    boolean needsPrompt=!configured||command.projectName()==null;
+    if(needsPrompt&&!interactiveTerminalAvailable()){
+      if(!configured)return failForMissingTerminal();
+      System.err.println("此指令需要選擇專案；請在終端機執行，或指定專案名稱。");
+      return 2;
+    }
+    if(needsPrompt){
+      try(InteractiveConsole console=new InteractiveConsole()){
+        runCommand(console,loadOrConfigure(console),command);
       }
-      if (command.action() == Action.ANALYZE) {
-        AnalysisResult result = analyze(project);
-        logAnalysis(result);
-        serve(result.report());
-      }
-      else if (command.action() == Action.REPORT) serve(project.analysisDirectory().resolve("report"));
-      else logExport(export(project));
+    }else runCommand(null,WorkspaceSettings.load(WorkspaceSettings.defaultFile()),command);
+    return 0;
+  }
+
+  private static int failForMissingTerminal(){
+    System.err.println("尚未設定專案根目錄。可直接執行 `./bin/screentrace <專案路徑>` 分析單一專案，或在終端機執行 `./bin/screentrace config` 設定專案根目錄");
+    return 2;
+  }
+
+  /** `screentrace <project path>`: analyze one folder directly, without requiring a configured project root. */
+  private static int analyzePath(String argument) throws IOException, InterruptedException {
+    Path source=projectPath(argument);
+    if(!Files.isDirectory(source)){
+      System.err.println("找不到專案資料夾："+argument);
+      return 2;
+    }
+    WorkspaceSettings settings=settingsFor(source);
+    AnalysisResult result=analyze(projectAt(source,settings),settings);
+    logAnalysis(result);openReport(result.report());
+    return 0;
+  }
+
+  static Path projectPath(String argument){
+    String expanded=argument.equals("~")||argument.startsWith("~/")?System.getProperty("user.home")+argument.substring(1):argument;
+    return Path.of(expanded).toAbsolutePath().normalize();
+  }
+
+  private static ProjectCatalog.Project projectAt(Path source,WorkspaceSettings settings){
+    String name=source.getFileName()==null?"project":source.getFileName().toString();
+    return new ProjectCatalog.Project(name,source,settings.outputRoot().resolve(name));
+  }
+
+  /** The configured workspace when there is one; otherwise results go to `<ScreenTrace>/analyze/`. */
+  private static WorkspaceSettings settingsFor(Path source){
+    WorkspaceSettings configured=existingSettings();
+    if(configured!=null&&Files.isDirectory(configured.projectRoot()))return configured;
+    return new WorkspaceSettings(source.getParent()==null?source:source.getParent(),defaultOutputRoot(),java.util.Map.of());
+  }
+
+  /** The launcher's ScreenTrace home, then the checkout that contains the running classes. */
+  private static List<Path> toolRoots() {
+    List<Path> roots = new java.util.ArrayList<>(List.of(screenTraceHome()));
+    try {
+      for (Path root = Path.of(ScreenTraceCli.class.getProtectionDomain().getCodeSource().getLocation().toURI()); root != null; root = root.getParent())
+        if (Files.isDirectory(root.resolve("screentrace-capture"), java.nio.file.LinkOption.NOFOLLOW_LINKS)) { roots.add(root); break; }
+    } catch (java.net.URISyntaxException | SecurityException | NullPointerException ignored) { /* fall back to the working directory */ }
+    return roots;
+  }
+
+  static Path defaultOutputRoot(){return screenTraceHome().resolve("analyze");}
+
+  /** Set by the launcher; falls back to the nearest ancestor that contains the ScreenTrace sources. */
+  static Path screenTraceHome(){
+    String configured=System.getProperty("screentrace.home");
+    if(configured!=null&&Files.isDirectory(Path.of(configured)))return Path.of(configured).toAbsolutePath().normalize();
+    for(Path root=Path.of("").toAbsolutePath();root!=null;root=root.getParent())
+      if(Files.isDirectory(root.resolve("screentrace-capture"))&&Files.isRegularFile(root.resolve("pom.xml")))return root;
+    return Path.of("").toAbsolutePath();
+  }
+
+  private static int failConfigWithoutTerminal(){
+    System.err.println("config 需要互動式終端機");
+    return 2;
+  }
+
+  private static boolean hasConfiguredWorkspace(){
+    try{Path file=WorkspaceSettings.defaultFile();return Files.isRegularFile(file)&&Files.isDirectory(WorkspaceSettings.load(file).projectRoot());}
+    catch(IOException|RuntimeException ignored){return false;}
+  }
+
+  private static boolean interactiveTerminalAvailable() throws IOException {
+    if(System.console()==null)return false;
+    try(Terminal terminal=TerminalBuilder.builder().system(true).build()){
+      return !Terminal.TYPE_DUMB.equals(terminal.getType())&&!Terminal.TYPE_DUMB_COLOR.equals(terminal.getType());
     }
   }
 
-  private static void runInteractive(InteractiveConsole console, WorkspaceSettings settings, ProjectCatalog catalog)
+  private static void runCommand(InteractiveConsole console,WorkspaceSettings settings,Command command) throws IOException,InterruptedException {
+    ProjectCatalog catalog=new ProjectCatalog();
+    List<ProjectCatalog.Project> projects=command.action()==Action.ANALYZE?catalog.allProjects(settings):catalog.analyzedProjects(settings);
+    ProjectCatalog.Project project;
+    try{project=selectProject(console,catalog,projects,command.projectName());}
+    catch(InteractiveConsole.SelectionCancelledException ignored){return;}
+    if(command.action()==Action.ANALYZE){AnalysisResult result=analyze(project,settings);logAnalysis(result);openReport(result.report());}
+    else if(command.action()==Action.REPORT)openReport(new SingleHtmlAnalysisWriter().generate(project.analysisDirectory(),new LibraryStore(WorkspaceSettings.defaultFile().getParent()).selected(project.name())).path());
+  }
+
+  private static void runInteractive(InteractiveConsole console, ProjectCatalog catalog)
       throws IOException, InterruptedException {
     while (true) {
+      WorkspaceSettings configured = existingSettings();
+      boolean hasRoot = configured != null && Files.isDirectory(configured.projectRoot());
+      WorkspaceSettings settings = hasRoot ? configured
+          : new WorkspaceSettings(Path.of("").toAbsolutePath(), defaultOutputRoot(), java.util.Map.of());
       Action action;
       try {
-        action = chooseCommand(console);
+        action = chooseCommand(console, hasRoot, !catalog.analyzedProjects(settings).isEmpty());
       } catch (InteractiveConsole.SelectionCancelledException ignored) {
         return;
       }
       if (action == Action.EXIT) return;
-      List<ProjectCatalog.Project> projects = action == Action.ANALYZE
-          ? catalog.allProjects(settings) : catalog.analyzedProjects(settings);
+      if (action == Action.CONFIG) { configure(console); continue; }
       ProjectCatalog.Project project;
       try {
-        project = selectProject(console, catalog, projects, null);
+        project = action == Action.PATH
+            ? projectAt(console.existingDirectory("專案資料夾路徑", Path.of("").toAbsolutePath()), settingsFor(Path.of("").toAbsolutePath()))
+            : selectProject(console, catalog, action == Action.ANALYZE ? catalog.allProjects(settings) : catalog.analyzedProjects(settings), null);
       } catch (InteractiveConsole.SelectionCancelledException ignored) {
         continue;
       }
-      if (action == Action.EXPORT) {
-        console.showExportComplete(export(project));
-        continue;
-      }
       Path report;
-      if (action == Action.ANALYZE) {
-        AnalysisResult result = analyze(project);
-        console.showAnalysisComplete(result.project(), result.technologies(), result.endpoints(), result.screens(),
-            result.components(), result.output());
-        report = result.report();
+      if (action == Action.REPORT) {
+        report = new SingleHtmlAnalysisWriter().generate(project.analysisDirectory(),new LibraryStore(WorkspaceSettings.defaultFile().getParent()).selected(project.name())).path();
       } else {
-        report = project.analysisDirectory().resolve("report");
+        AnalysisResult result = analyze(project, action == Action.PATH ? settingsFor(project.sourceDirectory()) : settings);
+        console.showAnalysisComplete(result.project(), result.technologies(), result.endpoints(), result.screens(),
+            result.components(), result.output(), result.contextPathHintCount());
+        report = result.report();
       }
-      try (RunningReport running = startReport(report)) {
-        console.waitForReportClose(running.url());
-      }
+      openReport(report);
+      console.waitForMenuReturn(report.toUri().toString());
     }
   }
 
@@ -116,7 +196,9 @@ public final class ScreenTraceCli {
     Path projectRoot = console.existingDirectory("所有專案的根目錄", projectDefault);
     Path outputDefault = current == null ? projectRoot.resolve("analyze") : current.outputRoot();
     Path outputRoot = console.outputDirectory("分析結果根目錄", outputDefault);
-    WorkspaceSettings settings = new WorkspaceSettings(projectRoot, outputRoot);
+    WorkspaceSettings.CanonicalPaths canonical=WorkspaceSettings.canonicalPaths(projectRoot,outputRoot);
+    if(canonical.correctionMessage()!=null)LOGGER.info(canonical.correctionMessage());
+    WorkspaceSettings settings = new WorkspaceSettings(canonical.projectRoot(), canonical.outputRoot(),current==null?java.util.Map.of():current.contextPaths());
     settings.save(WorkspaceSettings.defaultFile());
     LOGGER.info(() -> "設定已儲存：\n  專案根目錄：" + settings.projectRoot() + "\n  輸出根目錄：" + settings.outputRoot());
     return settings;
@@ -131,9 +213,20 @@ public final class ScreenTraceCli {
     }
   }
 
-  private static Action chooseCommand(InteractiveConsole console) throws IOException {
-    return console.select("請選擇功能", List.of(Action.ANALYZE, Action.REPORT, Action.EXPORT, Action.EXIT),
-        Action::label, 'q', "q / Esc 結束", 3);
+  /** Without a configured project root the first item asks for a folder path; configuring a root stays optional. */
+  static List<Action> menu(boolean hasRoot, boolean hasReports) {
+    List<Action> actions = new java.util.ArrayList<>();
+    if (hasRoot) actions.add(Action.ANALYZE);
+    actions.add(Action.PATH);
+    if (hasReports) actions.add(Action.REPORT);
+    if (!hasRoot) actions.add(Action.CONFIG);
+    actions.add(Action.EXIT);
+    return actions;
+  }
+
+  private static Action chooseCommand(InteractiveConsole console, boolean hasRoot, boolean hasReports) throws IOException {
+    List<Action> actions = menu(hasRoot, hasReports);
+    return console.select("請選擇功能", actions, Action::label, 'q', "q / Esc 結束", actions.size() - 1);
   }
 
   private static ProjectCatalog.Project selectProject(InteractiveConsole console, ProjectCatalog catalog,
@@ -149,268 +242,96 @@ public final class ScreenTraceCli {
     return choice.project();
   }
 
-  private static AnalysisResult analyze(ProjectCatalog.Project project) throws IOException, InterruptedException {
+  private static AnalysisResult analyze(ProjectCatalog.Project project,WorkspaceSettings settings) throws IOException, InterruptedException {
     Path outputRoot = project.analysisDirectory().getParent();
     Files.createDirectories(outputRoot);
     Path safeOutput = SafeProjectFiles.requireWritePathWithin(outputRoot, project.analysisDirectory());
     Files.createDirectories(safeOutput);
     Path output = project.analysisDirectory();
-    var inventory = new ProjectScanner().scan(project.sourceDirectory());
-    var graph = analyze(inventory);
-    new ReportGenerator().write(graph, output);
-    if (graph.application().technologies().contains("JSP")) {
+    var inventory = new ProjectScanner().scan(project.sourceDirectory()).withContextPaths(settings.contextPathsFor(project.sourceDirectory()),settings.contextPathsLine());
+    var graph = io.screentrace.core.GraphIntegrityValidator.requireAnalysis(analyze(inventory));
+    var writer = new SingleHtmlAnalysisWriter();
+    writer.prepare(graph, output);
+    if (graph.application().technologies().contains("JSP") || graph.nodes().stream().anyMatch(n -> n.type() == ApplicationGraph.NodeType.SCREEN && n.attributes().getOrDefault("view", "").endsWith(".html"))) {
       renderStaticJsp(project.sourceDirectory(), output);
-      new ReportGenerator().write(graph, output);
+      packPreview(output);
     }
+    var report = writer.generate(graph, output,new LibraryStore(WorkspaceSettings.defaultFile().getParent()).selected(project.name()));
+    if (report.warning()) LOGGER.warning("單一 HTML 超過 100 MB，仍完整產出：" + report.bytes() + " bytes");
     long screens = graph.nodes().stream().filter(node -> node.type().name().equals("SCREEN")).count();
     long endpoints = graph.nodes().stream().filter(node -> node.type().name().equals("ENDPOINT")).count();
     long components = graph.nodes().stream().filter(node -> node.type().name().equals("COMPONENT")).count();
-    return new AnalysisResult(output.resolve("report"), project.name(), graph.application().technologies(), endpoints,
-        screens, components, output);
+    long contextPathHintCount=graph.diagnostics().stream().filter(d->"CONTEXT_PATH_HINT".equals(d.code())).mapToLong(d->d.evidence().size()).sum();
+    return new AnalysisResult(report.path(), project.name(), graph.application().technologies(), endpoints,
+        screens, components, output,contextPathHintCount);
+  }
+
+  static String contextPathHintSummary(long count) {
+    return count>0?"提示："+count+" 個網址可能缺少 context path，請使用 ./bin/screentrace config 設定後重新分析":null;
   }
 
   private static void logAnalysis(AnalysisResult result) {
     LOGGER.info(() -> "分析完成：\n  專案：" + result.project() + "\n  技術："
         + String.join(", ", result.technologies()) + "\n  Endpoints：" + result.endpoints()
         + "\n  Screens：" + result.screens() + "\n  Components：" + result.components()
-        + "\n  輸出：" + result.output());
+        + "\n  輸出：" + result.output()
+        + (contextPathHintSummary(result.contextPathHintCount())==null?"":"\n  "+contextPathHintSummary(result.contextPathHintCount())));
   }
 
   private static ApplicationGraph analyze(ProjectScanner.ProjectInventory inventory) throws IOException {
+    var unsupported = io.screentrace.adapter.struts.StrutsFrameworkDetector.unsupported(inventory);
+    if (unsupported.isPresent()) throw new IOException(unsupported.get().code() + ": " + unsupported.get().message());
     boolean struts = inventory.technologies().contains("Struts 1");
     boolean springWeb = inventory.technologies().contains("Spring MVC") || inventory.technologies().contains("Spring Boot");
-    if (struts && springWeb) return ApplicationGraphMerger.merge(new StrutsProjectAnalyzer().analyze(inventory), new SpringProjectAnalyzer().analyze(inventory));
+    if (struts && springWeb) return io.screentrace.parser.jsp.UrlGraphContribution.enrich(ApplicationGraphMerger.merge(new StrutsProjectAnalyzer().analyze(inventory), new SpringProjectAnalyzer().analyze(inventory)),inventory);
     if (struts) return new StrutsProjectAnalyzer().analyze(inventory);
     return new SpringProjectAnalyzer().analyze(inventory);
   }
 
   @SuppressWarnings("java:S4036")
   private static void renderStaticJsp(Path target, Path output) throws IOException, InterruptedException {
-    Process process = new ProcessBuilder("node", Path.of("screentrace-capture/capture-static-jsp.mjs").toAbsolutePath().toString(), target.toString(), output.toString()).inheritIO().start();
+    Process process = new ProcessBuilder("node", captureTool("capture-static-jsp.mjs").toString(), target.toString(), output.toString(), "--preview-v2").inheritIO().start();
     if (!process.waitFor(120, TimeUnit.SECONDS)) {
       process.destroy();
       if (!process.waitFor(2, TimeUnit.SECONDS)) process.destroyForcibly();
-      LOGGER.warning("JSP 靜態預覽逾時；報表會改用原始碼預覽。");
-    } else if (process.exitValue() != 0) LOGGER.warning("無法建立 JSP 靜態預覽；報表會改用原始碼預覽。");
+      LOGGER.warning("JSP 靜態預覽逾時；未取得預覽的畫面將明確標記。");
+    } else if (process.exitValue() != 0) LOGGER.warning("無法建立 JSP 靜態預覽；未取得預覽的畫面將明確標記。");
   }
 
-  private static Path export(ProjectCatalog.Project project) throws IOException {
-    Path destination = project.analysisDirectory().resolve("review-result.json");
-    new ReviewResultGenerator().write(project.analysisDirectory(), destination);
-    return destination;
-  }
-
-  private static void logExport(Path destination) {
-    LOGGER.info(() -> "確認功能結果已匯出：\n  " + destination);
-  }
-
-  private static void serve(Path report) throws IOException {
-    RunningReport running = startReport(report);
-    LOGGER.info("ScreenTrace report running at:\n\n" + running.url());
-  }
-
-  private static RunningReport startReport(Path report) throws IOException {
-    if (!Files.isDirectory(report)) throw new IllegalArgumentException("找不到報表：" + report);
-    HttpServer server = HttpServer.create(new InetSocketAddress(REPORT_ADDRESS, 0), 0);
-    int port = server.getAddress().getPort();
-    Path analysis = report.getParent();
-    Path overlay = analysis.resolve("edit-overlay.json");
-    String sessionToken = UUID.randomUUID().toString();
-    server.createContext("/edit-overlay.json", exchange -> handleOverlay(exchange, overlay, sessionToken));
-    server.createContext("/review-result.json", exchange -> handleReviewResult(exchange, analysis, overlay, sessionToken));
-    server.createContext("/", exchange -> serveStatic(exchange, report, analysis, sessionToken));
-    server.start();
-    String url = "http://localhost:" + port;
-    openReport(url);
-    return new RunningReport(server, url);
-  }
-
-  private record RunningReport(HttpServer server, String url) implements AutoCloseable {
-    @Override public void close() { server.stop(0); }
-  }
-
-  private static void handleOverlay(HttpExchange exchange, Path overlay, String sessionToken) throws IOException {
-    secure(exchange);
-    if (!validHost(exchange)) { exchange.sendResponseHeaders(403, -1); exchange.close(); return; }
-    if (exchange.getRequestMethod().equals("PUT")) {
-      if (!authorizedMutation(exchange, sessionToken) || !writeOverlay(exchange, overlay)) return;
-      exchange.sendResponseHeaders(204, -1);
-      exchange.close();
-      return;
+  private static Path captureTool(String name) throws IOException {
+    for (Path root : toolRoots()) {
+      Path tool = root.resolve("screentrace-capture").resolve(name);
+      if (Files.isRegularFile(tool, java.nio.file.LinkOption.NOFOLLOW_LINKS)) return SafeProjectFiles.requireExistingRegularFileWithin(root, tool);
     }
-    if (!exchange.getRequestMethod().equals("GET") || Files.isSymbolicLink(overlay)) {
-      exchange.sendResponseHeaders(exchange.getRequestMethod().equals("GET") ? 404 : 405, -1);
-      exchange.close();
-      return;
+    for (Path root = Path.of("").toAbsolutePath(); root != null; root = root.getParent()) {
+      Path tool = root.resolve("screentrace-capture").resolve(name);
+      if (Files.isRegularFile(tool)) return SafeProjectFiles.requireExistingRegularFileWithin(root, tool);
     }
-    sendFile(exchange, overlay, JSON_CONTENT_TYPE);
+    throw new IOException("找不到預覽工具：" + name);
   }
 
-  private static void handleReviewResult(HttpExchange exchange, Path analysis, Path overlay, String sessionToken) throws IOException {
-    secure(exchange);
-    if (!validHost(exchange)) { exchange.sendResponseHeaders(403, -1); exchange.close(); return; }
-    if (!exchange.getRequestMethod().equals("POST")) {
-      exchange.sendResponseHeaders(405, -1);
-      exchange.close();
-      return;
+  private static void packPreview(Path output) throws IOException, InterruptedException {
+    if (!Files.exists(output.resolve("static-preview/manifest.json"))) return;
+    Process process = new ProcessBuilder("node", captureTool("pack-preview.mjs").toString(), output.toString()).inheritIO().start();
+    if (!process.waitFor(120, TimeUnit.SECONDS)) {
+      process.destroy();
+      if (!process.waitFor(2, TimeUnit.SECONDS)) process.destroyForcibly();
+      throw new IOException("預覽資源封裝逾時");
     }
-    if (!authorizedMutation(exchange, sessionToken) || !writeOverlay(exchange, overlay)) return;
-    Path result = new ReviewResultGenerator().write(analysis, analysis.resolve("review-result.json"));
-    exchange.getResponseHeaders().set("Content-Disposition", "attachment; filename=review-result.json");
-    sendFile(exchange, result, JSON_CONTENT_TYPE);
+    if (process.exitValue() != 0) throw new IOException("預覽資源封裝失敗");
   }
 
-  private static boolean writeOverlay(HttpExchange exchange, Path overlay) throws IOException {
+  private static void openReport(Path file) throws IOException {
+    Path safe = SafeProjectFiles.requireExistingRegularFileWithin(file.getParent(), file);
+    LOGGER.info("單一 HTML 報表：" + safe.toUri());
     try {
-      if (Files.isSymbolicLink(overlay)) {
-        exchange.sendResponseHeaders(404, -1);
-        exchange.close();
-        return false;
-      }
-      Files.write(overlay, readLimited(exchange.getRequestBody()));
-      return true;
-    } catch (RequestTooLargeException ignored) {
-      exchange.sendResponseHeaders(413, -1);
-      exchange.close();
-      return false;
-    }
-  }
-
-  private static boolean authorizedMutation(HttpExchange exchange, String sessionToken) throws IOException {
-    if (hasMutationToken(exchange.getRequestHeaders().getFirst("X-ScreenTrace-Token"), sessionToken)) return true;
-    exchange.sendResponseHeaders(403, -1);
-    exchange.close();
-    return false;
-  }
-
-  static boolean hasMutationToken(String suppliedToken, String sessionToken) { return sessionToken.equals(suppliedToken); }
-
-  private static void serveStatic(HttpExchange exchange, Path report, Path analysis, String sessionToken) throws IOException {
-    secure(exchange);
-    if (!validHost(exchange)) { exchange.sendResponseHeaders(403, -1); exchange.close(); return; }
-    Path requested = staticFile(exchange.getRequestURI().getPath(), report, analysis);
-    if (requested == null || !Files.isRegularFile(requested)) {
-      exchange.sendResponseHeaders(404, -1);
-      exchange.close();
-      return;
-    }
-    if (requested.equals(report.resolve(INDEX_FILE))) {
-      if (Files.size(requested) > 16L * 1024 * 1024) { exchange.sendResponseHeaders(413, -1); exchange.close(); return; }
-      byte[] body = Files.readString(requested).replace("__SCREEN_TRACE_SESSION_TOKEN__", sessionToken).getBytes(StandardCharsets.UTF_8);
-      exchange.getResponseHeaders().set("Content-Security-Policy", reportCsp(body));
-      exchange.getResponseHeaders().set("Content-Type", HTML_CONTENT_TYPE);
-      exchange.sendResponseHeaders(200, body.length);
-      exchange.getResponseBody().write(body);
-      exchange.close();
-      return;
-    }
-    sendFile(exchange, requested, contentType(requested));
-  }
-
-  static Path staticFile(String uri, Path report, Path analysis) {
-    if (uri.equals("/")) return report.resolve(INDEX_FILE);
-    if (uri.equals("/application-graph.json") || uri.equals("/prototype-model.json") || uri.equals("/preview-model.json")) return resolveWithin(analysis, uri.substring(1));
-    if (uri.startsWith("/static-preview/")) return resolveWithin(analysis.resolve("static-preview"), uri.substring("/static-preview/".length()));
-    if (uri.startsWith("/screenshots/")) return resolveWithin(analysis.resolve("screenshots"), uri.substring("/screenshots/".length()));
-    return resolveWithin(report, uri.substring(1));
-  }
-
-  static Path resolveWithin(Path root, String relativePath) {
-    Path normalizedRoot = root.toAbsolutePath().normalize();
-    Path resolved = normalizedRoot.resolve(relativePath).normalize();
-    if (!resolved.startsWith(normalizedRoot)) return null;
-    try {
-      if (!Files.exists(resolved)) return resolved;
-      Path realRoot = normalizedRoot.toRealPath();
-      Path realResolved = resolved.toRealPath();
-      return realResolved.startsWith(realRoot) ? resolved : null;
-    } catch (IOException | SecurityException ignored) {
-      return null;
-    }
-  }
-
-  static byte[] readLimited(InputStream input) throws IOException {
-    try (input; ByteArrayOutputStream output = new ByteArrayOutputStream()) {
-      byte[] buffer = new byte[8192];
-      long total = 0;
-      int read;
-      while ((read = input.read(buffer)) != -1) {
-        total += read;
-        if (total > MAX_OVERLAY_BYTES) throw new RequestTooLargeException();
-        output.write(buffer, 0, read);
-      }
-      return output.toByteArray();
-    }
-  }
-
-  private static void sendFile(HttpExchange exchange, Path file, String contentType) throws IOException {
-    long size = Files.size(file);
-    if (size > MAX_SERVED_FILE_BYTES) { exchange.sendResponseHeaders(413, -1); exchange.close(); return; }
-    exchange.getResponseHeaders().set("Content-Type", contentType);
-    if (exchange.getRequestURI().getPath().startsWith("/static-preview/")) exchange.getResponseHeaders().set("Content-Security-Policy", previewCsp());
-    exchange.sendResponseHeaders(200, size);
-    try (InputStream input = Files.newInputStream(file); OutputStream response = exchange.getResponseBody()) { input.transferTo(response); }
-    finally { exchange.close(); }
-  }
-
-  private static void secure(HttpExchange exchange) {
-    var headers = exchange.getResponseHeaders();
-    headers.set("X-Content-Type-Options", "nosniff");
-    headers.set("Referrer-Policy", "no-referrer");
-    headers.set("Cache-Control", "no-store");
-    headers.set("Content-Security-Policy", previewCsp());
-  }
-
-  static String previewCsp() {
-    return "default-src 'none'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; font-src 'self'; script-src 'none'; connect-src 'none'; frame-src 'none'; object-src 'none'; media-src 'none'; base-uri 'none'; form-action 'none'";
-  }
-
-  static String reportCsp(byte[] html) {
-    String source = new String(html, StandardCharsets.UTF_8);
-    java.util.regex.Matcher scripts = java.util.regex.Pattern.compile("(?is)<script\\b(?![^>]*\\bsrc\\s*=)[^>]*>(.*?)</script\\s*>").matcher(source);
-    List<String> hashes = new java.util.ArrayList<>();
-    try {
-      while (scripts.find()) hashes.add("'sha256-" + Base64.getEncoder().encodeToString(MessageDigest.getInstance("SHA-256").digest(scripts.group(1).getBytes(StandardCharsets.UTF_8))) + "'");
-    } catch (java.security.NoSuchAlgorithmException impossible) { throw new IllegalStateException(impossible); }
-    return "default-src 'self'; script-src 'self' " + String.join(" ", hashes) + "; connect-src 'self'; img-src 'self' data:; frame-src 'self'; object-src 'none'; base-uri 'none'; style-src 'self' 'unsafe-inline'";
-  }
-
-  private static boolean validHost(HttpExchange exchange) {
-    String host = exchange.getRequestHeaders().getFirst("Host");
-    if (host == null || !(host.equalsIgnoreCase("localhost:" + exchange.getLocalAddress().getPort())
-        || host.equals("127.0.0.1:" + exchange.getLocalAddress().getPort())
-        || host.equals("[::1]:" + exchange.getLocalAddress().getPort()))) return false;
-    String origin = exchange.getRequestHeaders().getFirst("Origin");
-    return origin == null || origin.equals("http://localhost:" + exchange.getLocalAddress().getPort())
-        || origin.equals("http://127.0.0.1:" + exchange.getLocalAddress().getPort());
-  }
-
-  static String contentType(Path file) {
-    String value = file.toString();
-    if (value.endsWith(".json")) return JSON_CONTENT_TYPE;
-    if (value.endsWith(".css")) return "text/css; charset=utf-8";
-    if (value.endsWith(".js")) return "text/javascript; charset=utf-8";
-    if (value.endsWith(".svg")) return "image/svg+xml";
-    if (value.endsWith(".png")) return "image/png";
-    if (value.endsWith(".jpg") || value.endsWith(".jpeg")) return "image/jpeg";
-    if (value.endsWith(".gif")) return "image/gif";
-    if (value.endsWith(".webp")) return "image/webp";
-    if (value.endsWith(".woff")) return "font/woff";
-    if (value.endsWith(".woff2")) return "font/woff2";
-    if (value.endsWith(".ttf")) return "font/ttf";
-    if (value.endsWith(".html") || value.endsWith(".htm")) return HTML_CONTENT_TYPE;
-    return "application/octet-stream";
-  }
-
-  private static void openReport(String url) {
-    try {
-      if (Desktop.isDesktopSupported()) Desktop.getDesktop().browse(URI.create(url));
+      if (Desktop.isDesktopSupported()) Desktop.getDesktop().browse(safe.toUri());
     } catch (IOException ignored) {
-      // Opening a browser is best effort and must not prevent report serving.
+      LOGGER.info("瀏覽器無法自動開啟，請直接開啟上述 HTML 檔案。");
     }
   }
 
-  static final class RequestTooLargeException extends IOException { }
+  private static final java.util.Set<String> RETIRED_COMMANDS = java.util.Set.of("capture", "open", "serve", "export");
 
   private record Command(Action action, String projectName) {
     static Command parse(String[] arguments) {
@@ -425,22 +346,23 @@ public final class ScreenTraceCli {
           return new Command(candidate, arguments.length == 2 ? arguments[1] : null);
         }
       }
+      if (arguments.length == 1 && !RETIRED_COMMANDS.contains(arguments[0])) return new Command(Action.PATH, arguments[0]);
       throw usage();
     }
 
     private static IllegalArgumentException usage() {
-      return new IllegalArgumentException("Usage: screentrace [analyze|report|export] [project-name] | screentrace config");
+      return new IllegalArgumentException("Usage: screentrace <project-path> | screentrace [analyze|report] [project-name] | screentrace config");
     }
   }
 
   private record ProjectChoice(ProjectCatalog.Project project, String label) { }
 
   private record AnalysisResult(Path report, String project, List<String> technologies, long endpoints, long screens,
-      long components, Path output) { }
+      long components, Path output,long contextPathHintCount) { }
 
-  private enum Action {
-    INTERACTIVE(null, null), ANALYZE("analyze", "分析專案"), REPORT("report", "開啟報表"),
-    EXPORT("export", "匯出確認結果"), EXIT(null, "結束 ScreenTrace"), CONFIG("config", "設定");
+  enum Action {
+    INTERACTIVE(null, null), ANALYZE("analyze", "分析專案"), PATH(null, "輸入專案路徑"), REPORT("report", "開啟報表"),
+    EXIT(null, "結束 ScreenTrace"), CONFIG("config", "設定專案根目錄（選用）");
 
     private final String command;
     private final String label;

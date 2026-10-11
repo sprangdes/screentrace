@@ -1,0 +1,21 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFile,stat} from 'node:fs/promises';
+import {fileURLToPath} from 'node:url';
+import path from 'node:path';
+const guide=fileURLToPath(new URL('../../docs/USER_GUIDE.md',import.meta.url));
+const images=path.resolve(path.dirname(guide),'images/user-guide');
+test('guide uses always-available marking, explains the progress file and retains storage and size notices',async()=>{
+ const text=await readFile(guide,'utf8');
+ assert.doesNotMatch(text,/確認模式|開啟「確認模式」|操作／檢查模式/);
+ const saving=text.split('## 2. 開始：打開報表與保存進度')[1].split('\n## ')[0];
+ const exporting=text.split('## 7. 交付 md 給 AI')[1].split('\n## ')[0];
+ assert.match(saving,/暫存在瀏覽器/);
+ assert.match(saving,/換電腦、換檔案位置、使用私密瀏覽或清除瀏覽器資料/);
+ assert.match(saving,/匯出 md 保存/);
+ assert.match(saving,/進度檔/);
+ assert.match(exporting,/超過 5 MB/);
+ assert.match(exporting,/超過 64 MiB/);
+ for(const name of ['zoom-focus.png','progress-file.png'])assert.ok((await stat(path.join(images,name))).size>1000,name);
+ for(const name of ['inspect-mode.png','review-mode.png','element-style.png','screen-queue.png'])await assert.rejects(stat(path.join(images,name)),{code:'ENOENT'});
+});
