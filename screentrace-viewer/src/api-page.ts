@@ -1,28 +1,102 @@
-import {endpointGroup,EndpointGroup} from './endpoint-presentation';
+import {endpointGroup} from './endpoint-presentation';
+import {deriveApiUsage,ReviewState} from './shared/review';
+import {componentLabelsForScreen} from './labels';
+import {callerKind} from './usage';
 import {Index} from './map';
-import {ReviewState,deriveApiUsage} from './shared/review';
-import {apiSourceBasis} from './inventory';
-import {iconButton} from './shell-ui';
-import {element,text} from './text';
-type ApiRecord={id:string;group:EndpointGroup;category:string;method:string;path:string;handler:string;handlerNames:string[];status:string;callers:number;searchable:string;inferred:boolean;origin:string;autoRedirect:boolean;systemDefaultHome:boolean;inheritedTemplate:boolean};
-function categoryLabel(category:string):string{return category==='REST_API'?'API':category==='MVC_SCREEN'?'畫面網址':category==='ACTION'?'Struts 動作':category==='REDIRECT'?'轉址':category==='UNCLASSIFIED'||category==='未分類'?'未分類':'其他';}
-let externalNoticeDismissed=false;
-export function apiPage(index:Index,state:ReviewState,onDetail:(id:string)=>void,_onCaller?:(screenId:string,componentId?:string)=>void,sourceIndex:Index=index):HTMLElement {
- const root=element('section',undefined,'api-page');root.append(element('h2',text.apis));
- const toolbar=element('div',undefined,'api-toolbar'),search=element('input');search.type='text';search.setAttribute('aria-label',text.apiSearch);search.placeholder=text.apiSearch;
- const info=iconButton('靜態分析限制','info');info.title=text.external;toolbar.append(search,info);
- const notice=element('div',undefined,'api-limit-notice'),dismiss=iconButton('關閉靜態分析提醒','close');notice.append(element('p',text.external),dismiss);notice.hidden=externalNoticeDismissed;dismiss.onclick=()=>{externalNoticeDismissed=true;notice.hidden=true;};
- const labels={IN_USE:text.inUse,INFERRED_USAGE:'推定使用中',REMOVABLE:text.removable,UNREFERENCED:'找不到呼叫來源'},usage=deriveApiUsage(index.graph,state);
- const records:ApiRecord[]=index.graph.nodes.filter(n=>n.type==='ENDPOINT').map(n=>{const method=n.attributes.httpMethod||n.attributes.method||'ANY',path=n.attributes.path||n.attributes.route||n.name,handlers=(index.graph.relationships||[]).filter(e=>e.type==='HANDLED_BY'&&e.from===n.id).map(e=>index.nodes.get(e.to)).filter(Boolean),handlerNames=handlers.map(h=>h!.name).sort(),handler=handlers.map(h=>`${h!.name}${h!.source?` · ${h!.source.file}:${h!.source.line}`:''}`).sort().join('\n'),result=usage.get(n.id)!,inheritedTemplate=n.attributes.inheritedTemplate==='true',searchable=[method,path,handler,labels[result.status],...result.callers.map(c=>`${index.nodes.get(c.screenId)?.name||''} ${c.componentId?index.nodes.get(c.componentId)?.name||'':''} ${c.componentId?sourceIndex.nodes.get(c.componentId)?.name||'':''}`)].join(' ').toLowerCase();const inferred=apiSourceBasis(index.graph,n.id)==='TEMPLATE_INFERENCE';const apiGroup=endpointGroup(n,index);const autoRedirect=apiGroup==='SCREEN'&&index.screens.some(screen=>!!screen.attributes.autoRedirect&&(index.routes.get(screen.id)||[]).includes(path));const systemDefaultHome=n.attributes.entrySource==='系統預設首頁（web.xml welcome-file）';return{id:n.id,group:apiGroup,category:n.attributes.category||'未分類',method,path,handler,handlerNames,status:result.status,callers:result.callers.length,searchable,inferred,origin:n.attributes.origin||'',autoRedirect,systemDefaultHome,inheritedTemplate};});
- const backendRecords=records.filter(record=>record.origin!=='javascript-request'),frontendRecords=records.filter(record=>record.origin==='javascript-request');const filters=element('div',undefined,'api-state-filters');filters.setAttribute('role','group');filters.setAttribute('aria-label',text.apiFilter);let status='ALL',sort='method',ascending=true,selected='',group:EndpointGroup='API';
- const groups=element('div',undefined,'api-category-filters');groups.setAttribute('role','tablist');groups.setAttribute('aria-label','端點分類');const grouped=()=>backendRecords.filter(r=>group==='ALL'||r.group===group);
- for(const [value,label]of [['API','API'],['SCREEN','畫面網址'],['ALL','全部'],['UNCLASSIFIED','未分類']]as [EndpointGroup,string][]){if(value==='UNCLASSIFIED'&&!backendRecords.some(r=>r.group==='UNCLASSIFIED'))continue;const button=element('button',label,'chip');button.dataset.endpointGroup=value;if(value==='API'||value==='SCREEN')button.setAttribute('role','tab');button.setAttribute('aria-pressed',String(value===group));button.onclick=()=>{group=value;groups.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',String(b===button)));render();};groups.append(button);}
- const total=element('p',`API ${backendRecords.filter(r=>r.group==='API').length} · 畫面網址 ${backendRecords.filter(r=>r.group==='SCREEN').length}`,'api-total-summary');if(backendRecords.some(r=>r.group==='UNCLASSIFIED'))total.append(element('span',` · 未分類 ${backendRecords.filter(r=>r.group==='UNCLASSIFIED').length}`));toolbar.append(total);
- const matchesStatus=(record:ApiRecord,value:string)=>value==='ALL'||(!record.systemDefaultHome&&!record.inheritedTemplate&&(value==='INFERRED_USAGE'?record.status==='IN_USE'&&record.inferred:value==='IN_USE'?record.status==='IN_USE'&&!record.inferred:record.status===value));
- for(const value of ['ALL','IN_USE','INFERRED_USAGE','UNREFERENCED','REMOVABLE']as const){const count=()=>value==='ALL'?grouped().length:grouped().filter(record=>matchesStatus(record,value)).length,button=element('button',`${value==='ALL'?text.all:labels[value]} ${count()}`,'chip');button.dataset.apiFilter=value;button.setAttribute('aria-pressed',String(value==='ALL'));button.onclick=()=>{status=value;filters.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',String(b===button)));render();};filters.append(button);}
- const methodFilter=element('select');methodFilter.setAttribute('aria-label','API 方法篩選');for(const method of ['ALL',...[...new Set(records.map(r=>r.method))].sort()]){const option=element('option',method==='ALL'?'所有方法':method);option.value=method;methodFilter.append(option);}toolbar.append(methodFilter);
- const sorting=element('details',undefined,'api-sorting');sorting.append(element('summary','排序'));for(const [key,label]of [['method',text.method],['path',text.path],['handler',text.handlers],['status',text.status],['callers',text.callerCount]]){const button=element('button',label);button.setAttribute('aria-label',`${text.sortBy}${label}${text.sortSuffix}`);button.onclick=()=>{ascending=sort===key?!ascending:true;sort=key;render();};sorting.append(button);}toolbar.append(sorting);
- const list=element('div',undefined,'api-list'),frontend=element('section',undefined,'frontend-request-list');frontend.dataset.frontendRequests='true';frontend.append(element('h3','沒有對應到後端的呼叫'));if(frontendRecords.length){for(const record of frontendRecords){const row=element('article',undefined,'frontend-request-row');row.dataset.frontendRequest=record.id;row.append(element('span',record.method,'method-badge'),element('code',record.path),element('span',record.handler||'呼叫來源未記錄'));const callers=usage.get(record.id)?.callers||[];for(const caller of callers){const name=index.nodes.get(caller.screenId)?.name||'畫面';row.append(element('span',`來源：${name}`));}frontend.append(row);}}else frontend.append(element('p','沒有已知的前端請求'));const hint=((index.graph.diagnostics||[]) as any[]).find(item=>item.code==='CONTEXT_PATH_HINT');if(hint)frontend.append(element('p',`網址前綴仍有 ${hint.evidence?.length||0} 個呼叫無法確認；設定方式：./bin/screentrace config。`,'context-path-reminder'));root.append(toolbar,groups,filters,notice,element('p','狀態依分析中可證明的呼叫來源與目前決策即時推導；找不到呼叫來源不代表外部排程或其他系統沒有呼叫。','api-status-rules'),list,frontend);
- const render=()=>{for(const b of filters.querySelectorAll<HTMLButtonElement>('button')){const value=b.dataset.apiFilter!;b.textContent=`${value==='ALL'?text.all:labels[value as keyof typeof labels]} ${value==='ALL'?grouped().length:grouped().filter(r=>matchesStatus(r,value)).length}`;}const query=search.value.toLowerCase(),rows=grouped().filter(r=>matchesStatus(r,status)&&(methodFilter.value==='ALL'||r.method===methodFilter.value)&&(!query||r.searchable.includes(query))).sort((a,b)=>{const left=a[sort as 'method'|'path'|'handler'|'status'|'callers'],right=b[sort as 'method'|'path'|'handler'|'status'|'callers'],comparison=left<right?-1:left>right?1:a.id<b.id?-1:a.id>b.id?1:0;return ascending?comparison:-comparison;});list.replaceChildren();if(!rows.length)list.append(element('p','沒有符合的 API','api-no-results'));for(const record of rows){const row=element('article',undefined,'api-row');row.dataset.apiRow=record.id;const button=element('button');button.setAttribute('aria-pressed',String(record.id===selected));const methodLabel=record.method==='ANY'?'任何方法':record.method==='REDIRECT'?'轉址':record.method,method=element('span',methodLabel,'method-badge');method.dataset.method=record.method;if(record.method==='ANY'||record.method==='REDIRECT')method.title=record.method;const path=element('span',record.path,'api-path');path.title=record.path;const state=element('span',record.inheritedTemplate?'被繼承的設定樣板':record.systemDefaultHome?'系統預設首頁':record.autoRedirect?'系統自動導向':record.status==='IN_USE'&&record.inferred?'推定使用中':labels[record.status as keyof typeof labels],'api-state-chip');state.dataset.apiStatus=record.inheritedTemplate?'INHERITED_TEMPLATE':record.systemDefaultHome?'SYSTEM_DEFAULT_HOME':record.autoRedirect?'AUTO_REDIRECT':record.status;const count=element('span',String(record.callers),'api-caller-count');count.title=`呼叫來源 ${record.callers} 個`;count.setAttribute('aria-label',count.title);button.append(method,path,state,count);const category=element('span',record.category==='ACTION'&&record.group==='SCREEN'?'畫面網址':categoryLabel(record.category),'api-category');category.dataset.apiCategory=record.category;category.title=record.category;button.append(category);if(records.filter(r=>r.path===record.path).length>1){const names=element('span',record.handlerNames.join('、')||text.noHandler,'api-handler-tag');names.title=names.textContent!;button.append(names);}button.onclick=()=>{selected=record.id;list.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',String(b===button)));onDetail(record.id);};row.append(button);list.append(row);}};
- search.oninput=render;methodFilter.onchange=render;render();return root;
+import {Node} from './contracts';
+import {element} from './text';
+
+/** The three statuses shown to people: inferred usage and system entry points both count as in use. */
+export type ApiStatus='IN_USE'|'UNREFERENCED'|'REMOVABLE';
+export const apiStatusLabels:Record<ApiStatus,string>={IN_USE:'使用中',UNREFERENCED:'未被使用',REMOVABLE:'可移除'};
+const systemEntry=(node:Node,index:Index):string|undefined=>{
+ const path=node.attributes.path||node.attributes.route||node.name;
+ if(node.attributes.inheritedTemplate==='true')return '被繼承的設定樣板';
+ if(String(node.attributes.entrySource||'').includes('welcome-file'))return '系統預設首頁';
+ if(index.screens.some(screen=>!!screen.attributes.autoRedirect&&(index.routes.get(screen.id)||[]).includes(path)))return '系統自動導向';
+ return undefined;
+};
+
+/** Endpoints listed on the API page: backend APIs, not screen URLs and not unmatched frontend request descriptions. */
+export function apiEndpoints(index:Index):Node[]{
+ return index.graph.nodes.filter(n=>n.type==='ENDPOINT'&&n.attributes.origin!=='javascript-request'&&endpointGroup(n,index)!=='SCREEN');
+}
+
+export function apiStatuses(index:Index,state:ReviewState):Map<string,ApiStatus>{
+ const usage=deriveApiUsage(index.graph,state),result=new Map<string,ApiStatus>();
+ for(const node of apiEndpoints(index)){const status=usage.get(node.id)!.status;result.set(node.id,systemEntry(node,index)&&status==='UNREFERENCED'?'IN_USE':status);}
+ return result;
+}
+
+export interface ApiPageOptions {selected?:string;onCaller:(screenId:string,componentId?:string)=>void}
+type SortKey='path'|'status'|'callers';
+
+export function apiPage(index:Index,state:ReviewState,options:ApiPageOptions):HTMLElement{
+ const root=element('section',undefined,'api-page'),usage=deriveApiUsage(index.graph,state),statuses=apiStatuses(index,state);
+ const records=apiEndpoints(index).map(node=>{
+  const method=node.attributes.httpMethod||node.attributes.method||'ANY',path=node.attributes.path||node.attributes.route||node.name;
+  const handlers=(index.graph.relationships||[]).filter(e=>e.type==='HANDLED_BY'&&e.from===node.id).map(e=>index.nodes.get(e.to)).filter((h):h is Node=>!!h);
+  const callers=usage.get(node.id)!.callers,status=statuses.get(node.id)!;
+  const handler=handlers.map(h=>h.name).sort().join('、');
+  const searchable=[method,path,node.attributes.aliases||'',node.attributes.logicalPath||'',handler,apiStatusLabels[status],...callers.map(c=>`${index.nodes.get(c.screenId)?.name||''} ${c.componentId?componentLabelsForScreen(index,c.screenId).get(c.componentId)||'':''}`)].join(' ').toLowerCase();
+  return {node,method,path,handler,callers,status,searchable,note:systemEntry(node,index)};
+ });
+ let filter:'ALL'|ApiStatus='ALL',sort:SortKey='path',ascending=true,open=options.selected;
+ const toolbar=element('div',undefined,'api-toolbar'),search=element('input'),chips=element('div',undefined,'chips'),sorter=element('select'),list=element('div',undefined,'api-list');
+ search.type='search';search.placeholder='搜尋 API、處理程式或畫面';search.setAttribute('aria-label','搜尋 API');
+ chips.setAttribute('role','group');chips.setAttribute('aria-label','API 狀態篩選');
+ sorter.setAttribute('aria-label','排序');
+ for(const [value,label] of [['path','依 URL 排序'],['status','依狀態排序'],['callers','依呼叫來源數排序']] as const)sorter.append(new Option(label,value));
+ sorter.onchange=()=>{sort=sorter.value as SortKey;ascending=sort!=='callers';render();};
+ search.oninput=()=>render();
+ const heading=element('div',undefined,'api-heading');
+ heading.append(element('h1','API'),element('p',`${records.length} 個 API。狀態依目前的保留／移除標記即時計算；「未被使用」只代表畫面中找不到呼叫來源，排程或其他系統仍可能呼叫。`,'api-intro'));
+ toolbar.append(search,sorter);
+ root.append(heading,toolbar,chips,list);
+ const order:Record<ApiStatus,number>={REMOVABLE:0,UNREFERENCED:1,IN_USE:2};
+ const render=()=>{
+  chips.replaceChildren();
+  for(const value of ['ALL','IN_USE','UNREFERENCED','REMOVABLE'] as const){
+   const count=value==='ALL'?records.length:records.filter(r=>r.status===value).length;
+   const chip=element('button',`${value==='ALL'?'全部':apiStatusLabels[value]} ${count}`,'chip');
+   chip.dataset.apiFilter=value;chip.setAttribute('aria-pressed',String(filter===value));
+   chip.onclick=()=>{filter=value;render();};chips.append(chip);
+  }
+  const query=search.value.trim().toLowerCase();
+  const rows=records.filter(r=>(filter==='ALL'||r.status===filter)&&(!query||r.searchable.includes(query))).sort((a,b)=>{
+   const compare=sort==='status'?order[a.status]-order[b.status]:sort==='callers'?a.callers.length-b.callers.length:a.path.localeCompare(b.path,'en');
+   return (ascending?compare:-compare)||a.path.localeCompare(b.path,'en')||a.method.localeCompare(b.method,'en');
+  });
+  list.replaceChildren();
+  if(!rows.length)list.append(element('p','沒有符合的 API','empty-list'));
+  for(const record of rows){
+   const row=element('article',undefined,'api-row'),summary=element('button',undefined,'api-summary');
+   row.dataset.apiRow=record.node.id;row.dataset.apiStatus=record.status;
+   summary.setAttribute('aria-expanded',String(open===record.node.id));
+   const method=element('span',record.method==='ANY'?'任何方法':record.method,'method-badge');method.dataset.method=record.method;
+   const status=element('span',apiStatusLabels[record.status],'api-status');status.dataset.apiStatus=record.status;
+   summary.append(method,element('code',record.path,'api-path'),element('span',record.handler||'找不到處理程式','api-handler'),element('span',`${record.callers.length} 個來源`,'api-caller-count'),status);
+   summary.onclick=()=>{open=open===record.node.id?undefined:record.node.id;render();};
+   row.append(summary);
+   if(open===record.node.id){
+    const detail=element('div',undefined,'api-detail');
+    if(record.note)detail.append(element('p',`${record.note}：由系統設定進入，視為使用中。`,'api-note'));
+    detail.append(element('h3','呼叫來源'));
+    if(!record.callers.length)detail.append(element('p','畫面中找不到呼叫這個 API 的地方。','muted'));
+    for(const caller of record.callers){
+     const screen=index.nodes.get(caller.screenId)?.name||'畫面';
+     const trigger=caller.componentId?componentLabelsForScreen(index,caller.screenId).get(caller.componentId)||'沒有文字的按鈕':callerKind(index,caller)==='unresolved'?'無法確定的觸發來源':'畫面載入時';
+     const link=element('button',undefined,'api-caller');
+     link.dataset.callerScreen=caller.screenId;if(caller.componentId)link.dataset.callerComponent=caller.componentId;
+     link.append(element('strong',screen),element('span',trigger));
+     link.onclick=()=>options.onCaller(caller.screenId,caller.componentId);
+     detail.append(link);
+    }
+    row.append(detail);
+   }
+   list.append(row);
+  }
+ };
+ render();
+ return root;
 }

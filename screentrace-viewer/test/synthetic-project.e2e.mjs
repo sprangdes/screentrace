@@ -38,7 +38,7 @@ test('real source fixtures produce identical graph, packed HTML and shared-modul
 });
 
 for (const engine of engines) for (const family of families) {
-    test(`${engine}: ${family} source→CLI→offline report→review/library override→md→clear→restore`, async () => {
+    test(`${engine}: ${family} source→CLI→offline report→review→md→clear→restore`, async () => {
         const browser = await ({chromium, firefox, webkit}[engine]).launch();
         try {
             const page = await browser.newPage({viewport: {width: 1440, height: 1000}});
@@ -50,37 +50,31 @@ for (const engine of engines) for (const family of families) {
             const requests = [];
             page.on('request', r => {if (r.url() !== url && !r.url().startsWith('data:') && !r.url().startsWith('blob:')) requests.push(r.url());});
             await page.goto(url);
-            await page.getByRole('button',{name:'功能地圖',exact:true}).click();
-            assert.equal(await page.locator('[data-library-summary]').count(), 1);
+            assert.equal(await page.locator('[data-library-summary],[data-library-override]').count(), 0);
 
             await setDecision(page.locator(`[data-screen-review="${owner}"]`),'KEEP');
-            await page.locator(`.screen-card[data-screen="${owner}"]`).click();
             await setDecision(page.locator(`[data-component-review="${button.id}"]`),'KEEP');
-            await page.locator(`[data-library-override="${button.id}"]`).selectOption('sample-button');
             if (engine === 'chromium' && family === 'spring-mvc-jsp') {
                 const dir = path.join(root, 'screentrace-cli/target/wp10-screenshots');
                 await mkdir(dir, {recursive: true});
                 await page.locator('.preview').screenshot({path: path.join(dir, 'preview.png')});
-                await page.locator(`[data-library-override="${button.id}"]`).locator('..').screenshot({path: path.join(dir, 'library-override.png')});
             }
             const download = async () => {
                 const pending = await startReviewDownload(page);
                 return readFile(await pending.path(), 'utf8');
             };
             const first = await download();
-            assert.match(first, /"format_version":2/);
-            assert.match(first, /Sample Controls@1.0-sample/);
-            assert.match(first, /sample-button/);
+            assert.match(first, /"format_version":1/);
+            assert.doesNotMatch(first, /sample-button/);
             await page.evaluate(() => localStorage.clear());
             await page.reload();
 
-            assert.equal(await page.locator(`[data-screen-review="${owner}"]`).first().getAttribute('data-decision'), 'UNDECIDED');
-            await page.getByLabel('匯入 md', {exact: true}).setInputFiles({name: 'review.md', mimeType: 'text/markdown', buffer: Buffer.from(first)});
-            await page.locator('[data-md-status]').filter({hasText: '匯入完成'}).waitFor();
-            assert.equal(await page.locator(`[data-screen-review="${owner}"]`).first().getAttribute('data-decision'), 'KEEP');
-            await page.locator(`.screen-card[data-screen="${owner}"]`).click();
-            assert.equal(await page.locator(`[data-component-review="${button.id}"]`).first().getAttribute('data-decision'), 'KEEP');
-            assert.equal(await page.locator(`[data-library-override="${button.id}"]`).inputValue(), 'sample-button');
+            assert.equal(await page.locator(`.screen-list [data-screen-list="${owner}"]`).getAttribute('data-decision'), 'UNDECIDED');
+            await page.getByLabel('開啟 md', {exact: true}).setInputFiles({name: 'review.md', mimeType: 'text/markdown', buffer: Buffer.from(first)});
+            await page.locator('.save-status').filter({hasText: '已開啟 md'}).waitFor();
+            assert.equal(await page.locator(`.screen-list [data-screen-list="${owner}"]`).getAttribute('data-decision'), 'KEEP');
+            await page.locator(`.screen-list [data-screen-list="${owner}"]`).click();
+            assert.equal(await page.locator(`.decision-switch[data-component-id="${button.id}"]`).first().getAttribute('data-decision'), 'KEEP');
             assert.equal(normalize(await download()), normalize(first));
             assert.equal(await page.evaluate(() => globalThis.wp10Probe), undefined);
             assert.deepEqual(requests, []);

@@ -1,8 +1,0 @@
-import test from 'node:test';
-import assert from 'node:assert/strict';
-import {chromium} from '../../screentrace-capture/node_modules/playwright/index.mjs';
-import {fileFixture} from './fixture.mjs';
-
-test('WP46 queue shows the selected KEEP or REMOVE state instead of its entry count',async()=>{
- const data=(await import('./fixture.mjs')).fixture();data.graph.relationships.push({id:'screen-entry',type:'NAVIGATES_TO',from:'a',to:'b',confidence:'CONFIRMED',evidence:[{source:{file:'web/a.jsp',line:2},parser:'UrlResolution',resolution:'CONFIRMED'}]});const browser=await chromium.launch();try{const page=await browser.newPage({viewport:{width:1440,height:900}});page.setDefaultTimeout(3000);await page.addInitScript(()=>localStorage.setItem('screentrace:confirmation-preferences:v1',JSON.stringify({autoAdvance:false})));await page.goto(await fileFixture(data));await page.locator('#app[data-ready=true],#app[data-error=true]').waitFor();assert.equal(await page.locator('#app').getAttribute('data-ready'),'true',await page.locator('#app').innerText());await page.locator('.primary-tabs button').nth(1).click();const row=page.locator('[data-review-queue-screen="b"]'),id='b';assert.ok(await row.locator('.screen-review-queue-entry-count').count()>0);await row.locator('.sidebar-screen').click();await page.locator('.screen-review-screen-decision [data-screen-decision="REMOVE"]').click();const updated=page.locator(`[data-review-queue-screen="${id}"]`);assert.equal(await updated.locator('.screen-review-queue-status').innerText(),'移除');assert.equal(await updated.locator('.screen-review-queue-entry-count').count(),0);}finally{await browser.close();}
-});

@@ -1,25 +1,53 @@
-import {element} from './text';import {icon,iconButton} from './shell-ui';import {Payload} from './contracts';import {Index} from './map';import {partitionNavigation} from './overview';import {PrototypeHistory} from './prototype-history';
-export interface PrototypeOptions {back:()=>void;focus:(id:string)=>void;flow:()=>void;move:(delta:number)=>void;reset:()=>void;backToStart:()=>void;scroll:number}
-export function transition(thumbnail:string|undefined,name:string,from:DOMRect,to:DOMRect,complete:()=>void,ready:()=>boolean=()=>true):()=>void{
- if(matchMedia('(prefers-reduced-motion: reduce)').matches){complete();return()=>{};}
- const ghost=element('div',undefined,'prototype-transition');ghost.setAttribute('aria-hidden','true');if(thumbnail?.startsWith('data:image/')){const img=element('img');img.src=thumbnail;img.alt='';ghost.append(img);}else ghost.append(element('span',name));
- ghost.style.cssText=`position:fixed;left:${to.x}px;top:${to.y}px;width:${to.width}px;height:${to.height}px;z-index:10;pointer-events:none;transform-origin:0 0;`;
- document.body.append(ghost);const scale=Math.min(from.width/to.width,from.height/to.height),animation=ghost.animate([{transform:`translate(${from.x-to.x}px,${from.y-to.y}px) scale(${scale})`},{transform:'none'}],{duration:300,easing:'cubic-bezier(.2,.8,.2,1)'});let done=false,timeout:ReturnType<typeof setTimeout>|undefined,fade:Animation|undefined;const finish=()=>{if(done)return;done=true;if(timeout)clearTimeout(timeout);complete();fade=ghost.animate([{opacity:1},{opacity:0}],{duration:100,easing:'linear'});fade.finished.catch(()=>{}).finally(()=>ghost.remove());};const check=()=>{if(done)return;if(ready())finish();else timeout=setTimeout(check,16);};timeout=setTimeout(finish,1500);animation.finished.catch(()=>{}).finally(check);return()=>{if(timeout)clearTimeout(timeout);animation.cancel();fade?.cancel();ghost.remove();if(!done){done=true;complete();}};
-}
-export function prototypeViewer(index:Index,payload:Payload,id:string,preview:HTMLElement,frame:HTMLIFrameElement,history:PrototypeHistory,options:PrototypeOptions):HTMLElement {
- const screen=index.nodes.get(id)!,metadata=payload.preview.screens?.find(s=>s.graphScreenId===id),width=Math.max(1,metadata?.width||1440);let height=Math.max(1,metadata?.height||900);const root=element('section',undefined,'prototype-viewer'),toolbar=element('div',undefined,'prototype-toolbar'),scroller=element('div',undefined,'prototype-scroll'),stage=element('div',undefined,'prototype-stage'),status=element('div',undefined,'prototype-status');status.setAttribute('role','status');
- const back=iconButton('返回總覽','back'),previous=iconButton('上一頁','back'),next=iconButton('下一頁','arrow'),flow=element('button',undefined,'prototype-flow-button'),menu=element('details',undefined,'prototype-more'),menuButton=element('summary','更多檢視選項'),menuItems=element('div',undefined,'prototype-menu-items');menu.setAttribute('aria-label','更多檢視選項');menuButton.setAttribute('aria-label','更多檢視選項');menuButton.setAttribute('role','button');menu.append(menuButton);const menuItem=(label:string,action:()=>void)=>{const button=element('button',label);button.setAttribute('role','menuitem');button.onclick=()=>{action();menu.open=false;};menuItems.append(button);return button;};
- const url=element('span',index.routes.get(id)?.[0]||'沒有已知 URL','prototype-url');url.setAttribute('aria-label','主要 URL');url.title=url.textContent!;flow.append(icon('arrow'),element('span','看流程'));flow.setAttribute('aria-label','看流程');
- back.onclick=options.back;previous.disabled=!history.canBack;next.disabled=!history.canForward;previous.onclick=()=>options.move(-1);next.onclick=()=>options.move(1);flow.onclick=options.flow;menuItem('重置',options.reset);menuItem('回到起點',options.backToStart);let scaleMode='fit',scale=1;
- const setScale=(mode:string)=>{scaleMode=mode;scale=mode==='fit'?Math.min(1,Math.max(1,scroller.clientWidth-16)/width):Number(mode);resize();};menuItem('縮放：適合寬度',()=>setScale('fit'));menuItem('縮放：75%',()=>setScale('.75'));menuItem('縮放：100%',()=>setScale('1'));menu.append(menuItems);toolbar.append(back,previous,next,url,flow,menu);
- const crumb=element('div',undefined,'focus-breadcrumb');crumb.append(element('h2',screen.name));root.append(crumb,toolbar,status,scroller);
- frame.style.width=`${width}px`;frame.style.height=`${height}px`;frame.style.maxWidth='none';frame.scrolling='no';preview.style.width=`${width}px`;preview.style.height=`${height}px`;preview.style.transformOrigin='0 0';stage.append(preview);scroller.append(stage);
- const resize=()=>{if(!root.isConnected){observer.disconnect();contentObserver?.disconnect();return;}if(scaleMode==='fit')scale=Math.min(1,Math.max(1,scroller.clientWidth-16)/width);preview.style.transform=`scale(${scale})`;preview.style.height=`${height}px`;frame.style.height=`${height}px`;stage.style.width=`${width*scale}px`;stage.style.height=`${height*scale}px`;root.dataset.scale=String(scale);root.dataset.zoomMode=scaleMode;};
+import {element} from './text';
+import {iconButton} from './shell-ui';
+import {Index} from './map';
+import {Payload} from './contracts';
+import {PrototypeHistory} from './prototype-history';
+
+export interface PrototypeOptions {back:()=>void;focus:(id:string)=>void;move:(delta:number)=>void;scroll:number}
+
+/** Full-size static preview of one screen with its own history toolbar and zoom controls. */
+export function prototypeViewer(index:Index,payload:Payload,id:string,preview:HTMLElement,frame:HTMLIFrameElement,history:PrototypeHistory,options:PrototypeOptions):HTMLElement{
+ const metadata=payload.preview.screens?.find(s=>s.graphScreenId===id),width=Math.max(1,metadata?.width||1440);
+ let height=Math.max(1,metadata?.height||900);
+ const root=element('section',undefined,'prototype-viewer'),toolbar=element('div',undefined,'prototype-toolbar'),scroller=element('div',undefined,'prototype-scroll'),stage=element('div',undefined,'prototype-stage'),status=element('div',undefined,'prototype-status');
+ status.setAttribute('role','status');
+ const back=iconButton('返回畫布','back'),previous=iconButton('上一頁','back'),next=iconButton('下一頁','arrow');
+ back.classList.add('prototype-back');back.append(element('span','返回畫布'));
+ const url=element('code',index.routes.get(id)?.[0]||'沒有已知 URL','prototype-url');
+ url.setAttribute('aria-label','主要 URL');url.title=url.textContent!;
+ back.onclick=options.back;
+ previous.disabled=!history.canBack;next.disabled=!history.canForward;
+ previous.onclick=()=>options.move(-1);next.onclick=()=>options.move(1);
+ toolbar.append(back,previous,next,url);
+ root.append(toolbar,status,scroller);
+ frame.style.width=`${width}px`;frame.style.height=`${height}px`;frame.style.maxWidth='none';frame.scrolling='no';
+ preview.style.width=`${width}px`;preview.style.height=`${height}px`;preview.style.transformOrigin='0 0';
+ stage.append(preview);scroller.append(stage);
+ let scaleMode:'fit'|'manual'='fit',scale=1;
+ const fitScale=()=>Math.min(1,Math.max(1,scroller.clientWidth-16)/width);
+ const resize=()=>{
+  if(!root.isConnected){observer.disconnect();contentObserver?.disconnect();return;}
+  if(scaleMode==='fit')scale=fitScale();
+  preview.style.transform=`scale(${scale})`;preview.style.height=`${height}px`;frame.style.height=`${height}px`;
+  stage.style.width=`${width*scale}px`;stage.style.height=`${height*scale}px`;
+  root.dataset.scale=String(scale);root.dataset.zoomMode=scaleMode;
+ };
  const observer=new ResizeObserver(resize);let contentObserver:ResizeObserver|undefined;observer.observe(scroller);
- const zoomControls=element('div',undefined,'prototype-zoom-controls');zoomControls.setAttribute('aria-label','原型縮放');const zoomBy=(delta:number)=>{const base=scaleMode==='fit'?Math.min(1,Math.max(1,scroller.clientWidth-16)/width):scale;scaleMode='manual';scale=Math.min(1.5,Math.max(.5,Math.round((base+delta)*100)/100));resize();};const minus=iconButton('縮小','minus'),plus=iconButton('放大','zoom'),fit=iconButton('適合寬度','fit');minus.onclick=()=>zoomBy(-.25);plus.onclick=()=>zoomBy(.25);fit.onclick=()=>setScale('fit');zoomControls.append(minus,plus,fit);
- frame.addEventListener('load',()=>{if(!frame.getAttribute('srcdoc')||!frame.contentDocument)return;const doc=frame.contentDocument;const measure=()=>{height=Math.max(metadata?.height||900,doc.documentElement.scrollHeight,doc.body?.scrollHeight||0);resize();};measure();contentObserver=new ResizeObserver(measure);if(doc.body)contentObserver.observe(doc.body);scroller.scrollTop=options.scroll;root.dataset.loaded='true';});
+ const zoomControls=element('div',undefined,'prototype-zoom-controls');zoomControls.setAttribute('aria-label','畫面縮放');
+ const zoomBy=(delta:number)=>{const base=scaleMode==='fit'?fitScale():scale;scaleMode='manual';scale=Math.min(1.5,Math.max(0.5,Math.round((base+delta)*100)/100));resize();};
+ const minus=iconButton('縮小','minus'),plus=iconButton('放大','zoom'),fit=iconButton('適合寬度','fit');
+ minus.onclick=()=>zoomBy(-0.25);plus.onclick=()=>zoomBy(0.25);fit.onclick=()=>{scaleMode='fit';resize();};
+ zoomControls.append(minus,plus,fit);
+ frame.addEventListener('load',()=>{
+  if(!frame.getAttribute('srcdoc')||!frame.contentDocument)return;
+  const doc=frame.contentDocument;
+  const measure=()=>{height=Math.max(metadata?.height||900,doc.documentElement.scrollHeight,doc.body?.scrollHeight||0);resize();};
+  measure();contentObserver=new ResizeObserver(measure);if(doc.body)contentObserver.observe(doc.body);
+  scroller.scrollTop=options.scroll;root.dataset.loaded='true';
+ });
  if(!payload.documents[id])status.textContent='未取得重建預覽';
- const destinations=element('details',undefined,'prototype-destinations');const summary=element('summary');summary.append(element('button','可前往的畫面'));summary.querySelector('button')!.onclick=e=>{e.preventDefault();destinations.open=!destinations.open;};destinations.append(summary);const parts=partitionNavigation(index);
- for(const [title,relations]of [['畫面流程',parts.flows],['全站導覽',parts.global]]as const){const group=element('section');group.append(element('h3',title));for(const relation of relations.filter(r=>r.from===id)){const node=index.nodes.get(relation.to);if(!node)continue;const button=element('button',undefined,'prototype-destination');button.dataset.destination=node.id;const thumb=payload.preview.screens?.find(s=>s.graphScreenId===node.id)?.thumbnail;if(thumb?.startsWith('data:image/')){const img=element('img');img.src=thumb;img.alt='';button.append(img);}button.append(element('span',node.name),element('small',index.routes.get(node.id)?.[0]||'沒有已知 URL'));button.onclick=()=>options.focus(node.id);group.append(button);}if(group.querySelector('button'))destinations.append(group);}
- if(destinations.querySelector('.prototype-destination'))root.append(destinations);root.append(zoomControls);requestAnimationFrame(resize);return root;
+ root.append(zoomControls);
+ requestAnimationFrame(resize);
+ return root;
 }

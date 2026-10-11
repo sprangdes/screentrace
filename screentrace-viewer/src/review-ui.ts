@@ -1,9 +1,37 @@
-import {icon,segment} from './shell-ui';
-import {element,text} from './text';import {Decision,EffectiveDecision} from './shared/review';
+import {icon} from './shell-ui';
+import {element} from './text';
+import {Decision,EffectiveDecision} from './shared/review';
 import {decisionTerm} from './terms';
-export function decisionControl(label:string,value:Decision,onChange:(value:Decision)=>void,screen?:string,component?:string):HTMLElement{const group=screenDecisionControl(label,value,onChange,screen||'');delete group.dataset.screenReview;if(component)group.dataset.componentReview=component;if(screen)group.dataset.screenId=screen;group.classList.add('component-decision-buttons');for(const button of group.querySelectorAll('button')){button.setAttribute('aria-label',`${label}：${decisionLabel(button.dataset.decision as Decision)}`);button.title=button.getAttribute('aria-label')!;button.childNodes.forEach(child=>{if(child.nodeType===Node.TEXT_NODE)child.textContent='';});}return group;}
+
 export function decisionLabel(value:EffectiveDecision):string {return decisionTerm(value);}
 
-export function screenDecisionControl(label:string,value:Decision,onChange:(value:Decision)=>void,screen:string):HTMLElement{const choices=['KEEP','REMOVE','UNDECIDED'] as const;const buttons=choices.map(decision=>{const button=element('button',decisionLabel(decision));button.dataset.decision=decision;button.setAttribute('role','radio');button.setAttribute('aria-checked',String(value===decision));button.setAttribute('aria-pressed',String(value===decision));button.tabIndex=value===decision?0:-1;button.prepend(icon(decision==='KEEP'?'check':decision==='REMOVE'?'close':'question'));button.onclick=()=>onChange(decision);button.onkeydown=event=>{if(!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(event.key))return;event.preventDefault();const direction=['ArrowRight','ArrowDown'].includes(event.key)?1:-1,next=choices[(choices.indexOf(decision)+direction+choices.length)%choices.length];onChange(next);setTimeout(()=>{const groups=[...document.querySelectorAll<HTMLElement>('[role="radiogroup"]')],target=groups.find(item=>item.dataset.screenReview===screen||item.dataset.screenId===screen);[...(target?.querySelectorAll<HTMLButtonElement>('button')||[])].find(item=>item.dataset.decision===next)?.focus();},0);};return button;});const group=segment(buttons,label);group.setAttribute('role','radiogroup');group.classList.add('decision-buttons');group.dataset.screenReview=screen;group.dataset.decision=value;return group;}
+const choices=['KEEP','REMOVE','UNDECIDED'] as const;
 
-export function mapScreenDecisionControl(value:Decision,onChange:(value:Decision)=>void,screen:string):HTMLElement{const choices=['KEEP','REMOVE'] as const,buttons=choices.map(decision=>{const button=element('button',decisionLabel(decision));button.dataset.decision=decision;button.setAttribute('role','radio');button.setAttribute('aria-checked',String(value===decision));button.setAttribute('aria-pressed',String(value===decision));button.tabIndex=value===decision||value==='UNDECIDED'&&decision==='KEEP'?0:-1;button.onclick=()=>onChange(value===decision?'UNDECIDED':decision);button.onkeydown=event=>{if(!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(event.key))return;event.preventDefault();const direction=['ArrowRight','ArrowDown'].includes(event.key)?1:-1,next=choices[(choices.indexOf(decision)+direction+choices.length)%choices.length];onChange(next);setTimeout(()=>{const target=document.querySelector<HTMLElement>(`.map-screen-decision[data-screen-review="${CSS.escape(screen)}"]`);target?.querySelector<HTMLButtonElement>(`[data-decision="${next}"]`)?.focus();},0);};return button;}),group=segment(buttons,'畫面決策');group.setAttribute('role','radiogroup');group.classList.add('decision-buttons','map-screen-decision');group.dataset.screenReview=screen;group.dataset.decision=value;return group;}
+/** Three-state keep／remove／undecided selector implemented as a radiogroup; arrow keys move the choice. */
+export function decisionSwitch(label:string,value:Decision,onChange:(value:Decision)=>void,options:{compact?:boolean;screen?:string;component?:string}={}):HTMLElement{
+ const group=element('div',undefined,options.compact?'decision-switch compact':'decision-switch');
+ group.setAttribute('role','radiogroup');group.setAttribute('aria-label',label);group.dataset.decision=value;
+ if(options.screen)group.dataset.screenId=options.screen;
+ if(options.component)group.dataset.componentId=options.component;
+ const buttons=choices.map(decision=>{
+  const button=element('button',undefined,'decision-option');
+  button.type='button';button.dataset.decision=decision;
+  button.setAttribute('role','radio');button.setAttribute('aria-checked',String(value===decision));
+  button.tabIndex=value===decision?0:-1;
+  button.append(icon(decision==='KEEP'?'check':decision==='REMOVE'?'close':'question'));
+  if(options.compact){button.setAttribute('aria-label',`${label}：${decisionLabel(decision)}`);button.title=decisionLabel(decision);}
+  else button.append(element('span',decisionLabel(decision)));
+  button.onclick=()=>{if(value!==decision)onChange(decision);};
+  button.onkeydown=event=>{
+   if(!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(event.key))return;
+   event.preventDefault();
+   const next=choices[(choices.indexOf(decision)+(['ArrowRight','ArrowDown'].includes(event.key)?1:-1)+choices.length)%choices.length];
+   const selector=`.decision-switch[data-screen-id="${CSS.escape(options.screen||'')}"]${options.component?`[data-component-id="${CSS.escape(options.component)}"]`:':not([data-component-id])'} [data-decision="${next}"]`;
+   onChange(next);
+   requestAnimationFrame(()=>document.querySelector<HTMLButtonElement>(selector)?.focus());
+  };
+  return button;
+ });
+ group.append(...buttons);
+ return group;
+}

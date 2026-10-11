@@ -14,16 +14,11 @@ test('WP18 source fixture offline map exposes submit success, validation return 
   const page=await browser.newPage(),external=[];
   page.on('request',r=>{if(!/^(file|data|about|blob):/.test(r.url()))external.push(r.url());});
   await page.goto(pathToFileURL(report).href);await page.waitForSelector('[data-ready="true"]');
-  await openScreen(page,screen('form').id);await page.getByRole('button',{name:'看流程',exact:true}).click();
-  const formRelations=await page.locator('.focus-relation').evaluateAll(lines=>lines.map(line=>line.getAttribute('aria-label')));
-  const formCards=await page.locator('.focus-destination').evaluateAll(cards=>cards.map(card=>({id:card.getAttribute('data-relation-to'),name:card.querySelector('strong').textContent})));
-  assert.ok(formCards.some(card=>card.id===screen('detail').id&&formRelations.includes(card.name)),'submit success must lead to detail');
-  assert.ok(formCards.some(card=>card.id===screen('form').id&&formRelations.includes(card.name)),'validation failure must retain its self return');
-  await page.getByRole('button',{name:'地圖',exact:true}).click();
-  await openScreen(page,screen('find').id);await page.getByRole('button',{name:'看流程',exact:true}).click();
-  const searchRelations=await page.locator('.focus-relation').evaluateAll(lines=>lines.map(line=>line.getAttribute('aria-label')));
-  const searchCards=await page.locator('.focus-destination').evaluateAll(cards=>cards.map(card=>({id:card.getAttribute('data-relation-to'),name:card.querySelector('strong').textContent})));
-  for(const view of ['find','detail','list'])assert.ok(searchCards.some(card=>card.id===screen(view).id&&searchRelations.includes(card.name)),`search return ${view}`);
+  const line=(from,to)=>page.locator(`.relation-line[data-from="${screen(from).id}"][data-to="${screen(to).id}"]`);
+  assert.equal(await line('form','detail').count(),1,'submit success must lead to detail');
+  assert.equal(await line('form','form').count(),1,'validation failure must retain its self return');
+  for(const view of ['find','detail','list'])assert.equal(await line('find',view).count(),1,`search return ${view}`);
+  await openScreen(page,screen('detail').id);assert.equal(await page.locator(`aside [data-inbound="${screen('form').id}"]`).count(),1);
   assert.equal(external.length,0);
  } finally {await browser.close();}
 });
