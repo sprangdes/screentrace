@@ -56,4 +56,44 @@ class StrutsR16ValidationDispatchTest {
     assertEquals(Set.of("add","remove"),dispatchHandlers);
     assertTrue(graph.nodes().stream().filter(n->n.type()==NodeType.ENDPOINT&&n.attributes().containsKey("parameterValue")).map(n->n.attributes().get("parameterValue")).collect(java.util.stream.Collectors.toSet()).containsAll(Set.of("add","remove")));
   }
+
+  @Test void dispatchActionReadsOrdinaryHtmlHiddenInputsAndReportsMissingMethod() throws Exception {
+    base("<struts-config><action-mappings><action path='/dispatch' type='sample.Dispatch' parameter='dispatchMethod'/></action-mappings></struts-config>");
+    file("src/main/java/sample/Dispatch.java","package sample; public class Dispatch extends org.apache.struts.actions.DispatchAction { public org.apache.struts.action.ActionForward doFoo(org.apache.struts.action.ActionMapping m, org.apache.struts.action.ActionForm f, javax.servlet.http.HttpServletRequest q, javax.servlet.http.HttpServletResponse s){return null;} public org.apache.struts.action.ActionForward doBar(org.apache.struts.action.ActionMapping m, org.apache.struts.action.ActionForm f, javax.servlet.http.HttpServletRequest q, javax.servlet.http.HttpServletResponse s){return null;} public org.apache.struts.action.ActionForward execute(org.apache.struts.action.ActionMapping m, org.apache.struts.action.ActionForm f, javax.servlet.http.HttpServletRequest q, javax.servlet.http.HttpServletResponse s){return null;} }");
+    file("src/main/webapp/dispatch.jsp","<form action='/dispatch'><input type='hidden' name='dispatchMethod' value='doFoo'><input type='submit' value='Foo'></form><form action='/dispatch'><input type='hidden' name='dispatchMethod' value='doBar'><input type='submit' value='Bar'></form><form action='/dispatch'><input type='hidden' name='dispatchMethod' value='doInvalid'><input type='submit' value='Invalid'></form><form action='/dispatch'><input type='hidden' name='dispatchMethod' value='execute'><input type='submit' value='Execute'></form>");
+
+    ApplicationGraph graph=analyze();
+    Set<String> methods=graph.nodes().stream().filter(n->n.type()==NodeType.HANDLER&&n.attributes().containsKey("method")).map(n->n.attributes().get("method")).collect(java.util.stream.Collectors.toSet());
+    assertEquals(Set.of("doFoo","doBar","execute"),methods);
+    List<Behavior> submits=graph.behaviors().stream().filter(b->b.type()==BehaviorType.SUBMIT_FORM&&b.expression()!=null&&b.expression().contains("/dispatch")).toList();
+    assertTrue(submits.stream().anyMatch(b->Objects.toString(b.expression(),"").contains("doFoo")),submits.toString());
+    assertTrue(submits.stream().anyMatch(b->Objects.toString(b.expression(),"").contains("doBar")),submits.toString());
+    assertTrue(submits.stream().anyMatch(b->Objects.toString(b.expression(),"").contains("doInvalid")&&Objects.toString(b.expression(),"").contains("找不到此方法")),submits.toString());
+    assertTrue(submits.stream().anyMatch(b->Objects.toString(b.expression(),"").contains("execute")),submits.toString());
+  }
+
+  @Test void dispatchActionKeepsEveryOrdinaryHtmlParameterCandidateAmbiguous() throws Exception {
+    base("<struts-config><action-mappings><action path='/dispatch' type='sample.Dispatch' parameter='dispatchMethod'/></action-mappings></struts-config>");
+    file("src/main/java/sample/Dispatch.java","package sample; public class Dispatch extends org.apache.struts.actions.DispatchAction { public org.apache.struts.action.ActionForward doFoo(org.apache.struts.action.ActionMapping m, org.apache.struts.action.ActionForm f, javax.servlet.http.HttpServletRequest q, javax.servlet.http.HttpServletResponse s){return null;} public org.apache.struts.action.ActionForward doBar(org.apache.struts.action.ActionMapping m, org.apache.struts.action.ActionForm f, javax.servlet.http.HttpServletRequest q, javax.servlet.http.HttpServletResponse s){return null;} }");
+    file("src/main/webapp/dispatch.jsp","<form action='/dispatch'><input type='hidden' name='dispatchMethod' value='doFoo'><input type='hidden' name='dispatchMethod' value='doBar'><input type='submit' value='Run'></form>");
+
+    ApplicationGraph graph=analyze();
+    Behavior submit=graph.behaviors().stream().filter(b->b.type()==BehaviorType.SUBMIT_FORM&&b.expression()!=null&&b.expression().contains("/dispatch")).findFirst().orElseThrow();
+    assertTrue(submit.evidence().stream().anyMatch(e->e.resolution()==ResolutionStatus.AMBIGUOUS&&Objects.toString(e.detail(),"").contains("doFoo")&&e.detail().contains("doBar")),submit.toString());
+    assertTrue(graph.diagnostics().stream().anyMatch(d->d.code().equals("STRUTS_DISPATCH_AMBIGUOUS")&&d.message().contains("doFoo")&&d.message().contains("doBar")));
+  }
+
+  @Test void wildcardInheritedNameIsSubstitutedBeforeValidatorFieldBinding() throws Exception {
+    base("<struts-config><form-beans><form-bean name='RegistrationForm' type='sample.RegistrationForm'/></form-beans><action-mappings><action path='//BaseAction' type='sample.BaseAction' name='{1}Form'/><action path='/Save*' type='sample.SaveAction' extends='//BaseAction' input='/registration.jsp'/></action-mappings></struts-config>");
+    file("src/main/java/sample/RegistrationForm.java","package sample; public class RegistrationForm extends org.apache.struts.validator.ValidatorForm { public String getUsername(){return null;} }");
+    file("src/main/webapp/WEB-INF/validator-rules.xml","<validator-rules><validator name='required' classname='Required'/></validator-rules>");
+    file("src/main/webapp/WEB-INF/validation.xml","<form-validation><formset><form name='RegistrationForm'><field property='username' depends='required'/></form></formset></form-validation>");
+    file("src/main/webapp/registration.jsp","<html:form action='/SaveRegistration'><html:text property='username'/><html:submit value='Save'/></html:form>");
+
+    ApplicationGraph graph=analyze();
+    ValidationRule rule=graph.validationRules().stream().filter(item->item.parameters().getOrDefault("form","").equals("RegistrationForm")&&item.fields().contains("username")).findFirst().orElseThrow();
+    assertEquals(ResolutionStatus.CONFIRMED,rule.evidence().stream().filter(e->e.parser().equals("StrutsValidatorFieldBinding")).map(AnalysisEvidence::resolution).findFirst().orElse(null));
+    assertTrue(rule.parameters().getOrDefault("screenIds","").contains(StableGraphIds.screen("src/main/webapp/registration.jsp")),rule.toString());
+    assertTrue(rule.parameters().getOrDefault("componentIds","").contains(graph.nodes().stream().filter(n->n.type()==NodeType.COMPONENT&&"username".equals(n.attributes().get("property"))).findFirst().orElseThrow().id()),rule.toString());
+  }
 }
