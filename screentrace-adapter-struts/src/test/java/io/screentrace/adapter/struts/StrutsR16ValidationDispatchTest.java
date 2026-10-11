@@ -86,12 +86,13 @@ class StrutsR16ValidationDispatchTest {
   @Test void dispatchActionCollectsNamedButtonAndSelectOptionValuesAsAmbiguousCandidates() throws Exception {
     base("<struts-config><action-mappings><action path='/dispatch' type='sample.Dispatch' parameter='dispatchMethod'/></action-mappings></struts-config>");
     file("src/main/java/sample/Dispatch.java","package sample; public class Dispatch extends org.apache.struts.actions.DispatchAction { public org.apache.struts.action.ActionForward doFoo(org.apache.struts.action.ActionMapping m, org.apache.struts.action.ActionForm f, javax.servlet.http.HttpServletRequest q, javax.servlet.http.HttpServletResponse s){return null;} public org.apache.struts.action.ActionForward doBar(org.apache.struts.action.ActionMapping m, org.apache.struts.action.ActionForm f, javax.servlet.http.HttpServletRequest q, javax.servlet.http.HttpServletResponse s){return null;} public org.apache.struts.action.ActionForward doInvalid(org.apache.struts.action.ActionMapping m, org.apache.struts.action.ActionForm f, javax.servlet.http.HttpServletRequest q, javax.servlet.http.HttpServletResponse s){return null;} public org.apache.struts.action.ActionForward execute(org.apache.struts.action.ActionMapping m, org.apache.struts.action.ActionForm f, javax.servlet.http.HttpServletRequest q, javax.servlet.http.HttpServletResponse s){return null;} }");
-    file("src/main/webapp/dispatch.jsp","<form action='/dispatch'><select name='dispatchMethod'><option value='doFoo'>Foo</option><option value='doBar'>Bar</option></select><button name='dispatchMethod' value='doInvalid'>Invalid</button><input type='submit' name='dispatchMethod' value='execute'></form>");
+    file("src/main/webapp/dispatch.jsp","<form action='/dispatch'><input type='hidden' name='dispatchMethod' value='hiddenValue'><input type='submit' name='dispatchMethod' value='submitValue'><input type='image' name='dispatchMethod' value='imageValue'><input type='radio' name='dispatchMethod' value='radioValue'><button name='dispatchMethod' value='buttonValue'>Run</button><select name='dispatchMethod'><option value='selectValue'>Select</option></select></form>");
     ApplicationGraph graph=analyze();
     Diagnostic ambiguous=graph.diagnostics().stream().filter(item->item.code().equals("STRUTS_DISPATCH_AMBIGUOUS")).findFirst().orElseThrow();
-    for(String candidate:List.of("doFoo","doBar","doInvalid","execute"))assertTrue(ambiguous.message().contains(candidate),ambiguous.message());
+    List<String> candidates=List.of("hiddenValue","submitValue","imageValue","radioValue","buttonValue","selectValue");
+    for(String candidate:candidates)assertTrue(ambiguous.message().contains(candidate),ambiguous.message());
     Behavior submit=graph.behaviors().stream().filter(item->item.type()==BehaviorType.SUBMIT_FORM&&item.evidence().stream().anyMatch(e->e.resolution()==ResolutionStatus.AMBIGUOUS)).findFirst().orElseThrow();
-    assertTrue(submit.expression().contains("doFoo")&&submit.expression().contains("doBar")&&submit.expression().contains("doInvalid")&&submit.expression().contains("execute"),submit.toString());
+    for(String candidate:candidates)assertTrue(submit.expression().contains(candidate),submit.toString());
   }
 
   @Test void resolvedDispatchLinkDoesNotDuplicateMarkupBehavior() throws Exception {
