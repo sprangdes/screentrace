@@ -7,3 +7,7 @@ test('R16 Tiles page names keep the definition-derived screen name ahead of shar
  const m=await ownModule('names'),screen=node('tiles-page','SCREEN','Main Menu',{view:'src/main/webapp/layout.jsp',tilesDefinition:'true',tilesDefinitionName:'.mainMenu',screenNameSource:'Tiles definition name'}),hints=new Map([[screen.id,{title:'Shared Layout Title',heading:'Layout'}]]);
  assert.equal(m.screenNames([screen],hints,new Map([[screen.id,['/mainMenu.do']]])).get(screen.id),'Main Menu');
 });
+test('R16 duplicate Tiles labels use readable source context instead of numeric suffixes',async()=>{
+ const m=await ownModule('names'),nodes=[node('first','SCREEN','Main Menu',{tilesDefinition:'true',view:'src/main/webapp/WEB-INF/views/first.jsp'}),node('second','SCREEN','Main Menu',{tilesDefinition:'true',view:'src/main/webapp/WEB-INF/views/second.jsp'})],hints=new Map(),routes=new Map([['first',['/menu.do']],['second',['/menu.do']]]);
+ const names=m.screenNames(nodes,hints,routes);assert.equal(new Set(names.values()).size,2);assert.ok([...names.values()].every(name=>!/[（(]\d+[）)]$/.test(name)),[...names.values()].join('；'));
+});
