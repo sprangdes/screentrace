@@ -6,7 +6,7 @@
 
 ## 技術驗證（WP65 spike）
 
-以 Playwright Chromium 140、`file://` 開啟報表實測：`isSecureContext` 為 true，`showSaveFilePicker`、`showOpenFilePicker`、`FileSystemHandle.requestPermission` 皆存在；IndexedDB 在 `file://` 可寫入並於重新整理後讀回。瀏覽器私有檔案系統（OPFS）在 `file://` 下回 `SecurityError`，本設計不使用它。原生「另存新檔」對話框與重新開啟後的授權無法自動化，另提供驗證頁請需求方在實際 Chrome 中操作確認（結果記入 R17 報告）。
+以 Playwright Chromium 140、`file://` 開啟報表實測：`isSecureContext` 為 true，`showSaveFilePicker`、`showOpenFilePicker`、`FileSystemHandle.requestPermission` 皆存在；IndexedDB 在 `file://` 可寫入並於重新整理後讀回。瀏覽器私有檔案系統（OPFS）在 `file://` 下回 `SecurityError`，本設計不使用它。原生「另存新檔」對話框與重新開啟後的授權無法自動化，另提供驗證頁請需求方在實際 Chrome 中操作確認；需求方於 2026-10-11 回報：存檔、重新開啟後授權與帶回進度皆成功。
 
 ## 決定
 
