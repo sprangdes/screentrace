@@ -154,5 +154,5 @@ if (Test-BuildRequired $jar) {
   }
 }
 
-& java "-Dscreentrace.js.module=$(Join-Path $baseDir 'screentrace-js/cli.mjs')" -jar $jar @cliArgs
+& java "-Dscreentrace.home=$baseDir" "-Dscreentrace.js.module=$(Join-Path $baseDir 'screentrace-js/cli.mjs')" -jar $jar @cliArgs
 exit $LASTEXITCODE

@@ -39,11 +39,12 @@ public final class ScreenTraceCli {
   private static int run(String[] args) throws IOException, InterruptedException {
     if(args.length>0&&args[0].equals("library")){System.out.println(LibraryCommands.run(args,WorkspaceSettings.defaultFile().getParent()));return 0;}
     Command command = Command.parse(args);
+    if(command.action()==Action.PATH)return analyzePath(command.projectName());
     if(command.action()==Action.INTERACTIVE||command.action()==Action.CONFIG){
       if(!interactiveTerminalAvailable())return command.action()==Action.CONFIG?failConfigWithoutTerminal():failForMissingTerminal();
       try(InteractiveConsole console=new InteractiveConsole()){
-        WorkspaceSettings settings=command.action()==Action.CONFIG?configure(console):loadOrConfigure(console);
-        if(command.action()==Action.INTERACTIVE)runInteractive(console,settings,new ProjectCatalog());
+        if(command.action()==Action.CONFIG)configure(console);
+        else runInteractive(console,new ProjectCatalog());
       }
       return 0;
     }
@@ -63,8 +64,59 @@ public final class ScreenTraceCli {
   }
 
   private static int failForMissingTerminal(){
-    System.err.println("尚未設定專案根目錄與輸出根目錄。請先在終端機執行 `./bin/screentrace config`");
+    System.err.println("尚未設定專案根目錄。可直接執行 `./bin/screentrace <專案路徑>` 分析單一專案，或在終端機執行 `./bin/screentrace config` 設定專案根目錄");
     return 2;
+  }
+
+  /** `screentrace <project path>`: analyze one folder directly, without requiring a configured project root. */
+  private static int analyzePath(String argument) throws IOException, InterruptedException {
+    Path source=projectPath(argument);
+    if(!Files.isDirectory(source)){
+      System.err.println("找不到專案資料夾："+argument);
+      return 2;
+    }
+    WorkspaceSettings settings=settingsFor(source);
+    AnalysisResult result=analyze(projectAt(source,settings),settings);
+    logAnalysis(result);openReport(result.report());
+    return 0;
+  }
+
+  static Path projectPath(String argument){
+    String expanded=argument.equals("~")||argument.startsWith("~/")?System.getProperty("user.home")+argument.substring(1):argument;
+    return Path.of(expanded).toAbsolutePath().normalize();
+  }
+
+  private static ProjectCatalog.Project projectAt(Path source,WorkspaceSettings settings){
+    String name=source.getFileName()==null?"project":source.getFileName().toString();
+    return new ProjectCatalog.Project(name,source,settings.outputRoot().resolve(name));
+  }
+
+  /** The configured workspace when there is one; otherwise results go to `<ScreenTrace>/analyze/`. */
+  private static WorkspaceSettings settingsFor(Path source){
+    WorkspaceSettings configured=existingSettings();
+    if(configured!=null&&Files.isDirectory(configured.projectRoot()))return configured;
+    return new WorkspaceSettings(source.getParent()==null?source:source.getParent(),defaultOutputRoot(),java.util.Map.of());
+  }
+
+  /** The launcher's ScreenTrace home, then the checkout that contains the running classes. */
+  private static List<Path> toolRoots() {
+    List<Path> roots = new java.util.ArrayList<>(List.of(screenTraceHome()));
+    try {
+      for (Path root = Path.of(ScreenTraceCli.class.getProtectionDomain().getCodeSource().getLocation().toURI()); root != null; root = root.getParent())
+        if (Files.isDirectory(root.resolve("screentrace-capture"), java.nio.file.LinkOption.NOFOLLOW_LINKS)) { roots.add(root); break; }
+    } catch (java.net.URISyntaxException | SecurityException | NullPointerException ignored) { /* fall back to the working directory */ }
+    return roots;
+  }
+
+  static Path defaultOutputRoot(){return screenTraceHome().resolve("analyze");}
+
+  /** Set by the launcher; falls back to the nearest ancestor that contains the ScreenTrace sources. */
+  static Path screenTraceHome(){
+    String configured=System.getProperty("screentrace.home");
+    if(configured!=null&&Files.isDirectory(Path.of(configured)))return Path.of(configured).toAbsolutePath().normalize();
+    for(Path root=Path.of("").toAbsolutePath();root!=null;root=root.getParent())
+      if(Files.isDirectory(root.resolve("screentrace-capture"))&&Files.isRegularFile(root.resolve("pom.xml")))return root;
+    return Path.of("").toAbsolutePath();
   }
 
   private static int failConfigWithoutTerminal(){
@@ -94,32 +146,37 @@ public final class ScreenTraceCli {
     else if(command.action()==Action.REPORT)openReport(new SingleHtmlAnalysisWriter().generate(project.analysisDirectory(),new LibraryStore(WorkspaceSettings.defaultFile().getParent()).selected(project.name())).path());
   }
 
-  private static void runInteractive(InteractiveConsole console, WorkspaceSettings settings, ProjectCatalog catalog)
+  private static void runInteractive(InteractiveConsole console, ProjectCatalog catalog)
       throws IOException, InterruptedException {
     while (true) {
+      WorkspaceSettings configured = existingSettings();
+      boolean hasRoot = configured != null && Files.isDirectory(configured.projectRoot());
+      WorkspaceSettings settings = hasRoot ? configured
+          : new WorkspaceSettings(Path.of("").toAbsolutePath(), defaultOutputRoot(), java.util.Map.of());
       Action action;
       try {
-        action = chooseCommand(console);
+        action = chooseCommand(console, hasRoot, !catalog.analyzedProjects(settings).isEmpty());
       } catch (InteractiveConsole.SelectionCancelledException ignored) {
         return;
       }
       if (action == Action.EXIT) return;
-      List<ProjectCatalog.Project> projects = action == Action.ANALYZE
-          ? catalog.allProjects(settings) : catalog.analyzedProjects(settings);
+      if (action == Action.CONFIG) { configure(console); continue; }
       ProjectCatalog.Project project;
       try {
-        project = selectProject(console, catalog, projects, null);
+        project = action == Action.PATH
+            ? projectAt(console.existingDirectory("專案資料夾路徑", Path.of("").toAbsolutePath()), settingsFor(Path.of("").toAbsolutePath()))
+            : selectProject(console, catalog, action == Action.ANALYZE ? catalog.allProjects(settings) : catalog.analyzedProjects(settings), null);
       } catch (InteractiveConsole.SelectionCancelledException ignored) {
         continue;
       }
       Path report;
-      if (action == Action.ANALYZE) {
-        AnalysisResult result = analyze(project,settings);
+      if (action == Action.REPORT) {
+        report = new SingleHtmlAnalysisWriter().generate(project.analysisDirectory(),new LibraryStore(WorkspaceSettings.defaultFile().getParent()).selected(project.name())).path();
+      } else {
+        AnalysisResult result = analyze(project, action == Action.PATH ? settingsFor(project.sourceDirectory()) : settings);
         console.showAnalysisComplete(result.project(), result.technologies(), result.endpoints(), result.screens(),
             result.components(), result.output(), result.contextPathHintCount());
         report = result.report();
-      } else {
-        report = new SingleHtmlAnalysisWriter().generate(project.analysisDirectory(),new LibraryStore(WorkspaceSettings.defaultFile().getParent()).selected(project.name())).path();
       }
       openReport(report);
       console.waitForMenuReturn(report.toUri().toString());
@@ -156,9 +213,20 @@ public final class ScreenTraceCli {
     }
   }
 
-  private static Action chooseCommand(InteractiveConsole console) throws IOException {
-    return console.select("請選擇功能", List.of(Action.ANALYZE, Action.REPORT, Action.EXIT),
-        Action::label, 'q', "q / Esc 結束", 2);
+  /** Without a configured project root the first item asks for a folder path; configuring a root stays optional. */
+  static List<Action> menu(boolean hasRoot, boolean hasReports) {
+    List<Action> actions = new java.util.ArrayList<>();
+    if (hasRoot) actions.add(Action.ANALYZE);
+    actions.add(Action.PATH);
+    if (hasReports) actions.add(Action.REPORT);
+    if (!hasRoot) actions.add(Action.CONFIG);
+    actions.add(Action.EXIT);
+    return actions;
+  }
+
+  private static Action chooseCommand(InteractiveConsole console, boolean hasRoot, boolean hasReports) throws IOException {
+    List<Action> actions = menu(hasRoot, hasReports);
+    return console.select("請選擇功能", actions, Action::label, 'q', "q / Esc 結束", actions.size() - 1);
   }
 
   private static ProjectCatalog.Project selectProject(InteractiveConsole console, ProjectCatalog catalog,
@@ -231,6 +299,10 @@ public final class ScreenTraceCli {
   }
 
   private static Path captureTool(String name) throws IOException {
+    for (Path root : toolRoots()) {
+      Path tool = root.resolve("screentrace-capture").resolve(name);
+      if (Files.isRegularFile(tool, java.nio.file.LinkOption.NOFOLLOW_LINKS)) return SafeProjectFiles.requireExistingRegularFileWithin(root, tool);
+    }
     for (Path root = Path.of("").toAbsolutePath(); root != null; root = root.getParent()) {
       Path tool = root.resolve("screentrace-capture").resolve(name);
       if (Files.isRegularFile(tool)) return SafeProjectFiles.requireExistingRegularFileWithin(root, tool);
@@ -259,6 +331,8 @@ public final class ScreenTraceCli {
     }
   }
 
+  private static final java.util.Set<String> RETIRED_COMMANDS = java.util.Set.of("capture", "open", "serve", "export");
+
   private record Command(Action action, String projectName) {
     static Command parse(String[] arguments) {
       if (arguments.length == 0) return new Command(Action.INTERACTIVE, null);
@@ -272,11 +346,12 @@ public final class ScreenTraceCli {
           return new Command(candidate, arguments.length == 2 ? arguments[1] : null);
         }
       }
+      if (arguments.length == 1 && !RETIRED_COMMANDS.contains(arguments[0])) return new Command(Action.PATH, arguments[0]);
       throw usage();
     }
 
     private static IllegalArgumentException usage() {
-      return new IllegalArgumentException("Usage: screentrace [analyze|report] [project-name] | screentrace config");
+      return new IllegalArgumentException("Usage: screentrace <project-path> | screentrace [analyze|report] [project-name] | screentrace config");
     }
   }
 
@@ -285,9 +360,9 @@ public final class ScreenTraceCli {
   private record AnalysisResult(Path report, String project, List<String> technologies, long endpoints, long screens,
       long components, Path output,long contextPathHintCount) { }
 
-  private enum Action {
-    INTERACTIVE(null, null), ANALYZE("analyze", "分析專案"), REPORT("report", "開啟報表"),
-    EXIT(null, "結束 ScreenTrace"), CONFIG("config", "設定");
+  enum Action {
+    INTERACTIVE(null, null), ANALYZE("analyze", "分析專案"), PATH(null, "輸入專案路徑"), REPORT("report", "開啟報表"),
+    EXIT(null, "結束 ScreenTrace"), CONFIG("config", "設定專案根目錄（選用）");
 
     private final String command;
     private final String label;

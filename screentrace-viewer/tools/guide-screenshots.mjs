@@ -11,7 +11,7 @@ import {canonicalPng} from './png-canonical.mjs';
 
 const root=fileURLToPath(new URL('../../',import.meta.url));
 const output=path.join(root,'docs/images/user-guide');
-const shots=['overview-flow.png','overview-global-nav.png','feature-regions.png','screen-queue.png','button-table.png','wp49-map.png','zoom-viewer.png','simulate-link.png','simulate-submit.png','simulate-dialog.png','coverage.png','element-style.png','impact-preview.png','api-page.png','analysis-info.png','library-override.png','flow-outline.png','global-search.png','first-run-guide.png','help-popover.png','delivery-checklist.png'];
+const shots=['canvas.png','search-url.png','zoom-focus.png','screen-buttons.png','progress-file.png','progress-panel.png','simulate-choices.png','simulate-dialog.png','api-page.png','help-popover.png'];
 const fonts='Arial';
 
 /** Wait for browser-driven work to finish, then require a quiet render window rather than sleeping. */
@@ -72,10 +72,12 @@ async function main(){
   await page.reload();await page.locator('#app[data-ready="true"]').waitFor();
   await page.evaluate(async family=>{await document.fonts.ready;if(!document.fonts.check('12px '+family))throw new Error('Required screenshot font unavailable: '+family);},fonts);
   await page.addStyleTag({content:'*,*::before,*::after{animation:none!important;transition:none!important;caret-color:transparent!important;scroll-behavior:auto!important}::-webkit-scrollbar{display:none!important}.topbar button.secondary,.topbar>.segmented,.chip,.screen-card,.prototype-destinations summary button,.review-workflow-control,.global-search-open,.topbar-more>summary,.delivery-progress{border-radius:0!important}.delivery-progress{border:0!important}.topbar>.segmented button[aria-pressed=true],.screen-card,.prototype-destinations summary button{box-shadow:none!important}.topbar-actions{gap:8px!important}.topbar-actions>.global-search-open{width:108px!important}.review-workflow-control{width:248px!important}.review-workflow-control>.review-progress{flex:1!important}.md-controls>button{width:96px!important}.topbar-more>summary{width:102px!important;justify-content:center}.relations{shape-rendering:crispEdges!important}'});
-  const screenshot=async name=>{
-   await page.mouse.move(1,1);
-   await page.evaluate(()=>{if(document.activeElement instanceof HTMLElement)document.activeElement.blur();document.body.tabIndex=-1;document.body.focus();});
-   for(const frame of page.frames())await frame.evaluate(()=>{if(document.activeElement instanceof HTMLElement)document.activeElement.blur();});
+  const screenshot=async(name,keepPointer=false)=>{
+   if(!keepPointer){
+    await page.mouse.move(1,1);
+    await page.evaluate(()=>{if(document.activeElement instanceof HTMLElement)document.activeElement.blur();document.body.tabIndex=-1;document.body.focus();});
+    for(const frame of page.frames())await frame.evaluate(()=>{if(document.activeElement instanceof HTMLElement)document.activeElement.blur();});
+   }
    await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
    await page.locator('[data-transition="running"]').count().then(count=>assert.equal(count,0,'screenshot captured during screen transition'));
    await page.evaluate(async()=>{await document.fonts.ready;await Promise.all([...document.images].map(image=>image.decode().catch(()=>{})));});
@@ -84,26 +86,20 @@ async function main(){
    const file=path.join(output,name);let previous,bytes;for(let attempt=0;attempt<12;attempt++){bytes=canonicalPng(await page.screenshot({animations:'disabled'}));if(previous&&bytes.equals(previous))break;previous=bytes;await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));}assert.ok(previous&&bytes.equals(previous),`${name} did not reach a stable screenshot`);await writeFile(file,bytes);assert.ok(bytes.length>1000,`${name} is unexpectedly small`);
    for(const value of forbidden)assert.ok(!bytes.includes(Buffer.from(value)),`${name} contains private path marker ${value}`);
   };
-  await screenshot('first-run-guide.png');await page.locator('[data-first-run-guide]').getByRole('button',{name:'略過'}).click();await screenshot('overview-flow.png');
-  await page.locator('.primary-tabs button').nth(3).click();await page.locator('.canvas[data-fitted="true"]').waitFor();await page.getByRole('checkbox',{name:'顯示全站導覽'}).check();await page.waitForFunction(()=>document.querySelectorAll('.relation-line.global-navigation').length>0);await screenshot('overview-global-nav.png');
-  await page.getByRole('button',{name:'功能',exact:true}).click();await page.locator('.feature-region-card').first().waitFor();await screenshot('feature-regions.png');
-  await page.locator('.primary-tabs button').nth(1).click();await page.locator('.screen-review-queue').waitFor();await screenshot('screen-queue.png');
-  await page.locator('.primary-tabs button').nth(2).click();await page.locator('.button-table').waitFor();await screenshot('button-table.png');
-  await page.locator('.primary-tabs button').nth(3).click();await page.locator('.canvas[data-fitted="true"]').waitFor();await screenshot('wp49-map.png');
-  await page.locator('.screen-card[data-screen="a"]').click();await page.locator('.preview[aria-busy="false"]').waitFor();await screenshot('zoom-viewer.png');
-  await page.locator('.primary-tabs button').nth(3).click();await page.locator('.screen-card[data-screen="a"]').click();await page.locator('.preview[aria-busy="false"]').waitFor();await page.frameLocator('iframe').locator('#go').click();await page.locator('main h2').filter({hasText:'乙'}).waitFor();await screenshot('simulate-link.png');
-  await page.locator('.primary-tabs button').nth(3).click();await page.locator('.screen-card[data-screen="a"]').click();await page.locator('.preview[aria-busy="false"]').waitFor();await page.frameLocator('iframe').locator('#name').fill('林小安');await page.frameLocator('iframe').locator('#submit').click();await page.locator('.simulation-choice').first().waitFor();await page.locator('.prototype-status').getByText('可能的伺服器檢核訊息').waitFor();await screenshot('simulate-submit.png');
-  await page.locator('.primary-tabs button').nth(3).click();await page.locator('.screen-card[data-screen="a"]').click();await page.locator('.preview[aria-busy="false"]').waitFor();await page.frameLocator('iframe').locator('#open').click();await page.frameLocator('iframe').getByRole('dialog').waitFor();await screenshot('simulate-dialog.png');
-  await page.locator('.primary-tabs button').nth(3).click();await page.locator('.screen-card[data-screen="a"]').click();await page.locator('.preview[aria-busy="false"]').waitFor();await page.frameLocator('iframe').locator('#unknown').click();await page.locator('.simulation-coverage').waitFor();await screenshot('coverage.png');
-  await page.locator('.primary-tabs button').nth(3).click();await page.locator('.screen-card[data-screen="a"]').click();await page.locator('.preview[aria-busy="false"]').waitFor();await page.frameLocator('iframe').locator('#go').evaluate(el=>el.dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true,altKey:true})));await page.locator('#detail-tab-button-3').click();await page.locator('[data-detail-tab="3"]').locator('.computed-style-row').first().waitFor();await screenshot('element-style.png');
-  await page.locator('.primary-tabs button').nth(3).click();await page.locator('.canvas[data-fitted="true"]').waitFor();await page.locator('.screen-card[data-screen="b"]').click();await page.locator('.preview[aria-busy="false"]').waitFor();await page.locator('.prototype-toolbar [role="radio"][data-decision="REMOVE"]').click();await page.locator('.decision-impact').waitFor();await screenshot('impact-preview.png');
-  await page.locator('.primary-tabs button').nth(4).click();await page.locator('[data-endpoint-group="API"]').waitFor();await page.locator('.api-row button').first().click();await page.locator('.api-detail-heading').waitFor();await screenshot('api-page.png');
-  await page.locator('.topbar-more>summary').click();await page.getByRole('menuitem',{name:/^分析資訊 /}).click();await page.locator('.information-drawer[open]').waitFor();await screenshot('analysis-info.png');await page.getByRole('button',{name:'關閉分析資訊',exact:true}).click();await page.locator('.topbar-more>summary').click();
-  await page.locator('.primary-tabs button').nth(1).click();await page.locator('.primary-tabs button').nth(3).click();await page.locator('.screen-card[data-screen="a"]').click();await page.locator('.preview[aria-busy="false"]').waitFor();await page.locator('.prototype-toolbar [role="radio"][data-decision="KEEP"]').click();await page.getByRole('tab',{name:'操作',exact:true}).click();await page.locator('[data-component="shared"]').click();await page.locator('[data-library-details]').waitFor();await page.locator('[data-library-override="shared"]').waitFor();await page.locator('[data-library-override="shared"]').selectOption('demo-button');await page.locator('[data-library-override="shared"]').scrollIntoViewIfNeeded();await screenshot('library-override.png');
-  await page.locator('[data-flow-outline] > summary').click();await screenshot('flow-outline.png');
-  await page.getByRole('button',{name:'全域搜尋'}).click();await page.getByRole('searchbox',{name:'全域搜尋'}).fill('飼主');await screenshot('global-search.png');await page.keyboard.press('Escape');
-  await page.locator('.topbar-more>summary').click();await page.locator('.review-help > summary').evaluate(node=>node.click());await screenshot('help-popover.png');await page.locator('.review-help > summary').evaluate(node=>node.click());await page.locator('.topbar-more[open] > summary').click();await page.locator('.topbar-more:not([open])').waitFor();
-  await page.locator('.primary-tabs button').nth(5).click();await page.locator('[data-delivery]').waitFor();await screenshot('delivery-checklist.png');
+  const reset=async()=>{if(await page.locator('.prototype-back').count())await page.locator('.prototype-back').click();await page.locator('.canvas[data-mode="overview"]').waitFor();};
+  const zoom=async id=>{await reset();await page.locator(`.screen-card[data-screen="${id}"]`).click();await page.locator('.focus-layer:not([hidden]) .preview[aria-busy="false"]').waitFor();};
+  await page.locator('.canvas[data-fitted="true"]').waitFor();await screenshot('canvas.png');
+  await page.getByRole('searchbox',{name:'搜尋 URL 或畫面名稱'}).fill('/owners/5/edit');await page.locator('.screen-card.search-match').first().waitFor();await screenshot('search-url.png');
+  await page.getByRole('button',{name:'清除搜尋'}).click();
+  await zoom('a');const point=await page.locator('.focus-line-hit[data-kind="known"]').first().evaluate(line=>{const at=line.getPointAtLength(line.getTotalLength()*0.5),box=line.ownerSVGElement.getBoundingClientRect();return {x:box.left+at.x,y:box.top+at.y};});await page.mouse.move(point.x,point.y);await page.locator('.focus-tooltip:not([hidden])').waitFor();await screenshot('zoom-focus.png',true);await page.mouse.move(1,1);
+  await page.locator('[data-screen-panel="a"] .panel-buttons>summary').click();await screenshot('screen-buttons.png');
+  await page.locator('[data-screen-panel="a"] .panel-header [data-decision="REMOVE"]').click();await page.locator('.save-menu[open]').waitFor();await screenshot('progress-file.png');await page.getByRole('button',{name:'稍後再說'}).click();
+  await page.locator('[data-screen-panel="a"] .panel-header [data-decision="KEEP"]').click();
+  await page.locator('.progress-button').click();await page.locator('.progress-menu[open]').waitFor();await screenshot('progress-panel.png');await page.locator('.progress-button').click();
+  await zoom('a');await page.frameLocator('iframe').locator('#name').fill('林小安');await page.frameLocator('iframe').locator('#submit').click();await page.locator('.simulation-picker').waitFor();await screenshot('simulate-choices.png');await page.keyboard.press('Escape');
+  await page.frameLocator('iframe').locator('#open').click();await page.frameLocator('iframe').getByRole('dialog').waitFor();await screenshot('simulate-dialog.png');await page.keyboard.press('Escape');
+  await page.locator('.page-tab[data-page="api"]').click();await page.locator('.api-row .api-summary').first().click();await page.locator('.api-detail').waitFor();await screenshot('api-page.png');
+  await page.locator('.page-tab[data-page="screens"]').click();await page.locator('.help-menu>summary').click();await page.locator('.help-menu[open]').waitFor();await screenshot('help-popover.png');await page.locator('.help-menu>summary').click();
   assert.deepEqual(requests,[],'offline guide report must not make network or other local resource requests');
   await context.close();
  }finally{await browser.close();}

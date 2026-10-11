@@ -11,9 +11,6 @@ const requiredStatements=[
   '不會執行專案腳本、不連線',
   '未被使用不等於可刪除',
   '不要手動修改 md 附錄 A',
-  '未解析（UNRESOLVED）',
-  '有歧義（AMBIGUOUS）',
-  '依證據推定（INFERRED）',
   '截圖皆來自自行撰寫的合成專案',
   '暫存在瀏覽器',
   '換電腦',
@@ -21,11 +18,13 @@ const requiredStatements=[
   '私密瀏覽',
   '清除瀏覽器資料',
   '匯出 md 保存',
+  '進度檔',
+  'Chrome',
   '5 MB',
   '64 MiB'
 ];
-const shots=['overview-flow.png','overview-global-nav.png','feature-regions.png','screen-queue.png','button-table.png','wp49-map.png','zoom-viewer.png','simulate-link.png','simulate-submit.png','simulate-dialog.png','coverage.png','element-style.png','impact-preview.png','api-page.png','analysis-info.png','library-override.png','flow-outline.png','global-search.png','first-run-guide.png','help-popover.png','delivery-checklist.png'];
-const chapters=['了解盤點流程','盤點首頁','逐頁確認並做決定','按鈕總表','功能地圖','API 頁','交付清單與交付 AI','模擬操作','元件庫建議與覆寫','判斷分析結果是否可信','常見問題與詞彙表'];
+const shots=['canvas.png','search-url.png','zoom-focus.png','screen-buttons.png','progress-file.png','progress-panel.png','simulate-choices.png','simulate-dialog.png','api-page.png','help-popover.png'];
+const chapters=['了解確認流程','開始：打開報表與保存進度','在畫布上找畫面','查看畫面並標記保留或移除','模擬操作','API 頁','交付 md 給 AI','常見問題與詞彙表'];
 
 test('requester guide is task-focused, safe, plain-language and illustrated',async()=>{
   const text=await readFile(userGuide,'utf8'),lines=text.trimEnd().split(/\r?\n/);

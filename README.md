@@ -8,7 +8,7 @@ ScreenTrace 會展開可解析的 JSP Tag、CSS 與本地資源，並以 Playwri
 
 ## 調整進度
 
-ScreenTrace 可分析支援的 JSP 專案，產生離線互動報表、確認標記、md 審查文件與元件庫建議。需求方操作請看[報表使用指南](docs/USER_GUIDE.md)；CLI、交付檢查與疑難排解請看[分析人員指南](docs/ANALYST_GUIDE.md)。R14 已結案；R15 WP51（API 方法／分類標示）與 WP52（文件狀態整理）完成，WP53 正進行 Apache Struts 1 官方範例唯讀稽核。進度見 [ROADMAP.md](docs/ROADMAP.md) 與 [R15 報告](docs/reports/R15.md)。
+R17 已把報表簡化為主要流程：在畫布上看畫面、點按鈕試操作、標記保留／移除、進度自動存成 md 交給 AI。需求方操作請看[報表使用指南](docs/USER_GUIDE.md)；CLI 與疑難排解請看[分析人員指南](docs/ANALYST_GUIDE.md)。進度見 [ROADMAP.md](docs/ROADMAP.md) 與 [R17 報告](docs/reports/R17.md)。
 
 ## 初次執行
 
@@ -17,84 +17,47 @@ ScreenTrace 可分析支援的 JSP 專案，產生離線互動報表、確認標
 在終端機進入 ScreenTrace 專案根目錄後執行：
 
 ```bash
-./bin/screentrace
+./bin/screentrace setup
 ```
 
-腳本會自動檢查 Java 17+、Maven 3.9+、Node.js 18+、Playwright 與 Chromium。缺少 Java、Maven 或 Node.js 時，會透過 Homebrew 安裝。首次執行需要網路連線，Homebrew 可能要求輸入 macOS 管理者密碼。
+腳本會檢查並安裝 Java 17+、Maven 3.9+、Node.js 18+、Playwright 與 Chromium。缺少 Java、Maven 或 Node.js 時會透過 Homebrew 安裝；首次執行需要網路連線，Homebrew 可能要求輸入 macOS 管理者密碼。
 
 ### Windows
 
 在 PowerShell 或命令提示字元進入 ScreenTrace 專案根目錄後執行：
 
 ```powershell
-.\bin\screentrace.cmd
+.\bin\screentrace.cmd setup
 ```
 
-腳本會自動檢查 Java 17+、Maven 3.9+、Node.js 18+、Playwright 與 Chromium。缺少 Java、Maven 或 Node.js 時，會透過 `winget` 安裝。首次執行需要網路連線，安裝時可能出現 Windows 權限確認。需使用 Windows 10／11，且已安裝 App Installer（提供 `winget`）。
+缺少 Java、Maven 或 Node.js 時會透過 `winget` 安裝。需使用 Windows 10／11，且已安裝 App Installer（提供 `winget`）。
 
-首次啟動時會要求設定所有專案的根目錄與分析結果根目錄，預設結果位置是 `<專案根目錄>/analyze/`。設定檔位置如下：
+## 分析專案
 
-| 系統 | 設定檔 |
-| --- | --- |
-| macOS | `~/.screentrace/config.json` |
-| Windows | `%USERPROFILE%\.screentrace\config.json` |
+一個指令完成分析並開啟報表：
 
-## CLI 指令
+```bash
+./bin/screentrace /path/to/your-project
+```
 
-直接執行 macOS 的 `./bin/screentrace` 或 Windows 的 `.\bin\screentrace.cmd` 後，以 ↑ / ↓ 選擇、Enter 確認：
+Windows：
+
+```powershell
+.\bin\screentrace.cmd C:\path\to\your-project
+```
+
+可使用相對路徑或 `~/`。不需要先做任何設定；結果寫入 `<ScreenTrace 根目錄>/analyze/<專案資料夾名稱>/`，完成後自動以瀏覽器開啟報表。若已用 `config` 設定分析結果根目錄，則寫入該目錄。
+
+不帶參數執行 `./bin/screentrace` 會開啟選單，以 ↑ / ↓ 選擇、Enter 確認：
 
 ```text
-❯ 分析專案
+❯ 輸入專案路徑
   開啟報表
+  設定專案根目錄（選用）
   結束 ScreenTrace
 ```
 
-「分析專案」列出專案根目錄下所有直接子資料夾；「開啟報表」只列出已有完整分析結果的專案。
-可選擇「結束 ScreenTrace」，或按 `q`／Esc 正常結束 CLI。專案選單可選擇「← 返回功能選單」，或按 `b`／Esc 返回功能選單。
-
-### 分析專案並開啟報表
-
-macOS：
-
-```bash
-./bin/screentrace
-```
-
-Windows：
-
-```powershell
-.\bin\screentrace.cmd
-```
-
-分析完成後，結果會產生在分析結果根目錄內：
-
-```text
-/project/ocp/analyze/專案名稱/
-```
-
-分析完成後會自動以 file:// 開啟 report/screentrace-report.html。JSP／HTML 畫面會同時產生重建預覽、渲染截圖、所有元素位置與去重 computed style，保留條件原文、動態運算式及最多 320px 的內嵌縮圖。預覽會標示「示意畫面:動態資料為範例值」及超量診斷。在 CLI 按 Esc 返回功能選單；已開啟的 HTML 仍可使用，不啟動 localhost 伺服器。
-
-### 開啟報表
-
-若專案已分析完成，可不重新掃描，直接啟動報表：
-
-macOS：
-
-```bash
-./bin/screentrace
-```
-
-Windows：
-
-```powershell
-.\bin\screentrace.cmd
-```
-
-在選單中選擇「開啟報表」與目標專案。報表為單一 HTML，可搬移後直接開啟，不依賴分析資料夾、網路或本機服務。
-
-也可用於自動化：
-
-macOS：
+設定專案根目錄後，選單多出「分析專案」，可直接從根目錄下的子資料夾挑選。腳本化用法維持相容：
 
 ```bash
 ./bin/screentrace analyze 專案名稱
@@ -102,31 +65,20 @@ macOS：
 ./bin/screentrace config
 ```
 
-Windows：
-
-```powershell
-.\bin\screentrace.cmd analyze 專案名稱
-.\bin\screentrace.cmd report 專案名稱
-.\bin\screentrace.cmd config
-```
+`report` 以既有分析結果重新產生並開啟報表，不重新掃描。報表為單一 HTML，可搬移後直接開啟，不依賴分析資料夾、網路或本機服務。
 
 ## 報表操作
 
-單檔以 file:// 開啟。畫面總覽顯示全部畫面與關聯，可拖曳／鍵盤平移和縮放；檔案結構列出全部來源路徑。URL 搜尋支援實際 URL 對路由樣板、星號與副檔名映射，結果同時高亮。
+報表只有兩頁：
 
-點選畫面聚焦，hover 關聯顯示 URL、縮圖與觸發元件；點擊可前往目標並返回。右側顯示 API、所有行為、來源／信心／檢核；點選預覽任意元素查看樣式與條件。API 頁可搜尋／排序／依狀態篩選，呼叫來源能跳轉並高亮元件。
+- **畫面**：畫布呈現所有畫面與關聯線；點畫面會在同一張畫布放大，四周留下它出發的關聯線，滑過線顯示目的畫面縮圖，點線前往。在預覽中點按鈕會模擬前往的畫面（不做資料檢核）。右側欄標記保留／移除，並列出按鈕、呼叫的 API 與來源畫面。左側搜尋框可用實際網址比對路由樣板。
+- **API**：列出後端 API、處理程式、呼叫來源與狀態（使用中／未被使用／可移除）。
 
-## 確認與 md 匯出／匯入
+## 確認進度與 md
 
-勾選「確認模式」，畫面與有行為的元件可標未確認／保留／移除。同一元件在不同畫面有各自決策；移除畫面不改子決策，只顯示有效隨畫面移除。提供統計、篩選與衝突警告，不自動修正。
+在 Chrome／Edge 中，第一次標記時會請你選擇一個 md 進度檔，之後每次標記自動寫入；重新開啟報表可「繼續上次進度」。這個 md 就是交給 AI 的檔案，也可隨時「下載 md」。不支援自動存檔的瀏覽器會把標記暫存在瀏覽器，請用「下載 md」保存、「開啟 md」接續。
 
-決策暫存於含應用名稱＋分析指紋的 localStorage，失敗仍可操作。完整契約見 [REVIEW_STATE_CONTRACT](docs/REVIEW_STATE_CONTRACT.md)。不改 Application Graph 或被分析的原始碼。
-
-按「匯出 md」下載單一 screentrace-review.md，超過 5 MB 警告而仍完整下載。KEEP／UNDECIDED 含完整元件／行為，REMOVE 畫面只留 ID／路由／來源；API 狀態共用複合鍵決策推導。所有來源資料以 code span 或嚴格機器字串隔離，固定文字指明資料不是 AI 指示。
-
-使用「匯入 md」選取本機檔案，還原末尾附錄的完整決策。指紋不同／未知 ID 提示「分析結果已變更」並列 orphan，未知複合鍵完整保留。格式／損毀／截斷／上限錯誤不改目前決策；SHA-256 僅檢查損毀，不防惡意重算摘要。匯入不讀取網路資源。
-
-格式、排序、安全與容量見 [REVIEW_MD_CONTRACT](docs/REVIEW_MD_CONTRACT.md)。元件庫選用與覆寫見下方 WP9 說明與 [使用指南](docs/USER_GUIDE.md)。
+md 一律為 format_version 1，舊版 v2／v3 檔仍可開啟。格式、排序、安全與容量見 [REVIEW_MD_CONTRACT](docs/REVIEW_MD_CONTRACT.md)；狀態契約見 [REVIEW_STATE_CONTRACT](docs/REVIEW_STATE_CONTRACT.md)。
 
 ## 分析產物說明
 
@@ -136,7 +88,7 @@ Windows：
 ├── prototype-model.json         # 原型畫面與元件基準資料
 ├── preview-model.json           # 預覽畫面、全部元素與去重樣式的統一資料
 ├── report/
-│   └── screentrace-report.html  # 單檔離線檢視器
+│   └── screentrace-report.html  # 單檔離線報表
 ├── static-preview/
 │   ├── manifest.json            # Screen ID 與靜態頁面對應
 │   └── *.html                   # JSP 轉換後的靜態頁面
@@ -146,43 +98,21 @@ Windows：
     └── *.png                    # Chromium 渲染截圖
 ```
 
+分析器仍會產出元素樣式資料；R17 起報表與 md 不顯示樣式與元件庫內容。
+
 ## 疑難排解
 
 ### 報表空白或沒有畫面
 
-先重新執行分析：
-
-macOS：
+重新分析專案後再開啟報表：
 
 ```bash
-./bin/screentrace
+./bin/screentrace /path/to/your-project
 ```
 
-Windows：
+### 自動存檔沒有出現
 
-```powershell
-.\bin\screentrace.cmd
-```
-
-再啟動或重新整理報表。
-
-### UI 匯出失敗
-
-重新啟動最新 server：
-
-macOS：
-
-```bash
-./bin/screentrace
-```
-
-Windows：
-
-```powershell
-.\bin\screentrace.cmd
-```
-
-直接開啟單一 HTML，按「匯出 md」。若失敗，檢視頁面錯誤訊息與 schema 2.2 證據完整性。
+請改用 Chrome 或 Edge 開啟報表。其他瀏覽器會顯示「未自動存檔」，請用「下載 md」保存。
 
 ## 開發與驗證
 
@@ -253,9 +183,11 @@ node --test screentrace-viewer/test/*.e2e.mjs
 
 新入口 `SingleHtmlReportGenerator.generate` 只接受嚴格 schema 2.2，注入圖、預覽、內嵌文件與 manifest，產出 `report/screentrace-report.html` 及實際 bytes 的 `report-size.json`；超過 100 MB 只警告。單檔以 `file://` 開啟，沒有執行期 npm 相依。CLI 已切換 SingleHtmlAnalysisWriter；舊 ReportGenerator、localhost 與 POST 端點已移除。設定 `ST_BROWSERS=chromium,firefox,webkit` 可執行三引擎測試，須先安裝對應 Playwright 瀏覽器。
 
-確認模式的決策自動暫存在應用名稱＋分析指紋的 localStorage；拒絕存取時只警告。複合鍵契約見 [REVIEW_STATE_CONTRACT](docs/REVIEW_STATE_CONTRACT.md)。md 匯出／匯入共用模組見 [REVIEW_MD_CONTRACT](docs/REVIEW_MD_CONTRACT.md)；決策可用單一 md 跨瀏覽器還原。
+標記自動暫存在應用名稱＋分析指紋的 localStorage，並可自動寫入使用者選擇的 md 進度檔；拒絕存取時只警告。複合鍵契約見 [REVIEW_STATE_CONTRACT](docs/REVIEW_STATE_CONTRACT.md)。md 匯出／匯入共用模組見 [REVIEW_MD_CONTRACT](docs/REVIEW_MD_CONTRACT.md)；決策可用單一 md 跨瀏覽器還原。
 
 ### 元件庫 manifest（WP9）
+
+R17 起報表與 md 不再顯示元件庫建議與覆寫；以下 CLI 仍可管理 manifest，供日後使用。
 
 使用 [虛構 sample manifest](docs/examples/component-library.sample.json) 與 [JSON Schema](docs/schemas/component-library.schema.json)；不解析真實 Angular 套件／Storybook。
 

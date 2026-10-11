@@ -55,6 +55,7 @@ try {
 
  // ---- top bar
  const header=document.querySelector('header')!;header.classList.add('topbar');document.body.prepend(iconSprite());
+ document.title=`${graph.application.name} · ScreenTrace`;
  document.querySelector('#application')!.textContent=graph.application.name;document.querySelector<HTMLElement>('#application')!.title=graph.application.name;
  const tabs=element('nav',undefined,'page-tabs');tabs.setAttribute('aria-label','主要分頁');
  const screensTab=element('button',undefined,'page-tab'),apiTab=element('button',undefined,'page-tab');

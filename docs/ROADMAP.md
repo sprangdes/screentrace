@@ -84,3 +84,4 @@
 - 第一階段（WP60、WP61，並提前完成 WP64）：報表改為兩頁，移除 §2 清單功能，API 頁三狀態。完整驗證後停止等待需求方檢視，見 [R17 報告](reports/R17.md)、[ADR 0084](adr/0084-r17-two-page-report-and-retired-tests.md)。
 - 第二階段（WP62、WP63）：畫布 zoom in 聚焦、關聯線縮圖與前往、點擊模擬不受檢核限制。完整驗證後停止等待需求方檢視，見 [R17 報告](reports/R17.md)、[ADR 0085](adr/0085-r17-canvas-zoom-focus-and-click-simulation.md)。
 - 第三階段（WP65、WP66）：進度檔自動存檔、md 一律 v1 並精簡正文。完整驗證後停止等待需求方驗收，見 [R17 報告](reports/R17.md)、[ADR 0086](adr/0086-r17-progress-file-autosave-and-md-v1.md)。
+- 第四階段（WP67、WP68）：`screentrace <專案路徑>` 一步分析、設定改為選用、指南與文件依新流程重寫。R17 全部完成，等待結案驗收，見 [R17 報告](reports/R17.md)。

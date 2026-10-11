@@ -11,7 +11,7 @@ import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Test;
 
 class NonInteractiveCliTest {
-  private static final String SETUP_MESSAGE = "尚未設定專案根目錄與輸出根目錄。請先在終端機執行 `./bin/screentrace config`";
+  private static final String SETUP_MESSAGE = "尚未設定專案根目錄。可直接執行 `./bin/screentrace <專案路徑>` 分析單一專案，或在終端機執行 `./bin/screentrace config` 設定專案根目錄";
 
   @Test void missingSettingsFailsClearlyForClosedAndOpenInputWithoutWaiting() throws Exception {
     for (String command : new String[] {"analyze", "report"}) {
@@ -91,6 +91,57 @@ class NonInteractiveCliTest {
     Result reported=run(home,"report",project);
     assertEquals(0,reported.exitCode(),reported.output());assertFalse(reported.output().contains("Exception"),reported.output());
     return Files.readAllBytes(outputRoot.resolve(project+"/report/screentrace-report.html"));
+  }
+
+  @Test void projectPathAnalyzesWithoutSettingsIntoTheScreenTraceAnalyzeFolder() throws Exception {
+    Path workspace=Files.createTempDirectory("screentrace-path-arg-"),home=Files.createDirectory(workspace.resolve("home")),screenTrace=Files.createDirectory(workspace.resolve("screentrace"));
+    Path project=copyFixture(Files.createDirectory(workspace.resolve("projects")),"spring-mvc-jsp");
+    Result absolute=runPath(home,screenTrace,workspace,project.toString());
+    assertEquals(0,absolute.exitCode(),absolute.output());assertTrue(absolute.output().contains("分析完成"),absolute.output());
+    assertTrue(Files.isRegularFile(screenTrace.resolve("analyze/spring-mvc-jsp/report/screentrace-report.html")),absolute.output());
+    assertFalse(Files.exists(home.resolve(".screentrace/config.json")),"no settings are written");
+    Result relative=runPath(home,screenTrace,project.getParent(),"spring-mvc-jsp");
+    assertEquals(0,relative.exitCode(),relative.output());
+    Result missing=runPath(home,screenTrace,workspace,"no-such-project");
+    assertEquals(2,missing.exitCode(),missing.output());assertTrue(missing.output().contains("找不到專案資料夾：no-such-project"),missing.output());assertFalse(missing.output().contains("Exception"),missing.output());
+  }
+
+  @Test void projectPathUsesTheConfiguredOutputRootWhenOneExists() throws Exception {
+    Path workspace=Files.createTempDirectory("screentrace-path-config-"),home=workspace.resolve("home"),output=Files.createDirectory(workspace.resolve("output"));
+    Path projects=Files.createDirectory(workspace.resolve("projects")),project=copyFixture(projects,"spring-mvc-jsp");
+    Files.createDirectories(home.resolve(".screentrace"));
+    Files.writeString(home.resolve(".screentrace/config.json"),"{\"projectRoot\":\""+json(projects.toString())+"\",\"outputRoot\":\""+json(output.toString())+"\"}");
+    Result result=runPath(home,Files.createDirectory(workspace.resolve("screentrace")),workspace,project.toString());
+    assertEquals(0,result.exitCode(),result.output());
+    assertTrue(Files.isRegularFile(output.resolve("spring-mvc-jsp/report/screentrace-report.html")),result.output());
+  }
+
+  @Test void interactiveMenuAsksForAPathFirstWhenNoProjectRootIsConfigured() {
+    assertEquals(java.util.List.of("輸入專案路徑","設定專案根目錄（選用）","結束 ScreenTrace"),ScreenTraceCli.menu(false,false).stream().map(a->a.label()).toList());
+    assertEquals(java.util.List.of("輸入專案路徑","開啟報表","設定專案根目錄（選用）","結束 ScreenTrace"),ScreenTraceCli.menu(false,true).stream().map(a->a.label()).toList());
+    assertEquals(java.util.List.of("分析專案","輸入專案路徑","開啟報表","結束 ScreenTrace"),ScreenTraceCli.menu(true,true).stream().map(a->a.label()).toList());
+    assertEquals(Path.of(System.getProperty("user.home"),"demo"),ScreenTraceCli.projectPath("~/demo"));
+  }
+
+  private static Path copyFixture(Path parent,String family) throws Exception {
+    Path source=Path.of("").toAbsolutePath();while(source!=null&&!(Files.isRegularFile(source.resolve("pom.xml"))&&Files.isDirectory(source.resolve("screentrace-core"))))source=source.getParent();
+    assertNotNull(source,"repository source root");
+    Path fixture=source.resolve("fixtures/wp10/"+family),project=parent.resolve(family);
+    try(var files=Files.walk(fixture)){for(Path file:files.toList()){Path copy=project.resolve(fixture.relativize(file));if(Files.isDirectory(file))Files.createDirectories(copy);else Files.copy(file,copy);}}
+    return project;
+  }
+
+  /** Runs `screentrace <path>` from a working directory with the launcher's screentrace.home; preview tools come from the checkout. */
+  private static Result runPath(Path home,Path screenTrace,Path workingDirectory,String argument) throws Exception {
+    String classpath=System.getProperty("surefire.test.class.path",System.getProperty("java.class.path"));
+    var args=new java.util.ArrayList<String>();args.add(Path.of(System.getProperty("java.home"),"bin","java").toString());
+    args.add("-Duser.home="+home);args.add("-Dscreentrace.home="+screenTrace);args.add("-Djava.awt.headless=true");
+    String jsModule=System.getProperty("screentrace.js.module");if(jsModule!=null)args.add("-Dscreentrace.js.module="+jsModule);
+    args.add("-cp");args.add(classpath);args.add(ScreenTraceCli.class.getName());args.add(argument);
+    Process process=new ProcessBuilder(args).directory(workingDirectory.toFile()).redirectErrorStream(true).redirectInput(new File("/dev/null")).start();
+    var output=CompletableFuture.supplyAsync(()->{try{return new String(process.getInputStream().readAllBytes(),java.nio.charset.StandardCharsets.UTF_8);}catch(java.io.IOException error){throw new java.io.UncheckedIOException(error);}});
+    assertTrue(process.waitFor(Duration.ofSeconds(120).toMillis(),TimeUnit.MILLISECONDS),argument+" timed out");
+    return new Result(process.exitValue(),output.get(2,TimeUnit.SECONDS));
   }
 
   private static Result run(Path home,String command,String project) throws Exception {

@@ -2,34 +2,34 @@
 
 本指南供負責設定、分析、報表交付與元件庫管理的人員使用。需求方的操作說明見[報表使用指南](USER_GUIDE.md)。
 
-## 設定專案與輸出位置
+## 分析一個專案
 
-在可互動的終端機執行：
+```sh
+./bin/screentrace <專案路徑>
+```
+
+不需要事先設定。可使用絕對路徑、相對路徑或 `~/`；結果寫入 `<ScreenTrace 根目錄>/analyze/<專案資料夾名稱>/`（已設定分析結果根目錄時改寫入該目錄），完成後自動開啟報表。路徑不存在時以結束碼 2 顯示「找不到專案資料夾」。原始專案保持唯讀。Windows 請執行 `bin\screentrace.cmd <專案路徑>`。
+
+## 設定專案根目錄（選用）
+
+需要經常從同一個資料夾挑選專案時，在可互動的終端機執行：
 
 ```sh
 ./bin/screentrace config
 ```
 
-依提示設定專案根目錄與分析結果根目錄。Windows 請執行 `bin/screentrace.cmd config`。輸出根目錄需有足夠空間；原始專案保持唯讀。
-
-設定後可列出目前 CLI 支援的指令：
-
-```sh
-./bin/screentrace --help
-```
-
-## 分析並產生報表
+依提示設定專案根目錄與分析結果根目錄。設定後，不帶參數執行 `./bin/screentrace` 的選單會多出「分析專案」，並可使用：
 
 ```sh
 ./bin/screentrace analyze <專案名稱>
 ./bin/screentrace report <專案名稱>
 ```
 
-`analyze` 讀取設定的專案並產生圖與預覽資料；`report` 產生可離線開啟的單一 HTML。缺少專案設定時，請在互動式終端機執行 `config`。無互動終端機時，指令會以結束碼 2 顯示設定提示並立即結束，不會等待輸入或輸出堆疊追蹤。
+`analyze` 讀取設定的專案並產生圖與預覽資料；`report` 以既有分析重新產生可離線開啟的單一 HTML。未設定時使用這兩個指令，會以結束碼 2 提示改用 `<專案路徑>` 或執行 `config`，不會等待輸入或輸出堆疊追蹤。
 
 ## 管理元件庫
 
-只匯入經 JSON Schema 驗證的 manifest。範例 manifest 是虛構資料，僅供格式參考。
+R17 起報表與 md 不顯示元件庫建議與覆寫；以下指令仍可驗證與保存 manifest，供日後使用。只匯入經 JSON Schema 驗證的 manifest。範例 manifest 是虛構資料，僅供格式參考。
 
 ```sh
 ./bin/screentrace library validate <manifest.json>
@@ -58,13 +58,13 @@
 3. 檢查報表大小；超過 100 MB 會警告，仍需確認傳遞方式與使用者設備可正常開啟。
 4. 搜尋 HTML 與 md 輸出，確認沒有專案根目錄、分析輸出目錄、使用者家目錄或其他本機絕對路徑。
 5. 確認 context path 的值與來源已呈現在證據中；未設定時不可自行猜測。
-6. 對照需求方的[報表使用指南](USER_GUIDE.md)，確認可找到畫面、試操作、標記及匯出審查文件。
+6. 對照需求方的[報表使用指南](USER_GUIDE.md)，確認可找到畫面、試操作、標記，並在 Chrome 中設定進度檔與下載 md。
 
 ## 疑難排解
 
 ### 缺少預覽或縮圖
 
-確認分析輸出完整，再執行 `report` 重建 HTML。若仍缺少，檢視分析資訊中的診斷及預覽資源診斷；不要以空白預覽推斷原畫面沒有內容。
+確認分析輸出完整，再重新分析或執行 `report` 重建 HTML。若仍缺少，檢視 `application-graph.json` 與 `preview-model.json` 中的診斷；不要以空白預覽推斷原畫面沒有內容。
 
 ### Context path 未設定
 
@@ -72,7 +72,7 @@
 
 ### 診斷代碼
 
-開啟報表的「分析資訊」，先讀中文摘要，再展開診斷查看完整代碼、訊息、來源檔與行號。`UNRESOLVED`、`AMBIGUOUS`、`INFERRED` 等狀態的需求方說明見[使用指南的可信度章節](USER_GUIDE.md#10-判斷分析結果是否可信)。
+R17 起報表不再顯示診斷與信心狀態。診斷的完整代碼、訊息、來源檔與行號保留在 `application-graph.json`；交給 AI 的 md 第 7 節「分析限制」列出 `UNRESOLVED`、`AMBIGUOUS` 項目與來源。報表只在受影響畫面顯示 JSF 未分析等提示，在 API 頁顯示 context path 提示。
 
 ### 路徑大小寫與符號連結
 
@@ -80,7 +80,7 @@
 
 ### CLI 沒有互動終端機
 
-缺少專案設定時，CLI 會立即顯示「尚未設定專案根目錄與輸出根目錄。請先在終端機執行 `./bin/screentrace config`」並以非零結束碼停止。請先在一般終端機完成設定，再執行分析；自動化流程應準備有效設定並明確處理非零結束碼。已有設定且指定專案名稱時，`analyze` 與 `report` 可直接執行。
+自動化流程建議直接使用 `./bin/screentrace <專案路徑>`，不需要設定或互動終端機。未設定時執行 `analyze`／`report` 會立即顯示「尚未設定專案根目錄。可直接執行 `./bin/screentrace <專案路徑>` 分析單一專案，或在終端機執行 `./bin/screentrace config` 設定專案根目錄」並以非零結束碼停止。
 
 ## 重新產生指南截圖
 
@@ -90,6 +90,6 @@
 npm --prefix screentrace-viewer run guide-shots
 ```
 
-輸出固定寫入 `docs/images/user-guide/`。檢查十二張圖都非空、沒有多餘舊圖，並在相同環境連續執行兩次，以 SHA-256 確認每張 PNG 位元組一致。若字型或 Chromium 不可用，腳本應明確失敗；不得以空白截圖代替。
+輸出固定寫入 `docs/images/user-guide/`。檢查十張圖都非空、沒有多餘舊圖，並在相同環境連續執行兩次，以 SHA-256 確認每張 PNG 位元組一致。若字型或 Chromium 不可用，腳本應明確失敗；不得以空白截圖代替。
 
 文件格式細節見[審查文件契約](REVIEW_MD_CONTRACT.md)、[審查狀態契約](REVIEW_STATE_CONTRACT.md)與[元件庫 Schema](schemas/component-library.schema.json)。

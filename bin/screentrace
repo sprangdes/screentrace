@@ -127,4 +127,4 @@ if [[ "$needs_build" == true ]]; then
   (cd "$base_dir/screentrace-viewer" && npm ci --ignore-scripts --no-fund && npm run build)
   (cd "$base_dir" && mvn -q -DskipTests package)
 fi
-exec java "-Dscreentrace.js.module=$base_dir/screentrace-js/cli.mjs" -jar "$jar" "$@"
+exec java "-Dscreentrace.home=$base_dir" "-Dscreentrace.js.module=$base_dir/screentrace-js/cli.mjs" -jar "$jar" "$@"
