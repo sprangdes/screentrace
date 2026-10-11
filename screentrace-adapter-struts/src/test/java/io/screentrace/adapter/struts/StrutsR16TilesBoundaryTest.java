@@ -108,6 +108,22 @@ class StrutsR16TilesBoundaryTest {
     assertTrue(graph.behaviors().stream().anyMatch(behavior->behavior.triggerId().equals(layout.id())&&behavior.type()==BehaviorType.CALL_API&&behavior.expression().contains("/tiles-layout-api")),graph.behaviors()+"\n"+graph.diagnostics());
   }
 
+  @Test void extendedTileDefinitionRemainsAsAuditableNonScreenNode()throws Exception{
+    file("src/main/webapp/WEB-INF/web.xml","<web-app><servlet><servlet-name>action</servlet-name><servlet-class>org.apache.struts.action.ActionServlet</servlet-class></servlet><servlet-mapping><servlet-name>action</servlet-name><url-pattern>*.do</url-pattern></servlet-mapping></web-app>");
+    file("src/main/webapp/WEB-INF/struts-config.xml","<struts-config><action-mappings><action path='/home' type='sample.Home'><forward name='ok' path='home.page'/></action></action-mappings></struts-config>");
+    file("tiles-defs.xml","<tiles-definitions><definition name='base' path='/WEB-INF/jsp/layout.jsp'/><definition name='home.page' extends='base'/></tiles-definitions>");
+    file("src/main/webapp/WEB-INF/jsp/layout.jsp","<tiles:insert attribute='body'/>");
+
+    var graph=analyze();
+    var baseView=graph.nodes().stream().filter(node->node.type()==NodeType.VIEW&&node.name().equals("base")).findFirst().orElseThrow();
+    assertEquals("/WEB-INF/jsp/layout.jsp",baseView.attributes().get("view"));
+    assertEquals("tiles-defs.xml",baseView.source().file());
+    assertFalse(graph.nodes().stream().anyMatch(node->node.type()==NodeType.SCREEN&&node.name().equals("base")));
+    var pageView=graph.nodes().stream().filter(node->node.type()==NodeType.VIEW&&node.name().equals("home.page")).findFirst().orElseThrow();
+    assertEquals("base",pageView.attributes().get("extends"));
+    assertTrue(graph.relationships().stream().anyMatch(edge->edge.type()==EdgeType.INCLUDES&&edge.from().equals(pageView.id())&&edge.to().equals(baseView.id())&&edge.evidence().stream().anyMatch(proof->proof.detail()!=null&&proof.detail().contains("extends=base"))));
+  }
+
   @Test void referencedRootTemplateWithoutEntryIsNotAnIndependentScreen()throws Exception{
     file("src/main/webapp/WEB-INF/web.xml","<web-app><servlet><servlet-name>action</servlet-name><servlet-class>org.apache.struts.action.ActionServlet</servlet-class></servlet><servlet-mapping><servlet-name>action</servlet-name><url-pattern>*.do</url-pattern></servlet-mapping></web-app>");
     file("src/main/webapp/WEB-INF/struts-config.xml","<struts-config><action-mappings><action path='/home' type='sample.Home'><forward name='ok' path='home.page'/></action></action-mappings></struts-config>");
