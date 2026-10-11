@@ -116,10 +116,11 @@ class StrutsR16TilesBoundaryTest {
 
     var graph=analyze();
     var baseView=graph.nodes().stream().filter(node->node.type()==NodeType.VIEW&&node.name().equals("base")).findFirst().orElseThrow();
-    assertEquals("/WEB-INF/jsp/layout.jsp",baseView.attributes().get("view"));
+    assertEquals("src/main/webapp/WEB-INF/jsp/layout.jsp",baseView.attributes().get("view"));
     assertEquals("tiles-defs.xml",baseView.source().file());
     assertFalse(graph.nodes().stream().anyMatch(node->node.type()==NodeType.SCREEN&&node.name().equals("base")));
     var pageView=graph.nodes().stream().filter(node->node.type()==NodeType.VIEW&&node.name().equals("home.page")).findFirst().orElseThrow();
+    assertEquals("/WEB-INF/jsp/layout.jsp",pageView.attributes().get("view"));
     assertEquals("base",pageView.attributes().get("extends"));
     assertTrue(graph.relationships().stream().anyMatch(edge->edge.type()==EdgeType.INCLUDES&&edge.from().equals(pageView.id())&&edge.to().equals(baseView.id())&&edge.evidence().stream().anyMatch(proof->proof.detail()!=null&&proof.detail().contains("extends=base"))));
   }
