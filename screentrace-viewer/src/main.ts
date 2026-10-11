@@ -6,7 +6,7 @@ import {screenNames,NameHint} from './names';
 import {Payload,requireGraph,requirePreview} from './contracts';
 import {element,text} from './text';
 import {indexGraph,searchScreens} from './map';
-import {canvas,fileTree,CanvasTransform} from './canvas';
+import {canvas,fileTree,CanvasTransform,CanvasView} from './canvas';
 import {prototypeViewer} from './prototype';
 import {PrototypeHistory} from './prototype-history';
 import {apiPage} from './api-page';
@@ -130,7 +130,7 @@ try {
   for(const value of ['ALL','UNDECIDED','KEEP','REMOVE'] as const){
    const chip=element('button',`${value==='ALL'?'全部':decisionLabel(value)} ${value==='ALL'?index.screens.length:counts[value]}`,'chip');
    chip.dataset.stateFilter=value;chip.setAttribute('aria-pressed',String(filter===value));
-   chip.onclick=()=>{filter=value;canvasTransform=undefined;render();};chips.append(chip);
+   chip.onclick=()=>{filter=value;render();};chips.append(chip);
   }
   listButton.setAttribute('aria-pressed',String(listMode==='list'));filesButton.setAttribute('aria-pressed',String(listMode==='files'));
   const visible=visibleScreens(),matches=searchScreens(index,query);
@@ -161,19 +161,22 @@ try {
   if(highlightComponent)requestAnimationFrame(()=>panel.querySelector(`[data-component-row="${CSS.escape(highlightComponent!)}"]`)?.scrollIntoView({block:'nearest'}));
  };
 
- // ---- main area
- let simulation:ReturnType<typeof attachSimulation>|undefined,viewerScreen:string|undefined;
- const renderCanvas=()=>{
-  viewerScreen=undefined;simulation=undefined;
-  main.replaceChildren(canvas(index,payload,query,id=>openScreen(id),{transform:canvasTransform,onTransformChange:state=>{canvasTransform=state;},visible:visibleScreens(),screenStatus:id=>screenDecision(reviewState,id)}));
- };
- const decoratePreview=(id:string)=>(doc:Document)=>{
+ // ---- main area: the canvas (zooming into the open screen) or the API page
+ let simulation:ReturnType<typeof attachSimulation>|undefined,view:CanvasView|undefined,frame:HTMLIFrameElement|undefined,viewer:HTMLElement|undefined;
+ const thumbnail=(id:string)=>{const value=payload.preview.screens?.find(s=>s.graphScreenId===id)?.thumbnail;return value?.startsWith('data:image/')?value:undefined;};
+ const canvasState=()=>({query,visible:visibleScreens(),screenStatus:(id:string)=>screenDecision(reviewState,id)});
+ const nodesFor=(doc:Document,id:string,component:string)=>{const nodes=new Set<HTMLElement>(doc.querySelectorAll<HTMLElement>(`[data-st-component-id="${CSS.escape(component)}"]`));for(const record of payload.preview.elements||[])if(record.graphScreenId===id&&record.graphComponentId===component)try{const node=doc.querySelector<HTMLElement>(previewSelector(record.path));if(node)nodes.add(node);}catch{}return [...nodes];};
+ /** Decision outlines and badges inside the preview, reapplied in place whenever decisions change. */
+ const decorate=(doc:Document,id:string)=>{
+  doc.querySelectorAll('[data-review-badge]').forEach(node=>node.remove());
+  doc.querySelectorAll<HTMLElement>('[data-review-status],[data-spotlight]').forEach(node=>{node.style.outline=node.dataset.originalOutline||'';delete node.dataset.reviewStatus;delete node.dataset.spotlight;});
   for(const record of payload.preview.elements||[]){
    if(record.graphScreenId!==id||!record.graphComponentId)continue;
    const decided=componentDecision(reviewState,id,record.graphComponentId)!=='UNDECIDED',spotlight=record.graphComponentId===highlightComponent;
    if(!decided&&!spotlight)continue;
    let node:HTMLElement|null=null;try{node=doc.querySelector<HTMLElement>(previewSelector(record.path));}catch{continue;}
    if(!node)continue;
+   if(node.dataset.originalOutline===undefined)node.dataset.originalOutline=node.style.outline;
    if(spotlight){node.style.outline='3px solid #eab308';node.dataset.spotlight='true';}
    if(!decided)continue;
    const effective=effectiveComponent(reviewState,id,record.graphComponentId),color=effective==='KEEP'?'#1d6b45':'#9e3410';
@@ -183,53 +186,72 @@ try {
    if(node.localName==='input')node.insertAdjacentElement('afterend',badge);else node.append(badge);
   }
  };
- const renderViewer=(id:string)=>{
-  const preview=element('section',undefined,'preview'),frame=element('iframe'),notice=element('span','示意畫面：資料為範例值，不是真實系統','preview-notice');
+ const renderFocus=(id:string,host:HTMLElement)=>{
+  const preview=element('section',undefined,'preview'),notice=element('span','示意畫面：資料為範例值，不是真實系統','preview-notice');
+  frame=element('iframe');simulation=undefined;
+  const own=frame;
   preview.setAttribute('aria-busy','true');
-  frame.setAttribute('sandbox','allow-same-origin');frame.title=index.nodes.get(id)!.name;
-  frame.onload=()=>{
-   const doc=frame.contentDocument;if(!doc||!frame.getAttribute('srcdoc'))return;
+  own.setAttribute('sandbox','allow-same-origin');own.title=index.nodes.get(id)!.name;
+  own.onload=()=>{
+   const doc=own.contentDocument;if(!doc||!own.getAttribute('srcdoc'))return;
    preview.setAttribute('aria-busy','false');
    doc.addEventListener('keydown',onKey);
-   simulation=attachSimulation(payload,id,frame,main,element('div'),{},{select:()=>{},focus:target=>openScreen(target),api:target=>showApi(target)});
+   simulation=attachSimulation(payload,id,own,viewer!,{focus:target=>openScreen(target),api:target=>showApi(target),thumbnail});
    doc.querySelector('[data-spotlight]')?.scrollIntoView({block:'center'});
   };
-  frame.srcdoc=previewDocument(payload,id,decoratePreview(id));
-  preview.append(frame,notice);
+  own.srcdoc=previewDocument(payload,id,doc=>decorate(doc,id));
+  preview.append(own,notice);
   const scroll=history.current?.screenId===id?history.current.scroll:0;
-  main.replaceChildren(prototypeViewer(index,payload,id,preview,frame,history,{back:()=>showCanvas(),focus:target=>openScreen(target),move:delta=>{const visit=history.move(delta,viewerScroll());if(visit)openScreen(visit.screenId,{push:false});},scroll}));
-  viewerScreen=id;
+  viewer=prototypeViewer(index,payload,id,preview,own,history,{back:()=>showCanvas(),focus:target=>openScreen(target),move:delta=>{const visit=history.move(delta,viewerScroll());if(visit)openScreen(visit.screenId,{push:false});},scroll});
+  host.replaceChildren(viewer);
  };
- const viewerScroll=()=>main.querySelector('.prototype-scroll')?.scrollTop||0;
+ const highlightTriggers=(triggers:string[]|undefined)=>{
+  const doc=frame?.contentDocument;if(!doc||!current)return;
+  doc.querySelectorAll<HTMLElement>('[data-line-trigger]').forEach(node=>{node.style.outline=node.dataset.lineTrigger||'';delete node.dataset.lineTrigger;});
+  for(const component of triggers||[])for(const node of nodesFor(doc,current,component)){node.dataset.lineTrigger=node.style.outline;node.style.outline='3px solid #2347c5';node.scrollIntoView({block:'nearest'});}
+ };
+ const ensureCanvas=()=>{
+  if(view&&main.contains(view.element))return view;
+  view=canvas(index,payload,{...canvasState(),transform:canvasTransform,onTransformChange:state=>{canvasTransform=state;},onOpen:id=>openScreen(id),renderFocus,onLineHover:highlightTriggers,onExitRequest:()=>showCanvas()});
+  main.replaceChildren(view.element);
+  return view;
+ };
+ const viewerScroll=()=>viewer?.querySelector('.prototype-scroll')?.scrollTop||0;
 
  const render=()=>{
   shell.dataset.page=page;
   screensTab.setAttribute('aria-current',page==='screens'?'page':'false');apiTab.setAttribute('aria-current',page==='api'?'page':'false');
   renderProgress();renderSidebar();renderPanel();
   if(page==='api'){
-   const view=apiPage(index,reviewState,{selected:selectedApi,onCaller:(screenId,componentId)=>openScreen(screenId,{component:componentId})});
+   const apis=apiPage(index,reviewState,{selected:selectedApi,onCaller:(screenId,componentId)=>openScreen(screenId,{component:componentId})});
    const hint=(graph.diagnostics as {code?:string;evidence?:unknown}[]|undefined||[]).find(d=>d?.code==='CONTEXT_PATH_HINT');
-   if(hint){const note=element('p',`有 ${Array.isArray(hint.evidence)?hint.evidence.length:0} 個呼叫因為網址前綴無法確認，相關 API 可能被誤列為未被使用；請分析人員以 ./bin/screentrace config 設定 context path 後重新分析。`,'notice');note.dataset.contextPathReminder='true';view.querySelector('.api-heading')?.append(note);}
-   main.replaceChildren(view);viewerScreen=undefined;
-  }else if(current){if(viewerScreen!==current)renderViewer(current);else{const frame=main.querySelector('iframe');if(frame)frame.srcdoc=previewDocument(payload,current,decoratePreview(current));}}
-  else renderCanvas();
+   if(hint){const note=element('p',`有 ${Array.isArray(hint.evidence)?hint.evidence.length:0} 個呼叫因為網址前綴無法確認，相關 API 可能被誤列為未被使用；請分析人員以 ./bin/screentrace config 設定 context path 後重新分析。`,'notice');note.dataset.contextPathReminder='true';apis.querySelector('.api-heading')?.append(note);}
+   main.replaceChildren(apis);view=undefined;frame=undefined;viewer=undefined;simulation=undefined;
+   return;
+  }
+  const canvasView=ensureCanvas();canvasView.update(canvasState());
+  if(current&&canvasView.focused!==current)canvasView.focus(current);
+  else if(!current&&canvasView.focused)canvasView.exit();
+  else if(current&&frame?.contentDocument)decorate(frame.contentDocument,current);
  };
 
  const openScreen=(id:string,options:{component?:string;push?:boolean}={})=>{
   if(options.push!==false){if(!current||page!=='screens')history.start(id);else history.visit(id,viewerScroll());}
   if(current!==id)buttonsOpen=false;
   highlightComponent=options.component;if(options.component)buttonsOpen=true;
-  page='screens';current=id;viewerScreen=undefined;render();
+  if(current!==id){frame=undefined;viewer=undefined;simulation=undefined;}
+  page='screens';current=id;render();
  };
- const showCanvas=()=>{page='screens';current=undefined;highlightComponent=undefined;render();};
+ const showCanvas=()=>{page='screens';current=undefined;highlightComponent=undefined;frame=undefined;viewer=undefined;simulation=undefined;render();};
  const showApi=(id?:string)=>{page='api';selectedApi=id;current=undefined;render();};
  screensTab.onclick=()=>{if(page!=='screens'||current)showCanvas();};
  apiTab.onclick=()=>showApi();
  listButton.onclick=()=>{listMode='list';renderSidebar();};
  filesButton.onclick=()=>{listMode='files';renderSidebar();};
  let searchTimer:ReturnType<typeof setTimeout>|undefined;
- search.oninput=()=>{clearTimeout(searchTimer);searchTimer=setTimeout(()=>{query=search.value.trim();renderSidebar();if(page==='screens'&&!current)renderCanvas();},150);};
- clearSearch.onclick=()=>{search.value='';query='';renderSidebar();if(page==='screens'&&!current)renderCanvas();search.focus();};
+ const applySearch=()=>{renderSidebar();if(page==='screens')view?.update(canvasState());};
+ search.oninput=()=>{clearTimeout(searchTimer);searchTimer=setTimeout(()=>{query=search.value.trim();applySearch();},150);};
+ clearSearch.onclick=()=>{search.value='';query='';applySearch();search.focus();};
 
  // ---- md download / open
  download.onclick=async()=>{

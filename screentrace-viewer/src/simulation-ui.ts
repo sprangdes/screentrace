@@ -1,48 +1,123 @@
 import {needsSimulationSurface,simulationSurface} from './simulation-surface';
-import {Payload,ElementRecord} from './contracts';import {assessSimulation,simulationReasonText,simulationReasons,SimulationReason,Effect} from './simulation';import {previewElement,previewSelector} from './preview';import {inertDocument} from './inert-document';import {element} from './text';
-export interface SimulationPreferences {}
+import {assessSimulation,Effect} from './simulation';
+import {previewElement,previewSelector} from './preview';
+import {Payload,ElementRecord} from './contracts';
+import {element} from './text';
+
 const operable='a,button,form,select,input,textarea';
-const eventElement=(target:EventTarget|null):Element|null=>{if(!target)return null;const candidate=target as Element;if(typeof candidate.closest==='function')return candidate;return(target as Node).parentElement||null;};
-function dialogRecords(payload:Payload,id:string,doc:Document){const result=new Map<string,Element>();for(const record of payload.preview.elements||[])if(record.graphScreenId===id&&record.graphComponentId&&record.componentResolution!=='UNRESOLVED'&&record.componentResolution!=='AMBIGUOUS')try{const node=doc.querySelector(previewSelector(record.path));if(node)result.set(record.graphComponentId,node);}catch{}return result;}
-function editableInput(node:Element):boolean{return ['input','select','textarea'].includes(node.localName)&&!node.hasAttribute('disabled')&&!node.hasAttribute('readonly')&&!['hidden','button','submit','reset','image','file'].includes(node.getAttribute('type')||'');}
-function submitControl(node:Element):boolean{return(node.localName==='button'&&(!node.getAttribute('type')||node.getAttribute('type')==='submit'))||node.localName==='input'&&['submit','image'].includes(node.getAttribute('type')||'');}
-/** Shared element entry point for click handling, coverage and explanations. Submit controls resolve through their associated form exactly as a real click does. */
-export function simulateElement(payload:Payload,id:string,node:Element,dialogIds=[...dialogRecords(payload,id,node.ownerDocument).keys()],valid=true,componentId?:string){const form=submitControl(node)?(node as HTMLButtonElement).form:undefined,target=form||node,record=previewElement(payload,id,target),result=assessSimulation(payload,id,record,{tag:target.localName,href:target.getAttribute('href')||undefined,valid,dialogIds,componentId});return{...(!result.possible&&editableInput(target)?{...result,reason:undefined}:result),node:target,record,delegated:target!==node};}
-export function elementSimulationAssessment(payload:Payload,id:string,node:Element,dialogIds=[...dialogRecords(payload,id,node.ownerDocument).keys()]){const{node:target,record,...result}=simulateElement(payload,id,node,dialogIds,true);return result;}
-function possible(payload:Payload,id:string,node:Element,dialogIds:string[]){return elementSimulationAssessment(payload,id,node,dialogIds);}
-export type ReasonCounts=Record<SimulationReason,number>;
-const emptyReasons=()=>Object.fromEntries(simulationReasons.map(r=>[r,0])) as ReasonCounts;
-export function simulationCoverage(payload:Payload,id:string,document?:Document){const doc=document||inertDocument(payload.documents[id]||''),dialogIds=[...dialogRecords(payload,id,doc).keys()],reasons=emptyReasons();let total=0,simulatable=0,editable=0,multipleCandidates=0;for(const node of doc.querySelectorAll(operable)){total++;const result=simulateElement(payload,id,node,dialogIds);if(result.possible){simulatable++;if(result.delegated&&result.effect.reason==='BEHAVIOR_AMBIGUOUS'&&(result.effect.choices?.length||0)>1)multipleCandidates++;}else if(editableInput(node))editable++;else reasons[result.reason!]++;}return{total,simulatable,editable,unknown:total-simulatable-editable,missing:!payload.documents[id],multipleCandidates,reasons};}
-export function projectSimulationCoverage(payload:Payload){let total=0,simulatable=0,editable=0,unknown=0,missing=0,multipleCandidates=0;const reasons=emptyReasons();for(const node of payload.graph.nodes.filter(n=>n.type==='SCREEN')){const count=simulationCoverage(payload,node.id);total+=count.total;simulatable+=count.simulatable;editable+=count.editable;unknown+=count.unknown;missing+=Number(count.missing);multipleCandidates+=count.multipleCandidates;for(const reason of simulationReasons)reasons[reason]+=count.reasons[reason];}return{total,simulatable,editable,unknown,missing,multipleCandidates,reasons};}
-export function supportedLabel(coverage:{simulatable:number;multipleCandidates:number}){return`有圖支持的行為 ${coverage.simulatable} 個${coverage.multipleCandidates?`（其中 ${coverage.multipleCandidates} 個有多個候選）`:''}`;}
-export function coverageReasons(count:{unknown:number;reasons:ReasonCounts}):HTMLElement{
- const r=count.reasons,recorded=r.BEHAVIOR_AMBIGUOUS+r.DESTINATION_UNRESOLVED+r.UNSUPPORTED_SIMULATION,parts:string[]=[];
- if(r.NO_KNOWN_BEHAVIOR)parts.push(`沒有已知的行為 ${r.NO_KNOWN_BEHAVIOR}`);
- if(recorded){const sub=[r.BEHAVIOR_AMBIGUOUS?`有歧義 ${r.BEHAVIOR_AMBIGUOUS}`:'',r.DESTINATION_UNRESOLVED?`目的未解析 ${r.DESTINATION_UNRESOLVED}`:'',r.UNSUPPORTED_SIMULATION?`類型或事件不支援 ${r.UNSUPPORTED_SIMULATION}`:''].filter(Boolean);parts.push(`已記錄行為但無法確認結果 ${recorded}（${sub.join('、')}）`);}
- for(const reason of simulationReasons.slice(0,5))if(r[reason])parts.push(`${simulationReasonText(reason).split('：')[0]} ${r[reason]}`);
- const details=element('details',undefined,'simulation-coverage-reasons');details.append(element('summary',`無法確認 ${count.unknown} 個${parts.length?'：'+parts.join('、'):''}`));for(const reason of simulationReasons)if(r[reason])details.append(element('p',`${simulationReasonText(reason)}：${r[reason]} 個`));return details;
+const eventElement=(target:EventTarget|null):Element|null=>{if(!target)return null;const candidate=target as Element;if(typeof candidate.closest==='function')return candidate;return (target as Node).parentElement||null;};
+
+function dialogRecords(payload:Payload,id:string,doc:Document):Map<string,Element>{
+ const result=new Map<string,Element>();
+ for(const record of payload.preview.elements||[])if(record.graphScreenId===id&&record.graphComponentId&&record.componentResolution!=='UNRESOLVED'&&record.componentResolution!=='AMBIGUOUS')try{const node=doc.querySelector(previewSelector(record.path));if(node)result.set(record.graphComponentId,node);}catch{}
+ return result;
 }
-export function attachSimulation(payload:Payload,id:string,frame:HTMLIFrameElement,main:HTMLElement,panel:HTMLElement,_preferences:SimulationPreferences,options:{select:(node:Element,toggle?:boolean,ownerForm?:HTMLFormElement)=>void;hover?:(node:Element,active:boolean)=>void;focus:(id:string)=>void;api:(id:string)=>void}):{closeDialog:()=>boolean} {
- const doc=frame.contentDocument!;const status=main.querySelector<HTMLElement>('.prototype-status')||element('div',undefined,'prototype-status');if(!status.isConnected)main.append(status);
- const coverage=simulationCoverage(payload,id,doc),coverageLabel=element('p',`此畫面：${supportedLabel(coverage)}；可直接輸入的欄位 ${coverage.editable} 個；無法確認 ${coverage.unknown} 個`,'simulation-coverage'),coverageDetails=coverageReasons(coverage);(panel.querySelector('[data-detail-tab="0"]')||panel).prepend(coverageLabel,coverageDetails);
- const available=dialogRecords(payload,id,doc),dialogIds=[...available.keys()];let close:undefined|(()=>void);let surface:ReturnType<typeof simulationSurface>|undefined;
- const style=doc.createElement('style');style.dataset.stViewer='true';style.textContent='.st-preview-hover{outline:2px solid #0f766e!important;outline-offset:2px;cursor:pointer!important}.st-first-pulse{animation:st-preview-pulse 1.2s ease-in-out 1}@keyframes st-preview-pulse{0%,100%{outline:0 solid transparent}35%,65%{outline:3px solid #0f766e;outline-offset:2px}}@media(prefers-reduced-motion:reduce){.st-first-pulse{animation:none;outline:2px solid #0f766e!important;outline-offset:2px}}';doc.head?.append(style);
- for(const node of doc.querySelectorAll<HTMLElement>(operable))if(simulateElement(payload,id,node,dialogIds).possible)node.dataset.simulationCapable='true';
- const evidence=(host:HTMLElement,effect:Effect)=>{if(!effect.evidence?.length&&!effect.expression)return;const details=element('details');details.append(element('summary','技術細節'));if(effect.expression)details.append(element('code',effect.expression));for(const e of effect.evidence||[])details.append(element('p',`${e.resolution} · ${e.source?`${e.source.file}:${e.source.line}`:''} · ${e.detail||e.parser}`));host.append(details);};
- const popup=(target:string)=>{const source=available.get(target);if(!source){status.textContent='彈窗內容無法從靜態分析重建';return;}close?.();const active=(surface?globalThis.document.activeElement:doc.activeElement) as HTMLElement,backdrop=doc.createElement('div'),modal=doc.createElement('section'),button=doc.createElement('button'),content=source.cloneNode(true) as HTMLElement;backdrop.className='simulation-backdrop';backdrop.dataset.stSimulationUi='true';const scale=Number(main.querySelector<HTMLElement>('.prototype-viewer')?.dataset.scale||'1'),rect=frame.getBoundingClientRect(),scroll=main.querySelector<HTMLElement>('.prototype-scroll');backdrop.style.cssText=`position:absolute;left:0;top:${Math.max(0,-rect.top+(scroll?.getBoundingClientRect().top||0))/scale}px;width:100%;height:${(scroll?.clientHeight||rect.height)/scale}px;background:#0007;z-index:2147483647;display:flex;align-items:center;justify-content:center;`;
- modal.className='simulation-modal';modal.setAttribute('role','dialog');modal.setAttribute('aria-modal','true');modal.style.cssText='background:white;color:#172d26;padding:20px;max-width:85%;max-height:85%;overflow:auto;border-radius:8px;';button.textContent='關閉模擬彈窗';button.type='button';content.hidden=false;content.removeAttribute('aria-hidden');content.style.setProperty('display','block','important');content.style.setProperty('visibility','visible','important');content.style.position='static';content.style.opacity='1';modal.append(button,content);backdrop.append(modal);doc.body.append(backdrop);close=()=>{backdrop.remove();close=undefined;surface?.update();if(active?.isConnected)active.focus();};button.onclick=e=>{e.preventDefault();close?.();};backdrop.onclick=e=>{if(e.target===backdrop)close?.();};if(surface){surface.update();surface.focusDialog();}else button.focus();};
- const render=(effect:Effect,record?:ElementRecord,node?:Element)=>{if(!coverageLabel.isConnected)(panel.querySelector('[data-detail-tab="0"]')||panel).prepend(coverageLabel,coverageDetails);status.replaceChildren();const message=effect.message||effect.kind==='api'?effect.message||`模擬呼叫 ${effect.method} ${effect.path}（不會真的送出）`:effect.kind==='form'?`模擬送出 ${effect.method} ${effect.path}（不會真的送出）`:effect.kind==='dialog'?`模擬開啟 ${effect.label}`:effect.kind==='navigate'?`前往 ${effect.label}`:'靜態分析無法確認這個操作';status.append(element('span',node?.localName==='form'&&effect.kind==='choices'?'這個表單可能送到下列路由，請選擇：':effect.kind==='choices'?'這個操作有多個可能結果，請選擇：':message));if(!effect.choices?.length)evidence(status,effect);if(effect.kind==='unknown'&&node){const reason=possible(payload,id,node,dialogIds).reason;if(reason)status.append(element('p',simulationReasonText(reason),'simulation-unconfirmed-reason'));}
-  if(effect.kind==='navigate'&&effect.targetId){options.focus(effect.targetId);return;}if(effect.kind==='dialog'&&effect.targetId){popup(effect.targetId);return;}if(effect.kind==='api'&&effect.targetId){const button=element('button','在 API 頁查看');button.onclick=()=>options.api(effect.targetId!);status.append(button);return;}
-  if(effect.kind==='form'){if(effect.rules?.length){status.append(element('p','可能的伺服器檢核訊息'));for(const rule of effect.rules)status.append(element('p',`${rule.fields.map(field=>payload.graph.nodes.find(n=>n.id===field)?.name||field).join('、')}：${rule.message||rule.kind}`));}const outcomes=effect.choices||[];if(outcomes.length===1&&outcomes[0].kind==='navigate'&&outcomes[0].resolution!=='AMBIGUOUS'){options.focus(outcomes[0].targetId!);const next=main.querySelector('.prototype-status');if(next)next.replaceChildren(...status.childNodes);return;}}
-  for(const choice of effect.choices||[]){const button=element('button',choice.label||choice.path||choice.message||'未知候選','simulation-choice');if(choice.targetId)button.dataset.target=choice.targetId;button.onclick=()=>{if(node?.localName==='form'&&!(node as HTMLFormElement).checkValidity()){if(surface)surface.reportValidity(node as HTMLFormElement);else (node as HTMLFormElement).reportValidity();render({kind:'invalid',message:'原生檢核未通過，請完成必填欄位與格式'},record,node);return;}if(choice.componentId&&record&&node){const selected=simulateElement(payload,id,node,dialogIds,node.localName==='form'?(node as HTMLFormElement).checkValidity():true,choice.componentId);render(selected.effect,selected.record as ElementRecord,node);}else render(choice,record,node);};const entry=element('section',undefined,'simulation-result-candidate');entry.append(button);const source=choice.evidence?.find(e=>e.source?.file&&e.source.file!=='.')?.source||record?.source;const file=source?.file.split(/[\\/]/).pop();const reason=choice.kind==='form'?`來源${file?'檔 '+file:'中的表單'}對應到這條路由；分析無法確認這次使用哪個用途。`:choice.kind==='unknown'?'這個結果尚未解析，選取後只顯示說明，不會導向。':`圖中記錄了這個可能結果${file?'，來源檔為 '+file:''}；條件是否成立未執行判斷。`;entry.append(element('p',reason,'simulation-reason'));evidence(entry,{...choice,expression:choice.expression||effect.expression,evidence:choice.evidence||effect.evidence});status.append(entry);}
+function editableInput(node:Element):boolean{return ['input','select','textarea'].includes(node.localName)&&!node.hasAttribute('disabled')&&!node.hasAttribute('readonly')&&!['hidden','button','submit','reset','image','file'].includes(node.getAttribute('type')||'');}
+function submitControl(node:Element):boolean{return node.localName==='button'&&(!node.getAttribute('type')||node.getAttribute('type')==='submit')||node.localName==='input'&&['submit','image'].includes(node.getAttribute('type')||'');}
+
+/** Simulates a click as the real page would: a submit control acts for its form, and forms are always treated as valid. */
+export function simulateElement(payload:Payload,id:string,node:Element,dialogIds=[...dialogRecords(payload,id,node.ownerDocument).keys()],componentId?:string){
+ const form=submitControl(node)?(node as HTMLButtonElement|HTMLInputElement).form:undefined,target=form||node,record=previewElement(payload,id,target);
+ const result=assessSimulation(payload,id,record,{tag:target.localName,href:target.getAttribute('href')||undefined,valid:true,dialogIds,componentId});
+ return {...(!result.possible&&editableInput(target)?{...result,reason:undefined}:result),node:target,record,delegated:target!==node};
+}
+export function elementSimulationAssessment(payload:Payload,id:string,node:Element,dialogIds=[...dialogRecords(payload,id,node.ownerDocument).keys()]){
+ const {node:_target,record:_record,...result}=simulateElement(payload,id,node,dialogIds);
+ return result;
+}
+
+export const unknownDestination='無法確定前往哪個畫面';
+
+export interface SimulationOptions {focus:(id:string)=>void;api:(id:string)=>void;thumbnail:(id:string)=>string|undefined}
+
+/** Wires clicks inside the static preview: navigate, open dialogs, show API calls, or offer the possible destinations. */
+export function attachSimulation(payload:Payload,id:string,frame:HTMLIFrameElement,viewer:HTMLElement,options:SimulationOptions){
+ const doc=frame.contentDocument!,status=viewer.querySelector<HTMLElement>('.prototype-status')!;
+ const available=dialogRecords(payload,id,doc),dialogIds=[...available.keys()];
+ let close:(()=>void)|undefined,surface:ReturnType<typeof simulationSurface>|undefined,picker:HTMLElement|undefined;
+ const style=doc.createElement('style');style.dataset.stViewer='true';
+ style.textContent='[data-simulation-capable]{cursor:pointer!important}[data-simulation-capable]:hover,[data-simulation-capable]:focus-visible{outline:2px solid #2347c5!important;outline-offset:2px}';
+ doc.head?.append(style);
+ for(const node of doc.querySelectorAll(operable))if(simulateElement(payload,id,node,dialogIds).possible)(node as HTMLElement).dataset.simulationCapable='true';
+ const closePicker=()=>{picker?.remove();picker=undefined;};
+ const say=(text:string,action?:{label:string;run:()=>void})=>{
+  status.replaceChildren(element('span',text));
+  if(action){const button=element('button',action.label,'link-row inline');button.onclick=action.run;status.append(button);}
  };
- const submit=(form:HTMLFormElement,submitter?:Element|null)=>{options.select(submitter||form,false,submitter?form:undefined);const valid=form.checkValidity();if(!valid){if(surface)surface.reportValidity(form);else form.reportValidity();}const result=simulateElement(payload,id,form,dialogIds,valid);render(result.effect,result.record as ElementRecord,form);};
+ const popup=(target:string)=>{
+  const source=available.get(target);if(!source){say('彈窗內容無法從原始碼重建');return;}
+  close?.();
+  const active=surface?globalThis.document.activeElement as HTMLElement|null:doc.activeElement as HTMLElement|null,backdrop=doc.createElement('div'),modal=doc.createElement('section'),button=doc.createElement('button'),content=source.cloneNode(true) as HTMLElement;
+  backdrop.className='simulation-backdrop';backdrop.dataset.stSimulationUi='true';
+  const scale=Number(viewer.dataset.scale||'1'),rect=frame.getBoundingClientRect(),scroll=viewer.querySelector('.prototype-scroll');
+  backdrop.style.cssText=`position:absolute;left:0;top:${Math.max(0,-rect.top+(scroll?.getBoundingClientRect().top||0))/scale}px;width:100%;height:${(scroll?.clientHeight||rect.height)/scale}px;background:#0007;z-index:2147483647;display:flex;align-items:center;justify-content:center;`;
+  modal.className='simulation-modal';modal.setAttribute('role','dialog');modal.setAttribute('aria-modal','true');
+  modal.style.cssText='background:white;color:#1b1e22;padding:20px;max-width:85%;max-height:85%;overflow:auto;border-radius:8px;';
+  button.textContent='關閉模擬彈窗';button.type='button';
+  content.hidden=false;content.removeAttribute('aria-hidden');content.style.setProperty('display','block','important');content.style.setProperty('visibility','visible','important');content.style.position='static';content.style.opacity='1';
+  modal.append(button,content);backdrop.append(modal);doc.body.append(backdrop);
+  close=()=>{backdrop.remove();close=undefined;surface?.update();if(active?.isConnected)active.focus();};
+  button.onclick=event=>{event.preventDefault();close?.();};
+  backdrop.onclick=event=>{if(event.target===backdrop)close?.();};
+  if(surface){surface.update();surface.focusDialog();}else button.focus();
+ };
+ const label=(choice:Effect)=>choice.kind==='navigate'?choice.label||'畫面':choice.kind==='api'?`呼叫 API：${choice.method} ${choice.path}`:choice.kind==='dialog'?`開啟彈窗：${choice.label||''}`:choice.kind==='form'?`送出到 ${choice.path}`:unknownDestination;
+ const choose=(choices:Effect[],node:Element,record:ElementRecord|undefined)=>{
+  closePicker();
+  const box=element('div',undefined,'simulation-picker');box.setAttribute('role','dialog');box.setAttribute('aria-label','可能的結果');box.dataset.stSimulationUi='true';
+  box.append(element('strong','這個操作可能前往：'));
+  for(const choice of choices){
+   const button=element('button',undefined,'simulation-choice');
+   if(choice.targetId)button.dataset.target=choice.targetId;
+   const thumb=choice.kind==='navigate'&&choice.targetId?options.thumbnail(choice.targetId):undefined;
+   if(thumb){const img=element('img');img.src=thumb;img.alt='';button.append(img);}
+   button.append(element('span',label(choice)));
+   button.onclick=()=>{closePicker();if(choice.componentId&&record){render(simulateElement(payload,id,node,dialogIds,choice.componentId).effect,record,node);}else render(choice,record,node);};
+   box.append(button);
+  }
+  const dismiss=element('button','取消','simulation-cancel');dismiss.onclick=closePicker;box.append(dismiss);
+  const scale=Number(viewer.dataset.scale||'1'),frameBox=frame.getBoundingClientRect(),nodeBox=node.getBoundingClientRect(),host=viewer.getBoundingClientRect();
+  box.style.left=`${Math.max(8,Math.min(host.width-288,frameBox.left-host.left+nodeBox.left*scale))}px`;
+  box.style.top=`${Math.max(8,frameBox.top-host.top+nodeBox.bottom*scale+6)}px`;
+  viewer.append(box);picker=box;box.querySelector<HTMLButtonElement>('.simulation-choice')?.focus();
+ };
+ const render=(effect:Effect,record:ElementRecord|undefined,node:Element)=>{
+  status.replaceChildren();
+  if(effect.kind==='navigate'&&effect.targetId){options.focus(effect.targetId);return;}
+  if(effect.kind==='dialog'&&effect.targetId){popup(effect.targetId);return;}
+  if(effect.kind==='api'&&effect.targetId){const target=effect.targetId;say(`呼叫 API：${effect.method} ${effect.path}（不會真的送出）`,{label:'在 API 頁查看',run:()=>options.api(target)});return;}
+  if(effect.kind==='external'){say('外部連結（不會開啟）');return;}
+  const choices=effect.choices||[];
+  if(effect.kind==='form'&&choices.length===1&&choices[0].kind==='navigate'&&choices[0].resolution!=='AMBIGUOUS'&&choices[0].targetId){options.focus(choices[0].targetId);return;}
+  if(choices.length){choose(choices,node,record);return;}
+  say(unknownDestination);
+ };
+ const submit=(form:HTMLFormElement,submitter:Element|null=null)=>{
+  const result=simulateElement(payload,id,submitter&&submitControl(submitter)?submitter:form,dialogIds);
+  render(result.effect,result.record,submitter||form);
+ };
  doc.addEventListener('submit',event=>{event.preventDefault();const submission=event as SubmitEvent;submit(event.target as HTMLFormElement,submission.submitter instanceof Element?submission.submitter:null);},true);
- const click=(target:Element)=>{options.select(target);const isSubmit=submitControl(target);const form=(target as HTMLButtonElement).form;if(!coverageLabel.isConnected)(panel.querySelector('[data-detail-tab="0"]')||panel).prepend(coverageLabel,coverageDetails);if(isSubmit&&form){submit(form,target);return;}const result=simulateElement(payload,id,target,dialogIds,true);render(result.effect,result.record as ElementRecord,target);};
- const change=(node:Element)=>{const record=previewElement(payload,id,node);if(node.localName!=='select'&&!(payload.graph.behaviors||[]).some(b=>b.triggerId===record?.graphComponentId&&b.event==='change'))return;const result=simulateElement(payload,id,node,dialogIds,true);render(result.effect,result.record as ElementRecord,node);};
- let longPress:ReturnType<typeof setTimeout>|undefined,longPressed:Element|undefined;doc.addEventListener('pointerdown',event=>{if(event.pointerType!=='touch')return;const target=eventElement(event.target)?.closest(operable);if(!target)return;longPress=setTimeout(()=>{longPressed=target;options.select(target,false);},550);});doc.addEventListener('pointerup',()=>{if(longPress)clearTimeout(longPress);longPress=undefined;});doc.addEventListener('pointercancel',()=>{if(longPress)clearTimeout(longPress);longPress=undefined;});
- doc.addEventListener('click',event=>{const target=eventElement(event.target)?.closest(operable);if(!target||target.closest('[data-st-simulation-ui]'))return;if(target.localName==='a'||target.localName==='button'||target.localName==='input'&&['submit','image'].includes(target.getAttribute('type')||''))event.preventDefault();if(longPressed===target){longPressed=undefined;event.preventDefault();return;}if(event.altKey){options.select(target,true);return;}click(target);});
+ const click=(target:Element)=>{
+  const form=(target as HTMLButtonElement).form;
+  if(submitControl(target)&&form){submit(form,target);return;}
+  const result=simulateElement(payload,id,target,dialogIds);
+  render(result.effect,result.record,target);
+ };
+ const change=(node:Element)=>{
+  const record=previewElement(payload,id,node);
+  if(node.localName!=='select'&&!(payload.graph.behaviors||[]).some(b=>b.triggerId===record?.graphComponentId&&b.event==='change'))return;
+  const result=simulateElement(payload,id,node,dialogIds);
+  render(result.effect,result.record,node);
+ };
+ doc.addEventListener('click',event=>{
+  closePicker();
+  const target=eventElement(event.target)?.closest(operable);
+  if(!target||target.closest('[data-st-simulation-ui]'))return;
+  if(target.localName==='a'||target.localName==='button'||target.localName==='input'&&['submit','image'].includes(target.getAttribute('type')||''))event.preventDefault();
+  click(target);
+ });
  doc.addEventListener('change',event=>change(event.target as Element));
- if(needsSimulationSurface())surface=simulationSurface(frame,options.select,click,submit,change,()=>close?.(),options.hover);
- return{closeDialog:()=>{if(!close)return false;close();return true;}};
+ doc.addEventListener('scroll',closePicker);
+ if(needsSimulationSurface())surface=simulationSurface(frame,()=>{},click,submit,change,()=>close?.());
+ return {closeDialog:()=>{if(picker){closePicker();return true;}if(!close)return false;close();return true;}};
 }

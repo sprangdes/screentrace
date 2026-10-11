@@ -82,3 +82,4 @@
 
 - 需求方於 2026-10-11 決定回到主要流程、全面簡化報表：只剩「畫面」「API」兩頁、畫布 zoom in 聚焦、模擬操作＝真實點擊、進度自動存成 md、移除信心狀態／樣式／元件庫。指示見 [ADJUSTMENT_R17_FLOW.md](ADJUSTMENT_R17_FLOW.md)。
 - 第一階段（WP60、WP61，並提前完成 WP64）：報表改為兩頁，移除 §2 清單功能，API 頁三狀態。完整驗證後停止等待需求方檢視，見 [R17 報告](reports/R17.md)、[ADR 0084](adr/0084-r17-two-page-report-and-retired-tests.md)。
+- 第二階段（WP62、WP63）：畫布 zoom in 聚焦、關聯線縮圖與前往、點擊模擬不受檢核限制。完整驗證後停止等待需求方檢視，見 [R17 報告](reports/R17.md)、[ADR 0085](adr/0085-r17-canvas-zoom-focus-and-click-simulation.md)。

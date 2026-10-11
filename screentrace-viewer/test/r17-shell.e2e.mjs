@@ -34,7 +34,7 @@ test('R17 report has only the screen and API pages and none of the retired featu
   assert.equal(await page.locator('.feature-lane,.map-legend,.first-run-guide,.global-search-dialog,.information-drawer,.flow-outline').count(),0);
   await page.keyboard.press('Control+k');await page.keyboard.press('Meta+k');
   assert.equal(await page.locator('dialog[open]').count(),0);
-  assert.equal(await page.locator('.screen-card').count(),2);
+  assert.equal(await page.locator('.screen-card:not([hidden])').count(),2);
   assert.deepEqual(requests,[]);
  }finally{await browser.close();}
 });
@@ -78,7 +78,7 @@ test('R17 screen decisions from the panel and keyboard update list, canvas, prog
   assert.equal(await page.locator('.screen-card[data-screen="a"]').getAttribute('data-screen-status'),'KEEP');
   await page.locator('[data-state-filter="REMOVE"]').click();
   assert.deepEqual(await page.locator('.screen-list [data-screen-list]').evaluateAll(rows=>rows.map(r=>r.dataset.screenList)),['b']);
-  assert.equal(await page.locator('.screen-card').count(),1);
+  assert.equal(await page.locator('.screen-card:not([hidden])').count(),1);
   await page.reload();await page.locator('#app[data-ready="true"]').waitFor();
   assert.equal(await page.locator('.screen-list [data-screen-list="a"]').getAttribute('data-decision'),'KEEP');
   assert.equal(await page.locator('.screen-list [data-screen-list="b"]').getAttribute('data-decision'),'REMOVE');
