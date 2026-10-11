@@ -34,7 +34,8 @@ class StrutsR16JsfBoundaryTest {
     ApplicationGraph graph=new StrutsProjectAnalyzer().analyze(new ProjectScanner().scan(root));
     GraphNode page=graph.nodes().stream().filter(node->node.type()==NodeType.SCREEN&&".home".equals(node.name())).findFirst().orElseThrow();
     assertEquals("JSF",page.attributes().get("unsupportedComponentFramework"));
-    assertFalse(graph.nodes().stream().anyMatch(node->node.type()==NodeType.SCREEN&&"src/main/webapp/layout.jsp".equals(node.attributes().get("view"))));
+    assertFalse(graph.nodes().stream().anyMatch(node->node.type()==NodeType.SCREEN&&".base".equals(node.name())));
+    assertFalse(graph.nodes().stream().anyMatch(node->node.type()==NodeType.SCREEN&&node.id().equals(io.screentrace.core.StableGraphIds.screen("src/main/webapp/layout.jsp"))));
     GraphNode baseView=graph.nodes().stream().filter(node->node.type()==NodeType.VIEW&&".base".equals(node.name())).findFirst().orElseThrow();
     assertEquals("src/main/webapp/layout.jsp",baseView.attributes().get("view"));
     assertTrue(graph.diagnostics().stream().anyMatch(item->item.code().equals("UNSUPPORTED_COMPONENT_FRAMEWORK")&&item.source().file().equals("src/main/webapp/layout.jsp")),graph.diagnostics().toString());
