@@ -73,3 +73,9 @@ manifest 文字同正文隔離（code span、300、控制／隱形可見化）�
 畫面摘要與元件表在 v3 增加「原因」「備註」欄。原因顯示中文標籤與固定代碼；備註是不可信使用者文字，套用正文專案文字的 code span、隱形／控制字元可見化、表格分隔符跳脫與 300 code point 上限。截斷標記指向 `附錄 A: screens.<screenId>.note` 或 `附錄 A: components.<screenId>.<componentId>.note`。不可把備註當成標題、清單或一般段落輸出。
 
 匯入 v3 僅接受已知欄位；`decision_notes` 必要，結構與型別嚴格驗證，原因必須符合該項 KEEP／REMOVE 決策的允許集合；備註不得超過 1,000 Unicode code point。`state_sha256` 涵蓋 `decision_notes` 與 v2 覆寫欄位。錯誤時拒絕整份匯入、不改目前狀態。v1／v2 欄位集合與 golden 不變。
+
+## R17：正文精簡與僅匯入相容（2026-10-11）
+
+- 匯出一律為 `format_version` 1，機器區只含 `analysis_fingerprint`、`screen_decisions`、`component_decisions`、`state_sha256`；同樣決策的附錄 A 位元組與 R17 前相同。
+- 正文移除：YAML 檔頭的 `migration_target.component_library`、固定指示原第 6、7 條（原第 8 條改為第 6 條，見 CODEX_INSTRUCTIONS §8.2）、元件表的「建議元件」「styleId」欄、原因／備註欄、API 表的「信心」欄、§6 元件庫對應、§9 樣式表。§7 衝突與警告、§8 分析限制依序改為 §6、§7；分析限制與證據表保留（供 AI 不自行猜測）。
+- `format_version` 2、3 改為**僅匯入相容**：驗證、摘要與欄位檢查不變；匯入後的元件庫覆寫、原因與備註由報表略過並提示，再匯出即為 v1。

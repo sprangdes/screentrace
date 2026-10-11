@@ -45,6 +45,21 @@ h1,h2,h3{margin:0}
 .popover h2{font-size:15px;margin-bottom:8px}
 .popover h3{font-size:12px;color:var(--gray-500);margin:12px 0 4px}
 .popover ul{margin:0;padding-left:18px;line-height:1.7;font-size:13px}
+.save-menu{position:relative}
+.save-menu>summary{list-style:none;cursor:pointer}
+.save-menu>summary::-webkit-details-marker{display:none}
+.file-state{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border:1px solid var(--gray-300);border-radius:6px;font-size:13px;white-space:nowrap}
+.file-dot{width:8px;height:8px;border-radius:50%;background:var(--gray-300)}
+.save-menu[data-file-state=saved] .file-dot{background:var(--keep)}
+.save-menu[data-file-state=saving] .file-dot{background:var(--primary)}
+.save-menu[data-file-state=none] .file-dot,.save-menu[data-file-state=pending] .file-dot{background:var(--warning)}
+.save-menu[data-file-state=error] .file-dot{background:var(--remove)}
+.save-menu[data-file-state=error] .file-state{border-color:var(--remove);color:var(--remove)}
+.save-menu[data-file-state=pending] .file-state{border-color:var(--warning);color:var(--warning);font-weight:600}
+.save-panel{display:flex;flex-direction:column;gap:6px}
+.save-panel p{margin:0 0 4px;line-height:1.6}
+.menu-row{width:100%;text-align:left}
+.menu-row.primary{text-align:center}
 .progress-row{display:flex;justify-content:space-between;width:100%;border:0;padding:6px 8px;text-align:left}
 .link-row{display:block;width:100%;text-align:left;border:0;padding:6px 8px;color:var(--primary);background:transparent;overflow-wrap:anywhere}
 .link-row:hover{background:var(--primary-soft)}

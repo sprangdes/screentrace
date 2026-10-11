@@ -40,3 +40,7 @@ md 雙格式契約見 REVIEW_MD_CONTRACT；有效／orphan ID 同時可逆還原
 切換保留／移除時，若舊原因不適用新決策則只清原因、保留備註。切為未決定時原因與備註留在本機狀態，介面收起且不匯出；重新作出相容決策時恢復。原因與備註仍使用畫面 ID 或 `(screenId, componentId)` 複合鍵，不建立合併鍵。驗證時拒絕未知欄位、原因與決策不相容、錯型別與超長備註；ID 以 own-property 字典處理。
 
 首次選用元件庫可讀同指紋的舊 WP8 key，保留決策後立即經共用分區；v1 md 匯入即使沒有覆寫，也正規化到目前 manifest 摘要 key。不得因匯入 v1 而退回未含摘要的暫存 key。
+
+## R17：退場欄位
+
+報表不再建立 `decisionNotes`、`component_overrides`、`orphan_component_overrides`、`manifest_sha256`。瀏覽器暫存或匯入的狀態若含這些欄位，載入時略過並提示一次；保留／移除決策與儲存鍵不變。`batchSetComponents` 隨批次標記退場移除。確認進度另可自動寫入使用者選擇的 md 進度檔（見 ADR 0086）；瀏覽器暫存仍同時寫入作為備援。

@@ -14,6 +14,7 @@ import {screenPanel,emptyScreenPanel} from './screen-panel';
 import {decisionLabel} from './review-ui';
 import {previewDocument,previewSelector} from './preview';
 import {generateMarkdown,importMarkdown,markdownSizeWarning} from './shared/review-md';
+import {autosaveSupported,chooseSaveFile,chooseOpenFile,isCancel,writeFile,handleStore,FileHandle} from './progress-file';
 import {loadReview,saveReview,screenDecision,componentDecision,effectiveComponent,setScreen,setComponent,statistics,conflicts,ReviewState,Decision} from './shared/review';
 
 type Filter='ALL'|'UNDECIDED'|'KEEP'|'REMOVE';
@@ -65,7 +66,9 @@ try {
  progressSummary.setAttribute('aria-label','確認進度');progress.append(progressSummary,progressPanel);
  const saveStatus=element('span',undefined,'save-status');saveStatus.setAttribute('role','status');
  const download=element('button',undefined,'primary download-md');download.append(icon('import'),element('span','下載 md'));download.dataset.mdExport='true';
- const openMd=element('button',undefined,'secondary open-md');openMd.append(element('span','開啟 md'));openMd.dataset.mdImport='true';
+ const openMd=element('button','開啟 md…','menu-row');openMd.dataset.mdImport='true';
+ const saveMenu=element('details',undefined,'save-menu'),saveSummary=element('summary',undefined,'file-state'),savePanel=element('div',undefined,'popover save-panel');
+ saveSummary.setAttribute('aria-label','進度檔');saveMenu.append(saveSummary,savePanel);
  const fileInput=element('input');fileInput.type='file';fileInput.accept='.md,text/markdown,text/plain';fileInput.hidden=true;fileInput.setAttribute('aria-label','開啟 md');
  const help=element('details',undefined,'help-menu'),helpSummary=element('summary',undefined,'icon-button');
  helpSummary.setAttribute('aria-label','說明');helpSummary.title='說明';helpSummary.append(icon('question'));
@@ -77,10 +80,10 @@ try {
  helpList('狀態',['綠色勾：保留','紅色叉：移除','沒有標示：未確認','隨畫面移除：畫面標記移除時，沒有個別標記的按鈕一起移除']);
  helpList('ScreenTrace 看不到的事',['書籤或 Email 連結直接進入的畫面','排程、批次工作或其他系統直接呼叫的 API','比對不到已知網址格式的程式組成連結']);
  help.append(helpSummary,helpPanel);
- actions.append(progress,saveStatus,download,openMd,fileInput,help);
+ actions.append(progress,saveMenu,saveStatus,download,fileInput,help);
  header.append(tabs,actions);
- for(const menu of [progress,help])menu.addEventListener('keydown',event=>{if(event.key==='Escape'&&menu.open){event.stopPropagation();menu.open=false;menu.querySelector('summary')!.focus();}});
- document.addEventListener('click',event=>{for(const menu of [progress,help])if(menu.open&&!menu.contains(event.target as Node))menu.open=false;});
+ for(const menu of [progress,help,saveMenu])menu.addEventListener('keydown',event=>{if(event.key==='Escape'&&menu.open){event.stopPropagation();menu.open=false;menu.querySelector('summary')!.focus();}});
+ document.addEventListener('click',event=>{for(const menu of [progress,help,saveMenu])if(menu.open&&!menu.contains(event.target as Node))menu.open=false;});
 
  // ---- shell
  const shell=element('div',undefined,'shell'),nav=element('nav',undefined,'sidebar'),main=element('main'),panel=element('aside',undefined,'details-panel');
@@ -103,12 +106,74 @@ try {
  if(initial.dropped)notices.append(element('p','先前的進度含已不再使用的欄位（原因、備註、元件庫對應），已略過；保留／移除標記不受影響。','notice'));
 
  const visibleScreens=():Set<string>|undefined=>filter==='ALL'?undefined:new Set(index.screens.filter(s=>screenDecision(reviewState,s.id)===filter).map(s=>s.id));
- const persist=()=>{
-  const failure=saveReview(storage,reviewState);
-  saveStatus.textContent=failure?'⚠ 無法暫存在瀏覽器，請下載 md':'已暫存在此瀏覽器';
-  saveStatus.dataset.state=failure?'error':'saved';
+ const say=(message:string,state:'saved'|'error'='saved')=>{saveStatus.textContent=message;saveStatus.dataset.state=state;};
+ const persist=()=>{if(saveReview(storage,reviewState))say('⚠ 無法暫存在瀏覽器，請下載 md','error');};
+
+ const applyImported=(imported:Awaited<ReturnType<typeof importMarkdown>>)=>{
+  const clean=withoutRetiredFields(imported.state);
+  reviewState=clean.state;persist();
+  notices.querySelectorAll('[data-import-notice]').forEach(n=>n.remove());
+  const messages=[imported.changed?'分析結果已變更，部分標記可能對應不到目前的畫面。':'',imported.orphans.length?`有 ${imported.orphans.length} 筆標記找不到對應的畫面或按鈕，已保留在檔案中。`:'',clean.dropped?'檔案含已不再使用的欄位（原因、備註、元件庫對應），已略過。':''].filter(Boolean);
+  for(const message of messages){const note=element('p',message,'notice');note.dataset.importNotice='true';notices.append(note);}
+  if(imported.orphans.length){const list=element('ul',undefined,'notice orphan-list');list.dataset.importNotice='true';list.dataset.mdOrphans='true';for(const orphan of imported.orphans)list.append(element('li',`${orphan.screenId}${orphan.componentId?` / ${orphan.componentId}`:''}`));notices.append(list);}
  };
- const changed=()=>{persist();render();};
+ // ---- progress file: the md the person chose, rewritten after every decision (Chrome／Edge)
+ type FileState='unsupported'|'none'|'pending'|'saving'|'saved'|'error';
+ const fileKey=graph.application.name,suggestedName=`screentrace-review-${fileKey.replace(/[\\/:*?"<>|\s]+/g,'-')}.md`;
+ let fileHandle:FileHandle|undefined,fileState:FileState=autosaveSupported()?'none':'unsupported',fileError='',promptDismissed=false,writeTimer:ReturnType<typeof setTimeout>|undefined,writing:Promise<void>=Promise.resolve();
+ const fileLabels:Record<FileState,string>={unsupported:'未自動存檔',none:'尚未設定進度檔',pending:'繼續上次進度',saving:'儲存中…',saved:'已自動儲存',error:'儲存失敗'};
+ const menuButton=(label:string,action:()=>void,primary=false)=>{const button=element('button',label,primary?'menu-row primary':'menu-row');button.onclick=()=>{saveMenu.open=false;action();};return button;};
+ const renderFile=()=>{
+  saveMenu.dataset.fileState=fileState;
+  const dot=element('span',undefined,'file-dot');saveSummary.replaceChildren(dot,element('span',fileLabels[fileState]),icon('more'));
+  saveSummary.title=fileHandle?`${fileLabels[fileState]}：${fileHandle.name}`:fileLabels[fileState];
+  savePanel.replaceChildren(element('h2','進度檔'));
+  const text=(value:string)=>savePanel.append(element('p',value,'muted'));
+  if(fileState==='unsupported'){text('這個瀏覽器不支援自動存檔。標記會暫存在這個瀏覽器；請用「下載 md」保存，之後用「開啟 md」接續。');savePanel.append(openMd);return;}
+  if(fileState==='none'){text('選擇一個 md 檔的存放位置，之後每次標記都會自動寫入。這個檔案就是要交給 AI 的 md。');savePanel.append(menuButton('選擇存放位置…',()=>void choose(),true),openMd);if(!promptDismissed)savePanel.append(menuButton('稍後再說',()=>{promptDismissed=true;}));return;}
+  const name=fileHandle?.name||'';
+  if(fileState==='pending'){text(`上次的進度檔：${name}。載入後以進度檔的內容為準。`);savePanel.append(menuButton(`繼續上次進度：${name}`,()=>void resume(),true),openMd,menuButton('選擇新的存放位置…',()=>void choose()));return;}
+  if(fileState==='error'){text(`寫入 ${name} 失敗：${fileError}。標記仍保留在這個頁面。`);savePanel.append(menuButton('重試',()=>{writing=writing.then(writeNow);},true),menuButton('選擇新的存放位置…',()=>void choose()));return;}
+  text(`每次標記都會自動寫入 ${name}。`);savePanel.append(menuButton('更換存放位置…',()=>void choose()),openMd);
+ };
+ const writeNow=async()=>{
+  if(!fileHandle)return;
+  fileState='saving';renderFile();
+  try{await writeFile(fileHandle,await generateMarkdown(mdPayload,reviewState));fileState='saved';}
+  catch(error){fileState='error';fileError=String(error instanceof Error?error.message:error);}
+  renderFile();
+ };
+ const scheduleWrite=()=>{
+  if(!fileHandle||fileState==='pending')return;
+  clearTimeout(writeTimer);fileState='saving';renderFile();
+  writeTimer=setTimeout(()=>{writing=writing.then(writeNow);},500);
+ };
+ const maybePrompt=()=>{if((fileState==='none'&&!promptDismissed)||fileState==='pending'){renderFile();setTimeout(()=>{saveMenu.open=true;});}};
+ const grant=async(handle:FileHandle)=>{if(await handle.queryPermission({mode:'readwrite'})!=='granted'&&await handle.requestPermission({mode:'readwrite'})!=='granted')throw Error('沒有取得檔案的寫入權限');};
+ const remember=async(handle:FileHandle)=>{fileHandle=handle;try{await handleStore().save(fileKey,handle);}catch{/* the shortcut is lost, the file still works */}};
+ const choose=async()=>{
+  try{const handle=await chooseSaveFile(suggestedName);await grant(handle);await remember(handle);await writeNow();if(fileState==='saved')say(`已設定進度檔：${handle.name}`);}
+  catch(error){if(!isCancel(error))say(`無法設定進度檔：${String(error)}`,'error');}
+ };
+ const load=async(handle:FileHandle)=>{
+  await grant(handle);
+  const file=await handle.getFile();
+  if(file.size>64*1024*1024)throw Error('檔案超過 64 MiB 安全上限');
+  const text=await file.text();
+  if(text.trim())applyImported(await importMarkdown(text,mdPayload));
+  await remember(handle);fileState='saved';renderFile();render();
+ };
+ const resume=async()=>{
+  const handle=fileHandle;if(!handle)return;
+  try{await load(handle);say(`已載入上次進度：${handle.name}`);}
+  catch(error){fileState='pending';renderFile();say(`無法載入上次進度：${String(error)}`,'error');}
+ };
+ const openProgress=async()=>{
+  if(!autosaveSupported()){fileInput.click();return;}
+  try{const handle=await chooseOpenFile();await load(handle);say('已開啟 md');}
+  catch(error){if(!isCancel(error))say(`開啟失敗：${String(error)}`,'error');}
+ };
+ const changed=()=>{persist();scheduleWrite();maybePrompt();render();};
  const decide={
   screen:(id:string,value:Decision)=>{reviewState=setScreen(reviewState,id,value);changed();},
   component:(screenId:string,componentId:string,value:Decision)=>{reviewState=setComponent(reviewState,screenId,componentId,value);highlightComponent=componentId;changed();}
@@ -273,23 +338,18 @@ try {
   try{
    const md=await generateMarkdown(mdPayload,reviewState),url=URL.createObjectURL(new Blob([md],{type:'text/markdown;charset=utf-8'})),link=element('a');
    link.href=url;link.download='screentrace-review.md';link.hidden=true;document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
-   saveStatus.textContent=markdownSizeWarning(md)?'md 超過 5 MB，仍完整下載':'已下載 md';saveStatus.dataset.state='saved';
-  }catch(error){saveStatus.textContent=`下載失敗：${String(error)}`;saveStatus.dataset.state='error';}
+   say(markdownSizeWarning(md)?'md 超過 5 MB，仍完整下載':'已下載 md');
+  }catch(error){say(`下載失敗：${String(error)}`,'error');}
   finally{download.disabled=false;}
  };
- openMd.onclick=()=>fileInput.click();
+ openMd.onclick=()=>{saveMenu.open=false;void openProgress();};
  fileInput.onchange=async()=>{
   const file=fileInput.files?.[0];if(!file)return;
   try{
    if(file.size>64*1024*1024)throw Error('檔案超過 64 MiB 安全上限');
-   const imported=await importMarkdown(await file.text(),mdPayload),clean=withoutRetiredFields(imported.state);
-   reviewState=clean.state;persist();
-   notices.querySelectorAll('[data-import-notice]').forEach(n=>n.remove());
-   const messages=[imported.changed?'分析結果已變更，部分標記可能對應不到目前的畫面。':'',imported.orphans.length?`有 ${imported.orphans.length} 筆標記找不到對應的畫面或按鈕，已保留在檔案中。`:'',clean.dropped?'檔案含已不再使用的欄位（原因、備註、元件庫對應），已略過。':''].filter(Boolean);
-   for(const message of messages){const note=element('p',message,'notice');note.dataset.importNotice='true';notices.append(note);}
-   if(imported.orphans.length){const list=element('ul',undefined,'notice orphan-list');list.dataset.importNotice='true';list.dataset.mdOrphans='true';for(const orphan of imported.orphans)list.append(element('li',`${orphan.screenId}${orphan.componentId?` / ${orphan.componentId}`:''}`));notices.append(list);}
-   saveStatus.textContent='已開啟 md';saveStatus.dataset.state='saved';render();
-  }catch(error){saveStatus.textContent=`開啟失敗：${String(error)}`;saveStatus.dataset.state='error';}
+   applyImported(await importMarkdown(await file.text(),mdPayload));scheduleWrite();
+   say('已開啟 md');render();
+  }catch(error){say(`開啟失敗：${String(error)}`,'error');}
   finally{fileInput.value='';}
  };
 
@@ -297,7 +357,7 @@ try {
  const nextUndecided=()=>{
   const ids=orderedScreens.map(s=>s.id),start=current?ids.indexOf(current):-1;
   for(let step=1;step<=ids.length;step++){const id=ids[(start+step+ids.length)%ids.length];if(screenDecision(reviewState,id)==='UNDECIDED'){openScreen(id);return;}}
-  saveStatus.textContent='全部畫面都已確認';
+  say('全部畫面都已確認');
  };
  const onKey=(event:KeyboardEvent)=>{
   const target=event.target as Element|null,editable=target?.closest?.('input,textarea,select,[contenteditable="true"]');
@@ -321,7 +381,13 @@ try {
  };
  document.addEventListener('keydown',onKey);
 
- saveStatus.textContent=storage?'已暫存在此瀏覽器':'⚠ 無法暫存在瀏覽器，請下載 md';saveStatus.dataset.state=storage?'saved':'error';
+ if(!storage)say('⚠ 無法暫存在瀏覽器，請下載 md','error');
+ renderFile();
+ if(fileState==='none')handleStore().load(fileKey).then(async handle=>{
+  if(!handle||fileHandle)return;
+  fileHandle=handle;fileState='pending';renderFile();
+  if(await handle.queryPermission({mode:'readwrite'})==='granted')await resume();else{saveMenu.open=true;}
+ }).catch(()=>{/* no remembered file */});
  render();
  root.replaceChildren(shell);
  root.dataset.ready='true';
