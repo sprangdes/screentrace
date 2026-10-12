@@ -1,6 +1,6 @@
 import {iconButton,icon} from './shell-ui';
-import {partitionNavigation,flowLayout,overviewRoute} from './overview';
-import {relationTooltip,focusedRelations,FocusRelation} from './relations';
+import {partitionNavigation,flowLayout,roundedPath} from './overview';
+import {relationTooltip,focusedRelations,FocusRelation,sharedNavigation} from './relations';
 import {Index,fileEntries,searchScreens} from './map';
 import {Payload} from './contracts';
 import {element,text} from './text';
@@ -28,7 +28,7 @@ export interface CanvasView {
  readonly focused:string|undefined;
 }
 
-const CARD={width:250,height:220},MOTION_MS=450,BOX_MARGIN={side:96,top:40,bottom:96};
+const CARD={width:250,height:220},MOTION_MS=450,BOX_MARGIN={side:96,top:64,bottom:96};
 /** The preview fades in over this part of the zoom; if it is still loading, it waits at most READY_MS more. */
 const REVEAL={from:0.3,span:0.45},LEAVE_SPAN=0.3,READY_MS=600,FADE_MS=180;
 /** Same curve as the side panels' width transition, so the canvas and the panels move as one. */
@@ -37,7 +37,7 @@ const clamp=(value:number)=>Math.max(0,Math.min(1,value));
 const wait=(ms:number)=>new Promise<void>(resolve=>setTimeout(resolve,ms));
 const svgNs='http://www.w3.org/2000/svg';
 const reducedMotion=()=>matchMedia('(prefers-reduced-motion: reduce)').matches;
-const arrowDefs=(id:string,color:string)=>`<defs><marker id="${id}" viewBox="0 0 6 6" refX="6" refY="3" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="${color}"/></marker></defs>`;
+const focusMarkers=['focus-arrow-out','focus-arrow-in','focus-arrow-unresolved'].map(id=>`<marker id="${id}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="14" markerHeight="14" markerUnits="userSpaceOnUse" orient="auto"><path d="M1,1 L9,5 L1,9 Z"/></marker>`).join('');
 
 /** Lines leaving the focused screen: its screen-specific flows (as drawn on the overview) plus one stub per trigger whose destination is unknown. */
 export function focusLines(index:Index,id:string):FocusRelation[]{
@@ -62,8 +62,8 @@ export function canvas(index:Index,payload:Payload,options:CanvasOptions):Canvas
   viewport.dataset.semanticZoom=zoom<0.7?'compact':'detail';
   if(!focused&&viewport.dataset.fitted==='true')options.onTransformChange?.({zoom,x,y});
  };
- const layout=flowLayout(index),positions=layout.positions,flows=partitionNavigation(index).flows;
- const width=Math.max(800,...[...positions.values()].map(p=>p.x+340)),height=Math.max(600,...[...positions.values()].map(p=>p.y+335));
+ const layout=flowLayout(index),positions=layout.positions;
+ const width=Math.max(800,layout.width),height=Math.max(600,layout.height);
  world.style.width=`${width}px`;world.style.height=`${height}px`;
  const visible=(id:string)=>!state.visible||state.visible.has(id);
  const fit=()=>{
@@ -81,27 +81,37 @@ export function canvas(index:Index,payload:Payload,options:CanvasOptions):Canvas
 
  // ---- overview: cards and their flows
  const svg=document.createElementNS(svgNs,'svg');
- svg.setAttribute('width',String(width));svg.setAttribute('height',String(height));svg.classList.add('relations');svg.innerHTML=arrowDefs('overview-arrow','#64748b');
- const highlight=(lines:Set<Element>,ids:Set<string>)=>{
-  svg.querySelectorAll('.relation-line').forEach(line=>{line.classList.toggle('is-highlighted',lines.has(line));line.classList.toggle('is-muted',!lines.has(line));});
+ // Arrowheads keep one size and take the colour of their line's state (see .relation-line in viewer.css).
+ const marker=(id:string)=>`<marker id="${id}" class="flow-marker" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="16" markerHeight="16" markerUnits="userSpaceOnUse" orient="auto"><path d="M1,1 L9,5 L1,9 Z"/></marker>`;
+ svg.setAttribute('width',String(width));svg.setAttribute('height',String(height));svg.classList.add('relations');
+ svg.innerHTML=`<defs>${['flow-arrow','flow-arrow-out','flow-arrow-in','flow-arrow-muted'].map(marker).join('')}</defs>`;
+ // Highlighted lines are repainted in a top layer; moving the hovered element itself would lose its mouseleave.
+ const raised=document.createElementNS(svgNs,'g');raised.setAttribute('class','relation-raised');raised.setAttribute('aria-hidden','true');
+ /** Lines leaving the pointed screen are drawn as outgoing, lines arriving as incoming; the rest step back. */
+ const highlight=(out:Set<Element>,into:Set<Element>,ids:Set<string>)=>{
+  raised.replaceChildren();
+  svg.querySelectorAll<SVGPathElement>('.relation-line').forEach(line=>{
+   const leaving=out.has(line),arriving=!leaving&&into.has(line);
+   line.classList.toggle('is-out',leaving);line.classList.toggle('is-in',arriving);line.classList.toggle('is-muted',!leaving&&!arriving);
+   if(leaving||arriving){const copy=line.cloneNode() as SVGPathElement;copy.removeAttribute('tabindex');copy.removeAttribute('role');copy.removeAttribute('aria-label');raised.append(copy);}
+  });
   world.querySelectorAll<HTMLElement>('.screen-card').forEach(card=>{const on=ids.has(card.dataset.screen!);card.classList.toggle('is-highlighted',on);card.classList.toggle('is-muted',!on);});
  };
- const clear=()=>world.querySelectorAll('.relation-line,.screen-card').forEach(node=>node.classList.remove('is-highlighted','is-muted'));
- for(const [ordinal,relation] of flows.entries()){
-  const line=document.createElementNS(svgNs,'path') as SVGPathElement,target=positions.get(relation.to)!;
-  line.setAttribute('d',overviewRoute(positions,relation,ordinal).map((p,i)=>`${i?'L':'M'}${p.x},${p.y}`).join(' '));
-  line.setAttribute('class','relation-line');line.setAttribute('marker-end','url(#overview-arrow)');
+ const clear=()=>{raised.replaceChildren();svg.querySelectorAll('.relation-line').forEach(line=>line.classList.remove('is-out','is-in','is-muted'));world.querySelectorAll('.screen-card').forEach(card=>card.classList.remove('is-highlighted','is-muted'));};
+ for(const {relation,points} of layout.routes){
+  const group=document.createElementNS(svgNs,'g'),hit=document.createElementNS(svgNs,'path') as SVGPathElement,line=document.createElementNS(svgNs,'path') as SVGPathElement,d=roundedPath(points);
+  group.setAttribute('class','relation');hit.setAttribute('d',d);hit.setAttribute('class','relation-hit');hit.setAttribute('aria-hidden','true');
+  line.setAttribute('d',d);line.setAttribute('class','relation-line');
   line.dataset.from=relation.from;line.dataset.to=relation.to;line.setAttribute('tabindex','0');line.setAttribute('role','button');
   line.setAttribute('aria-label',`${index.nodes.get(relation.from)!.name} → ${index.nodes.get(relation.to)!.name}`);
-  const tooltip=relationTooltip(index,payload,relation);
-  tooltip.hidden=true;tooltip.style.position='absolute';tooltip.style.left=`${target.x}px`;tooltip.style.top=`${target.y+140}px`;
-  const show=()=>{highlight(new Set([line]),new Set([relation.from,relation.to]));tooltip.hidden=false;},hide=()=>{clear();tooltip.hidden=true;};
-  line.addEventListener('mouseenter',show);line.addEventListener('focus',show);line.addEventListener('mouseleave',hide);line.addEventListener('blur',hide);
-  line.addEventListener('click',()=>options.onOpen(relation.to));
+  // Every screen is already visible on the overview, so pointing at a line only highlights it and its two ends.
+  const show=()=>highlight(new Set([line]),new Set(),new Set([relation.from,relation.to]));
+  group.addEventListener('mouseenter',show);group.addEventListener('mouseleave',clear);group.addEventListener('click',()=>options.onOpen(relation.to));
+  line.addEventListener('focus',show);line.addEventListener('blur',clear);
   line.addEventListener('keydown',event=>{if((event as KeyboardEvent).key==='Enter')options.onOpen(relation.to);});
-  svg.append(line);world.append(tooltip);
+  group.append(hit,line);svg.append(group);
  }
- world.append(svg);
+ svg.append(raised);world.append(svg);
  const cards=new Map<string,HTMLButtonElement>();
  for(const screen of index.screens){
   const p=positions.get(screen.id)!,card=element('button',undefined,'screen-card'),route=index.routes.get(screen.id)?.[0]||text.noUrl;
@@ -111,7 +121,10 @@ export function canvas(index:Index,payload:Payload,options:CanvasOptions):Canvas
   else{const missing=element('div',undefined,'card-preview missing-preview');missing.append(element('span',text.noPreview));card.append(missing);}
   const caption=element('div',undefined,'screen-caption'),routeLabel=element('span',route,'screen-route');routeLabel.title=route;
   caption.append(element('strong',screen.name),routeLabel);card.append(caption);
-  const linked=()=>{if(focused)return;const lines=new Set<Element>(),ids=new Set([screen.id]);svg.querySelectorAll<SVGPathElement>('.relation-line').forEach(line=>{if(line.dataset.from===screen.id||line.dataset.to===screen.id){lines.add(line);ids.add(line.dataset.from!);ids.add(line.dataset.to!);}});highlight(lines,ids);};
+  // Header/footer links are not drawn on the overview; a badge still tells that this screen is reachable from them.
+  const entries=sharedNavigation(index,screen.id,false).into.length;
+  if(entries){const badge=icon('menu');badge.classList.add('shared-entry');badge.setAttribute('role','img');const label=`可從 ${entries} 個畫面的頁首／頁尾連結進入`;badge.setAttribute('aria-label',label);const title=document.createElementNS('http://www.w3.org/2000/svg','title');title.textContent=label;badge.append(title);badge.dataset.count=String(entries);card.append(badge);}
+  const linked=()=>{if(focused)return;const out=new Set<Element>(),into=new Set<Element>(),ids=new Set([screen.id]);svg.querySelectorAll<SVGPathElement>('.relation-line').forEach(line=>{const leaving=line.dataset.from===screen.id,arriving=line.dataset.to===screen.id;if(leaving)out.add(line);else if(arriving)into.add(line);if(leaving||arriving){ids.add(line.dataset.from!);ids.add(line.dataset.to!);}});highlight(out,into,ids);};
   card.onmouseenter=card.onfocus=linked;card.onmouseleave=card.onblur=clear;
   card.addEventListener('pointerenter',()=>{if(!frameId)options.onIntent?.(screen.id);});
   card.onclick=()=>options.onOpen(screen.id);
@@ -127,7 +140,7 @@ export function canvas(index:Index,payload:Payload,options:CanvasOptions):Canvas
    if(status==='KEEP'||status==='REMOVE'){card.dataset.screenStatus=status;const mark=icon(status==='KEEP'?'check':'close');mark.classList.add('review-status-icon');mark.setAttribute('role','img');mark.setAttribute('aria-label',status==='KEEP'?text.keep:text.remove);card.append(mark);}
    else delete card.dataset.screenStatus;
   }
-  svg.querySelectorAll<SVGPathElement>('.relation-line').forEach(line=>{line.style.display=visible(line.dataset.from!)&&visible(line.dataset.to!)?'':'none';});
+  svg.querySelectorAll<SVGPathElement>('.relation-line').forEach(line=>{(line.parentNode as SVGGElement).style.display=visible(line.dataset.from!)&&visible(line.dataset.to!)?'':'none';});
   if(refit&&!focused)fit();
  };
 
@@ -135,44 +148,82 @@ export function canvas(index:Index,payload:Payload,options:CanvasOptions):Canvas
  const newLayer=():HTMLElement=>{const host=element('div',undefined,'focus-layer');host.hidden=true;return host;};
  let layer=newLayer(),leaving:HTMLElement|undefined;
  const lines=document.createElementNS(svgNs,'svg') as SVGSVGElement,tips=element('div',undefined,'focus-tips');
- lines.classList.add('focus-lines');lines.innerHTML=arrowDefs('focus-arrow','#475569');
+ lines.classList.add('focus-lines');lines.innerHTML=`<defs>${focusMarkers}</defs>`;
  lines.style.display='none';
  const box=()=>{const w=viewport.clientWidth,h=viewport.clientHeight;return {left:BOX_MARGIN.side,top:BOX_MARGIN.top,right:w-BOX_MARGIN.side,bottom:h-BOX_MARGIN.bottom,width:Math.max(1,w-2*BOX_MARGIN.side),height:Math.max(1,h-BOX_MARGIN.top-BOX_MARGIN.bottom)};};
  const transformFor=(id:string):CanvasTransform=>{const p=positions.get(id)!,b=box(),z=Math.min(b.width/CARD.width,b.height/CARD.height);return {zoom:z,x:b.left+b.width/2-(p.x+CARD.width/2)*z,y:b.top+b.height/2-(p.y+CARD.height/2)*z};};
  const placeLayer=(host:HTMLElement=layer)=>{const b=box();Object.assign(host.style,{left:`${b.left}px`,top:`${b.top}px`,width:`${b.width}px`,height:`${b.height}px`});};
  const center=(id:string)=>{const p=positions.get(id)!;return {x:p.x+CARD.width/2,y:p.y+CARD.height/2};};
+ // Shared navigation (header/footer links) is summarised as one dashed line each way above the preview box;
+ // its label opens the list of screens behind it.
+ const drawShared=(id:string,b:ReturnType<typeof box>)=>{
+  const shared=sharedNavigation(index,id);
+  const sides=[{direction:'in' as const,ids:shared.into,labels:shared.intoLabels,x:b.left+b.width*0.3,text:`頁首／頁尾連結進來 · ${shared.into.length} 個畫面`,heading:'經由頁首／頁尾連結到這裡'},
+   {direction:'out' as const,ids:shared.out,labels:shared.outLabels,x:b.left+b.width*0.7,text:`頁首／頁尾連結前往 · ${shared.out.length} 個畫面`,heading:'這個畫面的頁首／頁尾可前往'}];
+  for(const side of sides){
+   if(!side.ids.length)continue;
+   const pill=element('button',side.text,`shared-link is-${side.direction}`);pill.dataset.direction=side.direction;pill.dataset.count=String(side.ids.length);
+   pill.setAttribute('aria-haspopup','true');pill.setAttribute('aria-expanded','false');tips.append(pill);
+   const top=8,height=pill.offsetHeight||24,width=pill.offsetWidth||200,left=Math.round(side.x-width/2);
+   Object.assign(pill.style,{left:`${left}px`,top:`${top}px`});
+   const path=document.createElementNS(svgNs,'path'),group=document.createElementNS(svgNs,'g'),[y1,y2]=side.direction==='in'?[top+height,b.top]:[b.top,top+height];
+   path.setAttribute('d',`M${side.x},${y1} L${side.x},${y2}`);path.setAttribute('class',`focus-line shared ${side.direction==='in'?'is-in':'is-out'}`);path.dataset.kind=`shared-${side.direction}`;
+   group.append(path);lines.append(group);
+   const menu=element('div',undefined,'shared-popover');menu.hidden=true;menu.setAttribute('role','menu');menu.dataset.direction=side.direction;
+   menu.append(element('strong',side.heading));if(side.labels.length)menu.append(element('p',`連結：${side.labels.join('、')}`));
+   for(const other of side.ids){const item=element('button',index.nodes.get(other)?.name||other,'link-row');item.setAttribute('role','menuitem');item.dataset.sharedScreen=other;item.onclick=()=>options.onOpen(other);item.onpointerenter=()=>{if(!frameId)options.onIntent?.(other);};menu.append(item);}
+   const close=()=>{menu.hidden=true;pill.setAttribute('aria-expanded','false');};
+   pill.onclick=event=>{event.stopPropagation();const open=menu.hidden;tips.querySelectorAll<HTMLElement>('.shared-popover').forEach(m=>{m.hidden=true;});tips.querySelectorAll('.shared-link').forEach(p=>p.setAttribute('aria-expanded','false'));
+    if(!open)return;menu.hidden=false;pill.setAttribute('aria-expanded','true');
+    menu.style.left=`${Math.max(8,Math.min(viewport.clientWidth-menu.offsetWidth-8,left))}px`;menu.style.top=`${top+height+6}px`;menu.querySelector<HTMLElement>('button')?.focus();};
+   menu.addEventListener('keydown',event=>{if(event.key==='Escape'){event.stopPropagation();close();pill.focus();}});
+   menu.addEventListener('click',event=>event.stopPropagation());
+   tips.append(menu);
+  }
+ };
+ viewport.addEventListener('click',()=>tips.querySelectorAll<HTMLElement>('.shared-popover:not([hidden])').forEach(menu=>{menu.hidden=true;}));
  const drawLines=(id:string)=>{
   lines.querySelectorAll('g').forEach(g=>g.remove());tips.replaceChildren();
   const b=box(),cx=b.left+b.width/2,cy=b.top+b.height/2,w=viewport.clientWidth,h=viewport.clientHeight,from=center(id);
   lines.setAttribute('width',String(w));lines.setAttribute('height',String(h));
+  // Lines leave toward each destination and arrive from each source, in the directions the overview draws them.
   const relations=focusLines(index,id),known=relations.filter(r=>!r.unresolved&&r.to!==id),loops=relations.filter(r=>r.to===id),stubs=relations.filter(r=>r.unresolved);
-  type Segment={relation:FocusRelation;sx:number;sy:number;ex:number;ey:number;d?:string;kind:'known'|'loop'|'unresolved'};
+  const incoming=partitionNavigation(index).flows.filter(r=>r.to===id&&r.from!==id);
+  type Kind='known'|'incoming'|'loop'|'unresolved';
+  type Segment={relation:FocusRelation;sx:number;sy:number;ex:number;ey:number;d?:string;kind:Kind};
   const segments:Segment[]=[];
-  const rays=known.map(relation=>{const to=center(relation.to),dx=to.x-from.x,dy=to.y-from.y,length=Math.hypot(dx,dy)||1;return {relation,ux:dx/length,uy:dy/length,angle:Math.atan2(dy,dx)};}).sort((a,b)=>a.angle-b.angle||(a.relation.to<b.relation.to?-1:1));
+  const rays=[...known.map(relation=>({relation,other:relation.to,kind:'known' as Kind})),...incoming.map(relation=>({relation,other:relation.from,kind:'incoming' as Kind}))]
+   .map(ray=>{const to=center(ray.other),dx=to.x-from.x,dy=to.y-from.y,length=Math.hypot(dx,dy)||1;return {...ray,ux:dx/length,uy:dy/length,angle:Math.atan2(dy,dx)};})
+   .sort((a,b)=>a.angle-b.angle||(a.other<b.other?-1:a.other>b.other?1:0)||(a.kind<b.kind?-1:a.kind>b.kind?1:0));
   const groups:(typeof rays)[]=[];for(const ray of rays){const last=groups.at(-1);if(last&&ray.angle-last[0].angle<5*Math.PI/180)last.push(ray);else groups.push([ray]);}
   for(const group of groups)group.forEach((ray,i)=>{
    const {ux,uy}=ray,edge=Math.min(ux?b.width/2/Math.abs(ux):Infinity,uy?b.height/2/Math.abs(uy):Infinity);
    const reach=Math.min(ux>0?(w-6-cx)/ux:ux<0?(6-cx)/ux:Infinity,uy>0?(h-6-cy)/uy:uy<0?(6-cy)/uy:Infinity);
-   const offset=(i-(group.length-1)/2)*18,nx=-uy*offset,ny=ux*offset;
-   segments.push({relation:ray.relation,kind:'known',sx:cx+ux*edge+nx,sy:cy+uy*edge+ny,ex:cx+ux*reach+nx,ey:cy+uy*reach+ny});
+   const offset=(i-(group.length-1)/2)*18,nx=-uy*offset,ny=ux*offset,inner={x:cx+ux*edge+nx,y:cy+uy*edge+ny},outer={x:cx+ux*reach+nx,y:cy+uy*reach+ny};
+   const [start,end]=ray.kind==='incoming'?[outer,inner]:[inner,outer];
+   segments.push({relation:ray.relation,kind:ray.kind,sx:start.x,sy:start.y,ex:end.x,ey:end.y});
   });
+  drawShared(id,b);
   loops.forEach((relation,i)=>{const top=cy-28-i*20,bottom=cy+28+i*20,out=b.right+52+i*14;segments.push({relation,kind:'loop',sx:b.right,sy:top,ex:b.right,ey:bottom,d:`M${b.right},${top} C${out},${top-36} ${out},${bottom+36} ${b.right},${bottom}`});});
   stubs.forEach((relation,i)=>{const sx=b.left+b.width*(i+1)/(stubs.length+1);segments.push({relation,kind:'unresolved',sx,sy:b.bottom,ex:sx,ey:Math.min(h-8,b.bottom+44)});});
   for(const segment of segments){
-   const {relation}=segment,target=index.nodes.get(relation.to),group=document.createElementNS(svgNs,'g'),path=segment.d||`M${segment.sx},${segment.sy} L${segment.ex},${segment.ey}`;
+   const {relation}=segment,arriving=segment.kind==='incoming',other=arriving?relation.from:relation.to,target=index.nodes.get(other),group=document.createElementNS(svgNs,'g'),path=segment.d||`M${segment.sx},${segment.sy} L${segment.ex},${segment.ey}`;
    const visibleLine=document.createElementNS(svgNs,'path') as SVGPathElement,hit=document.createElementNS(svgNs,'path') as SVGPathElement;
-   visibleLine.setAttribute('d',path);visibleLine.setAttribute('class',`focus-line${segment.kind==='unresolved'?' unresolved':''}`);visibleLine.setAttribute('marker-end','url(#focus-arrow)');
+   visibleLine.setAttribute('d',path);visibleLine.setAttribute('class',`focus-line ${segment.kind==='unresolved'?'unresolved':arriving?'is-in':'is-out'}`);
    hit.setAttribute('d',path);hit.setAttribute('class','focus-line-hit');hit.setAttribute('tabindex','0');hit.setAttribute('role','button');
    for(const node of [visibleLine,hit]){node.dataset.from=relation.from;node.dataset.to=relation.to;node.dataset.kind=segment.kind;}
-   hit.setAttribute('aria-label',segment.kind==='unresolved'?text.unresolved:segment.kind==='loop'?`回到「${target?.name||''}」`:`前往「${target?.name||''}」`);
-   const tip=relationTooltip(index,payload,relation);tip.hidden=true;tip.classList.add('focus-tooltip');tip.dataset.to=relation.to;tips.append(tip);
+   hit.setAttribute('aria-label',segment.kind==='unresolved'?text.unresolved:segment.kind==='loop'?`回到「${target?.name||''}」`:arriving?`來自「${target?.name||''}」`:`前往「${target?.name||''}」`);
+   // An incoming line describes its source screen and the buttons there that lead here.
+   const tip=relationTooltip(index,payload,arriving?{...relation,to:relation.from}:relation);tip.hidden=true;tip.classList.add('focus-tooltip');tip.dataset.to=relation.to;tip.dataset.kind=segment.kind;
+   if(segment.kind==='known'||arriving)tip.prepend(element('span',arriving?'來自':'前往',`tooltip-direction ${arriving?'is-in':'is-out'}`));
+   tips.append(tip);
    const placeTip=(px:number,py:number)=>{tip.hidden=false;const tw=tip.offsetWidth||260,th=tip.offsetHeight||200;tip.style.left=`${Math.max(8,Math.min(w-tw-8,px+14))}px`;tip.style.top=`${Math.max(8,Math.min(h-th-8,py+14))}px`;};
-   const show=(px:number,py:number)=>{if(segment.kind==='known'&&!frameId)options.onIntent?.(relation.to);group.classList.add('is-active');placeTip(px,py);options.onLineHover?.(relation.triggers);};
+   const show=(px:number,py:number)=>{if((segment.kind==='known'||arriving)&&!frameId)options.onIntent?.(other);group.classList.add('is-active');placeTip(px,py);options.onLineHover?.(arriving?undefined:relation.triggers);};
    const hide=()=>{group.classList.remove('is-active');tip.hidden=true;options.onLineHover?.(undefined);};
    hit.addEventListener('mousemove',event=>{const r=viewport.getBoundingClientRect();show(event.clientX-r.left,event.clientY-r.top);});
    hit.addEventListener('mouseleave',hide);hit.addEventListener('blur',hide);
    hit.addEventListener('focus',()=>show((segment.sx+segment.ex)/2,(segment.sy+segment.ey)/2));
-   const open=()=>{if(segment.kind==='known')options.onOpen(relation.to);};
+   const open=()=>{if(segment.kind==='known'||arriving)options.onOpen(other);};
    hit.addEventListener('click',open);hit.addEventListener('keydown',event=>{const key=(event as KeyboardEvent).key;if(key==='Enter'||key===' '){event.preventDefault();open();}});
    group.append(visibleLine,hit);lines.append(group);
   }
@@ -286,7 +337,7 @@ export function canvas(index:Index,payload:Payload,options:CanvasOptions):Canvas
   event.preventDefault();apply();
  });
  let dragging:{x:number;y:number}|undefined;
- viewport.addEventListener('pointerdown',event=>{if(focused||(event.target as Element).closest('button,.relation-line'))return;dragging={x:event.clientX,y:event.clientY};viewport.setPointerCapture(event.pointerId);});
+ viewport.addEventListener('pointerdown',event=>{if(focused||(event.target as Element).closest('button,.relation'))return;dragging={x:event.clientX,y:event.clientY};viewport.setPointerCapture(event.pointerId);});
  viewport.addEventListener('pointermove',event=>{if(!dragging)return;x+=event.clientX-dragging.x;y+=event.clientY-dragging.y;dragging={x:event.clientX,y:event.clientY};apply();});
  for(const name of ['pointerup','pointercancel'])viewport.addEventListener(name,()=>{dragging=undefined;});
  viewport.addEventListener('wheel',event=>{

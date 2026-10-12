@@ -128,9 +128,18 @@ main{position:relative;overflow:hidden;min-width:0}
 .canvas:focus-visible{outline-offset:-3px}
 .world{position:absolute;transform-origin:0 0}
 .relations{position:absolute;inset:0;pointer-events:none;overflow:visible}
-.relation-line{fill:none;stroke:#64748b;stroke-width:3;stroke-opacity:.45;pointer-events:stroke;cursor:pointer}
-.relation-line:hover,.relation-line:focus,.relation-line.is-highlighted{stroke:var(--primary);stroke-opacity:1;stroke-width:5}
-.relation-line.is-muted{stroke-opacity:.12}
+:root{--flow:#9aa3af;--flow-muted:#e2e5e9;--flow-out:var(--primary);--flow-in:#d97706}
+.relation-line{fill:none;stroke:var(--flow);stroke-width:2;marker-end:url(#flow-arrow);pointer-events:stroke;cursor:pointer;transition:stroke .12s}
+/* A wider invisible twin makes thin lines easy to point at. */
+.relation-hit{fill:none;stroke:transparent;stroke-width:14;pointer-events:stroke;cursor:pointer}
+.relation-raised{pointer-events:none}.relation-raised .relation-line{pointer-events:none}
+.relation-line.is-out,.relation-line:focus{stroke:var(--flow-out);stroke-width:3;marker-end:url(#flow-arrow-out)}
+.relation-line.is-in{stroke:var(--flow-in);stroke-width:3;marker-end:url(#flow-arrow-in)}
+.relation-line.is-muted{stroke:var(--flow-muted);marker-end:url(#flow-arrow-muted)}
+#flow-arrow path{fill:var(--flow)}
+#flow-arrow-out path{fill:var(--flow-out)}
+#flow-arrow-in path{fill:var(--flow-in)}
+#flow-arrow-muted path{fill:var(--flow-muted)}
 .relation-line:focus-visible{outline:0}
 .screen-card{position:absolute;width:250px;height:220px;padding:0;overflow:hidden;z-index:1;background:white;border:1px solid var(--gray-200);border-radius:10px;box-shadow:var(--shadow-card);transition:opacity .15s,box-shadow .15s}
 .screen-card:hover,.screen-card.is-highlighted{box-shadow:0 0 0 2px var(--primary),var(--shadow-card)}
@@ -176,13 +185,33 @@ main{position:relative;overflow:hidden;min-width:0}
 .focus-lines.is-entering .focus-line-hit{pointer-events:none}
 .canvas[data-mode=focus] :is(.screen-card:hover,.screen-card.is-highlighted){box-shadow:var(--shadow-card)}
 .focus-lines{position:absolute;left:0;top:0;z-index:5;pointer-events:none;overflow:visible}
-.focus-line{fill:none;stroke:#475569;stroke-width:2.5;stroke-linecap:round}
-.focus-line.unresolved{stroke:#a16207;stroke-dasharray:6 5}
+.focus-line{fill:none;stroke-width:2.5;stroke-linecap:round}
+.focus-line.is-out{stroke:var(--flow-out);marker-end:url(#focus-arrow-out)}
+.focus-line.is-in{stroke:var(--flow-in);marker-end:url(#focus-arrow-in)}
+.focus-line.unresolved{stroke:#64748b;stroke-dasharray:6 5;marker-end:url(#focus-arrow-unresolved)}
+#focus-arrow-out path{fill:var(--flow-out)}
+#focus-arrow-in path{fill:var(--flow-in)}
+#focus-arrow-unresolved path{fill:#64748b}
+.focus-line.shared{stroke-dasharray:5 4}
+.shared-link,.shared-popover{pointer-events:auto}
+.shared-link{position:absolute;z-index:7;display:inline-flex;align-items:center;height:24px;padding:0 10px;border:1px solid currentColor;border-radius:12px;background:white;font-size:12px;font-weight:600;white-space:nowrap;cursor:pointer}
+.shared-link.is-in{color:var(--flow-in)}
+.shared-link.is-out{color:var(--flow-out)}
+.shared-link:hover,.shared-link[aria-expanded=true]{background:var(--gray-100)}
+.shared-popover{position:absolute;z-index:21;width:260px;max-height:60%;overflow:auto;padding:10px;background:white;border:1px solid var(--gray-200);border-radius:var(--radius);box-shadow:var(--shadow-float);font-size:13px}
+.shared-popover[hidden]{display:none}
+.shared-popover strong{display:block;margin-bottom:4px}
+.shared-popover p{margin:0 0 6px;color:var(--gray-500);font-size:12px}
+.shared-entry{position:absolute;left:8px;top:8px;width:30px;height:30px;padding:6px;border-radius:50%;background:var(--gray-700);color:white;stroke-width:2.4;box-shadow:0 0 0 2px white;transition:opacity .15s}
+.screen-card.is-morphing .shared-entry{opacity:0}
+.tooltip-direction{display:inline-block;margin-bottom:4px;padding:1px 6px;border-radius:4px;color:white;font-size:11px;font-weight:600}
+.tooltip-direction.is-out{background:var(--flow-out)}
+.tooltip-direction.is-in{background:var(--flow-in)}
+.relation-tooltip .tooltip-direction+strong{display:block}
 .focus-line-hit{fill:none;stroke:transparent;stroke-width:20;pointer-events:stroke;cursor:pointer}
 .focus-line-hit[data-kind=unresolved],.focus-line-hit[data-kind=loop]{cursor:help}
 .focus-line-hit:focus-visible{outline:0}
-g.is-active .focus-line{stroke:var(--primary);stroke-width:4}
-g.is-active .focus-line.unresolved{stroke:#a16207}
+g.is-active .focus-line{stroke-width:4}
 .focus-tips{position:absolute;inset:0;z-index:7;pointer-events:none}
 .focus-tooltip{position:absolute}
 
