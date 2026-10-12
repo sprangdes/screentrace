@@ -64,23 +64,37 @@ h1,h2,h3{margin:0}
 .link-row{display:block;width:100%;text-align:left;border:0;padding:6px 8px;color:var(--primary);background:transparent;overflow-wrap:anywhere}
 .link-row:hover{background:var(--primary-soft)}
 
-/* layout */
-.shell{display:grid;grid-template-columns:260px minmax(0,1fr) 340px;height:calc(100vh - 56px)}
-.shell[data-sidebar=collapsed]{grid-template-columns:40px minmax(0,1fr) 340px}
+/* layout: the side panels slide in step with the canvas zoom (same 450ms curve as canvas.ts) */
+@property --left{syntax:'<length>';inherits:true;initial-value:260px}
+@property --right{syntax:'<length>';inherits:true;initial-value:340px}
+.shell{--left:260px;--right:340px;--list-width:260px;--details-width:340px;display:grid;grid-template-columns:var(--left) minmax(0,1fr) var(--right);height:calc(100vh - 56px);transition:--left .45s cubic-bezier(.65,0,.35,1),--right .45s cubic-bezier(.65,0,.35,1)}
+.shell:is([data-sidebar=collapsed],[data-sidebar=overlay]){--left:48px}
+.shell[data-details=collapsed]{--right:48px}
+.shell[data-details=hidden]{--right:0px}
 .shell[data-page=api]{grid-template-columns:minmax(0,1fr)}
 .shell[data-page=api] .sidebar,.shell[data-page=api] .details-panel{display:none}
-.sidebar,.details-panel{background:white;overflow:auto;padding:12px}
+.sidebar,.details-panel{position:relative;min-width:0;overflow:hidden auto;padding:12px;background:white}
 .sidebar{border-right:1px solid var(--gray-200)}
-.sidebar-body{display:flex;flex-direction:column;gap:10px}
-.sidebar-header{display:flex;align-items:center;justify-content:space-between;margin:-4px -4px 0 0}
+/* Panel contents keep their width while the column narrows, so they slide out of view instead of reflowing. */
+.sidebar-body{display:flex;flex-direction:column;gap:10px;width:calc(var(--list-width) - 25px);transition:opacity .2s}
+.sidebar-header{display:flex;align-items:center;gap:4px;margin:-4px 0 0 -4px}
 .sidebar-header h2{font-size:13px;color:var(--gray-500);font-weight:600}
-.sidebar-rail{display:none}
-.shell[data-sidebar=collapsed] .sidebar{padding:0}
-.shell[data-sidebar=collapsed] .sidebar-body{display:none}
-.shell[data-sidebar=collapsed] .sidebar-rail{display:flex;flex-direction:column;align-items:center;gap:10px;width:100%;height:100%;padding:12px 0;border:0;border-radius:0;background:white;color:var(--gray-700)}
-.shell[data-sidebar=collapsed] .sidebar-rail:hover{background:var(--primary-soft);color:var(--primary)}
-.sidebar-rail span{writing-mode:vertical-rl;letter-spacing:4px;font-size:13px;font-weight:600}
-.details-panel{border-left:1px solid var(--gray-200)}
+.sidebar-header .icon-button,.sidebar-rail .icon-button{color:var(--gray-500)}
+.sidebar-header .icon-button:hover,.sidebar-rail .icon-button:hover{color:var(--gray-900)}
+.sidebar-rail,.details-rail{position:absolute;top:0;display:flex;flex-direction:column;gap:4px;padding:8px;opacity:0;visibility:hidden;transition:opacity .15s,visibility 0s .15s}
+.sidebar-rail{left:0;width:47px;align-items:center;padding-inline:0}
+.details-rail{right:0;align-items:flex-end}
+.shell:is([data-sidebar=collapsed],[data-sidebar=overlay]) .sidebar-rail,.shell[data-details=collapsed] .details-rail{opacity:1;visibility:visible;transition:opacity .2s .2s}
+.shell[data-sidebar=collapsed] .sidebar-body,.shell[data-details=collapsed] :is(.details-body,.details-toggle){opacity:0;visibility:hidden;transition:opacity .15s,visibility 0s .15s}
+.shell[data-sidebar=overlay] .sidebar{z-index:25;overflow:visible}
+.shell[data-sidebar=overlay] .sidebar-body{position:absolute;top:0;bottom:0;left:0;width:260px;padding:12px;overflow:auto;background:white;border-right:1px solid var(--gray-200);box-shadow:var(--shadow-float)}
+.details-panel{display:flex;flex-direction:column;align-items:flex-end;border-left:1px solid var(--gray-200)}
+.details-body{flex:none;width:calc(var(--details-width) - 25px)}
+.shell[data-details=hidden] .details-panel{visibility:hidden;transition:visibility 0s .45s}
+.details-toggle{position:absolute;top:8px;right:8px;z-index:1}
+.details-panel .panel-header h2{padding-right:32px}
+.details-toggle,.details-rail .icon-button{color:var(--gray-500)}
+.details-toggle:hover,.details-rail .icon-button:hover{color:var(--gray-900)}
 main{position:relative;overflow:hidden;min-width:0}
 
 /* sidebar */
@@ -133,6 +147,8 @@ main{position:relative;overflow:hidden;min-width:0}
 .screen-card[data-screen-status=KEEP] .review-status-icon{background:var(--keep)}
 .screen-card[data-screen-status=REMOVE] .review-status-icon{background:var(--remove)}
 .canvas[data-semantic-zoom=compact] .screen-caption strong{font-size:16px}
+.canvas-hint{position:absolute;left:16px;top:16px;z-index:5;margin:0;padding:6px 12px;background:white;border:1px solid var(--gray-200);border-radius:8px;box-shadow:var(--shadow-card);font-size:12px;color:var(--gray-500);pointer-events:none}
+.canvas[data-mode=focus] .canvas-hint{display:none}
 .canvas-controls{position:absolute;right:16px;bottom:16px;z-index:5;display:flex;gap:4px;padding:4px;background:white;border:1px solid var(--gray-200);border-radius:8px;box-shadow:var(--shadow-float)}
 .relation-tooltip{position:absolute;z-index:20;min-width:200px;max-width:280px;padding:12px;background:white;border:1px solid var(--gray-200);border-radius:var(--radius);box-shadow:var(--shadow-float);pointer-events:none;font-size:12px}
 .relation-tooltip strong{font-size:13px}
@@ -143,11 +159,22 @@ main{position:relative;overflow:hidden;min-width:0}
 /* canvas focus: the same canvas zoomed onto one screen */
 .screen-card{transition:opacity .25s,box-shadow .15s}
 .screen-card.is-dim,.screen-card.is-under-focus{opacity:0;pointer-events:none}
+.screen-card.is-under-focus{transition:none}
+/* The zooming card sheds its frame and caption so only its thumbnail travels into the preview box. */
+.screen-card.is-morphing{background:transparent;border-color:transparent;box-shadow:none!important;transition:opacity .25s,background-color .15s,border-color .15s,box-shadow .15s}
+.screen-card :is(.screen-caption,.review-status-icon){transition:opacity .15s}
+.screen-card.is-morphing :is(.screen-caption,.review-status-icon){opacity:0}
 .relations{transition:opacity .25s}
 .relations.is-dim{opacity:0}
+/* Neighbours fade over the whole zoom, so they are seen flying out of view rather than vanishing. */
+.canvas[data-mode=focus] .screen-card.is-dim,.canvas[data-mode=focus] .relations.is-dim{transition-duration:.45s}
 .canvas[data-mode=focus] .canvas-controls{display:none}
 .focus-layer{position:absolute;z-index:6;overflow:hidden;background:white;border:1px solid var(--gray-200);border-radius:12px;box-shadow:var(--shadow-float)}
 .focus-layer[hidden]{display:none}
+.focus-layer,.focus-lines{transition:opacity .18s ease-out}
+.focus-layer.is-entering,.focus-lines.is-entering{opacity:0;pointer-events:none}
+.focus-lines.is-entering .focus-line-hit{pointer-events:none}
+.canvas[data-mode=focus] :is(.screen-card:hover,.screen-card.is-highlighted){box-shadow:var(--shadow-card)}
 .focus-lines{position:absolute;left:0;top:0;z-index:5;pointer-events:none;overflow:visible}
 .focus-line{fill:none;stroke:#475569;stroke-width:2.5;stroke-linecap:round}
 .focus-line.unresolved{stroke:#a16207;stroke-dasharray:6 5}
@@ -189,9 +216,6 @@ g.is-active .focus-line.unresolved{stroke:#a16207}
 .simulation-hotspot:focus-visible{outline:3px solid #eab308!important}
 
 /* details panel */
-.panel-empty{padding:24px 8px;color:var(--gray-700)}
-.panel-empty h2{font-size:16px;margin-bottom:8px}
-.panel-empty p{line-height:1.6}
 .panel-header{display:flex;flex-direction:column;gap:8px;padding-bottom:12px;border-bottom:1px solid var(--gray-200)}
 .panel-header h2{font-size:18px;overflow-wrap:anywhere}
 .panel-url{color:var(--gray-500);overflow-wrap:anywhere}
@@ -245,13 +269,11 @@ g.is-active .focus-line.unresolved{stroke:#a16207}
 .api-caller span{color:var(--gray-500)}
 
 @media (max-width:1180px){
- .shell{grid-template-columns:220px minmax(0,1fr) 300px}
- .shell[data-sidebar=collapsed]{grid-template-columns:40px minmax(0,1fr) 300px}
+ .shell{--left:220px;--right:300px;--list-width:220px;--details-width:300px}
  #application,.save-status{display:none}
 }
 @media (max-width:1024px){
- .shell{grid-template-columns:200px minmax(0,1fr) 280px}
- .shell[data-sidebar=collapsed]{grid-template-columns:40px minmax(0,1fr) 280px}
+ .shell{--left:200px;--right:280px;--list-width:200px;--details-width:280px}
  .topbar{gap:8px;padding:0 8px}
  .page-tab{padding:6px 8px}
 }

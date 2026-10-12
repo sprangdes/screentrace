@@ -91,8 +91,3 @@ export function screenPanel(panel:HTMLElement,index:Index,state:ReviewState,scre
  panel.replaceChildren(root);
 }
 
-export function emptyScreenPanel(panel:HTMLElement):void{
- const box=element('section',undefined,'panel-empty');
- box.append(element('h2','開始確認'),element('p','點選畫布或左側清單中的畫面，查看它的按鈕與 API，並標記保留或移除。'),element('p','快捷鍵：n 下一個未確認畫面 · / 搜尋','muted'));
- panel.replaceChildren(box);
-}

@@ -12,8 +12,10 @@ export interface CanvasOptions extends CanvasState {
  onTransformChange?:(state:CanvasTransform)=>void;
  /** The person picked a screen: a card, an overview line or a focus line. */
  onOpen:(id:string)=>void;
- /** Builds the full preview of the focused screen inside the given box. */
- renderFocus:(id:string,host:HTMLElement)=>void;
+ /** Builds the full preview of the focused screen inside the given box; resolves once it can be shown. */
+ renderFocus:(id:string,host:HTMLElement)=>Promise<void>|void;
+ /** The person is pointing at a screen they may open next, so its preview can be prepared ahead. */
+ onIntent?:(id:string)=>void;
  /** A focus line is hovered (its trigger components) or left (undefined). */
  onLineHover?:(triggers:string[]|undefined)=>void;
  onExitRequest:()=>void;
@@ -26,7 +28,13 @@ export interface CanvasView {
  readonly focused:string|undefined;
 }
 
-const CARD={width:250,height:220},MOTION_MS=400,BOX_MARGIN={side:96,top:40,bottom:96};
+const CARD={width:250,height:220},MOTION_MS=450,BOX_MARGIN={side:96,top:40,bottom:96};
+/** The preview fades in over this part of the zoom; if it is still loading, it waits at most READY_MS more. */
+const REVEAL={from:0.3,span:0.45},LEAVE_SPAN=0.3,READY_MS=600,FADE_MS=180;
+/** Same curve as the side panels' width transition, so the canvas and the panels move as one. */
+const ease=(t:number)=>t<.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2;
+const clamp=(value:number)=>Math.max(0,Math.min(1,value));
+const wait=(ms:number)=>new Promise<void>(resolve=>setTimeout(resolve,ms));
 const svgNs='http://www.w3.org/2000/svg';
 const reducedMotion=()=>matchMedia('(prefers-reduced-motion: reduce)').matches;
 const arrowDefs=(id:string,color:string)=>`<defs><marker id="${id}" viewBox="0 0 6 6" refX="6" refY="3" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="${color}"/></marker></defs>`;
@@ -44,9 +52,12 @@ export function canvas(index:Index,payload:Payload,options:CanvasOptions):Canvas
  viewport.tabIndex=0;viewport.setAttribute('aria-label',text.canvas);viewport.dataset.mode='overview';
  let state:CanvasState={query:options.query,visible:options.visible,screenStatus:options.screenStatus};
  let zoom=options.transform?.zoom??1,x=options.transform?.x??0,y=options.transform?.y??0;
- let focused:string|undefined,overview:CanvasTransform|undefined,sequence=0;
- const apply=(animate=false)=>{
-  world.style.transition=animate&&!reducedMotion()?`transform ${MOTION_MS}ms cubic-bezier(.2,.8,.2,1)`:'none';
+ let focused:string|undefined,overview:(CanvasTransform&{left:number;top:number})|undefined,sequence=0,frameId=0;
+ // Where the canvas sat on the page while showing the overview; a zoom may already have moved it by the time focus() runs.
+ let rest:{left:number;top:number}|undefined;
+ const keepRest=()=>{if(!focused&&viewport.isConnected){const r=viewport.getBoundingClientRect();rest={left:r.left,top:r.top};}};
+ const apply=()=>{
+  keepRest();
   world.style.transform=`translate(${x}px, ${y}px) scale(${zoom})`;
   viewport.dataset.semanticZoom=zoom<0.7?'compact':'detail';
   if(!focused&&viewport.dataset.fitted==='true')options.onTransformChange?.({zoom,x,y});
@@ -102,6 +113,7 @@ export function canvas(index:Index,payload:Payload,options:CanvasOptions):Canvas
   caption.append(element('strong',screen.name),routeLabel);card.append(caption);
   const linked=()=>{if(focused)return;const lines=new Set<Element>(),ids=new Set([screen.id]);svg.querySelectorAll<SVGPathElement>('.relation-line').forEach(line=>{if(line.dataset.from===screen.id||line.dataset.to===screen.id){lines.add(line);ids.add(line.dataset.from!);ids.add(line.dataset.to!);}});highlight(lines,ids);};
   card.onmouseenter=card.onfocus=linked;card.onmouseleave=card.onblur=clear;
+  card.addEventListener('pointerenter',()=>{if(!frameId)options.onIntent?.(screen.id);});
   card.onclick=()=>options.onOpen(screen.id);
   world.append(card);cards.set(screen.id,card);
  }
@@ -120,12 +132,14 @@ export function canvas(index:Index,payload:Payload,options:CanvasOptions):Canvas
  };
 
  // ---- focus: the same canvas zoomed onto one screen, with that screen's outgoing lines
- const layer=element('div',undefined,'focus-layer'),lines=document.createElementNS(svgNs,'svg') as SVGSVGElement,tips=element('div',undefined,'focus-tips');
+ const newLayer=():HTMLElement=>{const host=element('div',undefined,'focus-layer');host.hidden=true;return host;};
+ let layer=newLayer(),leaving:HTMLElement|undefined;
+ const lines=document.createElementNS(svgNs,'svg') as SVGSVGElement,tips=element('div',undefined,'focus-tips');
  lines.classList.add('focus-lines');lines.innerHTML=arrowDefs('focus-arrow','#475569');
- layer.hidden=true;lines.style.display='none';
+ lines.style.display='none';
  const box=()=>{const w=viewport.clientWidth,h=viewport.clientHeight;return {left:BOX_MARGIN.side,top:BOX_MARGIN.top,right:w-BOX_MARGIN.side,bottom:h-BOX_MARGIN.bottom,width:Math.max(1,w-2*BOX_MARGIN.side),height:Math.max(1,h-BOX_MARGIN.top-BOX_MARGIN.bottom)};};
  const transformFor=(id:string):CanvasTransform=>{const p=positions.get(id)!,b=box(),z=Math.min(b.width/CARD.width,b.height/CARD.height);return {zoom:z,x:b.left+b.width/2-(p.x+CARD.width/2)*z,y:b.top+b.height/2-(p.y+CARD.height/2)*z};};
- const placeLayer=()=>{const b=box();Object.assign(layer.style,{left:`${b.left}px`,top:`${b.top}px`,width:`${b.width}px`,height:`${b.height}px`});};
+ const placeLayer=(host:HTMLElement=layer)=>{const b=box();Object.assign(host.style,{left:`${b.left}px`,top:`${b.top}px`,width:`${b.width}px`,height:`${b.height}px`});};
  const center=(id:string)=>{const p=positions.get(id)!;return {x:p.x+CARD.width/2,y:p.y+CARD.height/2};};
  const drawLines=(id:string)=>{
   lines.querySelectorAll('g').forEach(g=>g.remove());tips.replaceChildren();
@@ -153,7 +167,7 @@ export function canvas(index:Index,payload:Payload,options:CanvasOptions):Canvas
    hit.setAttribute('aria-label',segment.kind==='unresolved'?text.unresolved:segment.kind==='loop'?`回到「${target?.name||''}」`:`前往「${target?.name||''}」`);
    const tip=relationTooltip(index,payload,relation);tip.hidden=true;tip.classList.add('focus-tooltip');tip.dataset.to=relation.to;tips.append(tip);
    const placeTip=(px:number,py:number)=>{tip.hidden=false;const tw=tip.offsetWidth||260,th=tip.offsetHeight||200;tip.style.left=`${Math.max(8,Math.min(w-tw-8,px+14))}px`;tip.style.top=`${Math.max(8,Math.min(h-th-8,py+14))}px`;};
-   const show=(px:number,py:number)=>{group.classList.add('is-active');placeTip(px,py);options.onLineHover?.(relation.triggers);};
+   const show=(px:number,py:number)=>{if(segment.kind==='known'&&!frameId)options.onIntent?.(relation.to);group.classList.add('is-active');placeTip(px,py);options.onLineHover?.(relation.triggers);};
    const hide=()=>{group.classList.remove('is-active');tip.hidden=true;options.onLineHover?.(undefined);};
    hit.addEventListener('mousemove',event=>{const r=viewport.getBoundingClientRect();show(event.clientX-r.left,event.clientY-r.top);});
    hit.addEventListener('mouseleave',hide);hit.addEventListener('blur',hide);
@@ -163,31 +177,104 @@ export function canvas(index:Index,payload:Payload,options:CanvasOptions):Canvas
    group.append(visibleLine,hit);lines.append(group);
   }
  };
- const settle=(id:string,token:number)=>{
+ // Zooming is a shared-element move: the card's thumbnail lands exactly where the page appears in the preview box,
+ // and the box travels with the card, so only its frame fades in around a picture that never jumps.
+ const aligned=(id:string,host:HTMLElement):CanvasTransform=>{
+  const card=cards.get(id),image=card?.querySelector<HTMLImageElement>('img.card-preview'),scroller=host.querySelector<HTMLElement>('.prototype-scroll'),frame=scroller?.offsetParent as HTMLElement|null;
+  if(!card||!image?.naturalWidth||!image.naturalHeight||!scroller||!frame||host.hidden)return transformFor(id);
+  const page=Math.max(1,payload.preview.screens?.find(s=>s.graphScreenId===id)?.width||1440),b=box(),p=positions.get(id)!;
+  const boxWidth=image.clientWidth,boxHeight=image.clientHeight,shown=boxWidth/boxHeight<image.naturalWidth/image.naturalHeight?boxWidth:boxHeight*image.naturalWidth/image.naturalHeight;
+  const thumbX=p.x+card.clientLeft+image.offsetLeft+(boxWidth-shown)/2,thumbY=p.y+card.clientTop+image.offsetTop;
+  const inner=scroller.clientWidth,scale=Math.min(1,Math.max(1,inner-16)/page);
+  const stageX=b.left+frame.offsetLeft+scroller.offsetLeft+scroller.clientLeft+(inner-page*scale)/2,stageY=b.top+frame.offsetTop+scroller.offsetTop+scroller.clientTop;
+  const z=page*scale/shown;
+  return {zoom:z,x:stageX-thumbX*z,y:stageY-thumbY*z};
+ };
+ /** Keeps a preview box glued to its card while the world moves. */
+ const glue=(host:HTMLElement,id:string)=>{
+  placeLayer(host);const a=aligned(id,host),k=zoom/a.zoom,b=box();
+  host.style.transformOrigin='0 0';
+  host.style.transform=Math.abs(k-1)<1e-4&&Math.abs(x-a.x)<.5&&Math.abs(y-a.y)<.5?'':`translate(${x+(b.left-a.x)*k-b.left}px, ${y+(b.top-a.y)*k-b.top}px) scale(${k})`;
+ };
+ const origin=()=>{const r=viewport.getBoundingClientRect();return {left:r.left,top:r.top};};
+ /** Moves the world to target(), re-read every frame because the side panels resize the canvas meanwhile; scale changes geometrically around anchor. */
+ const animate=(target:()=>CanvasTransform,anchor:{x:number;y:number},frame:(t:number)=>void,done:()=>void)=>{
+  cancelAnimationFrame(frameId);
+  const o=origin(),from={zoom,x:x+o.left,y:y+o.top};let start:number|undefined;
+  const step=(now:number)=>{
+   start??=now;
+   const t=Math.min(1,(now-start)/MOTION_MS),e=ease(t),here=origin(),local=target(),to={zoom:local.zoom,x:local.x+here.left,y:local.y+here.top};
+   const z=from.zoom*Math.pow(to.zoom/from.zoom,e);
+   const ax=from.x+anchor.x*from.zoom+(to.x+anchor.x*to.zoom-from.x-anchor.x*from.zoom)*e,ay=from.y+anchor.y*from.zoom+(to.y+anchor.y*to.zoom-from.y-anchor.y*from.zoom)*e;
+   if(t<1){zoom=z;x=ax-anchor.x*z-here.left;y=ay-anchor.y*z-here.top;}else({zoom,x,y}=local);apply();
+   frame(t);
+   if(t<1)frameId=requestAnimationFrame(step);else{frameId=0;done();}
+  };
+  frameId=requestAnimationFrame(step);
+ };
+ const dropLeaving=()=>{leaving?.remove();leaving=undefined;};
+ /** The box that is leaving keeps following its card while it fades out. */
+ const fadeLeaving=(id:string,t:number,startOpacity:number)=>{
+  if(!leaving)return;
+  glue(leaving,id);leaving.style.opacity=String(startOpacity*(1-clamp(t/LEAVE_SPAN)));
+  if(t>=LEAVE_SPAN)dropLeaving();
+ };
+ const showLines=(id:string,token:number)=>{
   if(token!==sequence||focused!==id)return;
-  placeLayer();layer.hidden=false;lines.style.display='';
-  for(const [cardId,card] of cards)card.classList.toggle('is-dim',cardId!==id);
-  cards.get(id)?.classList.add('is-under-focus');
-  options.renderFocus(id,layer);drawLines(id);
+  lines.style.display='';drawLines(id);lines.classList.add('is-entering');
+  requestAnimationFrame(()=>lines.classList.remove('is-entering'));
  };
  const focus=(id:string)=>{
-  const token=++sequence,previous=focused;
-  if(!previous)overview={zoom,x,y};
-  focused=id;viewport.dataset.mode='focus';viewport.dataset.focused=id;
-  layer.hidden=true;layer.replaceChildren();lines.style.display='none';tips.replaceChildren();options.onLineHover?.(undefined);
-  for(const [cardId,card] of cards){card.classList.toggle('is-dim',cardId!==id&&cardId!==previous);card.classList.remove('is-under-focus');}
-  svg.classList.add('is-dim');
-  ({zoom,x,y}=transformFor(id));apply(true);
-  if(reducedMotion())settle(id,token);else setTimeout(()=>settle(id,token),MOTION_MS);
+  const token=++sequence,previous=focused,old=previous?layer:undefined,oldOpacity=old?Number(getComputedStyle(old).opacity)||0:0;
+  if(!previous){const o=rest??origin();overview={zoom,x,y,left:o.left,top:o.top};}
+  focused=id;viewport.dataset.mode='focus';viewport.dataset.focused=id;options.onLineHover?.(undefined);
+  clear();svg.classList.add('is-dim');lines.style.display='none';tips.replaceChildren();
+  for(const [cardId,card] of cards){card.classList.toggle('is-dim',cardId!==id&&cardId!==previous);card.classList.remove('is-under-focus');card.classList.toggle('is-morphing',cardId===id||cardId===previous);}
+  dropLeaving();leaving=old;if(!old)layer.remove();
+  layer=newLayer();viewport.insertBefore(layer,tips);
+  placeLayer();layer.classList.add('is-entering');layer.style.transition='none';layer.style.opacity='0';
+  const host=layer;let loaded=false,ready:Promise<void>|undefined;
+  // Build the preview after the zoom's first frame so the work never delays its start; the motion is still
+  // nearly at rest then, so switching from the approximate to the exact target is invisible.
+  const build=()=>{if(ready||token!==sequence)return;host.hidden=false;ready=Promise.resolve(options.renderFocus(id,host)).then(()=>{loaded=true;});};
+  const finish=()=>{
+   if(token!==sequence)return;
+   build();dropLeaving();({zoom,x,y}=aligned(id,host));apply();glue(host,id);
+   for(const [cardId,card] of cards){card.classList.toggle('is-dim',cardId!==id);if(cardId!==id)card.classList.remove('is-morphing');}
+   const reveal=()=>{
+    if(token!==sequence)return;
+    host.style.transition='';host.style.opacity='';host.classList.remove('is-entering');
+    const hide=()=>{if(token===sequence)cards.get(id)?.classList.add('is-under-focus');};
+    if(loaded||reducedMotion())hide();else wait(FADE_MS).then(hide);
+    showLines(id,token);
+   };
+   if(loaded||reducedMotion())reveal();else Promise.race([ready!,wait(READY_MS)]).then(reveal);
+  };
+  if(reducedMotion()){finish();return;}
+  animate(()=>{placeLayer(host);return aligned(id,host);},center(id),t=>{
+   if(t>0)build();
+   if(previous)fadeLeaving(previous,t,oldOpacity);
+   glue(host,id);host.style.opacity=loaded?String(clamp((t-REVEAL.from)/REVEAL.span)):'0';
+  },finish);
  };
  const exit=()=>{
   if(!focused)return;
-  ++sequence;const leaving=focused;focused=undefined;viewport.dataset.mode='overview';delete viewport.dataset.focused;
-  layer.hidden=true;layer.replaceChildren();lines.style.display='none';tips.replaceChildren();options.onLineHover?.(undefined);
-  for(const card of cards.values())card.classList.remove('is-dim','is-under-focus');
+  const token=++sequence,id=focused,host=layer;focused=undefined;viewport.dataset.mode='overview';delete viewport.dataset.focused;
+  options.onLineHover?.(undefined);lines.style.display='none';tips.replaceChildren();
+  dropLeaving();leaving=host.hidden?undefined:host;if(host.hidden)host.remove();
+  layer=newLayer();viewport.insertBefore(layer,tips);
+  const oldOpacity=leaving?Number(getComputedStyle(leaving).opacity)||0:0;if(leaving)leaving.style.transition='none';
+  for(const [cardId,card] of cards){card.classList.remove('is-dim','is-under-focus');card.classList.toggle('is-morphing',cardId===id);}
   svg.classList.remove('is-dim');
-  if(overview){({zoom,x,y}=overview);viewport.dataset.fitted='true';apply(true);}else fit();
-  cards.get(leaving)?.focus({preventScroll:true});
+  // Keyboard focus returns to the card only once the canvas has settled, so its highlighted lines appear at overview scale.
+  const end=()=>{if(token!==sequence)return;dropLeaving();cards.get(id)?.classList.remove('is-morphing');viewport.dataset.fitted='true';apply();cards.get(id)?.focus({preventScroll:true});};
+  const saved=overview;
+  if(!saved){dropLeaving();cards.get(id)?.classList.remove('is-morphing');fit();cards.get(id)?.focus({preventScroll:true});}
+  else{
+   const target=()=>{const o=origin();return {zoom:saved.zoom,x:saved.x+(saved.left-o.left),y:saved.y+(saved.top-o.top)};};
+   if(reducedMotion()){({zoom,x,y}=target());end();}
+   else animate(target,center(id),t=>{fadeLeaving(id,t,oldOpacity);if(t>=.5)cards.get(id)?.classList.remove('is-morphing');},end);
+  }
  };
 
  viewport.addEventListener('keydown',event=>{
@@ -206,17 +293,19 @@ export function canvas(index:Index,payload:Payload,options:CanvasOptions):Canvas
   if(focused){if(layer.contains(event.target as Node)&&!event.ctrlKey)return;event.preventDefault();if(event.deltaY>0)options.onExitRequest();return;}
   event.preventDefault();change(event.deltaY<0?1.1:1/1.1);
  },{passive:false});
- viewport.append(world,lines,layer,tips,controls);
+ const hint=element('p','點選畫面開始確認 · n 下一個未確認 · / 搜尋','canvas-hint');
+ viewport.append(world,lines,layer,tips,hint,controls);
  update(state);apply();
  let observed:{width:number;height:number}|undefined;
  new ResizeObserver(entries=>{
   const size=entries[0]?.contentRect;if(!size)return;
   const changed=!!observed&&(size.width!==observed.width||size.height!==observed.height);observed={width:size.width,height:size.height};
-  if(!changed)return;
+  if(!changed||frameId)return;
+  keepRest();
   if(focused){
-   // Leave a running zoom animation alone when the target is unchanged (e.g. the sidebar collapsed as the zoom started).
-   const target=transformFor(focused);if(target.zoom!==zoom||target.x!==x||target.y!==y){({zoom,x,y}=target);apply();}
-   placeLayer();if(!layer.hidden)drawLines(focused);
+   // Opening or folding a side panel resizes the canvas: keep the screen glued to its preview box.
+   placeLayer();({zoom,x,y}=aligned(focused,layer));apply();glue(layer,focused);
+   if(lines.style.display!=='none')drawLines(focused);
   }
   else if(!options.transform&&!overview)fit();
  }).observe(viewport);

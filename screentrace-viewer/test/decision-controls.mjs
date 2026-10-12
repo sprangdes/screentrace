@@ -28,6 +28,6 @@ export async function openScreen(page,id){
 /** While a screen is zoomed in, the screen list is collapsed; open it the way a person would. */
 export async function showList(page){
  if(await page.locator('.sidebar-body').isVisible())return;
- await page.locator('.sidebar-rail').click();
+ await page.getByRole('button',{name:'展開畫面清單'}).click();
  await page.locator('.sidebar-body').waitFor();
 }
