@@ -1,6 +1,5 @@
 package io.screentrace.adapter.spring;
 
-import com.github.javaparser.StaticJavaParser;
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
 import com.github.javaparser.ast.body.MethodDeclaration;
 import com.github.javaparser.ast.expr.AnnotationExpr;
@@ -69,7 +68,7 @@ public final class SpringBootAnalyzer {
     private void parseController(Path root, Path file, AnalysisState state) {
         try {
             String relative = root.relativize(file).toString();
-            for (ClassOrInterfaceDeclaration type : StaticJavaParser.parse(SafeProjectFiles.readUtf8Limited(root, file, SafeProjectFiles.MAX_SOURCE_FILE_BYTES)).findAll(ClassOrInterfaceDeclaration.class)) {
+            for (ClassOrInterfaceDeclaration type : io.screentrace.parser.jsp.JavaSources.parse(SafeProjectFiles.readUtf8Limited(root, file, SafeProjectFiles.MAX_SOURCE_FILE_BYTES)).findAll(ClassOrInterfaceDeclaration.class)) {
                 parseControllerType(type, relative, state);
             }
         } catch (IOException | RuntimeException exception) {

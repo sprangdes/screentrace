@@ -25,6 +25,36 @@ class SpringBootAnalyzerTest {
     }
 
     @Test
+    void parsesControllersAndRecordDtosWrittenWithModernJavaSyntax() throws Exception {
+        Path root = Files.createTempDirectory("st-java17");
+        Path java = root.resolve("src/main/java/Api.java");
+        Files.createDirectories(java.getParent());
+        Files.writeString(java, """
+            import org.springframework.web.bind.annotation.*;
+            @RestController @RequestMapping("/api") class Api {
+              @PostMapping("/pets") PetView create(@RequestBody CreatePet request) {
+                String label = switch (request.kind()) { case "cat" -> "Cat"; default -> "Other"; };
+                String text = \"\"\"
+                    multi-line
+                    \"\"\";
+                return new PetView(label);
+              }
+            }
+            record CreatePet(String kind, String name) { }
+            record PetView(String label) { }
+            """);
+
+        ApplicationGraph graph = new SpringBootAnalyzer().analyze(new ProjectScanner().scan(root));
+
+        var endpoint = graph.nodes().stream().filter(node -> node.name().equals("POST /api/pets")).findFirst()
+                .orElseThrow(() -> new AssertionError(graph.diagnostics().toString()));
+        var contract = graph.apiContracts().stream().filter(item -> item.endpointId().equals(endpoint.id())).findFirst().orElseThrow();
+        assertTrue(contract.request().fields().stream().anyMatch(field -> field.name().equals("name")));
+        assertTrue(contract.responses().get(0).fields().stream().anyMatch(field -> field.name().equals("label")));
+        assertTrue(graph.diagnostics().stream().noneMatch(item -> item.message().contains("Unable to parse")), graph.diagnostics().toString());
+    }
+
+    @Test
     void resolvesAReactViewImportedFromAnotherFile() throws Exception {
         Path root = Files.createTempDirectory("st-react");
         Path source = root.resolve("src");

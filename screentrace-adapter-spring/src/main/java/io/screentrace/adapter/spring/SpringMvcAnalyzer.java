@@ -1,7 +1,5 @@
 package io.screentrace.adapter.spring;
 
-import com.github.javaparser.StaticJavaParser;
-import com.github.javaparser.ParserConfiguration;
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
 import com.github.javaparser.ast.body.MethodDeclaration;
 import com.github.javaparser.ast.expr.AnnotationExpr;
@@ -46,10 +44,6 @@ import org.xml.sax.InputSource;
 public final class SpringMvcAnalyzer {
     private static final Set<String> MAPPINGS = Set.of("RequestMapping", "GetMapping", "PostMapping", "PutMapping", "DeleteMapping", "PatchMapping");
     private static final Set<String> PATH_NAMES = Set.of("value", "path");
-
-    static {
-        StaticJavaParser.setConfiguration(new ParserConfiguration().setLanguageLevel(ParserConfiguration.LanguageLevel.JAVA_17));
-    }
 
     public ApplicationGraph analyze(ProjectInventory inventory) throws IOException {
         State state = new State(inventory.root(), inventory.javaFiles());
@@ -126,7 +120,7 @@ public final class SpringMvcAnalyzer {
     private static void parseController(Path file, State state) {
         String relative = state.root.relativize(file).toString();
         try {
-            for (ClassOrInterfaceDeclaration type : StaticJavaParser.parse(SafeProjectFiles.readUtf8Limited(state.root, file, SafeProjectFiles.MAX_SOURCE_FILE_BYTES)).findAll(ClassOrInterfaceDeclaration.class)) {
+            for (ClassOrInterfaceDeclaration type : io.screentrace.parser.jsp.JavaSources.parse(SafeProjectFiles.readUtf8Limited(state.root, file, SafeProjectFiles.MAX_SOURCE_FILE_BYTES)).findAll(ClassOrInterfaceDeclaration.class)) {
                 AnnotationExpr controller = annotation(type, "Controller");
                 boolean rest = annotation(type, "RestController") != null;
                 if (controller == null && !rest) continue;

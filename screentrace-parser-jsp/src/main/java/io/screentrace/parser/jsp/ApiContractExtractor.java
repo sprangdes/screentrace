@@ -1,6 +1,5 @@
 package io.screentrace.parser.jsp;
 
-import com.github.javaparser.StaticJavaParser;
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
 import com.github.javaparser.ast.body.MethodDeclaration;
 import com.github.javaparser.ast.body.RecordDeclaration;
@@ -65,7 +64,7 @@ public class ApiContractExtractor {
   private void index(Path root, Path file) {
     try {
       String relative = root.relativize(file).toString();
-      var unit = StaticJavaParser.parse(SafeProjectFiles.readUtf8Limited(root, file, SafeProjectFiles.MAX_SOURCE_FILE_BYTES));
+      var unit = JavaSources.parse(SafeProjectFiles.readUtf8Limited(root, file, SafeProjectFiles.MAX_SOURCE_FILE_BYTES));
       for (ClassOrInterfaceDeclaration type : unit.findAll(ClassOrInterfaceDeclaration.class)) {
         List<Field> fields = new ArrayList<>();
         for (var declaration : type.getFields()) if(!declaration.isStatic()) for (VariableDeclarator variable : declaration.getVariables()) {
