@@ -87,7 +87,7 @@ async function main(){
    for(const value of forbidden)assert.ok(!bytes.includes(Buffer.from(value)),`${name} contains private path marker ${value}`);
   };
   const reset=async()=>{if(await page.locator('.prototype-back').count())await page.locator('.prototype-back').click();await page.locator('.canvas[data-mode="overview"]').waitFor();};
-  const zoom=async id=>{await reset();await page.locator(`.screen-card[data-screen="${id}"]`).click();await page.locator('.focus-layer:not([hidden]) .preview[aria-busy="false"]').waitFor();};
+  const zoom=async id=>{await reset();await page.locator(`.screen-card[data-screen="${id}"]`).click();await page.locator('.focus-layer:not([hidden]):not(.is-leaving) .preview[aria-busy="false"]').waitFor();};
   await page.locator('.canvas[data-fitted="true"]').waitFor();await screenshot('canvas.png');
   await page.getByRole('searchbox',{name:'搜尋 URL 或畫面名稱'}).fill('/owners/5/edit');await page.locator('.screen-card.search-match').first().waitFor();await screenshot('search-url.png');
   await page.getByRole('button',{name:'清除搜尋'}).click();

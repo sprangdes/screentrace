@@ -5,6 +5,7 @@ import {componentLabelsForScreen} from './labels';
 import {callSources} from './usage';
 import {jsfLimitation} from './unsupported-framework';
 import {apiEndpoints} from './api-page';
+import {sharedNavigation} from './relations';
 import {decisionSwitch,decisionLabel} from './review-ui';
 import {ReviewState,Decision,screenDecision,componentDecision,markableComponents,conflicts} from './shared/review';
 
@@ -86,13 +87,17 @@ export function screenPanel(panel:HTMLElement,index:Index,state:ReviewState,scre
  const inbound=element('section',undefined,'panel-section');inbound.dataset.section='inbound';
  inbound.append(element('h3',`從哪些畫面可來到這裡 ${sources.length} 個`));
  if(!sources.length)inbound.append(element('p','畫面中找不到前往這裡的連結；可能由網址、書籤或其他系統直接進入。','muted'));
- for(const source of sources){const link=element('button',source.name,'link-row');link.dataset.inbound=source.id;link.onclick=()=>actions.focus(source.id);inbound.append(link);}
+ // Sources reached only through header/footer links are grouped, matching the single shared line on the preview.
+ const navigation=sharedNavigation(index,screenId),viaShared=new Set(navigation.into);
+ const sourceRow=(source:Node)=>{const link=element('button',source.name,'link-row');link.dataset.inbound=source.id;link.onclick=()=>actions.focus(source.id);return link;};
+ for(const source of sources)if(!viaShared.has(source.id))inbound.append(sourceRow(source));
+ if(viaShared.size){
+  const group=element('details',undefined,'fragment-group inbound-shared'),summary=element('summary',`透過頁首／頁尾連結 ${viaShared.size} 個畫面`);
+  group.append(summary);if(navigation.intoLabels.length)group.append(element('p',`連結：${navigation.intoLabels.join('、')}`,'muted'));
+  for(const source of sources)if(viaShared.has(source.id))group.append(sourceRow(source));
+  inbound.append(group);
+ }
  root.append(inbound);
  panel.replaceChildren(root);
 }
 
-export function emptyScreenPanel(panel:HTMLElement):void{
- const box=element('section',undefined,'panel-empty');
- box.append(element('h2','開始確認'),element('p','點選畫布或左側清單中的畫面，查看它的按鈕與 API，並標記保留或移除。'),element('p','快捷鍵：n 下一個未確認畫面 · / 搜尋','muted'));
- panel.replaceChildren(box);
-}

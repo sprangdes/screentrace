@@ -10,7 +10,7 @@ import {canvas,fileTree,CanvasTransform,CanvasView} from './canvas';
 import {prototypeViewer} from './prototype';
 import {PrototypeHistory} from './prototype-history';
 import {apiPage} from './api-page';
-import {screenPanel,emptyScreenPanel} from './screen-panel';
+import {screenPanel} from './screen-panel';
 import {decisionLabel} from './review-ui';
 import {previewDocument,previewSelector} from './preview';
 import {generateMarkdown,importMarkdown,markdownSizeWarning} from './shared/review-md';
@@ -96,12 +96,16 @@ try {
  modes.setAttribute('role','group');modes.setAttribute('aria-label','清單顯示方式');modes.append(listButton,filesButton);
  const chips=element('div',undefined,'chips');chips.setAttribute('role','group');chips.setAttribute('aria-label','依狀態篩選');
  const notices=element('div',undefined,'sidebar-notices'),list=element('div',undefined,'screen-list');
- const sidebarHeader=element('div',undefined,'sidebar-header'),collapseList=iconButton('收起畫面清單','chevronLeft');
- sidebarHeader.append(element('h2','畫面清單'),collapseList);
- const rail=element('button',undefined,'sidebar-rail');rail.setAttribute('aria-label','展開畫面清單');rail.title='展開畫面清單';
- rail.append(icon('chevronRight'),element('span','畫面清單'));
+ // The same sidebar toggle sits in the same top-left spot whether the list is open or folded into the rail.
+ const sidebarHeader=element('div',undefined,'sidebar-header'),collapseList=iconButton('收起畫面清單','sidebar');
+ sidebarHeader.append(collapseList,element('h2','畫面清單'));
+ const rail=element('div',undefined,'sidebar-rail'),expandList=iconButton('展開畫面清單','sidebar'),railSearch=iconButton('搜尋畫面','search');
+ expandList.classList.add('rail-toggle');rail.append(expandList,railSearch);
  const sidebarBody=element('div',undefined,'sidebar-body');sidebarBody.append(sidebarHeader,searchBox,modes,chips,notices,list);
  nav.append(rail,sidebarBody);
+ // The screen details appear only while a screen is open; they fold into a rail on their own edge, mirroring the list.
+ const panelBody=element('div',undefined,'details-body'),collapseDetails=iconButton('收起畫面資訊','sidebarRight'),detailsRail=element('div',undefined,'details-rail'),expandDetails=iconButton('展開畫面資訊','sidebarRight');
+ collapseDetails.classList.add('details-toggle');expandDetails.classList.add('rail-toggle');detailsRail.append(expandDetails);panel.append(collapseDetails,detailsRail,panelBody);
  shell.append(nav,main,panel);
  if(restored.warning&&!restored.warning.includes('覆寫'))notices.append(element('p',restored.warning,'notice'));
  if(initial.dropped)notices.append(element('p','先前的進度含已不再使用的欄位（原因、備註、元件庫對應），已略過；保留／移除標記不受影響。','notice'));
@@ -221,16 +225,23 @@ try {
   if(!list.childElementCount)list.append(element('p','沒有符合的畫面','empty-list'));
  };
 
- // The screen list collapses into a rail on its own edge; zooming into a screen collapses it, returning restores it.
+ // The screen list folds into a rail on its own edge; zooming into a screen folds it, returning restores it.
+ // While zoomed in, opening it floats the list over the canvas so the preview keeps its size.
  let listCollapsed=false,overviewCollapsed=false,wasZoomed=false;
- const syncList=()=>{shell.dataset.sidebar=listCollapsed?'collapsed':'expanded';rail.setAttribute('aria-expanded','false');collapseList.setAttribute('aria-expanded','true');};
- const setList=(collapsed:boolean)=>{listCollapsed=collapsed;if(!wasZoomed)overviewCollapsed=collapsed;syncList();(collapsed?rail:search).focus();};
- rail.onclick=()=>setList(false);collapseList.onclick=()=>setList(true);
+ const overlayOpen=()=>wasZoomed&&!listCollapsed;
+ const syncList=()=>{shell.dataset.sidebar=listCollapsed?'collapsed':wasZoomed?'overlay':'expanded';sidebarBody.inert=listCollapsed;expandList.setAttribute('aria-expanded','false');collapseList.setAttribute('aria-expanded','true');};
+ const setList=(collapsed:boolean,focus:HTMLElement=collapsed?expandList:collapseList)=>{listCollapsed=collapsed;if(!wasZoomed)overviewCollapsed=collapsed;syncList();focus.focus();};
+ expandList.onclick=()=>setList(false);railSearch.onclick=()=>setList(false,search);collapseList.onclick=()=>setList(true);
+ document.addEventListener('click',event=>{if(overlayOpen()&&!nav.contains(event.target as Node)){listCollapsed=true;syncList();}});
+ let detailsCollapsed=false;
+ const syncDetails=()=>{shell.dataset.details=page!=='screens'||!current?'hidden':detailsCollapsed?'collapsed':'open';panelBody.inert=shell.dataset.details!=='open';collapseDetails.inert=shell.dataset.details!=='open';expandDetails.setAttribute('aria-expanded','false');collapseDetails.setAttribute('aria-expanded','true');};
+ const setDetails=(collapsed:boolean)=>{detailsCollapsed=collapsed;syncDetails();(collapsed?expandDetails:collapseDetails).focus();};
+ expandDetails.onclick=()=>setDetails(false);collapseDetails.onclick=()=>setDetails(true);
  const renderPanel=()=>{
-  if(page==='api'||!current){emptyScreenPanel(panel);return;}
+  if(page==='api'||!current){panelBody.replaceChildren();return;}
   const shown=panel.querySelector<HTMLDetailsElement>(`[data-screen-panel="${CSS.escape(current)}"] .panel-buttons`);
   if(shown)buttonsOpen=shown.open||buttonsOpen&&!!highlightComponent;
-  screenPanel(panel,index,reviewState,current,{
+  screenPanel(panelBody,index,reviewState,current,{
    setScreen:decide.screen,setComponent:decide.component,focus:id=>openScreen(id),api:id=>showApi(id),
    buttonsOpen,onButtonsToggle:open=>{buttonsOpen=open;},highlight:highlightComponent
   });
@@ -262,7 +273,16 @@ try {
    if(node.localName==='input')node.insertAdjacentElement('afterend',badge);else node.append(badge);
   }
  };
- const renderFocus=(id:string,host:HTMLElement)=>{
+ // Building a preview inlines its images and takes long enough to stall the zoom, so it is prepared as soon as
+ // the person points at a screen; decisions are applied on load, so a prepared document never goes stale.
+ const prepared=new Map<string,string>();let preparing:string|undefined;
+ const previewHtml=(id:string)=>{
+  let html=prepared.get(id);if(html===undefined)html=previewDocument(payload,id);
+  prepared.delete(id);prepared.set(id,html);if(prepared.size>4)prepared.delete(prepared.keys().next().value!);
+  return html;
+ };
+ const prepare=(id:string|undefined)=>{if(!id||prepared.has(id)||preparing===id||!index.nodes.has(id))return;preparing=id;setTimeout(()=>{if(preparing===id){preparing=undefined;previewHtml(id);}},0);};
+ const renderFocus=(id:string,host:HTMLElement)=>new Promise<void>(shown=>{
   const preview=element('section',undefined,'preview'),notice=element('span','示意畫面：資料為範例值，不是真實系統','preview-notice');
   frame=element('iframe');simulation=undefined;
   const own=frame;
@@ -270,17 +290,18 @@ try {
   own.setAttribute('sandbox','allow-same-origin');own.title=index.nodes.get(id)!.name;
   own.onload=()=>{
    const doc=own.contentDocument;if(!doc||!own.getAttribute('srcdoc'))return;
-   preview.setAttribute('aria-busy','false');
+   decorate(doc,id);preview.setAttribute('aria-busy','false');shown();
    doc.addEventListener('keydown',onKey);
    simulation=attachSimulation(payload,id,own,viewer!,{focus:target=>openScreen(target),api:target=>showApi(target),thumbnail});
+   setTimeout(()=>{if(current===id)prepare(nextUndecidedId());},800);
    doc.querySelector('[data-spotlight]')?.scrollIntoView({block:'center'});
   };
-  own.srcdoc=previewDocument(payload,id,doc=>decorate(doc,id));
+  own.srcdoc=previewHtml(id);
   preview.append(own,notice);
   const scroll=history.current?.screenId===id?history.current.scroll:0;
   viewer=prototypeViewer(index,payload,id,preview,own,history,{back:()=>showCanvas(),focus:target=>openScreen(target),move:delta=>{const visit=history.move(delta,viewerScroll());if(visit)openScreen(visit.screenId,{push:false});},scroll});
   host.replaceChildren(viewer);
- };
+ });
  const highlightTriggers=(triggers:string[]|undefined)=>{
   const doc=frame?.contentDocument;if(!doc||!current)return;
   doc.querySelectorAll<HTMLElement>('[data-line-trigger]').forEach(node=>{node.style.outline=node.dataset.lineTrigger||'';delete node.dataset.lineTrigger;});
@@ -288,7 +309,7 @@ try {
  };
  const ensureCanvas=()=>{
   if(view&&main.contains(view.element))return view;
-  view=canvas(index,payload,{...canvasState(),transform:canvasTransform,onTransformChange:state=>{canvasTransform=state;},onOpen:id=>openScreen(id),renderFocus,onLineHover:highlightTriggers,onExitRequest:()=>showCanvas()});
+  view=canvas(index,payload,{...canvasState(),transform:canvasTransform,onTransformChange:state=>{canvasTransform=state;},onOpen:id=>openScreen(id),renderFocus,onLineHover:highlightTriggers,onIntent:prepare,onExitRequest:()=>showCanvas()});
   main.replaceChildren(view.element);
   return view;
  };
@@ -299,7 +320,8 @@ try {
   const zoomed=page==='screens'&&!!current;
   if(zoomed&&!wasZoomed){overviewCollapsed=listCollapsed;listCollapsed=true;}
   else if(!zoomed&&wasZoomed)listCollapsed=overviewCollapsed;
-  wasZoomed=zoomed;syncList();
+  if(!zoomed)detailsCollapsed=false;
+  wasZoomed=zoomed;syncList();syncDetails();
   screensTab.setAttribute('aria-current',page==='screens'?'page':'false');apiTab.setAttribute('aria-current',page==='api'?'page':'false');
   renderProgress();renderSidebar();renderPanel();
   if(page==='api'){
@@ -320,6 +342,7 @@ try {
   if(current!==id)buttonsOpen=false;
   highlightComponent=options.component;if(options.component)buttonsOpen=true;
   if(current!==id){frame=undefined;viewer=undefined;simulation=undefined;}
+  if(overlayOpen())listCollapsed=true;
   page='screens';current=id;render();
  };
  const showCanvas=()=>{page='screens';current=undefined;highlightComponent=undefined;frame=undefined;viewer=undefined;simulation=undefined;render();};
@@ -355,15 +378,17 @@ try {
  };
 
  // ---- keyboard
- const nextUndecided=()=>{
+ const nextUndecidedId=()=>{
   const ids=orderedScreens.map(s=>s.id),start=current?ids.indexOf(current):-1;
-  for(let step=1;step<=ids.length;step++){const id=ids[(start+step+ids.length)%ids.length];if(screenDecision(reviewState,id)==='UNDECIDED'){openScreen(id);return;}}
-  say('全部畫面都已確認');
+  for(let step=1;step<=ids.length;step++){const id=ids[(start+step+ids.length)%ids.length];if(screenDecision(reviewState,id)==='UNDECIDED')return id;}
+  return undefined;
  };
+ const nextUndecided=()=>{const id=nextUndecidedId();if(id)openScreen(id);else say('全部畫面都已確認');};
  const onKey=(event:KeyboardEvent)=>{
   const target=event.target as Element|null,editable=target?.closest?.('input,textarea,select,[contenteditable="true"]');
   if(event.altKey&&['ArrowLeft','ArrowRight'].includes(event.key)&&page==='screens'&&current){event.preventDefault();const visit=history.move(event.key==='ArrowLeft'?-1:1,viewerScroll());if(visit)openScreen(visit.screenId,{push:false});return;}
   if(event.altKey||event.ctrlKey||event.metaKey)return;
+  if(event.key==='Escape'&&overlayOpen()){event.preventDefault();setList(true);return;}
   if(event.key==='Escape'&&editable){(target as HTMLElement).blur();return;}
   if(event.key==='Escape'){
    if(simulation?.closeDialog())return;
@@ -381,6 +406,8 @@ try {
   if(row)decide.component(current,row.dataset.componentRow!,value);else decide.screen(current,value);
  };
  document.addEventListener('keydown',onKey);
+ list.addEventListener('pointerover',event=>prepare((event.target as Element).closest<HTMLElement>('[data-screen-list]')?.dataset.screenList));
+ setTimeout(()=>prepare(nextUndecidedId()),1000);
 
  if(!storage)say('⚠ 無法暫存在瀏覽器，請下載 md','error');
  renderFile();
