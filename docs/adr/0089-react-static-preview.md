@@ -9,7 +9,7 @@ ADR 0088 讓 React 路由成為畫面，但靜態預覽只處理 JSP／HTML，Re
 - 預覽 HTML 由 ADR 0088 的同一個渲染展開產生（`screentrace-js/react/markup.mjs`），所以元件、條件與錨點和圖完全一致：
   - 原生元素輸出為 HTML；`className`、常值屬性與常值 `style` 物件保留。事件屬性、`dangerouslySetInnerHTML`、`script`／`style`／`iframe` 等元素、`src`／`srcdoc`／`action` 一律不輸出；文字與屬性值全部跳脫。
   - 無法證明的文字顯示「示例值」（與 JSP 預覽相同）。`className` 取最短、完全可證明的候選，也就是一般狀態。
-  - 條件無法判定時，兩個分支的元件都記錄到圖上；預覽 HTML 只放 `else`／fall-through 分支，該分支沒有內容時才改放條件分支。只在條件下出現的對話框與遮罩預設隱藏，並以 `data-st-condition` 保留條件原文。
+  - 條件無法判定時，兩個分支的元件都記錄到圖上；預覽 HTML 只放 `else`／fall-through 分支，該分支沒有內容時才改放條件分支。只在條件下出現的對話框預設關閉：隱藏的是包住它、在同一條件下渲染的整個區塊（固定定位圖層、背景遮罩與同條件的兄弟元素），不只是標記為 dialog 的元素，並以 `data-st-condition` 保留條件原文。
   - 可操作元素帶 `data-st-expansion-anchor`，值與圖上元件的 `expansionAnchor` 相同。錨點為渲染路徑上各元素的 `檔案:行號`，同一行有多個元素時加上 `#序號`，`.map` 展開的項目加上 `[i]`，所以在單一畫面內唯一。
 - CLI 在 capture 前呼叫 `ReactGraphContribution.writePreview`，寫出 `static-preview/react-preview.json`（各畫面 markup 與入口模組 import 的 CSS 清單）。capture 的 `react-preview.mjs` 只複製專案內存在的 CSS 與其相對 `url()` 資源，不下載、不讀取專案外檔案；缺少的套件樣式記錄 `REACT_STYLESHEET_MISSING`。之後沿用既有的 Chromium（JavaScript 關閉）截圖、元素樣式與 pack-preview 流程。
 - 檢視器：預覽框高度在有 capture 量測值時直接採用，不再依內容反覆量測。以 `vh`／`dvh` 設定最小高度的頁面會因 iframe 變高而跟著變高，原本的量測永遠不會收斂（reservio 登入頁的 iframe 曾長到 115,752px）。畫面名稱忽略含「示例值」的標題提示。

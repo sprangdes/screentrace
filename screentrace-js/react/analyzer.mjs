@@ -302,7 +302,7 @@ class ScreenRenderer {
       route: route.path, file: route.file, line: route.line, layoutOnly: Boolean(route.layoutOnly),
       view: this.view?.name ?? 'Route', viewSource: this.view?.file ?? route.file,
       sources: [...this.sources].sort(), components: components.sort((a, b) => a.key.localeCompare(b.key)), load: dedupe(this.load),
-      ...(this.markup ? {markup: serialize(this.document)} : {})
+      ...(this.markup ? {markup: serialize(closeConditionalDialogs(this.document))} : {})
     };
   }
 
@@ -654,12 +654,8 @@ class ScreenRenderer {
       const html = htmlAttribute(name, value);
       if (html && !html[0].startsWith('data-st-')) attributes[html[0]] = html[1];
     }
-    // A dialog or backdrop that only renders under a condition starts closed, as on first load.
-    if (state.guards.length && (tag === 'dialog' || /^(dialog|alertdialog)$/.test(attributes.role ?? '') || /(^|\s)(modal|modal-backdrop|offcanvas|offcanvas-backdrop)(\s|$)/.test(attributes.class ?? ''))) {
-      attributes.style = [attributes.style, 'display:none!important'].filter(Boolean).join(';');
-      attributes['data-st-condition'] = JSON.stringify(state.guards);
-    }
     const element = htmlElement(tag, attributes);
+    element.guards = state.guards;
     state.out.children.push(element);
     return element;
   }
@@ -885,6 +881,37 @@ function isLocation(node, evaluator, scope, allowHref) {
   if (target?.type !== 'MemberExpression' || target.computed || target.property.name !== 'location') return false;
   const owner = unwrap(target.object);
   return owner.type === 'Identifier' && LOCATION_OWNERS.has(owner.name) && !evaluator.lookup(owner.name, scope);
+}
+
+function isDialog(node) {
+  const attributes = node.attributes;
+  return node.tag === 'dialog' || attributes['aria-modal'] === 'true' || /^(dialog|alertdialog)$/.test(attributes.role ?? '')
+    || /(^|\s)(modal|offcanvas)(\s|$)/.test(attributes.class ?? '');
+}
+
+/**
+ * A dialog that renders only under a condition starts closed, as on first load. The whole conditional
+ * block around it is hidden — its fixed layer, its backdrop and siblings rendered under the same condition —
+ * not just the element marked as the dialog. Its components stay in the graph.
+ */
+function closeConditionalDialogs(document) {
+  const visit = (node, ancestors) => {
+    if (typeof node === 'string') return;
+    if (node.tag && node.guards?.length && isDialog(node)) {
+      const key = JSON.stringify(node.guards);
+      let root = node, parent = ancestors.at(-1), index = ancestors.length - 1;
+      while (parent?.tag && JSON.stringify(parent.guards) === key) { root = parent; parent = ancestors[--index]; }
+      for (const sibling of parent?.children ?? [root]) {
+        if (typeof sibling === 'string' || !sibling.tag || JSON.stringify(sibling.guards) !== key) continue;
+        if (!/display:none!important/.test(sibling.attributes.style ?? '')) sibling.attributes.style = [sibling.attributes.style, 'display:none!important'].filter(Boolean).join(';');
+        sibling.attributes['data-st-condition'] = key;
+      }
+      return;
+    }
+    for (const child of node.children) visit(child, [...ancestors, node]);
+  };
+  visit(document, []);
+  return document;
 }
 
 function hasContent(node) {

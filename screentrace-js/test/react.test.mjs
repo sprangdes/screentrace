@@ -196,3 +196,16 @@ export default function App(){ return <Routes><Route path="/p" element={<Page/>}
   assert.doesNotMatch(page.markup, /onclick|alert|<script|evil|<b>|Done|Saving/i);
   assert.deepEqual(page.components.map(c => c.kind).sort(), ['BUTTON', 'MODAL']);
 });
+
+test('a conditional dialog is closed together with its fixed layer and backdrop', () => {
+  const result = analyzeReact({markup: true, files: [{file: 'src/App.tsx', code: `${ROUTER} import { useThing } from 'some-store';
+function Overlay(){ return <div className="layer" role="presentation"><button className="layer__backdrop" aria-label="close"/><section aria-modal="true" className="sheet"><button>Confirm</button></section></div>; }
+function Page(){ const { target } = useThing(); return <main><h1>List</h1>{target && <Overlay/>}{target && <div className="scrim"/>}</main>; }
+export default function App(){ return <Routes><Route path="/p" element={<Page/>}/></Routes>; }`}]});
+  const page = screen(result, '/p');
+  assert.match(page.markup, /<div class="layer" data-st-condition="[^"]*target[^"]*" [^>]*role="presentation" style="display:none!important">/);
+  assert.match(page.markup, /<div class="scrim" [^>]*style="display:none!important">/);
+  assert.match(page.markup, /<main [^>]*><h1 [^>]*>List<\/h1>/);
+  assert.doesNotMatch(page.markup, /<main[^>]*display:none/);
+  assert.ok(page.components.some(c => c.label === 'Confirm'), 'the dialog buttons stay listed');
+});
