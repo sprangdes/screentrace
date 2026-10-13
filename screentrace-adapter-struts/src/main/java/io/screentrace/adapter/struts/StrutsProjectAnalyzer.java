@@ -199,6 +199,7 @@ public final class StrutsProjectAnalyzer {
         for(Element item:StrutsSources.elements(action,"forward")) {forwards.put(item.getAttribute("name"),item.getAttribute("path"));forwardSources.put(item.getAttribute("name"),StrutsSources.source(path,item));}
         String input=action.getAttribute("input");if(inputForward&&!input.isBlank())input=global.getOrDefault(input,input);
         Map<String,String> localForwards=new TreeMap<>();for(Element item:StrutsSources.elements(action,"forward"))localForwards.put(item.getAttribute("name"),item.getAttribute("path"));
+        String direct=directActionForward(action,type);if(direct!=null){localForwards.put(DIRECT_FORWARD,direct);forwardSources.put(DIRECT_FORWARD,source);}
         Mapping mapping=new Mapping(route,type,handlerId,formId,action.getAttribute("parameter"),family,forwards,localForwards,forwardSources,input,module,source);
         state.actionMappings.add(mapping);
         ServletMappingResolution servletMapping=state.servletMappings.get(module);
@@ -450,7 +451,17 @@ public final class StrutsProjectAnalyzer {
     String parent=java.parent();String direct=dispatchFamily(parent,state,seen);if(!direct.isBlank()) return direct;
     String prefix=type.contains(".")?type.substring(0,type.lastIndexOf('.')+1):"";return dispatchFamily(prefix+parent,state,seen);
   }
+  /** Key of the target an action mapping forwards to by itself, without running an Action class. */
+  private static final String DIRECT_FORWARD="(action forward)";
+  /** {@code <action forward|include>} always wins over type; the built-in ForwardAction / IncludeAction forward to {@code parameter}. */
+  private static String directActionForward(Element action,String type) {
+    for(String attribute:List.of("forward","include"))if(!action.getAttribute(attribute).isBlank())return action.getAttribute(attribute);
+    String shortName=type.substring(type.lastIndexOf('.')+1),parameter=action.getAttribute("parameter");
+    return Set.of("ForwardAction","IncludeAction").contains(shortName)&&!parameter.isBlank()?parameter:null;
+  }
   private static void analyzeForwards(Mapping mapping,State state) {
+    String direct=mapping.localForwards().get(DIRECT_FORWARD);
+    if(direct!=null)forward(direct,mapping.handlerId(),mapping.module(),mapping.forwardSources().getOrDefault(DIRECT_FORWARD,mapping.source()),state);
     var type=state.types.get(mapping.type());if(type==null) return;
     for(MethodDeclaration method:type.declaration().getMethods()) for(MethodCallExpr call:method.findAll(MethodCallExpr.class)) {
       if(!call.getNameAsString().equals("findForward")||call.getArguments().size()!=1) continue;
@@ -557,6 +568,8 @@ public final class StrutsProjectAnalyzer {
           String id=StableGraphIds.component(path,kind,identityAttributes(tag,name),occurrence);
           var resolved=jsp.interactions().stream().filter(i->id.equals(i.componentId())).findFirst();
           if(resolved.isPresent()&&!resolved.get().submitsCurrentView()) {target=resolved.get().target();if(resolved.get().originalExpression()!=null)attrs.put("originalExpression",resolved.get().originalExpression());}
+          // <form action="<c:url value='/x.do'/>">: take the literal URL the JSP parser proved, so the form and its submit buttons share it.
+          if(kind==ComponentKind.FORM&&action!=null&&action.stripLeading().startsWith("<")&&resolved.isPresent()&&resolved.get().target()!=null&&!resolved.get().target().stripLeading().startsWith("<")){action=resolved.get().target();attrs.put("target",action);}
           if(kind==ComponentKind.FORM&&action!=null)target=action;
           if(target!=null&&target.toLowerCase(Locale.ROOT).endsWith(".faces")){String facesTarget=normalizeFacesPath(target,state);if(facesTarget!=null&&!facesTarget.equals(target)){attrs.put("originalTarget",target);target=facesTarget;}}
           if(target!=null){
@@ -1266,6 +1279,7 @@ public final class StrutsProjectAnalyzer {
     String screen=ApplicationGraph.id(NodeType.SCREEN,"tiles:"+tile.name()),viewId=state.tileViewIds.get(tile.name());
     String template=resolvedTileTemplate(tile,state);Confidence status=state.viewIds.containsKey(template)?Confidence.CONFIRMED:Confidence.UNRESOLVED;
     TileScreenName display=tileScreenName(tile,state);Map<String,String> attributes=new TreeMap<>();attributes.put("view",template);attributes.put("tilesDefinition","true");attributes.put("tilesDefinitionName",tile.name());attributes.put("screenNameSource",display.source());attributes.put("screenNameSourcePath",display.path());if(!Objects.equals(template,tile.template()))attributes.put("originalView",tile.template());
+    attributes.put("tilesAttributes",tilesAttributesJson(tile,state));
     addNode(state,screen,NodeType.SCREEN,display.name(),attributes,tile.source(),status);state.screens.put(name,screen);
     List<String> targets=new ArrayList<>(tile.puts().values());targets.add(tile.template());
     for(String target:targets) {
@@ -1279,6 +1293,24 @@ public final class StrutsProjectAnalyzer {
       }
     }
     return screen;
+  }
+  /** The resolved put values of a page definition, so the static preview can fill each tiles:insert slot of its template. */
+  private static String tilesAttributesJson(Tile tile,State state) {
+    try {return new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(tilesContext(tile,state,new HashSet<>()));}
+    catch(com.fasterxml.jackson.core.JsonProcessingException error) {throw new UncheckedIOException(error);}
+  }
+
+  private static Map<String,Object> tilesContext(Tile tile,State state,Set<String> stack) {
+    stack.add(tile.name());Map<String,Object> attributes=new TreeMap<>();
+    for(var put:tile.puts().entrySet()) {
+      String value=put.getValue();Tile nested=state.tiles.get(value);
+      if(nested!=null&&!stack.contains(value))attributes.put(put.getKey(),Map.of("definition",tilesContext(nested,state,stack)));
+      else if(nested!=null)attributes.put(put.getKey(),Map.of("unresolved",value));
+      else if(value.startsWith("/")||value.matches("(?i).*\\.(jspf?|html?)$")) {String path=tileJspViewPath(value,state);attributes.put(put.getKey(),path==null?Map.of("unresolved",value):Map.of("path",path));}
+      else attributes.put(put.getKey(),Map.of("value",value));
+    }
+    stack.remove(tile.name());
+    Map<String,Object> context=new TreeMap<>();context.put("template",resolvedTileTemplate(tile,state));context.put("attributes",attributes);return context;
   }
   private static Tile resolveTile(String name,Map<String,Tile> definitions,Map<String,Tile> resolved,Set<String> stack,State state) {
     if(resolved.containsKey(name)) return resolved.get(name);
