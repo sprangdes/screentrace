@@ -2,6 +2,7 @@ name: Security checks
 
 on:
   push:
+    branches: [main]
   pull_request:
   schedule:
     - cron: '23 5 * * 1'
@@ -9,10 +10,15 @@ on:
 permissions:
   contents: read
 
+# A newer push to the same PR supersedes the run still in progress; main and scheduled runs always finish.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
-  dependency-audit:
+  build-and-test:
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -29,16 +35,37 @@ jobs:
         run: |
           npm --prefix screentrace-viewer ci --ignore-scripts
           npm --prefix screentrace-viewer run build
+      - name: Install capture dependencies
+        run: npm --prefix screentrace-capture ci
+      - name: Cache Playwright browsers
+        id: playwright-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-all-${{ hashFiles('screentrace-capture/package-lock.json') }}
       - name: Install viewer test browsers
-        run: |
-          npm --prefix screentrace-capture ci
-          npm exec --prefix screentrace-capture -- playwright install --with-deps chromium firefox webkit
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: npm exec --prefix screentrace-capture -- playwright install --with-deps chromium firefox webkit
+      - name: Install viewer test browser system dependencies
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
+        run: npm exec --prefix screentrace-capture -- playwright install-deps chromium firefox webkit
       - name: Build and test Java modules
         run: mvn -B clean verify
       - name: Test file viewer in all engines
         env:
           ST_BROWSERS: chromium,firefox,webkit
         run: node --test screentrace-viewer/test/*.e2e.mjs
+
+  dependency-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
       - name: Set vulnerability cache date
         id: cache-date
         run: echo "day=$(date -u +%Y-%m-%d)" >> "$GITHUB_OUTPUT"
@@ -53,7 +80,8 @@ jobs:
       - name: Audit Java dependencies
         env:
           DEPENDENCY_CHECK_DATA: ${{ runner.temp }}/dependency-check-data
-        run: mvn -B org.owasp:dependency-check-maven:aggregate -DdataDirectory="$DEPENDENCY_CHECK_DATA"
+        # Package in the same invocation so the reactor modules resolve without a full test run.
+        run: mvn -B -DskipTests package org.owasp:dependency-check-maven:aggregate -DdataDirectory="$DEPENDENCY_CHECK_DATA"
       - name: Upload dependency audit reports
         if: always()
         uses: actions/upload-artifact@v4
@@ -79,8 +107,18 @@ jobs:
             screentrace-viewer/package-lock.json
       - name: Install Node dependencies
         run: npm --prefix screentrace-capture ci
+      - name: Cache Playwright browsers
+        id: playwright-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-chromium-${{ hashFiles('screentrace-capture/package-lock.json') }}
       - name: Install Chromium for static reconstruction tests
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
         run: npm exec --prefix screentrace-capture -- playwright install --with-deps chromium
+      - name: Install Chromium system dependencies
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
+        run: npm exec --prefix screentrace-capture -- playwright install-deps chromium
       - name: Test static capture and project documentation
         run: node --test screentrace-capture/docs-baseline.test.mjs screentrace-capture/safe-files.test.mjs screentrace-capture/spring-resource-mappings.test.mjs screentrace-capture/capture-static-jsp.security.test.mjs screentrace-capture/preview-markup.test.mjs screentrace-capture/preview-v2.test.mjs screentrace-capture/pack-preview.test.mjs screentrace-capture/r6-thumbnail.test.mjs screentrace-capture/r7-anchor.test.mjs screentrace-capture/r7-reasons.test.mjs screentrace-capture/tiles-preview.test.mjs
       - name: Audit Node dependencies
