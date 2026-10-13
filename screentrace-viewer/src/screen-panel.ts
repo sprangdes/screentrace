@@ -17,7 +17,16 @@ export interface ScreenPanelActions {
  buttonsOpen:boolean;
  onButtonsToggle:(open:boolean)=>void;
  highlight?:string;
+ /** Where each button sits in the preview (top, then left); a button without a position is not visible there. */
+ positions?:Map<string,{x:number;y:number}>;
+ /** Pointing at a list row outlines its button in the preview; leaving clears it. */
+ hover?:(componentId:string|undefined)=>void;
+ /** Choosing a list row scrolls the preview to its button and keeps it highlighted. */
+ locate?:(componentId:string)=>void;
 }
+
+// Buttons on roughly the same line (within this many pixels) read left to right.
+const ROW_TOLERANCE=8;
 
 const endpointLabel=(node:Node)=>{const method=node.attributes.httpMethod||node.attributes.method||'ANY';return `${method==='ANY'?'任何方法':method} ${node.attributes.path||node.attributes.route||node.name}`;};
 
@@ -65,15 +74,25 @@ export function screenPanel(panel:HTMLElement,index:Index,state:ReviewState,scre
   const value=componentDecision(state,screenId,componentId),name=labels.get(componentId)||'沒有文字的按鈕',item=element('div',undefined,'button-row');
   item.dataset.componentRow=componentId;item.tabIndex=-1;
   if(actions.highlight===componentId)item.classList.add('is-highlighted');
-  const info=element('div',undefined,'button-info'),result=outcomes(index,componentId,apis);
+  const info=element('button',undefined,'button-info'),result=outcomes(index,componentId,apis);
+  info.type='button';info.dataset.locate=componentId;
+  info.title=actions.positions?.has(componentId)?'在預覽中標示這個按鈕':'這個按鈕在預覽中看不到';
   info.append(element('strong',name),element('span',result.length?result.join(' · '):'目的地無法確定','muted'));
+  info.onmouseenter=()=>actions.hover?.(componentId);info.onmouseleave=()=>actions.hover?.(undefined);
+  info.onfocus=()=>actions.hover?.(componentId);info.onblur=()=>actions.hover?.(undefined);
+  info.onclick=()=>actions.locate?.(componentId);
   if(decision==='REMOVE'&&value==='UNDECIDED')info.append(element('span',decisionLabel('INHERITED_REMOVE'),'inherited-tag'));
   item.append(info,decisionSwitch(name,value,next=>actions.setComponent(screenId,componentId,next),{compact:true,screen:screenId,component:componentId}));
   return item;
  };
+ const positions=actions.positions,placed=(k:{componentId:string})=>!positions||positions.has(k.componentId);
+ // Page order: top to bottom, then left to right, so the list reads like the preview.
+ const byPosition=(a:{componentId:string},b:{componentId:string})=>{const p=positions?.get(a.componentId),q=positions?.get(b.componentId);if(!p||!q)return 0;return Math.abs(p.y-q.y)>ROW_TOLERANCE?p.y-q.y:p.x-q.x;};
  const own=keys.filter(k=>!fragments.has(index.nodes.get(k.componentId)?.source?.file||'')),shared=keys.filter(k=>!own.includes(k));
- for(const key of own)buttons.append(row(key.componentId));
- if(shared.length){const group=element('details',undefined,'fragment-group');group.append(element('summary',`頁首、頁尾的按鈕 ${shared.length} 個`));for(const key of shared)group.append(row(key.componentId));buttons.append(group);}
+ for(const key of own.filter(placed).sort(byPosition))buttons.append(row(key.componentId));
+ const group=(title:string,items:{componentId:string}[],note?:string)=>{if(!items.length)return;const box=element('details',undefined,'fragment-group');box.append(element('summary',`${title} ${items.length} 個`));if(note)box.append(element('p',note,'muted'));for(const key of items)box.append(row(key.componentId));if(items.some(k=>k.componentId===actions.highlight))box.open=true;buttons.append(box);};
+ group('頁首、頁尾的按鈕',shared.filter(placed).sort(byPosition));
+ group('預覽中未顯示',[...own,...shared].filter(k=>!placed(k)),'這些按鈕只在特定情況下出現（例如點了某個按鈕才開啟的視窗、載入中或錯誤狀態），預覽畫面中看不到它們的位置。');
  root.append(buttons);
 
  const called=[...callSources(index.graph)].filter(([api,callers])=>apis.has(api)&&callers.some(c=>c.screenId===screenId)).map(([api])=>index.nodes.get(api)!).sort((a,b)=>endpointLabel(a).localeCompare(endpointLabel(b),'en'));

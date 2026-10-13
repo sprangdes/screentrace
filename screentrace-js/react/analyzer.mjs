@@ -570,7 +570,7 @@ class ScreenRenderer {
     if (name === 'Link' || name === 'NavLink') {
       const to = attributeExpression(attribute(node, 'to'));
       const urls = to ? this.urlsOf(to, scope) : [];
-      const behaviors = [this.effect('NAVIGATE', 'click', node, scope, state, {urls, expression: text(scope.module, to)})];
+      const behaviors = [this.effect('NAVIGATE', 'click', node, scope, unguarded(state), {urls, expression: text(scope.module, to)})];
       behaviors.push(...this.handlers(node, scope, state).flatMap(handler => handler.effects));
       const component = this.record(node, scope, state, key, {kind: 'LINK', tag: name, target: urls[0] ?? null, handlers: [], behaviors});
       const out = this.output(node, 'a', scope, state, key);
@@ -619,7 +619,7 @@ class ScreenRenderer {
     if (kind) {
       const component = this.record(node, scope, state, key, {kind, tag, attrs, handlers, target: tag === 'a' ? attrs.href ?? null : null});
       if (out.tag) out.attributes['data-st-expansion-anchor'] = component.anchor;
-      if (tag === 'a' && attrs.href && !attrs.href.startsWith('#')) component.behaviors.push(this.effect('NAVIGATE', 'click', node, scope, state, {urls: cleanUrls([attrs.href]), expression: attrs.href}));
+      if (tag === 'a' && attrs.href && !attrs.href.startsWith('#')) component.behaviors.push(this.effect('NAVIGATE', 'click', node, scope, unguarded(state), {urls: cleanUrls([attrs.href]), expression: attrs.href}));
       if (kind === 'FORM') next = {...next, form: component};
       if (kind === 'SUBMIT' && state.form) {
         component.form = state.form.key;
@@ -707,10 +707,10 @@ class ScreenRenderer {
       const event = name.slice(2).toLowerCase();
       const value = this.evaluator.evaluate(expr, scope);
       if (value.t !== 'fn') {
-        if (value.t === 'unknown') result.push({event, expression: text(scope.module, expr), effects: [this.effect('UNKNOWN', event, expr, scope, state, {expression: text(scope.module, expr), status: 'UNRESOLVED'})]});
+        if (value.t === 'unknown') result.push({event, expression: text(scope.module, expr), effects: [this.effect('UNKNOWN', event, expr, scope, unguarded(state), {expression: text(scope.module, expr), status: 'UNRESOLVED'})]});
         continue;
       }
-      const effects = new EffectRunner(this, event, state).run(value, [], new Set());
+      const effects = new EffectRunner(this, event, unguarded(state)).run(value, [], new Set());
       result.push({event, expression: text(scope.module, expr), effects});
     }
     return result;
@@ -807,6 +807,15 @@ class EffectRunner {
         this.walk(node.left, scope, active, trace, guards);
         const left = text(module, node.left);
         this.walk(node.right, scope, active, trace, [...guards, node.operator === '&&' ? left : `!(${left})`]);
+        return;
+      }
+      case 'BlockStatement': {
+        // After `if (x) return;` the rest of the block only runs when `x` is false.
+        let current = guards;
+        for (const statement of node.body) {
+          this.walk(statement, scope, active, trace, current);
+          if (statement.type === 'IfStatement' && !statement.alternate && alwaysReturns(statement.consequent)) current = [...current, `!(${text(module, statement.test)})`];
+        }
         return;
       }
       case 'CallExpression': case 'OptionalCallExpression': case 'NewExpression':
@@ -921,6 +930,14 @@ function hasContent(node) {
 function textual(node) {
   const n = unwrap(node);
   return ['StringLiteral', 'TemplateLiteral', 'NumericLiteral', 'BinaryExpression'].includes(n?.type);
+}
+
+/**
+ * What a click does is conditioned only by the handler itself; the conditions under which the element is
+ * shown at all belong to the component (its `guard`), not to each of its behaviors.
+ */
+function unguarded(state) {
+  return {...state, guards: []};
 }
 
 function guarded(state, guard) {

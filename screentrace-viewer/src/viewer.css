@@ -264,7 +264,9 @@ g.is-active .focus-line{stroke-width:4}
 .button-row{display:flex;align-items:center;gap:8px;padding:6px 4px;border-radius:6px}
 .button-row.is-highlighted{background:#fef9c3}
 .button-row:focus-within{background:var(--primary-soft)}
-.button-info{display:flex;flex-direction:column;min-width:0;flex:1}
+.button-info{display:flex;flex-direction:column;min-width:0;flex:1;align-items:flex-start;text-align:left;font:inherit;color:inherit;background:none;border:0;padding:2px 4px;margin:-2px -4px;border-radius:4px;cursor:pointer}
+.button-info:hover{background:var(--primary-soft)}
+.button-info:focus-visible{outline:2px solid var(--primary);outline-offset:1px}
 .button-info strong{font-size:13px;overflow-wrap:anywhere}
 .button-info .muted{margin:0;overflow-wrap:anywhere}
 .inherited-tag{align-self:flex-start;margin-top:2px;padding:1px 6px;border-radius:4px;background:var(--remove-soft);color:var(--remove);font-size:11px}

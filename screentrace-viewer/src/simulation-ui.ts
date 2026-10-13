@@ -61,7 +61,7 @@ export function attachSimulation(payload:Payload,id:string,frame:HTMLIFrameEleme
   backdrop.onclick=event=>{if(event.target===backdrop)close?.();};
   if(surface){surface.update();surface.focusDialog();}else button.focus();
  };
- const label=(choice:Effect)=>choice.kind==='navigate'?choice.label||'畫面':choice.kind==='api'?`呼叫 API：${choice.method} ${choice.path}`:choice.kind==='dialog'?`開啟彈窗：${choice.label||''}`:choice.kind==='form'?`送出到 ${choice.path}`:unknownDestination;
+ const label=(choice:Effect):string=>choice.kind==='choices'&&choice.choices?.length===1?`${label(choice.choices[0])}（有條件）`:choice.kind==='navigate'?choice.label||'畫面':choice.kind==='api'?`呼叫 API：${choice.method} ${choice.path}`:choice.kind==='dialog'?`開啟彈窗：${choice.label||''}`:choice.kind==='form'?`送出到 ${choice.path}`:unknownDestination;
  const choose=(choices:Effect[],node:Element,record:ElementRecord|undefined)=>{
   closePicker();
   const box=element('div',undefined,'simulation-picker');box.setAttribute('role','dialog');box.setAttribute('aria-label','可能的結果');box.dataset.stSimulationUi='true';

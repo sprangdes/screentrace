@@ -209,3 +209,14 @@ export default function App(){ return <Routes><Route path="/p" element={<Page/>}
   assert.doesNotMatch(page.markup, /<main[^>]*display:none/);
   assert.ok(page.components.some(c => c.label === 'Confirm'), 'the dialog buttons stay listed');
 });
+
+test('click behaviors carry only the handler conditions, not the conditions that show the element', () => {
+  const result = run({
+    'src/App.tsx': `${ROUTER} import { useThing } from 'some-store';
+      function Page(){ const { open, busy } = useThing(); return <>{open && <button onClick={() => { if (busy) return; fetch('/api/x', { method: 'POST' }); }}>Go</button>}</>; }
+      export default function App(){ return <Routes><Route path="/p" element={<Page/>}/></Routes>; }`
+  });
+  const go = component(screen(result, '/p'), 'Go');
+  assert.equal(go.guard, 'open');
+  assert.deepEqual(go.behaviors.map(e => [e.urls, e.guard]), [[['/api/x'], '!(busy)']]);
+});

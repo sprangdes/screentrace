@@ -243,7 +243,8 @@ try {
   if(shown)buttonsOpen=shown.open||buttonsOpen&&!!highlightComponent;
   screenPanel(panelBody,index,reviewState,current,{
    setScreen:decide.screen,setComponent:decide.component,focus:id=>openScreen(id),api:id=>showApi(id),
-   buttonsOpen,onButtonsToggle:open=>{buttonsOpen=open;},highlight:highlightComponent
+   buttonsOpen,onButtonsToggle:open=>{buttonsOpen=open;},highlight:highlightComponent,
+   positions:previewPositions(current),hover:id=>pointAt(id),locate:id=>locate(id)
   });
   if(highlightComponent)requestAnimationFrame(()=>panel.querySelector(`[data-component-row="${CSS.escape(highlightComponent!)}"]`)?.scrollIntoView({block:'nearest'}));
  };
@@ -253,6 +254,57 @@ try {
  const thumbnail=(id:string)=>{const value=payload.preview.screens?.find(s=>s.graphScreenId===id)?.thumbnail;return value?.startsWith('data:image/')?value:undefined;};
  const canvasState=()=>({query,visible:visibleScreens(),screenStatus:(id:string)=>screenDecision(reviewState,id)});
  const nodesFor=(doc:Document,id:string,component:string)=>{const nodes=new Set<HTMLElement>(doc.querySelectorAll<HTMLElement>(`[data-st-component-id="${CSS.escape(component)}"]`));for(const record of payload.preview.elements||[])if(record.graphScreenId===id&&record.graphComponentId===component)try{const node=doc.querySelector<HTMLElement>(previewSelector(record.path));if(node)nodes.add(node);}catch{}return [...nodes];};
+ /** Top-left of each button in the captured preview; buttons that were not visible there have no entry. */
+ const previewPositions=(id:string)=>{
+  const result=new Map<string,{x:number;y:number}>();
+  for(const record of payload.preview.elements||[]){
+   if(record.graphScreenId!==id||!record.graphComponentId||!record.bounds||record.bounds.width<=0||record.bounds.height<=0)continue;
+   const old=result.get(record.graphComponentId),{x,y}=record.bounds;
+   if(!old||y<old.y||y===old.y&&x<old.x)result.set(record.graphComponentId,{x,y});
+  }
+  return result;
+ };
+ /** A dashed frame drawn over the button, so the page's own styles and decision outlines stay untouched. */
+ const pointAt=(component:string|undefined)=>{
+  const doc=frame?.contentDocument;if(!doc||!current)return;
+  doc.querySelectorAll('[data-st-viewer-pointer]').forEach(node=>node.remove());
+  if(!component)return;
+  for(const node of nodesFor(doc,current,component)){
+   const rect=node.getBoundingClientRect();if(!rect.width||!rect.height)continue;
+   const box=doc.createElement('div');box.dataset.stViewerPointer='true';
+   box.style.cssText=`position:absolute;left:${rect.left+doc.defaultView!.scrollX-4}px;top:${rect.top+doc.defaultView!.scrollY-4}px;width:${rect.width+8}px;height:${rect.height+8}px;border:3px dashed #eab308;border-radius:6px;pointer-events:none;z-index:2147483646;box-sizing:border-box;`;
+   doc.body.append(box);
+  }
+ };
+ const markRow=(component:string)=>{
+  panel.querySelectorAll('.button-row.is-highlighted').forEach(row=>row.classList.remove('is-highlighted'));
+  const row=panel.querySelector<HTMLElement>(`[data-component-row="${CSS.escape(component)}"]`);if(!row)return;
+  row.classList.add('is-highlighted');
+  for(let parent=row.parentElement;parent&&parent!==panel;parent=parent.parentElement)if(parent instanceof HTMLDetailsElement)parent.open=true;
+  buttonsOpen=true;row.scrollIntoView({block:'nearest'});
+ };
+ /** From the list: keep the button highlighted in the preview and bring it into view. */
+ const locate=(component:string)=>{
+  highlightComponent=component;markRow(component);
+  const doc=frame?.contentDocument;if(!doc||!current)return;
+  decorate(doc,current);
+  const node=doc.querySelector<HTMLElement>('[data-spotlight]');
+  node?.scrollIntoView({block:'center',behavior:'smooth'});
+ };
+ /** From the preview: show which list row a clicked button is. */
+ const selectFromPreview=(doc:Document,id:string)=>{
+  const owners=new Map<Element,string>();
+  for(const record of payload.preview.elements||[]){
+   if(record.graphScreenId!==id||!record.graphComponentId)continue;
+   try{const node=doc.querySelector(previewSelector(record.path));if(node)owners.set(node,record.graphComponentId);}catch{/* an unreadable path maps nothing */}
+  }
+  doc.addEventListener('click',event=>{
+   for(let node=event.target as Element|null;node;node=node.parentElement){
+    const component=owners.get(node);
+    if(component){highlightComponent=component;markRow(component);decorate(doc,id);return;}
+   }
+  },true);
+ };
  /** Decision outlines and badges inside the preview, reapplied in place whenever decisions change. */
  const decorate=(doc:Document,id:string)=>{
   doc.querySelectorAll('[data-review-badge]').forEach(node=>node.remove());
@@ -290,7 +342,7 @@ try {
   own.setAttribute('sandbox','allow-same-origin');own.title=index.nodes.get(id)!.name;
   own.onload=()=>{
    const doc=own.contentDocument;if(!doc||!own.getAttribute('srcdoc'))return;
-   decorate(doc,id);preview.setAttribute('aria-busy','false');shown();
+   decorate(doc,id);selectFromPreview(doc,id);preview.setAttribute('aria-busy','false');shown();
    doc.addEventListener('keydown',onKey);
    simulation=attachSimulation(payload,id,own,viewer!,{focus:target=>openScreen(target),api:target=>showApi(target),thumbnail});
    setTimeout(()=>{if(current===id)prepare(nextUndecidedId());},800);
