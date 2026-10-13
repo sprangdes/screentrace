@@ -48,17 +48,9 @@ public final class ReactGraphContribution {
         if (!applies(inventory)) return graph;
         var builder = new Builder(graph);
         try {
-            List<Map<String, Object>> files = new ArrayList<>();
-            for (Path file : inventory.files()) {
-                String relative = inventory.root().relativize(file).toString().replace('\\', '/');
-                if (!isSource(relative)) continue;
-                try {
-                    files.add(Map.of("file", relative, "code", SafeProjectFiles.readUtf8Limited(inventory.root(), file, SafeProjectFiles.MAX_SOURCE_FILE_BYTES)));
-                } catch (IOException | SecurityException error) {
-                    builder.diagnostic(new SourceLocation(relative, 1), "REACT_SOURCE_READ", "前端來源無法安全讀取");
-                }
-            }
-            JsonNode result = JavaScriptGraphContribution.run(Map.of("mode", "react", "files", files, "maxDepth", Integer.getInteger("screentrace.react.maxDepth", 24)));
+            List<String> unreadable = new ArrayList<>();
+            JsonNode result = analyze(inventory, false, unreadable);
+            unreadable.forEach(file -> builder.diagnostic(new SourceLocation(file, 1), "REACT_SOURCE_READ", "前端來源無法安全讀取"));
             for (JsonNode screen : result.path("screens")) builder.screen(screen);
             builder.navigation();
             for (JsonNode item : result.path("diagnostics")) builder.diagnostic(source(item), item.path("code").asText("REACT_DIAGNOSTIC"), item.path("message").asText());
@@ -67,6 +59,44 @@ public final class ReactGraphContribution {
             builder.diagnostic(new SourceLocation(".", 1), "REACT_ANALYZER_FAILURE", "React 靜態分析失敗：" + error.getMessage());
         }
         return builder.build();
+    }
+
+    /**
+     * Writes `static-preview/react-preview.json`: the reconstructed markup of every React screen and the
+     * stylesheets the bundle imports. The capture step turns it into static documents and screenshots.
+     */
+    public static void writePreview(ProjectInventory inventory, Path output) throws IOException, InterruptedException {
+        if (!applies(inventory)) return;
+        JsonNode result;
+        try {
+            result = analyze(inventory, true, new ArrayList<>());
+        } catch (InterruptedException error) {
+            throw error;
+        } catch (Exception error) {
+            throw new IOException("React 靜態預覽重建失敗：" + error.getMessage(), error);
+        }
+        Map<String, Object> screens = new TreeMap<>();
+        for (JsonNode screen : result.path("screens")) screens.put(screenId(screen.path("file").asText(), screen.path("route").asText()), screen.path("markup").asText(""));
+        Map<String, Object> preview = new LinkedHashMap<>();
+        preview.put("stylesheets", result.path("stylesheets"));
+        preview.put("screens", screens);
+        Path target = SafeProjectFiles.requireWritePathWithin(output, output.resolve("static-preview").resolve("react-preview.json"));
+        java.nio.file.Files.createDirectories(target.getParent());
+        java.nio.file.Files.write(target, JSON.writeValueAsBytes(preview));
+    }
+
+    private static JsonNode analyze(ProjectInventory inventory, boolean markup, List<String> unreadable) throws Exception {
+        List<Map<String, Object>> files = new ArrayList<>();
+        for (Path file : inventory.files()) {
+            String relative = inventory.root().relativize(file).toString().replace('\\', '/');
+            if (!isSource(relative)) continue;
+            try {
+                files.add(Map.of("file", relative, "code", SafeProjectFiles.readUtf8Limited(inventory.root(), file, SafeProjectFiles.MAX_SOURCE_FILE_BYTES)));
+            } catch (IOException | SecurityException error) {
+                unreadable.add(relative);
+            }
+        }
+        return JavaScriptGraphContribution.run(Map.of("mode", "react", "files", files, "markup", markup, "maxDepth", Integer.getInteger("screentrace.react.maxDepth", 24)));
     }
 
     static boolean isSource(String relative) {
@@ -172,7 +202,9 @@ public final class ReactGraphContribution {
             nodes.put(id, new GraphNode(id, NodeType.COMPONENT, name, attributes, source, Confidence.CONFIRMED,
                     old == null ? proof(source, Confidence.CONFIRMED, "渲染路徑：" + component.path("anchor").asText()) : old.evidence()));
             contains(screenId, id, source);
-            for (JsonNode effect : component.path("behaviors")) behavior(id, effect);
+            // A component outside the routes (an app-wide header or dialog) is the same instance on every
+            // screen: it is contained by each of them, but its behaviors are recorded once.
+            if (old == null) for (JsonNode effect : component.path("behaviors")) behavior(id, effect);
             return id;
         }
 

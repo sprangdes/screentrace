@@ -43,7 +43,10 @@ export function prototypeViewer(index:Index,payload:Payload,id:string,preview:HT
   if(!frame.getAttribute('srcdoc')||!frame.contentDocument)return;
   const doc=frame.contentDocument;
   const measure=()=>{height=Math.max(metadata?.height||900,doc.documentElement.scrollHeight,doc.body?.scrollHeight||0);resize();};
-  measure();contentObserver=new ResizeObserver(measure);if(doc.body)contentObserver.observe(doc.body);
+  // The captured height was measured in a 900px viewport. Re-measuring inside a frame we keep enlarging
+  // never settles for pages sized in vh/dvh (each resize grows the content), so it is used as-is.
+  if(metadata?.height){height=metadata.height;resize();}
+  else{measure();contentObserver=new ResizeObserver(measure);if(doc.body)contentObserver.observe(doc.body);}
   scroller.scrollTop=options.scroll;root.dataset.loaded='true';
  });
  if(!payload.documents[id])status.textContent='未取得重建預覽';

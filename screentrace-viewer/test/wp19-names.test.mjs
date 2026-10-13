@@ -11,3 +11,7 @@ test('R16 duplicate Tiles labels use readable source context instead of numeric 
  const m=await ownModule('names'),nodes=[node('first','SCREEN','Main Menu',{tilesDefinition:'true',view:'src/main/webapp/WEB-INF/views/first.jsp'}),node('second','SCREEN','Main Menu',{tilesDefinition:'true',view:'src/main/webapp/WEB-INF/views/second.jsp'})],hints=new Map(),routes=new Map([['first',['/menu.do']],['second',['/menu.do']]]);
  const names=m.screenNames(nodes,hints,routes);assert.equal(new Set(names.values()).size,2);assert.ok([...names.values()].every(name=>!/[（(]\d+[）)]$/.test(name)),[...names.values()].join('；'));
 });
+test('preview sample text never becomes a screen name',async()=>{
+ const m=await ownModule('names'),screen=node('react','SCREEN','login',{view:'LoginPage'}),hints=new Map([[screen.id,{heading:'示例值'}]]);
+ assert.equal(m.screenNames([screen],hints,new Map([[screen.id,['/login']]])).get(screen.id),'Login Page');
+});

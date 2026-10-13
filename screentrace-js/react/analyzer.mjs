@@ -1,5 +1,7 @@
 import {parseModules, diagnostic, children, line, text, FUNCTIONS, PARSER} from './modules.mjs';
 import {Evaluator, unwrap, truthy, externalName, returnedExpressions} from './values.mjs';
+import {element as htmlElement, htmlAttribute, isAllowedTag, jsxText, serialize, styleText, SAMPLE_TEXT} from './markup.mjs';
+import {stylesheets} from './styles.mjs';
 
 const ROUTER = new Set(['react-router-dom', 'react-router', 'react-router-native']);
 const REACT = new Set(['react', 'preact/compat']);
@@ -17,7 +19,7 @@ const MAX_GUARD = 300;
  * Static React analysis: routes, the component tree each route renders, interactive elements and what
  * their handlers do. Target code is parsed, never run; values that cannot be proven stay unresolved.
  */
-export function analyzeReact({files = [], maxDepth = 24} = {}) {
+export function analyzeReact({files = [], maxDepth = 24, markup = false} = {}) {
   const {modules, diagnostics} = parseModules(files);
   const evaluator = new Evaluator(modules, maxDepth);
   const occurrences = jsxOccurrences(modules);
@@ -31,7 +33,7 @@ export function analyzeReact({files = [], maxDepth = 24} = {}) {
       continue;
     }
     seen.set(route.path, route);
-    screens.push(new ScreenRenderer(evaluator, occurrences, diagnostics, maxDepth).render(route, shell));
+    screens.push(new ScreenRenderer(evaluator, occurrences, diagnostics, maxDepth, markup).render(route, shell));
   }
   const patterns = screens.map(screen => ({route: screen.route, pattern: routePattern(screen.route)}));
   for (const screen of screens) {
@@ -47,25 +49,37 @@ export function analyzeReact({files = [], maxDepth = 24} = {}) {
   }
   const unique = new Map();
   for (const item of diagnostics) unique.set(JSON.stringify(item), item);
-  return {screens, diagnostics: [...unique.values()].sort((a, b) => a.source.file.localeCompare(b.source.file) || a.source.line - b.source.line || a.code.localeCompare(b.code))};
+  const result = {screens, diagnostics: [...unique.values()].sort((a, b) => a.source.file.localeCompare(b.source.file) || a.source.line - b.source.line || a.code.localeCompare(b.code))};
+  if (markup) result.stylesheets = stylesheets(modules, shell ? [shell.file] : [...new Set(routes.map(route => route.file))].sort());
+  return result;
 }
 
+/** Per JSX element: a stable key (file, name, same-name occurrence) and a readable anchor (file:line, #n when a line holds several). */
 function jsxOccurrences(modules) {
-  const result = new Map();
+  const keys = new Map(), anchors = new Map();
   for (const module of modules.values()) {
-    const counts = new Map();
+    const counts = new Map(), lines = new Map();
+    const elements = [];
     const visit = node => {
       if (node.type === 'JSXElement') {
         const name = jsxName(node.openingElement.name);
         const count = counts.get(name) ?? 0;
         counts.set(name, count + 1);
-        result.set(node, `${module.file}#${name}#${count}`);
+        keys.set(node, `${module.file}#${name}#${count}`);
+        elements.push(node);
+        lines.set(line(node), (lines.get(line(node)) ?? 0) + 1);
       }
       for (const child of children(node)) visit(child);
     };
     visit(module.ast.program);
+    const ordinals = new Map();
+    for (const node of elements.sort((a, b) => a.start - b.start)) {
+      const at = line(node), ordinal = (ordinals.get(at) ?? 0) + 1;
+      ordinals.set(at, ordinal);
+      anchors.set(node, `${module.file}:${at}${lines.get(at) > 1 ? '#' + ordinal : ''}`);
+    }
   }
-  return result;
+  return {keys, anchors};
 }
 
 function jsxName(name) {
@@ -251,9 +265,12 @@ function matchRoute(urls, patterns) {
 }
 
 class ScreenRenderer {
-  constructor(evaluator, occurrences, diagnostics, maxDepth) {
+  constructor(evaluator, occurrences, diagnostics, maxDepth, markup = false) {
     this.evaluator = evaluator;
-    this.occurrences = occurrences;
+    this.occurrences = occurrences.keys;
+    this.anchorsOf = occurrences.anchors;
+    this.markup = markup;
+    this.document = htmlElement(null);
     this.diagnostics = diagnostics;
     this.maxDepth = maxDepth;
     this.sources = new Set();
@@ -261,6 +278,7 @@ class ScreenRenderer {
     this.load = [];
     this.loaded = new Set();
     this.view = null;
+    this.emitted = new Set();
   }
 
   render(route, shell = null) {
@@ -269,7 +287,7 @@ class ScreenRenderer {
     this.routeElements = [...route.layouts, route.element].map(entry => entry.expr ?? entry.component);
     const outlets = [...route.layouts, route.element];
     const root = outlets.shift();
-    const state = {guards: [], anchors: [], keys: [], stack: [], depth: 0, repeated: false, form: null, outlets};
+    const state = {guards: [], anchors: [], keys: [], stack: [], depth: 0, repeated: false, form: null, outlets, out: this.document};
     this.sources.add(route.file);
     this.routeFile = route.file;
     if (shell && this.routesElement) {
@@ -283,7 +301,8 @@ class ScreenRenderer {
     return {
       route: route.path, file: route.file, line: route.line, layoutOnly: Boolean(route.layoutOnly),
       view: this.view?.name ?? 'Route', viewSource: this.view?.file ?? route.file,
-      sources: [...this.sources].sort(), components: components.sort((a, b) => a.key.localeCompare(b.key)), load: dedupe(this.load)
+      sources: [...this.sources].sort(), components: components.sort((a, b) => a.key.localeCompare(b.key)), load: dedupe(this.load),
+      ...(this.markup ? {markup: serialize(this.document)} : {})
     };
   }
 
@@ -301,18 +320,22 @@ class ScreenRenderer {
       case 'JSXElement': this.element(node, scope, state); return;
       case 'JSXFragment': this.childNodes(node.children, scope, state); return;
       case 'JSXExpressionContainer': this.expr(node.expression, scope, state); return;
+      case 'StringLiteral': case 'NumericLiteral': case 'TemplateLiteral': case 'BinaryExpression': this.text(node, scope, state); return;
       case 'ArrayExpression': node.elements.forEach(item => item && this.expr(item.type === 'SpreadElement' ? item.argument : item, scope, state)); return;
       case 'ConditionalExpression': {
         const truth = truthy(this.evaluator.evaluate(node.test, scope));
         const test = text(scope.module, node.test);
-        if (truth !== false) this.expr(node.consequent, scope, truth ? state : guarded(state, test));
-        if (truth !== true) this.expr(node.alternate, scope, truth === false ? state : guarded(state, `!(${test})`));
+        if (truth === null) {
+          this.either(out => this.expr(node.consequent, scope, {...guarded(state, test), out}), out => this.expr(node.alternate, scope, {...guarded(state, `!(${test})`), out}), state);
+          return;
+        }
+        this.expr(truth ? node.consequent : node.alternate, scope, state);
         return;
       }
       case 'LogicalExpression': {
         const truth = truthy(this.evaluator.evaluate(node.left, scope));
         if (node.operator === '&&') { if (truth !== false) this.expr(node.right, scope, truth ? state : guarded(state, text(scope.module, node.left))); return; }
-        this.expr(node.left, scope, state);
+        if (!(truth === null && textual(node.right))) this.expr(node.left, scope, state);
         if (truth !== true) this.expr(node.right, scope, guarded(state, `!(${text(scope.module, node.left)})`));
         return;
       }
@@ -330,7 +353,26 @@ class ScreenRenderer {
     if (value.t === 'jsx') this.expr(value.node, value.scope, next);
     else if (value.t === 'children') this.childNodes(value.closure.nodes, value.closure.scope, {...next, anchors: value.closure.anchors, keys: value.closure.keys, form: value.closure.form ?? state.form});
     else if (value.t === 'array') this.expr(value.node, value.scope, next);
-    else if (value.t === 'unknown' && node.type === 'Identifier') this.renderVariable(node, scope, next);
+    else if (value.t === 'lit' && (typeof value.v === 'string' || typeof value.v === 'number')) this.emitText(String(value.v), state);
+    else if (value.t === 'unknown') {
+      const before = state.out.children.length;
+      if (node.type === 'Identifier') this.renderVariable(node, scope, next);
+      if (state.out.children.length === before) this.emitText(SAMPLE_TEXT, state);
+    }
+  }
+
+  /** Text for a string-valued expression; parts that cannot be proven show the shared sample value. */
+  text(node, scope, state) {
+    const value = this.evaluator.strings(node, scope)[0] ?? '';
+    this.emitText(value.replace(/\{[^{}]*\}/g, SAMPLE_TEXT), state);
+  }
+
+  emitText(value, state) {
+    if (this.markup && value) state.out.children.push(value);
+  }
+
+  anchor(node, file) {
+    return this.anchorsOf.get(node) ?? `${file}:${line(node)}`;
   }
 
   /** JSX held in a variable whose value is conditional, e.g. `const body = page === 'a' ? <A/> : <B/>`. */
@@ -349,7 +391,7 @@ class ScreenRenderer {
       const items = this.evaluator.evaluate(callee.object, scope);
       const elements = items.t === 'array' ? items.node.elements : null;
       if (elements && elements.length <= MAX_UNROLLED && elements.every(item => item && item.type !== 'SpreadElement')) {
-        elements.forEach((item, index) => this.body(fn, [{expr: item, scope: items.scope}, {value: {t: 'lit', v: index}}], {...state, keys: [...state.keys, `[${index}]`]}, false));
+        elements.forEach((item, index) => this.body(fn, [{expr: item, scope: items.scope}, {value: {t: 'lit', v: index}}], {...state, keys: [...state.keys, `[${index}]`], anchors: [...state.anchors, `[${index}]`]}, false));
         return;
       }
       this.body(fn, [], {...state, repeated: true}, false);
@@ -369,11 +411,16 @@ class ScreenRenderer {
       this.body(value, node.arguments.map(expr => ({expr, scope})), {...state, stack: [...state.stack, value.node], depth: state.depth + 1}, false);
       return;
     }
-    node.arguments.forEach(arg => this.expr(arg, scope, state));
+    const markupArguments = node.arguments.filter(arg => ['JSXElement', 'JSXFragment'].includes(unwrap(arg)?.type));
+    markupArguments.forEach(arg => this.expr(arg, scope, state));
+    if (!markupArguments.length) this.emitText(SAMPLE_TEXT, state);
   }
 
   childNodes(nodes, scope, state) {
-    for (const child of nodes ?? []) if (child.type !== 'JSXText') this.expr(child, scope, state);
+    for (const child of nodes ?? []) {
+      if (child.type === 'JSXText') this.emitText(jsxText(child.value), state);
+      else this.expr(child, scope, state);
+    }
   }
 
   element(node, scope, state) {
@@ -431,7 +478,7 @@ class ScreenRenderer {
     if (!this.view || this.routeElements.some(expr => expr && node.start >= expr.start && node.end <= expr.end && file === this.routeFile))
       this.view = {name: fn.name ?? 'Route', file: fn.scope.module.file};
     this.sources.add(fn.scope.module.file);
-    const next = {...state, depth: state.depth + 1, stack: [...state.stack, fn.node], anchors: [...state.anchors, `${file}:${line(node)}`], keys: key ? [...state.keys, key] : state.keys};
+    const next = {...state, depth: state.depth + 1, stack: [...state.stack, fn.node], anchors: [...state.anchors, this.anchor(node, file)], keys: key ? [...state.keys, key] : state.keys};
     this.body(fn, [{value: props}], next, true);
   }
 
@@ -444,13 +491,37 @@ class ScreenRenderer {
   }
 
   statements(list, scope, state) {
-    let current = state;
-    for (const statement of list) {
-      if (this.statement(statement, scope, current)) return true;
-      if (statement.type === 'IfStatement' && !statement.alternate && alwaysReturns(statement.consequent) && truthy(this.evaluator.evaluate(statement.test, scope)) === null)
-        current = guarded(current, `!(${text(scope.module, statement.test)})`);
+    for (let index = 0; index < list.length; index++) {
+      const statement = list[index];
+      if (statement.type === 'IfStatement' && !statement.alternate && alwaysReturns(statement.consequent) && truthy(this.evaluator.evaluate(statement.test, scope)) === null) {
+        // `if (x) return <A/>; …rest` — both are recorded; the preview prefers the rest, the resting state.
+        const test = text(scope.module, statement.test), rest = list.slice(index + 1);
+        let restReturns = false;
+        this.either(out => this.statement(statement.consequent, scope, {...guarded(state, test), out}), out => { restReturns = this.statements(rest, scope, {...guarded(state, `!(${test})`), out}); }, state);
+        return restReturns;
+      }
+      if (this.statement(statement, scope, state)) return true;
     }
     return false;
+  }
+
+  /**
+   * Renders two alternatives that cannot be told apart statically. Both contribute components and effects;
+   * the preview keeps the second (the `else`/fall-through, usually the resting state) unless it is empty.
+   */
+  either(first, second, state) {
+    if (!this.markup) { first(state.out); second(state.out); return; }
+    const base = new Set(this.emitted);
+    const run = render => {
+      this.emitted = new Set(base);
+      const out = htmlElement(null);
+      render(out);
+      return {out, emitted: this.emitted};
+    };
+    const a = run(first), b = run(second);
+    const chosen = hasContent(b.out) ? b : a;
+    this.emitted = chosen.emitted;
+    state.out.children.push(...chosen.out.children);
   }
 
   /** Returns true when the statement always returns, so later statements cannot render. */
@@ -463,8 +534,9 @@ class ScreenRenderer {
         const test = text(scope.module, node.test);
         if (truth === true) return this.statement(node.consequent, scope, state);
         if (truth === false) return node.alternate ? this.statement(node.alternate, scope, state) : false;
-        const left = this.statement(node.consequent, scope, guarded(state, test));
-        const right = node.alternate ? this.statement(node.alternate, scope, guarded(state, `!(${test})`)) : false;
+        let left = false, right = false;
+        this.either(out => { left = this.statement(node.consequent, scope, {...guarded(state, test), out}); },
+          out => { right = node.alternate ? this.statement(node.alternate, scope, {...guarded(state, `!(${test})`), out}) : false; }, state);
         return left && right;
       }
       case 'SwitchStatement': {
@@ -500,7 +572,13 @@ class ScreenRenderer {
       const urls = to ? this.urlsOf(to, scope) : [];
       const behaviors = [this.effect('NAVIGATE', 'click', node, scope, state, {urls, expression: text(scope.module, to)})];
       behaviors.push(...this.handlers(node, scope, state).flatMap(handler => handler.effects));
-      this.record(node, scope, state, key, {kind: 'LINK', tag: name, target: urls[0] ?? null, handlers: [], behaviors});
+      const component = this.record(node, scope, state, key, {kind: 'LINK', tag: name, target: urls[0] ?? null, handlers: [], behaviors});
+      const out = this.output(node, 'a', scope, state, key);
+      if (out.tag) {
+        out.attributes['data-st-expansion-anchor'] = component.anchor;
+        if (urls[0]) out.attributes.href = urls[0];
+      }
+      this.childNodes(node.children, scope, {...state, out});
       return;
     }
     if (name === 'Navigate') {
@@ -536,11 +614,13 @@ class ScreenRenderer {
     const attrs = this.staticAttributes(node, scope);
     const handlers = this.handlers(node, scope, state);
     const kind = intrinsicKind(tag, attrs, state.form !== null, handlers.length > 0);
-    let next = state;
+    const out = this.output(node, tag, scope, state, key);
+    let next = {...state, out};
     if (kind) {
       const component = this.record(node, scope, state, key, {kind, tag, attrs, handlers, target: tag === 'a' ? attrs.href ?? null : null});
+      if (out.tag) out.attributes['data-st-expansion-anchor'] = component.anchor;
       if (tag === 'a' && attrs.href && !attrs.href.startsWith('#')) component.behaviors.push(this.effect('NAVIGATE', 'click', node, scope, state, {urls: cleanUrls([attrs.href]), expression: attrs.href}));
-      if (kind === 'FORM') next = {...state, form: component};
+      if (kind === 'FORM') next = {...next, form: component};
       if (kind === 'SUBMIT' && state.form) {
         component.form = state.form.key;
         component.behaviors.push(...state.form.submitEffects.map(effect => ({...effect, event: 'click', viaForm: true})));
@@ -549,6 +629,60 @@ class ScreenRenderer {
     }
     this.childNodes(node.children, scope, next);
     if (kind === 'FORM' && next.form.submitters.length) next.form.behaviors = next.form.behaviors.filter(effect => effect.event !== 'submit' || effect.type === 'VALIDATE');
+  }
+
+  /**
+   * The HTML element for one rendered JSX element. An element already emitted on another render path
+   * (a wrapper returning `children` from two branches) gets a detached node so the preview shows it once.
+   */
+  output(node, tag, scope, state, key) {
+    const instanceKey = [...state.keys, key].join(' > ');
+    if (!this.markup || !isAllowedTag(tag) || this.emitted.has(instanceKey)) return htmlElement(null);
+    this.emitted.add(instanceKey);
+    const attributes = {'data-st-source-file': scope.module.file, 'data-st-source-line': String(line(node))};
+    for (const item of node.openingElement.attributes) {
+      if (item.type !== 'JSXAttribute') continue;
+      const name = jsxName(item.name), expr = attributeExpression(item);
+      if (!expr || name === 'to') continue;
+      let value;
+      if (name === 'style') value = this.styleOf(expr, scope);
+      else if (name === 'className' || name === 'class') value = this.classOf(expr, scope);
+      else {
+        const evaluated = this.evaluator.evaluate(expr, scope);
+        value = evaluated.t === 'lit' ? evaluated.v : undefined;
+      }
+      const html = htmlAttribute(name, value);
+      if (html && !html[0].startsWith('data-st-')) attributes[html[0]] = html[1];
+    }
+    // A dialog or backdrop that only renders under a condition starts closed, as on first load.
+    if (state.guards.length && (tag === 'dialog' || /^(dialog|alertdialog)$/.test(attributes.role ?? '') || /(^|\s)(modal|modal-backdrop|offcanvas|offcanvas-backdrop)(\s|$)/.test(attributes.class ?? ''))) {
+      attributes.style = [attributes.style, 'display:none!important'].filter(Boolean).join(';');
+      attributes['data-st-condition'] = JSON.stringify(state.guards);
+    }
+    const element = htmlElement(tag, attributes);
+    state.out.children.push(element);
+    return element;
+  }
+
+  styleOf(expr, scope) {
+    const value = this.evaluator.evaluate(expr, scope);
+    if (value.t === 'lit' && typeof value.v === 'string') return value.v;
+    if (value.t !== 'object') return undefined;
+    const entries = [];
+    for (const property of value.node.properties) {
+      if (property.type !== 'ObjectProperty' || property.computed) continue;
+      const item = this.evaluator.evaluate(property.value, value.scope);
+      if (item.t === 'lit' && ['string', 'number'].includes(typeof item.v)) entries.push([property.key.name ?? String(property.key.value), item.v]);
+    }
+    return styleText(entries) || undefined;
+  }
+
+  /** The resting class list: the shortest fully proven alternative, otherwise the proven parts only. */
+  classOf(expr, scope) {
+    const options = this.evaluator.strings(expr, scope);
+    const proven = options.filter(item => !item.includes('{')).sort((a, b) => a.length - b.length || a.localeCompare(b));
+    const chosen = proven[0] ?? options[0]?.replace(/\{[^{}]*\}/g, ' ') ?? '';
+    return chosen.split(/\s+/).filter(Boolean).join(' ') || undefined;
   }
 
   staticAttributes(node, scope) {
@@ -596,7 +730,7 @@ class ScreenRenderer {
     const label = labelOf(node, attrs, this.evaluator, scope, kind);
     const submitEffects = kind === 'FORM' ? handlers.filter(h => h.event === 'submit').flatMap(h => h.effects) : [];
     const component = {
-      key: instanceKey, file: scope.module.file, line: line(node), anchor: [...state.anchors, `${scope.module.file}:${line(node)}`].join(' > '),
+      key: instanceKey, file: scope.module.file, line: line(node), anchor: [...state.anchors, this.anchor(node, scope.module.file)].join(' > '),
       kind, tag, label: label.text, labelSource: label.source, attrs, target, guard: joinGuards(state.guards),
       repeated: state.repeated, form: null, behaviors: [...behaviors, ...handlers.flatMap(handler => handler.effects)], submitEffects, submitters: []
     };
@@ -751,6 +885,15 @@ function isLocation(node, evaluator, scope, allowHref) {
   if (target?.type !== 'MemberExpression' || target.computed || target.property.name !== 'location') return false;
   const owner = unwrap(target.object);
   return owner.type === 'Identifier' && LOCATION_OWNERS.has(owner.name) && !evaluator.lookup(owner.name, scope);
+}
+
+function hasContent(node) {
+  return node.children.some(child => typeof child === 'string' ? child.trim() : true);
+}
+
+function textual(node) {
+  const n = unwrap(node);
+  return ['StringLiteral', 'TemplateLiteral', 'NumericLiteral', 'BinaryExpression'].includes(n?.type);
 }
 
 function guarded(state, guard) {

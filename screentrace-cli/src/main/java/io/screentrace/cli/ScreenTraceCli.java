@@ -252,7 +252,9 @@ public final class ScreenTraceCli {
     var graph = io.screentrace.core.GraphIntegrityValidator.requireAnalysis(analyze(inventory));
     var writer = new SingleHtmlAnalysisWriter();
     writer.prepare(graph, output);
-    if (graph.application().technologies().contains("JSP") || graph.nodes().stream().anyMatch(n -> n.type() == ApplicationGraph.NodeType.SCREEN && n.attributes().getOrDefault("view", "").endsWith(".html"))) {
+    boolean reactScreens = graph.nodes().stream().anyMatch(n -> n.type() == ApplicationGraph.NodeType.SCREEN && "static-reconstruction".equals(n.attributes().get("rendering")));
+    if (reactScreens) io.screentrace.parser.jsp.ReactGraphContribution.writePreview(inventory, output);
+    if (reactScreens || graph.application().technologies().contains("JSP") || graph.nodes().stream().anyMatch(n -> n.type() == ApplicationGraph.NodeType.SCREEN && n.attributes().getOrDefault("view", "").endsWith(".html"))) {
       renderStaticJsp(project.sourceDirectory(), output);
       packPreview(output);
     }

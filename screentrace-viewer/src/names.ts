@@ -1,7 +1,9 @@
 import {Node} from './contracts';
 export interface NameHint {title?:string;heading?:string}
 const unsafeSourceMarkup=/(?:data-st-|<\/?[a-z][\w.-]*:[^>]*>|<\/?[a-z][\w.-]*\b[^>]*\bdata-st-[^>]*>)/iu;
-const clean=(value?:string)=>{const text=String(value||'');if(unsafeSourceMarkup.test(text))return '';return text.replace(/\$\{[^{}]*\}|#\{[^{}]*\}|<%[\s\S]*?%>/g,'動態內容').replace(/\s+/g,' ').trim();};
+// The static preview shows unproven text as this sample value; it never names a screen.
+const SAMPLE_TEXT='示例值';
+const clean=(value?:string)=>{const text=String(value||'');if(unsafeSourceMarkup.test(text)||text.includes(SAMPLE_TEXT))return '';return text.replace(/\$\{[^{}]*\}|#\{[^{}]*\}|<%[\s\S]*?%>/g,'動態內容').replace(/\s+/g,' ').trim();};
 export function humanizeName(value:string):string {
  if(unsafeSourceMarkup.test(value))return '未命名畫面';
  const filename=value.split(/[\\/]/).at(-1)!.replace(/\.[^.]+$/,'');

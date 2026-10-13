@@ -255,6 +255,11 @@ export class Evaluator {
 
   /** The value a call produces, for the hooks and wrappers that matter to rendering and URLs. */
   call(node, scope, depth) {
+    const member = unwrap(node.callee);
+    if ((member.type === 'MemberExpression' || member.type === 'OptionalMemberExpression') && !member.computed && member.property.name === 'filter') {
+      const filtered = this.filter(this.evaluate(member.object, scope), node.arguments[0] && this.evaluate(node.arguments[0], scope), depth);
+      if (filtered) return filtered;
+    }
     const callee = this.evaluate(node.callee, scope);
     const args = node.arguments.map(expr => ({expr, scope}));
     if (callee.t === 'external') {
@@ -269,6 +274,13 @@ export class Evaluator {
     }
     if (callee.t === 'fn') return this.result(callee, args, depth);
     return unknown();
+  }
+
+  /** `items.filter(fn)` over a literal array: items the predicate proves false are dropped, unproven ones kept. */
+  filter(items, fn, depth) {
+    if (items?.t !== 'array' || fn?.t !== 'fn' || items.node.elements.some(item => !item || item.type === 'SpreadElement')) return null;
+    const kept = items.node.elements.filter((item, index) => truthy(this.result(fn, [{expr: item, scope: items.scope}, {value: lit(index)}], depth)) !== false);
+    return {t: 'array', node: {type: 'ArrayExpression', elements: kept}, scope: items.scope};
   }
 
   lazyComponent(factory, scope) {

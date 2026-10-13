@@ -167,3 +167,32 @@ test('output is deterministic and independent of input order', () => {
   assert.equal(first, reversed);
   assert.equal(first, JSON.stringify(run(files)));
 });
+
+test('filtered literal arrays keep only items the predicate cannot rule out', () => {
+  const result = run({
+    'src/App.tsx': `${ROUTER} const items = [{ label: 'A', to: '/a' }, { label: 'Hidden' }, { label: 'B', to: '/b' }];
+      function Nav(){ const visible = items.filter(item => item.to); return <nav>{visible.map(item => <Link key={item.label} to={item.to}>{item.label}</Link>)}</nav>; }
+      export default function App(){ return <Routes><Route path="/a" element={<Nav/>}/><Route path="/b" element={<p/>}/></Routes>; }`
+  });
+  assert.deepEqual(screen(result, '/a').components.map(c => [c.label, c.target]), [['A', '/a'], ['B', '/b']]);
+});
+
+test('preview markup escapes text, drops handlers and prefers the resting branch', () => {
+  const result = analyzeReact({markup: true, files: [{file: 'src/App.tsx', code: `${ROUTER} import { useThing } from 'some-store';
+function Page(){
+  const { busy, result } = useThing();
+  if (result) return <p>Done</p>;
+  return <main className={\`page\${busy ? ' is-busy' : ''}\`} style={{ minWidth: 44, color: 'red' }}>
+    <button onClick={() => alert(1)} dangerouslySetInnerHTML={{ __html: '<b>x</b>' }}>{busy ? 'Saving' : 'Save <now>'}</button>
+    {busy && <div className="modal show" role="dialog">Wait</div>}
+    <script>evil()</script>
+  </main>;
+}
+export default function App(){ return <Routes><Route path="/p" element={<Page/>}/></Routes>; }`}]});
+  const page = screen(result, '/p');
+  assert.match(page.markup, /^<main class="page" data-st-source-file="src\/App.tsx" data-st-source-line="5" style="min-width:44px;color:red">/);
+  assert.match(page.markup, /<button data-st-expansion-anchor="[^"]+" [^>]*>Save &lt;now&gt;<\/button>/);
+  assert.match(page.markup, /data-st-condition="[^"]*busy[^"]*" [^>]*role="dialog" style="display:none!important">Wait<\/div>/);
+  assert.doesNotMatch(page.markup, /onclick|alert|<script|evil|<b>|Done|Saving/i);
+  assert.deepEqual(page.components.map(c => c.kind).sort(), ['BUTTON', 'MODAL']);
+});
