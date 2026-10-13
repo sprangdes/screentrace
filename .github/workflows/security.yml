@@ -37,18 +37,8 @@ jobs:
           npm --prefix screentrace-viewer run build
       - name: Install capture dependencies
         run: npm --prefix screentrace-capture ci
-      - name: Cache Playwright browsers
-        id: playwright-cache
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/ms-playwright
-          key: ${{ runner.os }}-playwright-all-${{ hashFiles('screentrace-capture/package-lock.json') }}
       - name: Install viewer test browsers
-        if: steps.playwright-cache.outputs.cache-hit != 'true'
         run: npm exec --prefix screentrace-capture -- playwright install --with-deps chromium firefox webkit
-      - name: Install viewer test browser system dependencies
-        if: steps.playwright-cache.outputs.cache-hit == 'true'
-        run: npm exec --prefix screentrace-capture -- playwright install-deps chromium firefox webkit
       - name: Build and test Java modules
         run: mvn -B clean verify
       - name: Test file viewer in all engines
@@ -107,18 +97,8 @@ jobs:
             screentrace-viewer/package-lock.json
       - name: Install Node dependencies
         run: npm --prefix screentrace-capture ci
-      - name: Cache Playwright browsers
-        id: playwright-cache
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/ms-playwright
-          key: ${{ runner.os }}-playwright-chromium-${{ hashFiles('screentrace-capture/package-lock.json') }}
       - name: Install Chromium for static reconstruction tests
-        if: steps.playwright-cache.outputs.cache-hit != 'true'
         run: npm exec --prefix screentrace-capture -- playwright install --with-deps chromium
-      - name: Install Chromium system dependencies
-        if: steps.playwright-cache.outputs.cache-hit == 'true'
-        run: npm exec --prefix screentrace-capture -- playwright install-deps chromium
       - name: Test static capture and project documentation
         run: node --test screentrace-capture/docs-baseline.test.mjs screentrace-capture/safe-files.test.mjs screentrace-capture/spring-resource-mappings.test.mjs screentrace-capture/capture-static-jsp.security.test.mjs screentrace-capture/preview-markup.test.mjs screentrace-capture/preview-v2.test.mjs screentrace-capture/pack-preview.test.mjs screentrace-capture/r6-thumbnail.test.mjs screentrace-capture/r7-anchor.test.mjs screentrace-capture/r7-reasons.test.mjs screentrace-capture/tiles-preview.test.mjs
       - name: Audit Node dependencies
