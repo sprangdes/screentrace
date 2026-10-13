@@ -229,12 +229,12 @@ try {
  // While zoomed in, opening it floats the list over the canvas so the preview keeps its size.
  let listCollapsed=false,overviewCollapsed=false,wasZoomed=false;
  const overlayOpen=()=>wasZoomed&&!listCollapsed;
- const syncList=()=>{shell.dataset.sidebar=listCollapsed?'collapsed':wasZoomed?'overlay':'expanded';expandList.setAttribute('aria-expanded','false');collapseList.setAttribute('aria-expanded','true');};
+ const syncList=()=>{shell.dataset.sidebar=listCollapsed?'collapsed':wasZoomed?'overlay':'expanded';sidebarBody.inert=listCollapsed;expandList.setAttribute('aria-expanded','false');collapseList.setAttribute('aria-expanded','true');};
  const setList=(collapsed:boolean,focus:HTMLElement=collapsed?expandList:collapseList)=>{listCollapsed=collapsed;if(!wasZoomed)overviewCollapsed=collapsed;syncList();focus.focus();};
  expandList.onclick=()=>setList(false);railSearch.onclick=()=>setList(false,search);collapseList.onclick=()=>setList(true);
  document.addEventListener('click',event=>{if(overlayOpen()&&!nav.contains(event.target as Node)){listCollapsed=true;syncList();}});
  let detailsCollapsed=false;
- const syncDetails=()=>{shell.dataset.details=page!=='screens'||!current?'hidden':detailsCollapsed?'collapsed':'open';expandDetails.setAttribute('aria-expanded','false');collapseDetails.setAttribute('aria-expanded','true');};
+ const syncDetails=()=>{shell.dataset.details=page!=='screens'||!current?'hidden':detailsCollapsed?'collapsed':'open';panelBody.inert=shell.dataset.details!=='open';collapseDetails.inert=shell.dataset.details!=='open';expandDetails.setAttribute('aria-expanded','false');collapseDetails.setAttribute('aria-expanded','true');};
  const setDetails=(collapsed:boolean)=>{detailsCollapsed=collapsed;syncDetails();(collapsed?expandDetails:collapseDetails).focus();};
  expandDetails.onclick=()=>setDetails(false);collapseDetails.onclick=()=>setDetails(true);
  const renderPanel=()=>{

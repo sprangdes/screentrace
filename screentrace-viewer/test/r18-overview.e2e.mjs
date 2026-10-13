@@ -56,9 +56,9 @@ test('R18 a zoomed screen shows lines leaving (blue) and arriving (amber) in the
   const flows=await page.locator('.relations > .relation .relation-line').evaluateAll(lines=>lines.map(l=>({from:l.dataset.from,to:l.dataset.to})));
   const id=flows.find(f=>f.from!==f.to&&flows.some(g=>g.to===f.to&&g.from!==f.to))?.to;assert.ok(id,'the fixture has a screen with an incoming line');
   const sources=[...new Set(flows.filter(f=>f.to===id&&f.from!==id).map(f=>f.from))].sort();
-  await page.locator(`.screen-card[data-screen="${id}"]`).click();await page.locator('.focus-layer:not([hidden]) .preview[aria-busy="false"]').waitFor();
+  await page.locator(`.screen-card[data-screen="${id}"]`).click();await page.locator('.focus-layer:not([hidden]):not(.is-leaving) .preview[aria-busy="false"]').waitFor();
   await page.waitForFunction(()=>!document.querySelector('.focus-lines').classList.contains('is-entering')&&document.querySelectorAll('.focus-line-hit').length>0);
-  const arriving=await page.locator('.focus-line-hit[data-kind="incoming"]').evaluateAll(hits=>hits.map(h=>{const a=h.getPointAtLength(0),b=h.getPointAtLength(h.getTotalLength()),box=document.querySelector('.focus-layer').getBoundingClientRect(),c=document.querySelector('.canvas').getBoundingClientRect(),cx=box.left-c.left+box.width/2,cy=box.top-c.top+box.height/2;return {from:h.dataset.from,inward:Math.hypot(b.x-cx,b.y-cy)<Math.hypot(a.x-cx,a.y-cy)};}));
+  const arriving=await page.locator('.focus-line-hit[data-kind="incoming"]').evaluateAll(hits=>hits.map(h=>{const a=h.getPointAtLength(0),b=h.getPointAtLength(h.getTotalLength()),box=document.querySelector('.focus-layer:not(.is-leaving)').getBoundingClientRect(),c=document.querySelector('.canvas').getBoundingClientRect(),cx=box.left-c.left+box.width/2,cy=box.top-c.top+box.height/2;return {from:h.dataset.from,inward:Math.hypot(b.x-cx,b.y-cy)<Math.hypot(a.x-cx,a.y-cy)};}));
   assert.deepEqual([...new Set(arriving.map(a=>a.from))].sort(),sources);
   assert.ok(arriving.every(a=>a.inward),'arriving lines point into the preview box');
   const classes=await page.locator('.focus-line').evaluateAll(lines=>lines.map(l=>({kind:l.dataset.kind,cls:l.getAttribute('class'),marker:getComputedStyle(l).markerEnd})));

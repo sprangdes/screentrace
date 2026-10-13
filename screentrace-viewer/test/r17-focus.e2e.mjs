@@ -20,7 +20,7 @@ async function open(reducedMotion='reduce'){
  return {browser,page,requests};
 }
 const focused=page=>page.locator('.canvas').getAttribute('data-focused');
-const ready=page=>page.locator('.focus-layer:not([hidden]) .preview[aria-busy="false"]').waitFor();
+const ready=page=>page.locator('.focus-layer:not([hidden]):not(.is-leaving) .preview[aria-busy="false"]').waitFor();
 
 test('R17 WP62 clicking a card zooms the same canvas into it and keeps only its outgoing lines in their original directions',async()=>{
  const {browser,page,requests}=await open();
@@ -69,8 +69,8 @@ test('R17 WP62 n zooms to the next unconfirmed screen and the transition settles
  const {browser,page}=await open('no-preference');
  try{
   await page.locator('.screen-card[data-screen="a"]').click();
-  assert.equal(await page.locator('.focus-layer').evaluate(l=>l.hidden||l.classList.contains('is-entering')),true,'the preview fades in over the end of the zoom animation');
-  await page.waitForFunction(()=>!document.querySelector('.focus-layer').classList.contains('is-entering'));
+  assert.equal(await page.locator('.focus-layer:not(.is-leaving)').evaluate(l=>l.hidden||l.classList.contains('is-entering')),true,'the preview fades in over the end of the zoom animation');
+  await page.waitForFunction(()=>!document.querySelector('.focus-layer:not(.is-leaving)').classList.contains('is-entering'));
   await ready(page);
   await page.locator('.panel-header [data-decision="KEEP"]').click();
   await page.locator('body').click({position:{x:5,y:5}});
@@ -113,11 +113,11 @@ test('R17 WP62 zooming in folds the screen list into a rail; opening it there fl
   assert.equal(await rail.innerText(),'','the rail holds icon buttons only');
   const toggleSpot=async button=>button.evaluate(b=>{const r=b.getBoundingClientRect();return [Math.round(r.left),Math.round(r.top)];});
   const railSpot=await toggleSpot(expand);
-  const before=await page.locator('.focus-layer').evaluate(l=>l.offsetWidth);
+  const before=await page.locator('.focus-layer:not(.is-leaving)').evaluate(l=>l.offsetWidth);
   await expand.click();
   assert.equal(await shell.getAttribute('data-sidebar'),'overlay');assert.equal(await body.isVisible(),true);
   assert.deepEqual(await toggleSpot(collapse),railSpot,'the toggle stays in the same spot');
-  assert.equal(await page.locator('.focus-layer').evaluate(l=>l.offsetWidth),before,'the floating list does not shrink the preview');
+  assert.equal(await page.locator('.focus-layer:not(.is-leaving)').evaluate(l=>l.offsetWidth),before,'the floating list does not shrink the preview');
   await page.keyboard.press('Escape');
   assert.equal(await body.isVisible(),false);assert.equal(await page.locator('.canvas').getAttribute('data-mode'),'focus','Esc closes the list before leaving the screen');
   await expand.click();await page.locator('.details-panel').click({position:{x:20,y:400}});
@@ -152,11 +152,11 @@ test('R17 the screen details appear only while a screen is open, fold into a rai
   await page.locator('.screen-card[data-screen="a"]').click();await ready(page);
   assert.equal(await shell.getAttribute('data-details'),'open');assert.equal(await hint.isVisible(),false);
   assert.equal(await page.locator('.details-panel [data-screen-panel="a"]').isVisible(),true);
-  const openSpot=await spot(collapse),before=await page.locator('.focus-layer').evaluate(l=>l.offsetWidth);
+  const openSpot=await spot(collapse),before=await page.locator('.focus-layer:not(.is-leaving)').evaluate(l=>l.offsetWidth);
   await collapse.click();
   assert.equal(await shell.getAttribute('data-details'),'collapsed');
   assert.deepEqual(await spot(expand),openSpot,'the toggle stays in the same spot');
-  await page.waitForFunction(width=>document.querySelector('.focus-layer').offsetWidth>width,before);
+  await page.waitForFunction(width=>document.querySelector('.focus-layer:not(.is-leaving)').offsetWidth>width,before);
   await page.locator('.canvas').focus();await page.keyboard.press('k');
   assert.equal(await page.locator('.screen-list [data-screen-list="a"]').getAttribute('data-decision'),'KEEP','shortcuts still mark while folded');
   await showList(page);await page.locator('.screen-list [data-screen-list="b"]').click();await ready(page);

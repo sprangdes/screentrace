@@ -264,6 +264,8 @@ export function canvas(index:Index,payload:Payload,options:CanvasOptions):Canvas
   frameId=requestAnimationFrame(step);
  };
  const dropLeaving=()=>{leaving?.remove();leaving=undefined;};
+ // A box on its way out is only a picture: it takes no input and is not the current preview.
+ const markLeaving=(host:HTMLElement|undefined)=>{if(host){host.classList.add('is-leaving');host.inert=true;}};
  /** The box that is leaving keeps following its card while it fades out. */
  const fadeLeaving=(id:string,t:number,startOpacity:number)=>{
   if(!leaving)return;
@@ -281,7 +283,7 @@ export function canvas(index:Index,payload:Payload,options:CanvasOptions):Canvas
   focused=id;viewport.dataset.mode='focus';viewport.dataset.focused=id;options.onLineHover?.(undefined);
   clear();svg.classList.add('is-dim');lines.style.display='none';tips.replaceChildren();
   for(const [cardId,card] of cards){card.classList.toggle('is-dim',cardId!==id&&cardId!==previous);card.classList.remove('is-under-focus');card.classList.toggle('is-morphing',cardId===id||cardId===previous);}
-  dropLeaving();leaving=old;if(!old)layer.remove();
+  dropLeaving();leaving=old;markLeaving(old);if(!old)layer.remove();
   layer=newLayer();viewport.insertBefore(layer,tips);
   placeLayer();layer.classList.add('is-entering');layer.style.transition='none';layer.style.opacity='0';
   const host=layer;let loaded=false,ready:Promise<void>|undefined;
@@ -312,7 +314,7 @@ export function canvas(index:Index,payload:Payload,options:CanvasOptions):Canvas
   if(!focused)return;
   const token=++sequence,id=focused,host=layer;focused=undefined;viewport.dataset.mode='overview';delete viewport.dataset.focused;
   options.onLineHover?.(undefined);lines.style.display='none';tips.replaceChildren();
-  dropLeaving();leaving=host.hidden?undefined:host;if(host.hidden)host.remove();
+  dropLeaving();leaving=host.hidden?undefined:host;markLeaving(leaving);if(host.hidden)host.remove();
   layer=newLayer();viewport.insertBefore(layer,tips);
   const oldOpacity=leaving?Number(getComputedStyle(leaving).opacity)||0:0;if(leaving)leaving.style.transition='none';
   for(const [cardId,card] of cards){card.classList.remove('is-dim','is-under-focus');card.classList.toggle('is-morphing',cardId===id);}

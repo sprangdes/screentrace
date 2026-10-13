@@ -27,7 +27,8 @@ export async function openScreen(page,id){
 
 /** While a screen is zoomed in, the screen list is collapsed; open it the way a person would. */
 export async function showList(page){
- if(await page.locator('.sidebar-body').isVisible())return;
+ // The list is open when docked or floating; a folding list may still be fading out but takes no input.
+ if(['expanded','overlay'].includes(await page.locator('.shell').getAttribute('data-sidebar')))return;
  await page.getByRole('button',{name:'展開畫面清單'}).click();
  await page.locator('.sidebar-body').waitFor();
 }
