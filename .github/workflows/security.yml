@@ -2,6 +2,7 @@ name: Security checks
 
 on:
   push:
+    branches: [main]
   pull_request:
   schedule:
     - cron: '23 5 * * 1'
@@ -9,10 +10,15 @@ on:
 permissions:
   contents: read
 
+# A newer push to the same PR supersedes the run still in progress; main and scheduled runs always finish.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
-  dependency-audit:
+  build-and-test:
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -29,16 +35,27 @@ jobs:
         run: |
           npm --prefix screentrace-viewer ci --ignore-scripts
           npm --prefix screentrace-viewer run build
+      - name: Install capture dependencies
+        run: npm --prefix screentrace-capture ci
       - name: Install viewer test browsers
-        run: |
-          npm --prefix screentrace-capture ci
-          npm exec --prefix screentrace-capture -- playwright install --with-deps chromium firefox webkit
+        run: npm exec --prefix screentrace-capture -- playwright install --with-deps chromium firefox webkit
       - name: Build and test Java modules
         run: mvn -B clean verify
       - name: Test file viewer in all engines
         env:
           ST_BROWSERS: chromium,firefox,webkit
         run: node --test screentrace-viewer/test/*.e2e.mjs
+
+  dependency-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
       - name: Set vulnerability cache date
         id: cache-date
         run: echo "day=$(date -u +%Y-%m-%d)" >> "$GITHUB_OUTPUT"
@@ -53,7 +70,8 @@ jobs:
       - name: Audit Java dependencies
         env:
           DEPENDENCY_CHECK_DATA: ${{ runner.temp }}/dependency-check-data
-        run: mvn -B org.owasp:dependency-check-maven:aggregate -DdataDirectory="$DEPENDENCY_CHECK_DATA"
+        # Package in the same invocation so the reactor modules resolve without a full test run.
+        run: mvn -B -DskipTests package org.owasp:dependency-check-maven:aggregate -DdataDirectory="$DEPENDENCY_CHECK_DATA"
       - name: Upload dependency audit reports
         if: always()
         uses: actions/upload-artifact@v4
