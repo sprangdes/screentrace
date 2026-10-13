@@ -106,6 +106,37 @@ async function expandIncludes(source, currentFile, stack = new Set(), depth = 0)
   if(previewV2)expanded=await replaceAsync(expanded, /<jsp:include\b([^>]*?)(?:\/>|>[\s\S]*?<\/jsp:include\s*>)/gi,async match=>{const includePath=attrs(match[1]).page;if(!includePath||includePath.includes('${')){captureDiagnostics.push('Dynamic include not rendered.');return '';}const file=includePath.startsWith('/')?path.join(webRoot,includePath):path.resolve(path.dirname(currentFile),includePath);if(stack.has(file)||!(await exists(file,webRoot))){captureDiagnostics.push('Missing or cyclic include not rendered.');return '';}const next=new Set(stack);next.add(file);return expandIncludes(annotateSource(await text(file),path.relative(target,file).replaceAll(path.sep,'/'),graph.nodes),file,next,depth+1);});
   return expanded;
 }
+// Struts Tiles: a page definition's template is rendered with its resolved put values (screen.attributes.tilesAttributes).
+const TILES_INSERT=/<tiles:(insert|insertAttribute|insertDefinition|insertTemplate)\b((?:[^>"']|"[^"]*"|'[^']*')*?)(?:\/>|>([\s\S]*?)<\/tiles:\1\s*>)/gi;
+function tilesContext(screen){const raw=screen.attributes?.tilesAttributes;if(!raw)return null;try{return JSON.parse(raw);}catch{captureDiagnostics.push('Tiles attributes unreadable; template slots not rendered.');return null;}}
+function escapeHtml(value){return String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function tilesPagePath(value,currentFile){return value.startsWith('/')?path.join(webRoot,value):path.resolve(path.dirname(currentFile),value);}
+function inlineTilesPuts(body,currentFile){const result={};for(const match of body.matchAll(/<tiles:put(?:-attribute|Attribute)?\b([^>]*?)\/?>/gi)){const a=attrs(match[1]);if(!a.name||a.value===undefined)continue;result[a.name]=/\.(?:jspf?|html?)$/i.test(a.value)&&!a.value.includes('${')?{path:path.relative(target,tilesPagePath(a.value,currentFile))}:{value:a.value};}return result;}
+async function tilesPage(file,context,stack,depth){
+  if(stack.has(file)||!(await exists(file))){captureDiagnostics.push('Missing or cyclic Tiles page not rendered.');return '';}
+  const next=new Set(stack);next.add(file);
+  const included=await expandIncludes(annotateSource(await text(file),path.relative(target,file).replaceAll(path.sep,'/'),graph.nodes),file,next,depth+1);
+  return expandTiles(included,context,file,next,depth+1);
+}
+async function tilesEntry(entry,name,stack,depth){
+  if(entry?.path)return tilesPage(path.join(target,entry.path),null,stack,depth);
+  if(entry?.definition)return tilesPage(path.join(target,entry.definition.template),entry.definition,stack,depth);
+  if(entry&&'value' in entry)return escapeHtml(entry.value);
+  captureDiagnostics.push(`Tiles attribute not rendered: ${name}`);return '';
+}
+async function expandTiles(source,context,currentFile,stack,depth){
+  if(depth>=16){captureDiagnostics.push('Tiles depth limit reached; remaining insert not rendered.');return source;}
+  const attributes=context?.attributes??{};
+  const strings=source.replace(/<tiles:getAsString\b((?:[^>"']|"[^"]*"|'[^']*')*?)\/?>/gi,(_,attributeText)=>{const name=attrs(attributeText).name,entry=attributes[name];if(entry&&'value' in entry)return escapeHtml(entry.value);captureDiagnostics.push(`Tiles string attribute not rendered: ${name}`);return '';});
+  return replaceAsync(strings,TILES_INSERT,async match=>{
+    const tag=match[1].toLowerCase(),a=attrs(match[2]);
+    const attribute=tag==='insertattribute'?a.name:tag==='insert'?a.attribute??(a.name in attributes?a.name:undefined):undefined;
+    if(attribute!==undefined)return tilesEntry(attributes[attribute],attribute,stack,depth);
+    const page=tag==='inserttemplate'?a.template:tag==='insert'?a.page??a.template??a.component:undefined;
+    if(page&&!page.includes('${'))return tilesPage(tilesPagePath(page,currentFile),{attributes:inlineTilesPuts(match[3]||'',currentFile)},stack,depth);
+    captureDiagnostics.push(`Tiles insert not rendered: ${a.definition??a.name??a.attribute??page??tag}`);return '';
+  });
+}
 function placeholder(expression) {
   const value = expression.trim();
   const escaped = value.match(/^fn:escapeXml\((.+)\)$/);
@@ -220,6 +251,7 @@ async function renderJsp(screen) {
   const original=await text(jsp);
   if(previewV2){localTagDirs=new Map();previewExpressions=new Set();declaredTagDirs(original);}
   let source = await expandIncludes(previewV2?annotateSource(original,view,graph.nodes):original, jsp, new Set([jsp]));
+  if(previewV2)source=await expandTiles(source,tilesContext(screen),jsp,new Set([jsp]),0);
   if(previewV2)declaredTagDirs(source);
   source = removeDirectives(source);
   const unresolved = previewV2?expressionList(source):dynamicExpressions(source);
