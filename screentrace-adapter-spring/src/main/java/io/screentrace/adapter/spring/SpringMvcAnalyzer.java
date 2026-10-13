@@ -568,7 +568,7 @@ public final class SpringMvcAnalyzer {
                 .ifPresent(value -> values.put(variable.getNameAsString(), value.asStringLiteralExpr().asString()))));
         return values;
     }
-    private static String join(String base, String child) { String path = (base + "/" + child).replaceAll("/{2,}", "/"); return path.isEmpty() ? "/" : path.startsWith("/") ? path : "/" + path; }
+    private static String join(String base, String child) { String path = (child.isEmpty() ? base : base + "/" + child).replaceAll("/{2,}", "/"); return path.isEmpty() ? "/" : path.startsWith("/") ? path : "/" + path; }
     private static void addNode(State state, GraphNode node) {
         if(state.nodes.stream().noneMatch(n->n.id().equals(node.id()))) {
             List<ApplicationGraph.AnalysisEvidence> proof=node.evidence().stream().map(e->Set.of("UNKNOWN","LEGACY").contains(e.parser())?

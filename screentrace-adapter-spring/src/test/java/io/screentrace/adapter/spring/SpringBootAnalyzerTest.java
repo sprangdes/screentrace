@@ -25,6 +25,19 @@ class SpringBootAnalyzerTest {
     }
 
     @Test
+    void methodMappingWithoutPathUsesTheClassPathWithoutATrailingSlash() throws Exception {
+        Path root = Files.createTempDirectory("st-empty-mapping");
+        Path java = root.resolve("src/main/java/Api.java");
+        Files.createDirectories(java.getParent());
+        Files.writeString(java, "import org.springframework.web.bind.annotation.*; @RestController @RequestMapping(\"/api/notifications\") class Api { @GetMapping String list(){ return null; } @PostMapping(\"/\") String create(){ return null; } }");
+
+        ApplicationGraph graph = new SpringBootAnalyzer().analyze(new ProjectScanner().scan(root));
+
+        assertTrue(graph.nodes().stream().anyMatch(node -> node.name().equals("GET /api/notifications")), graph.nodes().toString());
+        assertTrue(graph.nodes().stream().anyMatch(node -> node.name().equals("POST /api/notifications/")), graph.nodes().toString());
+    }
+
+    @Test
     void parsesControllersAndRecordDtosWrittenWithModernJavaSyntax() throws Exception {
         Path root = Files.createTempDirectory("st-java17");
         Path java = root.resolve("src/main/java/Api.java");
@@ -59,8 +72,8 @@ class SpringBootAnalyzerTest {
         Path root = Files.createTempDirectory("st-react");
         Path source = root.resolve("src");
         Files.createDirectories(source);
-        Files.writeString(source.resolve("App.tsx"), "import Home from './Home';\n<Route path=\"/\" element={<Home />} />");
-        Files.writeString(source.resolve("Home.tsx"), "export function Home() { return <Link to=\"/next\">Next</Link>; }");
+        Files.writeString(source.resolve("App.tsx"), "import { Route } from 'react-router-dom';\nimport Home from './Home';\n<Route path=\"/\" element={<Home />} />");
+        Files.writeString(source.resolve("Home.tsx"), "import { Link } from 'react-router-dom'; export default function Home() { return <Link to=\"/next\">Next</Link>; }");
 
         ApplicationGraph graph = new SpringBootAnalyzer().analyze(new ProjectScanner().scan(root));
 
@@ -82,8 +95,8 @@ class SpringBootAnalyzerTest {
             }
             class CreatePetRequest { String name; int age; } class PetResponse { long id; String name; }
             """);
-        Files.writeString(source.resolve("App.tsx"), "import Home from './Home';\n<Route path=\"/\" element={<Home />} />");
-        Files.writeString(source.resolve("Home.tsx"), "import { useEffect } from 'react'; export function Home(){ useEffect(()=>{ fetch('/api/pets'); }, []); return <button onClick={()=>fetch('/api/pets',{method:'POST'})}>Save</button>; }");
+        Files.writeString(source.resolve("App.tsx"), "import { Route } from 'react-router-dom';\nimport Home from './Home';\n<Route path=\"/\" element={<Home />} />");
+        Files.writeString(source.resolve("Home.tsx"), "import { useEffect } from 'react'; export default function Home(){ useEffect(()=>{ fetch('/api/pets'); }, []); return <button onClick={()=>fetch('/api/pets',{method:'POST'})}>Save</button>; }");
 
         ApplicationGraph graph = new SpringBootAnalyzer().analyze(new ProjectScanner().scan(root));
 
@@ -105,7 +118,7 @@ class SpringBootAnalyzerTest {
         Path secret = root.getParent().resolve("OutsideView.tsx");
         Files.writeString(secret, "export function Evil(){ return <p>SECRET_OUTSIDE</p>; }");
         try {
-            Files.writeString(source.resolve("App.tsx"), "import Evil from '../../../../../../OutsideView';\n<Route path=\"/\" element={<Evil />} />");
+            Files.writeString(source.resolve("App.tsx"), "import { Route } from 'react-router-dom';\nimport Evil from '../../../../../../OutsideView';\n<Route path=\"/\" element={<Evil />} />");
             ApplicationGraph graph = new SpringBootAnalyzer().analyze(new ProjectScanner().scan(root));
             var screen = graph.nodes().stream().filter(node -> node.type() == ApplicationGraph.NodeType.SCREEN).findFirst().orElseThrow();
             assertEquals("src/App.tsx", screen.attributes().get("viewSource"));

@@ -67,7 +67,7 @@ function Ensure-Runtime {
 
 function Ensure-JsParser {
   $parserDir = Join-Path $baseDir 'screentrace-js'
-  if (-not (Test-Path (Join-Path $parserDir 'node_modules/acorn/package.json')) -or -not (Test-Path (Join-Path $parserDir 'node_modules/acorn-loose/package.json'))) {
+  if (-not (Test-Path (Join-Path $parserDir 'node_modules/acorn/package.json')) -or -not (Test-Path (Join-Path $parserDir 'node_modules/acorn-loose/package.json')) -or -not (Test-Path (Join-Path $parserDir 'node_modules/@babel/parser/package.json'))) {
     Push-Location $parserDir
     try {
       & npm ci --ignore-scripts --no-fund
@@ -124,7 +124,7 @@ if ($args.Count -gt 0 -and $args[0] -eq 'doctor') {
   if ((Get-MavenVersion) -lt $requiredMaven) { $missing += "Maven $requiredMaven+" }
   if ((Get-NodeMajorVersion) -lt $requiredNode) { $missing += "Node.js $requiredNode+" }
   if (-not (Test-Path (Join-Path $baseDir 'screentrace-capture/node_modules/.bin/playwright.cmd'))) { $missing += 'Playwright renderer (run .\bin\screentrace.ps1 setup)' }
-  if (-not (Test-Path (Join-Path $baseDir 'screentrace-js/node_modules/acorn/package.json')) -or -not (Test-Path (Join-Path $baseDir 'screentrace-js/node_modules/acorn-loose/package.json'))) { $missing += 'JavaScript parser (run setup)' }
+  if (-not (Test-Path (Join-Path $baseDir 'screentrace-js/node_modules/acorn/package.json')) -or -not (Test-Path (Join-Path $baseDir 'screentrace-js/node_modules/acorn-loose/package.json')) -or -not (Test-Path (Join-Path $baseDir 'screentrace-js/node_modules/@babel/parser/package.json'))) { $missing += 'JavaScript parser (run setup)' }
   if ($missing.Count) { $missing | ForEach-Object { Write-Host "Missing $_" }; exit 1 }
   Write-Host 'ScreenTrace dependencies are ready.'
   exit 0
