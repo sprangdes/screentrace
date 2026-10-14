@@ -120,7 +120,7 @@ class SpringBootAnalyzerTest {
         Files.writeString(java, "import org.springframework.web.bind.annotation.*; @RestController @RequestMapping(\"/api/auth\") class Auth { @PostMapping(\"/login\") String login(){ return null; } @GetMapping(\"/unused\") String unused(){ return null; } }");
         Files.writeString(web.resolve("api.ts"), "async function request(path, options = {}) { return fetch(path, { ...options }); }\nexport const api = { login: () => request('/api/auth/login', { method: 'POST' }) };");
         Files.writeString(web.resolve("main.tsx"), "import { createRoot } from 'react-dom/client'; import App from './App'; import { api } from './api';\ncreateRoot(document.body).render(<><button onClick={() => api.login()}>Header sign in</button><App/></>);");
-        Files.writeString(web.resolve("App.tsx"), "import { Routes, Route } from 'react-router-dom'; import Login from './Login';\nexport default function App(){ return <Routes><Route path=\"/login\" element={<Login/>}/><Route path=\"/home\" element={<p/>}/></Routes>; }");
+        Files.writeString(web.resolve("App.tsx"), "import { Routes, Route, Navigate } from 'react-router-dom'; import Login from './Login';\nexport default function App(){ return <Routes><Route path=\"/login\" element={<Login/>}/><Route path=\"/home\" element={<p/>}/><Route path=\"/signin\" element={<Navigate to=\"/login\"/>}/></Routes>; }");
         Files.writeString(web.resolve("Login.tsx"), "import { useNavigate } from 'react-router-dom'; import { api } from './api';\nexport default function Login(){ const navigate = useNavigate(); const submit = async (e) => { await api.login(); navigate('/home'); };\n return <form onSubmit={submit}><input name=\"user\"/><button>Sign in</button></form>; }");
 
         ApplicationGraph graph = new SpringBootAnalyzer().analyze(new ProjectScanner().scan(root));
@@ -140,8 +140,13 @@ class SpringBootAnalyzerTest {
 
         assertEquals(1, graph.behaviors().stream().filter(item -> item.triggerId().equals(button.id()) && item.type() == ApplicationGraph.BehaviorType.CALL_API).count());
         var header = graph.nodes().stream().filter(node -> node.name().equals("Header sign in")).findFirst().orElseThrow();
-        assertEquals(2, graph.relationships().stream().filter(edge -> edge.type() == ApplicationGraph.EdgeType.CONTAINS && edge.to().equals(header.id())).count());
+        long screens = graph.nodes().stream().filter(node -> node.type() == ApplicationGraph.NodeType.SCREEN).count();
+        assertEquals(screens, graph.relationships().stream().filter(edge -> edge.type() == ApplicationGraph.EdgeType.CONTAINS && edge.to().equals(header.id())).count());
         assertEquals(1, graph.behaviors().stream().filter(item -> item.triggerId().equals(header.id())).count());
+
+        var forward = graph.nodes().stream().filter(node -> "/signin".equals(node.attributes().get("route"))).findFirst().orElseThrow();
+        assertEquals(screen.id(), forward.attributes().get("redirectTargets"));
+        assertFalse(screen.attributes().containsKey("redirectTargets"));
 
         ApplicationGraph again = new SpringBootAnalyzer().analyze(new ProjectScanner().scan(root));
         assertEquals(graph.nodes().stream().map(ApplicationGraph.GraphNode::id).toList(), again.nodes().stream().map(ApplicationGraph.GraphNode::id).toList());

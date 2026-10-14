@@ -132,6 +132,7 @@ public final class ReactGraphContribution {
         private final Map<String, String> screensByRoute = new HashMap<>();
         private final Map<String, Integer> occurrences = new HashMap<>();
         private final List<PendingNavigation> navigations = new ArrayList<>();
+        private final Map<String, List<String>> redirects = new LinkedHashMap<>();
 
         private Builder(ApplicationGraph graph) {
             this.graph = graph;
@@ -157,6 +158,11 @@ public final class ReactGraphContribution {
             nodes.put(id, new GraphNode(id, NodeType.SCREEN, route.equals("/") ? "Home" : route.substring(1), attributes, source, Confidence.CONFIRMED,
                     proof(source, Confidence.CONFIRMED, "路由宣告；畫面元件 " + screen.path("view").asText())));
             screensByRoute.put(route, id);
+            if (screen.path("redirectOnly").asBoolean()) {
+                List<String> targets = new ArrayList<>();
+                screen.path("redirectTo").forEach(item -> targets.add(item.asText()));
+                redirects.put(id, targets);
+            }
             Map<String, String> componentIds = new LinkedHashMap<>();
             for (JsonNode component : screen.path("components")) componentIds.put(component.path("key").asText(), component(id, component));
             for (JsonNode component : screen.path("components")) {
@@ -252,6 +258,13 @@ public final class ReactGraphContribution {
 
         /** Navigation targets are screens, so they are linked once every route has been added. */
         void navigation() {
+            // A route that only redirects is marked with the screens it forwards to, its own redirect first.
+            redirects.forEach((id, routes) -> {
+                var node = nodes.get(id);
+                var attributes = new TreeMap<>(node.attributes());
+                attributes.put("redirectTargets", String.join("|", routes.stream().map(screensByRoute::get).filter(java.util.Objects::nonNull).distinct().toList()));
+                nodes.put(id, new GraphNode(id, node.type(), node.name(), attributes, node.source(), node.confidence(), node.evidence()));
+            });
             for (var item : navigations) {
                 List<String> screens = item.targets().stream().map(screensByRoute::get).filter(java.util.Objects::nonNull).sorted().toList();
                 String target = screens.size() == 1 ? screens.get(0) : null;

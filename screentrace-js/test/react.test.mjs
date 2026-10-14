@@ -220,3 +220,20 @@ test('click behaviors carry only the handler conditions, not the conditions that
   assert.equal(go.guard, 'open');
   assert.deepEqual(go.behaviors.map(e => [e.urls, e.guard]), [[['/api/x'], '!(busy)']]);
 });
+
+test('a route that only redirects is marked as such and never named after a shell provider', () => {
+  const result = run({
+    'src/main.tsx': `import { createRoot } from 'react-dom/client'; import App from './App';
+      function AuthProvider({ children }){ return <>{children}</>; }
+      createRoot(document.body).render(<AuthProvider><App/></AuthProvider>);`,
+    'src/App.tsx': `${ROUTER} import { useThing } from 'some-store';
+      function Home(){ return <h1>Home</h1>; }
+      function Guard({ children }){ const { me } = useThing(); if (!me) return <Navigate to="/"/>; return children; }
+      function Old(){ return <Guard><Navigate to="/home" replace/></Guard>; }
+      export default function App(){ return <Routes><Route path="/" element={<p>Start</p>}/><Route path="/home" element={<Home/>}/><Route path="/old" element={<Old/>}/><Route path="*" element={<Navigate to="/"/>}/></Routes>; }`
+  });
+  assert.deepEqual([screen(result, '/old').redirectOnly, screen(result, '/old').redirectTo], [true, ['/home', '/']]);
+  assert.deepEqual([screen(result, '/*').redirectOnly, screen(result, '/*').redirectTo, screen(result, '/*').view], [true, ['/'], 'Route']);
+  assert.equal(screen(result, '/home').redirectOnly, false);
+  assert.equal(screen(result, '/').view, 'Route');
+});

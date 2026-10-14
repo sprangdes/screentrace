@@ -15,3 +15,14 @@ test('preview sample text never becomes a screen name',async()=>{
  const m=await ownModule('names'),screen=node('react','SCREEN','login',{view:'LoginPage'}),hints=new Map([[screen.id,{heading:'示例值'}]]);
  assert.equal(m.screenNames([screen],hints,new Map([[screen.id,['/login']]])).get(screen.id),'Login Page');
 });
+test('screens sharing a page heading keep it, told apart by route; layout headings shared widely do not',async()=>{
+ const m=await ownModule('names'),screens=['today','pending','all'].map(id=>node(id,'SCREEN',id,{view:'ReservationCenterRoute'})),hints=new Map(screens.map(s=>[s.id,{heading:'預約中心'}])),routes=new Map([['today',['/reservation/today']],['pending',['/reservation/pending']],['all',['/reservation']]]);
+ const names=m.screenNames(screens,hints,routes);assert.equal(names.get('today'),'預約中心（/reservation/today）');assert.equal(new Set(names.values()).size,3);
+ const many=Array.from({length:6},(_,i)=>node('p'+i,'SCREEN','p'+i,{view:`web/page${i}.jsp`})),layout=new Map(many.map(s=>[s.id,{heading:'PetClinic'}]));
+ assert.ok([...m.screenNames(many,layout,new Map()).values()].every(name=>name.startsWith('Page')));
+});
+test('a route that only redirects is named after its destination',async()=>{
+ const m=await ownModule('names'),home=node('home','SCREEN','home',{view:'Home'}),old=node('old','SCREEN','old',{view:'Old',redirectTargets:'home'}),any=node('any','SCREEN','any',{view:'Route',redirectTargets:'home'}),lost=node('lost','SCREEN','lost',{view:'Route',redirectTargets:''});
+ const names=m.screenNames([home,old,any,lost],new Map([['home',{heading:'營運概覽'}]]),new Map([['home',['/']],['old',['/old']],['any',['/*']],['lost',['/lost']]]));
+ assert.equal(names.get('old'),'轉址到「營運概覽」');assert.equal(names.get('any'),'其他網址轉址到「營運概覽」');assert.equal(names.get('lost'),'轉址頁');
+});

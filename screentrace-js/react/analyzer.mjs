@@ -47,6 +47,12 @@ export function analyzeReact({files = [], maxDepth = 24, markup = false} = {}) {
         }
       }
   }
+  for (const screen of screens) {
+    if (!screen.redirectOnly) continue;
+    const ordered = [...screen.redirects.filter(item => item.own), ...screen.redirects.filter(item => !item.own)];
+    screen.redirectTo = [...new Set(ordered.flatMap(item => [...(item.effect.targetRoutes ?? [])].sort()))];
+  }
+  for (const screen of screens) delete screen.redirects;
   const unique = new Map();
   for (const item of diagnostics) unique.set(JSON.stringify(item), item);
   const result = {screens, diagnostics: [...unique.values()].sort((a, b) => a.source.file.localeCompare(b.source.file) || a.source.line - b.source.line || a.code.localeCompare(b.code))};
@@ -278,6 +284,8 @@ class ScreenRenderer {
     this.load = [];
     this.loaded = new Set();
     this.view = null;
+    this.inRoute = 0;
+    this.routeContent = 0;
     this.emitted = new Set();
   }
 
@@ -301,16 +309,24 @@ class ScreenRenderer {
     return {
       route: route.path, file: route.file, line: route.line, layoutOnly: Boolean(route.layoutOnly),
       view: this.view?.name ?? 'Route', viewSource: this.view?.file ?? route.file,
+      // A route that renders nothing of its own and only redirects is a forwarding address, not a page.
+      redirectOnly: this.routeContent === 0 && this.load.some(effect => effect.routeRedirect),
+      // Redirects written in the screen's own component come first; a guard's "not signed in" redirect after.
+      redirects: this.load.filter(effect => effect.routeRedirect).map(effect => ({effect, own: !!this.view && effect.source.file === this.view.file && effect.source.line >= this.view.from && effect.source.line <= this.view.to})),
       sources: [...this.sources].sort(), components: components.sort((a, b) => a.key.localeCompare(b.key)), load: dedupe(this.load),
       ...(this.markup ? {markup: serialize(closeConditionalDialogs(this.document))} : {})
     };
   }
 
+  /** Renders the route's own elements; the shell around `<Routes>` is not part of the route. */
   renderRoute(entry, state) {
     if (!entry) return;
-    if (entry.expr) { this.expr(entry.expr, entry.scope, state); return; }
-    const value = this.evaluator.evaluate(entry.component, entry.scope);
-    if (value.t === 'fn') this.component(value, {t: 'props', attrs: new Map(), children: null}, entry.component, state, entry.scope.module.file);
+    this.inRoute++;
+    try {
+      if (entry.expr) { this.expr(entry.expr, entry.scope, state); return; }
+      const value = this.evaluator.evaluate(entry.component, entry.scope);
+      if (value.t === 'fn') this.component(value, {t: 'props', attrs: new Map(), children: null}, entry.component, state, entry.scope.module.file);
+    } finally { this.inRoute--; }
   }
 
   expr(input, scope, state) {
@@ -475,8 +491,9 @@ class ScreenRenderer {
       this.diagnostics.push(diagnostic(file, line(node), 'REACT_RENDER_DEPTH', `元件展開超過 ${this.maxDepth} 層；停止展開 ${fn.name ?? '(匿名)'}`));
       return;
     }
-    if (!this.view || this.routeElements.some(expr => expr && node.start >= expr.start && node.end <= expr.end && file === this.routeFile))
-      this.view = {name: fn.name ?? 'Route', file: fn.scope.module.file};
+    // The screen is named after the innermost component written in the route element, never a shell provider.
+    if (this.inRoute && this.routeElements.some(expr => expr && node.start >= expr.start && node.end <= expr.end && file === this.routeFile))
+      this.view = {name: fn.name ?? 'Route', file: fn.scope.module.file, from: fn.node.loc?.start.line ?? 0, to: fn.node.loc?.end.line ?? 0};
     this.sources.add(fn.scope.module.file);
     const next = {...state, depth: state.depth + 1, stack: [...state.stack, fn.node], anchors: [...state.anchors, this.anchor(node, file)], keys: key ? [...state.keys, key] : state.keys};
     this.body(fn, [{value: props}], next, true);
@@ -568,6 +585,7 @@ class ScreenRenderer {
       return;
     }
     if (name === 'Link' || name === 'NavLink') {
+      if (this.inRoute) this.routeContent++;
       const to = attributeExpression(attribute(node, 'to'));
       const urls = to ? this.urlsOf(to, scope) : [];
       const behaviors = [this.effect('NAVIGATE', 'click', node, scope, unguarded(state), {urls, expression: text(scope.module, to)})];
@@ -583,7 +601,7 @@ class ScreenRenderer {
     }
     if (name === 'Navigate') {
       const to = attributeExpression(attribute(node, 'to'));
-      this.addLoad(this.effect('NAVIGATE', 'load', node, scope, state, {urls: to ? this.urlsOf(to, scope) : [], expression: text(scope.module, node), redirect: true}));
+      this.addLoad(this.effect('NAVIGATE', 'load', node, scope, state, {urls: to ? this.urlsOf(to, scope) : [], expression: text(scope.module, node), redirect: true, routeRedirect: this.inRoute > 0}));
       return;
     }
     if (name === 'Routes' && node === this.routesElement && this.pendingRoute && !this.reachedRoutes) {
@@ -611,6 +629,7 @@ class ScreenRenderer {
   }
 
   intrinsic(node, tag, scope, state, key) {
+    if (this.inRoute) this.routeContent++;
     const attrs = this.staticAttributes(node, scope);
     const handlers = this.handlers(node, scope, state);
     const kind = intrinsicKind(tag, attrs, state.form !== null, handlers.length > 0);

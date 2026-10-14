@@ -9,6 +9,9 @@ export function humanizeName(value:string):string {
  const filename=value.split(/[\\/]/).at(-1)!.replace(/\.[^.]+$/,'');
  return clean(filename.replace(/([a-z0-9])([A-Z])/g,'$1 $2').replace(/([A-Z])([A-Z][a-z])/g,'$1 $2').replace(/[_-]+/g,' ')).replace(/\b[a-z]/g,s=>s.toUpperCase())||'未命名畫面';
 }
+// A heading shared by a few screens still names each of them (the route tells them apart); one shared by
+// more is a layout heading, not a page title.
+const SHARED_HEADING_LIMIT=5;
 /** Display-only names; graph IDs, evidence and exported source-derived names stay intact. */
 export function screenNames(screens:Node[],hints:Map<string,NameHint>,routes:Map<string,string[]>):Map<string,string>{
  const sorted=[...screens].sort((a,b)=>a.id<b.id?-1:a.id>b.id?1:0),counts=new Map<string,number>();
@@ -17,7 +20,10 @@ export function screenNames(screens:Node[],hints:Map<string,NameHint>,routes:Map
  for(const screen of sorted){const hint=hints.get(screen.id)||{},title=clean(hint.title),heading=clean(hint.heading),duplicate=!!title&&counts.get(title)!>1;
  const fallback=screen.attributes.view||screen.attributes.viewIdentifier||screen.source?.file||screen.name;
  const tileName=screen.attributes.tilesDefinition==='true'?clean(screen.attributes.screenName||screen.name):'';
- names.set(screen.id,tileName|| (title&&counts.get(title)===1?title:heading&&counts.get(heading)===1?heading:duplicate||screen.attributes.view?humanizeName(fallback):clean(screen.attributes.screenName||screen.name)||humanizeName(fallback)));}
+ names.set(screen.id,tileName|| (title&&counts.get(title)===1?title:heading&&counts.get(heading)!<=SHARED_HEADING_LIMIT?heading:duplicate||screen.attributes.view?humanizeName(fallback):clean(screen.attributes.screenName||screen.name)||humanizeName(fallback)));}
+ // A route that only forwards elsewhere is named after where it goes.
+ for(const screen of sorted){const targets=screen.attributes.redirectTargets;if(targets===undefined)continue;const first=targets.split('|').filter(Boolean)[0],target=first&&first!==screen.id?names.get(first):undefined,wildcard=(routes.get(screen.id)||[]).some(route=>route.includes('*'));
+  names.set(screen.id,target?`${wildcard?'其他網址':''}轉址到「${target}」`:'轉址頁');}
  const byId=new Map(screens.map(screen=>[screen.id,screen])),groups=new Map<string,string[]>();for(const [id,name]of names)groups.set(name,[...(groups.get(name)||[]),id]);
  for(const [name,ids]of groups)if(ids.length>1){
   const candidates=new Map(ids.map(id=>{const screen=byId.get(id),source=screen?.attributes.screenNameSourcePath||screen?.attributes.view||screen?.source?.file;return[id,[routes.get(id)?.[0],clean(screen?.attributes.tilesDefinitionName).replace(/^\.+/,''),sourceFileName(source),sourceDirectoryName(source)]];}));
