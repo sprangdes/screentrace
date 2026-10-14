@@ -37,6 +37,28 @@ const clamp=(value:number)=>Math.max(0,Math.min(1,value));
 const wait=(ms:number)=>new Promise<void>(resolve=>setTimeout(resolve,ms));
 const svgNs='http://www.w3.org/2000/svg';
 const reducedMotion=()=>matchMedia('(prefers-reduced-motion: reduce)').matches;
+type Edge='right'|'bottom'|'left'|'top';
+type Spot={x:number;y:number;edge:Edge};
+const LOOP={width:30,height:38,corner:40,step:16};
+/** The point on the box edge farthest from every taken point; ties keep the first edge in right, bottom, left, top order. The top edge is skipped while header-link pills occupy the space above it. */
+function freeSpot(b:{left:number;top:number;right:number;bottom:number},taken:{x:number;y:number}[],useTop:boolean):Spot{
+ const candidates:Spot[]=[];
+ const along=(from:number,to:number,place:(v:number)=>Spot)=>{for(let v=from+LOOP.corner;v<=to-LOOP.corner;v+=LOOP.step)candidates.push(place(v));};
+ along(b.top,b.bottom,y=>({x:b.right,y,edge:'right'}));along(b.left,b.right,x=>({x,y:b.bottom,edge:'bottom'}));
+ along(b.top,b.bottom,y=>({x:b.left,y,edge:'left'}));if(useTop)along(b.left,b.right,x=>({x,y:b.top,edge:'top'}));
+ let best=candidates[0]||{x:b.right,y:(b.top+b.bottom)/2,edge:'right' as Edge},score=-1;
+ for(const spot of candidates){const near=taken.length?Math.min(...taken.map(p=>Math.hypot(p.x-spot.x,p.y-spot.y))):Infinity;if(near>score+0.5){score=near;best=spot;}}
+ return best;
+}
+/** A small arc leaving the box at the spot and returning beside it, bowed outward from that edge. */
+function loopPath(spot:Spot,b:{top:number}){
+ const normal={right:{x:1,y:0},left:{x:-1,y:0},bottom:{x:0,y:1},top:{x:0,y:-1}}[spot.edge],tangent={x:-normal.y,y:normal.x};
+ // The top edge has only the margin above the box; stay clear of the header-link pills there.
+ const height=spot.edge==='top'?Math.min(LOOP.height,Math.max(18,b.top-12)):LOOP.height,half=LOOP.width/2;
+ const sx=spot.x-tangent.x*half,sy=spot.y-tangent.y*half,ex=spot.x+tangent.x*half,ey=spot.y+tangent.y*half;
+ const c1={x:sx+normal.x*height-tangent.x*8,y:sy+normal.y*height-tangent.y*8},c2={x:ex+normal.x*height+tangent.x*8,y:ey+normal.y*height+tangent.y*8};
+ return {sx,sy,ex,ey,d:`M${sx},${sy} C${c1.x},${c1.y} ${c2.x},${c2.y} ${ex},${ey}`};
+}
 const focusMarkers=['focus-arrow-out','focus-arrow-in','focus-arrow-unresolved'].map(id=>`<marker id="${id}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="14" markerHeight="14" markerUnits="userSpaceOnUse" orient="auto"><path d="M1,1 L9,5 L1,9 Z"/></marker>`).join('');
 
 /** Lines leaving the focused screen: its screen-specific flows (as drawn on the overview) plus one stub per trigger whose destination is unknown. */
@@ -204,8 +226,11 @@ export function canvas(index:Index,payload:Payload,options:CanvasOptions):Canvas
    segments.push({relation:ray.relation,kind:ray.kind,sx:start.x,sy:start.y,ex:end.x,ey:end.y});
   });
   drawShared(id,b);
-  loops.forEach((relation,i)=>{const top=cy-28-i*20,bottom=cy+28+i*20,out=b.right+52+i*14;segments.push({relation,kind:'loop',sx:b.right,sy:top,ex:b.right,ey:bottom,d:`M${b.right},${top} C${out},${top-36} ${out},${bottom+36} ${b.right},${bottom}`});});
   stubs.forEach((relation,i)=>{const sx=b.left+b.width*(i+1)/(stubs.length+1);segments.push({relation,kind:'unresolved',sx,sy:b.bottom,ex:sx,ey:Math.min(h-8,b.bottom+44)});});
+  // Lines back to this screen sit where the box edge is free: away from every other line's end and the shared links.
+  const shared=sharedNavigation(index,id),taken=segments.map(segment=>segment.kind==='incoming'?{x:segment.ex,y:segment.ey}:{x:segment.sx,y:segment.sy});
+  if(shared.into.length)taken.push({x:b.left+b.width*0.3,y:b.top});if(shared.out.length)taken.push({x:b.left+b.width*0.7,y:b.top});
+  loops.forEach(relation=>{const spot=freeSpot(b,taken,!shared.into.length&&!shared.out.length);taken.push(spot);segments.push({relation,kind:'loop',...loopPath(spot,b)});});
   for(const segment of segments){
    const {relation}=segment,arriving=segment.kind==='incoming',other=arriving?relation.from:relation.to,target=index.nodes.get(other),group=document.createElementNS(svgNs,'g'),path=segment.d||`M${segment.sx},${segment.sy} L${segment.ex},${segment.ey}`;
    const visibleLine=document.createElementNS(svgNs,'path') as SVGPathElement,hit=document.createElementNS(svgNs,'path') as SVGPathElement;

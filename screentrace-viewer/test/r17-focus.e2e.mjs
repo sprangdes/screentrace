@@ -5,9 +5,12 @@ import {fileFixture} from './fixture.mjs';
 import {simulationFixture} from './wp26-fixture.mjs';
 import {showList} from './decision-controls.mjs';
 
-/** WP26 simulation fixture plus a second trigger whose destination is unknown. */
+/** WP26 simulation fixture plus a second trigger whose destination is unknown and a link back to the same screen. */
 function focusFixture(){
  const data=simulationFixture();
+ data.graph.nodes.push({id:'self',type:'COMPONENT',name:'重新整理',attributes:{kind:'LINK'},confidence:'CONFIRMED'});
+ data.graph.relationships.push({id:'owner-self',type:'CONTAINS',from:'a',to:'self',confidence:'CONFIRMED'},{id:'self-nav',type:'NAVIGATES_TO',from:'self',to:'a',confidence:'CONFIRMED'});
+ data.graph.behaviors.push({id:'self-action',triggerId:'self',type:'NAVIGATE',event:'click',targetId:'a',evidence:[{parser:'Fixture',resolution:'CONFIRMED',source:{file:'web/a.jsp',line:1}}]});
  data.graph.behaviors.push({id:'lost',triggerId:'unknown',type:'NAVIGATE',event:'click',evidence:[{parser:'Fixture',resolution:'UNRESOLVED',source:{file:'web/a.jsp',line:1}}]});
  return data;
 }
@@ -37,6 +40,11 @@ test('R17 WP62 clicking a card zooms the same canvas into it and keeps only its 
   assert.ok(known.length>0);
   for(const line of known){const from=centers.a,to=centers[line.to],expected=Math.atan2(to.y-from.y,to.x-from.x),diff=Math.abs(Math.atan2(Math.sin(line.angle-expected),Math.cos(line.angle-expected)))*180/Math.PI;assert.ok(diff<=15,`${line.to} differs ${diff}°`);}
   assert.equal(await page.locator('.focus-line-hit[data-kind="unresolved"]').count(),2);
+  // A line back to the same screen sits in a free part of the box edge, not on top of the other lines.
+  const ends=await page.locator('.focus-line-hit').evaluateAll(lines=>lines.map(l=>{const a=l.getPointAtLength(0),b=l.getPointAtLength(l.getTotalLength());return {kind:l.dataset.kind,points:(l.dataset.kind==='loop'?[a,b]:[l.dataset.kind==='incoming'?b:a]).map(p=>({x:p.x,y:p.y}))};}));
+  const loops=ends.filter(e=>e.kind==='loop'),others=ends.filter(e=>e.kind!=='loop').flatMap(e=>e.points);
+  assert.ok(loops.length>0,"fixture has a line back to the same screen");
+  for(const loop of loops)for(const point of loop.points)assert.ok(others.every(o=>Math.hypot(o.x-point.x,o.y-point.y)>=20),`loop end ${JSON.stringify(point)} touches another line`);
   await page.keyboard.press('Escape');
   await page.waitForFunction(()=>document.querySelector('.canvas').dataset.mode==='overview');
   await page.waitForFunction(t=>document.querySelector('.world').style.transform===t,before);
