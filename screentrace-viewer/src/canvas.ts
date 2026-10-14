@@ -1,5 +1,5 @@
 import {iconButton,icon} from './shell-ui';
-import {partitionNavigation,flowLayout,roundedPath} from './overview';
+import {partitionNavigation,flowLayout,roundedPath,commonDestinations} from './overview';
 import {relationTooltip,focusedRelations,FocusRelation,sharedNavigation} from './relations';
 import {Index,fileEntries,searchScreens} from './map';
 import {Payload} from './contracts';
@@ -28,7 +28,7 @@ export interface CanvasView {
  readonly focused:string|undefined;
 }
 
-const CARD={width:250,height:220},MOTION_MS=450,BOX_MARGIN={side:56,top:48,bottom:56};
+const CARD={width:250,height:220},MOTION_MS=450,DENSE_SCREENS=20,BOX_MARGIN={side:56,top:48,bottom:56};
 /** The preview fades in over this part of the zoom; if it is still loading, it waits at most READY_MS more. */
 const REVEAL={from:0.3,span:0.45},LEAVE_SPAN=0.3,READY_MS=600,FADE_MS=180;
 /** Same curve as the side panels' width transition, so the canvas and the panels move as one. */
@@ -106,6 +106,8 @@ export function canvas(index:Index,payload:Payload,options:CanvasOptions):Canvas
  // Arrowheads keep one size and take the colour of their line's state (see .relation-line in viewer.css).
  const marker=(id:string)=>`<marker id="${id}" class="flow-marker" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="16" markerHeight="16" markerUnits="userSpaceOnUse" orient="auto"><path d="M1,1 L9,5 L1,9 Z"/></marker>`;
  svg.setAttribute('width',String(width));svg.setAttribute('height',String(height));svg.classList.add('relations');
+ // With many screens the lines step back until a screen or a line is pointed at.
+ if(index.screens.length>DENSE_SCREENS)svg.classList.add('is-dense');
  svg.innerHTML=`<defs>${['flow-arrow','flow-arrow-out','flow-arrow-in','flow-arrow-muted'].map(marker).join('')}</defs>`;
  // Highlighted lines are repainted in a top layer; moving the hovered element itself would lose its mouseleave.
  const raised=document.createElementNS(svgNs,'g');raised.setAttribute('class','relation-raised');raised.setAttribute('aria-hidden','true');
@@ -145,6 +147,8 @@ export function canvas(index:Index,payload:Payload,options:CanvasOptions):Canvas
   caption.append(element('strong',screen.name),routeLabel);card.append(caption);
   // Header/footer links are not drawn on the overview; a badge still tells that this screen is reachable from them.
   const entries=sharedNavigation(index,screen.id,false).into.length;
+  const common=commonDestinations(index).get(screen.id)?.length||0;
+  if(common){const badge=element('span',`${common}`,'common-entry');badge.setAttribute('role','img');const label=`可從 ${common} 個畫面直接前往（總覽不逐一畫線，放大畫面時顯示）`;badge.setAttribute('aria-label',label);badge.title=label;badge.dataset.count=String(common);if(entries)badge.classList.add('after-shared');card.append(badge);}
   if(entries){const badge=icon('menu');badge.classList.add('shared-entry');badge.setAttribute('role','img');const label=`可從 ${entries} 個畫面的頁首／頁尾連結進入`;badge.setAttribute('aria-label',label);const title=document.createElementNS('http://www.w3.org/2000/svg','title');title.textContent=label;badge.append(title);badge.dataset.count=String(entries);card.append(badge);}
   const linked=()=>{if(focused)return;const out=new Set<Element>(),into=new Set<Element>(),ids=new Set([screen.id]);svg.querySelectorAll<SVGPathElement>('.relation-line').forEach(line=>{const leaving=line.dataset.from===screen.id,arriving=line.dataset.to===screen.id;if(leaving)out.add(line);else if(arriving)into.add(line);if(leaving||arriving){ids.add(line.dataset.from!);ids.add(line.dataset.to!);}});highlight(out,into,ids);};
   card.onmouseenter=card.onfocus=linked;card.onmouseleave=card.onblur=clear;

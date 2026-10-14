@@ -20,6 +20,26 @@ export function partitionNavigation(index:Index):{global:Relation[];flows:Relati
  if(common.length)global.push({...r,triggers:common});if(specific.length||!r.triggers.length)flows.push({...r,triggers:specific});}
  const result={global,flows};partitions.set(index,result);return result;
 }
+// With few screens every line stays readable; beyond this, destinations most screens reach are not drawn on the overview.
+export const COMMON_DESTINATION_MIN_SCREENS=12;
+/**
+ * Destinations reached from at least half of all screens (sign-in, the home page): drawing a line from every
+ * screen to them buries the flows that tell screens apart. The overview shows them as a badge on the target
+ * instead; zooming into a screen still draws them. Only a few such destinations (at most 3, or a fifth of
+ * the screens) are singled out.
+ */
+export function commonDestinations(index:Index):Map<string,string[]>{
+ const result=new Map<string,string[]>();
+ if(index.screens.length<=COMMON_DESTINATION_MIN_SCREENS)return result;
+ const sources=new Map<string,Set<string>>();
+ for(const r of partitionNavigation(index).flows)if(r.from!==r.to){const set=sources.get(r.to)||new Set<string>();set.add(r.from);sources.set(r.to,set);}
+ for(const [to,set]of sources)if(set.size*2>=index.screens.length)result.set(to,[...set].sort());
+ // They must stand out: when many screens qualify the application is uniformly dense and every line matters.
+ if(result.size>Math.max(3,Math.floor(index.screens.length/5)))return new Map();
+ return result;
+}
+/** The flows the overview draws and lays out: page-specific flows other than those into common destinations. */
+export function overviewFlows(index:Index):Relation[]{const common=commonDestinations(index);return partitionNavigation(index).flows.filter(r=>r.from===r.to||!common.has(r.to));}
 /** Grid cell of a card: flow layers are columns, ordered slots are rows. */
 export interface Cell {col:number;row:number}
 export interface RoutedRelation {relation:Relation;points:Position[]}
@@ -32,13 +52,13 @@ export function gridCells(index:Index):Map<string,Cell>{
  const columns=Math.max(1,index.screens.length<=12?Math.min(3,Math.ceil(Math.sqrt(index.screens.length))):Math.ceil(Math.sqrt(index.screens.length)));
  return new Map(index.screens.map((screen,i)=>[screen.id,{col:i%columns,row:Math.floor(i/columns)}]));
 }
-export function gridLayout(index:Index):Map<string,Position>{return routeDiagram(gridCells(index),partitionNavigation(index).flows).positions;}
+export function gridLayout(index:Index):Map<string,Position>{return routeDiagram(gridCells(index),overviewFlows(index)).positions;}
 
 /** Sorted DFS removes only ancestor edges; longest DAG paths determine left-to-right layers.
  * Four alternating barycenter sweeps order each layer, with IDs breaking every tie; each card then
  * takes the median row of its predecessors when free, so chains run straight. */
 export function flowLayout(index:Index):FlowLayout {
- const drawn=partitionNavigation(index).flows;
+ const drawn=overviewFlows(index);
  if(index.screens.length>150||index.relations.length>600)return {...routeDiagram(gridCells(index),drawn),dag:[],back:[],isolated:[],fallback:true};
  const ids=index.screens.map(s=>s.id).sort(order),edges=drawn.filter(r=>r.from!==r.to).sort((a,b)=>order(a.from,b.from)||order(a.to,b.to));
  const incoming=new Map(ids.map(id=>[id,edges.filter(r=>r.to===id)])),outgoing=new Map(ids.map(id=>[id,edges.filter(r=>r.from===id)]));

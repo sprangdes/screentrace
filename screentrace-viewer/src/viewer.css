@@ -204,6 +204,13 @@ main{position:relative;overflow:hidden;min-width:0}
 .shared-popover p{margin:0 0 6px;color:var(--gray-500);font-size:12px}
 .shared-entry{position:absolute;left:8px;top:8px;width:30px;height:30px;padding:6px;border-radius:50%;background:var(--gray-700);color:white;stroke-width:2.4;box-shadow:0 0 0 2px white;transition:opacity .15s}
 .screen-card.is-morphing .shared-entry{opacity:0}
+.common-entry{position:absolute;left:8px;top:8px;min-width:30px;height:30px;padding:0 9px;display:flex;align-items:center;justify-content:center;gap:2px;border-radius:15px;background:var(--flow-in);color:white;font:700 13px/1 system-ui,sans-serif;box-shadow:0 0 0 2px white;transition:opacity .15s}
+.common-entry::before{content:'→';font-weight:700}
+.common-entry.after-shared{left:46px}
+.screen-card.is-morphing .common-entry{opacity:0}
+.relations.is-dense .relation-line{opacity:.28}
+.relations.is-dense .relation-line.is-out,.relations.is-dense .relation-line.is-in,.relations.is-dense .relation-line:focus,.relations.is-dense .relation-raised .relation-line{opacity:1}
+.relations.is-dense .relation-line.is-muted{opacity:.12}
 .tooltip-direction{display:inline-block;margin-bottom:4px;padding:1px 6px;border-radius:4px;color:white;font-size:11px;font-weight:600}
 .tooltip-direction.is-out{background:var(--flow-out)}
 .tooltip-direction.is-in{background:var(--flow-in)}
