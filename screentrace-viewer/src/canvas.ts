@@ -1,5 +1,6 @@
 import {iconButton,icon} from './shell-ui';
 import {partitionNavigation,flowLayout,roundedPath,commonDestinations} from './overview';
+import {groupedLayout,crossPoints} from './groups';
 import {relationTooltip,focusedRelations,FocusRelation,sharedNavigation} from './relations';
 import {Index,fileEntries,searchScreens} from './map';
 import {Payload} from './contracts';
@@ -84,7 +85,8 @@ export function canvas(index:Index,payload:Payload,options:CanvasOptions):Canvas
   viewport.dataset.semanticZoom=zoom<0.7?'compact':'detail';
   if(!focused&&viewport.dataset.fitted==='true')options.onTransformChange?.({zoom,x,y});
  };
- const layout=flowLayout(index),positions=layout.positions;
+ // Many screens are shown as areas by URL; a small map keeps one flow layout.
+ const grouped=groupedLayout(index),layout=grouped??flowLayout(index),positions=layout.positions;
  const width=Math.max(800,layout.width),height=Math.max(600,layout.height);
  world.style.width=`${width}px`;world.style.height=`${height}px`;
  const visible=(id:string)=>!state.visible||state.visible.has(id);
@@ -92,7 +94,8 @@ export function canvas(index:Index,payload:Payload,options:CanvasOptions):Canvas
   if(!viewport.clientWidth||!viewport.clientHeight||focused)return;
   const shown=index.screens.filter(s=>visible(s.id)).map(s=>positions.get(s.id)!);
   if(!shown.length)return;
-  const left=Math.min(...shown.map(p=>p.x)),top=Math.min(...shown.map(p=>p.y)),right=Math.max(...shown.map(p=>p.x+CARD.width)),bottom=Math.max(...shown.map(p=>p.y+CARD.height));
+  const boxes=(grouped?.groups||[]).filter(g=>g.members.some(visible)).map(g=>g.box);
+  const left=Math.min(...shown.map(p=>p.x),...boxes.map(b=>b.x)),top=Math.min(...shown.map(p=>p.y),...boxes.map(b=>b.y)),right=Math.max(...shown.map(p=>p.x+CARD.width),...boxes.map(b=>b.x+b.width)),bottom=Math.max(...shown.map(p=>p.y+CARD.height),...boxes.map(b=>b.y+b.height));
   const w=right-left+80,h=bottom-top+80;
   zoom=Math.min(1,(viewport.clientWidth-48)/w,(viewport.clientHeight-48)/h);
   x=(viewport.clientWidth-w*zoom)/2-(left-40)*zoom;y=(viewport.clientHeight-h*zoom)/2-(top-40)*zoom;
@@ -113,7 +116,7 @@ export function canvas(index:Index,payload:Payload,options:CanvasOptions):Canvas
  const raised=document.createElementNS(svgNs,'g');raised.setAttribute('class','relation-raised');raised.setAttribute('aria-hidden','true');
  /** Lines leaving the pointed screen are drawn as outgoing, lines arriving as incoming; the rest step back. */
  const highlight=(out:Set<Element>,into:Set<Element>,ids:Set<string>)=>{
-  raised.replaceChildren();
+  raised.replaceChildren();svg.classList.add('is-highlighting');
   svg.querySelectorAll<SVGPathElement>('.relation-line').forEach(line=>{
    const leaving=out.has(line),arriving=!leaving&&into.has(line);
    line.classList.toggle('is-out',leaving);line.classList.toggle('is-in',arriving);line.classList.toggle('is-muted',!leaving&&!arriving);
@@ -121,7 +124,7 @@ export function canvas(index:Index,payload:Payload,options:CanvasOptions):Canvas
   });
   world.querySelectorAll<HTMLElement>('.screen-card').forEach(card=>{const on=ids.has(card.dataset.screen!);card.classList.toggle('is-highlighted',on);card.classList.toggle('is-muted',!on);});
  };
- const clear=()=>{raised.replaceChildren();svg.querySelectorAll('.relation-line').forEach(line=>line.classList.remove('is-out','is-in','is-muted'));world.querySelectorAll('.screen-card').forEach(card=>card.classList.remove('is-highlighted','is-muted'));};
+ const clear=()=>{svg.classList.remove('is-highlighting');raised.replaceChildren();svg.querySelectorAll('.relation-line').forEach(line=>line.classList.remove('is-out','is-in','is-muted'));world.querySelectorAll('.screen-card').forEach(card=>card.classList.remove('is-highlighted','is-muted'));};
  for(const {relation,points} of layout.routes){
   const group=document.createElementNS(svgNs,'g'),hit=document.createElementNS(svgNs,'path') as SVGPathElement,line=document.createElementNS(svgNs,'path') as SVGPathElement,d=roundedPath(points);
   group.setAttribute('class','relation');hit.setAttribute('d',d);hit.setAttribute('class','relation-hit');hit.setAttribute('aria-hidden','true');
@@ -134,6 +137,24 @@ export function canvas(index:Index,payload:Payload,options:CanvasOptions):Canvas
   line.addEventListener('focus',show);line.addEventListener('blur',clear);
   line.addEventListener('keydown',event=>{if((event as KeyboardEvent).key==='Enter')options.onOpen(relation.to);});
   group.append(hit,line);svg.append(group);
+ }
+ if(grouped){
+  // Area frames sit behind everything; each pair of areas gets one line with the number of flows it stands for.
+  for(const group of grouped.groups){const frame=element('div',undefined,'screen-group');frame.dataset.group=group.key;Object.assign(frame.style,{left:`${group.box.x}px`,top:`${group.box.y}px`,width:`${group.box.width}px`,height:`${group.box.height}px`});frame.append(element('span',group.label,'screen-group-title'));world.append(frame);}
+  const labelOf=new Map(grouped.groups.map(g=>[g.key,g.label.split(' · ')[0]]));
+  for(const link of grouped.links){
+   const g=document.createElementNS(svgNs,'g'),line=document.createElementNS(svgNs,'path') as SVGPathElement,count=link.relations.length;
+   // The count sits on the route's longest horizontal run, where it reads clearly and no area is behind it.
+   const runs=link.points.slice(1).map((p,i)=>({a:link.points[i],b:p})).filter(r=>r.a.y===r.b.y).sort((r,q)=>Math.abs(q.b.x-q.a.x)-Math.abs(r.b.x-r.a.x)),run=runs[0]||{a:link.points[0],b:link.points[link.points.length-1]};
+   const a={x:run.a.x,y:run.a.y},b={x:run.b.x,y:run.b.y};
+   g.setAttribute('class','group-link');line.setAttribute('d',roundedPath(link.points,10));line.setAttribute('class','group-link-line');line.style.strokeWidth=String(Math.min(8,2+Math.log2(count)*1.5));
+   const title=document.createElementNS(svgNs,'title');title.textContent=`${labelOf.get(link.from)} → ${labelOf.get(link.to)}：${count} 條`;g.append(title,line);svg.append(g);
+   const badge=element('span',String(count),'group-link-count');badge.title=title.textContent;Object.assign(badge.style,{left:`${(a.x+b.x)/2}px`,top:`${(a.y+b.y)/2}px`});world.append(badge);
+   const crossing=()=>{const out=new Set<Element>(),ids=new Set<string>();for(const r of link.relations){svg.querySelectorAll<SVGPathElement>(`.relation-line.cross[data-from="${CSS.escape(r.from)}"][data-to="${CSS.escape(r.to)}"]`).forEach(l=>out.add(l));ids.add(r.from);ids.add(r.to);}highlight(out,new Set(),ids);};
+   for(const target of [g,badge]){target.addEventListener('mouseenter',crossing);target.addEventListener('mouseleave',clear);}
+  }
+  // Each flow between areas also exists as its own line, hidden until one of its screens is pointed at.
+  for(const relation of grouped.cross){const line=document.createElementNS(svgNs,'path') as SVGPathElement,[a,b]=crossPoints(positions,relation);line.setAttribute('d',`M${a.x},${a.y} L${b.x},${b.y}`);line.setAttribute('class','relation-line cross');line.setAttribute('aria-hidden','true');line.dataset.from=relation.from;line.dataset.to=relation.to;svg.append(line);}
  }
  svg.append(raised);world.append(svg);
  const cards=new Map<string,HTMLButtonElement>();

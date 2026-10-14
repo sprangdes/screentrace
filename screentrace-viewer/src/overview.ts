@@ -57,10 +57,10 @@ export function gridLayout(index:Index):Map<string,Position>{return routeDiagram
 /** Sorted DFS removes only ancestor edges; longest DAG paths determine left-to-right layers.
  * Four alternating barycenter sweeps order each layer, with IDs breaking every tie; each card then
  * takes the median row of its predecessors when free, so chains run straight. */
-export function flowLayout(index:Index):FlowLayout {
- const drawn=overviewFlows(index);
+export function flowLayout(index:Index,members?:Set<string>):FlowLayout {
+ const drawn=overviewFlows(index).filter(r=>!members||members.has(r.from)&&members.has(r.to));
  if(index.screens.length>150||index.relations.length>600)return {...routeDiagram(gridCells(index),drawn),dag:[],back:[],isolated:[],fallback:true};
- const ids=index.screens.map(s=>s.id).sort(order),edges=drawn.filter(r=>r.from!==r.to).sort((a,b)=>order(a.from,b.from)||order(a.to,b.to));
+ const ids=index.screens.map(s=>s.id).filter(id=>!members||members.has(id)).sort(order),edges=drawn.filter(r=>r.from!==r.to).sort((a,b)=>order(a.from,b.from)||order(a.to,b.to));
  const incoming=new Map(ids.map(id=>[id,edges.filter(r=>r.to===id)])),outgoing=new Map(ids.map(id=>[id,edges.filter(r=>r.from===id)]));
  const isolated=ids.filter(id=>!incoming.get(id)!.length&&!outgoing.get(id)!.length),active=ids.filter(id=>!isolated.includes(id)),state=new Map<string,number>(),dag:Relation[]=[],back:Relation[]=[];
  const primary=(id:string)=>index.routes.get(id)?.[0];
