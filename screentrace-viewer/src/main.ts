@@ -244,7 +244,7 @@ try {
   screenPanel(panelBody,index,reviewState,current,{
    setScreen:decide.screen,setComponent:decide.component,focus:id=>openScreen(id),api:id=>showApi(id),
    buttonsOpen,onButtonsToggle:open=>{buttonsOpen=open;},highlight:highlightComponent,
-   positions:previewPositions(current),hover:id=>pointAt(id),locate:id=>locate(id)
+   positions:(()=>{const found=previewPositions(current);return found.size?found:undefined;})(),hover:id=>pointAt(id),locate:id=>locate(id)
   });
   if(highlightComponent)requestAnimationFrame(()=>panel.querySelector(`[data-component-row="${CSS.escape(highlightComponent!)}"]`)?.scrollIntoView({block:'nearest'}));
  };

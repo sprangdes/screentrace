@@ -31,7 +31,7 @@ test('R17 WP62 clicking a card zooms the same canvas into it and keeps only its 
   const overviewTargets=(await page.locator('.relation-line[data-from="a"]').evaluateAll(lines=>lines.map(l=>l.dataset.to))).sort();
   const centers=await page.locator('.screen-card').evaluateAll(cards=>Object.fromEntries(cards.map(c=>[c.dataset.screen,{x:c.offsetLeft+c.offsetWidth/2,y:c.offsetTop+c.offsetHeight/2}])));
   const before=await page.locator('.world').evaluate(w=>w.style.transform);
-  await page.locator('.screen-card[data-screen="a"]').click();await ready(page);
+  await page.locator('.screen-card[data-screen="a"]').dblclick();await ready(page);
   assert.equal(await page.locator('.canvas').getAttribute('data-mode'),'focus');assert.equal(await focused(page),'a');
   assert.deepEqual(await page.locator('.screen-card:not([data-screen="a"])').evaluateAll(cards=>cards.every(c=>c.classList.contains('is-dim'))),true);
   const focusTargets=(await page.locator('.focus-line-hit[data-kind="known"],.focus-line-hit[data-kind="loop"]').evaluateAll(lines=>lines.map(l=>l.dataset.to))).sort();
@@ -76,7 +76,7 @@ test('R17 WP62 hovering a line shows the destination thumbnail and its trigger; 
 test('R17 WP62 n zooms to the next unconfirmed screen and the transition settles after the animation',async()=>{
  const {browser,page}=await open('no-preference');
  try{
-  await page.locator('.screen-card[data-screen="a"]').click();
+  await page.locator('.screen-card[data-screen="a"]').dblclick();
   assert.equal(await page.locator('.focus-layer:not(.is-leaving)').evaluate(l=>l.hidden||l.classList.contains('is-entering')),true,'the preview fades in over the end of the zoom animation');
   await page.waitForFunction(()=>!document.querySelector('.focus-layer:not(.is-leaving)').classList.contains('is-entering'));
   await ready(page);
@@ -93,7 +93,7 @@ test('R17 WP62 n zooms to the next unconfirmed screen and the transition settles
 test('R17 WP63 clicks act like the real page: links navigate, forms submit without validation, ambiguous results offer destinations',async()=>{
  const {browser,page}=await open();
  try{
-  await page.locator('.screen-card[data-screen="a"]').click();await ready(page);
+  await page.locator('.screen-card[data-screen="a"]').dblclick();await ready(page);
   const control=id=>page.frameLocator('iframe').locator(`#${id}`);
   await control('go').click();
   await page.waitForFunction(()=>document.querySelector('.canvas').dataset.focused==='b');await ready(page);
@@ -116,7 +116,7 @@ test('R17 WP62 zooming in folds the screen list into a rail; opening it there fl
   const expand=page.getByRole('button',{name:'展開畫面清單'}),collapse=page.getByRole('button',{name:'收起畫面清單'});
   assert.equal(await body.isVisible(),true);assert.equal(await rail.isVisible(),false);
   assert.equal(await page.locator('.prototype-toolbar .list-toggle').count(),0);
-  await page.locator('.screen-card[data-screen="a"]').click();await ready(page);
+  await page.locator('.screen-card[data-screen="a"]').dblclick();await ready(page);
   assert.equal(await body.isVisible(),false);assert.equal(await rail.isVisible(),true);
   assert.equal(await rail.innerText(),'','the rail holds icon buttons only');
   const toggleSpot=async button=>button.evaluate(b=>{const r=b.getBoundingClientRect();return [Math.round(r.left),Math.round(r.top)];});
@@ -142,7 +142,7 @@ test('R17 WP62 zooming in folds the screen list into a rail; opening it there fl
   assert.equal(await shell.getAttribute('data-sidebar'),'expanded');
   assert.deepEqual(await toggleSpot(collapse),railSpot,'the docked toggle uses the same spot');
   await collapse.click();
-  await page.locator('.screen-card[data-screen="a"]').click();await ready(page);
+  await page.locator('.screen-card[data-screen="a"]').dblclick();await ready(page);
   await page.locator('.prototype-back').click();
   await page.waitForFunction(()=>document.querySelector('.canvas').dataset.mode==='overview');
   assert.equal(await body.isVisible(),false,'a list collapsed on the overview stays collapsed after returning');
@@ -156,8 +156,8 @@ test('R17 the screen details appear only while a screen is open, fold into a rai
   const expand=page.getByRole('button',{name:'展開畫面資訊'}),collapse=page.getByRole('button',{name:'收起畫面資訊'});
   const spot=async button=>button.evaluate(b=>{const r=b.getBoundingClientRect();return [Math.round(r.right),Math.round(r.top)];});
   assert.equal(await shell.getAttribute('data-details'),'hidden');assert.equal(await details.isVisible(),false);
-  assert.match(await hint.innerText(),/點選畫面開始確認/);
-  await page.locator('.screen-card[data-screen="a"]').click();await ready(page);
+  assert.match(await hint.innerText(),/點一下畫面看關聯 · 點兩下開啟畫面/);
+  await page.locator('.screen-card[data-screen="a"]').dblclick();await ready(page);
   assert.equal(await shell.getAttribute('data-details'),'open');assert.equal(await hint.isVisible(),false);
   assert.equal(await page.locator('.details-panel [data-screen-panel="a"]').isVisible(),true);
   const openSpot=await spot(collapse),before=await page.locator('.focus-layer:not(.is-leaving)').evaluate(l=>l.offsetWidth);
@@ -175,7 +175,7 @@ test('R17 the screen details appear only while a screen is open, fold into a rai
   await page.locator('.prototype-back').click();
   await page.waitForFunction(()=>document.querySelector('.canvas').dataset.mode==='overview');
   assert.equal(await shell.getAttribute('data-details'),'hidden');assert.equal(await hint.isVisible(),true);
-  await page.locator('.screen-card[data-screen="a"]').click();await ready(page);
+  await page.locator('.screen-card[data-screen="a"]').dblclick();await ready(page);
   assert.equal(await shell.getAttribute('data-details'),'open','returning to the canvas resets the choice');
  }finally{await browser.close();}
 });

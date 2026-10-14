@@ -321,8 +321,11 @@ g.is-active .focus-line{stroke-width:4}
 .simulation-calls li{overflow-wrap:anywhere}
 
 /* overview areas (many screens) */
-.screen-group{position:absolute;border:1px dashed var(--gray-300);border-radius:14px;background:#ffffff66;pointer-events:none}
+.screen-group{position:absolute;border:1px dashed var(--gray-300);border-radius:14px;background:#ffffff66;cursor:zoom-in}
+.screen-group:hover{border-color:var(--gray-500);background:#ffffffa0}
 .screen-group-title{position:absolute;left:20px;top:14px;font:700 30px/1.2 system-ui,sans-serif;color:var(--gray-700);white-space:nowrap}
+.group-link,.group-link-count{display:none}
+.group-link.is-shown{display:inline}.group-link-count.is-shown{display:block}
 .group-link-line{fill:none;stroke:var(--gray-500);stroke-linecap:round;marker-end:url(#flow-arrow);pointer-events:stroke;cursor:default;opacity:.55}
 .group-link:hover .group-link-line{opacity:1;stroke:var(--gray-700)}
 .relations.is-highlighting .group-link-line{opacity:.12}
@@ -330,3 +333,4 @@ g.is-active .focus-line{stroke-width:4}
 .relation-line.cross{visibility:hidden;pointer-events:none}
 .relation-raised .relation-line.cross{visibility:visible}
 .canvas[data-mode=focus] :is(.group-link-count,.screen-group-title){opacity:0;transition:opacity .15s}
+.screen-card.is-pinned{box-shadow:0 0 0 3px var(--primary),var(--shadow-card)}
