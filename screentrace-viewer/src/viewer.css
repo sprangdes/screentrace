@@ -224,7 +224,7 @@ g.is-active .focus-line{stroke-width:4}
 .prototype-stage{position:relative;margin:0 auto}
 .preview{position:relative}
 .preview iframe{display:block;border:0;background:white}
-.preview-notice{position:absolute;right:8px;top:8px;padding:3px 8px;background:#fffffff0;border:1px solid var(--gray-200);border-radius:6px;font-size:12px;color:var(--gray-500);pointer-events:none}
+.preview-notice{margin-left:auto;flex:none;padding:3px 8px;background:white;border:1px solid var(--gray-200);border-radius:6px;font-size:12px;color:var(--gray-500);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
 .prototype-zoom-controls{position:absolute;right:24px;bottom:24px;z-index:4;display:flex;gap:4px;padding:4px;background:white;border:1px solid var(--gray-200);border-radius:8px;box-shadow:var(--shadow-float)}
 .prototype-status{display:flex;flex-wrap:wrap;gap:6px;align-items:center;max-height:min(180px,25vh);overflow:auto;padding:8px;background:white;border:1px solid var(--gray-200);border-radius:6px;font-size:13px;flex:none}
 .prototype-status:empty{display:none}

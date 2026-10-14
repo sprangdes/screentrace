@@ -28,7 +28,7 @@ export interface CanvasView {
  readonly focused:string|undefined;
 }
 
-const CARD={width:250,height:220},MOTION_MS=450,BOX_MARGIN={side:96,top:64,bottom:96};
+const CARD={width:250,height:220},MOTION_MS=450,BOX_MARGIN={side:56,top:48,bottom:56};
 /** The preview fades in over this part of the zoom; if it is still loading, it waits at most READY_MS more. */
 const REVEAL={from:0.3,span:0.45},LEAVE_SPAN=0.3,READY_MS=600,FADE_MS=180;
 /** Same curve as the side panels' width transition, so the canvas and the panels move as one. */

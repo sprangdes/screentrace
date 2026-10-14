@@ -349,9 +349,11 @@ try {
    doc.querySelector('[data-spotlight]')?.scrollIntoView({block:'center'});
   };
   own.srcdoc=previewHtml(id);
-  preview.append(own,notice);
+  preview.append(own);
   const scroll=history.current?.screenId===id?history.current.scroll:0;
   viewer=prototypeViewer(index,payload,id,preview,own,history,{back:()=>showCanvas(),focus:target=>openScreen(target),move:delta=>{const visit=history.move(delta,viewerScroll());if(visit)openScreen(visit.screenId,{push:false});},scroll});
+  // The notice sits beside the URL, outside the page, so it never covers the page's own buttons.
+  viewer.querySelector('.prototype-toolbar')?.append(notice);
   host.replaceChildren(viewer);
   // A simulated click that requested APIs on the way here says so on the screen it arrived at.
   if(pendingNotice){const status=viewer.querySelector('.prototype-status');if(status)status.textContent=pendingNotice;pendingNotice=undefined;}
