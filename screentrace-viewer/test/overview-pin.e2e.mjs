@@ -53,3 +53,19 @@ test('single click shows a screen’s relations and frames them, double click op
   assert.ok(after.width>box.width&&after.x>=viewport.x-1&&after.x+after.width<=viewport.x+viewport.width+1,'the whole area fills the canvas');
  }finally{await browser.close();}
 });
+
+test('going back to the canvas closes the preview even when an area lies under the back button',async()=>{
+ const browser=await chromium.launch();
+ try{
+  const page=await browser.newPage({viewport:{width:1440,height:900}});
+  await page.goto(await fileFixture(areasFixture()));await page.locator('#app[data-ready="true"]').waitFor();
+  await page.waitForFunction(()=>document.querySelector('.canvas')?.dataset.fitted==='true');
+  for(const id of ['s0','s4','s9']){
+   await page.locator(`.screen-card[data-screen="${id}"]`).dblclick();
+   await page.locator('.focus-layer:not([hidden]):not(.is-leaving) .preview[aria-busy="false"]').waitFor();
+   await page.locator('.prototype-back').click();
+   await page.waitForFunction(()=>document.querySelector('.canvas').dataset.mode==='overview');
+   await page.waitForFunction(()=>!document.querySelector('.focus-layer:not([hidden]) .prototype-viewer'),undefined,{timeout:3000});
+  }
+ }finally{await browser.close();}
+});

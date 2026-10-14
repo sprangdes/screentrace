@@ -211,11 +211,13 @@ export function canvas(index:Index,payload:Payload,options:CanvasOptions):Canvas
   animate(()=>target,{x:rect.x+rect.width/2,y:rect.y+rect.height/2},()=>{},()=>{});
  };
  // The second click of a double click may land elsewhere once the map has moved; it still opens the first card.
- viewport.addEventListener('click',event=>{if(!lastClick||focused||event.detail<2||performance.now()-lastClick.time>DOUBLE_CLICK_MS)return;event.stopPropagation();event.preventDefault();const id=lastClick.id;lastClick=undefined;options.onOpen(id);},true);
+ // Only clicks on the map itself count: not the preview, its back button, tooltips or the zoom controls.
+ const onMap=(event:Event)=>event.target===viewport||world.contains(event.target as Node);
+ viewport.addEventListener('click',event=>{if(!onMap(event)||!lastClick||focused||event.detail<2||performance.now()-lastClick.time>DOUBLE_CLICK_MS)return;event.stopPropagation();event.preventDefault();const id=lastClick.id;lastClick=undefined;options.onOpen(id);},true);
  // A click that is not a drag: on an area it zooms into the area, elsewhere it lets go of a pinned screen.
  // Panning captures the pointer, so the click arrives here and the area is found under the pointer.
  viewport.addEventListener('click',event=>{
-  if(focused||dragged||(event.target as Element).closest('.screen-card,.relation,.group-link,.group-link-count,.canvas-controls'))return;
+  if(!onMap(event)||focused||frameId||dragged||(event.target as Element).closest('.screen-card,.relation,.group-link,.group-link-count'))return;
   const area=document.elementsFromPoint(event.clientX,event.clientY).find(node=>node.classList.contains('screen-group')) as HTMLElement|undefined;
   const group=area&&grouped?.groups.find(g=>g.key===area.dataset.group);
   if(pinned)unpin();
