@@ -309,3 +309,6 @@ g.is-active .focus-line{stroke-width:4}
  .page-tab{padding:6px 8px}
 }
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+
+.simulation-calls{margin:4px 0 8px;padding-left:18px;font-size:12px;color:var(--gray-700)}
+.simulation-calls li{overflow-wrap:anywhere}

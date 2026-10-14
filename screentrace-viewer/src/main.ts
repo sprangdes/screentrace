@@ -344,7 +344,7 @@ try {
    const doc=own.contentDocument;if(!doc||!own.getAttribute('srcdoc'))return;
    decorate(doc,id);selectFromPreview(doc,id);preview.setAttribute('aria-busy','false');shown();
    doc.addEventListener('keydown',onKey);
-   simulation=attachSimulation(payload,id,own,viewer!,{focus:target=>openScreen(target),api:target=>showApi(target),thumbnail});
+   simulation=attachSimulation(payload,id,own,viewer!,{focus:(target,notice)=>openScreen(target,{notice}),api:target=>showApi(target),thumbnail});
    setTimeout(()=>{if(current===id)prepare(nextUndecidedId());},800);
    doc.querySelector('[data-spotlight]')?.scrollIntoView({block:'center'});
   };
@@ -353,6 +353,8 @@ try {
   const scroll=history.current?.screenId===id?history.current.scroll:0;
   viewer=prototypeViewer(index,payload,id,preview,own,history,{back:()=>showCanvas(),focus:target=>openScreen(target),move:delta=>{const visit=history.move(delta,viewerScroll());if(visit)openScreen(visit.screenId,{push:false});},scroll});
   host.replaceChildren(viewer);
+  // A simulated click that requested APIs on the way here says so on the screen it arrived at.
+  if(pendingNotice){const status=viewer.querySelector('.prototype-status');if(status)status.textContent=pendingNotice;pendingNotice=undefined;}
  });
  const highlightTriggers=(triggers:string[]|undefined)=>{
   const doc=frame?.contentDocument;if(!doc||!current)return;
@@ -389,7 +391,10 @@ try {
   else if(current&&frame?.contentDocument)decorate(frame.contentDocument,current);
  };
 
- const openScreen=(id:string,options:{component?:string;push?:boolean}={})=>{
+ let pendingNotice:string|undefined;
+ const openScreen=(id:string,options:{component?:string;push?:boolean;notice?:string}={})=>{
+  pendingNotice=options.notice;
+  if(pendingNotice&&current===id&&viewer){const status=viewer.querySelector('.prototype-status');if(status)status.textContent=pendingNotice;pendingNotice=undefined;}
   if(options.push!==false){if(!current||page!=='screens')history.start(id);else history.visit(id,viewerScroll());}
   if(current!==id)buttonsOpen=false;
   highlightComponent=options.component;if(options.component)buttonsOpen=true;
