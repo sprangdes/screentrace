@@ -82,6 +82,8 @@ export function canvas(index:Index,payload:Payload,options:CanvasOptions):Canvas
  const apply=()=>{
   keepRest();
   world.style.transform=`translate(${x}px, ${y}px) scale(${zoom})`;
+  // Card and area borders divide by this so they stay one screen pixel at any zoom instead of vanishing when zoomed out.
+  world.style.setProperty('--zoom',String(zoom));
   viewport.dataset.semanticZoom=zoom<0.7?'compact':'detail';
   if(!focused&&viewport.dataset.fitted==='true')options.onTransformChange?.({zoom,x,y});
  };
@@ -90,6 +92,12 @@ export function canvas(index:Index,payload:Payload,options:CanvasOptions):Canvas
  const width=Math.max(800,layout.width),height=Math.max(600,layout.height);
  world.style.width=`${width}px`;world.style.height=`${height}px`;
  const visible=(id:string)=>!state.visible||state.visible.has(id);
+ // Fitting keeps the map below the hint in the top-left corner so it never covers an area's title.
+ const reserved=()=>{const hint=viewport.querySelector<HTMLElement>('.canvas-hint');return hint&&!focused?Math.max(24,hint.offsetTop+hint.offsetHeight+8):24;};
+ const frameRect=(left:number,top:number,w:number,h:number):CanvasTransform=>{
+  const above=reserved(),room=viewport.clientHeight-above-24,z=Math.min(1,(viewport.clientWidth-48)/w,room/h);
+  return {zoom:z,x:(viewport.clientWidth-w*z)/2-(left-40)*z,y:above+(room-h*z)/2-(top-40)*z};
+ };
  const fit=()=>{
   if(!viewport.clientWidth||!viewport.clientHeight||focused)return;
   const shown=index.screens.filter(s=>visible(s.id)).map(s=>positions.get(s.id)!);
@@ -97,8 +105,7 @@ export function canvas(index:Index,payload:Payload,options:CanvasOptions):Canvas
   const boxes=(grouped?.groups||[]).filter(g=>g.members.some(visible)).map(g=>g.box);
   const left=Math.min(...shown.map(p=>p.x),...boxes.map(b=>b.x)),top=Math.min(...shown.map(p=>p.y),...boxes.map(b=>b.y)),right=Math.max(...shown.map(p=>p.x+CARD.width),...boxes.map(b=>b.x+b.width)),bottom=Math.max(...shown.map(p=>p.y+CARD.height),...boxes.map(b=>b.y+b.height));
   const w=right-left+80,h=bottom-top+80;
-  zoom=Math.min(1,(viewport.clientWidth-48)/w,(viewport.clientHeight-48)/h);
-  x=(viewport.clientWidth-w*zoom)/2-(left-40)*zoom;y=(viewport.clientHeight-h*zoom)/2-(top-40)*zoom;
+  ({zoom,x,y}=frameRect(left,top,w,h));
   viewport.dataset.fitted='true';apply();
  };
  const change=(ratio:number)=>{if(focused)return;zoom=Math.max(0.1,Math.min(4,zoom*ratio));viewport.dataset.fitted='true';apply();};
@@ -204,8 +211,7 @@ export function canvas(index:Index,payload:Payload,options:CanvasOptions):Canvas
  /** Eases the overview onto a world rectangle, with the same margins as fitting the whole map. */
  const zoomTo=(rect:{x:number;y:number;width:number;height:number})=>{
   if(!viewport.clientWidth||!viewport.clientHeight)return;
-  const w=rect.width+80,h=rect.height+80,z=Math.min(1,(viewport.clientWidth-48)/w,(viewport.clientHeight-48)/h);
-  const target={zoom:z,x:(viewport.clientWidth-w*z)/2-(rect.x-40)*z,y:(viewport.clientHeight-h*z)/2-(rect.y-40)*z};
+  const target=frameRect(rect.x,rect.y,rect.width+80,rect.height+80);
   viewport.dataset.fitted='true';
   if(reducedMotion()){({zoom,x,y}=target);apply();return;}
   animate(()=>target,{x:rect.x+rect.width/2,y:rect.y+rect.height/2},()=>{},()=>{});
