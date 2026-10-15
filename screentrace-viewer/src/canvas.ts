@@ -111,6 +111,12 @@ export function canvas(index:Index,payload:Payload,options:CanvasOptions):Canvas
   viewport.dataset.fitted='true';apply();
  };
  const change=(ratio:number)=>{if(focused)return;zoom=Math.max(0.1,Math.min(4,zoom*ratio));viewport.dataset.fitted='true';apply();};
+ /** Zooms keeping the world point under (clientX, clientY) where it is, so a pinch zooms into what the fingers are on. */
+ const zoomAt=(ratio:number,clientX:number,clientY:number)=>{
+  if(focused)return;
+  const r=viewport.getBoundingClientRect(),px=clientX-r.left,py=clientY-r.top,next=Math.max(0.1,Math.min(4,zoom*ratio)),k=next/zoom;
+  x=px-(px-x)*k;y=py-(py-y)*k;zoom=next;viewport.dataset.fitted='true';apply();
+ };
  for(const [label,name,action] of [[text.zoomIn,'zoom',()=>change(1.2)],[text.zoomOut,'minus',()=>change(1/1.2)],[text.reset,'fit',fit]] as const){const button=iconButton(label,name);button.onclick=action;controls.append(button);}
 
  // ---- overview: cards and their flows
@@ -453,8 +459,15 @@ export function canvas(index:Index,payload:Payload,options:CanvasOptions):Canvas
  viewport.addEventListener('pointermove',event=>{if(!dragging)return;travel+=Math.abs(event.clientX-dragging.x)+Math.abs(event.clientY-dragging.y);if(travel>4)dragged=true;x+=event.clientX-dragging.x;y+=event.clientY-dragging.y;dragging={x:event.clientX,y:event.clientY};apply();});
  for(const name of ['pointerup','pointercancel'])viewport.addEventListener(name,()=>{dragging=undefined;});
  viewport.addEventListener('wheel',event=>{
-  if(focused){if(layer.contains(event.target as Node)&&!event.ctrlKey)return;event.preventDefault();if(event.deltaY>0)options.onExitRequest();return;}
-  event.preventDefault();change(event.deltaY<0?1.1:1/1.1);
+  // A pinch arrives as a wheel event with ctrlKey; ⌘/Ctrl with a mouse wheel zooms the same way. Any other scroll —
+  // two fingers on a trackpad, or a mouse wheel — moves the map.
+  const zooming=event.ctrlKey||event.metaKey;
+  if(focused){if(layer.contains(event.target as Node)&&!zooming)return;event.preventDefault();if(zooming&&event.deltaY>0)options.onExitRequest();return;}
+  event.preventDefault();
+  if(frameId)return; // the map is easing somewhere (back from a screen, onto an area); let it arrive
+  const unit=event.deltaMode===1?16:event.deltaMode===2?viewport.clientHeight:1;
+  if(zooming){zoomAt(Math.exp(-Math.max(-50,Math.min(50,event.deltaY*unit))*0.01),event.clientX,event.clientY);return;}
+  x-=event.deltaX*unit;y-=event.deltaY*unit;viewport.dataset.fitted='true';apply();
  },{passive:false});
  const hint=element('p','點一下畫面看關聯 · 點兩下開啟畫面 · n 下一個未確認 · / 搜尋','canvas-hint');
  viewport.append(world,lines,layer,tips,hint,controls);

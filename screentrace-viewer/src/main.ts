@@ -77,7 +77,7 @@ try {
  helpPanel.append(element('h2','操作說明'));
  const helpList=(title:string,items:string[])=>{helpPanel.append(element('h3',title));const list=element('ul');for(const item of items)list.append(element('li',item));helpPanel.append(list);};
  helpList('快捷鍵',['k 保留、x 移除、u 未確認（作用於目前畫面，或右側欄中選取的按鈕）','n 前往下一個未確認的畫面','/ 搜尋畫面','f 全螢幕預覽（展示用，再按一次或 Esc 結束）','Esc 返回畫布']);
- helpList('操作方式',['點畫布上的畫面查看完整預覽','在預覽中點連結或按鈕，會模擬前往的畫面','標記會自動暫存在這個瀏覽器；請用「下載 md」保存並交付']);
+ helpList('操作方式',['觸控板兩指滑動或滑鼠拖曳移動畫布；兩指捏合或 ⌘／Ctrl＋滾輪縮放','點一下畫面看它的關聯，點兩下查看完整預覽','在預覽中點連結或按鈕，會模擬前往的畫面','標記會自動暫存在這個瀏覽器；請用「下載 md」保存並交付']);
  helpList('狀態',['綠色勾：保留','紅色叉：移除','沒有標示：未確認','隨畫面移除：畫面標記移除時，沒有個別標記的按鈕一起移除']);
  helpList('ScreenTrace 看不到的事',['書籤或 Email 連結直接進入的畫面','排程、批次工作或其他系統直接呼叫的 API','比對不到已知網址格式的程式組成連結']);
  help.append(helpSummary,helpPanel);
