@@ -15,6 +15,8 @@ export interface CanvasOptions extends CanvasState {
  onOpen:(id:string)=>void;
  /** Builds the full preview of the focused screen inside the given box; resolves once it can be shown. */
  renderFocus:(id:string,host:HTMLElement)=>Promise<void>|void;
+ /** True while the open preview covers the whole window: moving to another screen then stays full-window. */
+ presenting?:()=>boolean;
  /** The person is pointing at a screen they may open next, so its preview can be prepared ahead. */
  onIntent?:(id:string)=>void;
  /** A focus line is hovered (its trigger components) or left (undefined). */
@@ -82,6 +84,8 @@ export function canvas(index:Index,payload:Payload,options:CanvasOptions):Canvas
  const apply=()=>{
   keepRest();
   world.style.transform=`translate(${x}px, ${y}px) scale(${zoom})`;
+  // Card and area borders divide by this so they stay one screen pixel at any zoom instead of vanishing when zoomed out.
+  world.style.setProperty('--zoom',String(zoom));
   viewport.dataset.semanticZoom=zoom<0.7?'compact':'detail';
   if(!focused&&viewport.dataset.fitted==='true')options.onTransformChange?.({zoom,x,y});
  };
@@ -90,6 +94,12 @@ export function canvas(index:Index,payload:Payload,options:CanvasOptions):Canvas
  const width=Math.max(800,layout.width),height=Math.max(600,layout.height);
  world.style.width=`${width}px`;world.style.height=`${height}px`;
  const visible=(id:string)=>!state.visible||state.visible.has(id);
+ // Fitting keeps the map below the hint in the top-left corner so it never covers an area's title.
+ const reserved=()=>{const hint=viewport.querySelector<HTMLElement>('.canvas-hint');return hint&&!focused?Math.max(24,hint.offsetTop+hint.offsetHeight+8):24;};
+ const frameRect=(left:number,top:number,w:number,h:number):CanvasTransform=>{
+  const above=reserved(),room=viewport.clientHeight-above-24,z=Math.min(1,(viewport.clientWidth-48)/w,room/h);
+  return {zoom:z,x:(viewport.clientWidth-w*z)/2-(left-40)*z,y:above+(room-h*z)/2-(top-40)*z};
+ };
  const fit=()=>{
   if(!viewport.clientWidth||!viewport.clientHeight||focused)return;
   const shown=index.screens.filter(s=>visible(s.id)).map(s=>positions.get(s.id)!);
@@ -97,11 +107,16 @@ export function canvas(index:Index,payload:Payload,options:CanvasOptions):Canvas
   const boxes=(grouped?.groups||[]).filter(g=>g.members.some(visible)).map(g=>g.box);
   const left=Math.min(...shown.map(p=>p.x),...boxes.map(b=>b.x)),top=Math.min(...shown.map(p=>p.y),...boxes.map(b=>b.y)),right=Math.max(...shown.map(p=>p.x+CARD.width),...boxes.map(b=>b.x+b.width)),bottom=Math.max(...shown.map(p=>p.y+CARD.height),...boxes.map(b=>b.y+b.height));
   const w=right-left+80,h=bottom-top+80;
-  zoom=Math.min(1,(viewport.clientWidth-48)/w,(viewport.clientHeight-48)/h);
-  x=(viewport.clientWidth-w*zoom)/2-(left-40)*zoom;y=(viewport.clientHeight-h*zoom)/2-(top-40)*zoom;
+  ({zoom,x,y}=frameRect(left,top,w,h));
   viewport.dataset.fitted='true';apply();
  };
  const change=(ratio:number)=>{if(focused)return;zoom=Math.max(0.1,Math.min(4,zoom*ratio));viewport.dataset.fitted='true';apply();};
+ /** Zooms keeping the world point under (clientX, clientY) where it is, so a pinch zooms into what the fingers are on. */
+ const zoomAt=(ratio:number,clientX:number,clientY:number)=>{
+  if(focused)return;
+  const r=viewport.getBoundingClientRect(),px=clientX-r.left,py=clientY-r.top,next=Math.max(0.1,Math.min(4,zoom*ratio)),k=next/zoom;
+  x=px-(px-x)*k;y=py-(py-y)*k;zoom=next;viewport.dataset.fitted='true';apply();
+ };
  for(const [label,name,action] of [[text.zoomIn,'zoom',()=>change(1.2)],[text.zoomOut,'minus',()=>change(1/1.2)],[text.reset,'fit',fit]] as const){const button=iconButton(label,name);button.onclick=action;controls.append(button);}
 
  // ---- overview: cards and their flows
@@ -204,8 +219,7 @@ export function canvas(index:Index,payload:Payload,options:CanvasOptions):Canvas
  /** Eases the overview onto a world rectangle, with the same margins as fitting the whole map. */
  const zoomTo=(rect:{x:number;y:number;width:number;height:number})=>{
   if(!viewport.clientWidth||!viewport.clientHeight)return;
-  const w=rect.width+80,h=rect.height+80,z=Math.min(1,(viewport.clientWidth-48)/w,(viewport.clientHeight-48)/h);
-  const target={zoom:z,x:(viewport.clientWidth-w*z)/2-(rect.x-40)*z,y:(viewport.clientHeight-h*z)/2-(rect.y-40)*z};
+  const target=frameRect(rect.x,rect.y,rect.width+80,rect.height+80);
   viewport.dataset.fitted='true';
   if(reducedMotion()){({zoom,x,y}=target);apply();return;}
   animate(()=>target,{x:rect.x+rect.width/2,y:rect.y+rect.height/2},()=>{},()=>{});
@@ -378,6 +392,8 @@ export function canvas(index:Index,payload:Payload,options:CanvasOptions):Canvas
   // Opening a screen ends any single-click zoom still in motion and drops the pinned lines.
   cancelAnimationFrame(frameId);frameId=0;pinned=undefined;for(const card of cards.values())card.classList.remove('is-pinned');
   const token=++sequence,previous=focused,old=previous?layer:undefined,oldOpacity=old?Number(getComputedStyle(old).opacity)||0:0;
+  // Full-window previews skip the zoom: the old one stays in place until the new one has faded in over it.
+  const crossfade=!!previous&&!!options.presenting?.();
   if(!previous){const o=rest??origin();overview={zoom,x,y,left:o.left,top:o.top};}
   focused=id;viewport.dataset.mode='focus';viewport.dataset.focused=id;options.onLineHover?.(undefined);
   clear();svg.classList.add('is-dim');lines.style.display='none';tips.replaceChildren();
@@ -391,7 +407,7 @@ export function canvas(index:Index,payload:Payload,options:CanvasOptions):Canvas
   const build=()=>{if(ready||token!==sequence)return;host.hidden=false;ready=Promise.resolve(options.renderFocus(id,host)).then(()=>{loaded=true;});};
   const finish=()=>{
    if(token!==sequence)return;
-   build();dropLeaving();({zoom,x,y}=aligned(id,host));apply();glue(host,id);
+   build();if(!crossfade)dropLeaving();({zoom,x,y}=aligned(id,host));apply();glue(host,id);
    for(const [cardId,card] of cards){card.classList.toggle('is-dim',cardId!==id);if(cardId!==id)card.classList.remove('is-morphing');}
    const reveal=()=>{
     if(token!==sequence)return;
@@ -399,10 +415,11 @@ export function canvas(index:Index,payload:Payload,options:CanvasOptions):Canvas
     const hide=()=>{if(token===sequence)cards.get(id)?.classList.add('is-under-focus');};
     if(loaded||reducedMotion())hide();else wait(FADE_MS).then(hide);
     showLines(id,token);
+    if(crossfade)wait(FADE_MS+20).then(()=>{if(token===sequence)dropLeaving();});
    };
    if(loaded||reducedMotion())reveal();else Promise.race([ready!,wait(READY_MS)]).then(reveal);
   };
-  if(reducedMotion()){finish();return;}
+  if(reducedMotion()||crossfade){finish();return;}
   animate(()=>{placeLayer(host);return aligned(id,host);},center(id),t=>{
    if(t>0)build();
    if(previous)fadeLeaving(previous,t,oldOpacity);
@@ -442,8 +459,15 @@ export function canvas(index:Index,payload:Payload,options:CanvasOptions):Canvas
  viewport.addEventListener('pointermove',event=>{if(!dragging)return;travel+=Math.abs(event.clientX-dragging.x)+Math.abs(event.clientY-dragging.y);if(travel>4)dragged=true;x+=event.clientX-dragging.x;y+=event.clientY-dragging.y;dragging={x:event.clientX,y:event.clientY};apply();});
  for(const name of ['pointerup','pointercancel'])viewport.addEventListener(name,()=>{dragging=undefined;});
  viewport.addEventListener('wheel',event=>{
-  if(focused){if(layer.contains(event.target as Node)&&!event.ctrlKey)return;event.preventDefault();if(event.deltaY>0)options.onExitRequest();return;}
-  event.preventDefault();change(event.deltaY<0?1.1:1/1.1);
+  // A pinch arrives as a wheel event with ctrlKey; ⌘/Ctrl with a mouse wheel zooms the same way. Any other scroll —
+  // two fingers on a trackpad, or a mouse wheel — moves the map.
+  const zooming=event.ctrlKey||event.metaKey;
+  if(focused){if(layer.contains(event.target as Node)&&!zooming)return;event.preventDefault();if(zooming&&event.deltaY>0)options.onExitRequest();return;}
+  event.preventDefault();
+  if(frameId)return; // the map is easing somewhere (back from a screen, onto an area); let it arrive
+  const unit=event.deltaMode===1?16:event.deltaMode===2?viewport.clientHeight:1;
+  if(zooming){zoomAt(Math.exp(-Math.max(-50,Math.min(50,event.deltaY*unit))*0.01),event.clientX,event.clientY);return;}
+  x-=event.deltaX*unit;y-=event.deltaY*unit;viewport.dataset.fitted='true';apply();
  },{passive:false});
  const hint=element('p','點一下畫面看關聯 · 點兩下開啟畫面 · n 下一個未確認 · / 搜尋','canvas-hint');
  viewport.append(world,lines,layer,tips,hint,controls);

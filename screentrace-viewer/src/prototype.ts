@@ -4,7 +4,7 @@ import {Index} from './map';
 import {Payload} from './contracts';
 import {PrototypeHistory} from './prototype-history';
 
-export interface PrototypeOptions {back:()=>void;focus:(id:string)=>void;move:(delta:number)=>void;scroll:number}
+export interface PrototypeOptions {back:()=>void;focus:(id:string)=>void;move:(delta:number)=>void;scroll:number;presenting:boolean;present:()=>void}
 
 /** Full-size static preview of one screen with its own history toolbar and zoom controls. */
 export function prototypeViewer(index:Index,payload:Payload,id:string,preview:HTMLElement,frame:HTMLIFrameElement,history:PrototypeHistory,options:PrototypeOptions):HTMLElement{
@@ -19,7 +19,9 @@ export function prototypeViewer(index:Index,payload:Payload,id:string,preview:HT
  back.onclick=options.back;
  previous.disabled=!history.canBack;next.disabled=!history.canForward;
  previous.onclick=()=>options.move(-1);next.onclick=()=>options.move(1);
- toolbar.append(back,previous,next,url);
+ const present=iconButton(options.presenting?'結束全螢幕':'全螢幕預覽',options.presenting?'minimize':'maximize');
+ present.classList.add('prototype-present');present.setAttribute('aria-pressed',String(options.presenting));present.onclick=options.present;
+ toolbar.append(back,previous,next,url,present);
  root.append(toolbar,status,scroller);
  frame.style.width=`${width}px`;frame.style.height=`${height}px`;frame.style.maxWidth='none';frame.scrolling='no';
  preview.style.width=`${width}px`;preview.style.height=`${height}px`;preview.style.transformOrigin='0 0';
