@@ -71,7 +71,7 @@ public final class JavaScriptGraphContribution {
     } catch(Exception error){diagnostics.add(diagnostic(new SourceLocation(".",1),"JS_ANALYZER_FAILURE","JavaScript 靜態分析失敗："+error.getMessage()));if(error instanceof InterruptedException)Thread.currentThread().interrupt();}
     return new ApplicationGraph(graph.application(),List.copyOf(nodes.values()),List.copyOf(edges.values()),diagnostics,graph.apiContracts(),graph.schemaVersion(),List.copyOf(behaviors.values()),List.copyOf(rules.values()));
   }
-  private static JsonNode run(Map<String,Object> request) throws Exception {
+  static JsonNode run(Map<String,Object> request) throws Exception {
     Path current=Path.of("").toAbsolutePath(),module=System.getProperty("screentrace.js.module")==null?null:Path.of(System.getProperty("screentrace.js.module")).toAbsolutePath();while(module==null&&current!=null){var candidate=current.resolve("screentrace-js/cli.mjs");if(io.screentrace.scanner.SafeProjectFiles.isSafeRegularFile(current,candidate)){module=candidate;break;}current=current.getParent();}
     if(module==null)throw new IOException("找不到工具 screentrace-js/cli.mjs");
     module=io.screentrace.scanner.SafeProjectFiles.requireExistingRegularFileWithin(module.getParent(),module);

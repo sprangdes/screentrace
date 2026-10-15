@@ -8,6 +8,7 @@ import {annotateConditions,annotateSource,convertControls,expressionList,markupT
 import { deduplicateMappings, discoverSpringResourceMappings } from './spring-resource-mappings.mjs';
 import {loadStrutsMessageCatalog,renderStrutsMessages} from './struts-messages.mjs';
 import {renderUnsupportedJsfTags} from './unsupported-components.mjs';
+import {prepareReactPreview} from './react-preview.mjs';
 import { assertOutputPathWithin, createDirectoryWithin, readBufferLimited, readUtf8Limited, resolveExistingDirectoryWithin, resolveExistingFileWithin, writeBufferWithin } from './safe-files.mjs';
 
 const [targetArg, outputArg, ...extraArgs] = process.argv.slice(2);
@@ -243,7 +244,18 @@ function htmlControls(source) {
     .replace(/\s+(?:items|modelAttribute|names)=["'][^"']*["']/g, '');
 }
 function dynamicExpressions(source) { return [...source.matchAll(/\$\{[^}]+}/g)].map(match => match[0]); }
+const reactPreview = previewV2 ? await prepareReactPreview({projectRoot, output, htmlRoot: htmlRootReal}) : null;
+if (reactPreview) captureDiagnostics.push(...reactPreview.diagnostics.map(item => item.message));
+async function renderReact(screen) {
+  let source = reactPreview?.document(screen.id);
+  if (!source) return null;
+  source = source.replace(/<head([^>]*)>/i, "<head$1><style data-st-preview-freeze>*,*::before,*::after{animation-play-state:paused!important;transition:none!important;caret-color:transparent!important}</style>");
+  const htmlFile = await assertOutputPathWithin(output, path.join(htmlRootReal, `${screen.id.replace(/[^a-z0-9-]/gi, '_')}.html`));
+  await writeOutput(htmlFile, source);
+  return { htmlFile, assets: reactPreview.assets, dynamicExpressions: [] };
+}
 async function renderJsp(screen) {
+  if (screen.attributes?.rendering === 'static-reconstruction') return renderReact(screen);
   const view = screen.attributes?.view;
   if (!view || !(previewV2?/\.(?:jsp|jspf|html?|xhtml)$/i.test(view):view.endsWith('.jsp'))) return null;
   const jsp = path.join(target, view);

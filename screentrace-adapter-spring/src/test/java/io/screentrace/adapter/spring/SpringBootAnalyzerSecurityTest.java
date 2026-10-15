@@ -17,7 +17,7 @@ class SpringBootAnalyzerSecurityTest {
     Files.writeString(secret, "export function Evil(){return <p>SECRET</p>}");
     Files.createSymbolicLink(source.resolve("Linked.tsx"), secret);
     String escape = source.relativize(secret).toString().replace('\\', '/').replace("Outside.tsx", "Outside");
-    Files.writeString(app, "import Outside from '" + escape + "'; import Linked from './Linked';\n<Route path=\"/\" element={<Outside />} />");
+    Files.writeString(app, "import { Route } from 'react-router-dom'; import Outside from '" + escape + "'; import Linked from './Linked';\n<Route path=\"/\" element={<Outside />} />");
 
     ApplicationGraph graph = new SpringBootAnalyzer().analyze(new ProjectScanner().scan(root));
     var screen = graph.nodes().stream().filter(node -> node.type() == ApplicationGraph.NodeType.SCREEN).findFirst().orElseThrow();

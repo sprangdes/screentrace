@@ -28,7 +28,7 @@ export function elementSimulationAssessment(payload:Payload,id:string,node:Eleme
 
 export const unknownDestination='無法確定前往哪個畫面';
 
-export interface SimulationOptions {focus:(id:string)=>void;api:(id:string)=>void;thumbnail:(id:string)=>string|undefined}
+export interface SimulationOptions {focus:(id:string,notice?:string)=>void;api:(id:string)=>void;thumbnail:(id:string)=>string|undefined}
 
 /** Wires clicks inside the static preview: navigate, open dialogs, show API calls, or offer the possible destinations. */
 export function attachSimulation(payload:Payload,id:string,frame:HTMLIFrameElement,viewer:HTMLElement,options:SimulationOptions){
@@ -61,11 +61,15 @@ export function attachSimulation(payload:Payload,id:string,frame:HTMLIFrameEleme
   backdrop.onclick=event=>{if(event.target===backdrop)close?.();};
   if(surface){surface.update();surface.focusDialog();}else button.focus();
  };
- const label=(choice:Effect)=>choice.kind==='navigate'?choice.label||'畫面':choice.kind==='api'?`呼叫 API：${choice.method} ${choice.path}`:choice.kind==='dialog'?`開啟彈窗：${choice.label||''}`:choice.kind==='form'?`送出到 ${choice.path}`:unknownDestination;
- const choose=(choices:Effect[],node:Element,record:ElementRecord|undefined)=>{
+ /** A conditional result with a single outcome is that outcome; the condition is noted in its label. */
+ const outcomeOf=(choice:Effect):Effect=>choice.kind==='choices'&&choice.choices?.length===1?choice.choices[0]:choice;
+ const label=(choice:Effect):string=>choice.kind==='choices'&&choice.choices?.length===1?`${label(choice.choices[0])}（有條件）`:choice.kind==='navigate'?choice.label||'畫面':choice.kind==='api'?`呼叫 API：${choice.method} ${choice.path}`:choice.kind==='dialog'?`開啟彈窗：${choice.label||''}`:choice.kind==='form'?`送出到 ${choice.path}`:unknownDestination;
+ const choose=(choices:Effect[],node:Element,record:ElementRecord|undefined,calls:Effect[]=[])=>{
   closePicker();
   const box=element('div',undefined,'simulation-picker');box.setAttribute('role','dialog');box.setAttribute('aria-label','可能的結果');box.dataset.stSimulationUi='true';
-  box.append(element('strong','這個操作可能前往：'));
+  if(calls.length){box.append(element('strong','這個操作會呼叫：'));const list=element('ul',undefined,'simulation-calls');for(const call of calls)list.append(element('li',label(call)));box.append(list);}
+  const destinations=choices.every(choice=>outcomeOf(choice).kind==='navigate');
+  box.append(element('strong',destinations?(calls.length?'然後可能前往：':'這個操作可能前往：'):'這個操作可能：'));
   for(const choice of choices){
    const button=element('button',undefined,'simulation-choice');
    if(choice.targetId)button.dataset.target=choice.targetId;
@@ -83,6 +87,19 @@ export function attachSimulation(payload:Payload,id:string,frame:HTMLIFrameEleme
  };
  const render=(effect:Effect,record:ElementRecord|undefined,node:Element)=>{
   status.replaceChildren();
+  // An element with several behaviors usually requests APIs and then moves on: the requests all happen, so they
+  // are listed, never offered as alternatives; only the remaining outcomes are something to choose between.
+  if(effect.kind==='choices'&&effect.choices?.length&&!effect.choices.some(choice=>choice.componentId)){
+   const calls=effect.choices.filter(choice=>outcomeOf(choice).kind==='api'),rest=effect.choices.filter(choice=>!calls.includes(choice));
+   if(calls.length){
+    const requested=`呼叫 API：${calls.map(call=>label(call).replace(/^呼叫 API：/,'')).join('、')}（不會真的送出）`;
+    if(!rest.length){say(`留在本頁 · ${requested}`);return;}
+    const next=rest.length===1?outcomeOf(rest[0]):undefined;
+    if(next?.kind==='navigate'&&next.targetId&&next.resolution!=='AMBIGUOUS'){options.focus(next.targetId,`上一個畫面的操作${requested}`);return;}
+    if(next?.kind==='dialog'&&next.targetId){popup(next.targetId);say(requested);return;}
+    choose(rest,node,record,calls);return;
+   }
+  }
   if(effect.kind==='navigate'&&effect.targetId){options.focus(effect.targetId);return;}
   if(effect.kind==='dialog'&&effect.targetId){popup(effect.targetId);return;}
   if(effect.kind==='api'&&effect.targetId){const target=effect.targetId;say(`呼叫 API：${effect.method} ${effect.path}（不會真的送出）`,{label:'在 API 頁查看',run:()=>options.api(target)});return;}

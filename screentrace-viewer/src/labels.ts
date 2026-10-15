@@ -48,7 +48,7 @@ export function componentLabel(node:Node&{displayLabel?:string},context:LabelCon
  return [...label].length>80?[...label].slice(0,79).join('')+'…':label;
 }
 
-export interface LabelPreviewRecord {graphScreenId:string;path:string;tag?:string;graphComponentId?:string}
+export interface LabelPreviewRecord {graphScreenId:string;path:string;tag?:string;graphComponentId?:string;bounds?:{x:number;y:number;width:number;height:number}}
 interface LabelSource {documents:Map<string,Document>;dynamicScreens:Set<string>;previewElements:LabelPreviewRecord[];labels:Map<string,Map<string,string>>;targets:Map<string,Map<string,Set<string>>>;nodesByScreen:Map<string,Node[]>;contexts:Map<string,Map<string,LabelContext>>}
 const labelCache=new WeakMap<Index,LabelSource>();
 const destinationsFor=(index:Index)=>{const byScreen=new Map<string,Map<string,Set<string>>>();for(const relation of index.relations){const triggers=byScreen.get(relation.from)||new Map<string,Set<string>>();for(const id of relation.triggers){const targets=triggers.get(id)||new Set<string>();targets.add(relation.to);triggers.set(id,targets);}byScreen.set(relation.from,triggers);}return byScreen;};
@@ -84,7 +84,15 @@ function documentContexts(index:Index,screenId:string,document:Document|undefine
 function makeLabels(index:Index,screenId:string,nodes:Node[],contexts:Map<string,LabelContext>,targets:Map<string,Set<string>>):Map<string,string>{
  const forms=new Map<string,string>();for(const candidate of nodes){const id=candidate.attributes.formId,text=normalize(candidate.attributes.visibleText);if(id&&text&&!technical(text,candidate)&&!forms.has(id))forms.set(id,text);}
  const bases=nodes.map(node=>{const context={...(contexts.get(node.id)||{})},destination=targets.get(node.id);if(destination?.size===1)context.knownDestination=index.nodes.get([...destination][0])?.name;if(String(node.attributes.kind||'').toUpperCase()==='FORM')context.submitText=forms.get(String(node.attributes.name||node.attributes.id||node.name||''));return componentLabel(node,context);});
- const totals=new Map<string,number>();for(const base of bases)totals.set(base,(totals.get(base)||0)+1);const seen=new Map<string,number>(),labels=new Map<string,string>();nodes.forEach((node,i)=>{const base=bases[i],ordinal=(seen.get(base)||0)+1;seen.set(base,ordinal);labels.set(node.id,totals.get(base)!>1?`${base}（第 ${ordinal} 個）`:base);});return labels;
+ const totals=new Map<string,number>();for(const base of bases)totals.set(base,(totals.get(base)||0)+1);const seen=new Map<string,number>(),labels=new Map<string,string>();
+ // Same-named buttons are numbered in the order they appear on the page; ones the preview does not show come last.
+ const position=previewPositions(sourceFor(index).previewElements,screenId),order=nodes.map((node,i)=>i).sort((a,b)=>{const p=position.get(nodes[a].id),q=position.get(nodes[b].id);if(p&&q)return Math.abs(p.y-q.y)>8?p.y-q.y:p.x-q.x||a-b;return p?-1:q?1:a-b;});
+ for(const i of order){const node=nodes[i],base=bases[i],ordinal=(seen.get(base)||0)+1;seen.set(base,ordinal);labels.set(node.id,totals.get(base)!>1?`${base}（第 ${ordinal} 個）`:base);}return labels;
+}
+function previewPositions(records:LabelPreviewRecord[],screenId:string):Map<string,{x:number;y:number}>{
+ const result=new Map<string,{x:number;y:number}>();
+ for(const record of records){const bounds=record.bounds;if(record.graphScreenId!==screenId||!record.graphComponentId||!bounds||bounds.width<=0||bounds.height<=0)continue;const old=result.get(record.graphComponentId);if(!old||bounds.y<old.y||bounds.y===old.y&&bounds.x<old.x)result.set(record.graphComponentId,{x:bounds.x,y:bounds.y});}
+ return result;
 }
 /** Build the per-screen names once, reusing the already parsed inert documents. */
 function sourceFor(index:Index):LabelSource {let source=labelCache.get(index);if(source)return source;const nodesByScreen=new Map<string,Node[]>();for(const [id,screens]of index.owners){const node=index.nodes.get(id);if(!node)continue;for(const screen of screens){const values=nodesByScreen.get(screen)||[];values.push(node);nodesByScreen.set(screen,values);}}source={documents:new Map(),dynamicScreens:new Set(),previewElements:[],labels:new Map(),targets:destinationsFor(index),nodesByScreen,contexts:new Map()};labelCache.set(index,source);return source;}

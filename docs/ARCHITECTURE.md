@@ -4,7 +4,7 @@ R3 WP18 controller flows: `SpringControllerReturns` in `screentrace-adapter-spri
 
 ## Current POC implementation
 
-The current implementation analyzes server-rendered JSP applications using Struts 1, Spring MVC, Spring Boot, or their supported combinations.
+The current implementation analyzes server-rendered JSP applications using Struts 1, Spring MVC, Spring Boot, or their supported combinations, and Spring Boot back ends with React single-page front ends (ADR 0088, ADR 0089).
 
 R3 WP17 parser behavior: `JspTagFileExpander` in `screentrace-parser-jsp` follows statically declared taglib `tagdir` mappings, substitutes only literal call-site attributes, expands nested tag files and `<jsp:doBody/>`, and guards recursion at depth 12 with cycle/depth diagnostics. Dynamic attributes remain unresolved. Components are projected from each consuming JSP, retaining both the page call-site and tag-file definition as evidence. `SpringMvcAnalyzer` resolves a relative JSP URL only when exactly one controller route is proven to render that JSP; it joins the relative value to that route's directory and records `INFERRED` evidence. Multiple routes remain `AMBIGUOUS`; no route remains `UNRESOLVED`. The legacy exception in ADR 0005 still excludes `c:set` from URL-variable resolution.
 
@@ -145,6 +145,7 @@ Node 模組，使用 Playwright 1.55.1；靜態化 JSP、展開支援的標記�
 ### 後續工作包指定的新模組（規劃中）
 
 - `screentrace-js`：已建立的 Node 模組，Acorn / acorn-loose AST 與容錯診斷；ADR 0007 記錄釘選與 JSON 邊界。
+  `screentrace-js/react/` 以 @babel/parser 解析 React／TSX：路由、渲染展開、元件、事件處理器效果與靜態重建預覽 markup，由 `ReactGraphContribution`（screentrace-parser-jsp）轉成圖；見 [ADR 0088](adr/0088-react-ast-analysis.md)、[ADR 0089](adr/0089-react-static-preview.md)。
 - `screentrace-viewer`：WP7 TypeScript + esbuild 離線檢視器。
 - `review-md`：WP8 瀏覽器與 Node 共用匯出邏輯，名稱可依 ADR 調整。
 

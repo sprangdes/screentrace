@@ -66,6 +66,12 @@ R17 起報表與 md 不顯示元件庫建議與覆寫；以下指令仍可驗證
 
 確認分析輸出完整，再重新分析或執行 `report` 重建 HTML。若仍缺少，檢視 `application-graph.json` 與 `preview-model.json` 中的診斷；不要以空白預覽推斷原畫面沒有內容。
 
+### React 預覽沒有套用樣式
+
+React 畫面的預覽由原始碼靜態重建，會連結專案 import 的 CSS。來自套件的樣式（例如 `import 'bootstrap/dist/css/bootstrap.min.css'`）只有在專案已安裝 `node_modules` 時才找得到；找不到時寫入 `static-preview/diagnostics.json`，預覽仍會產生但沒有該樣式。ScreenTrace 不會替目標專案執行 `npm install`，請自行在目標專案安裝後重新分析。
+
+React 預覽中無法靜態證明的文字顯示為「示例值」；只在特定條件出現的對話框預設關閉；`if (loading) return …` 這類分支在預覽中顯示一般狀態，但兩邊的按鈕都會列在右側欄。
+
 ### Context path 未設定
 
 查看圖中設定證據。若工作區設定與伺服器設定均未提供，結果應明確顯示「未設定」；先取得部署設定，再重新分析，不要從 URL 外觀猜值。

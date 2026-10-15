@@ -10,7 +10,7 @@ test('R18 header/footer links: a badge on the overview, one dashed line each way
   await page.goto(await fileFixture(commonNavigation()));await page.locator('#app[data-ready="true"]').waitFor();
   assert.equal(await page.locator('.screen-card[data-screen="d"] .shared-entry').getAttribute('data-count'),'2');
   assert.equal(await page.locator('.screen-card[data-screen="a"] .shared-entry').count(),0);
-  await page.locator('.screen-card[data-screen="d"]').click();await page.locator('.focus-layer:not([hidden]):not(.is-leaving) .preview[aria-busy="false"]').waitFor();
+  await page.locator('.screen-card[data-screen="d"]').dblclick();await page.locator('.focus-layer:not([hidden]):not(.is-leaving) .preview[aria-busy="false"]').waitFor();
   const into=page.locator('.shared-link[data-direction="in"]');await into.waitFor();
   assert.equal(await into.getAttribute('data-count'),'2');assert.equal(await page.locator('.shared-link[data-direction="out"]').count(),0);
   assert.equal(await page.locator('.focus-line.shared.is-in').count(),1);

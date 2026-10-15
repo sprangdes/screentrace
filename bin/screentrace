@@ -71,7 +71,7 @@ ensure_runtime() {
 base_dir="$(cd "$(dirname "$0")/.." && pwd)"
 
 ensure_js_parser() {
-  if [[ ! -f "$base_dir/screentrace-js/node_modules/acorn/package.json" || ! -f "$base_dir/screentrace-js/node_modules/acorn-loose/package.json" ]]; then
+  if [[ ! -f "$base_dir/screentrace-js/node_modules/acorn/package.json" || ! -f "$base_dir/screentrace-js/node_modules/acorn-loose/package.json" || ! -f "$base_dir/screentrace-js/node_modules/@babel/parser/package.json" ]]; then
     (cd "$base_dir/screentrace-js" && npm ci --ignore-scripts --no-fund)
   fi
 }
@@ -102,7 +102,7 @@ if [[ "${1:-}" == doctor ]]; then
   needs_maven || { echo "Missing Maven ${required_maven}+"; missing=1; }
   needs_node || { echo "Missing Node.js ${required_node}+"; missing=1; }
   [[ -x "$base_dir/screentrace-capture/node_modules/.bin/playwright" ]] || { echo "Missing renderer; run ./bin/screentrace setup"; missing=1; }
-  [[ -f "$base_dir/screentrace-js/node_modules/acorn/package.json" && -f "$base_dir/screentrace-js/node_modules/acorn-loose/package.json" ]] || { echo "Missing JavaScript parser; run ./bin/screentrace setup"; missing=1; }
+  [[ -f "$base_dir/screentrace-js/node_modules/acorn/package.json" && -f "$base_dir/screentrace-js/node_modules/acorn-loose/package.json" && -f "$base_dir/screentrace-js/node_modules/@babel/parser/package.json" ]] || { echo "Missing JavaScript parser; run ./bin/screentrace setup"; missing=1; }
   ((missing == 0)) && echo "ScreenTrace dependencies are ready."
   exit "$missing"
 fi

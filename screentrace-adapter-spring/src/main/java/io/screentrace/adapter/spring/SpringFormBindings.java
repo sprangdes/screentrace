@@ -1,6 +1,5 @@
 package io.screentrace.adapter.spring;
 
-import com.github.javaparser.StaticJavaParser;
 import com.github.javaparser.ast.body.*;
 import com.github.javaparser.ast.expr.*;
 import io.screentrace.core.ApplicationGraph;
@@ -18,7 +17,7 @@ final class SpringFormBindings {
     for(var file:inventory.javaFiles()) {
       String path=inventory.root().relativize(file).toString().replace('\\','/');
       try {
-        var unit=StaticJavaParser.parse(SafeProjectFiles.readUtf8Limited(inventory.root(),file,SafeProjectFiles.MAX_SOURCE_FILE_BYTES));
+        var unit=io.screentrace.parser.jsp.JavaSources.parse(SafeProjectFiles.readUtf8Limited(inventory.root(),file,SafeProjectFiles.MAX_SOURCE_FILE_BYTES));
         for(var type:unit.findAll(ClassOrInterfaceDeclaration.class)) types.computeIfAbsent(type.getFullyQualifiedName().orElse(type.getNameAsString()),k->new ArrayList<>()).add(new Type(type,path));
         for(var parameter:unit.findAll(Parameter.class)) for(var annotation:parameter.getAnnotations()) if(isModelAttribute(annotation,unit)) {
           String name=literalName(annotation);if(name!=null)models.add(model(name,qualifiedType(unit,parameter.getType().asString()),new SourceLocation(path,parameter.getBegin().map(p->p.line).orElse(1)),parameter));
