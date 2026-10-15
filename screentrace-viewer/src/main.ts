@@ -76,7 +76,7 @@ try {
  const helpPanel=element('div',undefined,'popover help-panel');
  helpPanel.append(element('h2','操作說明'));
  const helpList=(title:string,items:string[])=>{helpPanel.append(element('h3',title));const list=element('ul');for(const item of items)list.append(element('li',item));helpPanel.append(list);};
- helpList('快捷鍵',['k 保留、x 移除、u 未確認（作用於目前畫面，或右側欄中選取的按鈕）','n 前往下一個未確認的畫面','/ 搜尋畫面','Esc 返回畫布']);
+ helpList('快捷鍵',['k 保留、x 移除、u 未確認（作用於目前畫面，或右側欄中選取的按鈕）','n 前往下一個未確認的畫面','/ 搜尋畫面','f 全螢幕預覽（展示用，再按一次或 Esc 結束）','Esc 返回畫布']);
  helpList('操作方式',['點畫布上的畫面查看完整預覽','在預覽中點連結或按鈕，會模擬前往的畫面','標記會自動暫存在這個瀏覽器；請用「下載 md」保存並交付']);
  helpList('狀態',['綠色勾：保留','紅色叉：移除','沒有標示：未確認','隨畫面移除：畫面標記移除時，沒有個別標記的按鈕一起移除']);
  helpList('ScreenTrace 看不到的事',['書籤或 Email 連結直接進入的畫面','排程、批次工作或其他系統直接呼叫的 API','比對不到已知網址格式的程式組成連結']);
@@ -351,9 +351,9 @@ try {
   own.srcdoc=previewHtml(id);
   preview.append(own);
   const scroll=history.current?.screenId===id?history.current.scroll:0;
-  viewer=prototypeViewer(index,payload,id,preview,own,history,{back:()=>showCanvas(),focus:target=>openScreen(target),move:delta=>{const visit=history.move(delta,viewerScroll());if(visit)openScreen(visit.screenId,{push:false});},scroll});
+  viewer=prototypeViewer(index,payload,id,preview,own,history,{presenting,present:()=>setPresenting(!presenting),back:()=>showCanvas(),focus:target=>openScreen(target),move:delta=>{const visit=history.move(delta,viewerScroll());if(visit)openScreen(visit.screenId,{push:false});},scroll});
   // The notice sits beside the URL, outside the page, so it never covers the page's own buttons.
-  viewer.querySelector('.prototype-toolbar')?.append(notice);
+  viewer.querySelector('.prototype-present')?.before(notice);
   host.replaceChildren(viewer);
   // A simulated click that requested APIs on the way here says so on the screen it arrived at.
   if(pendingNotice){const status=viewer.querySelector('.prototype-status');if(status)status.textContent=pendingNotice;pendingNotice=undefined;}
@@ -404,8 +404,16 @@ try {
   if(overlayOpen())listCollapsed=true;
   page='screens';current=id;render();
  };
- const showCanvas=()=>{page='screens';current=undefined;highlightComponent=undefined;frame=undefined;viewer=undefined;simulation=undefined;render();};
- const showApi=(id?:string)=>{page='api';selectedApi=id;current=undefined;render();};
+ // Presenting lays the preview over the whole window, top bar and side panels included; the layout underneath stays.
+ let presenting=false;
+ const setPresenting=(on:boolean)=>{
+  presenting=on&&page==='screens'&&!!current;document.body.dataset.presenting=String(presenting);
+  const button=viewer?.querySelector<HTMLButtonElement>('.prototype-present');if(!button)return;
+  const label=presenting?'結束全螢幕':'全螢幕預覽';button.setAttribute('aria-label',label);button.title=label;button.setAttribute('aria-pressed',String(presenting));
+  button.querySelector('use')?.setAttribute('href',`#st-icon-${presenting?'minimize':'maximize'}`);
+ };
+ const showCanvas=()=>{setPresenting(false);page='screens';current=undefined;highlightComponent=undefined;frame=undefined;viewer=undefined;simulation=undefined;render();};
+ const showApi=(id?:string)=>{setPresenting(false);page='api';selectedApi=id;current=undefined;render();};
  screensTab.onclick=()=>{if(page!=='screens'||current)showCanvas();};
  apiTab.onclick=()=>showApi();
  listButton.onclick=()=>{listMode='list';renderSidebar();};
@@ -451,6 +459,7 @@ try {
   if(event.key==='Escape'&&editable){(target as HTMLElement).blur();return;}
   if(event.key==='Escape'){
    if(simulation?.closeDialog())return;
+   if(presenting){event.preventDefault();setPresenting(false);return;}
    if(page==='screens'&&current){event.preventDefault();showCanvas();}
    return;
   }
@@ -458,6 +467,7 @@ try {
   const key=event.key.toLowerCase();
   if(key==='/'){event.preventDefault();if(page!=='screens'){page='screens';render();}if(listCollapsed){listCollapsed=false;syncList();}search.focus();return;}
   if(key==='n'&&page==='screens'){event.preventDefault();nextUndecided();return;}
+  if(key==='f'&&page==='screens'&&current){event.preventDefault();setPresenting(!presenting);return;}
   const value=({k:'KEEP',x:'REMOVE',u:'UNDECIDED'} as Record<string,Decision>)[key];
   if(!value||page!=='screens'||!current)return;
   event.preventDefault();
