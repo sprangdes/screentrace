@@ -15,6 +15,8 @@ export interface CanvasOptions extends CanvasState {
  onOpen:(id:string)=>void;
  /** Builds the full preview of the focused screen inside the given box; resolves once it can be shown. */
  renderFocus:(id:string,host:HTMLElement)=>Promise<void>|void;
+ /** True while the open preview covers the whole window: moving to another screen then stays full-window. */
+ presenting?:()=>boolean;
  /** The person is pointing at a screen they may open next, so its preview can be prepared ahead. */
  onIntent?:(id:string)=>void;
  /** A focus line is hovered (its trigger components) or left (undefined). */
@@ -384,6 +386,8 @@ export function canvas(index:Index,payload:Payload,options:CanvasOptions):Canvas
   // Opening a screen ends any single-click zoom still in motion and drops the pinned lines.
   cancelAnimationFrame(frameId);frameId=0;pinned=undefined;for(const card of cards.values())card.classList.remove('is-pinned');
   const token=++sequence,previous=focused,old=previous?layer:undefined,oldOpacity=old?Number(getComputedStyle(old).opacity)||0:0;
+  // Full-window previews skip the zoom: the old one stays in place until the new one has faded in over it.
+  const crossfade=!!previous&&!!options.presenting?.();
   if(!previous){const o=rest??origin();overview={zoom,x,y,left:o.left,top:o.top};}
   focused=id;viewport.dataset.mode='focus';viewport.dataset.focused=id;options.onLineHover?.(undefined);
   clear();svg.classList.add('is-dim');lines.style.display='none';tips.replaceChildren();
@@ -397,7 +401,7 @@ export function canvas(index:Index,payload:Payload,options:CanvasOptions):Canvas
   const build=()=>{if(ready||token!==sequence)return;host.hidden=false;ready=Promise.resolve(options.renderFocus(id,host)).then(()=>{loaded=true;});};
   const finish=()=>{
    if(token!==sequence)return;
-   build();dropLeaving();({zoom,x,y}=aligned(id,host));apply();glue(host,id);
+   build();if(!crossfade)dropLeaving();({zoom,x,y}=aligned(id,host));apply();glue(host,id);
    for(const [cardId,card] of cards){card.classList.toggle('is-dim',cardId!==id);if(cardId!==id)card.classList.remove('is-morphing');}
    const reveal=()=>{
     if(token!==sequence)return;
@@ -405,10 +409,11 @@ export function canvas(index:Index,payload:Payload,options:CanvasOptions):Canvas
     const hide=()=>{if(token===sequence)cards.get(id)?.classList.add('is-under-focus');};
     if(loaded||reducedMotion())hide();else wait(FADE_MS).then(hide);
     showLines(id,token);
+    if(crossfade)wait(FADE_MS+20).then(()=>{if(token===sequence)dropLeaving();});
    };
    if(loaded||reducedMotion())reveal();else Promise.race([ready!,wait(READY_MS)]).then(reveal);
   };
-  if(reducedMotion()){finish();return;}
+  if(reducedMotion()||crossfade){finish();return;}
   animate(()=>{placeLayer(host);return aligned(id,host);},center(id),t=>{
    if(t>0)build();
    if(previous)fadeLeaving(previous,t,oldOpacity);

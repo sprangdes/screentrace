@@ -365,7 +365,7 @@ try {
  };
  const ensureCanvas=()=>{
   if(view&&main.contains(view.element))return view;
-  view=canvas(index,payload,{...canvasState(),transform:canvasTransform,onTransformChange:state=>{canvasTransform=state;},onOpen:id=>openScreen(id),renderFocus,onLineHover:highlightTriggers,onIntent:prepare,onExitRequest:()=>showCanvas()});
+  view=canvas(index,payload,{...canvasState(),transform:canvasTransform,onTransformChange:state=>{canvasTransform=state;},onOpen:id=>openScreen(id),renderFocus,presenting:()=>presenting,onLineHover:highlightTriggers,onIntent:prepare,onExitRequest:()=>showCanvas()});
   main.replaceChildren(view.element);
   return view;
  };
