@@ -7,8 +7,10 @@ import java.util.List;
 import java.util.function.Function;
 import org.jline.keymap.BindingReader;
 import org.jline.keymap.KeyMap;
+import org.jline.reader.EndOfFileException;
 import org.jline.reader.LineReader;
 import org.jline.reader.LineReaderBuilder;
+import org.jline.reader.UserInterruptException;
 import org.jline.terminal.Attributes;
 import org.jline.terminal.Terminal;
 import org.jline.terminal.TerminalBuilder;
@@ -21,7 +23,11 @@ final class InteractiveConsole implements AutoCloseable {
   private final LineReader lines;
 
   InteractiveConsole() throws IOException {
-    terminal = TerminalBuilder.builder().system(true).build();
+    this(TerminalBuilder.builder().system(true).build());
+  }
+
+  InteractiveConsole(Terminal terminal) {
+    this.terminal = terminal;
     lines = LineReaderBuilder.builder().terminal(terminal).build();
   }
 
@@ -103,6 +109,33 @@ final class InteractiveConsole implements AutoCloseable {
     }
   }
 
+  /** Enter opens the report; Esc, q, or closed input returns to the menu without opening it. */
+  boolean confirmOpenReport(String url) throws IOException {
+    if (!supportsInPlaceRedraw()) {
+      try {
+        return lines.readLine("開啟報表？Enter 開啟，輸入 q 回到選單：").trim().isEmpty();
+      } catch (UserInterruptException | EndOfFileException ignored) {
+        return false;
+      }
+    }
+    Attributes original = terminal.enterRawMode();
+    List<String> panel = completionPanelLines("開啟報表？", List.of(url), "Enter 開啟 · Esc 回到選單");
+    try {
+      renderMenu(panel, false);
+      BindingReader keys = new BindingReader(terminal.reader());
+      while (true) {
+        MenuKey key = readMenuKey(keys, 'q');
+        if (key == MenuKey.ACCEPT) return true;
+        if (key == MenuKey.CANCEL || key == MenuKey.SHORTCUT) return false;
+      }
+    } finally {
+      moveCursorUp(panel.size());
+      terminal.puts(Capability.clr_eos);
+      terminal.setAttributes(original);
+      terminal.flush();
+    }
+  }
+
   void showAnalysisComplete(String project, List<String> technologies, long endpoints, long screens, long components,
       Path output,long contextPathHintCount) {
     List<String> details = new java.util.ArrayList<>(List.of(
@@ -132,7 +165,8 @@ final class InteractiveConsole implements AutoCloseable {
     bindings.bind(MenuKey.SHORTCUT, String.valueOf(shortcut));
     bindings.setNomatch(MenuKey.IGNORE);
     bindings.setAmbiguousTimeout(50);
-    return reader.readBinding(bindings);
+    MenuKey key = reader.readBinding(bindings);
+    return key == null ? MenuKey.CANCEL : key;
   }
 
   private void bindTerminalKey(KeyMap<MenuKey> bindings, MenuKey key, Capability capability) {

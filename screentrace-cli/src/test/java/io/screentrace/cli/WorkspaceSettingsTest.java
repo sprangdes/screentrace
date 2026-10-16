@@ -79,4 +79,27 @@ class WorkspaceSettingsTest {
     new WorkspaceSettings(mixed,output).save(file);
     assertEquals(actual.toRealPath().toString(),new com.fasterxml.jackson.databind.ObjectMapper().readTree(file.toFile()).path("projectRoot").asText());
   }
+
+  @Test void legacyConfigWithoutABrowserLoadsAndReportsNoPreference() throws Exception {
+    Path file=root.resolve("legacy.json");
+    Files.writeString(file,new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(java.util.Map.of("projectRoot",root.toString(),"outputRoot",root.resolve("out").toString())));
+    assertEquals(root.toRealPath(),WorkspaceSettings.load(file).projectRoot());
+    org.junit.jupiter.api.Assertions.assertNull(WorkspaceSettings.browser(file));
+    org.junit.jupiter.api.Assertions.assertNull(WorkspaceSettings.browser(root.resolve("missing.json")));
+  }
+
+  @Test void browserPreferenceSurvivesWorkspaceSavesAndKeepsOtherSettings() throws Exception {
+    Path file=root.resolve("settings/config.json");
+    WorkspaceSettings.saveBrowser(file,"edge");
+    assertEquals("edge",WorkspaceSettings.browser(file));
+    new WorkspaceSettings(root.resolve("projects"),root.resolve("output")).save(file);
+    assertEquals("edge",WorkspaceSettings.browser(file));
+    WorkspaceSettings.saveBrowser(file,"firefox");
+    var loaded=WorkspaceSettings.load(file);
+    assertEquals(root.toRealPath().resolve("projects"),loaded.projectRoot());
+    assertEquals("firefox",WorkspaceSettings.browser(file));
+    WorkspaceSettings.saveBrowser(file,null);
+    org.junit.jupiter.api.Assertions.assertNull(WorkspaceSettings.browser(file));
+    org.junit.jupiter.api.Assertions.assertFalse(Files.readString(file).contains("browser"));
+  }
 }

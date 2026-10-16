@@ -63,11 +63,36 @@ final class WorkspaceSettings {
 
   void save(Path file) throws IOException {
     if (Files.isSymbolicLink(file) || Files.isSymbolicLink(file.getParent())) throw new IOException("ScreenTrace config path must not contain a symbolic link: " + file);
+    var paths=canonicalPaths(projectRoot,outputRoot);
+    writeAtomically(file,new StoredSettings(paths.projectRoot().toString(), paths.outputRoot().toString(),canonicalContextPaths(contextPaths),browser(file)));
+  }
+
+  /** The stored default browser id, or null when none is set (older config files have no such field). */
+  static String browser(Path file) {
+    try {
+      if (!Files.isRegularFile(file) || Files.isSymbolicLink(file)) return null;
+      var value = new ObjectMapper().readTree(file.toFile()).path("browser");
+      return value.isTextual() && !value.asText().isBlank() ? value.asText() : null;
+    } catch (IOException ignored) {
+      return null;
+    }
+  }
+
+  /** Stores the default browser while keeping every other setting; works before a project root is configured. */
+  static void saveBrowser(Path file, String browser) throws IOException {
+    if (Files.isSymbolicLink(file) || Files.isSymbolicLink(file.getParent())) throw new IOException("ScreenTrace config path must not contain a symbolic link: " + file);
+    var mapper = new ObjectMapper();
+    var tree = Files.isRegularFile(file) && mapper.readTree(file.toFile()) instanceof com.fasterxml.jackson.databind.node.ObjectNode existing
+        ? existing : mapper.createObjectNode();
+    if (browser == null) tree.remove("browser");
+    else tree.put("browser", browser);
+    writeAtomically(file, tree);
+  }
+
+  private static void writeAtomically(Path file, Object value) throws IOException {
     Files.createDirectories(file.getParent());
     Path temporary = Files.createTempFile(file.getParent(), "config-", ".json");
-    var paths=canonicalPaths(projectRoot,outputRoot);
-    new ObjectMapper().enable(SerializationFeature.INDENT_OUTPUT)
-        .writeValue(temporary.toFile(), new StoredSettings(paths.projectRoot().toString(), paths.outputRoot().toString(),canonicalContextPaths(contextPaths)));
+    new ObjectMapper().enable(SerializationFeature.INDENT_OUTPUT).writeValue(temporary.toFile(), value);
     try {
       Files.move(temporary, file, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
     } catch (AtomicMoveNotSupportedException ignored) {
@@ -96,12 +121,15 @@ final class WorkspaceSettings {
     public String projectRoot;
     public String outputRoot;
     public java.util.Map<String,java.util.List<String>> contextPaths;
+    @com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)
+    public String browser;
 
     @SuppressWarnings("unused")
     public StoredSettings() { }
 
-    private StoredSettings(String projectRoot, String outputRoot,java.util.Map<String,java.util.List<String>> contextPaths) {
+    private StoredSettings(String projectRoot, String outputRoot,java.util.Map<String,java.util.List<String>> contextPaths,String browser) {
       this.contextPaths=contextPaths;
+      this.browser=browser;
       this.projectRoot = projectRoot;
       this.outputRoot = outputRoot;
     }
