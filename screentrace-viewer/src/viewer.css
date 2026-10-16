@@ -226,6 +226,10 @@ main{position:relative;overflow:hidden;min-width:0}
 .focus-line-hit[data-kind=unresolved],.focus-line-hit[data-kind=loop]{cursor:help}
 .focus-line-hit:focus-visible{outline:0}
 g.is-active .focus-line{stroke-width:4}
+/* Focus lines stay faded so direction and count still read without crowding the preview; pointing at a line,
+   tabbing to it or pointing at one of its buttons brings it back. The shared-link labels are HTML and stay solid. */
+.focus-lines g{opacity:.3;transition:opacity .15s ease-out}
+.focus-lines g:is(.is-active,.is-lit,:has(.focus-line-hit:hover),:has(.focus-line-hit:focus-visible)){opacity:1}
 .focus-tips{position:absolute;inset:0;z-index:7;pointer-events:none}
 .focus-tooltip{position:absolute}
 

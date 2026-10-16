@@ -28,6 +28,8 @@ export interface CanvasView {
  update(state:CanvasState):void;
  focus(id:string):void;
  exit():void;
+ /** Brings back the faded focus lines that this component of the focused screen leads along; undefined fades them again. */
+ lightLines(component:string|undefined):void;
  readonly focused:string|undefined;
 }
 
@@ -290,8 +292,11 @@ export function canvas(index:Index,payload:Payload,options:CanvasOptions):Canvas
   }
  };
  viewport.addEventListener('click',()=>tips.querySelectorAll<HTMLElement>('.shared-popover:not([hidden])').forEach(menu=>{menu.hidden=true;}));
+ // Focus lines are faded until pointed at; each outgoing line remembers the buttons that take it.
+ let triggerLines:{group:SVGGElement;triggers:string[]}[]=[];
+ const lightLines=(component:string|undefined)=>{for(const {group,triggers} of triggerLines)group.classList.toggle('is-lit',!!component&&triggers.includes(component));};
  const drawLines=(id:string)=>{
-  lines.querySelectorAll('g').forEach(g=>g.remove());tips.replaceChildren();
+  lines.querySelectorAll('g').forEach(g=>g.remove());tips.replaceChildren();triggerLines=[];
   const b=box(),cx=b.left+b.width/2,cy=b.top+b.height/2,w=viewport.clientWidth,h=viewport.clientHeight,from=center(id);
   lines.setAttribute('width',String(w));lines.setAttribute('height',String(h));
   // Lines leave toward each destination and arrive from each source, in the directions the overview draws them.
@@ -337,6 +342,7 @@ export function canvas(index:Index,payload:Payload,options:CanvasOptions):Canvas
    const open=()=>{if(segment.kind==='known'||arriving)options.onOpen(other);};
    hit.addEventListener('click',open);hit.addEventListener('keydown',event=>{const key=(event as KeyboardEvent).key;if(key==='Enter'||key===' '){event.preventDefault();open();}});
    group.append(visibleLine,hit);lines.append(group);
+   if(!arriving)triggerLines.push({group,triggers:relation.triggers});
   }
  };
  // Zooming is a shared-element move: the card's thumbnail lands exactly where the page appears in the preview box,
@@ -486,7 +492,7 @@ export function canvas(index:Index,payload:Payload,options:CanvasOptions):Canvas
   else if(!options.transform&&!overview)fit();
  }).observe(viewport);
  requestAnimationFrame(()=>{if(options.transform){viewport.dataset.fitted='true';apply();}else fit();});
- return {element:viewport,update,focus,exit,get focused(){return focused;}};
+ return {element:viewport,update,focus,exit,lightLines,get focused(){return focused;}};
 }
 
 /** File structure view of the screens, grouped by their source folders. */

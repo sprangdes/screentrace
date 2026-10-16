@@ -267,6 +267,7 @@ try {
  };
  /** A dashed frame drawn over the button, so the page's own styles and decision outlines stay untouched. */
  const pointAt=(component:string|undefined)=>{
+  view?.lightLines(component);
   const doc=frame?.contentDocument;if(!doc||!current)return;
   doc.querySelectorAll('[data-st-viewer-pointer]').forEach(node=>node.remove());
   if(!component)return;
@@ -299,12 +300,14 @@ try {
    if(record.graphScreenId!==id||!record.graphComponentId)continue;
    try{const node=doc.querySelector(previewSelector(record.path));if(node)owners.set(node,record.graphComponentId);}catch{/* an unreadable path maps nothing */}
   }
+  const ownerOf=(target:EventTarget|null)=>{for(let node=target as Element|null;node;node=node.parentElement){const component=owners.get(node);if(component)return component;}return undefined;};
   doc.addEventListener('click',event=>{
-   for(let node=event.target as Element|null;node;node=node.parentElement){
-    const component=owners.get(node);
-    if(component){highlightComponent=component;markRow(component);decorate(doc,id);return;}
-   }
+   const component=ownerOf(event.target);
+   if(component){highlightComponent=component;markRow(component);decorate(doc,id);}
   },true);
+  // Pointing at a button in the preview brings back the focus lines it leads along.
+  doc.addEventListener('mouseover',event=>{if(current===id)view?.lightLines(ownerOf(event.target));});
+  doc.documentElement.addEventListener('mouseleave',()=>{if(current===id)view?.lightLines(undefined);});
  };
  /** Decision outlines and badges inside the preview, reapplied in place whenever decisions change. */
  const decorate=(doc:Document,id:string)=>{
