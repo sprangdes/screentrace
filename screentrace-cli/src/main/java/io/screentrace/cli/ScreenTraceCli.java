@@ -9,6 +9,7 @@ import io.screentrace.report.PreviewResourceBoundaryException;
 import io.screentrace.scanner.ProjectScanner;
 import io.screentrace.scanner.SafeProjectFiles;
 import java.awt.Desktop;
+import java.awt.GraphicsEnvironment;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -36,14 +37,22 @@ public final class ScreenTraceCli {
     return 2;
   }
 
-  private static int run(String[] args) throws IOException, InterruptedException {
+  /** Opens a finished report; tests replace it to observe which entry points open one. */
+  interface ReportOpener { void open(Path report) throws IOException; }
+
+  static ReportOpener reportOpener = ScreenTraceCli::openReport;
+
+  /** Asks whether to open a freshly analyzed report. */
+  interface ReportPrompt { boolean confirmOpen(String url) throws IOException; }
+
+  static int run(String[] args) throws IOException, InterruptedException {
     if(args.length>0&&args[0].equals("library")){System.out.println(LibraryCommands.run(args,WorkspaceSettings.defaultFile().getParent()));return 0;}
     Command command = Command.parse(args);
     if(command.action()==Action.PATH)return analyzePath(command.projectName());
     if(command.action()==Action.INTERACTIVE||command.action()==Action.CONFIG){
       if(!interactiveTerminalAvailable())return command.action()==Action.CONFIG?failConfigWithoutTerminal():failForMissingTerminal();
       try(InteractiveConsole console=new InteractiveConsole()){
-        if(command.action()==Action.CONFIG)configure(console);
+        if(command.action()==Action.CONFIG)settingsMenu(console);
         else runInteractive(console,new ProjectCatalog());
       }
       return 0;
@@ -77,7 +86,7 @@ public final class ScreenTraceCli {
     }
     WorkspaceSettings settings=settingsFor(source);
     AnalysisResult result=analyze(projectAt(source,settings),settings);
-    logAnalysis(result);openReport(result.report());
+    logAnalysis(result);reportOpener.open(result.report());
     return 0;
   }
 
@@ -142,8 +151,8 @@ public final class ScreenTraceCli {
     ProjectCatalog.Project project;
     try{project=selectProject(console,catalog,projects,command.projectName());}
     catch(InteractiveConsole.SelectionCancelledException ignored){return;}
-    if(command.action()==Action.ANALYZE){AnalysisResult result=analyze(project,settings);logAnalysis(result);openReport(result.report());}
-    else if(command.action()==Action.REPORT)openReport(new SingleHtmlAnalysisWriter().generate(project.analysisDirectory(),new LibraryStore(WorkspaceSettings.defaultFile().getParent()).selected(project.name())).path());
+    if(command.action()==Action.ANALYZE){AnalysisResult result=analyze(project,settings);logAnalysis(result);printReportPath(result.report());}
+    else if(command.action()==Action.REPORT)reportOpener.open(new SingleHtmlAnalysisWriter().generate(project.analysisDirectory(),new LibraryStore(WorkspaceSettings.defaultFile().getParent()).selected(project.name())).path());
   }
 
   private static void runInteractive(InteractiveConsole console, ProjectCatalog catalog)
@@ -160,7 +169,7 @@ public final class ScreenTraceCli {
         return;
       }
       if (action == Action.EXIT) return;
-      if (action == Action.CONFIG) { configure(console); continue; }
+      if (action == Action.CONFIG) { settingsMenu(console); continue; }
       ProjectCatalog.Project project;
       try {
         project = action == Action.PATH
@@ -169,25 +178,69 @@ public final class ScreenTraceCli {
       } catch (InteractiveConsole.SelectionCancelledException ignored) {
         continue;
       }
-      Path report;
       if (action == Action.REPORT) {
-        report = new SingleHtmlAnalysisWriter().generate(project.analysisDirectory(),new LibraryStore(WorkspaceSettings.defaultFile().getParent()).selected(project.name())).path();
+        Path report = new SingleHtmlAnalysisWriter().generate(project.analysisDirectory(),new LibraryStore(WorkspaceSettings.defaultFile().getParent()).selected(project.name())).path();
+        reportOpener.open(report);
+        console.waitForMenuReturn(report.toUri().toString());
       } else {
         AnalysisResult result = analyze(project, action == Action.PATH ? settingsFor(project.sourceDirectory()) : settings);
         console.showAnalysisComplete(result.project(), result.technologies(), result.endpoints(), result.screens(),
             result.components(), result.output(), result.contextPathHintCount());
-        report = result.report();
+        offerReport(console::confirmOpenReport, result.report());
       }
-      openReport(report);
-      console.waitForMenuReturn(report.toUri().toString());
     }
+  }
+
+  /** After an interactive analysis: open the report only when asked; either way the menu comes back. */
+  static void offerReport(ReportPrompt prompt, Path report) throws IOException {
+    if (prompt.confirmOpen(report.toUri().toString())) reportOpener.open(report);
+  }
+
+  private static void settingsMenu(InteractiveConsole console) throws IOException {
+    List<String> items = List.of("專案根目錄", "預設瀏覽器（目前：" + browserLabel(WorkspaceSettings.browser(WorkspaceSettings.defaultFile())) + "）", "← 返回功能選單");
+    String choice;
+    try {
+      choice = console.select("設定", items, item -> item, 'b', "b / Esc 返回", items.size() - 1);
+    } catch (InteractiveConsole.SelectionCancelledException ignored) {
+      return;
+    }
+    if (choice.equals(items.get(0))) configure(console);
+    else if (choice.equals(items.get(1))) configureBrowser(console, ReportBrowser.forCurrentOs());
+  }
+
+  /** Lists only the browsers found on this computer, plus the system default. */
+  private static void configureBrowser(InteractiveConsole console, ReportBrowser.Detector detector) throws IOException {
+    List<BrowserOption> options = browserOptions(ReportBrowser.installed(detector));
+    BrowserOption choice;
+    try {
+      choice = console.select("預設瀏覽器", options, BrowserOption::label, 'b', "b / Esc 返回", options.size() - 1);
+    } catch (InteractiveConsole.SelectionCancelledException ignored) {
+      return;
+    }
+    if (choice.id() == null) return;
+    WorkspaceSettings.saveBrowser(WorkspaceSettings.defaultFile(), choice.id());
+    LOGGER.info(() -> "預設瀏覽器已設定為：" + browserLabel(choice.id()));
+  }
+
+  static List<BrowserOption> browserOptions(List<ReportBrowser.Choice> installed) {
+    List<BrowserOption> options = new java.util.ArrayList<>();
+    for (ReportBrowser.Choice browser : installed)
+      options.add(new BrowserOption(browser.kind().id(), browser.label() + (browser.kind().autosave() ? "" : "（不支援自動存檔）")));
+    options.add(new BrowserOption(ReportBrowser.SYSTEM, "系統預設"));
+    options.add(new BrowserOption(null, "← 返回設定"));
+    return options;
+  }
+
+  static String browserLabel(String preference) {
+    if (preference == null) return "自動（Chrome → Edge → 系統預設）";
+    if (ReportBrowser.SYSTEM.equals(preference)) return "系統預設";
+    return ReportBrowser.Kind.byId(preference).map(ReportBrowser.Kind::label).orElse(preference);
   }
 
   private static WorkspaceSettings loadOrConfigure(InteractiveConsole console) throws IOException {
     Path settingsFile = WorkspaceSettings.defaultFile();
-    if (!Files.isRegularFile(settingsFile)) return configure(console);
-    WorkspaceSettings settings = WorkspaceSettings.load(settingsFile);
-    return Files.isDirectory(settings.projectRoot()) ? settings : configure(console);
+    WorkspaceSettings settings = Files.isRegularFile(settingsFile) ? existingSettings() : null;
+    return settings != null && Files.isDirectory(settings.projectRoot()) ? settings : configure(console);
   }
 
   private static WorkspaceSettings configure(InteractiveConsole console) throws IOException {
@@ -213,13 +266,13 @@ public final class ScreenTraceCli {
     }
   }
 
-  /** Without a configured project root the first item asks for a folder path; configuring a root stays optional. */
+  /** Without a configured project root the first item asks for a folder path; the settings item is always offered. */
   static List<Action> menu(boolean hasRoot, boolean hasReports) {
     List<Action> actions = new java.util.ArrayList<>();
     if (hasRoot) actions.add(Action.ANALYZE);
     actions.add(Action.PATH);
     if (hasReports) actions.add(Action.REPORT);
-    if (!hasRoot) actions.add(Action.CONFIG);
+    actions.add(Action.CONFIG);
     actions.add(Action.EXIT);
     return actions;
   }
@@ -323,14 +376,24 @@ public final class ScreenTraceCli {
     if (process.exitValue() != 0) throw new IOException("預覽資源封裝失敗");
   }
 
-  private static void openReport(Path file) throws IOException {
+  private static Path printReportPath(Path file) throws IOException {
     Path safe = SafeProjectFiles.requireExistingRegularFileWithin(file.getParent(), file);
     LOGGER.info("單一 HTML 報表：" + safe.toUri());
-    try {
-      if (Desktop.isDesktopSupported()) Desktop.getDesktop().browse(safe.toUri());
-    } catch (IOException ignored) {
-      LOGGER.info("瀏覽器無法自動開啟，請直接開啟上述 HTML 檔案。");
-    }
+    return safe;
+  }
+
+  /** The configured browser, else Chrome, Edge, then the system default; headless runs only print the path. */
+  private static void openReport(Path file) throws IOException {
+    Path safe = printReportPath(file);
+    if (GraphicsEnvironment.isHeadless()) return;
+    ReportBrowser.open(safe, WorkspaceSettings.browser(WorkspaceSettings.defaultFile()), ReportBrowser.forCurrentOs(),
+        ReportBrowser::startProcess, ScreenTraceCli::browseWithSystemDefault, ReportBrowser.isMac(), LOGGER::info);
+  }
+
+  private static boolean browseWithSystemDefault(java.net.URI uri) throws IOException {
+    if (!Desktop.isDesktopSupported() || !Desktop.getDesktop().isSupported(Desktop.Action.BROWSE)) return false;
+    Desktop.getDesktop().browse(uri);
+    return true;
   }
 
   private static final java.util.Set<String> RETIRED_COMMANDS = java.util.Set.of("capture", "open", "serve", "export");
@@ -359,12 +422,14 @@ public final class ScreenTraceCli {
 
   private record ProjectChoice(ProjectCatalog.Project project, String label) { }
 
+  record BrowserOption(String id, String label) { }
+
   private record AnalysisResult(Path report, String project, List<String> technologies, long endpoints, long screens,
       long components, Path output,long contextPathHintCount) { }
 
   enum Action {
     INTERACTIVE(null, null), ANALYZE("analyze", "分析專案"), PATH(null, "輸入專案路徑"), REPORT("report", "開啟報表"),
-    EXIT(null, "結束 ScreenTrace"), CONFIG("config", "設定專案根目錄（選用）");
+    EXIT(null, "結束 ScreenTrace"), CONFIG("config", "設定");
 
     private final String command;
     private final String label;

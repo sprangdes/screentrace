@@ -88,6 +88,7 @@ class NonInteractiveCliTest {
     Files.writeString(home.resolve(".screentrace/config.json"),mapper.writeValueAsString(java.util.Map.of("projectRoot",projectRoot.toString(),"outputRoot",outputRoot.toString())));
     Result analyzed=run(home,"analyze",project);
     assertEquals(0,analyzed.exitCode(),analyzed.output());assertTrue(analyzed.output().contains("分析完成"),analyzed.output());
+    assertTrue(analyzed.output().contains("單一 HTML 報表：file:"),analyzed.output());
     Result reported=run(home,"report",project);
     assertEquals(0,reported.exitCode(),reported.output());assertFalse(reported.output().contains("Exception"),reported.output());
     return Files.readAllBytes(outputRoot.resolve(project+"/report/screentrace-report.html"));
@@ -117,9 +118,9 @@ class NonInteractiveCliTest {
   }
 
   @Test void interactiveMenuAsksForAPathFirstWhenNoProjectRootIsConfigured() {
-    assertEquals(java.util.List.of("輸入專案路徑","設定專案根目錄（選用）","結束 ScreenTrace"),ScreenTraceCli.menu(false,false).stream().map(a->a.label()).toList());
-    assertEquals(java.util.List.of("輸入專案路徑","開啟報表","設定專案根目錄（選用）","結束 ScreenTrace"),ScreenTraceCli.menu(false,true).stream().map(a->a.label()).toList());
-    assertEquals(java.util.List.of("分析專案","輸入專案路徑","開啟報表","結束 ScreenTrace"),ScreenTraceCli.menu(true,true).stream().map(a->a.label()).toList());
+    assertEquals(java.util.List.of("輸入專案路徑","設定","結束 ScreenTrace"),ScreenTraceCli.menu(false,false).stream().map(a->a.label()).toList());
+    assertEquals(java.util.List.of("輸入專案路徑","開啟報表","設定","結束 ScreenTrace"),ScreenTraceCli.menu(false,true).stream().map(a->a.label()).toList());
+    assertEquals(java.util.List.of("分析專案","輸入專案路徑","開啟報表","設定","結束 ScreenTrace"),ScreenTraceCli.menu(true,true).stream().map(a->a.label()).toList());
     assertEquals(Path.of(System.getProperty("user.home"),"demo"),ScreenTraceCli.projectPath("~/demo"));
   }
 
