@@ -1,14 +1,12 @@
 # ScreenTrace
 
-ScreenTrace 會分析伺服端渲染 JSP 專案的畫面、路由與可互動元件，產生可瀏覽的 Screen flow、靜態頁面、按鈕資訊與確認結果；不會啟動或修改目標專案。
+ScreenTrace 會分析 JSP 伺服端渲染與 React 前端專案的畫面、路由與可互動元件，產生可瀏覽的 Screen flow、靜態頁面、按鈕資訊與確認結果；不會啟動或修改目標專案。
 
 目前支援 Struts 1、Struts + Spring、Spring MVC JSP、Spring Boot JSP 專案，以及 Spring Boot 後端搭配 React（react-router）前端的專案；偵測到 Struts 2 會以 `UNSUPPORTED_FRAMEWORK` 拒絕分析；產生的資料與報表都寫入設定的分析結果根目錄，不會修改原始程式碼。
 
 ScreenTrace 會展開可解析的 JSP Tag、CSS 與本地資源，並以 Playwright Chromium 渲染靜態 HTML，產生畫面截圖與可見元件位置。JSP 的動態清單、明細與欄位會填入合成示範資料；不會啟動目標專案或連線其資料庫。
 
-## 調整進度
-
-R17 已把報表簡化為主要流程：在畫布上看畫面、點按鈕試操作、標記保留／移除、進度自動存成 md 交給 AI。需求方操作請看[報表使用指南](docs/USER_GUIDE.md)；CLI 與疑難排解請看[分析人員指南](docs/ANALYST_GUIDE.md)。進度見 [ROADMAP.md](docs/ROADMAP.md) 與 [R17 報告](docs/reports/R17.md)。
+報表的主要流程：在畫布上看畫面、點按鈕試操作、標記保留／移除、進度自動存成 md 交給 AI。需求方操作請看[報表使用指南](docs/USER_GUIDE.md)；CLI 與疑難排解請看[分析人員指南](docs/ANALYST_GUIDE.md)。
 
 ## 初次執行
 
@@ -71,7 +69,7 @@ Windows：
 
 報表只有兩頁：
 
-- **畫面**：畫布呈現所有畫面與關聯線；點畫面會在同一張畫布放大，四周留下它出發的關聯線，滑過線顯示目的畫面縮圖，點線前往。在預覽中點按鈕會模擬前往的畫面（不做資料檢核）。右側欄標記保留／移除，並列出按鈕、呼叫的 API 與來源畫面。左側搜尋框可用實際網址比對路由樣板。
+- **畫面**：畫布呈現所有畫面與關聯線；畫面較多時依網址第一段分區。觸控板兩指滑動移動畫布，捏合或 ⌘／Ctrl＋滾輪縮放。點一下畫面標出它的關聯線，點兩下在同一張畫布放大成完整預覽，四周留下進出的關聯線，滑過線顯示目的畫面縮圖，點線前往。在預覽中點按鈕會模擬前往的畫面（不做資料檢核）；按 `f` 或預覽右上角按鈕可切換全螢幕預覽。右側欄標記保留／移除，並列出按鈕、呼叫的 API 與來源畫面；左右側欄都可收合。左側搜尋框可用實際網址比對路由樣板。
 - **API**：列出後端 API、處理程式、呼叫來源與狀態（使用中／未被使用／可移除）。
 
 ## 確認進度與 md
@@ -98,7 +96,7 @@ md 一律為 format_version 1，舊版 v2／v3 檔仍可開啟。格式、排序
     └── *.png                    # Chromium 渲染截圖
 ```
 
-分析器仍會產出元素樣式資料；R17 起報表與 md 不顯示樣式與元件庫內容。
+分析器仍會產出元素樣式資料；報表與 md 不顯示樣式與元件庫內容。
 
 ## 疑難排解
 
@@ -117,6 +115,7 @@ md 一律為 format_version 1，舊版 v2／v3 檔仍可開啟。格式、排序
 ## 開發與驗證
 
 ```bash
+npm --prefix screentrace-js ci --ignore-scripts
 npm --prefix screentrace-viewer ci --ignore-scripts
 npm --prefix screentrace-viewer run build
 mvn clean verify
@@ -149,19 +148,19 @@ npm --prefix screentrace-capture audit --audit-level=high
 
 首次下載完整 NVD 資料仍可能較慢，後續會使用快取並更新變更資料。Sonatype OSS Index 需要另行認證；未提供認證時，新版工具會略過該額外資料來源，NVD 掃描仍執行。
 
-### JavaScript 靜態分析（WP4）
+### JavaScript 與 React 靜態分析
 
-分析 inline／外部 script、module 的本地相對 import、事件屬性與 javascript: URL，使用釘選 Acorn AST，不執行目標程式。setup／啟動腳本準備 screentrace-js 相依；直接跑 Maven 前先 `npm --prefix screentrace-js ci --ignore-scripts`。事件／呼叫／CLIENT 檢核進入 Application Graph，未知選擇器與動態值保留 UNRESOLVED。追蹤深度預設 10，Java 可用 `-Dscreentrace.js.maxDepth=5` 設定；Node JSON 以 maxDepth 設定。
+分析 inline／外部 script、module 的本地相對 import、事件屬性與 javascript: URL，使用釘選 Acorn AST，不執行目標程式。setup／啟動腳本準備 screentrace-js 相依；直接跑 Maven 前先 `npm --prefix screentrace-js ci --ignore-scripts`。事件／呼叫／CLIENT 檢核進入 Application Graph，未知選擇器與動態值保留 UNRESOLVED。追蹤深度預設 10，Java 可用 `-Dscreentrace.js.maxDepth=5` 設定；Node JSON 以 maxDepth 設定。React 專案的路由（react-router）、渲染元件與事件處理效果以 Babel AST 分析，同樣不執行目標程式。
 
-JS API request 節點保存來源方法、URL、資料欄位，backendStatus 為 UNRESOLVED；後端 URL／context path 配對是尚未開始的 WP5，不能把 WP4 的 request 節點當成已證明的後端 handler。script src context 前綴例外見 v1.3 與 ADR 0008，不套用到 API URL。
+JS API request 節點保存來源方法、URL、資料欄位；只有在後端 URL 配對成立時才連到 handler，無法證明的配對保留 UNRESOLVED 或歧義。script src context 前綴例外見 ADR 0008，不套用到 API URL。
 
-WP5 的 WAR context path 可在 `~/.screentrace/config.json` 加入 `contextPaths`，鍵為專案絕對路徑，值為明確候選陣列，例如 `"contextPaths": {"/workspace/shop": ["/shop"]}`。未設定不推測部署路徑；多個不同候選保留歧義。Spring Boot properties／YAML 的 `server.servlet.context-path` 亦保留來源證據。
+WAR context path 可在 `~/.screentrace/config.json` 加入 `contextPaths`，鍵為專案絕對路徑，值為明確候選陣列，例如 `"contextPaths": {"/workspace/shop": ["/shop"]}`。未設定不推測部署路徑；多個不同候選保留歧義。Spring Boot properties／YAML 的 `server.servlet.context-path` 亦保留來源證據。
 
-### WP5 schema 與 context
+### Graph schema 與 context
 
-新分析的 Struts／Spring／混合圖一律 schema 2.2，嚴格驗證來源證據。URL 配對與明確 context 候選保留全部歧義；API 契約與 SERVER 規則附來源。core 舊版 API 僅歷史相容；舊報表與 JSON 匯出已退場，決定見 [ADR 0015](docs/adr/0015-schema-two-production-and-historical-compatibility.md)、[ADR 0016](docs/adr/0016-historical-report-entries-and-schema-retirement.md)。WP5 完整測試與 CI 見 [回報](docs/reports/WP5.md)。
+新分析的 Struts／Spring／混合圖一律 schema 2.2，嚴格驗證來源證據。URL 配對與明確 context 候選保留全部歧義；API 契約與 SERVER 規則附來源。core 舊版 API 僅歷史相容；舊報表與 JSON 匯出已退場，決定見 [ADR 0015](docs/adr/0015-schema-two-production-and-historical-compatibility.md)、[ADR 0016](docs/adr/0016-historical-report-entries-and-schema-retirement.md)。
 
-### WP6 靜態重建預覽
+### 靜態重建預覽
 
 正式 CLI 使用 schema 2.2 的完整預覽模式；獨立執行：
 
@@ -171,7 +170,7 @@ node screentrace-capture/capture-static-jsp.mjs <target-project> <analysis-direc
 
 每畫面的警告上限可用 `--style-element-limit=50000`、`--style-byte-limit=16777216` 調整；超量產生診斷，完整元素／樣式保留。安全路徑、來源檔大小與截圖硬限制仍生效，失敗明確標記。預設舊 capture 入口保留為歷史工具；正式 CLI 使用完整模式並執行 pack-preview 靜態封裝；不執行目標 JSP、Java 或 JavaScript。契約與限制見 [ADR 0018](docs/adr/0018-complete-reconstructed-preview.md)。
 
-### 單檔檢視器建置（WP7）
+### 單檔檢視器建置
 
 ```bash
 npm --prefix screentrace-viewer ci --ignore-scripts
@@ -181,13 +180,13 @@ npm --prefix screentrace-viewer test
 node --test screentrace-viewer/test/*.e2e.mjs
 ```
 
-新入口 `SingleHtmlReportGenerator.generate` 只接受嚴格 schema 2.2，注入圖、預覽、內嵌文件與 manifest，產出 `report/screentrace-report.html` 及實際 bytes 的 `report-size.json`；超過 100 MB 只警告。單檔以 `file://` 開啟，沒有執行期 npm 相依。CLI 已切換 SingleHtmlAnalysisWriter；舊 ReportGenerator、localhost 與 POST 端點已移除。設定 `ST_BROWSERS=chromium,firefox,webkit` 可執行三引擎測試，須先安裝對應 Playwright 瀏覽器。
+新入口 `SingleHtmlReportGenerator.generate` 只接受嚴格 schema 2.2，注入圖、預覽、內嵌文件與 manifest，產出 `report/screentrace-report.html` 及實際 bytes 的 `report-size.json`；超過 100 MB 只警告。單檔以 `file://` 開啟，沒有執行期 npm 相依。CLI 透過 SingleHtmlAnalysisWriter 產生報表，不啟動 localhost 服務。設定 `ST_BROWSERS=chromium,firefox,webkit` 可執行三引擎測試，須先安裝對應 Playwright 瀏覽器。
 
 標記自動暫存在應用名稱＋分析指紋的 localStorage，並可自動寫入使用者選擇的 md 進度檔；拒絕存取時只警告。複合鍵契約見 [REVIEW_STATE_CONTRACT](docs/REVIEW_STATE_CONTRACT.md)。md 匯出／匯入共用模組見 [REVIEW_MD_CONTRACT](docs/REVIEW_MD_CONTRACT.md)；決策可用單一 md 跨瀏覽器還原。
 
-### 元件庫 manifest（WP9）
+### 元件庫 manifest
 
-R17 起報表與 md 不再顯示元件庫建議與覆寫；以下 CLI 仍可管理 manifest，供日後使用。
+報表與 md 目前不顯示元件庫建議與覆寫；以下 CLI 仍可管理 manifest，供日後使用。
 
 使用 [虛構 sample manifest](docs/examples/component-library.sample.json) 與 [JSON Schema](docs/schemas/component-library.schema.json)；不解析真實 Angular 套件／Storybook。
 
@@ -204,11 +203,9 @@ manifest 的 library.name／version、元件 id／name／selector／category 最
 
 未指定 project 只儲存、不選用。相同名稱@版本異內容需明確 --replace，已綁定專案更換後重新執行 report；解除後顯示「未匯入元件庫」。list 列摘要與綁定，不列工作區路徑。
 
-元件詳情顯示自動候選／屬性與事件對照；確認模式下 KEEP 畫面的元件可手動覆寫，共用元件按畫面獨立保存。md 帶入選用庫名稱@版本與摘要，舊庫覆寫隔離為 orphan，換回原庫恢復。決策與覆寫透過單一 md 還原，詳細欄位與隔離規則見 [Review md 契約](docs/REVIEW_MD_CONTRACT.md)。
+### 合成專案整合驗證
 
-### 合成專案整合驗證（WP10）
-
-[五類自行撰寫的 fixture](fixtures/wp10/README.md) 與 [WP2–WP5 語法清單](fixtures/wp10/coverage.json) 不建置、不啟動目標服務。Java 的 SyntheticProjectIntegrationTest 在隔離工作區執行四類 fixture 的真實 analyze／capture／pack／report 兩次，逐 bytes 比對圖、同環境預覽與單一 HTML；Struts 2 只驗證拒絕。Node 共用 md 與三引擎 E2E 讀取這些實際產物，涵蓋元件庫選用、覆寫、下載、清除暫存及匯入還原。
+[五類自行撰寫的 fixture](fixtures/wp10/README.md) 與 [語法涵蓋清單](fixtures/wp10/coverage.json) 不建置、不啟動目標服務。Java 的 SyntheticProjectIntegrationTest 在隔離工作區執行四類 fixture 的真實 analyze／capture／pack／report 兩次，逐 bytes 比對圖、同環境預覽與單一 HTML；Struts 2 只驗證拒絕。Node 共用 md 與三引擎 E2E 讀取這些實際產物，涵蓋標記、下載、清除暫存及匯入還原。
 
 ```bash
 npm --prefix screentrace-viewer run build
@@ -216,4 +213,4 @@ mvn verify
 ST_BROWSERS=chromium,firefox,webkit node --test screentrace-viewer/test/*.e2e.mjs
 ```
 
-E2E 依賴前一步 Java 生成的 `screentrace-cli/target/wp10-fixtures`；預覽決定性只在同一次測試的相同瀏覽器／字型環境比較，不把跨作業系統截圖混為同一基線。既有 CI 已依此順序執行，不增加效能調校、格式化或相容清理工作。
+E2E 依賴前一步 Java 生成的 `screentrace-cli/target/wp10-fixtures`；預覽決定性只在同一次測試的相同瀏覽器／字型環境比較，不把跨作業系統截圖混為同一基線。CI 依此順序執行。
