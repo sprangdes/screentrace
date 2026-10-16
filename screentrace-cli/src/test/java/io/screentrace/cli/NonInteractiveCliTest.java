@@ -117,10 +117,10 @@ class NonInteractiveCliTest {
     assertTrue(Files.isRegularFile(output.resolve("spring-mvc-jsp/report/screentrace-report.html")),result.output());
   }
 
-  @Test void interactiveMenuAsksForAPathFirstWhenNoProjectRootIsConfigured() {
-    assertEquals(java.util.List.of("輸入專案路徑","設定","結束 ScreenTrace"),ScreenTraceCli.menu(false,false).stream().map(a->a.label()).toList());
-    assertEquals(java.util.List.of("輸入專案路徑","開啟報表","設定","結束 ScreenTrace"),ScreenTraceCli.menu(false,true).stream().map(a->a.label()).toList());
-    assertEquals(java.util.List.of("分析專案","輸入專案路徑","開啟報表","設定","結束 ScreenTrace"),ScreenTraceCli.menu(true,true).stream().map(a->a.label()).toList());
+  @Test void interactiveMenuHasOneAnalyseEntryWithOrWithoutAProjectRoot() {
+    assertEquals(java.util.List.of("分析專案","設定","結束 ScreenTrace"),ScreenTraceCli.menu(false,false).stream().map(a->a.label()).toList());
+    assertEquals(java.util.List.of("分析專案","開啟報表","設定","結束 ScreenTrace"),ScreenTraceCli.menu(false,true).stream().map(a->a.label()).toList());
+    assertEquals(java.util.List.of("分析專案","開啟報表","設定","結束 ScreenTrace"),ScreenTraceCli.menu(true,true).stream().map(a->a.label()).toList());
     assertEquals(Path.of(System.getProperty("user.home"),"demo"),ScreenTraceCli.projectPath("~/demo"));
   }
 

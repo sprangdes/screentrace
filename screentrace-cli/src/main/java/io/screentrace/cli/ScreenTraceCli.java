@@ -172,9 +172,9 @@ public final class ScreenTraceCli {
       if (action == Action.CONFIG) { settingsMenu(console); continue; }
       ProjectCatalog.Project project;
       try {
-        project = action == Action.PATH
-            ? projectAt(console.existingDirectory("專案資料夾路徑", Path.of("").toAbsolutePath()), settingsFor(Path.of("").toAbsolutePath()))
-            : selectProject(console, catalog, action == Action.ANALYZE ? catalog.allProjects(settings) : catalog.analyzedProjects(settings), null);
+        project = action == Action.ANALYZE
+            ? selectAnalysisTarget(console, hasRoot ? catalog.allProjects(settings) : List.of())
+            : selectProject(console, catalog, catalog.analyzedProjects(settings), null);
       } catch (InteractiveConsole.SelectionCancelledException ignored) {
         continue;
       }
@@ -183,7 +183,7 @@ public final class ScreenTraceCli {
         reportOpener.open(report);
         console.waitForMenuReturn(report.toUri().toString());
       } else {
-        AnalysisResult result = analyze(project, action == Action.PATH ? settingsFor(project.sourceDirectory()) : settings);
+        AnalysisResult result = analyze(project, hasRoot ? settings : settingsFor(project.sourceDirectory()));
         console.showAnalysisComplete(result.project(), result.technologies(), result.endpoints(), result.screens(),
             result.components(), result.output(), result.contextPathHintCount());
         offerReport(console::confirmOpenReport, result.report());
@@ -269,8 +269,7 @@ public final class ScreenTraceCli {
   /** Without a configured project root the first item asks for a folder path; the settings item is always offered. */
   static List<Action> menu(boolean hasRoot, boolean hasReports) {
     List<Action> actions = new java.util.ArrayList<>();
-    if (hasRoot) actions.add(Action.ANALYZE);
-    actions.add(Action.PATH);
+    actions.add(Action.ANALYZE);
     if (hasReports) actions.add(Action.REPORT);
     actions.add(Action.CONFIG);
     actions.add(Action.EXIT);
@@ -280,6 +279,27 @@ public final class ScreenTraceCli {
   private static Action chooseCommand(InteractiveConsole console, boolean hasRoot, boolean hasReports) throws IOException {
     List<Action> actions = menu(hasRoot, hasReports);
     return console.select("請選擇功能", actions, Action::label, 'q', "q / Esc 結束", actions.size() - 1);
+  }
+
+  /**
+   * One entry for analysing: the project root's folders plus "another path", or straight to the path prompt when
+   * there is nothing to list (no project root yet, or an empty one).
+   */
+  static ProjectCatalog.Project selectAnalysisTarget(InteractiveConsole console,
+      List<ProjectCatalog.Project> projects) throws IOException {
+    if (!projects.isEmpty()) {
+      List<ProjectChoice> choices = new java.util.ArrayList<>(projects.stream()
+          .map(project -> new ProjectChoice(project, project.name())).toList());
+      ProjectChoice otherPath = new ProjectChoice(null, "輸入其他路徑…"), back = new ProjectChoice(null, "← 返回功能選單");
+      choices.add(otherPath);
+      choices.add(back);
+      ProjectChoice choice = console.select("請選擇專案", choices, ProjectChoice::label, 'b', "b / Esc 返回",
+          choices.size() - 1);
+      if (choice == back) throw new InteractiveConsole.SelectionCancelledException();
+      if (choice != otherPath) return choice.project();
+    }
+    Path source = console.existingDirectory("專案資料夾路徑", Path.of("").toAbsolutePath());
+    return projectAt(source, settingsFor(source));
   }
 
   private static ProjectCatalog.Project selectProject(InteractiveConsole console, ProjectCatalog catalog,
@@ -428,7 +448,7 @@ public final class ScreenTraceCli {
       long components, Path output,long contextPathHintCount) { }
 
   enum Action {
-    INTERACTIVE(null, null), ANALYZE("analyze", "分析專案"), PATH(null, "輸入專案路徑"), REPORT("report", "開啟報表"),
+    INTERACTIVE(null, null), ANALYZE("analyze", "分析專案"), PATH(null, null), REPORT("report", "開啟報表"),
     EXIT(null, "結束 ScreenTrace"), CONFIG("config", "設定");
 
     private final String command;
