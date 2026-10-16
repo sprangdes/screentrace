@@ -75,9 +75,11 @@ h1,h2,h3{margin:0}
 .shell[data-page=api]{grid-template-columns:minmax(0,1fr)}
 .shell[data-page=api] .sidebar,.shell[data-page=api] .details-panel{display:none}
 .sidebar,.details-panel{position:relative;min-width:0;overflow:hidden auto;padding:12px;background:white}
-.sidebar{border-right:1px solid var(--gray-200)}
+/* The list scrolls inside its body, so the folded rail never scrolls. */
+.sidebar{overflow:hidden;padding:0;border-right:1px solid var(--gray-200)}
 /* Panel contents keep their width while the column narrows, so they slide out of view instead of reflowing. */
-.sidebar-body{display:flex;flex-direction:column;gap:10px;width:calc(var(--list-width) - 25px);transition:opacity .2s}
+.sidebar-body{display:flex;flex-direction:column;gap:10px;width:calc(var(--list-width) - 1px);height:100%;padding:12px;overflow:hidden auto;transition:opacity .2s}
+.sidebar-body>*{flex-shrink:0}
 .sidebar-header{display:flex;align-items:center;gap:4px;margin:-4px 0 0 -4px}
 .sidebar-header h2{font-size:13px;color:var(--gray-500);font-weight:600}
 .sidebar-header .icon-button,.sidebar-rail .icon-button{color:var(--gray-500)}
@@ -90,7 +92,9 @@ h1,h2,h3{margin:0}
 .shell[data-sidebar=overlay] .sidebar{z-index:25;overflow:visible}
 .shell[data-sidebar=overlay] .sidebar-body{position:absolute;top:0;bottom:0;left:0;width:260px;padding:12px;overflow:auto;background:white;border-right:1px solid var(--gray-200);box-shadow:var(--shadow-float)}
 .details-panel{display:flex;flex-direction:column;align-items:flex-end;border-left:1px solid var(--gray-200)}
-.details-body{flex:none;width:calc(var(--details-width) - 25px)}
+/* At rest the details fill the panel beside any scrollbar; while the panel narrows they keep that width.
+   A fixed width would overflow past the left edge whenever a scrollbar takes room (panel is right-aligned). */
+.details-body{flex:none;width:min(calc(100% + var(--details-width) - var(--right)),calc(var(--details-width) - 25px))}
 .shell[data-details=hidden] .details-panel{visibility:hidden;transition:visibility 0s .45s}
 .details-toggle{position:absolute;top:8px;right:8px;z-index:1}
 .details-panel .panel-header h2{padding-right:32px}
