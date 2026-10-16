@@ -78,7 +78,7 @@ export function screenPanel(panel:HTMLElement,index:Index,state:ReviewState,scre
   info.type='button';info.dataset.locate=componentId;
   info.title=actions.positions?.has(componentId)?'在預覽中標示這個按鈕':'這個按鈕在預覽中看不到';
   info.append(element('strong',name),element('span',result.length?result.join(' · '):'目的地無法確定','muted'));
-  info.onmouseenter=()=>actions.hover?.(componentId);info.onmouseleave=()=>actions.hover?.(undefined);
+  item.onmouseenter=()=>actions.hover?.(componentId);item.onmouseleave=()=>actions.hover?.(undefined);
   info.onfocus=()=>actions.hover?.(componentId);info.onblur=()=>actions.hover?.(undefined);
   info.onclick=()=>actions.locate?.(componentId);
   if(decision==='REMOVE'&&value==='UNDECIDED')info.append(element('span',decisionLabel('INHERITED_REMOVE'),'inherited-tag'));

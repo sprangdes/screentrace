@@ -63,7 +63,8 @@ h1,h2,h3{margin:0}
 .menu-row.primary{text-align:center}
 .progress-row{display:flex;justify-content:space-between;width:100%;border:0;padding:6px 8px;text-align:left}
 .link-row{display:block;width:100%;text-align:left;border:0;padding:6px 8px;color:var(--primary);background:transparent;overflow-wrap:anywhere}
-.link-row:hover{background:var(--primary-soft)}
+.link-row{border-radius:6px}
+.link-row:hover{background:var(--gray-50)}
 
 /* layout: the side panels slide in step with the canvas zoom (same 450ms curve as canvas.ts) */
 @property --left{syntax:'<length>';inherits:true;initial-value:260px}
@@ -278,12 +279,15 @@ body[data-presenting=true] .focus-layer{position:fixed!important;inset:0!importa
 .decision-switch.compact{flex:none;gap:2px;padding:2px}
 .decision-switch.compact .decision-option{width:28px;height:28px;padding:0;flex:none}
 .decision-switch.compact .icon{width:15px;height:15px}
-.button-row{display:flex;align-items:center;gap:8px;padding:6px 4px;border-radius:6px}
-.button-row.is-highlighted{background:#fef9c3}
-.button-row:focus-within{background:var(--primary-soft)}
-.button-info{display:flex;flex-direction:column;min-width:0;flex:1;align-items:flex-start;text-align:left;font:inherit;color:inherit;background:none;border:0;padding:2px 4px;margin:-2px -4px;border-radius:4px;cursor:pointer}
-.button-info:hover{background:var(--primary-soft)}
-.button-info:focus-visible{outline:2px solid var(--primary);outline-offset:1px}
+/* One row, one state at a time: gray while hovered, yellow while it is the button marked in the preview
+   (the same yellow as the preview's frame). Keyboard focus adds the usual ring around the whole row. */
+.button-row{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:6px}
+.button-row:hover{background:var(--gray-50)}
+.button-row.is-highlighted{background:#fef9c3;box-shadow:inset 3px 0 0 #eab308}
+.button-row:has(.button-info:focus-visible){outline:2px solid var(--primary);outline-offset:-2px}
+.button-info{display:flex;flex-direction:column;min-width:0;flex:1;align-items:flex-start;text-align:left;font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
+.button-info:hover{background:none}
+.button-info:focus-visible{outline:0}
 .button-info strong{font-size:13px;overflow-wrap:anywhere}
 .button-info .muted{margin:0;overflow-wrap:anywhere}
 .inherited-tag{align-self:flex-start;margin-top:2px;padding:1px 6px;border-radius:4px;background:var(--remove-soft);color:var(--remove);font-size:11px}
