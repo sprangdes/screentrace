@@ -15,6 +15,7 @@ import {decisionLabel} from './review-ui';
 import {previewDocument,previewSelector} from './preview';
 import {generateMarkdown,importMarkdown,markdownSizeWarning} from './shared/review-md';
 import {autosaveSupported,chooseSaveFile,chooseOpenFile,isCancel,writeFile,handleStore,FileHandle} from './progress-file';
+import {revealInPreview} from './reveal';
 import {loadReview,saveReview,screenDecision,componentDecision,effectiveComponent,setScreen,setComponent,statistics,conflicts,ReviewState,Decision} from './shared/review';
 
 type Filter='ALL'|'UNDECIDED'|'KEEP'|'REMOVE';
@@ -289,7 +290,7 @@ try {
   const doc=frame?.contentDocument;if(!doc||!current)return;
   decorate(doc,current);
   const node=doc.querySelector<HTMLElement>('[data-spotlight]');
-  node?.scrollIntoView({block:'center',behavior:'smooth'});
+  if(node)revealInPreview(node,frame!,viewer?.querySelector('.prototype-scroll')??null,'smooth');
  };
  /** From the preview: show which list row a clicked button is. */
  const selectFromPreview=(doc:Document,id:string)=>{
@@ -346,7 +347,7 @@ try {
    doc.addEventListener('keydown',onKey);
    simulation=attachSimulation(payload,id,own,viewer!,{focus:(target,notice)=>openScreen(target,{notice}),api:target=>showApi(target),thumbnail});
    setTimeout(()=>{if(current===id)prepare(nextUndecidedId());},800);
-   doc.querySelector('[data-spotlight]')?.scrollIntoView({block:'center'});
+   const spotlight=doc.querySelector('[data-spotlight]');if(spotlight)revealInPreview(spotlight,own,viewer?.querySelector('.prototype-scroll')??null);
   };
   own.srcdoc=previewHtml(id);
   preview.append(own);
@@ -361,7 +362,7 @@ try {
  const highlightTriggers=(triggers:string[]|undefined)=>{
   const doc=frame?.contentDocument;if(!doc||!current)return;
   doc.querySelectorAll<HTMLElement>('[data-line-trigger]').forEach(node=>{node.style.outline=node.dataset.lineTrigger||'';delete node.dataset.lineTrigger;});
-  for(const component of triggers||[])for(const node of nodesFor(doc,current,component)){node.dataset.lineTrigger=node.style.outline;node.style.outline='3px solid #2347c5';node.scrollIntoView({block:'nearest'});}
+  for(const component of triggers||[])for(const node of nodesFor(doc,current,component)){node.dataset.lineTrigger=node.style.outline;node.style.outline='3px solid #2347c5';revealInPreview(node,frame!,viewer?.querySelector('.prototype-scroll')??null);}
  };
  const ensureCanvas=()=>{
   if(view&&main.contains(view.element))return view;
