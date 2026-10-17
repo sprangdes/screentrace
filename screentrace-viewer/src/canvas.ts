@@ -62,9 +62,17 @@ function loopPath(spot:Spot,b:{top:number}){
  const height=spot.edge==='top'?Math.min(LOOP.height,Math.max(18,b.top-12)):LOOP.height,half=LOOP.width/2;
  const sx=spot.x-tangent.x*half,sy=spot.y-tangent.y*half,ex=spot.x+tangent.x*half,ey=spot.y+tangent.y*half;
  const c1={x:sx+normal.x*height-tangent.x*8,y:sy+normal.y*height-tangent.y*8},c2={x:ex+normal.x*height+tangent.x*8,y:ey+normal.y*height+tangent.y*8};
- return {sx,sy,ex,ey,d:`M${sx},${sy} C${c1.x},${c1.y} ${c2.x},${c2.y} ${ex},${ey}`};
+ // The curve arrives against the normal; its arrow's point lands on the box edge.
+ return {sx,sy,ex,ey,d:`M${sx},${sy} C${c1.x},${c1.y} ${c2.x},${c2.y} ${ex+normal.x*ARROW_TIP},${ey+normal.y*ARROW_TIP}`};
 }
-const focusMarkers=['focus-arrow-out','focus-arrow-in','focus-arrow-unresolved'].map(id=>`<marker id="${id}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="14" markerHeight="14" markerUnits="userSpaceOnUse" orient="auto"><path d="M1,1 L9,5 L1,9 Z"/></marker>`).join('');
+/*
+ * Focus arrows sit a little past the line's end, so the line (and its round cap) stops inside the arrowhead
+ * instead of poking through its point. Every focus line ends ARROW_TIP short of where the point should land.
+ */
+const ARROW_REF=6,ARROW_TIP=14*(9-ARROW_REF)/10;
+const focusMarkers=['focus-arrow-out','focus-arrow-in','focus-arrow-unresolved'].map(id=>`<marker id="${id}" viewBox="0 0 10 10" refX="${ARROW_REF}" refY="5" markerWidth="14" markerHeight="14" markerUnits="userSpaceOnUse" orient="auto"><path d="M1,1 L9,5 L1,9 Z"/></marker>`).join('');
+/** The end of a straight line pulled back by ARROW_TIP, so its arrow's point lands on the original end. */
+function arrowEnd(sx:number,sy:number,ex:number,ey:number){const dx=ex-sx,dy=ey-sy,length=Math.hypot(dx,dy)||1;return {x:ex-dx/length*ARROW_TIP,y:ey-dy/length*ARROW_TIP};}
 
 /** Lines leaving the focused screen: its screen-specific flows (as drawn on the overview) plus one stub per trigger whose destination is unknown. */
 export function focusLines(index:Index,id:string):FocusRelation[]{
@@ -277,7 +285,7 @@ export function canvas(index:Index,payload:Payload,options:CanvasOptions):Canvas
    const top=8,height=pill.offsetHeight||24,width=pill.offsetWidth||200,left=Math.round(side.x-width/2);
    Object.assign(pill.style,{left:`${left}px`,top:`${top}px`});
    const path=document.createElementNS(svgNs,'path'),group=document.createElementNS(svgNs,'g'),[y1,y2]=side.direction==='in'?[top+height,b.top]:[b.top,top+height];
-   path.setAttribute('d',`M${side.x},${y1} L${side.x},${y2}`);path.setAttribute('class',`focus-line shared ${side.direction==='in'?'is-in':'is-out'}`);path.dataset.kind=`shared-${side.direction}`;
+   path.setAttribute('d',`M${side.x},${y1} L${side.x},${arrowEnd(side.x,y1,side.x,y2).y}`);path.setAttribute('class',`focus-line shared ${side.direction==='in'?'is-in':'is-out'}`);path.dataset.kind=`shared-${side.direction}`;
    group.append(path);lines.append(group);
    const menu=element('div',undefined,'shared-popover');menu.hidden=true;menu.setAttribute('role','menu');menu.dataset.direction=side.direction;
    menu.append(element('strong',side.heading));if(side.labels.length)menu.append(element('p',`連結：${side.labels.join('、')}`));
@@ -323,7 +331,7 @@ export function canvas(index:Index,payload:Payload,options:CanvasOptions):Canvas
   if(shared.into.length)taken.push({x:b.left+b.width*0.3,y:b.top});if(shared.out.length)taken.push({x:b.left+b.width*0.7,y:b.top});
   loops.forEach(relation=>{const spot=freeSpot(b,taken,!shared.into.length&&!shared.out.length);taken.push(spot);segments.push({relation,kind:'loop',...loopPath(spot,b)});});
   for(const segment of segments){
-   const {relation}=segment,arriving=segment.kind==='incoming',other=arriving?relation.from:relation.to,target=index.nodes.get(other),group=document.createElementNS(svgNs,'g'),path=segment.d||`M${segment.sx},${segment.sy} L${segment.ex},${segment.ey}`;
+   const {relation}=segment,arriving=segment.kind==='incoming',other=arriving?relation.from:relation.to,target=index.nodes.get(other),group=document.createElementNS(svgNs,'g'),end=arrowEnd(segment.sx,segment.sy,segment.ex,segment.ey),path=segment.d||`M${segment.sx},${segment.sy} L${end.x},${end.y}`;
    const visibleLine=document.createElementNS(svgNs,'path') as SVGPathElement,hit=document.createElementNS(svgNs,'path') as SVGPathElement;
    visibleLine.setAttribute('d',path);visibleLine.setAttribute('class',`focus-line ${segment.kind==='unresolved'?'unresolved':arriving?'is-in':'is-out'}`);
    hit.setAttribute('d',path);hit.setAttribute('class','focus-line-hit');hit.setAttribute('tabindex','0');hit.setAttribute('role','button');
