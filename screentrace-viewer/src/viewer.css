@@ -25,6 +25,8 @@ h1,h2,h3{margin:0}
 .primary:hover{background:#1c3aa6}
 .notice{margin:8px 0;padding:8px 10px;border-radius:6px;background:var(--warning-soft);color:var(--warning);font-size:12px;line-height:1.5}
 .notice.conflict{background:var(--remove-soft);color:var(--remove)}
+.notice-dismiss{display:block;margin-top:6px;padding:2px 8px;border:1px solid currentColor;border-radius:4px;background:transparent;color:inherit;font-size:12px}
+.notice-dismiss:hover{background:#ffffff80}
 .empty-list{color:var(--gray-500);font-size:13px;padding:8px 4px}
 
 /* top bar */
