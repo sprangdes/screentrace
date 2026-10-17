@@ -9,6 +9,6 @@ test('R16 welcome-file entry is a screen URL, never listed as an unused API',asy
  const browser=await chromium.launch();try{const page=await browser.newPage();await page.goto(await fileFixture(data));await page.locator('#app[data-ready=true]').waitFor();
   await page.locator('.page-tab[data-page="api"]').click();await page.locator('.api-page').waitFor();
   assert.equal(await page.locator('[data-api-row="welcome-file"]').count(),0);
-  await page.locator('[data-api-filter="UNREFERENCED"]').click();assert.equal(await page.locator('[data-api-row="welcome-file"]').count(),0);
+  await page.locator('[data-api-filter="ATTENTION"]').click();assert.equal(await page.locator('[data-api-row="welcome-file"]').count(),0);
  }finally{await browser.close();}
 });

@@ -385,7 +385,7 @@ try {
   screensTab.setAttribute('aria-current',page==='screens'?'page':'false');apiTab.setAttribute('aria-current',page==='api'?'page':'false');
   renderProgress();renderSidebar();renderPanel();
   if(page==='api'){
-   const apis=apiPage(index,reviewState,{selected:selectedApi,onCaller:(screenId,componentId)=>openScreen(screenId,{component:componentId})});
+   const apis=apiPage(index,reviewState,{selected:selectedApi,onSelect:id=>{selectedApi=id;},onCaller:(screenId,componentId)=>openScreen(screenId,{component:componentId})});
    const hint=(graph.diagnostics as {code?:string;evidence?:unknown}[]|undefined||[]).find(d=>d?.code==='CONTEXT_PATH_HINT');
    if(hint){const note=element('p',`有 ${Array.isArray(hint.evidence)?hint.evidence.length:0} 個呼叫因為網址前綴無法確認，相關 API 可能被誤列為未被使用；請分析人員以 ./bin/screentrace config 設定 context path 後重新分析。`,'notice');note.dataset.contextPathReminder='true';apis.querySelector('.api-heading')?.append(note);}
    main.replaceChildren(apis);view=undefined;frame=undefined;viewer=undefined;simulation=undefined;

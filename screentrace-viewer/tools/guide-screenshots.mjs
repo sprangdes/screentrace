@@ -98,7 +98,7 @@ async function main(){
   await page.locator('.progress-button').click();await page.locator('.progress-menu[open]').waitFor();await screenshot('progress-panel.png');await page.locator('.progress-button').click();
   await zoom('a');await page.frameLocator('iframe').locator('#name').fill('林小安');await page.frameLocator('iframe').locator('#submit').click();await page.locator('.simulation-picker').waitFor();await screenshot('simulate-choices.png');await page.keyboard.press('Escape');
   await page.frameLocator('iframe').locator('#open').click();await page.frameLocator('iframe').getByRole('dialog').waitFor();await screenshot('simulate-dialog.png');await page.keyboard.press('Escape');
-  await page.locator('.page-tab[data-page="api"]').click();await page.locator('.api-row .api-summary').first().click();await page.locator('.api-detail').waitFor();await screenshot('api-page.png');
+  await page.locator('.page-tab[data-page="api"]').click();await page.locator('.api-row').first().click();await page.locator('.api-detail').waitFor();await screenshot('api-page.png');
   await page.locator('.page-tab[data-page="screens"]').click();await page.locator('.help-menu>summary').click();await page.locator('.help-menu[open]').waitFor();await screenshot('help-popover.png');await page.locator('.help-menu>summary').click();
   assert.deepEqual(requests,[],'offline guide report must not make network or other local resource requests');
   await context.close();

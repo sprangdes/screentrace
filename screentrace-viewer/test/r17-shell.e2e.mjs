@@ -117,17 +117,21 @@ test('R17 API page shows three statuses that follow decisions and callers open t
   const status=id=>page.locator(`.api-row[data-api-row="${id}"]`).getAttribute('data-api-status');
   assert.equal(await status('ep'),'IN_USE');assert.equal(await status('unused'),'UNREFERENCED');
   assert.equal(await page.locator('.sidebar').isVisible(),false);
-  assert.deepEqual(await page.locator('[data-api-filter]').allInnerTexts(),['全部 2','使用中 1','未被使用 1','可移除 0']);
-  await page.locator('.api-row[data-api-row="ep"] .api-summary').click();
-  await page.locator('.api-caller[data-caller-component="save"]').click();
+  assert.deepEqual(await page.locator('[data-api-filter]').allInnerTexts(),['全部 2','需要注意 1','使用中 1']);
+  await page.locator('.api-row[data-api-row="ep"]').click();
+  await page.locator('.api-detail .api-caller[data-caller-component="save"]').click();
   await page.locator('[data-screen-panel="a"]').waitFor();
   assert.equal(await page.locator('[data-screen-panel="a"] .panel-buttons').evaluate(details=>details.open),true);
   assert.equal(await page.locator('[data-component-row="save"]').evaluate(row=>row.classList.contains('is-highlighted')),true);
   await radio(page,'a','REMOVE').click();
   await page.locator('[data-section="apis"] [data-api="ep"]').click();
   assert.equal(await status('ep'),'REMOVABLE');
-  await page.locator('[data-api-filter="REMOVABLE"]').click();
-  assert.equal(await page.locator('.api-row').count(),1);
+  assert.match(await page.locator('.api-detail .api-reason').innerText(),/所有呼叫來源都已標記移除/);
+  assert.match(await page.locator('.api-detail .api-caller[data-caller-component="save"]').innerText(),/已標記移除/);
+  await page.locator('[data-api-filter="IN_USE"]').click();
+  assert.equal(await page.locator('.api-row').count(),0);
+  await page.locator('[data-api-filter="ATTENTION"]').click();
+  assert.equal(await page.locator('.api-row').count(),2);
  }finally{await browser.close();}
 });
 
