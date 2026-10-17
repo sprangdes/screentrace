@@ -119,8 +119,12 @@ try {
   const clean=withoutRetiredFields(imported.state);
   reviewState=clean.state;persist();
   notices.querySelectorAll('[data-import-notice]').forEach(n=>n.remove());
-  const messages=[imported.changed?'分析結果已變更，部分標記可能對應不到目前的畫面。':'',imported.orphans.length?`有 ${imported.orphans.length} 筆標記找不到對應的畫面或按鈕，已保留在檔案中。`:'',clean.dropped?'檔案含已不再使用的欄位（原因、備註、元件庫對應），已略過。':''].filter(Boolean);
+  // A different analysis only matters when the file holds decisions that could now point elsewhere.
+  const decided=Object.values(clean.state.screenDecisions).some(d=>d!=='UNDECIDED')||Object.values(clean.state.componentDecisions).some(c=>Object.values(c).some(d=>d!=='UNDECIDED'));
+  const messages=[imported.changed&&decided?'分析結果已變更，部分標記可能對應不到目前的畫面。':'',imported.orphans.length?`有 ${imported.orphans.length} 筆標記找不到對應的畫面或按鈕，已保留在檔案中。`:'',clean.dropped?'檔案含已不再使用的欄位（原因、備註、元件庫對應），已略過。':''].filter(Boolean);
   for(const message of messages){const note=element('p',message,'notice');note.dataset.importNotice='true';notices.append(note);}
+  const first=notices.querySelector<HTMLElement>('p[data-import-notice]');
+  if(first){const dismiss=element('button','知道了','notice-dismiss');dismiss.type='button';dismiss.onclick=()=>notices.querySelectorAll('[data-import-notice]').forEach(n=>n.remove());first.append(dismiss);}
   if(imported.orphans.length){const list=element('ul',undefined,'notice orphan-list');list.dataset.importNotice='true';list.dataset.mdOrphans='true';for(const orphan of imported.orphans)list.append(element('li',`${orphan.screenId}${orphan.componentId?` / ${orphan.componentId}`:''}`));notices.append(list);}
  };
  // ---- progress file: the md the person chose, rewritten after every decision (Chrome／Edge)
