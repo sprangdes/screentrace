@@ -1,0 +1,567 @@
+{
+  "cases": [
+    {
+      "id": "C01",
+      "project": "contract-management-system",
+      "sourceView": "src/main/webapp/input.jsp",
+      "selector": "a[href=\"contractList.do\"]",
+      "kind": "navigate",
+      "expectedViews": [
+        "src/main/webapp/list.jsp"
+      ],
+      "sourceLine": 190
+    },
+    {
+      "id": "C02",
+      "project": "contract-management-system",
+      "sourceView": "src/main/webapp/list.jsp",
+      "selector": "a[href=\"input.jsp\"]",
+      "kind": "navigate",
+      "expectedViews": [
+        "src/main/webapp/input.jsp"
+      ],
+      "sourceLine": 86
+    },
+    {
+      "id": "C03",
+      "project": "contract-management-system",
+      "sourceView": "src/main/webapp/input.jsp",
+      "selector": "input[type=submit],button[type=submit]",
+      "kind": "navigate",
+      "expectedViews": [
+        "src/main/webapp/result.jsp",
+        "src/main/webapp/input.jsp"
+      ],
+      "inputs": {
+        "[name=contractorName]": "ScreenTrace Test",
+        "[name=age]": "33"
+      },
+      "choose": "src/main/webapp/result.jsp",
+      "sourceLine": 227
+    },
+    {
+      "id": "C04",
+      "project": "contract-management-system",
+      "sourceView": "src/main/webapp/result.jsp",
+      "selector": "a[href=\"input.jsp\"]",
+      "kind": "navigate",
+      "expectedViews": [
+        "src/main/webapp/input.jsp"
+      ],
+      "sourceLine": 122
+    },
+    {
+      "id": "C05",
+      "project": "contract-management-system",
+      "sourceView": "src/main/webapp/input.jsp",
+      "selector": "button[onclick]",
+      "kind": "feedback",
+      "expectedViews": [],
+      "inputs": {
+        "[name=contractorName]": "ScreenTrace Test"
+      },
+      "expectedText": [
+        "登録されています",
+        "登録可能",
+        "通信エラー"
+      ],
+      "sourceLine": 207
+    },
+    {
+      "id": "C06",
+      "project": "contract-management-system",
+      "sourceView": "src/main/webapp/input.jsp",
+      "selector": "[name=contractorName]",
+      "kind": "attribute",
+      "expectedViews": [],
+      "attribute": "id",
+      "value": "contractorNameField",
+      "sourceLine": 204
+    },
+    {
+      "id": "C07",
+      "project": "contract-management-system",
+      "sourceView": "src/main/webapp/list.jsp",
+      "selector": "a[href*=\"contractDelete\"]",
+      "kind": "confirmation",
+      "expectedViews": [],
+      "sourceLine": 103
+    },
+    {
+      "id": "B01",
+      "project": "Fintech-Finance-Banking-Application",
+      "sourceView": "src/main/webapp/WEB-INF/jsp/index.jsp",
+      "selector": "a[href=\"/register\"]",
+      "kind": "navigate",
+      "expectedViews": [
+        "src/main/webapp/WEB-INF/jsp/register.jsp"
+      ],
+      "sourceLine": 41
+    },
+    {
+      "id": "B02",
+      "project": "Fintech-Finance-Banking-Application",
+      "sourceView": "src/main/webapp/WEB-INF/jsp/register.jsp",
+      "selector": "a[href=\"/login\"]",
+      "kind": "navigate",
+      "expectedViews": [
+        "src/main/webapp/WEB-INF/jsp/login.jsp"
+      ],
+      "sourceLine": 107
+    },
+    {
+      "id": "B03",
+      "project": "Fintech-Finance-Banking-Application",
+      "sourceView": "src/main/webapp/WEB-INF/jsp/login.jsp",
+      "selector": "a[href=\"/\"]",
+      "kind": "navigate",
+      "expectedViews": [
+        "src/main/webapp/WEB-INF/jsp/index.jsp"
+      ],
+      "sourceLine": 120
+    },
+    {
+      "id": "B04",
+      "project": "Fintech-Finance-Banking-Application",
+      "sourceView": "src/main/webapp/WEB-INF/jsp/login.jsp",
+      "selector": "button",
+      "kind": "navigate",
+      "expectedViews": [
+        "src/main/webapp/WEB-INF/jsp/login.jsp",
+        "src/main/webapp/WEB-INF/jsp/error.jsp",
+        "src/main/webapp/WEB-INF/jsp/dashboard.jsp"
+      ],
+      "inputs": {
+        "[name=email]": "test@example.invalid",
+        "[name=password]": "ScreenTrace123!"
+      },
+      "sourceLine": 105
+    },
+    {
+      "id": "B05",
+      "project": "Fintech-Finance-Banking-Application",
+      "sourceView": "src/main/webapp/WEB-INF/jsp/dashboard.jsp",
+      "selector": "a[href=\"/app/payment_history\"]",
+      "kind": "navigate",
+      "expectedViews": [
+        "src/main/webapp/WEB-INF/jsp/paymentHistory.jsp"
+      ],
+      "sourceFile": "src/main/webapp/WEB-INF/jsp/components/incl/header.jsp",
+      "sourceLine": 19
+    },
+    {
+      "id": "B06",
+      "project": "Fintech-Finance-Banking-Application",
+      "sourceView": "src/main/webapp/WEB-INF/jsp/dashboard.jsp",
+      "selector": "button#add-account-btn",
+      "kind": "reveal",
+      "expectedViews": [],
+      "reveal": "#offcanvasRight",
+      "sourceFile": "src/main/webapp/WEB-INF/jsp/components/accounts_display.jsp",
+      "sourceLine": 8
+    },
+    {
+      "id": "B07",
+      "project": "Fintech-Finance-Banking-Application",
+      "sourceView": "src/main/webapp/WEB-INF/jsp/dashboard.jsp",
+      "selector": "button#transact-btn",
+      "kind": "reveal",
+      "expectedViews": [],
+      "reveal": "#offcanvasExample",
+      "sourceFile": "src/main/webapp/WEB-INF/jsp/components/accounts_display.jsp",
+      "sourceLine": 13
+    },
+    {
+      "id": "B08",
+      "project": "Fintech-Finance-Banking-Application",
+      "sourceView": "src/main/webapp/WEB-INF/jsp/dashboard.jsp",
+      "selector": "#transact-type",
+      "kind": "selectReveal",
+      "expectedViews": [],
+      "value": "deposit",
+      "reveal": "#deposit-card",
+      "sourceFile": "src/main/webapp/WEB-INF/jsp/components/transact_offcanvas.jsp",
+      "sourceLine": 18
+    },
+    {
+      "id": "B09",
+      "project": "Fintech-Finance-Banking-Application",
+      "sourceView": "src/main/webapp/WEB-INF/jsp/register.jsp",
+      "selector": "button",
+      "kind": "feedback",
+      "expectedViews": [],
+      "inputs": {
+        "[name=first_name]": "Test",
+        "[name=last_name]": "User",
+        "[name=email]": "test@example.invalid",
+        "[name=password]": "abc123",
+        "[name=confirm_password]": "different"
+      },
+      "expectedText": [
+        "passwords do not match"
+      ],
+      "sourceLine": 98
+    },
+    {
+      "id": "I01",
+      "project": "SpringMVC-IMS",
+      "sourceView": "web/WEB-INF/jsp/index.jsp",
+      "selector": "a[href=\"loginform\"]",
+      "kind": "navigate",
+      "expectedViews": [
+        "web/WEB-INF/jsp/loginform.jsp"
+      ],
+      "sourceLine": 36
+    },
+    {
+      "id": "I02",
+      "project": "SpringMVC-IMS",
+      "sourceView": "web/WEB-INF/jsp/loginform.jsp",
+      "selector": "#loginBtn",
+      "kind": "navigate",
+      "expectedViews": [
+        "web/WEB-INF/jsp/dashboard.jsp",
+        "web/WEB-INF/jsp/loginform.jsp"
+      ],
+      "inputs": {
+        "#userid": "test",
+        "#password": "test"
+      },
+      "selects": {
+        "#usertype": "1"
+      },
+      "choose": "web/WEB-INF/jsp/dashboard.jsp",
+      "sourceLine": 88
+    },
+    {
+      "id": "I03",
+      "project": "SpringMVC-IMS",
+      "sourceView": "web/WEB-INF/jsp/dashboard.jsp",
+      "selector": "a[href=\"dashboard\"]",
+      "kind": "navigate",
+      "expectedViews": [
+        "web/WEB-INF/jsp/dashboard.jsp",
+        "web/WEB-INF/jsp/loginform.jsp"
+      ],
+      "sourceFile": "web/WEB-INF/jsp/menu.jsp",
+      "sourceLine": 25
+    },
+    {
+      "id": "I04",
+      "project": "SpringMVC-IMS",
+      "sourceView": "web/WEB-INF/jsp/dashboard.jsp",
+      "selector": "a[href=\"customers\"]",
+      "kind": "navigate",
+      "expectedViews": [
+        "web/WEB-INF/jsp/customers.jsp",
+        "web/WEB-INF/jsp/loginform.jsp"
+      ],
+      "sourceFile": "web/WEB-INF/jsp/menu.jsp",
+      "sourceLine": 32
+    },
+    {
+      "id": "I05",
+      "project": "SpringMVC-IMS",
+      "sourceView": "web/WEB-INF/jsp/dashboard.jsp",
+      "selector": "a[href=\"suppliers\"]",
+      "kind": "navigate",
+      "expectedViews": [
+        "web/WEB-INF/jsp/suppliers.jsp",
+        "web/WEB-INF/jsp/loginform.jsp"
+      ],
+      "sourceFile": "web/WEB-INF/jsp/menu.jsp",
+      "sourceLine": 38
+    },
+    {
+      "id": "I06",
+      "project": "SpringMVC-IMS",
+      "sourceView": "web/WEB-INF/jsp/dashboard.jsp",
+      "selector": "a[href=\"brand\"]",
+      "kind": "navigate",
+      "expectedViews": [
+        "web/WEB-INF/jsp/brand.jsp",
+        "web/WEB-INF/jsp/loginform.jsp"
+      ],
+      "sourceFile": "web/WEB-INF/jsp/menu.jsp",
+      "sourceLine": 44
+    },
+    {
+      "id": "I07",
+      "project": "SpringMVC-IMS",
+      "sourceView": "web/WEB-INF/jsp/dashboard.jsp",
+      "selector": "a[href=\"category\"]",
+      "kind": "navigate",
+      "expectedViews": [
+        "web/WEB-INF/jsp/category.jsp",
+        "web/WEB-INF/jsp/loginform.jsp"
+      ],
+      "sourceFile": "web/WEB-INF/jsp/menu.jsp",
+      "sourceLine": 50
+    },
+    {
+      "id": "I08",
+      "project": "SpringMVC-IMS",
+      "sourceView": "web/WEB-INF/jsp/dashboard.jsp",
+      "selector": "a[href=\"model\"]",
+      "kind": "navigate",
+      "expectedViews": [
+        "web/WEB-INF/jsp/model.jsp",
+        "web/WEB-INF/jsp/loginform.jsp"
+      ],
+      "sourceFile": "web/WEB-INF/jsp/menu.jsp",
+      "sourceLine": 56
+    },
+    {
+      "id": "I09",
+      "project": "SpringMVC-IMS",
+      "sourceView": "web/WEB-INF/jsp/dashboard.jsp",
+      "selector": "a[href=\"product\"]",
+      "kind": "navigate",
+      "expectedViews": [
+        "web/WEB-INF/jsp/product.jsp",
+        "web/WEB-INF/jsp/loginform.jsp"
+      ],
+      "sourceFile": "web/WEB-INF/jsp/menu.jsp",
+      "sourceLine": 62
+    },
+    {
+      "id": "I10",
+      "project": "SpringMVC-IMS",
+      "sourceView": "web/WEB-INF/jsp/category.jsp",
+      "selector": "button[title=\"Insert New Category\"]",
+      "kind": "reveal",
+      "expectedViews": [],
+      "reveal": "#insertCategoryModal",
+      "sourceLine": 23
+    },
+    {
+      "id": "I11",
+      "project": "SpringMVC-IMS",
+      "sourceView": "web/WEB-INF/jsp/category.jsp",
+      "selector": "#searchCategory",
+      "kind": "request",
+      "expectedViews": [],
+      "inputs": {
+        "#searchCategory": "test"
+      },
+      "event": "keyup",
+      "expectedRoute": "searchCategory",
+      "sourceFile": "web/resources/JS/categoryHandaler.js",
+      "sourceLine": 63
+    },
+    {
+      "id": "I12",
+      "project": "SpringMVC-IMS",
+      "sourceView": "web/WEB-INF/jsp/category.jsp",
+      "selector": "a[title=\"Edit\"]",
+      "kind": "reveal",
+      "expectedViews": [],
+      "reveal": "#editCategoryPopUp",
+      "sourceLine": 94
+    },
+    {
+      "id": "I13",
+      "project": "SpringMVC-IMS",
+      "sourceView": "web/WEB-INF/jsp/category.jsp",
+      "selector": "a[title=\"Delete\"]",
+      "kind": "reveal",
+      "expectedViews": [],
+      "reveal": "#deleteCategoryPopUp",
+      "sourceLine": 95
+    },
+    {
+      "id": "A01",
+      "project": "airline_system",
+      "sourceView": "src/main/resources/templates/index.html",
+      "selector": "a[href=\"/flights\"]",
+      "kind": "navigate",
+      "expectedViews": [
+        "src/main/resources/templates/flights.html"
+      ]
+    },
+    {
+      "id": "A02",
+      "project": "airline_system",
+      "sourceView": "src/main/resources/templates/flights.html",
+      "selector": "a[href=\"/passengers\"]",
+      "kind": "navigate",
+      "expectedViews": [
+        "src/main/resources/templates/passengers.html"
+      ]
+    },
+    {
+      "id": "A03",
+      "project": "airline_system",
+      "sourceView": "src/main/resources/templates/passengers.html",
+      "selector": "a[href=\"/reservations\"]",
+      "kind": "navigate",
+      "expectedViews": [
+        "src/main/resources/templates/reservations.html"
+      ]
+    },
+    {
+      "id": "A04",
+      "project": "airline_system",
+      "sourceView": "src/main/resources/templates/reservations.html",
+      "selector": "a[href=\"/\"]",
+      "kind": "navigate",
+      "expectedViews": [
+        "src/main/resources/templates/index.html"
+      ]
+    },
+    {
+      "id": "A05",
+      "project": "airline_system",
+      "sourceView": "src/main/resources/templates/passengers.html",
+      "selector": "#passengerId",
+      "kind": "attribute",
+      "expectedViews": [],
+      "attribute": "name",
+      "value": "passengerId"
+    },
+    {
+      "id": "A06",
+      "project": "airline_system",
+      "sourceView": "src/main/resources/templates/passengers.html",
+      "selector": "#firstName",
+      "kind": "attribute",
+      "expectedViews": [],
+      "attribute": "name",
+      "value": "firstName"
+    },
+    {
+      "id": "A07",
+      "project": "airline_system",
+      "sourceView": "src/main/resources/templates/passengers.html",
+      "selector": "#lastName",
+      "kind": "attribute",
+      "expectedViews": [],
+      "attribute": "name",
+      "value": "lastName"
+    },
+    {
+      "id": "A08",
+      "project": "airline_system",
+      "sourceView": "src/main/resources/templates/flights.html",
+      "selector": "#flightNumber",
+      "kind": "attribute",
+      "expectedViews": [],
+      "attribute": "name",
+      "value": "flightNumber"
+    },
+    {
+      "id": "A09",
+      "project": "airline_system",
+      "sourceView": "src/main/resources/templates/flights.html",
+      "selector": "#seatCapacity",
+      "kind": "attribute",
+      "expectedViews": [],
+      "attribute": "name",
+      "value": "seatCapacity"
+    },
+    {
+      "id": "A10",
+      "project": "airline_system",
+      "sourceView": "src/main/resources/templates/passengers.html",
+      "selector": "button[type=submit]",
+      "kind": "record",
+      "expectedViews": [
+        "src/main/resources/templates/passengers.html"
+      ],
+      "inputs": {
+        "#passengerId": "ST-BATCH3",
+        "#firstName": "ScreenTrace",
+        "#lastName": "Completeness"
+      },
+      "expectedText": [
+        "ST-BATCH3",
+        "ScreenTrace",
+        "Completeness"
+      ],
+      "sourceLine": 65
+    },
+    {
+      "id": "A11",
+      "project": "airline_system",
+      "sourceView": "src/main/resources/templates/flights.html",
+      "selector": "button[type=submit]",
+      "kind": "record",
+      "expectedViews": [
+        "src/main/resources/templates/flights.html"
+      ],
+      "inputs": {
+        "#flightNumber": "ST-318",
+        "#departure": "Taipei",
+        "#destination": "Tokyo",
+        "#departureTime": "2026-11-01T10:00",
+        "#seatCapacity": "180"
+      },
+      "expectedText": [
+        "ST-318",
+        "Taipei",
+        "Tokyo"
+      ],
+      "sourceLine": 73
+    },
+    {
+      "id": "A12",
+      "project": "airline_system",
+      "sourceView": "src/main/resources/templates/reservations.html",
+      "selector": "select[name=flightNumber]",
+      "kind": "options",
+      "expectedViews": [],
+      "minimum": 1,
+      "sourceLine": 55
+    }
+  ],
+  "chains": [
+    {
+      "id": "CJ1",
+      "project": "contract-management-system",
+      "steps": [
+        "C01",
+        "C02",
+        "C03",
+        "C04"
+      ]
+    },
+    {
+      "id": "BJ1",
+      "project": "Fintech-Finance-Banking-Application",
+      "steps": [
+        "B01",
+        "B02",
+        "B03"
+      ]
+    },
+    {
+      "id": "IJ1",
+      "project": "SpringMVC-IMS",
+      "steps": [
+        "I01",
+        "I02",
+        "I07"
+      ]
+    },
+    {
+      "id": "AJ1",
+      "project": "airline_system",
+      "steps": [
+        "A01",
+        "A02",
+        "A03",
+        "A04"
+      ]
+    },
+    {
+      "id": "AJ2",
+      "project": "airline_system",
+      "steps": [
+        "A02",
+        "A10",
+        "A03",
+        "A12"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,47 @@
+C01 PASS [""]
+C02 PASS [""]
+C03 PASS [""]
+C04 PASS [""]
+C05 FAIL [""]
+C06 FAIL ""
+C07 FAIL CONTROL_MISSING
+CJ1 PASS 
+B01 PASS [""]
+B02 PASS [""]
+B03 PASS [""]
+B04 PASS [""]
+B05 FAIL CONTROL_MISSING
+B06 FAIL CONTROL_MISSING
+B07 FAIL CONTROL_MISSING
+B08 FAIL CONTROL_MISSING
+B09 FAIL [""]
+BJ1 PASS 
+I01 PASS [""]
+I02 FAIL ["無法確定前往哪個畫面"]
+I03 FAIL ["無法確定前往哪個畫面"]
+I04 FAIL ["無法確定前往哪個畫面"]
+I05 FAIL ["無法確定前往哪個畫面"]
+I06 FAIL ["無法確定前往哪個畫面"]
+I07 FAIL ["無法確定前往哪個畫面"]
+I08 FAIL ["無法確定前往哪個畫面"]
+I09 FAIL ["無法確定前往哪個畫面"]
+I10 FAIL [""]
+I11 FAIL [""]
+I12 FAIL [""]
+I13 FAIL [""]
+IJ1 FAIL I02
+A01 PASS [""]
+A02 PASS [""]
+A03 PASS [""]
+A04 PASS [""]
+A05 FAIL ""
+A06 FAIL ""
+A07 FAIL ""
+A08 FAIL ""
+A09 FAIL ""
+A10 FAIL ["示範資料無法確認操作的資料列或欄位"]
+A11 FAIL [""]
+A12 PASS [{"value":"","text":"Uçuş seçin..."},{"value":"Flight","text":"\n                                        Flight\n                                    "}]
+AJ1 PASS 
+AJ2 FAIL A10
+{"cases":{"PASS":14,"FAIL":27},"journeys":[{"id":"CJ1","result":"PASS"},{"id":"BJ1","result":"PASS"},{"id":"IJ1","result":"FAIL","blockedAt":"I02"},{"id":"AJ1","result":"PASS"},{"id":"AJ2","result":"FAIL","blockedAt":"A10"}]}
