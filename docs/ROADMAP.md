@@ -90,3 +90,8 @@
 
 - 分支 `fix/workflow-restoration`，處理 [實測問題 WF-001–009](reports/WORKFLOW_RESTORATION_20261018.md)：Struts legacy web roots／控制項、Spring view returns／resolver、JS 靜態效果與日期元件、Web Flow、inline 背景圖封裝。
 - 原始失敗證據保留，修正後以同一份三專案來源與完整操作旅程驗收；結果、限制與重現入口見 [修正報告](reports/WORKFLOW_FIXES_20261018.md)、[ADR 0091](adr/0091-public-workflow-restoration.md)。
+
+## 新增公開專案驗收第二批（2026-10-18）
+
+- 三個全新 JSP 業務專案及一個 Thymeleaf 負對照；25 個檢查 14 PASS／11 FAIL，5 個旅程 2 PASS／3 FAIL。
+- WF-010 預覽 selector、WF-011 刪除確認未修正；WF-012 資料狀態功能缺口、原專案問題及負對照分別記錄。詳見 [測試報告](reports/WORKFLOW_BATCH2_20261018.md)。本批只有驗證與證據，未將新失敗宣告修復。

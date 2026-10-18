@@ -1,0 +1,51 @@
+{
+  "actual": {
+    "html": "<a data-st-source-file=\"src/main/webapp/WEB-INF/pages/template/header.jsp\" data-st-source-line=\"42\">Catalog</a>",
+    "ancestors": [
+      "A",
+      "LI",
+      "UL",
+      "DIV",
+      "DIV",
+      "NAV",
+      "JSP:USEBEAN",
+      "BODY",
+      "HTML"
+    ]
+  },
+  "recorded": [
+    {
+      "graphScreenId": "screen:de4acafb-a60d-39bc-847e-626b67c2987c",
+      "path": "body>jsp:usebean[1]>nav[1]>div[1]>div[2]>ul[1]>li[2]>a[1]",
+      "tag": "a",
+      "id": null,
+      "name": null,
+      "className": null,
+      "text": "Catalog",
+      "bounds": {
+        "x": 317.65625,
+        "y": 0,
+        "width": 78.734375,
+        "height": 50
+      },
+      "styleId": "style:b276222dd8c09ba1bdd7bfd8d654882c30f9c94501d9203e41a6d7e46def23c8",
+      "defaultId": "http://www.w3.org/1999/xhtml:a",
+      "graphComponentId": "component:77aa39d5-ee42-3301-b390-df3212c408bf",
+      "graphComponentCandidates": [
+        "component:77aa39d5-ee42-3301-b390-df3212c408bf"
+      ],
+      "componentResolution": "INFERRED",
+      "conditions": [],
+      "source": {
+        "file": "src/main/webapp/WEB-INF/pages/template/header.jsp",
+        "line": 42
+      },
+      "expansionAnchor": "src/main/webapp/WEB-INF/pages/template/header.jsp:42",
+      "matchBasis": "ANCHOR"
+    }
+  ],
+  "selectorCheck": {
+    "selector": "body>jsp:usebean[1]>nav:nth-of-type(1)>div:nth-of-type(1)>div:nth-of-type(2)>ul:nth-of-type(1)>li:nth-of-type(2)>a:nth-of-type(1)",
+    "error": "SyntaxError: Failed to execute 'matches' on 'Element': 'body>jsp:usebean[1]>nav:nth-of-type(1)>div:nth-of-type(1)>div:nth-of-type(2)>ul:nth-of-type(1)>li:nth-of-type(2)>a:nth-of-type(1)' is not a valid selector."
+  }
+}

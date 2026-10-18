@@ -1,0 +1,10 @@
+10月 18, 2026 10:29:35 下午 io.screentrace.cli.ScreenTraceCli logAnalysis
+INFO: 分析完成：
+  專案：Employee-Management-System
+  技術：JSP, Java, Maven, Spring, Spring Boot
+  Endpoints：8
+  Screens：5
+  Components：17
+  輸出：/Users/machi/IntelliJ/screentrace/analyze/workflows-batch2-20261018/Employee-Management-System
+10月 18, 2026 10:29:35 下午 io.screentrace.cli.ScreenTraceCli printReportPath
+INFO: 單一 HTML 報表：file:///Users/machi/IntelliJ/screentrace/analyze/workflows-batch2-20261018/Employee-Management-System/report/screentrace-report.html
