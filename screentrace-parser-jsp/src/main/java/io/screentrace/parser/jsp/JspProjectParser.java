@@ -67,6 +67,7 @@ public final class JspProjectParser {
                                List<JspAnalysis.Interaction> interactions, List<JspAnalysis.Include> includes,
                                List<Diagnostic> diagnostics, Map<String, MarkupAnalysis> markup,StaticMessageResolver messages) throws IOException {
     String text = SafeProjectFiles.readUtf8Limited(root, file, SafeProjectFiles.MAX_JSP_FILE_BYTES);
+    text = ThymeleafMarkup.normalize(text);
     String relative = relative(root, file);
     JspTagFileExpander.Result tagExpansion=new JspTagFileExpander().expand(root,relative,text);
     text=tagExpansion.text();
@@ -141,7 +142,11 @@ public final class JspProjectParser {
       }
       if(resolution != null) for(int i=interactionStart;i<interactions.size();i++) {
         var item=interactions.get(i);
-        interactions.set(i,new JspAnalysis.Interaction(item.viewPath(),item.type(),item.label(),item.target(),item.httpMethod(),item.source(),item.confidence(),item.submitsCurrentView(),resolution.originalExpression(),resolution.definitions(),componentId));
+        String template=tag.attribute("th:href");if(template==null)template=tag.attribute("th:action");
+        var confidence=template!=null&&Objects.toString(item.target(),"").contains("{")&&item.confidence()!=Confidence.UNRESOLVED?Confidence.INFERRED:item.confidence();
+        var proof=new ArrayList<>(resolution.definitions());
+        if(template!=null)proof.add(new io.screentrace.core.ApplicationGraph.AnalysisEvidence(source,"ThymeleafMarkup",confidence.resolutionStatus(),"模板 URL="+template+"；路徑="+item.target()));
+        interactions.set(i,new JspAnalysis.Interaction(item.viewPath(),item.type(),item.label(),item.target(),item.httpMethod(),item.source(),confidence,item.submitsCurrentView(),template!=null?template:resolution.originalExpression(),proof,componentId));
       }
     }
     for(int i=0;i<interactions.size();i++) {

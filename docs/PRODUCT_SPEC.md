@@ -2,7 +2,7 @@
 
 ## POC priority
 
-The executable POC supports server-rendered JSP applications using Struts 1, Struts + Spring, Spring MVC, or Spring Boot. Spring MVC support resolves annotation and XML Controller mappings, literal `ModelAndView` views, `InternalResourceViewResolver` JSP paths, Tiles definitions, literal Spring URL-tag variables, and literal JSP form/link/button targets. JSP reports expand supported local tag files, transform supported Spring/JSTL markup into standalone static HTML, fill dynamic JSP values with deterministic demonstration data, then use Playwright Chromium to capture rendered screenshots and component bounds. FreeMarker and Thymeleaf remain unsupported. ScreenTrace is standalone: it never joins the target Maven/Gradle build and does not execute or modify target source, apart from writing analysis data to the user-configured analysis results directory.
+The executable POC supports server-rendered JSP applications using Struts 1, Struts + Spring, Spring MVC, or Spring Boot. Spring MVC support resolves annotation and XML Controller mappings, literal `ModelAndView` views, `InternalResourceViewResolver` JSP paths, Tiles definitions, literal Spring URL-tag variables, and literal JSP form/link/button targets. JSP reports expand supported local tag files, transform supported Spring/JSTL markup into standalone static HTML, fill dynamic JSP values with deterministic demonstration data, then use Playwright Chromium to capture rendered screenshots and component bounds. FreeMarker remains unsupported. Bounded Thymeleaf HTML view, application-relative URL-template and literal JavaScript navigation projection is supported (ADR 0092); arbitrary template expressions and layout dialect execution remain unsupported. Source-proven Spring Data paths can drive session-local demonstration CRUD in the offline report; this never executes backend code or writes a real database. ScreenTrace is standalone: it never joins the target Maven/Gradle build and does not execute or modify target source, apart from writing analysis data to the user-configured analysis results directory.
 
 ## Prototype and Edit Mode Contract
 
@@ -242,7 +242,7 @@ Future adapters may support:
 - Angular
 - React
 - Vue
-- Thymeleaf
+- Full Thymeleaf engine / SpEL / layout dialect execution (bounded source projection is supported; ADR 0092)
 - JSF
 - other server-side rendering technologies
 

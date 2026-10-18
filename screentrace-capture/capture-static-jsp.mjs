@@ -1,3 +1,4 @@
+import {templatePreview,snapshotMotionCss} from './template-preview.mjs';
 import {metadataValue} from './expansion-anchor.mjs';
 import { lstat, mkdir, readdir } from 'node:fs/promises';
 import path from 'node:path';
@@ -249,7 +250,7 @@ if (reactPreview) captureDiagnostics.push(...reactPreview.diagnostics.map(item =
 async function renderReact(screen) {
   let source = reactPreview?.document(screen.id);
   if (!source) return null;
-  source = source.replace(/<head([^>]*)>/i, "<head$1><style data-st-preview-freeze>*,*::before,*::after{animation-play-state:paused!important;transition:none!important;caret-color:transparent!important}</style>");
+  source = source.replace(/<head([^>]*)>/i, "<head$1><style data-st-preview-freeze>"+snapshotMotionCss+"</style>");
   const htmlFile = await assertOutputPathWithin(output, path.join(htmlRootReal, `${screen.id.replace(/[^a-z0-9-]/gi, '_')}.html`));
   await writeOutput(htmlFile, source);
   return { htmlFile, assets: reactPreview.assets, dynamicExpressions: [] };
@@ -260,7 +261,7 @@ async function renderJsp(screen) {
   if (!view || !(previewV2?/\.(?:jsp|jspf|html?|xhtml)$/i.test(view):view.endsWith('.jsp'))) return null;
   const jsp = path.join(target, view);
   if (!(await exists(jsp))) return null;
-  const original=await text(jsp);
+  const original=previewV2?templatePreview(await text(jsp),screen,graph.nodes):await text(jsp);
   if(previewV2){localTagDirs=new Map();previewExpressions=new Set();declaredTagDirs(original);}
   let source = await expandIncludes(previewV2?annotateSource(original,view,graph.nodes):original, jsp, new Set([jsp]));
   if(previewV2)source=await expandTiles(source,tilesContext(screen),jsp,new Set([jsp]),0);
@@ -291,7 +292,7 @@ async function renderJsp(screen) {
   if (!/<html[\s>]/i.test(source)) source = `<!doctype html><html><head></head><body>${source}</body></html>`;
   source = source.replace(/<html\b[^>]*>\s*<html\b[^>]*>/gi, '<html>').replace(/<\/head>\s*<head\b[^>]*>/gi, '');
   source = source.replace(/<script\b[\s\S]*?<\/script\s*>/gi, '').replace(/\son[a-z]+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, '');
-  if(previewV2){if(!/<head[\s>]/i.test(source))source=source.replace(/<html\b[^>]*>/i,'$&<head></head>');source=source.replace(/<head([^>]*)>/i,"<head$1><style data-st-preview-freeze>*,*::before,*::after{animation-play-state:paused!important;transition:none!important;caret-color:transparent!important}</style>");}
+  if(previewV2){if(!/<head[\s>]/i.test(source))source=source.replace(/<html\b[^>]*>/i,'$&<head></head>');source=source.replace(/<head([^>]*)>/i,"<head$1><style data-st-preview-freeze>"+snapshotMotionCss+"</style>");}
   const htmlFile = await assertOutputPathWithin(output, path.join(htmlRootReal, `${screen.id.replace(/[^a-z0-9-]/gi, '_')}.html`));
   await writeOutput(htmlFile, source);
   return { htmlFile, assets: [...source.matchAll(/\b(?:href|src)=["'](assets\/[^"']+)/gi)].map(match => '/' + match[1]), dynamicExpressions: previewV2?[...new Set([...unresolved,...previewExpressions,...expressionList(source)])]:unresolved };

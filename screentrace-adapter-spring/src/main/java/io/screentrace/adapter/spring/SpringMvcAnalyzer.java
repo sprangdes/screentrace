@@ -70,7 +70,7 @@ public final class SpringMvcAnalyzer {
         graph=SpringFormBindings.bind(graph,inventory);
         var completed=SpringControllerFlow.project(SpringServerValidation.enrich(io.screentrace.parser.jsp.UrlGraphContribution.enrich(io.screentrace.parser.jsp.JavaScriptGraphContribution.enrich(MarkupGraphContribution.enrich(graph,jsp),inventory),inventory),inventory));
         completed=io.screentrace.parser.jsp.RouteTemplateInference.enrich(completed,inventory);
-        return io.screentrace.core.GraphIntegrityValidator.requireAnalysis(MarkupGraphContribution.inheritLinkActions(SpringWebFlowContribution.enrich(SpringSecurityRedirects.enrich(completed,inventory),inventory)));
+        return io.screentrace.core.GraphIntegrityValidator.requireAnalysis(SpringDataSimulation.enrich(MarkupGraphContribution.inheritLinkActions(SpringWebFlowContribution.enrich(SpringSecurityRedirects.enrich(completed,inventory),inventory)),inventory));
     }
 
     private static void discoverExceptionView(ProjectInventory inventory, State state) {
@@ -99,8 +99,13 @@ public final class SpringMvcAnalyzer {
         state.screensByView.put(relative, id);
         state.screensByView.put("/" + relative, id);
         webPath(relative).ifPresent(path -> state.screensByView.put(path, id));
-        for (String prefix : List.of("src/main/webapp/WEB-INF/jsp/", "src/main/webapp/WEB-INF/views/", "WEB-INF/jsp/", "WEB-INF/views/")) {
+        for (String prefix : List.of("src/main/webapp/WEB-INF/jsp/", "src/main/webapp/WEB-INF/views/", "WEB-INF/jsp/", "WEB-INF/views/", "src/main/resources/templates/")) {
             if (relative.startsWith(prefix)) state.screensByView.put(relative.substring(prefix.length()).replaceFirst("\\.jsp$", ""), id);
+        }
+        String templateRoot="src/main/resources/templates/";
+        if(relative.startsWith(templateRoot)&&relative.endsWith(".html")) {
+            String logical=relative.substring(templateRoot.length(),relative.length()-5);
+            state.screensByView.put(logical,id);state.screensByView.put("/"+logical,id);
         }
     }
 
@@ -433,6 +438,9 @@ public final class SpringMvcAnalyzer {
                     Confidence.INFERRED, interaction.source());
             }
             String next = state.screensByView.get(interaction.target());
+            // A template's logical name is a view resolver key, never proof of a public URL.
+            String direct=next;
+            if(next!=null&&state.nodes.stream().anyMatch(n->n.id().equals(direct)&&n.attributes().getOrDefault("view","").startsWith("src/main/resources/templates/")))next=null;
             if (next != null) edge(state, EdgeType.NAVIGATES_TO, id, next, Confidence.CONFIRMED, interaction.source());
         }
     }

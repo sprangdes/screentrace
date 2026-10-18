@@ -1,0 +1,22 @@
+[
+  {
+    "project": "struts1_CRUD_ProductManagement",
+    "exitCode": 0,
+    "seconds": 7.81
+  },
+  {
+    "project": "ShoppingCart",
+    "exitCode": 0,
+    "seconds": 8.42
+  },
+  {
+    "project": "Employee-Management-System",
+    "exitCode": 0,
+    "seconds": 7.96
+  },
+  {
+    "project": "hotel-reservation-springmvc",
+    "exitCode": 0,
+    "seconds": 6.29
+  }
+]

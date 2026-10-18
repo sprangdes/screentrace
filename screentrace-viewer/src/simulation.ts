@@ -1,7 +1,8 @@
+import {DataAction,behaviorDataAction} from './simulation-data';
 import {Payload,ElementRecord,Behavior,Evidence,Rule} from './contracts';
 export interface Intent {tag:string;href?:string;valid?:boolean;dialogIds?:string[];componentId?:string}
 export type SimulationReason='NO_GRAPH_COMPONENT'|'AMBIGUOUS_CANDIDATES'|'ANCHOR_MISSING'|'DYNAMIC_OR_UNRESOLVED_SOURCE'|'OTHER'|'NO_KNOWN_BEHAVIOR'|'BEHAVIOR_AMBIGUOUS'|'DESTINATION_UNRESOLVED'|'UNSUPPORTED_SIMULATION';
-export interface Effect {kind:'navigate'|'form'|'dialog'|'api'|'choices'|'unknown'|'external'|'invalid'|'ui'|'message'|'sequence';targetId?:string;label?:string;expression?:string;message?:string;method?:string;path?:string;resolution?:string;evidence?:Evidence[];choices?:Effect[];rules?:Rule[];componentId?:string;simulatable?:boolean;reason?:SimulationReason;operation?:string;selector?:string;value?:string;index?:number;callback?:string;callbackId?:string;order?:number;format?:string}
+export interface Effect {dataAction?:DataAction;kind:'navigate'|'form'|'dialog'|'api'|'choices'|'unknown'|'external'|'invalid'|'ui'|'message'|'sequence'|'confirm';targetId?:string;label?:string;expression?:string;message?:string;method?:string;path?:string;resolution?:string;evidence?:Evidence[];choices?:Effect[];rules?:Rule[];componentId?:string;simulatable?:boolean;reason?:SimulationReason;operation?:string;selector?:string;value?:string;index?:number;callback?:string;callbackId?:string;order?:number;format?:string}
 const compare=(a:string,b:string)=>a<b?-1:a>b?1:0;
 const unknown=(expression?:string,message='靜態分析無法確認這個操作'):Effect=>({kind:'unknown',expression,message});
 /** Read only the candidate list emitted by our graph producers, never arbitrary
@@ -13,6 +14,7 @@ function serverRules(payload:Payload,endpoint:string):Rule[]{return(payload.grap
 export function staticAction(b:Behavior):Effect|undefined {
  for(const proof of b.evidence||[])if(proof.parser==='AcornStaticAnalyzer'&&proof.detail)try{
   const item=JSON.parse(proof.detail);if(!['CONFIRMED','INFERRED'].includes(item.status)||b.guard)continue;
+  if(item.operation==='confirm'&&item.cancelsDefault===true&&typeof item.message==='string'&&!b.parentId)return {kind:'confirm',message:item.message,evidence:b.evidence};
   if(item.operation==='message'&&typeof item.message==='string')return {kind:'message',message:item.message,label:item.message,callback:b.parentId?b.event:undefined,callbackId:b.parentId,order:item.order,evidence:b.evidence};
   if(['show','hide','toggle','setValue','datePicker','reload','print','preventSubmit'].includes(item.operation))return {kind:'ui',operation:item.operation,selector:item.selector,value:item.value,index:item.index,format:item.format,label:item.title,callback:b.parentId?b.event:undefined,callbackId:b.parentId,order:item.order,evidence:b.evidence};
  }catch{}
@@ -23,7 +25,7 @@ function effect(payload:Payload,b:Behavior,targetId:string,intent:Intent,resolut
  if(b.type==='CALL_API')return node.type==='ENDPOINT'?{kind:'api',targetId,label:node.name,method:node.attributes.httpMethod||'ANY',path:node.attributes.path||node.attributes.route||node.name,resolution,evidence:b.evidence}:unknown(b.expression);
  if(b.type==='OPEN_DIALOG')return node.type==='COMPONENT'&&node.attributes.kind==='MODAL'&&intent.dialogIds?.includes(targetId)?{kind:'dialog',targetId,label:node.name,resolution,evidence:b.evidence}:unknown(b.expression,'彈窗內容無法從靜態分析重建');
  if(!['NAVIGATE','SUBMIT_FORM'].includes(b.type))return unknown(b.expression,'這個操作的結果取決於頁面腳本，靜態分析無法確認');
- const outcomes=screens(payload,targetId);if(!outcomes.length)return {...unknown(b.expression),targetId,label:node.name,evidence:b.evidence,resolution,reason:'DESTINATION_UNRESOLVED'};for(const item of outcomes){item.resolution=item.resolution==='CONFIRMED'?resolution:item.resolution;item.evidence=[...(b.evidence||[]),...(item.evidence||[])];}
+ const outcomes=screens(payload,targetId);if(!outcomes.length)return {...unknown(b.expression),targetId,label:node.name,evidence:b.evidence,resolution,reason:'DESTINATION_UNRESOLVED'};for(const item of outcomes){item.dataAction=behaviorDataAction(payload,b,targetId);item.resolution=item.resolution==='CONFIRMED'?resolution:item.resolution;item.evidence=[...(b.evidence||[]),...(item.evidence||[])];}
  if(b.type==='SUBMIT_FORM')return{kind:'form',targetId,label:node.name,method:node.attributes.httpMethod||'ANY',path:node.attributes.path||node.attributes.route||node.name,resolution,evidence:b.evidence,choices:outcomes,rules:serverRules(payload,targetId)};
  return outcomes.length===1&&(outcomes[0].resolution!=='AMBIGUOUS'||resolution==='AMBIGUOUS'&&node.type==='SCREEN')?outcomes[0]:{kind:'choices',choices:outcomes,expression:b.expression,message:'有多個可能目的，請選擇；系統不會替你決定'};
 }
@@ -46,9 +48,11 @@ function simulateRaw(payload:Payload,screenId:string,record:Partial<ElementRecor
  for(const b of behaviors){const action=staticAction(b);if(action){effects.push(action);continue;}const resolution=state(b);if(resolution==='AMBIGUOUS'){const ids=candidates(b);effects.push({kind:'choices',message:'有多個候選，請選擇；系統不會替你決定',expression:b.expression,evidence:b.evidence,reason:'BEHAVIOR_AMBIGUOUS',choices:ids.map(id=>effect(payload,b,id,intent,'AMBIGUOUS'))});}else if(['CONFIRMED','INFERRED'].includes(resolution)&&b.targetId){const resolved=effect(payload,b,b.targetId,intent,resolution);effects.push(b.guard||b.condition?{kind:'choices',message:`條件尚未求值，請選擇可能結果：${b.guard||b.condition}`,expression:b.expression,choices:[resolved],evidence:b.evidence}:resolved);}else effects.push({...unknown(b.expression,b.type==='OPEN_DIALOG'?'彈窗內容無法從靜態分析重建':undefined),reason:'DESTINATION_UNRESOLVED'});}
  const callbacks=new Map<string,Effect[]>();for(let i=effects.length-1;i>=0;i--){const item=effects[i];if(item.callback){const key=(item.callbackId||'')+'|'+item.callback;callbacks.set(key,[item,...(callbacks.get(key)||[])]);effects.splice(i,1);}}
  for(const [,items] of callbacks)effects.push({kind:'sequence',callback:items[0].callback,choices:items.sort((a,b)=>(a.order??0)-(b.order??0))});
+ const confirmations=effects.filter(e=>e.kind==='confirm');
+ if(confirmations.length===1)return {...confirmations[0],choices:effects.filter(e=>e!==confirmations[0])};
  if(!effects.length)return {...unknown(),reason:all.some(b=>state(b)==='AMBIGUOUS')?'BEHAVIOR_AMBIGUOUS':all.length?'UNSUPPORTED_SIMULATION':'NO_KNOWN_BEHAVIOR'};return effects.length===1?effects[0]:{kind:'choices',message:'此元素有多個靜態行為，請選擇要檢視的操作',choices:effects};
 }
-function finalize(effect:Effect):Effect{if(effect.choices)effect.choices=effect.choices.map(finalize);effect.simulatable=['navigate','dialog','api','ui','message'].includes(effect.kind)||['form','choices','sequence'].includes(effect.kind)&&!!effect.choices?.some(choice=>choice.simulatable);if(!effect.simulatable&&!effect.reason)effect.reason=effect.choices?.find(choice=>choice.reason)?.reason;return effect;}
+function finalize(effect:Effect):Effect{if(effect.choices)effect.choices=effect.choices.map(finalize);effect.simulatable=['navigate','dialog','api','ui','message','confirm'].includes(effect.kind)||['form','choices','sequence'].includes(effect.kind)&&!!effect.choices?.some(choice=>choice.simulatable);if(!effect.simulatable&&!effect.reason)effect.reason=effect.choices?.find(choice=>choice.reason)?.reason;return effect;}
 /** The sole simulation entry point returns the action and its coverage result together. */
 export function simulate(payload:Payload,screenId:string,record:Partial<ElementRecord>|undefined,intent:Intent):Effect{return finalize(simulateRaw(payload,screenId,record,intent));}
 /** Compatibility view of the outcome produced by simulate; contains no separate policy. */

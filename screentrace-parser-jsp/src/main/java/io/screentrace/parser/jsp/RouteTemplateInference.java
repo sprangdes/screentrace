@@ -98,6 +98,7 @@ public final class RouteTemplateInference {
   if(b.type()==BehaviorType.CALL_API)for(AnalysisEvidence e:b.evidence())if(e.detail()!=null)try{var j=new com.fasterxml.jackson.databind.ObjectMapper().readTree(e.detail());if(j.has("url")&&!j.path("url").isNull())return j.path("url").asText();}catch(Exception ignored){}
   String raw=trigger.attributes().getOrDefault("originalExpression",trigger.attributes().get("target"));
   if(raw==null)raw=b.expression();
+  if(raw!=null&&raw.startsWith("@{")&&b.evidence().stream().anyMatch(e->e.parser().equals("ThymeleafMarkup")))raw=ThymeleafMarkup.url(raw);
   if(raw==null)return null;
   var tagValue=Pattern.compile("(?is)<(?:spring:url|c:url)\\b[^>]*\\bvalue\\s*=\\s*(['\"])(.*?)\\1").matcher(raw);
   if(tagValue.find())raw=tagValue.group(2);

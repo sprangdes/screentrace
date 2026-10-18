@@ -94,6 +94,12 @@ export function analyze(request) {
   }
   function visitNode(node,ctx) {
    if(!node?.type||functionTypes.has(node.type))return;
+   if(node.type==='ReturnStatement'&&node.argument?.type==='CallExpression'&&!ctx.guard&&ctx.depth===0&&!ctx.parentId&&unit.event){
+    const call=node.argument,name=calleeName(call.callee);
+    if(['confirm','window.confirm'].includes(name)&&!lookup(ctx.env??rootEnv,name)&&!lookup(ctx.env??rootEnv,name,'functions')&&!lookup(ctx.env??rootEnv,name.split('.')[0])){
+     const message=value(call.arguments[0]);emit('OPEN_DIALOG',call,ctx,{operation:'confirm',cancelsDefault:true,message:message.value},message.status);return;
+    }
+   }
    if(node.type==='ReturnStatement'&&node.argument?.value===false&&!ctx.guard){emit('UI_STATE_CHANGE',node,ctx,{operation:'preventSubmit'});return;}
    if(node.type==='IfStatement') {visit(node.test,ctx);visit(node.consequent,{...ctx,guard:ctx.guard?ctx.guard+' && '+text(node.test,code):text(node.test,code)});if(node.alternate)visit(node.alternate,{...ctx,guard:'!('+text(node.test,code)+')'});return;}
    if(node.type==='AssignmentExpression') {

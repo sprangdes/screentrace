@@ -1,3 +1,4 @@
+import {applyDataAction} from './simulation-data';
 import {needsSimulationSurface,simulationSurface} from './simulation-surface';
 import {assessSimulation,Effect,staticAction} from './simulation';
 import {previewElement,previewSelector} from './preview';
@@ -114,6 +115,13 @@ export function attachSimulation(payload:Payload,id:string,frame:HTMLIFrameEleme
  };
  const render=(effect:Effect,record:ElementRecord|undefined,node:Element)=>{
   status.replaceChildren();
+  if(effect.kind==='confirm'){
+   message(effect.message||'');const modal=doc.querySelector('.simulation-modal')!,cancel=modal.querySelector('button')!;
+   cancel.textContent='取消';cancel.className='simulation-confirm-cancel';
+   const accept=doc.createElement('button');accept.type='button';accept.textContent='確認';accept.className='simulation-confirm-accept';
+   accept.onclick=()=>{close?.();const next=effect.choices||[];if(next.length)render(next.length===1?next[0]:{kind:'choices',choices:next},record,node);};
+   modal.append(accept);cancel.focus();return;
+  }
   if(effect.kind==='sequence'){for(const item of effect.choices||[])render(item,record,node);return;}
   if(effect.kind==='ui'){apply(effect);return;}
   if(effect.kind==='message'){message(effect.message||'');return;}
@@ -134,12 +142,12 @@ export function attachSimulation(payload:Payload,id:string,frame:HTMLIFrameEleme
     choose(rest,node,record,calls);return;
    }
   }
-  if(effect.kind==='navigate'&&effect.targetId){options.focus(effect.targetId);return;}
+  if(effect.kind==='navigate'&&effect.targetId){if(effect.dataAction&&!applyDataAction(payload,effect.dataAction,node)){say('示範資料無法確認操作的資料列或欄位');return;}options.focus(effect.targetId);return;}
   if(effect.kind==='dialog'&&effect.targetId){popup(effect.targetId);return;}
   if(effect.kind==='api'&&effect.targetId){const target=effect.targetId;say(`呼叫 API：${effect.method} ${effect.path}（不會真的送出）`,{label:'在 API 頁查看',run:()=>options.api(target)});return;}
   if(effect.kind==='external'){say('外部連結（不會開啟）');return;}
   const choices=effect.choices||[];
-  if(effect.kind==='form'&&choices.length===1&&choices[0].kind==='navigate'&&choices[0].resolution!=='AMBIGUOUS'&&choices[0].targetId){options.focus(choices[0].targetId);return;}
+  if(effect.kind==='form'&&choices.length===1&&choices[0].kind==='navigate'&&choices[0].resolution!=='AMBIGUOUS'&&choices[0].targetId){render(choices[0],record,node);return;}
   if(choices.length){choose(choices,node,record);return;}
   say(unknownDestination);
  };

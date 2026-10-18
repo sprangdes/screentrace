@@ -7,7 +7,8 @@ import java.io.IOException;
 /** Selects the Spring analyzer from deterministic project technology signals. */
 public final class SpringProjectAnalyzer {
     public ApplicationGraph analyze(ProjectInventory inventory) throws IOException {
-        if (inventory.technologies().contains("Spring MVC") || inventory.technologies().contains("JSP")) {
+        if (inventory.technologies().contains("Spring MVC") || inventory.technologies().contains("JSP")
+                || inventory.files().stream().anyMatch(p->inventory.root().relativize(p).toString().replace('\\','/').startsWith("src/main/resources/templates/")&&p.toString().endsWith(".html"))) {
             return new SpringMvcAnalyzer().analyze(inventory);
         }
         return new SpringBootAnalyzer().analyze(inventory);

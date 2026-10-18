@@ -95,3 +95,8 @@
 
 - 三個全新 JSP 業務專案及一個 Thymeleaf 負對照；25 個檢查 14 PASS／11 FAIL，5 個旅程 2 PASS／3 FAIL。
 - WF-010 預覽 selector、WF-011 刪除確認未修正；WF-012 資料狀態功能缺口、原專案問題及負對照分別記錄。詳見 [測試報告](reports/WORKFLOW_BATCH2_20261018.md)。本批只有驗證與證據，未將新失敗宣告修復。
+
+## WP70 第二批公開專案修正
+
+- 修正 WF-010 冒號標籤、WF-011 確認取消、WF-012 有來源證據的示範 CRUD，加入 NC-001 有限度 Thymeleaf URL／HTML view 投影；另修復視覺複核發現的 WF-013 透明淡入快照。
+- 原 25 案例／5 旅程全部通過，新增確認控制與完整示範 CRUD 測試；標準套件 730 項、729 PASS／既有 1 skip。未更動既有斷言、目標來源或 graph schema。見 [修正報告](reports/WORKFLOW_BATCH2_FIXES_20261018.md)、[ADR 0092](adr/0092-public-workflows-state-and-template-projection.md)。

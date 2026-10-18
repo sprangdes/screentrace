@@ -60,7 +60,7 @@ public final class ScriptSources {
     Map<String,String> moduleFiles=new TreeMap<>();for(var file:files)if(file.toString().endsWith(".js")||file.toString().endsWith(".mjs")){String path=inventory.root().relativize(file).toString().replace('\\','/');try{moduleFiles.put(path,SafeProjectFiles.readUtf8Limited(inventory.root(),file,SafeProjectFiles.MAX_SOURCE_FILE_BYTES));}catch(IOException|SecurityException error){diagnostics.add(diag(path,1,"JS_SOURCE_READ",error.getMessage()));}}
     List<Script> scripts=new ArrayList<>();List<Reference> references=new ArrayList<>();List<Map<String,Object>> dom=new ArrayList<>();
     for(var entry:markup.entrySet()) {
-      String path=entry.getKey(),source=entry.getValue();var analysis=MarkupAnalysis.parse(path,source);Map<Integer,MarkupAnalysis.Component> components=new HashMap<>();analysis.components().forEach(c->components.put(c.source().line(),c));
+      String path=entry.getKey(),source=ThymeleafMarkup.normalize(entry.getValue());var analysis=MarkupAnalysis.parse(path,source);Map<Integer,MarkupAnalysis.Component> components=new HashMap<>();analysis.components().forEach(c->components.put(c.source().line(),c));
       // Attribute identity and occurrence disambiguate multiple components on one source line.
       Map<String,Deque<MarkupAnalysis.Component>> byTag=new HashMap<>();analysis.components().forEach(c->byTag.computeIfAbsent(c.tag()+c.attributes(),k->new ArrayDeque<>()).add(c));
       List<Map<String,Object>> stack=new ArrayList<>();Map<String,Integer> domOccurrences=new HashMap<>();int ordinal=0,lineCursor=0,bodyLine=1;var resolver=new UrlVariableResolver(path,source,JspProjectParser.includedWrites(inventory.root(),path,source,new HashSet<>()));

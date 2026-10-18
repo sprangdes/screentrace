@@ -622,3 +622,7 @@ R7 決定性補強：capture 在元素樣式／bounds 量測前，先觸發版�
 Spring adapter 的 `SpringWebFlowContribution` 只讀取登錄的 flow XML，將 entry、view-state、transition 與 submitter 事件投射到既有 framework-neutral graph；缺少／循環來源保留診斷。Spring ViewResolver 增加 properties，ModelAndView 增加受限制的常值 setter 追蹤。Struts 相對路徑支援 conventional legacy web roots。
 
 JS AST 的來源 evidence 可攜帶固定操作 metadata（show/hide/toggle、setValue、message、reload、print、已識別日期元件）；viewer 以工具程式執行這些有界效果，不執行來源 JS。callback 分支維持人工選擇、未知值維持未知；pathname 前綴推導與已設定 context path 分開。預覽同一行的精確來源 ID 只在原候選集合內使用。schema 2.2、PreviewModel 2、資源邊界、review 與 API 規則不變。詳見 [ADR 0091](adr/0091-public-workflow-restoration.md)。
+
+## WP70 — public workflow state and template projection
+
+[ADR 0092](adr/0092-public-workflows-state-and-template-projection.md) adds bounded Thymeleaf URL normalization in the markup parser and physical HTML view correlation in the Spring adapter. Direct source-proven Spring Data paths emit INFERRED `simulationData` handler attributes and `simulationBindings` screen attributes. Capture emits graph-derived inert template bindings; the viewer stores demonstration CRUD state in a payload-scoped WeakMap, retaining preview records across cloned rows and refreshing same-screen returns. No target source, backend, database, review or graph is mutated. Graph 2.2 / Preview 2 and all existing assertions remain unchanged. Returned inline confirm gates continuation; common preview lookup narrows only within original anchor candidates. Snapshot CSS settles animations at a deterministic completed frame while ordinary hidden content stays hidden.
