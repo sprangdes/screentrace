@@ -67,9 +67,10 @@ export function convertControls(source) {
  const controls={form:'form',input:'input',text:'input',password:'input',hidden:'input',textarea:'textarea',select:'select',option:'option',options:'option',checkbox:'input',radio:'input',submit:'input',reset:'input',button:'button',link:'a',img:'img'};
  return markupTokens(source).map(t=>{if(!t.name||!['html','form'].includes(t.name.split(':')[0]))return t.text;const name=t.name.split(':')[1],tag=controls[name];if(!tag)return t.text;
   if(t.closing)return ['input','img'].includes(tag)?'':`</${tag}>`;
-  let text=t.text.replace(new RegExp(`^<\\s*${t.name}`),`<${tag}`).replace(/\b(?:path|property)=/g,'name=').replace(/\bstyleClass=/g,'class=');
-  const types={text:'text',password:'password',hidden:'hidden',checkbox:'checkbox',radio:'radio',submit:'submit',reset:'reset'};if(types[name])text=add(text,{type:types[name]});
-  if(t.selfClosing&&!['input','img'].includes(tag))text=text.replace(/\/\s*>$/,`></${tag}>`);return text;
+  let text=t.text.replace(new RegExp(`^<\\s*${t.name}`),`<${tag}`).replace(/\b(?:path|property)\s*=/g,'name=').replace(/\bstyleClass\s*=/g,'class=');
+  const a=attributes(t.text);if(name==='form'&&!('method' in a))text=add(text,{method:'post'});
+  const types={button:'button',text:'text',password:'password',hidden:'hidden',checkbox:'checkbox',radio:'radio',submit:'submit',reset:'reset'};if(types[name])text=add(text,{type:types[name]});
+  if(t.selfClosing&&!['input','img'].includes(tag))text=text.replace(/\/\s*>$/,`>${name==='button'?escape(a.value??''):''}</${tag}>`);return text;
  }).join('');
 }
 

@@ -76,6 +76,18 @@ public final class MarkupGraphContribution {
     }
     return new ApplicationGraph(graph.application(),List.copyOf(nodes.values()),List.copyOf(edges.values()),graph.diagnostics(),graph.apiContracts(),graph.schemaVersion(),List.copyOf(behaviors.values()),List.copyOf(rules.values()));
   }
+  /** Nested buttons outside forms activate their containing link, with the same source-derived result. */
+  public static ApplicationGraph inheritLinkActions(ApplicationGraph graph) {
+    Map<String,GraphNode> nodes=new TreeMap<>();graph.nodes().forEach(n->nodes.put(n.id(),n));
+    List<Relationship> edges=new ArrayList<>(graph.relationships());List<Behavior> behaviors=new ArrayList<>(graph.behaviors());
+    for(GraphNode button:graph.nodes())if(button.attributes().containsKey("parentLinkId")&&graph.behaviors().stream().noneMatch(b->button.id().equals(b.triggerId()))) {
+      String parent=button.attributes().get("parentLinkId");GraphNode link=nodes.get(parent);if(link==null)continue;
+      Map<String,String> attrs=new TreeMap<>(button.attributes());if(link.attributes().containsKey("target"))attrs.put("target",link.attributes().get("target"));nodes.put(button.id(),new GraphNode(button.id(),button.type(),button.name(),attrs,button.source(),button.confidence(),button.evidence()));
+      for(Behavior b:graph.behaviors())if(parent.equals(b.triggerId())&&b.type()==BehaviorType.NAVIGATE){List<AnalysisEvidence> proof=new ArrayList<>(b.evidence());proof.addAll(button.evidence());behaviors.add(new Behavior(ApplicationGraph.id(NodeType.COMPONENT,"link-button:"+button.id()+":"+b.id()),button.id(),"click",b.type(),b.targetId(),b.guard(),null,b.expression(),proof));}
+      for(Relationship e:graph.relationships())if(parent.equals(e.from())&&Set.of(EdgeType.NAVIGATES_TO,EdgeType.TRIGGERS).contains(e.type()))edges.add(new Relationship(ApplicationGraph.id(NodeType.COMPONENT,"link-button:"+button.id()+":"+e.id()),e.type(),button.id(),e.to(),e.confidence(),button.source(),e.evidence()));
+    }
+    return new ApplicationGraph(graph.application(),List.copyOf(nodes.values()),edges,graph.diagnostics(),graph.apiContracts(),graph.schemaVersion(),behaviors,graph.validationRules());
+  }
   private static boolean isModelField(MarkupAnalysis.Component c) {
     if (!c.tag().contains(":") && c.attributes().containsKey("form")) return false;
     return switch(c.kind()) {

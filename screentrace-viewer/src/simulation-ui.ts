@@ -1,5 +1,5 @@
 import {needsSimulationSurface,simulationSurface} from './simulation-surface';
-import {assessSimulation,Effect} from './simulation';
+import {assessSimulation,Effect,staticAction} from './simulation';
 import {previewElement,previewSelector} from './preview';
 import {Payload,ElementRecord} from './contracts';
 import {element} from './text';
@@ -17,7 +17,11 @@ function submitControl(node:Element):boolean{return node.localName==='button'&&(
 
 /** Simulates a click as the real page would: a submit control acts for its form, and forms are always treated as valid. */
 export function simulateElement(payload:Payload,id:string,node:Element,dialogIds=[...dialogRecords(payload,id,node.ownerDocument).keys()],componentId?:string){
- const form=submitControl(node)?(node as HTMLButtonElement|HTMLInputElement).form:undefined,target=form||node,record=previewElement(payload,id,target);
+ const own=previewElement(payload,id,node),submitter=payload.graph.nodes.find(n=>n.id===own?.graphComponentId)?.attributes.submitterAction==='true'||payload.graph.behaviors?.some(b=>b.triggerId===own?.graphComponentId&&staticAction(b)?.operation==='preventSubmit');
+ const form=submitControl(node)&&!submitter?(node as HTMLButtonElement|HTMLInputElement).form:undefined;
+ const parentLink=!form&&node.localName==='button'&&!payload.graph.behaviors?.some(b=>b.triggerId===own?.graphComponentId)?node.closest('a[href]'):null;
+ const target=form||parentLink||node,record=previewElement(payload,id,target);
+ const identity=target.getAttribute('data-st-component-id');if(!componentId&&record?.componentResolution==='AMBIGUOUS'&&identity&&record.graphComponentCandidates?.includes(identity))componentId=identity;
  const result=assessSimulation(payload,id,record,{tag:target.localName,href:target.getAttribute('href')||undefined,valid:true,dialogIds,componentId});
  return {...(!result.possible&&editableInput(target)?{...result,reason:undefined}:result),node:target,record,delegated:target!==node};
 }
@@ -63,7 +67,7 @@ export function attachSimulation(payload:Payload,id:string,frame:HTMLIFrameEleme
  };
  /** A conditional result with a single outcome is that outcome; the condition is noted in its label. */
  const outcomeOf=(choice:Effect):Effect=>choice.kind==='choices'&&choice.choices?.length===1?choice.choices[0]:choice;
- const label=(choice:Effect):string=>choice.kind==='choices'&&choice.choices?.length===1?`${label(choice.choices[0])}（有條件）`:choice.kind==='navigate'?choice.label||'畫面':choice.kind==='api'?`呼叫 API：${choice.method} ${choice.path}`:choice.kind==='dialog'?`開啟彈窗：${choice.label||''}`:choice.kind==='form'?`送出到 ${choice.path}`:unknownDestination;
+ const label=(choice:Effect):string=>choice.kind==='sequence'?`${choice.callback==='error'?'失敗':'成功'}：${(choice.choices||[]).map(c=>c.kind==='message'?c.message:c.kind==='ui'&&c.operation==='reload'?'重新顯示本頁':label(c)).join('；')}`:choice.kind==='choices'&&choice.choices?.length===1?`${label(choice.choices[0])}（有條件）`:choice.kind==='message'?`${choice.callback==='error'?'失敗':choice.callback==='success'?'成功':'訊息'}：${choice.message}`:choice.kind==='navigate'?choice.label||'畫面':choice.kind==='api'?`呼叫 API：${choice.method} ${choice.path}`:choice.kind==='dialog'?`開啟彈窗：${choice.label||''}`:choice.kind==='form'?`送出到 ${choice.path}`:unknownDestination;
  const choose=(choices:Effect[],node:Element,record:ElementRecord|undefined,calls:Effect[]=[])=>{
   closePicker();
   const box=element('div',undefined,'simulation-picker');box.setAttribute('role','dialog');box.setAttribute('aria-label','可能的結果');box.dataset.stSimulationUi='true';
@@ -85,8 +89,38 @@ export function attachSimulation(payload:Payload,id:string,frame:HTMLIFrameEleme
   box.style.top=`${Math.max(8,frameBox.top-host.top+nodeBox.bottom*scale+6)}px`;
   viewer.append(box);picker=box;box.querySelector<HTMLButtonElement>('.simulation-choice')?.focus();
  };
+ const message=(text:string)=>{
+  close?.();const box=doc.createElement('div'),content=doc.createElement('section'),body=doc.createElement('p'),button=doc.createElement('button');
+  box.className='simulation-backdrop';box.dataset.stSimulationUi='true';box.style.cssText='position:fixed;inset:0;background:#0007;display:flex;align-items:center;justify-content:center;z-index:2147483647';
+  content.className='simulation-modal';content.setAttribute('role','dialog');content.style.cssText='background:white;color:#111;padding:20px;max-width:80%;border-radius:8px';
+  body.textContent=text;button.type='button';button.textContent='關閉';button.onclick=()=>close?.();content.append(body,button);box.append(content);doc.body.append(box);close=()=>{box.remove();close=undefined;};button.focus();
+ };
+ const apply=(effect:Effect)=>{
+  if(effect.operation==='preventSubmit')return;
+  if(effect.operation==='reload'){say('重新顯示本頁示例（不會送出請求）');return;}
+  if(effect.operation==='print'){say('列印目前的靜態畫面');window.print();return;}
+  let targets:Element[]=[];try{targets=effect.selector?Array.from(doc.querySelectorAll(effect.selector)):[];}catch{}
+  if(effect.index!==undefined)targets=targets[effect.index]?[targets[effect.index]]:[];
+  if(effect.operation==='datePicker'&&targets.length!==1){say('無法確認日期欄位');return;}
+  for(const target of targets){
+   if(effect.operation==='setValue'&&'value'in target)(target as HTMLInputElement).value=effect.value??'';
+   else if(['show','hide','toggle'].includes(effect.operation||'')){
+    const hidden=effect.operation==='hide'||effect.operation==='toggle'&&doc.defaultView!.getComputedStyle(target).display!=='none';
+    (target as HTMLElement).hidden=hidden;(target as HTMLElement).style.display=hidden?'none':'block';
+   }else if(effect.operation==='datePicker'&&'value'in target){
+    close?.();const panel=doc.createElement('div'),input=doc.createElement('input'),button=doc.createElement('button');panel.className='simulation-backdrop';panel.dataset.stSimulationUi='true';panel.setAttribute('role','dialog');panel.setAttribute('aria-label','選擇日期');panel.style.cssText='position:fixed;inset:20% 25%;background:white;border:1px solid #bbb;padding:24px;z-index:2147483647';input.type='date';input.setAttribute('aria-label','日期');button.type='button';button.textContent='套用日期';button.onclick=()=>{const [year,month,day]=input.value.split('-');if(year&&month&&day)(target as HTMLInputElement).value=(effect.format||'yyyy/mm/dd').replace('yyyy',year).replace('mm',month).replace('dd',day);close?.();};panel.append(input,button);doc.body.append(panel);close=()=>{panel.remove();close=undefined;};input.focus();
+   }
+  }
+ };
  const render=(effect:Effect,record:ElementRecord|undefined,node:Element)=>{
   status.replaceChildren();
+  if(effect.kind==='sequence'){for(const item of effect.choices||[])render(item,record,node);return;}
+  if(effect.kind==='ui'){apply(effect);return;}
+  if(effect.kind==='message'){message(effect.message||'');return;}
+  if(effect.kind==='choices'&&effect.choices?.some(c=>c.kind==='ui')){
+   const actions=effect.choices.filter(c=>c.kind==='ui');for(const action of actions)apply(action);
+   const rest=effect.choices.filter(c=>c.kind!=='ui'&&c.kind!=='unknown');if(!rest.length){if(effect.choices.some(c=>c.kind==='unknown'))say('已模擬可確認的操作；部分腳本結果無法確定');return;}render(rest.length===1?rest[0]:{kind:'choices',choices:rest},record,node);return;
+  }
   // An element with several behaviors usually requests APIs and then moves on: the requests all happen, so they
   // are listed, never offered as alternatives; only the remaining outcomes are something to choose between.
   if(effect.kind==='choices'&&effect.choices?.length&&!effect.choices.some(choice=>choice.componentId)){

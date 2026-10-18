@@ -23,6 +23,7 @@ const unknown=(expression,tainted=false)=>({value:'{'+expression+'}',status:'UNR
 export function resolveValue(node,{env,code,elValues={},globals=new Map(),seen=new Set()}) {
  const recur=(n,e=env,s=seen)=>resolveValue(n,{env:e,code,elValues,globals,seen:s});
  if(!node)return unknown('missing');
+ if(node.jspExpression)return unknown(text(node,code));
  if(node.type==='Literal'&&['string','number','boolean'].includes(typeof node.value)) {
   if(typeof node.value==='string'&&node.value.includes('<%'))return unknown(text(node,code),true);
   let value=String(node.value),unresolved=false;
@@ -53,6 +54,7 @@ export function resolveValue(node,{env,code,elValues={},globals=new Map(),seen=n
   }
   return unknown(node.property.name);
  }
+ if(node.type==='BinaryExpression'&&node.operator==='+'&&!lookup(env,'window')&&!lookup(env,'location')&&node.left?.value==='/'&&node.right?.type==='MemberExpression'&&node.right.computed&&node.right.property?.value===1&&node.right.object?.type==='CallExpression'&&node.right.object.callee?.property?.name==='split'&&['window.location.pathname','location.pathname'].includes(calleeName(node.right.object.callee.object))&&node.right.object.arguments[0]?.value==='/')return {value:'{pathname.segment1}',status:'INFERRED',known:true,tainted:false};
  if(node.type==='BinaryExpression'&&node.operator==='+') {
   const a=recur(node.left),b=recur(node.right);if(a.tainted||b.tainted)return unknown(text(node,code),true);
   if(!a.known&&!b.known)return unknown(text(node,code));

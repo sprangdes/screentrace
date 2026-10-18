@@ -57,6 +57,7 @@ public final class SpringMvcAnalyzer {
         addTilesDefinitions(jsp, state);
         discoverExceptionView(inventory, state);
         parseXmlControllers(inventory, state);
+        addPropertiesViewResolvers(inventory,state);
         for (Path java : inventory.javaFiles()) parseController(java, state);
         SpringControllerFlow.resolve(state.nodes,state.edges,state.diagnostics,state.returnTargets,
             io.screentrace.parser.jsp.UrlResolution.context(inventory,List.of()));
@@ -69,7 +70,7 @@ public final class SpringMvcAnalyzer {
         graph=SpringFormBindings.bind(graph,inventory);
         var completed=SpringControllerFlow.project(SpringServerValidation.enrich(io.screentrace.parser.jsp.UrlGraphContribution.enrich(io.screentrace.parser.jsp.JavaScriptGraphContribution.enrich(MarkupGraphContribution.enrich(graph,jsp),inventory),inventory),inventory));
         completed=io.screentrace.parser.jsp.RouteTemplateInference.enrich(completed,inventory);
-        return io.screentrace.core.GraphIntegrityValidator.requireAnalysis(SpringSecurityRedirects.enrich(completed,inventory));
+        return io.screentrace.core.GraphIntegrityValidator.requireAnalysis(MarkupGraphContribution.inheritLinkActions(SpringWebFlowContribution.enrich(SpringSecurityRedirects.enrich(completed,inventory),inventory)));
     }
 
     private static void discoverExceptionView(ProjectInventory inventory, State state) {
@@ -230,6 +231,14 @@ public final class SpringMvcAnalyzer {
             beans.put(id.isBlank() ? "__anonymous_" + index : id, bean);
         }
         return beans;
+    }
+
+    private static void addPropertiesViewResolvers(ProjectInventory inventory,State state) {
+        for(Path file:inventory.files())if(file.getFileName().toString().equals("application.properties"))try {
+            var properties=new java.util.Properties();properties.load(new java.io.StringReader(SafeProjectFiles.readUtf8Limited(inventory.root(),file,SafeProjectFiles.MAX_SOURCE_FILE_BYTES)));
+            String prefix=properties.getProperty("spring.mvc.view.prefix"),suffix=properties.getProperty("spring.mvc.view.suffix");
+            if(prefix!=null&&suffix!=null&&!prefix.contains("${")&&!suffix.contains("${"))state.viewResolvers.add(new ViewResolver(prefix,suffix));
+        }catch(IOException error){state.diagnostics.add(new Diagnostic("View resolver 設定無法讀取",Confidence.UNRESOLVED,new SourceLocation(inventory.root().relativize(file).toString(),1)));}
     }
 
     private static void addViewResolvers(Map<String, Element> beans, State state) {

@@ -85,3 +85,8 @@
 - 第二階段（WP62、WP63）：畫布 zoom in 聚焦、關聯線縮圖與前往、點擊模擬不受檢核限制。完整驗證後停止等待需求方檢視，見 [R17 報告](reports/R17.md)、[ADR 0085](adr/0085-r17-canvas-zoom-focus-and-click-simulation.md)。
 - 第三階段（WP65、WP66）：進度檔自動存檔、md 一律 v1 並精簡正文。完整驗證後停止等待需求方驗收，見 [R17 報告](reports/R17.md)、[ADR 0086](adr/0086-r17-progress-file-autosave-and-md-v1.md)。
 - 第四階段（WP67、WP68）：`screentrace <專案路徑>` 一步分析、設定改為選用、指南與文件依新流程重寫。R17 全部完成，等待結案驗收，見 [R17 報告](reports/R17.md)。
+
+## WP69 公開業務應用流程修復
+
+- 分支 `fix/workflow-restoration`，處理 [實測問題 WF-001–009](reports/WORKFLOW_RESTORATION_20261018.md)：Struts legacy web roots／控制項、Spring view returns／resolver、JS 靜態效果與日期元件、Web Flow、inline 背景圖封裝。
+- 原始失敗證據保留，修正後以同一份三專案來源與完整操作旅程驗收；結果、限制與重現入口見 [修正報告](reports/WORKFLOW_FIXES_20261018.md)、[ADR 0091](adr/0091-public-workflow-restoration.md)。

@@ -211,7 +211,7 @@ async function replaceAsync(source, expression, mapper) {
   return result + source.slice(cursor);
 }
 function rewriteAssetUrls(source) {
-  return source.replace(/\b(href|src)=(['"])(\/[^'"]*)/gi, (_, attribute, quote, url) => {
+  return source.replace(/url\(\s*(['"]?)(\/[^)'"\s]+)\1\s*\)/g,(original,quote,url)=>{const mapping=mappingFor(url);return mapping?`url(${quote}assets/${mapping.assetKey}${url.substring(mapping.urlPrefix.length-1)}${quote})`:original;}).replace(/\b(href|src)=(['"])(\/[^'"]*)/gi, (_, attribute, quote, url) => {
     const mapping = mappingFor(url);
     return mapping ? `${attribute}=${quote}assets/${mapping.assetKey}${url.substring(mapping.urlPrefix.length - 1)}` : _;
   });

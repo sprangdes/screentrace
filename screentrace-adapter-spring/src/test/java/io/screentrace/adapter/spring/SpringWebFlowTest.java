@@ -26,5 +26,20 @@ class SpringWebFlowTest {
   assertTrue(g.nodes().stream().anyMatch(n->n.type()==NodeType.ENDPOINT&&"/checkout".equals(n.attributes().get("path"))));
   assertTrue(g.relationships().stream().anyMatch(e->e.type()==EdgeType.RENDERS&&g.nodes().stream().anyMatch(n->n.id().equals(e.to())&&n.attributes().getOrDefault("view","").endsWith("address.jsp"))));
  }
+ @Test void missingRegisteredFlowIsDiagnosticRatherThanAGuessedEndpoint()throws Exception{
+  Path root=Files.createTempDirectory("flow-missing");
+  write(root,"registry.xml","<beans xmlns:flow=\"urn:flow\"><flow:flow-location id=\"missing\" path=\"/WEB-INF/missing.xml\"/></beans>");
+  var g=new SpringMvcAnalyzer().analyze(new ProjectScanner().scan(root));
+  assertTrue(g.diagnostics().stream().anyMatch(d->d.code().equals("FLOW_REFERENCE_UNRESOLVED")));
+  assertTrue(g.nodes().stream().noneMatch(n->n.type()==NodeType.ENDPOINT));
+ }
+ @Test void cyclicStartStateNeverInventsARenderedScreen()throws Exception{
+  Path root=Files.createTempDirectory("flow-cycle");
+  write(root,"src/main/webapp/WEB-INF/registry.xml","<beans xmlns:flow=\"urn:flow\"><flow:flow-location id=\"cycle\" path=\"/WEB-INF/flow.xml\"/></beans>");
+  write(root,"src/main/webapp/WEB-INF/flow.xml","<flow><action-state id=\"a\"><transition to=\"b\"/></action-state><action-state id=\"b\"><transition to=\"a\"/></action-state></flow>");
+  var g=new SpringMvcAnalyzer().analyze(new ProjectScanner().scan(root));
+  assertTrue(g.diagnostics().stream().anyMatch(d->d.code().equals("FLOW_START_UNRESOLVED")));
+  assertTrue(g.relationships().stream().noneMatch(e->e.type()==EdgeType.RENDERS));
+ }
  private static void write(Path r,String f,String s)throws Exception{Path p=r.resolve(f);Files.createDirectories(p.getParent());Files.writeString(p,s);}
 }

@@ -11,6 +11,7 @@ const status=(...values)=>values.filter(Boolean).sort((a,b)=>rank[b]-rank[a])[0]
 export function identifyLibrary(file,header='') {
  // Specific library signatures take precedence over the generic jQuery signature.
  const comments=header.slice(0,4096).match(/^\s*(?:(?:\/\*[\s\S]*?\*\/|\/\/[^\n]*)(?:\s*))/)?.[0]??'';
+ if(/Popup Calendar\(Window\)/.test(header.slice(0,4096))&&/yxscripts\.com/.test(header.slice(0,4096)))return 'yx-calendar';
  if(/(?:^|\/)angular(?:[.-][^/]*)?\.js$/i.test(file)||/AngularJS\s+v\d/i.test(comments))return 'angularjs';
  for(const name of ['jquery.validate','jquery-ui','bootstrap','select2','datepicker','jquery']) {
   const entry=table[name];if(new RegExp(entry.file,'i').test(file)||new RegExp(entry.header,'i').test(comments))return name;
@@ -21,6 +22,18 @@ export function analyze(request) {
  const globalFunctions=new Map(),globalValues=new Map(),angularFunctions=new Map(),runners=[];const maxDepth=Number.isInteger(request.maxDepth)&&request.maxDepth>=0?request.maxDepth:10;
  const stable=(kind,...parts)=>{const key=JSON.stringify(parts),count=occurrences.get(kind+key)??0;occurrences.set(kind+key,count+1);return kind+':js:'+createHash('sha256').update(JSON.stringify([...parts,count])).digest('hex').slice(0,24);};
  const expanded=expandModules(request.sources??[],request.moduleFiles??{});diagnostics.push(...expanded.diagnostics);
+ const calendars=new Map(),calendarScreens=new Set(),calendarFormats=new Map();
+ for(const unit of request.sources??[])if(identifyLibrary(unit.file,unit.code)==='yx-calendar')calendarScreens.add(unit.screenId);
+ for(const unit of request.sources??[])if(calendarScreens.has(unit.screenId)){
+  const parsed=parseSource(unit);if(!parsed.ast||parsed.status!=='CONFIRMED')continue;
+  const list=calendars.get(unit.screenId)??new Map();
+  for(const statement of parsed.ast.body){
+   if(identifyLibrary(unit.file,unit.code)==='yx-calendar'&&statement.type==='VariableDeclaration')for(const d of statement.declarations)if(d.id.name==='calFormat'&&typeof d.init?.value==='string'&&!calendarFormats.has(unit.screenId))calendarFormats.set(unit.screenId,d.init.value);
+   const n=statement.type==='ExpressionStatement'?statement.expression:null;if(n?.type!=='CallExpression')continue;
+   if(calleeName(n.callee)==='setFormat')calendarFormats.set(unit.screenId,typeof n.arguments[0]?.value==='string'?n.arguments[0].value:null);
+   if(calleeName(n.callee)==='addCalendar'&&n.arguments.length===4&&n.arguments.every(a=>a.type==='Literal'&&typeof a.value==='string')){const [name,title,field,form]=n.arguments.map(a=>a.value);list.set(name,list.has(name)?null:{title,field,form});}
+  }calendars.set(unit.screenId,list);
+ }
  for(const unit of expanded.sources) {
   const library=identifyLibrary(unit.file,unit.code);if(library){libraries.push({file:unit.file,name:library,source:{file:unit.file,line:1}});continue;}
   const parsed=parseSource(unit);diagnostics.push(...parsed.diagnostics);if(!parsed.ast)continue;
@@ -45,7 +58,7 @@ export function analyze(request) {
   const emit=(type,node,ctx,extra={},resolution='CONFIRMED')=>{
    const expression=text(node,code),id=stable('behavior',unit.file,ctx.triggerId,ctx.event,type,expression,ctx.parentId);
    let dynamic=false;function inspect(n){if(!n?.type||functionTypes.has(n.type))return;if(n.type==='MemberExpression'&&n.computed)dynamic=true;for(const c of children(n))inspect(c);}inspect(node);
-   const b={id,type,triggerId:ctx.triggerId,event:ctx.event,selector:ctx.selector,guard:ctx.guard,parentId:ctx.parentId,expression,ownerFile:unit.ownerFile,entryFile:unit.entryFile??unit.file,source:source(node),parser:'AcornStaticAnalyzer',status:status(parsed.status,unit.status,ctx.status,resolution,dynamic?'UNRESOLVED':null),trace:ctx.trace??[],...extra};behaviors.push(b);return b;
+   const b={id,type,triggerId:ctx.triggerId,event:ctx.event,selector:ctx.selector,guard:ctx.guard,parentId:ctx.parentId,expression,ownerFile:unit.ownerFile,entryFile:unit.entryFile??unit.file,source:source(node),parser:'AcornStaticAnalyzer',status:status(parsed.status,unit.status,ctx.status,resolution,dynamic&&!extra.operation?'UNRESOLVED':null),trace:ctx.trace??[],...(extra.operation?{order:node.start}:{}),...extra};behaviors.push(b);return b;
   };
   const rule=(kind,node,ctx,field,message,parameters={},resolution='CONFIRMED')=>{
    const id=stable('validation',unit.file,field,kind,text(node,code));const r={id,kind,fields:[field],message,parameters,layer:'CLIENT',source:source(node),parser:'AcornStaticAnalyzer',status:status(parsed.status,unit.status,ctx.status,resolution)};rules.push(r);emit('VALIDATE',node,ctx,{targetId:id},resolution);return r;
@@ -70,11 +83,25 @@ export function analyze(request) {
    };
    for(const valueNode of values)scan(valueNode);
   }
+  function domReference(node){
+   if(node?.type==='MemberExpression'&&node.computed&&node.property?.value===0){const ref=domReference(node.object);return ref?{...ref,index:0}:null;}
+   if(node?.type!=='CallExpression')return null;
+   const name=calleeName(node.callee),arg=node.arguments[0]?.value;if(typeof arg!=='string')return null;
+   if(name==='document.getElementById')return {selector:'#'+arg};
+   if(name==='document.getElementsByName')return {selector:'[name="'+arg.replaceAll('"','')+'"]'};
+   if(name==='document.querySelector')return {selector:arg,index:0};
+   return null;
+  }
   function visitNode(node,ctx) {
    if(!node?.type||functionTypes.has(node.type))return;
+   if(node.type==='ReturnStatement'&&node.argument?.value===false&&!ctx.guard){emit('UI_STATE_CHANGE',node,ctx,{operation:'preventSubmit'});return;}
    if(node.type==='IfStatement') {visit(node.test,ctx);visit(node.consequent,{...ctx,guard:ctx.guard?ctx.guard+' && '+text(node.test,code):text(node.test,code)});if(node.alternate)visit(node.alternate,{...ctx,guard:'!('+text(node.test,code)+')'});return;}
    if(node.type==='AssignmentExpression') {
     const name=calleeName(node.left);
+    if(node.left.type==='MemberExpression'&&node.left.property?.name==='value'){
+     const ref=domReference(node.left.object),v=value(node.right);
+     if(ref&&v.status==='CONFIRMED'){emit('SELECT_CHANGE',node,ctx,{operation:'setValue',...ref,value:v.value});return;}
+    }
     if(['window.onload','document.onload'].includes(name)&&functionTypes.has(node.right.type)){visit(node.right.body,{...root,event:'load'});return;}
     if(['location.href','window.location.href','window.location','location'].includes(name)){const v=value(node.right);emit('NAVIGATE',node,ctx,{url:v.value},v.status);return;}
     if(node.left.type==='MemberExpression'&&node.left.computed){emit('UNKNOWN',node,ctx,{},'UNRESOLVED');return;}
@@ -84,6 +111,11 @@ export function analyze(request) {
    if(node.type==='CallExpression') {
     if(functionTypes.has(node.callee.type)){execute(node.callee,node.arguments,ctx,node);return;}
     const name=calleeName(node.callee),method=node.callee.property?.name,args=node.arguments,receiver=node.callee.object;
+    if(calendarScreens.has(unit.screenId)&&name==='showCal'){
+     const calendar=calendars.get(unit.screenId)?.get(value(args[0]).value);
+     if(calendar&&calendarFormats.get(unit.screenId)){emit('UI_STATE_CHANGE',node,ctx,{operation:'datePicker',selector:'[name="'+calendar.field.replaceAll('"','')+'"]',title:calendar.title,format:calendarFormats.get(unit.screenId)});return;}
+    }
+    if(calendarScreens.has(unit.screenId)&&['addCalendar','setWidth','setColor','setFont','setFormat','setSize','setFontColor','setWeekDay','setMonthNames','setDayNames','setLinkNames'].includes(name))return;
     if(method==='controller'&&receiver?.type==='CallExpression'&&calleeName(receiver.callee)==='angular.module')return;
     if(lookup(ctx.env??rootEnv,name,'functions')||lookup(ctx.env??rootEnv,name)){if(execute(node.callee,args,ctx,node))return;emit('UNKNOWN',node,ctx,{callee:name},'UNRESOLVED');return;}
     const ready=(name==='$'||name==='jQuery')&&functionTypes.has(args[0]?.type);
@@ -94,7 +126,9 @@ export function analyze(request) {
     if(!name&&node.callee.type==='MemberExpression'&&node.callee.computed){emit('UNKNOWN',node,ctx,{},'UNRESOLVED');diagnostics.push(diagnostic(unit.file,source(node).line,'UNKNOWN_CALL','動態呼叫：'+text(node.callee,code)));return;}
     if(name==='eval'||name==='Function'){emit('UNKNOWN',node,ctx,{},'UNRESOLVED');diagnostics.push(diagnostic(unit.file,source(node).line,'UNKNOWN_CALL','禁止解析執行式呼叫：'+name));return;}
     if(['location.assign','location.replace','window.location.assign','window.location.replace','history.pushState','window.history.pushState','window.open'].includes(name)){const v=value(args[name?.endsWith('pushState')?2:0]);emit(name==='window.open'?'OPEN_DIALOG':'NAVIGATE',node,ctx,{url:v.value},v.status);return;}
-    if(['alert','confirm','prompt','window.alert','window.confirm','window.prompt'].includes(name)){emit('OPEN_DIALOG',node,ctx,{message:value(args[0]).value});return;}
+    if(['alert','confirm','prompt','window.alert','window.confirm','window.prompt'].includes(name)){const message=value(args[0]);emit('OPEN_DIALOG',node,ctx,{operation:'message',message:message.value},message.status);return;}
+    if(['location.reload','window.location.reload'].includes(name)){emit('UI_STATE_CHANGE',node,ctx,{operation:'reload'});return;}
+    if(['window.print','print'].includes(name)){emit('UI_STATE_CHANGE',node,ctx,{operation:'print'});return;}
     const jquery=receiver?.type==='CallExpression'&&['$','jQuery'].includes(calleeName(receiver.callee));
     let api=false,urlNode=null,methodValue='GET',data=null;
     if(['$.ajax','jQuery.ajax'].includes(name)){api=true;urlNode=prop(args[0],'url');methodValue=configuredMethod(args[0]);data=prop(args[0],'data');}
@@ -105,7 +139,7 @@ export function analyze(request) {
     else if(name==='axios'||name?.startsWith('axios.')){api=true;urlNode=name==='axios'?prop(args[0],'url'):args[0];methodValue=name==='axios'?configuredMethod(args[0]):name.slice(6).toUpperCase();data=name==='axios'?prop(args[0],'data'):args[1];}
     else if(jquery&&method==='load'&&args.length){api=true;urlNode=args[0];data=args[1];methodValue=data?.type==='ObjectExpression'?'POST':'GET';}
     else if(method==='send'&&xhr.has(receiver?.name)){api=true;const opens=xhr.get(receiver.name);if(opens.length>1){const urlCandidates=[...new Set(opens.map(a=>value(a[1]).value).filter(Boolean))].sort();return emit('CALL_API',node,ctx,{url:null,method:null,urlCandidates,dataFields:fields(args[0])},'AMBIGUOUS');}const opened=opens[0];urlNode=opened?.[1];methodValue=value(opened?.[0]).value??null;data=args[0];}
-    if(api){const v=value(urlNode);const b=emit('CALL_API',node,ctx,{url:v.value,method:methodValue?.toUpperCase()??null,dataFields:fields(data)},methodValue?v.status:'UNRESOLVED');const callback=prop(args[0],'success');if(callback)execute(callback,[],{...ctx,parentId:b.id,event:'success'},node,true);return b;}
+    if(api){const v=value(urlNode);const b=emit('CALL_API',node,ctx,{url:v.value,method:methodValue?.toUpperCase()??null,dataFields:fields(data)},methodValue?v.status:'UNRESOLVED');for(const event of ['success','error']){const callback=prop(args[0],event);if(callback)execute(callback,[],{...ctx,parentId:b.id,event},node,true);}return b;}
     if(method==='open'&&xhr.has(receiver?.name))return;
     if(method==='submit'&&!args.length){emit('SUBMIT_FORM',node,ctx,{selector:selectorOf(receiver,code)});return;}
     if(method==='setCustomValidity') {const ids=select(selectorOf(receiver,code),unitDom,ctx.triggerId),v=value(args[0]);for(const id of ids.length?ids:[selectorOf(receiver,code)])rule('custom',node,ctx,id,v.value,{},ids.length?v.status:'UNRESOLVED');return;}
@@ -118,6 +152,10 @@ export function analyze(request) {
     }
     if(bootstrapInstances.has(receiver?.name)&&['show','hide','toggle'].includes(method)){const instance=bootstrapInstances.get(receiver.name);const dialog=instance.name==='bootstrap.Modal'&&method!=='hide';const target=dialog?dialogTarget(instance.selector):{};const {status:targetStatus,...attributes}=target;emit(dialog?'OPEN_DIALOG':'UI_STATE_CHANGE',node,ctx,{library:'bootstrap',...attributes},targetStatus);return;}
     if(jquery) {
+     const selector=value(receiver.arguments[0]);
+     if(['show','hide','toggle'].includes(method)&&selector.status==='CONFIRMED'){emit('UI_STATE_CHANGE',node,ctx,{operation:method,selector:selector.value});return;}
+     if(method==='val'&&args.length&&selector.status==='CONFIRMED'){const v=value(args[0]);if(v.status==='CONFIRMED'){emit('SELECT_CHANGE',node,ctx,{operation:'setValue',selector:selector.value,value:v.value});return;}}
+
      if(['val','html','text'].includes(method)&&!args.length)return;
      const mapped=Object.entries(table).find(([,entry])=>entry.apis[method]);if(mapped){const selector=selectorOf(receiver,code);const operation=table[mapped[0]].operations?.[method]?.[args[0]?.value]??mapped[1].apis[method];const target=operation==='OPEN_DIALOG'?dialogTarget(selector):{};const {status:targetStatus,...attributes}=target;emit(operation,node,ctx,{library:mapped[0],selector,...attributes},targetStatus);return;}
     }

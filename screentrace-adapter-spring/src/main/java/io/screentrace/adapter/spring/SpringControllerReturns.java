@@ -89,7 +89,15 @@ final class SpringControllerReturns {
       for(MethodCallExpr call:method.findAll(MethodCallExpr.class)) {
         if(call.getArguments().stream().anyMatch(a->a.findAll(NameExpr.class).stream().anyMatch(n->n.getNameAsString().equals(name))))return unknown();
         if(call.getScope().isPresent()&&call.getScope().get().findAll(NameExpr.class).stream().anyMatch(n->n.getNameAsString().equals(name))
-            &&!(call.getScope().get().isNameExpr()&&Set.of("addObject","addAllObjects","getModel","getModelMap").contains(call.getNameAsString())))return unknown();
+            &&!(call.getScope().get().isNameExpr()&&Set.of("addObject","addAllObjects","getModel","getModelMap","setViewName").contains(call.getNameAsString())))return unknown();
+      }
+      var setters=method.findAll(MethodCallExpr.class).stream().filter(c->c.getNameAsString().equals("setViewName")&&c.getScope().filter(e->e.isNameExpr()&&e.asNameExpr().getNameAsString().equals(name)).isPresent()).toList();
+      if(!setters.isEmpty()) {
+        if(setters.size()!=1)return unknown();var setter=setters.get(0);
+        var statement=setter.findAncestor(ExpressionStmt.class);
+        if(setter.getArguments().size()!=1||statement.isEmpty()||statement.get().getParentNode().orElse(null)!=block.get()
+            ||!setter.getBegin().orElseThrow().isAfter(definition.getEnd().orElseThrow())||!setter.getEnd().orElseThrow().isBefore(use.getBegin().orElseThrow()))return unknown();
+        String view=literal(setter.getArgument(0),constants);return view==null?unknown():classify(view);
       }
       return value(definition.getInitializer().get(),method,use,constants);
     }
