@@ -1,0 +1,334 @@
+TAP version 13
+# Subtest: static capture sanitizes active markup and makes no external requests
+ok 1 - static capture sanitizes active markup and makes no external requests
+  ---
+  duration_ms: 1453.114958
+  type: 'test'
+  ...
+# Subtest: preexisting output symlink is rejected before writing outside the output root
+ok 2 - preexisting output symlink is rejected before writing outside the output root
+  ---
+  duration_ms: 339.441417
+  type: 'test'
+  ...
+# Subtest: requirements preserve the instructions sections 1 and 2 verbatim
+ok 3 - requirements preserve the instructions sections 1 and 2 verbatim
+  ---
+  duration_ms: 6.210042
+  type: 'test'
+  ...
+# Subtest: architecture documents every actual Maven module and marks absent modules as planned
+ok 4 - architecture documents every actual Maven module and marks absent modules as planned
+  ---
+  duration_ms: 2.098083
+  type: 'test'
+  ...
+# Subtest: roadmap tracks WP0 through WP10 and the four instruction milestones
+ok 5 - roadmap tracks WP0 through WP10 and the four instruction milestones
+  ---
+  duration_ms: 0.5795
+  type: 'test'
+  ...
+# Subtest: baseline and open questions are available and linked from the workflow
+ok 6 - baseline and open questions are available and linked from the workflow
+  ---
+  duration_ms: 1.620333
+  type: 'test'
+  ...
+# Subtest: standalone pack embeds CSS imports, images, fonts by hash and removes active/external resources
+ok 7 - standalone pack embeds CSS imports, images, fonts by hash and removes active/external resources
+  ---
+  duration_ms: 67.37225
+  type: 'test'
+  ...
+# Subtest: pack rejects symlinks and traversal while preserving diagnostic instead of loading outside files
+ok 8 - pack rejects symlinks and traversal while preserving diagnostic instead of loading outside files
+  ---
+  duration_ms: 2.468459
+  type: 'test'
+  ...
+# Subtest: pack never reads symlinked resources
+ok 9 - pack never reads symlinked resources
+  ---
+  duration_ms: 36.367708
+  type: 'test'
+  ...
+# Subtest: nested if and all choose branches retain original guarded conditions
+ok 10 - nested if and all choose branches retain original guarded conditions
+  ---
+  duration_ms: 6.997875
+  type: 'test'
+  ...
+# Subtest: comments script text and quoted angle brackets cannot invent condition tags
+ok 11 - comments script text and quoted angle brackets cannot invent condition tags
+  ---
+  duration_ms: 3.531375
+  type: 'test'
+  ...
+# Subtest: target reserved attributes cannot spoof the generated guard
+ok 12 - target reserved attributes cannot spoof the generated guard
+  ---
+  duration_ms: 0.217917
+  type: 'test'
+  ...
+# Subtest: unknown conditional expression and scriptlet remain in the dynamic list
+ok 13 - unknown conditional expression and scriptlet remain in the dynamic list
+  ---
+  duration_ms: 0.590209
+  type: 'test'
+  ...
+# Subtest: dynamic expression evidence keeps balanced map literals, quoted braces and deferred EL verbatim
+ok 14 - dynamic expression evidence keeps balanced map literals, quoted braces and deferred EL verbatim
+  ---
+  duration_ms: 0.11825
+  type: 'test'
+  ...
+# Subtest: Struts controls retain spaced bindings and button/reset semantics
+ok 15 - Struts controls retain spaced bindings and button/reset semantics
+  ---
+  duration_ms: 0.667583
+  type: 'test'
+  ...
+# Subtest: captures every element with stable paths, all computed deltas and lossless style roundtrip
+ok 16 - captures every element with stable paths, all computed deltas and lossless style roundtrip
+  ---
+  duration_ms: 2366.329917
+  type: 'test'
+  ...
+# Subtest: limits diagnose overflow without dropping any element or style
+ok 17 - limits diagnose overflow without dropping any element or style
+  ---
+  duration_ms: 622.884666
+  type: 'test'
+  ...
+# Subtest: new capture explicitly rejects historical graphs
+ok 18 - new capture explicitly rejects historical graphs
+  ---
+  duration_ms: 120.323417
+  type: 'test'
+  ...
+# Subtest: HTML screens and declared local tag libraries preserve all branch/source evidence without executing target scripts
+ok 19 - HTML screens and declared local tag libraries preserve all branch/source evidence without executing target scripts
+  ---
+  duration_ms: 538.56
+  type: 'test'
+  ...
+# Subtest: source order maps anonymous elements and ambiguous matches retain all candidates for every occurrence
+ok 20 - source order maps anonymous elements and ambiguous matches retain all candidates for every occurrence
+  ---
+  duration_ms: 507.85125
+  type: 'test'
+  ...
+# Subtest: new reconstruction never triggers script/event/network side-effect probes
+ok 21 - new reconstruction never triggers script/event/network side-effect probes
+  ---
+  duration_ms: 480.756667
+  type: 'test'
+  ...
+# Subtest: CSS animation capture is deterministic across repeated reconstruction
+ok 22 - CSS animation capture is deterministic across repeated reconstruction
+  ---
+  duration_ms: 995.867209
+  type: 'test'
+  ...
+# Subtest: same-line anonymous ambiguity does not consume candidates for the next occurrence
+ok 23 - same-line anonymous ambiguity does not consume candidates for the next occurrence
+  ---
+  duration_ms: 438.277333
+  type: 'test'
+  ...
+# Subtest: canonical occurrence IDs map same-line anonymous components in original source order
+ok 24 - canonical occurrence IDs map same-line anonymous components in original source order
+  ---
+  duration_ms: 418.307125
+  type: 'test'
+  ...
+# Subtest: element text excludes head and raw script/style contents
+ok 25 - element text excludes head and raw script/style contents
+  ---
+  duration_ms: 428.770125
+  type: 'test'
+  ...
+# Subtest: SVG raw style is excluded from element records and ancestor text while its computed effect is retained
+ok 26 - SVG raw style is excluded from element records and ancestor text while its computed effect is retained
+  ---
+  duration_ms: 413.7705
+  type: 'test'
+  ...
+# Subtest: inline web-root background images stay inside copied preview assets
+ok 27 - inline web-root background images stay inside copied preview assets
+  ---
+  duration_ms: 422.442875
+  type: 'test'
+  ...
+# Subtest: unparsed JSF controls are shown as fixed placeholders without raw JSF tags or content
+ok 28 - unparsed JSF controls are shown as fixed placeholders without raw JSF tags or content
+  ---
+  duration_ms: 1.440166
+  type: 'test'
+  ...
+# Subtest: static Struts message rendering uses configured bundle, ignores locales and labels missing keys
+ok 29 - static Struts message rendering uses configured bundle, ignores locales and labels missing keys
+  ---
+  duration_ms: 61.501875
+  type: 'test'
+  ...
+# Subtest: Struts-Faces s:message uses the same bundle lookup and missing-key fallback
+ok 30 - Struts-Faces s:message uses the same bundle lookup and missing-key fallback
+  ---
+  duration_ms: 0.4035
+  type: 'test'
+  ...
+# Subtest: s:message resolves the configured package bundle from src/main/java
+ok 31 - s:message resolves the configured package bundle from src/main/java
+  ---
+  duration_ms: 119.270834
+  type: 'test'
+  ...
+# Subtest: WP24 tool-owned thumbnails are 640px lossless PNG and identical on repetition
+ok 32 - WP24 tool-owned thumbnails are 640px lossless PNG and identical on repetition
+  ---
+  duration_ms: 699.160958
+  type: 'test'
+  ...
+# Subtest: OQ-017 shared vectors keep only original opening tags and original start lines
+ok 33 - OQ-017 shared vectors keep only original opening tags and original start lines
+  ---
+  duration_ms: 27.422167
+  type: 'test'
+  ...
+# Subtest: four distinct tag hrefs map to the component that owns that exact href
+ok 34 - four distinct tag hrefs map to the component that owns that exact href
+  ---
+  duration_ms: 2253.90975
+  type: 'test'
+  ...
+# Subtest: no source and no attribute evidence cannot consume a same-tag component; anchor collisions retain all candidates
+ok 35 - no source and no attribute evidence cannot consume a same-tag component; anchor collisions retain all candidates
+  ---
+  duration_ms: 220.482334
+  type: 'test'
+  ...
+# Subtest: unique anchors support repeated DOM occurrences and ignore other screens and conflicting heuristics
+ok 36 - unique anchors support repeated DOM occurrences and ignore other screens and conflicting heuristics
+  ---
+  duration_ms: 225.586834
+  type: 'test'
+  ...
+# Subtest: packed display documents omit redundant DOM anchor strings while original capture documents remain intact
+ok 37 - packed display documents omit redundant DOM anchor strings while original capture documents remain intact
+  ---
+  duration_ms: 4.292
+  type: 'test'
+  ...
+# Subtest: WP29 only unmapped operables receive one of the five evidence-based reasons
+ok 38 - WP29 only unmapped operables receive one of the five evidence-based reasons
+  ---
+  duration_ms: 1.575
+  type: 'test'
+  ...
+# Subtest: WP29 capture waits for pending font completion before measuring styles
+ok 39 - WP29 capture waits for pending font completion before measuring styles
+  ---
+  duration_ms: 1485.846959
+  type: 'test'
+  ...
+# Subtest: React screens render their reconstructed markup with project stylesheets and map elements by anchor
+ok 40 - React screens render their reconstructed markup with project stylesheets and map elements by anchor
+  ---
+  duration_ms: 1525.905208
+  type: 'test'
+  ...
+# Subtest: a package stylesheet that is not installed is reported, not fetched
+ok 41 - a package stylesheet that is not installed is reported, not fetched
+  ---
+  duration_ms: 949.541
+  type: 'test'
+  ...
+# Subtest: stylesheet references keep only relative local files
+ok 42 - stylesheet references keep only relative local files
+  ---
+  duration_ms: 0.954
+  type: 'test'
+  ...
+# Subtest: bounded reads allow a project file and reject oversized inputs
+ok 43 - bounded reads allow a project file and reject oversized inputs
+  ---
+  duration_ms: 11.466583
+  type: 'test'
+  ...
+# Subtest: rejects traversal and symbolic-link source files
+ok 44 - rejects traversal and symbolic-link source files
+  ---
+  duration_ms: 4.900667
+  type: 'test'
+  ...
+# Subtest: refuses output symlinks and traversal
+ok 45 - refuses output symlinks and traversal
+  ---
+  duration_ms: 2.000542
+  type: 'test'
+  ...
+# Subtest: accepts a configured output root through its root symlink while keeping child symlinks forbidden
+ok 46 - accepts a configured output root through its root symlink while keeping child symlinks forbidden
+  ---
+  duration_ms: 7.893375
+  type: 'test'
+  ...
+# Subtest: containment treats a sibling sharing the root name prefix as outside
+ok 47 - containment treats a sibling sharing the root name prefix as outside
+  ---
+  duration_ms: 2.9565
+  type: 'test'
+  ...
+# Subtest: discovers a servlet-webapp mvc:resources mapping
+ok 48 - discovers a servlet-webapp mvc:resources mapping
+  ---
+  duration_ms: 88.098292
+  type: 'test'
+  ...
+# Subtest: supports reversed attributes and multiple mappings
+ok 49 - supports reversed attributes and multiple mappings
+  ---
+  duration_ms: 179.845667
+  type: 'test'
+  ...
+# Subtest: keeps supported servlet and classpath locations from a comma-separated mapping
+ok 50 - keeps supported servlet and classpath locations from a comma-separated mapping
+  ---
+  duration_ms: 34.957084
+  type: 'test'
+  ...
+# Subtest: rejects locations that escape the analyzed project
+ok 51 - rejects locations that escape the analyzed project
+  ---
+  duration_ms: 8.553125
+  type: 'test'
+  ...
+# Subtest: rejects a resource location symlinked outside the project
+ok 52 - rejects a resource location symlinked outside the project
+  ---
+  duration_ms: 9.33825
+  type: 'test'
+  ...
+# Subtest: Tiles page definitions render their template with every resolved slot
+ok 53 - Tiles page definitions render their template with every resolved slot
+  ---
+  duration_ms: 1435.435541
+  type: 'test'
+  ...
+# Subtest: a template without Tiles attributes renders only its literal pages and reports each empty slot
+ok 54 - a template without Tiles attributes renders only its literal pages and reports each empty slot
+  ---
+  duration_ms: 892.648083
+  type: 'test'
+  ...
+1..54
+# tests 54
+# suites 0
+# pass 54
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 8390.655708

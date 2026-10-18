@@ -1,0 +1,111 @@
+{
+  "date": "2026-10-18",
+  "branch": "fix/workflow-restoration",
+  "implementationCommit": "054cf0cc3e1078abe7e5efba007382ee8ab2483a",
+  "projects": {
+    "MyStrutsApp": {
+      "repository": "https://github.com/ranveer5289/OLMS",
+      "commit": "60b3499745bfe5c8ae884fac3cb89d8b1e96d1dd",
+      "sourceRoot": "/private/tmp/screentrace-workflows-20261018/sources/OLMS/MyStrutsApp"
+    },
+    "eBazaar": {
+      "repository": "https://github.com/bradd-pandey/eBazaar",
+      "commit": "88e30754c8a760d87d7eec2c115777efa04a7ba1",
+      "sourceRoot": "/private/tmp/screentrace-workflows-20261018/sources/eBazaar"
+    },
+    "Hospital-Bed-Availability-Management-System": {
+      "repository": "https://github.com/RahulDahekar/Hospital-Bed-Availability-Management-System",
+      "commit": "4667e02e2463ec79907bd60a919b9c2501d3f15d",
+      "sourceRoot": "/private/tmp/screentrace-workflows-20261018/sources/Hospital-Bed-Availability-Management-System"
+    }
+  },
+  "analysisRuns": [
+    {
+      "project": "MyStrutsApp",
+      "exitCode": 0,
+      "seconds": 6.21
+    },
+    {
+      "project": "eBazaar",
+      "exitCode": 0,
+      "seconds": 6.69
+    },
+    {
+      "project": "Hospital-Bed-Availability-Management-System",
+      "exitCode": 0,
+      "seconds": 8.4
+    }
+  ],
+  "sourceUnchanged": {
+    "MyStrutsApp": true,
+    "eBazaar": true,
+    "Hospital-Bed-Availability-Management-System": true
+  },
+  "artifacts": {
+    "MyStrutsApp/application-graph.json": {
+      "bytes": 339490,
+      "sha256": "61344c1d441db53e7968a7a80d49653c86b4026f0f011b4f59cd8067ff16245f"
+    },
+    "MyStrutsApp/preview-model.json": {
+      "bytes": 749871,
+      "sha256": "f5f71b332f3c1ea9085d25cdca6e03f13de6147b4367dd0ad5e6080b241c8403"
+    },
+    "MyStrutsApp/report/screentrace-report.html": {
+      "bytes": 1221110,
+      "sha256": "651675c452cb77a0f9aba44ed269fede38a964234ad9de81d662df1385e9df27"
+    },
+    "eBazaar/application-graph.json": {
+      "bytes": 506468,
+      "sha256": "0755e50221919fe11dfcd8095ad9d90346d7b36e51df4be506fcfbb251ad040b"
+    },
+    "eBazaar/preview-model.json": {
+      "bytes": 956535,
+      "sha256": "04ca44c239c022fae0bd86a8838045cf99da519852b085d7d1a6a0561221fa57"
+    },
+    "eBazaar/report/screentrace-report.html": {
+      "bytes": 1540387,
+      "sha256": "0e2ddee7af939a770590c7d22ebb93054b4206feeb6513003bea66547dd39bd2"
+    },
+    "Hospital-Bed-Availability-Management-System/application-graph.json": {
+      "bytes": 638661,
+      "sha256": "5333eb83f8ad0ae5016babc8e4b9447afff0cbbadff5ab285762443847d712b8"
+    },
+    "Hospital-Bed-Availability-Management-System/preview-model.json": {
+      "bytes": 2213619,
+      "sha256": "85f4a19eb7adb40b44add4a17839568b61c631d8a18271a7278623471f8053eb"
+    },
+    "Hospital-Bed-Availability-Management-System/report/screentrace-report.html": {
+      "bytes": 7720051,
+      "sha256": "b93eb9fc3f27dc559bcb78c97c58ea39a9ae7b9bc982ffcf519a7063943f8476"
+    }
+  },
+  "testSummary": {
+    "java": {
+      "tests": 405,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 1
+    },
+    "capture": 54,
+    "javascript": 66,
+    "viewerUnit": 105,
+    "viewerE2E": 84,
+    "publicOperations": 32,
+    "publicJourneys": 3
+  },
+  "baselineSha256": "a07dfc5a73ff7476fd27b8908524343a8aba0065fb00b85c6f5ddf2839a923b3",
+  "finalCommittedBuildComparison": {
+    "MyStrutsApp": {
+      "identicalToAcceptedArtifacts": true,
+      "files": 23
+    },
+    "eBazaar": {
+      "identicalToAcceptedArtifacts": true,
+      "files": 25
+    },
+    "Hospital-Bed-Availability-Management-System": {
+      "identicalToAcceptedArtifacts": true,
+      "files": 28
+    }
+  }
+}
