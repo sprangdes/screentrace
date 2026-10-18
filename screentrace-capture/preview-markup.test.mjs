@@ -6,3 +6,9 @@ test('comments script text and quoted angle brackets cannot invent condition tag
 test('target reserved attributes cannot spoof the generated guard',()=>{const html=annotateConditions('<div data-st-conditional="true" data-st-condition="fake">X</div><c:if test="${real}"><span data-st-condition="fake">Y</span></c:if>');assert.equal((html.match(/data-st-conditional/g)||[]).length,1);assert.doesNotMatch(html,/fake/);});
 test('unknown conditional expression and scriptlet remain in the dynamic list',()=>{assert.deepEqual(expressionList('<div>${fn:unknown(x)}</div><% out.print(value); %>'),['${fn:unknown(x)}','<% out.print(value); %>']);});
 test('dynamic expression evidence keeps balanced map literals, quoted braces and deferred EL verbatim',()=>{assert.deepEqual(expressionList('${{"x": {"y": 1}}} #{bean.title} ${fn:unknown("}")}'),['${{"x": {"y": 1}}}','#{bean.title}','${fn:unknown("}")}']);});
+
+test('Struts controls retain spaced bindings and button/reset semantics',async()=>{
+ const {convertControls}=await import('./preview-markup.mjs');
+ const html=convertControls('<html:form><html:text property = "code"/><html:button property = "go" value = "clear" onclick="clearForm()"/></html:form>');
+ assert.match(html,/name\s*=\s*"code"/);assert.match(html,/type="button"/);assert.match(html,/>clear<\/button>/);assert.match(html,/<form[^>]*method="post"/);
+});
