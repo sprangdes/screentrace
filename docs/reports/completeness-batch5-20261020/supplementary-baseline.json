@@ -1,0 +1,417 @@
+{
+  "cases": [
+    {
+      "id": "X01",
+      "project": "Student-Management-system",
+      "sourceView": "src/main/webapp/WEB-INF/views/index.jsp",
+      "kind": "navigate",
+      "selector": "a[href=\"add-student\"]",
+      "source": "src/main/webapp/WEB-INF/views/base.jsp:67-70",
+      "expectedView": "src/main/webapp/WEB-INF/views/addstudent.jsp",
+      "replacesInvalid": [
+        "S01"
+      ]
+    },
+    {
+      "id": "X02",
+      "project": "Student-Management-system",
+      "sourceView": "src/main/webapp/WEB-INF/views/index.jsp",
+      "kind": "navigate",
+      "selector": "a[href=\"studentlist\"]",
+      "source": "src/main/webapp/WEB-INF/views/base.jsp:63-65",
+      "expectedView": "src/main/webapp/WEB-INF/views/studentlist.jsp",
+      "replacesInvalid": [
+        "S02"
+      ]
+    },
+    {
+      "id": "X03",
+      "project": "Student-Management-system",
+      "sourceView": "src/main/webapp/WEB-INF/views/index.jsp",
+      "kind": "dataJourney",
+      "selector": "a[href=\"add-student\"]",
+      "source": "src/main/java/studentcurd/controller/MainController.java:49-95",
+      "steps": [
+        "X01",
+        "S04",
+        "X02"
+      ],
+      "expectedText": [
+        "Trace Student 520",
+        "Static Analysis"
+      ],
+      "replacesInvalid": [
+        "S08"
+      ]
+    }
+  ],
+  "references": [
+    {
+      "id": "M01",
+      "project": "Materials-Program-Management",
+      "sourceView": "WebRoot/index.jsp",
+      "kind": "text",
+      "selector": "body",
+      "source": "WebRoot/index.jsp:15-20",
+      "expectedText": [
+        "\u7528\u6237",
+        "\u5bc6\u7801",
+        "\u767b\u5f55",
+        "\u4e2d\u6587",
+        "\u82f1\u6587"
+      ]
+    },
+    {
+      "id": "M02",
+      "project": "Materials-Program-Management",
+      "sourceView": "WebRoot/index.jsp",
+      "kind": "choices",
+      "selector": "input[type=submit]",
+      "source": "src/com/bjsxt/drp/web/itemmgr/actions/LoginAction.java:36-42",
+      "expectedViews": [
+        "WebRoot/index.jsp",
+        "WebRoot/WEB-INF/jsp/basedata/item_maint.jsp"
+      ],
+      "fill": {
+        "[name=username]": "admin",
+        "[name=password]": "admin"
+      }
+    },
+    {
+      "id": "M03",
+      "project": "Materials-Program-Management",
+      "sourceView": "WebRoot/WEB-INF/jsp/basedata/item_maint.jsp",
+      "kind": "navigate",
+      "selector": "#btnAdd",
+      "source": "WebRoot/WEB-INF/jsp/basedata/item_maint.jsp:12-14",
+      "expectedView": "WebRoot/WEB-INF/jsp/basedata/item_add.jsp"
+    },
+    {
+      "id": "M04",
+      "project": "Materials-Program-Management",
+      "sourceView": "WebRoot/WEB-INF/jsp/basedata/item_maint.jsp",
+      "kind": "navigate",
+      "selector": "#btnModify",
+      "source": "WebRoot/WEB-INF/jsp/basedata/item_maint.jsp:16-38",
+      "expectedView": "WebRoot/WEB-INF/jsp/basedata/item_modify.jsp",
+      "check": [
+        "[name=selectFlag]"
+      ]
+    },
+    {
+      "id": "M05",
+      "project": "Materials-Program-Management",
+      "sourceView": "WebRoot/WEB-INF/jsp/basedata/item_maint.jsp",
+      "kind": "navigate",
+      "selector": "#btnUpload",
+      "source": "WebRoot/WEB-INF/jsp/basedata/item_maint.jsp:66-85",
+      "expectedView": "WebRoot/WEB-INF/jsp/basedata/item_upload.jsp",
+      "check": [
+        "[name=selectFlag]"
+      ]
+    },
+    {
+      "id": "M06",
+      "project": "Materials-Program-Management",
+      "sourceView": "WebRoot/WEB-INF/jsp/basedata/item_maint.jsp",
+      "kind": "dialog",
+      "selector": "#btnModify",
+      "source": "WebRoot/WEB-INF/jsp/basedata/item_maint.jsp:25-27",
+      "expectedMessage": "\u8bf7\u9009\u62e9\u9700\u8981\u4fee\u6539\u7684\u7269\u6599\uff01",
+      "uncheck": [
+        "[name=selectFlag]"
+      ]
+    },
+    {
+      "id": "M07",
+      "project": "Materials-Program-Management",
+      "sourceView": "WebRoot/WEB-INF/jsp/basedata/item_add.jsp",
+      "kind": "navigate",
+      "selector": "#btnBack",
+      "source": "WebRoot/WEB-INF/jsp/basedata/item_add.jsp:32-34",
+      "expectedView": "WebRoot/WEB-INF/jsp/basedata/item_maint.jsp"
+    },
+    {
+      "id": "M08",
+      "project": "Materials-Program-Management",
+      "sourceView": "WebRoot/WEB-INF/jsp/basedata/item_add.jsp",
+      "kind": "dialog",
+      "selector": "#btnAdd",
+      "source": "WebRoot/WEB-INF/jsp/basedata/item_add.jsp:13-23",
+      "expectedMessage": "\u7269\u6599\u4ee3\u7801\u4e0d\u80fd\u4e3a\u7a7a!",
+      "fill": {
+        "[name=itemNo]": "",
+        "[name=itemName]": ""
+      }
+    },
+    {
+      "id": "M09",
+      "project": "Materials-Program-Management",
+      "sourceView": "WebRoot/WEB-INF/jsp/basedata/item_upload.jsp",
+      "kind": "navigate",
+      "selector": "[name=btnBack]",
+      "source": "WebRoot/WEB-INF/jsp/basedata/item_upload.jsp:18-20",
+      "expectedView": "WebRoot/WEB-INF/jsp/basedata/item_maint.jsp"
+    },
+    {
+      "id": "S01",
+      "project": "Student-Management-system",
+      "sourceView": "src/main/webapp/WEB-INF/views/index.jsp",
+      "kind": "navigate",
+      "selector": "a[href$=\"/add-student\"]",
+      "source": "src/main/webapp/WEB-INF/views/base.jsp",
+      "expectedView": "src/main/webapp/WEB-INF/views/addstudent.jsp"
+    },
+    {
+      "id": "S02",
+      "project": "Student-Management-system",
+      "sourceView": "src/main/webapp/WEB-INF/views/index.jsp",
+      "kind": "navigate",
+      "selector": "a[href$=\"/studentlist\"]",
+      "source": "src/main/webapp/WEB-INF/views/base.jsp",
+      "expectedView": "src/main/webapp/WEB-INF/views/studentlist.jsp"
+    },
+    {
+      "id": "S03",
+      "project": "Student-Management-system",
+      "sourceView": "src/main/webapp/WEB-INF/views/index.jsp",
+      "kind": "toggle",
+      "selector": "#sidebarCollapse",
+      "source": "src/main/webapp/WEB-INF/resources/js/main.js:1-5",
+      "targetSelectors": [
+        "#sidebar",
+        "#content"
+      ],
+      "className": "active"
+    },
+    {
+      "id": "S04",
+      "project": "Student-Management-system",
+      "sourceView": "src/main/webapp/WEB-INF/views/addstudent.jsp",
+      "kind": "navigate",
+      "selector": "button[type=submit]",
+      "source": "src/main/java/studentcurd/controller/MainController.java:49-83",
+      "expectedView": "src/main/webapp/WEB-INF/views/index.jsp",
+      "fill": {
+        "[name=name]": "Trace Student 520",
+        "[name=course]": "Static Analysis",
+        "[name=dob]": "2001-02-03",
+        "[name=email]": "trace@example.invalid",
+        "[name=mobile]": "0700520520",
+        "[name=address]": "Source Street"
+      },
+      "select": {
+        "#Gender": "Female"
+      },
+      "fileSelector": "[name=studentimg]"
+    },
+    {
+      "id": "S05",
+      "project": "Student-Management-system",
+      "sourceView": "src/main/webapp/WEB-INF/views/studentlist.jsp",
+      "kind": "navigate",
+      "selector": "a[href^=\"update/\"]",
+      "source": "src/main/java/studentcurd/controller/MainController.java:113-121",
+      "expectedView": "src/main/webapp/WEB-INF/views/updateform.jsp"
+    },
+    {
+      "id": "S06",
+      "project": "Student-Management-system",
+      "sourceView": "src/main/webapp/WEB-INF/views/studentlist.jsp",
+      "kind": "navigate",
+      "selector": "a[href^=\"delete/\"]",
+      "source": "src/main/java/studentcurd/controller/MainController.java:102-108",
+      "expectedView": "src/main/webapp/WEB-INF/views/studentlist.jsp"
+    },
+    {
+      "id": "S07",
+      "project": "Student-Management-system",
+      "sourceView": "src/main/webapp/WEB-INF/views/updateform.jsp",
+      "kind": "navigate",
+      "selector": "button[type=submit]",
+      "source": "src/main/java/studentcurd/controller/MainController.java:49-83",
+      "expectedView": "src/main/webapp/WEB-INF/views/index.jsp",
+      "fill": {
+        "[name=name]": "Updated Student 520"
+      },
+      "fileSelector": "[name=studentimg]"
+    },
+    {
+      "id": "S08",
+      "project": "Student-Management-system",
+      "sourceView": "src/main/webapp/WEB-INF/views/index.jsp",
+      "kind": "dataJourney",
+      "selector": "a[href$=\"/add-student\"]",
+      "source": "src/main/java/studentcurd/controller/MainController.java:49-95",
+      "steps": [
+        "S01",
+        "S04",
+        "S02"
+      ],
+      "expectedText": [
+        "Trace Student 520",
+        "Static Analysis"
+      ]
+    },
+    {
+      "id": "E01",
+      "project": "Expenses-Tracker-WebApp",
+      "sourceView": "src/main/resources/templates/landing-page.html",
+      "kind": "navigate",
+      "selector": "a[th\\:href=\"@{/showLoginPage}\"]",
+      "source": "src/main/resources/templates/fragments/navbar.html:20",
+      "expectedView": "src/main/resources/templates/login-page.html"
+    },
+    {
+      "id": "E02",
+      "project": "Expenses-Tracker-WebApp",
+      "sourceView": "src/main/resources/templates/landing-page.html",
+      "kind": "navigate",
+      "selector": "a[th\\:href=\"@{/showRegistrationForm}\"]",
+      "source": "src/main/resources/templates/fragments/navbar.html:22",
+      "expectedView": "src/main/resources/templates/registration-page.html"
+    },
+    {
+      "id": "E03",
+      "project": "Expenses-Tracker-WebApp",
+      "sourceView": "src/main/resources/templates/list-page.html",
+      "kind": "toggleVisible",
+      "selector": "#toggleFormBtn",
+      "source": "src/main/resources/templates/list-page.html:44-55",
+      "targetSelector": "#filterForm"
+    },
+    {
+      "id": "E04",
+      "project": "Expenses-Tracker-WebApp",
+      "sourceView": "src/main/resources/templates/add-expense.html",
+      "kind": "navigate",
+      "selector": "input[type=submit]",
+      "source": "src/main/java/com/SpringBootMVC/ExpensesTracker/controller/MainController.java:51-57",
+      "expectedView": "src/main/resources/templates/list-page.html",
+      "fill": {
+        "#amount": "520",
+        "#dateTime": "2026-10-20T12:30",
+        "#description": "Trace expense 520"
+      },
+      "select": {
+        "#expenseCategory": "groceries"
+      }
+    },
+    {
+      "id": "E05",
+      "project": "Expenses-Tracker-WebApp",
+      "sourceView": "src/main/resources/templates/list-page.html",
+      "kind": "navigate",
+      "selector": "a[th\\:href^=\"@{/showUpdate\"]",
+      "source": "src/main/java/com/SpringBootMVC/ExpensesTracker/controller/MainController.java:77-89",
+      "expectedView": "src/main/resources/templates/update-page.html"
+    },
+    {
+      "id": "E06",
+      "project": "Expenses-Tracker-WebApp",
+      "sourceView": "src/main/resources/templates/update-page.html",
+      "kind": "navigate",
+      "selector": "input[type=submit]",
+      "source": "src/main/java/com/SpringBootMVC/ExpensesTracker/controller/MainController.java:92-99",
+      "expectedView": "src/main/resources/templates/list-page.html",
+      "fill": {
+        "#amount": "521",
+        "#dateTime": "2026-10-20T13:30",
+        "#description": "Updated expense 520"
+      }
+    },
+    {
+      "id": "E07",
+      "project": "Expenses-Tracker-WebApp",
+      "sourceView": "src/main/resources/templates/list-page.html",
+      "kind": "confirmCancel",
+      "selector": "a[th\\:href^=\"@{/delete\"]",
+      "source": "src/main/resources/templates/list-page.html:212-213",
+      "expectedMessage": "Are you sure you want to delete this expense?"
+    },
+    {
+      "id": "E08",
+      "project": "Expenses-Tracker-WebApp",
+      "sourceView": "src/main/resources/templates/list-page.html",
+      "kind": "navigateConfirm",
+      "selector": "a[th\\:href^=\"@{/delete\"]",
+      "source": "src/main/java/com/SpringBootMVC/ExpensesTracker/controller/MainController.java:102-106",
+      "expectedView": "src/main/resources/templates/list-page.html"
+    },
+    {
+      "id": "E09",
+      "project": "Expenses-Tracker-WebApp",
+      "sourceView": "src/main/resources/templates/list-page.html",
+      "kind": "filter",
+      "selector": "input[value=Apply]",
+      "source": "src/main/java/com/SpringBootMVC/ExpensesTracker/controller/MainController.java:110-128",
+      "expectedView": "src/main/resources/templates/filter-result.html",
+      "fill": {
+        "#from": "100",
+        "#to": "600"
+      },
+      "select": {
+        "#expenseCategory": "groceries",
+        "#months": "10",
+        "#years": "2024"
+      },
+      "openSelector": "#toggleFormBtn"
+    },
+    {
+      "id": "E10",
+      "project": "Expenses-Tracker-WebApp",
+      "sourceView": "src/main/resources/templates/registration-page.html",
+      "kind": "choices",
+      "selector": "button[type=submit]",
+      "source": "src/main/java/com/SpringBootMVC/ExpensesTracker/controller/SignupController.java:48-61",
+      "expectedViews": [
+        "src/main/resources/templates/registration-page.html",
+        "src/main/resources/templates/login-page.html"
+      ],
+      "fill": {
+        "[name=username]": "TraceUser520",
+        "[name=password]": "TracePassword520!",
+        "[name=firstName]": "Trace",
+        "[name=lastName]": "User",
+        "[name=email]": "trace@example.invalid"
+      }
+    },
+    {
+      "id": "E11",
+      "project": "Expenses-Tracker-WebApp",
+      "sourceView": "src/main/resources/templates/login-page.html",
+      "kind": "navigate",
+      "selector": "button[type=submit]",
+      "source": "src/main/java/com/SpringBootMVC/ExpensesTracker/security/SecurityConfig.java:42-44",
+      "expectedView": "src/main/resources/templates/list-page.html",
+      "fill": {
+        "[name=username]": "TraceUser520",
+        "[name=password]": "TracePassword520!"
+      }
+    },
+    {
+      "id": "E12",
+      "project": "Expenses-Tracker-WebApp",
+      "sourceView": "src/main/resources/templates/add-expense.html",
+      "kind": "dataJourney",
+      "selector": "input[type=submit]",
+      "source": "src/main/java/com/SpringBootMVC/ExpensesTracker/controller/MainController.java:51-74",
+      "steps": [
+        "E04"
+      ],
+      "expectedText": [
+        "Trace expense 520",
+        "520"
+      ]
+    },
+    {
+      "id": "E13",
+      "project": "Expenses-Tracker-WebApp",
+      "sourceView": "src/main/resources/templates/add-expense.html",
+      "kind": "navigate",
+      "selector": "input[value=logout]",
+      "source": "src/main/java/com/SpringBootMVC/ExpensesTracker/security/SecurityConfig.java:46-50",
+      "expectedView": "src/main/resources/templates/login-page.html"
+    }
+  ]
+}

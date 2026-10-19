@@ -1,0 +1,206 @@
+{
+  "units": 33,
+  "rows": [
+    {
+      "project": "Materials-Program-Management",
+      "file": "WebRoot/WEB-INF/jsp/basedata/item_add.jsp",
+      "line": 15,
+      "kind": "uiCall",
+      "callee": "alert",
+      "url": null,
+      "httpMethod": null,
+      "expression": "alert(\"物料代码不能为空!\")"
+    },
+    {
+      "project": "Materials-Program-Management",
+      "file": "WebRoot/WEB-INF/jsp/basedata/item_add.jsp",
+      "line": 21,
+      "kind": "uiCall",
+      "callee": "alert",
+      "url": null,
+      "httpMethod": null,
+      "expression": "alert(\"物料名称不能为空!\")"
+    },
+    {
+      "project": "Materials-Program-Management",
+      "file": "WebRoot/WEB-INF/jsp/basedata/item_maint.jsp",
+      "line": 26,
+      "kind": "uiCall",
+      "callee": "alert",
+      "url": null,
+      "httpMethod": null,
+      "expression": "alert(\"请选择需要修改的物料！\")"
+    },
+    {
+      "project": "Materials-Program-Management",
+      "file": "WebRoot/WEB-INF/jsp/basedata/item_maint.jsp",
+      "line": 30,
+      "kind": "uiCall",
+      "callee": "alert",
+      "url": null,
+      "httpMethod": null,
+      "expression": "alert(\"一次只能修改一个物料！\")"
+    },
+    {
+      "project": "Materials-Program-Management",
+      "file": "WebRoot/WEB-INF/jsp/basedata/item_maint.jsp",
+      "line": 48,
+      "kind": "uiCall",
+      "callee": "alert",
+      "url": null,
+      "httpMethod": null,
+      "expression": "alert(\"请选择需要删除的物料！\")"
+    },
+    {
+      "project": "Materials-Program-Management",
+      "file": "WebRoot/WEB-INF/jsp/basedata/item_maint.jsp",
+      "line": 76,
+      "kind": "uiCall",
+      "callee": "alert",
+      "url": null,
+      "httpMethod": null,
+      "expression": "alert(\"请选择需要上传的物料！\")"
+    },
+    {
+      "project": "Materials-Program-Management",
+      "file": "WebRoot/WEB-INF/jsp/basedata/item_maint.jsp",
+      "line": 80,
+      "kind": "uiCall",
+      "callee": "alert",
+      "url": null,
+      "httpMethod": null,
+      "expression": "alert(\"一次只能上传一个物料！\")"
+    },
+    {
+      "project": "Materials-Program-Management",
+      "file": "WebRoot/WEB-INF/jsp/basedata/item_modify.jsp",
+      "line": 15,
+      "kind": "uiCall",
+      "callee": "alert",
+      "url": null,
+      "httpMethod": null,
+      "expression": "alert(\"物料名称不能为空！\")"
+    },
+    {
+      "project": "Materials-Program-Management",
+      "file": "WebRoot/script/JSCalendar.js",
+      "line": 121,
+      "kind": "uiCall",
+      "callee": "alert",
+      "url": null,
+      "httpMethod": null,
+      "expression": "alert(\"JSCalendar 1.0 alerts you:\\n\\n INPUT element(object) must be required!\")"
+    },
+    {
+      "project": "Student-Management-system",
+      "file": "src/main/webapp/WEB-INF/resources/js/main.js",
+      "line": 2,
+      "kind": "eventBinding",
+      "callee": "on",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$('#sidebarCollapse').on('click', function(){\n        $('#sidebar, #content').toggleClass('active');\n    })"
+    },
+    {
+      "project": "Expenses-Tracker-WebApp",
+      "file": "src/main/resources/static/js/scripts.js",
+      "line": 10,
+      "kind": "eventBinding",
+      "callee": "window.addEventListener",
+      "url": null,
+      "httpMethod": null,
+      "expression": "window.addEventListener('DOMContentLoaded', event => {\n\n    // Navbar shrink function\n    var navbarShrink = function () {\n        const navbarCollapsible = document.body.querySele"
+    },
+    {
+      "project": "Expenses-Tracker-WebApp",
+      "file": "src/main/resources/static/js/scripts.js",
+      "line": 19,
+      "kind": "uiCall",
+      "callee": "navbarCollapsible.classList.remove",
+      "url": null,
+      "httpMethod": null,
+      "expression": "navbarCollapsible.classList.remove('navbar-shrink')"
+    },
+    {
+      "project": "Expenses-Tracker-WebApp",
+      "file": "src/main/resources/static/js/scripts.js",
+      "line": 21,
+      "kind": "uiCall",
+      "callee": "navbarCollapsible.classList.add",
+      "url": null,
+      "httpMethod": null,
+      "expression": "navbarCollapsible.classList.add('navbar-shrink')"
+    },
+    {
+      "project": "Expenses-Tracker-WebApp",
+      "file": "src/main/resources/static/js/scripts.js",
+      "line": 30,
+      "kind": "eventBinding",
+      "callee": "document.addEventListener",
+      "url": null,
+      "httpMethod": null,
+      "expression": "document.addEventListener('scroll', navbarShrink)"
+    },
+    {
+      "project": "Expenses-Tracker-WebApp",
+      "file": "src/main/resources/static/js/scripts.js",
+      "line": 47,
+      "kind": "eventBinding",
+      "callee": "responsiveNavItem.addEventListener",
+      "url": null,
+      "httpMethod": null,
+      "expression": "responsiveNavItem.addEventListener('click', () => {\n            if (window.getComputedStyle(navbarToggler).display !== 'none') {\n                navbarToggler.click();\n            "
+    },
+    {
+      "project": "Expenses-Tracker-WebApp",
+      "file": "src/main/resources/static/js/scripts.js",
+      "line": 49,
+      "kind": "eventBinding",
+      "callee": "navbarToggler.click",
+      "url": null,
+      "httpMethod": null,
+      "expression": "navbarToggler.click()"
+    },
+    {
+      "project": "Expenses-Tracker-WebApp",
+      "file": "src/main/resources/templates/filter-result.html",
+      "line": 62,
+      "kind": "uiCall",
+      "callee": "confirm",
+      "url": null,
+      "httpMethod": null,
+      "expression": "confirm('Are you sure you want to delete this expense?')"
+    },
+    {
+      "project": "Expenses-Tracker-WebApp",
+      "file": "src/main/resources/templates/list-page.html",
+      "line": 36,
+      "kind": "eventBinding",
+      "callee": "document.addEventListener",
+      "url": null,
+      "httpMethod": null,
+      "expression": "document.addEventListener(\"DOMContentLoaded\", function () {\n            var toggleFormBtn = document.getElementById(\"toggleFormBtn\");\n            var filterForm = document.getEleme"
+    },
+    {
+      "project": "Expenses-Tracker-WebApp",
+      "file": "src/main/resources/templates/list-page.html",
+      "line": 40,
+      "kind": "eventBinding",
+      "callee": "toggleFormBtn.addEventListener",
+      "url": null,
+      "httpMethod": null,
+      "expression": "toggleFormBtn.addEventListener(\"click\", function () {\n                if (filterForm.style.display === \"none\" || filterForm.style.display === \"\") {\n                    filterForm.s"
+    },
+    {
+      "project": "Expenses-Tracker-WebApp",
+      "file": "src/main/resources/templates/list-page.html",
+      "line": 166,
+      "kind": "uiCall",
+      "callee": "confirm",
+      "url": null,
+      "httpMethod": null,
+      "expression": "confirm('Are you sure you want to delete this expense?')"
+    }
+  ],
+  "parseFailures": []
+}

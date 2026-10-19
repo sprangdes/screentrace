@@ -121,3 +121,9 @@
 - 修正 WF-024–033、NC-004–005 的有限分析／模擬路徑，補上離線圖示、新解鎖的動態查詢路徑 WF-034，以及 autofocus 擷取時序 WF-037、下拉選單初始可見狀態 WF-038。41／41 實體來源回傳、13／13 本地 CSS 通過；五次各 46 份產物一致，完整回歸 786 通過／1 略過。
 - 原操作 28 PASS／3 FAIL；來源更正後有效 33 項 31 PASS／2 FAIL。原 H11、X03 的錯誤預期與 FAIL 保留，以 X04 驗證來源日期欄位。前述 WP73 的「X03 來源正確」已由本次複核更正：來源沒有電話欄位。
 - 自訂 Hibernate DAO 與外部 HTTP 清單資料回顯仍未解決（WF-035／036），不宣稱功能完全等價。見 [修正報告](reports/WORKFLOW_BATCH4_FIXES_20261019.md)、[ADR 0094](adr/0094-public-batch4-workflow-repairs.md)。
+
+## WP75 第五批不重複公開專案驗收（2026-10-20）
+
+- 三個新 repository：Struts 1／Spring 物料、MVC／JSP 學生、Boot／Thymeleaf 支出；與既有 18 個 repository 無交集。21 頁面／片段、21 個 Controller／Struts 路由、153 控制項都有發現；另 2 個 Security 配置入口缺失。
+- 來源更正後有效 30 檢查為 6 PASS／24 FAIL，3 旅程 1 PASS／2 FAIL；新增 WF-039–049、NC-006。目的頁集合 17／21 正確，12 個本地 CSS 參照 7 PASS／5 FAIL；支出可跳頁但提交資料沒有回顯，學生資料旅程阻於提交回首頁。
+- 本批僅驗證及保留問題證據，沒有修改產品／既有斷言；前批 WF-035／036 未修復。來源 377 檔不變，兩次各 41 份產物一致。詳見 [測試報告](reports/COMPLETENESS_BATCH5_20261020.md)。

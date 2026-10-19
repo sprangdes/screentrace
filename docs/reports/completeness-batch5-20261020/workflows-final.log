@@ -1,0 +1,58 @@
+M01 FAIL 
+M02 FAIL 
+M03 FAIL 
+M04 FAIL 
+M05 FAIL 
+M06 FAIL 
+M07 FAIL 
+M08 FAIL 
+M09 FAIL 
+MJ1-M03 FAIL 
+S01 FAIL TimeoutError: locator.click: Timeout 3500ms exceeded.
+Call log:
+[2m  - waiting for locator('.focus-
+S02 FAIL TimeoutError: locator.click: Timeout 3500ms exceeded.
+Call log:
+[2m  - waiting for locator('.focus-
+S03 FAIL 
+S04 FAIL 
+S05 FAIL 
+S06 FAIL 
+S07 FAIL 
+S08-S01 FAIL TimeoutError: locator.click: Timeout 3500ms exceeded.
+Call log:
+[2m  - waiting for locator('.focus-
+S08 FAIL 
+SJ1-S01 FAIL TimeoutError: locator.click: Timeout 3500ms exceeded.
+Call log:
+[2m  - waiting for locator('.focus-
+E01 FAIL TimeoutError: locator.click: Timeout 3500ms exceeded.
+Call log:
+[2m  - waiting for locator('.focus-
+E02 FAIL TimeoutError: locator.click: Timeout 3500ms exceeded.
+Call log:
+[2m  - waiting for locator('.focus-
+E03 FAIL 
+E04 PASS 
+E05 PASS 
+E06 PASS 
+E07 FAIL TimeoutError: locator.waitFor: Timeout 3500ms exceeded.
+Call log:
+[2m  - waiting for locator('.focu
+E08 FAIL TimeoutError: locator.click: Timeout 3500ms exceeded.
+Call log:
+[2m  - waiting for locator('.focus-
+E09 FAIL TimeoutError: locator.fill: Timeout 3500ms exceeded.
+Call log:
+[2m  - waiting for locator('.focus-l
+E10 PASS 
+E11 FAIL 
+E12-E04 PASS 
+E12 FAIL 
+E13 FAIL TimeoutError: locator.click: Timeout 3500ms exceeded.
+Call log:
+[2m  - waiting for locator('.focus-
+EJ1-E04 PASS 
+EJ1-E05 PASS 
+EJ1-E06 PASS 
+CASES { FAIL: 26, PASS: 4 } JOURNEYS [ [ 'MJ1', 'FAIL' ], [ 'SJ1', 'FAIL' ], [ 'EJ1', 'PASS' ] ]
