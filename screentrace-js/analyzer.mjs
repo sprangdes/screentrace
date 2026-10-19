@@ -1,3 +1,4 @@
+import {keyFilter,dependentDate,disclosure} from './workflow-shapes.mjs';
 import {createHash} from 'node:crypto';
 import {readFileSync} from 'node:fs';
 import {parseSource,diagnostic} from './parser.mjs';
@@ -100,16 +101,20 @@ export function analyze(request) {
    if(node?.type==='MemberExpression'&&['previousElementSibling','nextElementSibling'].includes(node.property?.name)){const ref=domReference(node.object,seen);return ref?{...ref,relative:node.property.name}:null;}
 
    if(node?.type==='MemberExpression'&&node.computed&&node.property?.value===0){const ref=domReference(node.object);return ref?{...ref,index:0}:null;}
+   if(calleeName(node)==='document.body'&&!lookup(currentContext?.env??rootEnv,'document')&&!lookup(currentContext?.env??rootEnv,'document','functions'))return {selector:'body',index:0};
    if(node?.type!=='CallExpression')return null;
    const name=calleeName(node.callee),arg=node.arguments[0]?.value;const head=name?.split('.')[0];if(head&&(['$','jQuery','document'].includes(head))&&(lookup(currentContext?.env??rootEnv,head)||lookup(currentContext?.env??rootEnv,head,'functions')))return null;if(['$','jQuery'].includes(name)&&node.arguments[0]?.type==='ThisExpression')return {selector:'this',library:'jquery'};if(typeof arg!=='string')return null;
    if(['$','jQuery'].includes(name))return {selector:arg,library:'jquery'};
    if(name==='document.getElementById')return {selector:'#'+arg};
    if(name==='document.getElementsByName')return {selector:'[name="'+arg.replaceAll('"','')+'"]'};
-   if(name==='document.querySelector')return {selector:arg,index:0};
+   if(['document.querySelector','document.body.querySelector'].includes(name))return {selector:arg,index:0};
    return null;
   }
   function visitNode(node,ctx) {
    if(!node?.type||functionTypes.has(node.type))return;
+   if(unit.event==='keypress'&&parsed.ast.type==='Program'&&parsed.ast.body.length===1&&parsed.ast.body[0]===node&&ctx.depth===0&&!ctx.guard&&!ctx.parentId&&!lookup(ctx.env??rootEnv,'event')) {
+    const filter=keyFilter(node);if(filter){emit('VALIDATE',node,ctx,{operation:'keyFilter',...filter});return;}
+   }
    if(node.type==='ReturnStatement'&&node.argument?.type==='CallExpression'&&!ctx.guard&&ctx.depth===0&&!ctx.parentId&&unit.event){
     const call=node.argument,name=calleeName(call.callee);
     if(['confirm','window.confirm'].includes(name)&&!lookup(ctx.env??rootEnv,name)&&!lookup(ctx.env??rootEnv,name,'functions')&&!lookup(ctx.env??rootEnv,name.split('.')[0])){
@@ -123,7 +128,7 @@ export function analyze(request) {
      for(const branch of node.cases)for(const child of branch.consequent)if(child.type!=='BreakStatement')visit(child,{...ctx,when:{selector:ref.selector,value:branch.test.value}});return;
     }
    }
-   if(node.type==='IfStatement') {visit(node.test,ctx);visit(node.consequent,{...ctx,guard:ctx.guard?ctx.guard+' && '+text(node.test,code):text(node.test,code)});if(node.alternate)visit(node.alternate,{...ctx,guard:'!('+text(node.test,code)+')'});return;}
+   if(node.type==='IfStatement') {const exists=n=>{if(n?.type==='LogicalExpression'&&n.operator==='&&')return exists(n.left)&&exists(n.right);const ref=domReference(n);if(!ref)return false;const matched=selectNodes(ref.selector,unitDom,ctx.triggerId);return matched.length===1&&!matched[0].dynamic;};if(exists(node.test)){visit(node.consequent,ctx);return;}visit(node.test,ctx);visit(node.consequent,{...ctx,guard:ctx.guard?ctx.guard+' && '+text(node.test,code):text(node.test,code)});if(node.alternate)visit(node.alternate,{...ctx,guard:'!('+text(node.test,code)+')'});return;}
    if(node.type==='AssignmentExpression') {
     const name=calleeName(node.left);
     if(node.left?.type==='MemberExpression'&&node.left.property?.name==='display'&&node.left.object?.property?.name==='style'){
@@ -150,7 +155,7 @@ export function analyze(request) {
     if(method==='controller'&&receiver?.type==='CallExpression'&&calleeName(receiver.callee)==='angular.module')return;
     if(lookup(ctx.env??rootEnv,name,'functions')||lookup(ctx.env??rootEnv,name)){if(execute(node.callee,args,ctx,node))return;emit('UNKNOWN',node,ctx,{callee:name},'UNRESOLVED');return;}
     const ready=(name==='$'||name==='jQuery')&&functionTypes.has(args[0]?.type);
-    const load=method==='ready'||(method==='addEventListener'&&args[0]?.value==='load'&&['window','document'].includes(calleeName(receiver)));
+    const load=method==='ready'||(method==='addEventListener'&&['load','DOMContentLoaded'].includes(args[0]?.value)&&['window','document'].includes(calleeName(receiver))&&!lookup(ctx.env??rootEnv,calleeName(receiver))&&!lookup(ctx.env??rootEnv,calleeName(receiver),'functions'));
     if(ready||load||(['$','jQuery'].includes(name)&&args[0]?.type==='Identifier')){const fn=ready||['$','jQuery'].includes(name)?args[0]:args[method==='ready'?0:1];execute(fn,[],{...root,event:load&&method!=='ready'?'load':'ready'},node,true);return;}
     if(['done','then','success','catch','fail','finally'].includes(method)&&receiver?.type==='CallExpression'){const parent=visit(receiver,ctx);for(const fn of args)if(functionTypes.has(fn?.type)||fn?.type==='Identifier')execute(fn,[],{...ctx,parentId:parent?.id??ctx.parentId,event:method},node,true);return parent;}
     const registration=registered.get(text(node,code))??(['on','click','change','submit','blur','focus','input','keydown','keyup','addEventListener'].includes(method)?bindings(unit,unitDom,{node,status:parsed.status,resolveSelector:value,resolveReceiver:n=>domReference(n)?.selector,thisId:ctx.triggerId}):[]);if(registration.some(b=>b.handler)){for(const b of registration)if(b.handler)bound(b,ctx);return;}
@@ -192,7 +197,7 @@ export function analyze(request) {
      if(['val','html','text'].includes(method)&&!args.length)return;
      const mapped=Object.entries(table).find(([,entry])=>entry.apis[method]);if(mapped){const selector=selectorOf(receiver,code);const operation=table[mapped[0]].operations?.[method]?.[args[0]?.value]??mapped[1].apis[method];const target=operation==='OPEN_DIALOG'?dialogTarget(selector):{};const {status:targetStatus,...attributes}=target;emit(operation,node,ctx,{library:mapped[0],selector,...attributes},targetStatus);return;}
     }
-    if(['add','remove','toggle'].includes(method)&&receiver?.property?.name==='classList'){emit('UI_STATE_CHANGE',node,ctx);return;}
+    if(['add','remove','toggle'].includes(method)&&receiver?.property?.name==='classList'){const target=domReference(receiver.object),v=value(args[0]);if(target&&args.length===1&&v.status==='CONFIRMED'&&/^[A-Za-z_][A-Za-z0-9_-]{0,127}$/.test(v.value))emit('UI_STATE_CHANGE',node,ctx,{operation:'class'+method[0].toUpperCase()+method.slice(1),...target,value:v.value});else emit('UI_STATE_CHANGE',node,ctx);return;}
     if(['JSON.stringify','JSON.parse','console.log','Object.keys','Object.values'].includes(name)||['$','jQuery'].includes(name))return;
     if(execute(node.callee,args,ctx,node))return;
    emit('UNKNOWN',node,ctx,{callee:text(node.callee,code)},'UNRESOLVED');diagnostics.push(diagnostic(unit.file,source(node).line,ctx.controllerName?'ANGULAR_CONTROLLER_UNRESOLVED':'UNKNOWN_CALL',ctx.controllerName?'AngularJS 控制器函式無法對應：'+text(node.callee,code):'未知函式呼叫：'+text(node.callee,code)));return;
@@ -209,6 +214,8 @@ export function analyze(request) {
    const env=environment(fn.body,declEnv);fn.params.forEach((p,i)=>{if(p.type==='Identifier')env.values.set(p.name,{resolved:args[i]&&(args[i].value!==null||args[i].properties)?args[i]:{value:'{'+p.name+'}',status:'UNRESOLVED',known:false,tainted:false},at:0});});
    const next={...ctx,env,depth:asHandler?ctx.depth:ctx.depth+1,stack:[...ctx.stack,key]};
    if(/^validate/i.test(fn.id?.name??call.name??'')) {walk(fn.body,n=>{if(n.type==='IfStatement'){let ids=[];walk(n.test,c=>{if(c.type==='CallExpression'&&c.callee.type==='MemberExpression')ids.push(...select(selectorOf(c.callee.object,code),unitDom,ctx.triggerId));});let message=null;walk(n.consequent,c=>{if(c.type==='CallExpression'&&['alert','window.alert'].includes(calleeName(c.callee)))message=c.arguments[0]?.value??null;});for(const id of new Set(ids))rule('custom',n,{...next,guard:text(n.test,code)},id,message,{condition:text(n.test,code)});}});}
+   if(asHandler&&ctx.event==='click'){const shape=disclosure(fn),button=shape&&domReference(shape.button),menu=shape&&domReference(shape.menu);if(button&&menu){emit('UI_STATE_CHANGE',fn.body,next,{operation:'toggleDisclosure',selector:menu.selector,inputSelector:button.selector});return;}}
+   if(asHandler&&ctx.event==='change'&&!lookup(env,'Date')&&!lookup(env,'Date','functions')){const date=dependentDate(fn);const ref=date&&domReference(date.target);if(ref){emit('UI_STATE_CHANGE',fn.body,next,{operation:'dateMin',...ref,days:date.days,inputSelector:ctx.selector});return;}}
    visit(fn.body,next);
   }
   walk(parsed.ast,n=>{if(n.type!=='CallExpression'||n.callee?.type!=='MemberExpression'||n.callee.property?.name!=='controller'||!n.arguments?.[0]?.value||!functionTypes.has(n.arguments[1]?.type))return;const controller=n.arguments[0].value,fn=n.arguments[1];walk(fn.body,a=>{if(a.type!=='AssignmentExpression'||a.left?.type!=='MemberExpression'||calleeName(a.left.object)!=='$scope'||!functionTypes.has(a.right?.type))return;const name=a.left.property?.name;if(!name)return;const key=`${unit.screenId}:${controller}:${name}`;if(!angularFunctions.has(key))angularFunctions.set(key,[]);angularFunctions.get(key).push({file:unit.file,invoke:(args,ctx)=>invoke(a.right,args,ctx,a.right,rootEnv,ctx.stack.length===0)});});});

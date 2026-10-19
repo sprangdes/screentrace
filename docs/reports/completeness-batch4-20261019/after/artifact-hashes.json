@@ -1,0 +1,92 @@
+{
+  "jar": {
+    "bytes": 7261704,
+    "sha256": "719d8738699633e603968cd6c2335d1305bd7c869037dffe16f02f1a9917c94d"
+  },
+  "files": {
+    "demo-struts1/application-graph.json": {
+      "bytes": 508529,
+      "sha256": "d2edcac6fa240f1ea1fa0435ffa74b3f8725237b5e5c834b5aee43cd978ccc0f"
+    },
+    "demo-struts1/preview-model.json": {
+      "bytes": 940607,
+      "sha256": "c713d3d0f29d54e1804728aaad685b53035090f1f0cbcd0aa1b57e131b59331d"
+    },
+    "demo-struts1/prototype-model.json": {
+      "bytes": 46218,
+      "sha256": "fc8f6b6a7476f390f1a8509f36eb7d2ea7fada2fc0d14ee3d5a0b433db53b574"
+    },
+    "demo-struts1/viewer-documents.json": {
+      "bytes": 73685,
+      "sha256": "3edc18f4e904bee70d7f55ee13c4bf8a1f9fa955ec68d5a59ba288f3cffc68ed"
+    },
+    "demo-struts1/report/screentrace-report.html": {
+      "bytes": 1583700,
+      "sha256": "4a5caba7c9f6ac414ef4e85adc7cd999d2732033c83c07b5fca512d0c54fec76"
+    },
+    "demo-struts1/report-size.json": {
+      "bytes": 120,
+      "sha256": "3470a7d019065ad83800366c2ef87cef9621302573336e57e4c6621f1fe37245"
+    },
+    "demo-struts1/static-preview/element-styles.json": {
+      "bytes": 964256,
+      "sha256": "1ed749f77a1f29b378f35747dc1da7088db15366d2e44c36d75fb38ccc1dc31f"
+    },
+    "App1Assignment5/application-graph.json": {
+      "bytes": 349055,
+      "sha256": "bcdce4936a10a2e6101f10dbe06816f491c83eb35a889b0b9f3311ffe0600111"
+    },
+    "App1Assignment5/preview-model.json": {
+      "bytes": 493814,
+      "sha256": "f7907ac67dc558b00e80bc54666c74e5bb2f9191e8a397b7726e2ef6c8868943"
+    },
+    "App1Assignment5/prototype-model.json": {
+      "bytes": 30430,
+      "sha256": "34ff3f749704d77f2440ebd119317c1ce4f8d03f0fb4b1e72ea9b2419dab30ac"
+    },
+    "App1Assignment5/viewer-documents.json": {
+      "bytes": 26828,
+      "sha256": "537b260b0ed9c60a5309fee72e034bd2039cbbb48adaf1ca4e532c4deef435e0"
+    },
+    "App1Assignment5/report/screentrace-report.html": {
+      "bytes": 1025760,
+      "sha256": "e1e8846204e1c855877dc94543021cf55653b457e5c193dfe5aba7cdd22a5ab9"
+    },
+    "App1Assignment5/report-size.json": {
+      "bytes": 120,
+      "sha256": "dfe2617d510f051ccbe7c4c6eacccec7c160921e88670fc6b25c076c0793d834"
+    },
+    "App1Assignment5/static-preview/element-styles.json": {
+      "bytes": 501113,
+      "sha256": "03ef19dc3c9049a24d257371214a5b5f72bf2cd729d16f112578c9c20396e971"
+    },
+    "Hotel-Management-System-Spring-Boot/application-graph.json": {
+      "bytes": 1044865,
+      "sha256": "12e4c99947bac8cba85888f3951d958f9e0357677215b16e4806ca419ed06b10"
+    },
+    "Hotel-Management-System-Spring-Boot/preview-model.json": {
+      "bytes": 2040084,
+      "sha256": "30f08a767321de5b9299096a4bdf498aa54b3902d8b3c7d1195722f3f948b2a1"
+    },
+    "Hotel-Management-System-Spring-Boot/prototype-model.json": {
+      "bytes": 83419,
+      "sha256": "474463db4e251faacd19f0812947971890932a981dfb99e8511c2d24e54b74ee"
+    },
+    "Hotel-Management-System-Spring-Boot/viewer-documents.json": {
+      "bytes": 170655,
+      "sha256": "19a1cc23cb31601563b16a0c0ce4b37fb2dfae50a67444e4a937b248561fc234"
+    },
+    "Hotel-Management-System-Spring-Boot/report/screentrace-report.html": {
+      "bytes": 3010276,
+      "sha256": "e12891ddee8c697b7b954f95185252f56ee5e0a14b7f4d76eae8f4f9579f940c"
+    },
+    "Hotel-Management-System-Spring-Boot/report-size.json": {
+      "bytes": 120,
+      "sha256": "635bca3e145e3b3b7b5c5acb45d4ef8c0ce6c7cf553a0b1f4f00b64ee6e7e363"
+    },
+    "Hotel-Management-System-Spring-Boot/static-preview/element-styles.json": {
+      "bytes": 2071689,
+      "sha256": "ab66f032dff8b1e6dd69838420c8faa2c55dd5f4b7c9c38418051145dffa7e98"
+    }
+  }
+}

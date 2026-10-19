@@ -1,0 +1,360 @@
+[
+  {
+    "id": "WF-024",
+    "project": "App1Assignment5",
+    "title": "只有 suffix 的 Java ViewResolver 未採用預設空 prefix",
+    "cases": [
+      "L02",
+      "L04",
+      "L05",
+      "L06",
+      "L08",
+      "L09",
+      "L10"
+    ],
+    "kind": "COVERAGE_GAP",
+    "priority": "P1",
+    "status": "FIXED_BOUNDED_SCOPE",
+    "source": {
+      "file": "src/main/java/com/config/MyMvcConfig.java",
+      "line": 22,
+      "excerpt": "resolver.setSuffix(\".jsp\");",
+      "url": "https://github.com/satyam131/Library-Management-Web-Application-with-RESTful-Web-Services/blob/1d1b858fcca3db6c51c2764058369d7bc2af2be6/App1Assignment5/src/main/java/com/config/MyMvcConfig.java#L22"
+    },
+    "observation": "實體 JSP 已發現，但七個回傳出現 No JSP source found；建立 AddBook、EditBook、bookListing、login 四個分離的 logical SCREEN。",
+    "originalStatus": "OPEN",
+    "verification": "after/ui-results.json, after/return-results.json, after/style-results.json, after/supplementary-results.json",
+    "remainingDataCase": "L08 tracked separately as WF-036; physical view resolution passes"
+  },
+  {
+    "id": "WF-025",
+    "project": "App1Assignment5",
+    "title": "相對 redirect 未連到存在的 public JSP",
+    "cases": [
+      "L01"
+    ],
+    "kind": "COVERAGE_GAP",
+    "priority": "P1",
+    "status": "FIXED_BOUNDED_SCOPE",
+    "source": {
+      "file": "src/main/java/com/controller/RegisterController.java",
+      "line": 26,
+      "excerpt": "return \"redirect:register.jsp\";",
+      "url": "https://github.com/satyam131/Library-Management-Web-Application-with-RESTful-Web-Services/blob/1d1b858fcca3db6c51c2764058369d7bc2af2be6/App1Assignment5/src/main/java/com/controller/RegisterController.java#L26"
+    },
+    "observation": "redirect:login.jsp 與 redirect:register.jsp 保持未解析，註冊入口不能走到實體 register.jsp。保留未知比猜 URL 正確，但操作覆蓋仍不足。",
+    "originalStatus": "OPEN",
+    "verification": "after/ui-results.json, after/return-results.json, after/style-results.json, after/supplementary-results.json"
+  },
+  {
+    "id": "WF-026",
+    "project": "App1Assignment5",
+    "title": "已初始化 ModelAndView 的分支 setViewName 仍缺回傳",
+    "cases": [
+      "L03"
+    ],
+    "kind": "COVERAGE_GAP",
+    "priority": "P1",
+    "status": "FIXED_BOUNDED_SCOPE",
+    "source": {
+      "file": "src/main/java/com/controller/LoginController.java",
+      "line": 52,
+      "excerpt": "mv.setViewName(\"bookListing\");",
+      "url": "https://github.com/satyam131/Library-Management-Web-Application-with-RESTful-Web-Services/blob/1d1b858fcca3db6c51c2764058369d7bc2af2be6/App1Assignment5/src/main/java/com/controller/LoginController.java#L52"
+    },
+    "observation": "兩個 return mv 都未解析；這是 WF-016 已初始化 alias 的新反例，與前輪未初始化再賦值的語法不同。",
+    "originalStatus": "OPEN",
+    "verification": "after/ui-results.json, after/return-results.json, after/style-results.json, after/supplementary-results.json"
+  },
+  {
+    "id": "WF-027",
+    "project": "demo-struts1",
+    "title": "條件 form action 的有限分支沒有串到既有路由",
+    "cases": [
+      "S07",
+      "S09",
+      "H07"
+    ],
+    "kind": "COVERAGE_GAP",
+    "priority": "P1",
+    "status": "FIXED_BOUNDED_SCOPE",
+    "source": {
+      "file": "src/main/webapp/WEB-INF/view/spotifyInit.jsp",
+      "line": 21,
+      "excerpt": "<c:set var=\"actionUrl\" value=\"/spotify-create.do\" />",
+      "url": "https://github.com/ImanNazirah/demo-struts1/blob/c17a963c1b236be573cf43b9e0da4ee6c81529d7/src/main/webapp/WEB-INF/view/spotifyInit.jsp#L21"
+    },
+    "observation": "Struts c:set 分支 create/update/delete 及旅館 th:action ternary add/update 都未形成可操作請求集合；既有路由存在。包含已知 c:set 支援邊界，不把 unresolved 當成錯誤 CONFIRMED。",
+    "originalStatus": "OPEN",
+    "verification": "after/ui-results.json, after/return-results.json, after/style-results.json, after/supplementary-results.json",
+    "remainingDataCase": "S09 tracked separately as WF-035; endpoint and destination sets pass"
+  },
+  {
+    "id": "WF-028",
+    "project": "Hotel-Management-System-Spring-Boot",
+    "title": "Thymeleaf 連結的確認與導覽分裂到不同 component ID",
+    "cases": [
+      "H08"
+    ],
+    "kind": "CORRELATION_DEFECT",
+    "priority": "P1",
+    "status": "FIXED_BOUNDED_SCOPE",
+    "source": {
+      "file": "src/main/resources/templates/admin/rooms.html",
+      "line": 77,
+      "excerpt": "onclick=\"return confirm('Are you sure you want to delete this room?')\"",
+      "url": "https://github.com/FathimaNufla2000/Hotel-Management-System-Spring-Boot/blob/9d1c1ba2bb109faa7bc58dea4290c0ab63545aab/src/main/resources/templates/admin/rooms.html#L77"
+    },
+    "observation": "實際 Delete 沒有開確認。相同行號的第一個 component 只有 NAVIGATE，第二個才有 OPEN_DIALOG；畫面上的控制項使用第一個。",
+    "originalStatus": "OPEN",
+    "verification": "after/ui-results.json, after/return-results.json, after/style-results.json, after/supplementary-results.json"
+  },
+  {
+    "id": "WF-029",
+    "project": "demo-struts1",
+    "title": "DOMContentLoaded 裡的原生 classList.toggle 沒有重播",
+    "cases": [
+      "S05"
+    ],
+    "kind": "COVERAGE_GAP",
+    "priority": "P2",
+    "status": "FIXED_BOUNDED_SCOPE",
+    "source": {
+      "file": "src/main/webapp/WEB-INF/view/common/loadScript.jsp",
+      "line": 12,
+      "excerpt": "//     document.body.classList.toggle('sb-sidenav-toggled');",
+      "url": "https://github.com/ImanNazirah/demo-struts1/blob/c17a963c1b236be573cf43b9e0da4ee6c81529d7/src/main/webapp/WEB-INF/view/common/loadScript.jsp#L12"
+    },
+    "observation": "側欄按鈕可點，但 body class 前後相同；顯示無法確定目的頁。",
+    "originalStatus": "OPEN",
+    "verification": "after/ui-results.json, after/return-results.json, after/style-results.json, after/supplementary-results.json"
+  },
+  {
+    "id": "WF-030",
+    "project": "App1Assignment5",
+    "title": "inline keypress 的數字過濾未還原",
+    "cases": [
+      "L07"
+    ],
+    "kind": "COVERAGE_GAP",
+    "priority": "P2",
+    "status": "FIXED_BOUNDED_SCOPE",
+    "source": {
+      "file": "src/main/webapp/AddBook.jsp",
+      "line": 45,
+      "excerpt": "name=\"bookCode\" onkeypress=\"return /[0-9]/i.test(event.key)\" required>",
+      "url": "https://github.com/satyam131/Library-Management-Web-Application-with-RESTful-Web-Services/blob/1d1b858fcca3db6c51c2764058369d7bc2af2be6/App1Assignment5/src/main/webapp/AddBook.jsp#L45"
+    },
+    "observation": "依序輸入 12a3 後實際值為 12a3，來源 return /[0-9]/i.test(event.key) 預期 123。",
+    "originalStatus": "OPEN",
+    "verification": "after/ui-results.json, after/return-results.json, after/style-results.json, after/supplementary-results.json"
+  },
+  {
+    "id": "WF-031",
+    "project": "Hotel-Management-System-Spring-Boot",
+    "title": "入住日變更沒有更新退房日 min",
+    "cases": [
+      "X02"
+    ],
+    "kind": "COVERAGE_GAP",
+    "priority": "P1",
+    "status": "FIXED_BOUNDED_SCOPE",
+    "source": {
+      "file": "src/main/resources/templates/visitor/booking-form.html",
+      "line": 119,
+      "excerpt": "document.getElementById('checkOutDate').setAttribute('min', d.toISOString().split('T')[0]);",
+      "url": "https://github.com/FathimaNufla2000/Hotel-Management-System-Spring-Boot/blob/9d1c1ba2bb109faa7bc58dea4290c0ab63545aab/src/main/resources/templates/visitor/booking-form.html#L119"
+    },
+    "observation": "入住 2026-11-01 後退房 min 仍為 null；來源指定最早隔日 2026-11-02。不測需要當天時間的初始 today 值。",
+    "originalStatus": "OPEN",
+    "verification": "after/ui-results.json, after/return-results.json, after/style-results.json, after/supplementary-results.json"
+  },
+  {
+    "id": "WF-032",
+    "project": "Hotel-Management-System-Spring-Boot",
+    "title": "存在於來源的 CSS 沒有封裝到單檔頁面",
+    "cases": [
+      "X01"
+    ],
+    "kind": "COVERAGE_GAP",
+    "priority": "P2",
+    "status": "FIXED_BOUNDED_SCOPE",
+    "source": {
+      "file": "src/main/resources/templates/visitor/home.html",
+      "line": 7,
+      "excerpt": "<link rel=\"stylesheet\" th:href=\"@{/css/Home.css}\">",
+      "url": "https://github.com/FathimaNufla2000/Hotel-Management-System-Spring-Boot/blob/9d1c1ba2bb109faa7bc58dea4290c0ab63545aab/src/main/resources/templates/visitor/home.html#L7"
+    },
+    "observation": "旅館 11 個 Thymeleaf CSS 引用、圖書管理 2 個相對 CSS 引用均缺失。實測 body 背景透明、font 為 Times；來源 Home.css 為 --bg #f5f7fb 與 system-ui。外部 CDN 另列。",
+    "originalStatus": "OPEN",
+    "verification": "after/ui-results.json, after/return-results.json, after/style-results.json, after/supplementary-results.json"
+  },
+  {
+    "id": "WF-033",
+    "project": "Hotel-Management-System-Spring-Boot",
+    "title": "th:if 的初始錯誤區塊沒有依 model 狀態呈現",
+    "cases": [
+      "H03"
+    ],
+    "kind": "COVERAGE_GAP",
+    "priority": "P1",
+    "status": "FIXED_BOUNDED_SCOPE",
+    "source": {
+      "file": "src/main/resources/templates/admin/login.html",
+      "line": 17,
+      "excerpt": "<div th:if=\"${error}\" class=\"alert alert-error\" th:text=\"${error}\">",
+      "url": "https://github.com/FathimaNufla2000/Hotel-Management-System-Spring-Boot/blob/9d1c1ba2bb109faa7bc58dea4290c0ab63545aab/src/main/resources/templates/admin/login.html#L17"
+    },
+    "observation": "GET loginPage 未加 error，原型仍直接顯示 Invalid username or password；不是一次失敗登入後的回饋。",
+    "originalStatus": "OPEN",
+    "verification": "after/ui-results.json, after/return-results.json, after/style-results.json, after/supplementary-results.json"
+  },
+  {
+    "id": "NC-004",
+    "project": "Hotel-Management-System-Spring-Boot",
+    "title": "跳到確認頁卻沒有帶入訂房輸入資料",
+    "cases": [
+      "H11",
+      "X03"
+    ],
+    "kind": "STATE_SUPPORT_GAP",
+    "priority": "P1",
+    "status": "FIXED_BOUNDED_SCOPE",
+    "source": {
+      "file": "src/main/resources/templates/visitor/booking-success.html",
+      "line": 49,
+      "excerpt": "<span th:text=\"${#temporals.format(booking.checkInDate, 'dd-MM-yyyy')}\">01-01-2024</span>",
+      "url": "https://github.com/FathimaNufla2000/Hotel-Management-System-Spring-Boot/blob/9d1c1ba2bb109faa7bc58dea4290c0ab63545aab/src/main/resources/templates/visitor/booking-success.html#L49"
+    },
+    "observation": "H10 導覽通過；正確電話與 dd-MM-yyyy 日期補驗 X03 仍失敗，顯示模板示例電話／2024 日期。H11 的日期預期錯誤與姓名分支限制另列，不用它們證明產品缺陷。",
+    "originalStatus": "OPEN",
+    "verification": "after/ui-results.json, after/return-results.json, after/style-results.json, after/supplementary-results.json",
+    "scopeCorrection": "Direct submitted dates pass X04; phone is absent from source, nested guest lookup remains unknown"
+  },
+  {
+    "id": "NC-005",
+    "project": "Hotel-Management-System-Spring-Boot",
+    "title": "無法辨識示範資料列時阻斷來源已知的訂房頁路徑",
+    "cases": [
+      "H09"
+    ],
+    "kind": "STATE_SUPPORT_GAP",
+    "priority": "P1",
+    "status": "FIXED_BOUNDED_SCOPE",
+    "source": {
+      "file": "src/main/resources/templates/visitor/home.html",
+      "line": 62,
+      "excerpt": "<a th:href=\"@{/book/{id}(id=${room.id})}\" class=\"book-btn\">",
+      "url": "https://github.com/FathimaNufla2000/Hotel-Management-System-Spring-Boot/blob/9d1c1ba2bb109faa7bc58dea4290c0ab63545aab/src/main/resources/templates/visitor/home.html#L62"
+    },
+    "observation": "Book Now 顯示「示範資料無法確認操作的資料列或欄位」，未到 booking-form；來源 /book/{roomId} 有明確目的頁。可維持 ID 未知，但目前無法展示該流程。",
+    "originalStatus": "OPEN",
+    "verification": "after/ui-results.json, after/return-results.json, after/style-results.json, after/supplementary-results.json"
+  },
+  {
+    "id": "EXT-001",
+    "project": "demo-struts1",
+    "title": "只有外部字型圖示的控制項在離線頁面沒有點擊區域",
+    "cases": [
+      "S03",
+      "S06",
+      "S08"
+    ],
+    "kind": "EXTERNAL_DEPENDENCY",
+    "priority": "P2",
+    "status": "OFFLINE_AFFORDANCE_ONLY",
+    "source": {
+      "file": "src/main/webapp/WEB-INF/view/common/header.jsp",
+      "line": 5,
+      "excerpt": "<link href=\"https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css\" rel=\"stylesheet\">",
+      "url": "https://github.com/ImanNazirah/demo-struts1/blob/c17a963c1b236be573cf43b9e0da4ee6c81529d7/src/main/webapp/WEB-INF/view/common/header.jsp#L5"
+    },
+    "observation": "來源 Bootstrap／SB Admin／Font Awesome／DataTables 都在外部 CDN；新增、編輯及 dropdown 圖示控制項沒有可見尺寸。仍保留操作 FAIL，與 parser 路由缺陷分開。",
+    "originalStatus": "OPEN",
+    "verification": "after/ui-results.json, after/return-results.json, after/style-results.json, after/supplementary-results.json"
+  },
+  {
+    "id": "SRC-001",
+    "project": "Hotel-Management-System-Spring-Boot",
+    "title": "Controller 回傳三個 repository 中不存在的模板",
+    "cases": [],
+    "kind": "SOURCE_ISSUE",
+    "priority": "P2",
+    "status": "SOURCE_MISSING_VIEW",
+    "source": {
+      "file": "src/main/java/com/hotel/management/controller/VisitorController.java",
+      "line": 74,
+      "excerpt": "return \"visitor/cancel-booking\";",
+      "url": "https://github.com/FathimaNufla2000/Hotel-Management-System-Spring-Boot/blob/9d1c1ba2bb109faa7bc58dea4290c0ab63545aab/src/main/java/com/hotel/management/controller/VisitorController.java#L74"
+    },
+    "observation": "visitor/cancel-booking.html、visitor/cancel-success.html、visitor/my-bookings.html 在 src 模板及 tracked target 模板都不存在；單獨分類 SOURCE_MISSING_VIEW，不算工具漏掉三個實體頁。",
+    "originalStatus": "OPEN",
+    "verification": "after/ui-results.json, after/return-results.json, after/style-results.json, after/supplementary-results.json"
+  },
+  {
+    "id": "WF-034",
+    "project": "demo-struts1",
+    "title": "巢狀 URL 的動態查詢值阻斷已知路徑",
+    "status": "FIXED",
+    "cases": [
+      "S08"
+    ],
+    "source": {
+      "file": "src/main/webapp/WEB-INF/view/spotifyListPagination.jsp",
+      "line": 46
+    }
+  },
+  {
+    "id": "WF-035",
+    "project": "demo-struts1",
+    "title": "自訂 Hibernate DAO 成功分支的提交資料未回填到分頁列表",
+    "status": "OPEN",
+    "cases": [
+      "S09"
+    ],
+    "priority": "P1",
+    "source": {
+      "file": "src/main/java/com/demo/struts1/action/Spotify/SpotifyCreateAction.java",
+      "line": 43
+    },
+    "boundary": "No custom DAO / transaction / pagination demonstration contract; never executed"
+  },
+  {
+    "id": "WF-036",
+    "project": "App1Assignment5",
+    "title": "外部 HTTP 寫入後 GET 清單的資料回顯尚未支援",
+    "status": "OPEN",
+    "cases": [
+      "L08",
+      "LJ2"
+    ],
+    "priority": "P1",
+    "source": {
+      "file": "src/main/java/com/controller/AddController.java",
+      "line": 77
+    },
+    "boundary": "No remote HTTP response contract; never contacted the service or guessed persistence success"
+  },
+  {
+    "id": "WF-037",
+    "project": "Hotel-Management-System-Spring-Boot",
+    "title": "原生 autofocus 的樣式擷取時序不一致",
+    "status": "FIXED",
+    "source": {
+      "file": "src/main/resources/templates/admin/login.html",
+      "line": 31
+    },
+    "verification": "after/focus-style-reproduction.json reproduces both exact historical hashes; tool settles unique native autofocus before style capture; target scripts remain disabled"
+  },
+  {
+    "id": "WF-038",
+    "project": "demo-struts1",
+    "title": "離線缺少外部 CSS 時下拉選單初始未收合",
+    "status": "FIXED_BOUNDED_SCOPE",
+    "source": {
+      "file": "src/main/webapp/WEB-INF/view/common/loadScript.jsp",
+      "line": 70
+    },
+    "verification": "after/disclosure-before-initial-state-fix.json FAIL; after/disclosure-regression.json PASS; source-proven closed aria state with unique graph-owned disclosure, no explicit local display rule"
+  }
+]

@@ -1,3 +1,4 @@
+import os
 """Independent finite source-view union; never evaluates predicates or calls product code."""
 from pathlib import Path
 import json,xml.etree.ElementTree as ET,collections
@@ -5,7 +6,7 @@ H=Path(__file__).resolve().parent;R=H.parents[2];B=json.loads((H/'baseline.json'
 def key(n):
  a=n.get('attributes',{});return 'tile:'+a['tilesDefinitionName'] if a.get('tilesDefinitionName') else 'file:'+a.get('view','')
 for project,c in C.items():
- root=Path(B['projects'][project]['sourceRoot']);g=json.loads((R/'analyze/completeness-batch4-20261019'/project/'application-graph.json').read_text());nodes={n['id']:n for n in g['nodes']};views={v['file'] for v in c['views']};eps=[r for r in c['java'] if r['kind']=='endpoint'];records=c['java']
+ root=Path(B['projects'][project]['sourceRoot']);g=json.loads((Path(os.environ.get('ST_BATCH4_OUTPUT',str(R/'analyze/completeness-batch4-20261019')))/project/'application-graph.json').read_text());nodes={n['id']:n for n in g['nodes']};views={v['file'] for v in c['views']};eps=[r for r in c['java'] if r['kind']=='endpoint'];records=c['java']
  def physical(name):
   if project=='Hotel-Management-System-Spring-Boot':return 'src/main/resources/templates/'+name+'.html'
   return 'src/main/webapp/'+name+'.jsp'
@@ -59,5 +60,5 @@ for project,c in C.items():
    return found
   for action in c['struts']:
    exp=struts(action);a=actual([n['id'] for n in nodes.values() if n['type']=='HANDLER' and n['attributes'].get('path')==action['path']]);results.append({'project':project,'source':action,'expectedTargets':sorted(exp),'actualTargets':sorted(a),'missing':sorted(exp-a),'extra':sorted(a-exp),'result':'PASS' if exp==a else 'FAIL'})
-(H/'return-results.json').write_text(json.dumps(results,ensure_ascii=False,indent=2)+'\n')
+(Path(os.environ.get('ST_BATCH4_RESULTS',str(H)))/'return-results.json').write_text(json.dumps(results,ensure_ascii=False,indent=2)+'\n')
 for project in C:print(project,dict(collections.Counter(r['result'] for r in results if r['project']==project)))

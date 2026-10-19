@@ -1,4 +1,4 @@
-import {applyDataAction,setModelFeedback} from './simulation-data';
+import {applyDataAction,setModelFeedback,setSubmittedValues} from './simulation-data';
 import {needsSimulationSurface,simulationSurface} from './simulation-surface';
 import {assessSimulation,Effect,staticAction} from './simulation';
 import {previewElement,previewSelector,registerPreviewClone} from './preview';
@@ -109,8 +109,11 @@ export function attachSimulation(payload:Payload,id:string,frame:HTMLIFrameEleme
   if(effect.operation==='datePicker'&&targets.length!==1){say('無法確認日期欄位');return;}
   if(effect.relative)targets=targets.map(n=>effect.relative==='previousElementSibling'?n.previousElementSibling:n.nextElementSibling).filter((n):n is Element=>!!n);
   for(const target of targets){
-   if(effect.operation==='setText')target.textContent=effect.value??'';
+   if(effect.operation==='toggleDisclosure'&&effect.inputSelector){let button:Element|null=null;try{button=doc.querySelector(effect.inputSelector);}catch{}if(button){const expanded=button.getAttribute('aria-expanded')==='true';button.setAttribute('aria-expanded',String(!expanded));target.classList.toggle('show',!expanded);(target as HTMLElement).hidden=expanded;}}
+   else if(effect.operation==='setText')target.textContent=effect.value??'';
    else if(effect.operation==='setStyle'&&['display','color'].includes(effect.property||''))(target as HTMLElement).style.setProperty(effect.property!,effect.value??'');
+   else if(['classAdd','classRemove','classToggle'].includes(effect.operation||'')&&/^[A-Za-z_][A-Za-z0-9_-]{0,127}$/.test(effect.value||'')){const operation=effect.operation==='classAdd'?'add':effect.operation==='classRemove'?'remove':'toggle';target.classList[operation](effect.value!);}
+   else if(effect.operation==='dateMin'&&Number.isInteger(effect.days)&&effect.days!>=1&&effect.days!<=366&&effect.inputSelector){let input:HTMLInputElement|null=null;try{input=doc.querySelector(effect.inputSelector);}catch{}const value=input?.value||'';if(/^\d{4}-\d{2}-\d{2}$/.test(value)){const date=new Date(value+'T00:00:00Z');if(Number.isFinite(date.getTime())&&date.toISOString().slice(0,10)===value){date.setUTCDate(date.getUTCDate()+effect.days!);target.setAttribute('min',date.toISOString().slice(0,10));}}}
    else if(effect.operation==='setValue'&&'value'in target)(target as HTMLInputElement).value=effect.value??'';
    else if(['show','hide','toggle'].includes(effect.operation||'')){
     const hidden=effect.operation==='hide'||effect.operation==='toggle'&&doc.defaultView!.getComputedStyle(target).display!=='none';
@@ -149,7 +152,7 @@ export function attachSimulation(payload:Payload,id:string,frame:HTMLIFrameEleme
     choose(rest,node,record,calls);return;
    }
   }
-  if(effect.kind==='navigate'&&effect.targetId){if(effect.dataAction&&!applyDataAction(payload,effect.dataAction,node)){say('示範資料無法確認操作的資料列或欄位');return;}setModelFeedback(payload,effect.targetId,effect.feedback??{});options.focus(effect.targetId);return;}
+  if(effect.kind==='navigate'&&effect.targetId){if(effect.dataAction&&!applyDataAction(payload,effect.dataAction,node)){say('示範資料無法確認操作的資料列或欄位');return;}setModelFeedback(payload,effect.targetId,effect.feedback??{});setSubmittedValues(payload,effect.targetId,effect.inputProjection??{},node);options.focus(effect.targetId,effect.inputProjection?'已回放提交欄位；其他資料為來源範例':undefined);return;}
   if(effect.kind==='dialog'&&effect.targetId){popup(effect.targetId);return;}
   if(effect.kind==='api'&&effect.targetId){const target=effect.targetId;say(`呼叫 API：${effect.method} ${effect.path}（不會真的送出）`,{label:'在 API 頁查看',run:()=>options.api(target)});return;}
   if(effect.kind==='external'){say('外部連結（不會開啟）');return;}
@@ -175,6 +178,14 @@ export function attachSimulation(payload:Payload,id:string,frame:HTMLIFrameEleme
   const result=simulateElement(payload,id,node,dialogIds,undefined,event);
   render(result.effect,result.record,node);
  };
+ doc.addEventListener('keypress',event=>{
+  const node=eventElement(event.target);if(!node)return;const record=previewElement(payload,id,node);
+  for(const b of payload.graph.behaviors||[])if(b.triggerId===record?.graphComponentId&&b.event==='keypress'){
+   const action=staticAction(b);if(action?.operation==='keyFilter'&&typeof action.pattern==='string'&&/^\^?\[[A-Za-z0-9 -]+\]\$?$/.test(action.pattern)&&action.pattern.length<=128&&/^(i)?$/.test(action.flags||'')){
+    const key=(event as KeyboardEvent).key;if(typeof key==='string')try{if(!new RegExp(action.pattern,action.flags).test(key))event.preventDefault();}catch{}
+   }
+  }
+ },true);
  for(const type of ['keyup','keydown','input','blur','focus'])doc.addEventListener(type,event=>{const node=eventElement(event.target);if(node)change(node,type);},true);
  doc.addEventListener('click',event=>{
   closePicker();

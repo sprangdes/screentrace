@@ -16,3 +16,23 @@ test('snapshot collection waits for delayed styles and never executes source scr
  await openStaticSnapshot(page,'https://snapshot.invalid/');assert.equal(styled,true);assert.equal(await page.locator('main').innerText(),'Record');assert.equal(await page.locator('main').evaluate(n=>n.getBoundingClientRect().width),123);
  }finally{await browser.close();}
 });
+test('offline icon affordance restores only empty zero-width controls and preserves local glyphs',async()=>{
+ const {offlineIconAffordances}=await import('./template-preview.mjs');const browser=await chromium.launch();try{const page=await browser.newPage();await page.setContent('<style>.local::before{content:"+"}.hidden{display:none}</style><a data-st-component-id="one"><i class="fas fa-plus"></i></a><a data-st-component-id="two"><i class="fas fa-plus local"></i></a><a data-st-component-id="three"><i class="fas fa-plus hidden"></i></a>');assert.equal(await offlineIconAffordances(page),1);assert.equal(await page.locator('[data-st-component-id=one] i').textContent(),'◇');assert.equal(await page.locator('[data-st-component-id=two] i').textContent(),'');assert.equal(await page.locator('[data-st-component-id=three] i').textContent(),'');}finally{await browser.close();}
+});
+
+test('source autofocus is settled for computed styles with target scripts disabled',async()=>{
+ const {settleSourceAutofocus}=await import('./template-preview.mjs');const browser=await chromium.launch();try{const context=await browser.newContext({javaScriptEnabled:false}),page=await context.newPage();await page.setContent('<style>input{color:red}input:focus{color:blue}</style><input id="login" autofocus onfocus="document.body.dataset.executed=1"><script>document.body.dataset.executed=1</script>');await page.evaluate(()=>document.activeElement.blur());await settleSourceAutofocus(page);assert.equal(await page.locator('#login').evaluate(n=>document.activeElement===n),true);assert.equal(await page.locator('#login').evaluate(n=>getComputedStyle(n).color),'rgb(0, 0, 255)');assert.equal(await page.locator('body').getAttribute('data-executed'),null);}finally{await browser.close();}
+});
+
+test('closed disclosure fallback requires canonical ownership and preserves explicit source display',async()=>{
+ const {offlineDisclosureState}=await import('./template-preview.mjs');const browser=await chromium.launch();try{
+ const context=await browser.newContext({javaScriptEnabled:false}),page=await context.newPage();
+ const graph={relationships:[{type:'CONTAINS',from:'s',to:'button'}],behaviors:[{triggerId:'button',evidence:[{parser:'AcornStaticAnalyzer',resolution:'CONFIRMED',detail:JSON.stringify({operation:'toggleDisclosure',selector:'#menu',inputSelector:'#button'})}]}]};
+ const html='<button id="button" aria-expanded="false">Menu</button><ul id="menu"><li>Item</li></ul>';
+ await page.setContent(html);assert.equal(await offlineDisclosureState(page,graph,'other'),0);assert.equal(await page.locator('#menu').isVisible(),true);
+ assert.equal(await offlineDisclosureState(page,graph,'s'),1);assert.equal(await page.locator('#menu').isVisible(),false);assert.equal(await offlineDisclosureState(page,graph,'s'),0);
+ await page.setContent('<style>#menu{display:block}</style>'+html);assert.equal(await offlineDisclosureState(page,graph,'s'),0);assert.equal(await page.locator('#menu').isVisible(),true);
+ await page.setContent(html);graph.behaviors[0].guard='unknown';assert.equal(await offlineDisclosureState(page,graph,'s'),0);
+ graph.behaviors[0].guard=null;graph.behaviors[0].evidence[0].resolution='UNRESOLVED';assert.equal(await offlineDisclosureState(page,graph,'s'),0);
+ }finally{await browser.close();}
+});

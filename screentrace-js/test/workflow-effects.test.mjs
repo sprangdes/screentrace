@@ -51,3 +51,26 @@ test('adjacent request object redeclarations keep each call URL and method witho
  assert.deepEqual(r.behaviors.filter(b=>b.type==='CALL_API').map(b=>[b.url,b.method]),[['/one','POST'],['/two','GET']]);assert.ok(r.behaviors.filter(b=>b.type==='CALL_API').every(b=>b.status==='INFERRED'));
  for(const code of [`var request={url:'/one'};mutate(request);$.ajax(request);request={url:'/later'};`,`var request={url:'/one'};if(flag)request={url:'/other'};$.ajax(request);`]){const x=analyze({sources:[{file:'a.js',screenId:'s',code}],dom});assert.ok(x.behaviors.filter(b=>b.type==='CALL_API').every(b=>b.status==='UNRESOLVED'&&b.url===null));}
 });
+test('DOMContentLoaded and immutable body selector prove the native class toggle',()=>{
+ const tree=[{id:'body',tag:'body',attrs:{},screenId:'s'},...dom.map(n=>({...n,parent:'body',screenId:'s'}))];
+ const r=analyze({sources:[{file:'a.js',screenId:'s',code:`window.addEventListener('DOMContentLoaded',()=>{const b=document.body.querySelector('#go');if(b)b.addEventListener('click',()=>{document.body.classList.toggle('sidebar-open');});});`}],dom:tree});
+ assert.ok(r.behaviors.some(b=>b.operation==='classToggle'&&b.selector==='body'&&b.value==='sidebar-open'&&b.triggerId==='go'&&!b.guard&&b.status==='CONFIRMED'));
+ const shadow=analyze({sources:[{file:'a.js',screenId:'s',code:`const document=custom;document.body.classList.toggle('wrong');`}],dom:tree});assert.ok(!shadow.behaviors.some(b=>b.operation==='classToggle'));
+});
+test('keypress supports only a finite literal character class on the inline event key',()=>{
+ const unit={file:'a.jsp',screenId:'s',triggerId:'field',event:'keypress'};
+ assert.ok(analyze({sources:[{...unit,code:'return /[0-9]/i.test(event.key)'}],dom}).behaviors.some(b=>b.operation==='keyFilter'&&b.pattern==='[0-9]'));
+ for(const code of ['return /(a+)+$/.test(event.key)','const event=custom;return /[0-9]/.test(event.key)','return /[0-9]/.test(other.key)','function event(){};return /[0-9]/.test(event.key)','class event{};return /[0-9]/.test(event.key)'])assert.ok(!analyze({sources:[{...unit,code}],dom}).behaviors.some(b=>b.operation==='keyFilter'),code);
+});
+test('dependent date recognizes the complete bounded shape and rejects additional source writes',()=>{
+ const body=`const d=new Date(this.value);d.setDate(d.getDate()+1);document.getElementById('panel').setAttribute('min',d.toISOString().split('T')[0]);`;
+ const run=inside=>analyze({sources:[{file:'a.js',screenId:'s',code:`document.querySelector('#go').addEventListener('change',function(){${inside}});`}],dom});
+ assert.ok(run(body).behaviors.some(b=>b.operation==='dateMin'&&b.days===1&&b.selector==='#panel'&&b.inputSelector==='#go'&&b.triggerId==='go'));
+ assert.ok(!analyze({sources:[{file:'a.js',screenId:'s',code:`document.querySelector('#go').addEventListener('change',()=>{${body}});`}],dom}).behaviors.some(b=>b.operation==='dateMin'));
+ for(const invalid of [body.replace('+1','+days'),body.replace('new Date','new CustomDate'),body+'modify(d);',body.replace("'T'","'x'")])assert.ok(!run(invalid).behaviors.some(b=>b.operation==='dateMin'),invalid);
+});
+test('a literal native disclosure toggle stays one bounded action with both existence checks',()=>{
+ const tree=[...dom,{id:'menu',componentId:'menu',tag:'div',attrs:{class:'menu'}}];
+ const r=analyze({sources:[{file:'a.js',screenId:'s',code:`window.addEventListener('DOMContentLoaded',()=>{const button=document.querySelector('#go');const menu=document.querySelector('.menu');if(button&&menu)button.addEventListener('click',function(event){event.preventDefault();const expanded=button.getAttribute('aria-expanded')==='true';button.setAttribute('aria-expanded',!expanded);if(expanded){menu.classList.remove('show');}else{menu.classList.add('show');}});});`}],dom:tree});
+ assert.ok(r.behaviors.some(b=>b.operation==='toggleDisclosure'&&b.selector==='.menu'&&b.inputSelector==='#go'&&b.triggerId==='go'&&!b.guard));
+});

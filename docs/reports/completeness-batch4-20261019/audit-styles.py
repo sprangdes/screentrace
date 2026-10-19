@@ -1,3 +1,4 @@
+import os
 """Source-local stylesheet inclusion audit; no CSS/JS execution and no remote media fetch."""
 from pathlib import Path
 from html.parser import HTMLParser
@@ -9,7 +10,7 @@ class Links(HTMLParser):
   a=dict(attrs)
   if t=='link' and a.get('rel')=='stylesheet':self.links.append((self.getpos()[0],a.get('th:href',a.get('href',''))))
 for project,c in C.items():
- root=Path(B['projects'][project]['sourceRoot']);out=R/'analyze/completeness-batch4-20261019'/project;g=json.loads((out/'application-graph.json').read_text());packed=json.loads((out/'viewer-documents.json').read_text())
+ root=Path(B['projects'][project]['sourceRoot']);out=Path(os.environ.get('ST_BATCH4_OUTPUT',str(R/'analyze/completeness-batch4-20261019')))/project;g=json.loads((out/'application-graph.json').read_text());packed=json.loads((out/'viewer-documents.json').read_text())
  assets={k:base64.b64decode(v.split(',',1)[1]).decode(errors='replace').replace('\r\n','\n') for k,v in packed['assets'].items() if v.startswith('data:text/css;base64,')}
  for view in c['views']:
   parser=Links();parser.feed((root/view['file']).read_text())
@@ -25,5 +26,5 @@ for project,c in C.items():
    screens=[n for n in g['nodes'] if n['type']=='SCREEN' and n['attributes'].get('view')==view['file']];row['packedMatchingCssAssets']=matching;row['screens']=[n['id'] for n in screens]
    row['linkedScreens']=[n['id'] for n in screens if any('st-asset-sha256:'+k in packed['documents'].get(n['id'],'') for k in matching)]
    row['result']='PASS' if screens and len(row['linkedScreens'])==len(screens) else 'FAIL';results.append(row)
-(H/'style-results.json').write_text(json.dumps(results,indent=2)+'\n')
+(Path(os.environ.get('ST_BATCH4_RESULTS',str(H)))/'style-results.json').write_text(json.dumps(results,indent=2)+'\n')
 for project in B['projects']:print(project,dict(collections.Counter(r['result'] for r in results if r['project']==project)))

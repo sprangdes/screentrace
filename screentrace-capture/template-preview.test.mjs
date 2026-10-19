@@ -43,3 +43,16 @@ test('model feedback for another destination cannot authorize a screen projectio
  const screen={id:'form',attributes:{view:'form.jsp'}},edges=[{to:'other',evidence:[{parser:'SpringModelFeedback',resolution:'INFERRED',detail:JSON.stringify({version:1,values:{error:'Other form error'}})}]}];
  assert.doesNotMatch(templatePreview('<b>${error}</b>',screen,[],edges),/data-st-model-key/);
 });
+test('stylesheet projections require a resource node with parser evidence',()=>{
+ const source='<link rel="stylesheet" th:href="@{/css/local.css}">',screen={attributes:{view:'page.html'}},node={type:'SOURCE_ARTIFACT',source:{file:'page.html',line:1},attributes:{kind:'STATIC_RESOURCE_REFERENCE',tag:'link','th:href':'@{/css/local.css}',href:'/css/local.css'},evidence:[{parser:'StaticResourceParser',resolution:'INFERRED'}]};
+ assert.match(templatePreview(source,screen,[node]),/ href="\/css\/local.css"/);assert.doesNotMatch(templatePreview(source,screen,[{...node,evidence:[]}]),/ href=/);
+});
+test('simple conditional feedback has an inert marker only with destination evidence',()=>{
+ const source='<div th:if="${error}" th:text="${error}">Error</div>',screen={id:'s',attributes:{view:'page.html'}},edges=[{to:'s',evidence:[{parser:'SpringModelFeedback',resolution:'INFERRED',detail:JSON.stringify({version:1,values:{error:'Denied'}})}]}];
+ assert.match(templatePreview(source,screen,[],edges),/data-st-model-if="error"/);assert.doesNotMatch(templatePreview(source,screen,[]),/data-st-model-if/);
+});
+test('submitted date markers require direct binding evidence and do not authorize nested relations',()=>{
+ const screen={id:'s',attributes:{view:'result.html'}},edges=[{to:'s',evidence:[{parser:'SpringSubmittedModel',resolution:'INFERRED',detail:JSON.stringify({version:1,scope:'submitted-binding-demo',fields:{'record.date':'date'}})}]}];
+ const source='<span th:text="${#temporals.format(record.date, \'dd-MM-yyyy\')}">Sample</span><span th:text="${record.guest.name}">Guest</span>';
+ const projected=templatePreview(source,screen,[],edges);assert.match(projected,/data-st-submitted-key="record.date"/);assert.match(projected,/data-st-submitted-format="dd-MM-yyyy"/);assert.doesNotMatch(projected,/data-st-submitted-key="record.guest.name"/);assert.doesNotMatch(templatePreview(source,screen,[]),/data-st-submitted-key/);
+});

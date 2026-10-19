@@ -77,6 +77,11 @@ public final class UrlVariableResolver {
       List<MarkupTag> nested=MarkupTag.scan(raw);
       if(nested.size()==1 && nested.get(0).attribute("value")!=null&&!MarkupAnalysis.dynamic(nested.get(0).attribute("value")))
         return new Resolution(nested.get(0).attribute("value"),raw,List.of(new AnalysisEvidence(new SourceLocation(path,use.line()),"JspUrlVariableResolver",ResolutionStatus.CONFIRMED,"巢狀 URL 常值定義；param 不解析")));
+      if(nested.size()==1&&nested.get(0).attribute("value")!=null) {
+        String value=nested.get(0).attribute("value");int delimiter=value.indexOf('?');
+        if(delimiter>0&&value.substring(0,delimiter).matches("/[A-Za-z0-9_./-]*")&&value.substring(delimiter+1).matches("[A-Za-z0-9_=&.$(){} -]*")&&!value.substring(delimiter+1).contains("#{"))
+          return new Resolution(value.replaceAll("\\$\\{[^{}]*}","{queryValue}"),raw,List.of(new AnalysisEvidence(new SourceLocation(path,use.line()),"JspUrlVariableResolver",ResolutionStatus.INFERRED,"巢狀 URL 的路徑為字面常值；查詢參數運算式未求值；原文="+raw)));
+      }
       return new Resolution(raw,raw,List.of());
     }
     int query=raw.indexOf('?');

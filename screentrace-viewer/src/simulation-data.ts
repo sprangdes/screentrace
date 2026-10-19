@@ -5,6 +5,12 @@ type RecordData=Record<string,string>;
 interface Collection {records:Map<string,RecordData>;next:number;selected?:string}
 const modelFeedback=new WeakMap<Payload,Map<string,Record<string,string>>>();
 export function setModelFeedback(payload:Payload,screen:string,values:Record<string,string>){let map=modelFeedback.get(payload);if(!map){map=new Map();modelFeedback.set(payload,map);}map.set(screen,values);}
+const submittedValues=new WeakMap<Payload,Map<string,Record<string,string>>>();
+export function setSubmittedValues(payload:Payload,screen:string,fields:Record<string,string>,node:Element){
+ let screens=submittedValues.get(payload);if(!screens){screens=new Map();submittedValues.set(payload,screens);}const values:Record<string,string>=Object.create(null);
+ const form=node.localName==='form'?node as HTMLFormElement:(node as HTMLButtonElement).form;
+ if(form)for(const [key,input]of Object.entries(fields)){const controls=Array.from(form.elements).filter(e=>e.getAttribute('name')===input&&'value'in e&&!e.hasAttribute('disabled'));if(controls.length===1)values[key]=String((controls[0] as HTMLInputElement).value).slice(0,4000);}screens.set(screen,values);
+}
 const sessions=new WeakMap<Payload,Map<string,Collection>>();
 const safeField=(s:unknown):s is string=>typeof s==='string'&&/^[A-Za-z_][\w]*$/.test(s)&&!['__proto__','prototype','constructor'].includes(s);
 export function parseDataAction(value:unknown):DataAction|undefined {
@@ -32,7 +38,7 @@ function collection(payload:Payload,action:DataAction):Collection {
 /** Runs only the tool's CRUD model, with form strings; never source code or requests. */
 export function applyDataAction(payload:Payload,action:DataAction,node:Element):boolean {
  const data=collection(payload,action),row=node.closest('[data-st-demo-key]'),key=row?.getAttribute('data-st-demo-key')||undefined;
- if(action.operation==='readOne'){if(!key||!data.records.has(key))return false;data.selected=key;return true;}
+ if(action.operation==='readOne'){if(!key){data.selected=undefined;return true;}if(!data.records.has(key))return false;data.selected=key;return true;}
  if(action.operation==='delete'){if(!key||!data.records.has(key))return false;data.records.delete(key);return true;}
  if(action.operation!=='upsert')return true;
  const form=node.localName==='form'?node as HTMLFormElement:(node as HTMLButtonElement).form;if(!form)return false;
@@ -47,7 +53,8 @@ function pattern(text:string,variable:string,record:RecordData,fields:string[]):
 }
 /** Called on each focused screen; session data survives focus, but never alters the graph. */
 export function projectSimulationData(payload:Payload,id:string,doc:Document):void {
- const feedback=modelFeedback.get(payload)?.get(id);if(feedback)for(const node of doc.querySelectorAll<HTMLElement>('[data-st-model-key]')){const key=node.dataset.stModelKey!;if(Object.hasOwn(feedback,key))node.textContent=feedback[key];}
+ const submitted=submittedValues.get(payload)?.get(id);for(const node of doc.querySelectorAll<HTMLElement>('[data-st-submitted-key]')){const key=node.dataset.stSubmittedKey!,value=submitted?.[key];if(value===undefined)continue;const format=node.dataset.stSubmittedFormat;if(format){if(!/^\d{4}-\d{2}-\d{2}$/.test(value))continue;const date=new Date(value+'T00:00:00Z');if(!Number.isFinite(date.getTime())||date.toISOString().slice(0,10)!==value)continue;const [year,month,day]=value.split('-');if(['dd-MM-yyyy','yyyy-MM-dd','dd/MM/yyyy'].includes(format))node.textContent=format.replace('yyyy',year).replace('MM',month).replace('dd',day);}else node.textContent=value;}
+ const feedback=modelFeedback.get(payload)?.get(id);for(const node of doc.querySelectorAll<HTMLElement>('[data-st-model-if]')){const key=node.dataset.stModelIf!;node.hidden=!feedback||!Object.hasOwn(feedback,key)||!feedback[key];}if(feedback)for(const node of doc.querySelectorAll<HTMLElement>('[data-st-model-key]')){const key=node.dataset.stModelKey!;if(Object.hasOwn(feedback,key))node.textContent=feedback[key];}
  const bindings=contract(payload.graph.nodes.find(n=>n.id===id),'simulationBindings');
  for(const binding of bindings){const data=collection(payload,binding);
   if(binding.operation==='readOne'){

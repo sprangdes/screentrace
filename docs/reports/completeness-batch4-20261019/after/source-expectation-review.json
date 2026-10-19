@@ -1,0 +1,37 @@
+{
+  "H11": {
+    "originalAssertionsPreserved": true,
+    "invalid": [
+      "ISO dates instead of source dd-MM-yyyy",
+      "unconditional guest-name expectation",
+      "phone absent from source success page"
+    ]
+  },
+  "X03": {
+    "originalAssertionsPreserved": true,
+    "invalid": [
+      "phone absent from source success page"
+    ],
+    "validDateSubassertions": "both pass after fixes"
+  },
+  "X04": {
+    "checks": [
+      "source success view",
+      "01-11-2026",
+      "03-11-2026"
+    ],
+    "result": "PASS"
+  },
+  "source": "src/main/resources/templates/visitor/booking-success.html",
+  "sourcePhoneFieldCount": 0,
+  "sourceDateLines": [
+    49,
+    53
+  ],
+  "X05SourceLineCorrection": {
+    "historicalProbeLine": 46,
+    "actualOnkeypressAttributeLine": 45,
+    "historicalProbePreserved": true
+  },
+  "historicalResultsNeverRewritten": true
+}

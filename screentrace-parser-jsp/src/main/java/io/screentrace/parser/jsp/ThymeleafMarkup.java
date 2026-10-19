@@ -16,13 +16,14 @@ public final class ThymeleafMarkup {
    String opening=source.substring(tag.start(),tag.end()+1);
    for(String key:List.of("href","action")) {
     String expression=tag.attribute("th:"+key);if(expression==null)continue;
+    String target=url(expression);
+    if(Objects.equals(tag.attribute(key),target==null?"${unresolvedTemplateTarget}":target))continue;
     // A runtime template overrides its static fallback. Unsupported expressions stay unresolved.
     if(tag.attribute(key)!=null)opening=renameFallback(opening,key);
-    String target=url(expression);
     attributes.append(' ').append(key).append("=\"").append(escape(target==null?"${unresolvedTemplateTarget}":target)).append('"');
    }
    String field=tag.attribute("th:field");
-   if(field!=null) {
+   if(field!=null && !"UNRESOLVED".equals(tag.attribute("data-st-template-field-status")) && !(field.matches("\\*\\{[A-Za-z_][A-Za-z0-9_]*}") && Objects.equals(tag.attribute("name"),field.substring(2,field.length()-1)))) {
     if(tag.attribute("name")!=null)opening=renameFallback(opening,"name");
     if(field.matches("\\*\\{[A-Za-z_][A-Za-z0-9_]*}"))attributes.append(" name=\"").append(field.substring(2,field.length()-1)).append('"');
     else attributes.append(" data-st-template-field-status=\"UNRESOLVED\"");

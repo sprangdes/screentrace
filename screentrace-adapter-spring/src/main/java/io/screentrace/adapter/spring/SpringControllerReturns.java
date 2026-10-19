@@ -22,12 +22,15 @@ final class SpringControllerReturns {
       SourceLocation source=new SourceLocation(file,statement.getBegin().map(p->p.line).orElse(1));
       if(expression.isNameExpr()) {
         var definitions=method.findAll(VariableDeclarator.class).stream().filter(v->belongsTo(v,method)&&v.getNameAsString().equals(expression.asNameExpr().getNameAsString())).toList();
-        if(definitions.size()==1&&definitions.get(0).getInitializer().isEmpty()) {
+        if(definitions.size()==1&&(definitions.get(0).getInitializer().isEmpty() || emptyModelAndView(definitions.get(0)))) {
           var paths=assignedPaths(method,statement,expression.asNameExpr().getNameAsString(),constants);
+          if(emptyModelAndView(definitions.get(0))&&paths.stream().anyMatch(p->p.value.kind()==Kind.UNKNOWN))paths=List.of(new PathValue(unknown(),"存在無法證明的回傳分支",null));
           for(var path:paths) {
             var proof=new SourceLocation(file,path.source==null?source.line():path.source.getBegin().map(p->p.line).orElse(source.line()));
             String detail="類別="+className+"；方法="+className+"."+method.getNameAsString()+"；原始運算式="+raw+"；目標="+Objects.toString(path.value.value(),"UNRESOLVED")+"；條件="+path.guard;
-            targets.add(new Target(path.value.kind(),path.value.value(),raw,source,List.of(new AnalysisEvidence(source,"SpringControllerReturns",path.value.kind()==Kind.UNKNOWN?ResolutionStatus.UNRESOLVED:ResolutionStatus.INFERRED,detail),new AnalysisEvidence(proof,"SpringControllerReturns",ResolutionStatus.INFERRED,"分支內賦值來源；column="+(path.source==null?0:path.source.getBegin().map(p->p.column).orElse(0))))));
+            var pathEvidence=new ArrayList<>(List.of(new AnalysisEvidence(source,"SpringControllerReturns",path.value.kind()==Kind.UNKNOWN?ResolutionStatus.UNRESOLVED:ResolutionStatus.INFERRED,detail),new AnalysisEvidence(proof,"SpringControllerReturns",ResolutionStatus.INFERRED,"分支內賦值來源；column="+(path.source==null?0:path.source.getBegin().map(p->p.column).orElse(0)))));
+            if(path.value.kind()!=Kind.UNKNOWN)pathEvidence.addAll(feedback(method,statement,file));
+            targets.add(new Target(path.value.kind(),path.value.value(),raw,source,pathEvidence));
           }
           continue;
         }
@@ -42,10 +45,12 @@ final class SpringControllerReturns {
   }
   static String branchKey(Target target){return target.evidence().stream().filter(e->e.detail()!=null&&e.detail().startsWith("分支內賦值來源；column=")).map(e->":assign:"+e.source().line()+":"+e.detail().substring(e.detail().indexOf("column=")+7)).findFirst().orElse("");}
   private static List<AnalysisEvidence> feedback(MethodDeclaration method,ReturnStmt use,String file){
-    if(use.getExpression().isEmpty()||!use.getExpression().get().isNameExpr())return List.of();
-    String variable=use.getExpression().get().asNameExpr().getNameAsString();Node block=use.getParentNode().orElse(null);
+    if(use.getExpression().isEmpty())return List.of();
+    String variable=use.getExpression().get().isNameExpr()?use.getExpression().get().asNameExpr().getNameAsString():null;
+    Set<String> models=new HashSet<>();method.getParameters().stream().filter(p->Set.of("Model","ModelMap").contains(p.getType().asString())).forEach(p->models.add(p.getNameAsString()));
+    Node block=use.getParentNode().orElse(null);
     Map<String,String> values=new TreeMap<>();List<AnalysisEvidence> result=new ArrayList<>();
-    for(var call:method.findAll(MethodCallExpr.class))if(belongsTo(call,method)&&call.getNameAsString().equals("addObject")&&call.getScope().filter(e->e.isNameExpr()&&e.asNameExpr().getNameAsString().equals(variable)).isPresent()&&call.getArguments().size()==2&&call.getArgument(0).isStringLiteralExpr()){
+    for(var call:method.findAll(MethodCallExpr.class))if(belongsTo(call,method)&&Set.of("addObject","addAttribute").contains(call.getNameAsString())&&call.getScope().filter(e->e.isNameExpr()&&(call.getNameAsString().equals("addObject")&&e.asNameExpr().getNameAsString().equals(variable)||call.getNameAsString().equals("addAttribute")&&models.contains(e.asNameExpr().getNameAsString()))).isPresent()&&call.getArguments().size()==2&&call.getArgument(0).isStringLiteralExpr()){
       var statement=call.findAncestor(ExpressionStmt.class);if(statement.isEmpty()||statement.get().getParentNode().orElse(null)!=block||!call.getEnd().orElseThrow().isBefore(use.getBegin().orElseThrow()))continue;
       String key=call.getArgument(0).asStringLiteralExpr().asString(),value=null;Expression argument=call.getArgument(1);
       if(argument.isStringLiteralExpr())value=argument.asStringLiteralExpr().asString();
@@ -59,14 +64,18 @@ final class SpringControllerReturns {
     }
     return result;
   }
+  private static boolean emptyModelAndView(VariableDeclarator definition) {
+    return definition.getInitializer().filter(Expression::isObjectCreationExpr).map(Expression::asObjectCreationExpr).filter(c->c.getType().getNameAsString().equals("ModelAndView")&&c.getArguments().isEmpty()).isPresent();
+  }
   private record PathValue(Value value,String guard,Node source) { }
   private static List<PathValue> assignedPaths(MethodDeclaration method,ReturnStmt use,String name,Map<String,String> constants) {
-    // Only an uninitialized, unaliased local may enter this finite path analysis.
-    for(var n:method.findAll(NameExpr.class))if(n.getNameAsString().equals(name)&&belongsTo(n,method)) {
+    // Only an uninitialized or empty ModelAndView local, with no aliases or escapes, enters finite path analysis.
+    for(var n:method.findAll(NameExpr.class))if(n.getNameAsString().equals(name)) {
+      if(!belongsTo(n,method))return List.of(new PathValue(unknown(),"閉包或巢狀類別引用",null));
       Node parent=n.getParentNode().orElse(null);
       if(parent instanceof ReturnStmt)continue;
       if(parent instanceof AssignExpr a&&a.getTarget()==n&&a.getOperator()==AssignExpr.Operator.ASSIGN)continue;
-      if(parent instanceof MethodCallExpr c&&c.getScope().orElse(null)==n&&Set.of("addObject","addAllObjects").contains(c.getNameAsString()))continue;
+      if(parent instanceof MethodCallExpr c&&c.getScope().orElse(null)==n&&Set.of("addObject","addAllObjects","getModel","getModelMap","setViewName").contains(c.getNameAsString()))continue;
       return List.of(new PathValue(unknown(),"變數逸出或不支援的修改",null));
     }
     List<PathValue> result=new ArrayList<>();
@@ -87,6 +96,11 @@ final class SpringControllerReturns {
     if(statement.isExpressionStmt()&&statement.asExpressionStmt().getExpression() instanceof AssignExpr a&&a.getTarget().isNameExpr()&&a.getTarget().asNameExpr().getNameAsString().equals(name)) {
       Value v=a.getValue().isObjectCreationExpr()?value(a.getValue(),method,use,constants):unknown();
       return paths.stream().map(p->new PathValue(v,p.guard,a)).toList();
+    }
+    if(statement.isExpressionStmt()&&statement.asExpressionStmt().getExpression() instanceof MethodCallExpr call&&call.getNameAsString().equals("setViewName")&&call.getScope().filter(e->e.isNameExpr()&&e.asNameExpr().getNameAsString().equals(name)).isPresent()) {
+      String view=call.getArguments().size()==1?literal(call.getArgument(0),constants):null;
+      Value v=view==null?unknown():classify(view);
+      return paths.stream().map(p->new PathValue(v,p.guard,call)).toList();
     }
     if(statement instanceof WhileStmt||statement instanceof ForStmt||statement instanceof ForEachStmt||statement instanceof TryStmt||statement instanceof SwitchStmt||statement instanceof DoStmt) {
       if(statement.isAncestorOf(use)||statement.findAll(NameExpr.class).stream().anyMatch(n->n.getNameAsString().equals(name))){result.add(new PathValue(unknown(),"不支援的控制流程",statement));return List.of();}

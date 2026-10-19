@@ -21,3 +21,6 @@ test('data actions validate optional exception-path marker and accept supplied s
  assert.equal(applyDataAction(payload,action,{localName:'form',closest:()=>null,elements:[field('id','CODE-ONE'),field('name','Named')]}),true);
  assert.equal(applyDataAction(payload,{...action,operation:'delete'},{closest:()=>({getAttribute:()=> 'CODE-ONE'})}),true);
 });
+test('missing source row permits known read navigation without selecting a fabricated record',()=>{
+ const payload={};assert.equal(applyDataAction(payload,{...action,operation:'readOne'},{closest:()=>null}),true);assert.equal(applyDataAction(payload,{...action,operation:'readOne'},{closest:()=>({getAttribute:()=> 'nonexistent'})}),false);
+});

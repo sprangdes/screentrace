@@ -1,4 +1,4 @@
-import {templatePreview,snapshotMotionCss,requestDirectories,openStaticSnapshot} from './template-preview.mjs';
+import {templatePreview,snapshotMotionCss,requestDirectories,openStaticSnapshot,offlineIconAffordances,offlineDisclosureState} from './template-preview.mjs';
 import {metadataValue} from './expansion-anchor.mjs';
 import { lstat, mkdir, readdir } from 'node:fs/promises';
 import path from 'node:path';
@@ -38,7 +38,7 @@ async function exists(file, root = projectRoot, kind = 'file') {
   try { return kind === 'directory' ? !!(await resolveExistingDirectoryWithin(root, file)) : !!(await resolveExistingFileWithin(root, file)); }
   catch { return false; }
 }
-async function text(file) { const source=await readUtf8Limited(projectRoot,file);return /\.(?:jspf?|html?|tagx?)$/i.test(file)?markupTokens(source).map(t=>t.name&&!t.closing?stripMarkupAttributes(t.text,n=>n.startsWith('data-st-demo-')||n==='data-st-model-key'):t.text).join(''):source; }
+async function text(file) { const source=await readUtf8Limited(projectRoot,file);return /\.(?:jspf?|html?|tagx?)$/i.test(file)?markupTokens(source).map(t=>t.name&&!t.closing?stripMarkupAttributes(t.text,n=>n.startsWith('data-st-demo-')||['data-st-model-key','data-st-model-if','data-st-submitted-key','data-st-submitted-format'].includes(n)):t.text).join(''):source; }
 async function writeOutput(file, content) { await writeBufferWithin(output, file, content); }
 const captureDiagnostics = [];
 const conventionalAssetMappings = [
@@ -335,6 +335,7 @@ for (const screen of screens) {
   manifest[screen.id] = `static-preview/${path.basename(rendered.htmlFile)}`;
   reconstruction[screen.id] = { view: screen.attributes?.view, assets: rendered.assets, dynamicExpressions: rendered.dynamicExpressions, rendering: { mode: 'reconstructed' } };
   await openStaticSnapshot(page,pathToFileURL(rendered.htmlFile).href);
+  if(previewV2){const disclosures=await offlineDisclosureState(page,graph,screen.id);const icons=await offlineIconAffordances(page);if(disclosures)captureDiagnostics.push('OFFLINE_DISCLOSURE_STATE: '+screen.id+'; count='+disclosures);if(icons||disclosures){await writeOutput(rendered.htmlFile,await page.content());if(icons)captureDiagnostics.push('OFFLINE_ICON_AFFORDANCE: '+screen.id+'; count='+icons);}}
   const elementCount = await page.locator('*').count();
   if (!previewV2 && elementCount > 50_000) throw new Error(`Rendered page element limit exceeded: ${elementCount}`);
   if(previewV2){const captured=await collectElementStyles(page,context,graph,screen.id,styleOptions);Object.assign(styleCapture.styles,captured.styles);Object.assign(styleCapture.defaults,captured.defaults);styleCapture.diagnostics.push(...captured.diagnostics);styleCapture.screens[screen.id]={elements:captured.elements,diagnostics:captured.diagnostics,...reconstruction[screen.id]};}
