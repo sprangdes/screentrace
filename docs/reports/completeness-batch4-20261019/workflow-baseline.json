@@ -1,0 +1,568 @@
+{
+  "cases": [
+    {
+      "id": "S01",
+      "project": "demo-struts1",
+      "sourceView": "tile:tiles.logon",
+      "selector": "form button[type=submit]",
+      "kind": "navigate",
+      "expectedTargets": [
+        "tile:tiles.dashboard",
+        "tile:tiles.logon",
+        "file:src/main/webapp/WEB-INF/view/login.jsp"
+      ],
+      "inputs": {
+        "#inputUsername": "trace_user",
+        "#inputPassword": "trace_test"
+      },
+      "choose": "tile:tiles.dashboard",
+      "sourceFile": "src/main/webapp/WEB-INF/view/login.jsp",
+      "sourceLine": 11,
+      "sourceExcerpt": "<form action=\"<c:url value='/postLogin.do' />\" method=\"post\">",
+      "sourceAnchor": "value='/postLogin.do'"
+    },
+    {
+      "id": "S02",
+      "project": "demo-struts1",
+      "sourceView": "tile:tiles.dashboard",
+      "selector": "a[href=\"/spotify-pagination.do\"]",
+      "kind": "navigate",
+      "expectedTargets": [
+        "tile:tiles.spotify.list.pagination",
+        "tile:tiles.logon"
+      ],
+      "choose": "tile:tiles.spotify.list.pagination",
+      "sourceFile": "src/main/webapp/WEB-INF/view/common/sideNav.jsp",
+      "sourceLine": 21,
+      "sourceExcerpt": "<a href=\"<c:url value='/spotify-pagination.do' />\" class=\"nav-link\">",
+      "sourceAnchor": "value='/spotify-pagination.do'"
+    },
+    {
+      "id": "S03",
+      "project": "demo-struts1",
+      "sourceView": "tile:tiles.spotify.list.pagination",
+      "selector": "a[href=\"/spotify-init.do?action=create\"]",
+      "kind": "navigate",
+      "expectedTargets": [
+        "tile:tiles.spotify.init",
+        "tile:tiles.logon"
+      ],
+      "choose": "tile:tiles.spotify.init",
+      "sourceFile": "src/main/webapp/WEB-INF/view/spotifyListPagination.jsp",
+      "sourceLine": 19,
+      "sourceExcerpt": "<a class=\"modal-effect btn btn-dark mx-2\" href=\"<c:url value='/spotify-init.do?action=create' />\">",
+      "sourceAnchor": "value='/spotify-init.do?action=create'"
+    },
+    {
+      "id": "S04",
+      "project": "demo-struts1",
+      "sourceView": "tile:tiles.spotify.init",
+      "selector": "a[href=\"/spotify-pagination.do\"]",
+      "kind": "navigate",
+      "expectedTargets": [
+        "tile:tiles.spotify.list.pagination",
+        "tile:tiles.logon"
+      ],
+      "choose": "tile:tiles.spotify.list.pagination",
+      "sourceFile": "src/main/webapp/WEB-INF/view/spotifyInit.jsp",
+      "sourceLine": 92,
+      "sourceExcerpt": "<a href=\"<c:url value='/spotify-pagination.do' />\" class=\"btn btn-dark\">Cancel</a>",
+      "sourceAnchor": "Cancel</a>"
+    },
+    {
+      "id": "S05",
+      "project": "demo-struts1",
+      "sourceView": "tile:tiles.dashboard",
+      "selector": "#sidebarToggle",
+      "kind": "toggleClass",
+      "expectedTargets": [],
+      "className": "sb-sidenav-toggled",
+      "target": "body",
+      "sourceFile": "src/main/webapp/WEB-INF/view/common/loadScript.jsp",
+      "sourceLine": 12,
+      "sourceExcerpt": "//     document.body.classList.toggle('sb-sidenav-toggled');",
+      "sourceAnchor": "document.body.classList.toggle"
+    },
+    {
+      "id": "S06",
+      "project": "demo-struts1",
+      "sourceView": "tile:tiles.dashboard",
+      "selector": "#navbarDropdown",
+      "kind": "dropdown",
+      "expectedTargets": [],
+      "target": ".dropdown-menu",
+      "sourceFile": "src/main/webapp/WEB-INF/view/common/loadScript.jsp",
+      "sourceLine": 70,
+      "sourceExcerpt": "dropdownToggle.addEventListener('click', function(event) {",
+      "sourceAnchor": "dropdownToggle.addEventListener"
+    },
+    {
+      "id": "S07",
+      "project": "demo-struts1",
+      "sourceView": "tile:tiles.spotify.init",
+      "selector": "form",
+      "kind": "requests",
+      "expectedTargets": [],
+      "expectedRequests": [
+        "/spotify-create.do",
+        "/spotify-update.do",
+        "/spotify-delete.do"
+      ],
+      "sourceFile": "src/main/webapp/WEB-INF/view/spotifyInit.jsp",
+      "sourceLine": 21,
+      "sourceExcerpt": "<c:set var=\"actionUrl\" value=\"/spotify-create.do\" />",
+      "sourceAnchor": "<c:set var=\"actionUrl\""
+    },
+    {
+      "id": "S08",
+      "project": "demo-struts1",
+      "sourceView": "tile:tiles.spotify.list.pagination",
+      "selector": "a[href*=\"action=edit\"]",
+      "kind": "navigate",
+      "expectedTargets": [
+        "tile:tiles.spotify.init",
+        "tile:tiles.logon"
+      ],
+      "choose": "tile:tiles.spotify.init",
+      "sourceFile": "src/main/webapp/WEB-INF/view/spotifyListPagination.jsp",
+      "sourceLine": 46,
+      "sourceExcerpt": "<a class=\"modal-effect btn btn-dark mx-2\" href=\"<c:url value='/spotify-init.do?action=edit&id=${entity.id.toString()}' />\">",
+      "sourceAnchor": "value='/spotify-init.do?action=edit"
+    },
+    {
+      "id": "S09",
+      "project": "demo-struts1",
+      "sourceView": "tile:tiles.spotify.init",
+      "selector": "form button[type=submit]",
+      "kind": "record",
+      "expectedTargets": [
+        "tile:tiles.spotify.list.pagination",
+        "tile:tiles.spotify.init",
+        "tile:tiles.logon"
+      ],
+      "inputs": {
+        "#inputArtistName": "ST Artist 419",
+        "#inputTrackName": "ST Track 419",
+        "#inputGenre": "Test",
+        "#inputPopularity": "42"
+      },
+      "choose": "tile:tiles.spotify.list.pagination",
+      "expectedText": [
+        "ST Artist 419",
+        "ST Track 419"
+      ],
+      "sourceFile": "src/main/webapp/WEB-INF/view/spotifyInit.jsp",
+      "sourceLine": 36,
+      "sourceExcerpt": "<form action=\"<c:url value='${actionUrl}' />\" method=\"post\">",
+      "sourceAnchor": "<form action="
+    },
+    {
+      "id": "L01",
+      "project": "App1Assignment5",
+      "sourceView": "file:src/main/webapp/login.jsp",
+      "selector": "a[href=\"Register\"]",
+      "kind": "navigate",
+      "expectedTargets": [
+        "file:src/main/webapp/register.jsp"
+      ],
+      "sourceFile": "src/main/webapp/login.jsp",
+      "sourceLine": 50,
+      "sourceExcerpt": "<a href=\"Register\">Register User </a>",
+      "sourceAnchor": "href=\"Register\""
+    },
+    {
+      "id": "L02",
+      "project": "App1Assignment5",
+      "sourceView": "file:src/main/webapp/register.jsp",
+      "selector": "input[type=submit]",
+      "kind": "navigate",
+      "expectedTargets": [
+        "file:src/main/webapp/login.jsp"
+      ],
+      "inputs": {
+        "#uname": "trace_user",
+        "#pass": "trace_test"
+      },
+      "sourceFile": "src/main/webapp/register.jsp",
+      "sourceLine": 32,
+      "sourceExcerpt": "<form action=\"Register\" method=\"post\">",
+      "sourceAnchor": "<form action=\"Register\""
+    },
+    {
+      "id": "L03",
+      "project": "App1Assignment5",
+      "sourceView": "file:src/main/webapp/login.jsp",
+      "selector": "input[type=submit]",
+      "kind": "navigate",
+      "expectedTargets": [
+        "file:src/main/webapp/login.jsp",
+        "file:src/main/webapp/bookListing.jsp"
+      ],
+      "inputs": {
+        "#uname": "trace_user",
+        "#pass": "trace_test"
+      },
+      "choose": "file:src/main/webapp/bookListing.jsp",
+      "sourceFile": "src/main/webapp/login.jsp",
+      "sourceLine": 32,
+      "sourceExcerpt": "<form action=\"Login\" method=\"post\">",
+      "sourceAnchor": "<form action=\"Login\""
+    },
+    {
+      "id": "L04",
+      "project": "App1Assignment5",
+      "sourceView": "file:src/main/webapp/bookListing.jsp",
+      "selector": "form[action=Add] button",
+      "kind": "navigate",
+      "expectedTargets": [
+        "file:src/main/webapp/AddBook.jsp"
+      ],
+      "sourceFile": "src/main/webapp/bookListing.jsp",
+      "sourceLine": 50,
+      "sourceExcerpt": "<form action=\"Add\" method=\"post\">",
+      "sourceAnchor": "<form action=\"Add\""
+    },
+    {
+      "id": "L05",
+      "project": "App1Assignment5",
+      "sourceView": "file:src/main/webapp/bookListing.jsp",
+      "selector": "form[action=Edit] button",
+      "kind": "navigate",
+      "expectedTargets": [
+        "file:src/main/webapp/EditBook.jsp"
+      ],
+      "sourceFile": "src/main/webapp/bookListing.jsp",
+      "sourceLine": 77,
+      "sourceExcerpt": "<form action=\"Edit\" method=\"post\">",
+      "sourceAnchor": "<form action=\"Edit\""
+    },
+    {
+      "id": "L06",
+      "project": "App1Assignment5",
+      "sourceView": "file:src/main/webapp/AddBook.jsp",
+      "selector": "form[action=Addbook] button",
+      "kind": "navigate",
+      "expectedTargets": [
+        "file:src/main/webapp/bookListing.jsp"
+      ],
+      "inputs": {
+        "#bookCode": "419",
+        "#bookName": "ScreenTrace 419"
+      },
+      "sourceFile": "src/main/webapp/AddBook.jsp",
+      "sourceLine": 41,
+      "sourceExcerpt": "<form action=\"Addbook\" method=\"post\">",
+      "sourceAnchor": "<form action=\"Addbook\""
+    },
+    {
+      "id": "L07",
+      "project": "App1Assignment5",
+      "sourceView": "file:src/main/webapp/AddBook.jsp",
+      "selector": "#bookCode",
+      "kind": "keypress",
+      "expectedTargets": [],
+      "typed": "12a3",
+      "expectedValue": "123",
+      "sourceFile": "src/main/webapp/AddBook.jsp",
+      "sourceLine": 45,
+      "sourceExcerpt": "name=\"bookCode\" onkeypress=\"return /[0-9]/i.test(event.key)\" required>",
+      "sourceAnchor": "onkeypress="
+    },
+    {
+      "id": "L08",
+      "project": "App1Assignment5",
+      "sourceView": "file:src/main/webapp/AddBook.jsp",
+      "selector": "form[action=Addbook] button",
+      "kind": "record",
+      "expectedTargets": [
+        "file:src/main/webapp/bookListing.jsp"
+      ],
+      "inputs": {
+        "#bookCode": "419",
+        "#bookName": "ScreenTrace 419"
+      },
+      "expectedText": [
+        "419",
+        "ScreenTrace 419"
+      ],
+      "sourceFile": "src/main/java/com/controller/AddController.java",
+      "sourceLine": 60,
+      "sourceExcerpt": "@PostMapping(\"/Addbook\") // for post method mapping",
+      "sourceAnchor": "@PostMapping(\"/Addbook\")"
+    },
+    {
+      "id": "L09",
+      "project": "App1Assignment5",
+      "sourceView": "file:src/main/webapp/bookListing.jsp",
+      "selector": "form[action=Delete] button",
+      "kind": "navigate",
+      "expectedTargets": [
+        "file:src/main/webapp/bookListing.jsp"
+      ],
+      "sourceFile": "src/main/java/com/controller/DeleteController.java",
+      "sourceLine": 26,
+      "sourceExcerpt": "@PostMapping(\"/Delete\") // for post method mapping",
+      "sourceAnchor": "@PostMapping(\"/Delete\")"
+    },
+    {
+      "id": "L10",
+      "project": "App1Assignment5",
+      "sourceView": "file:src/main/webapp/bookListing.jsp",
+      "selector": "form[action=Logout] input",
+      "kind": "navigate",
+      "expectedTargets": [
+        "file:src/main/webapp/login.jsp"
+      ],
+      "sourceFile": "src/main/java/com/controller/Logout.java",
+      "sourceLine": 14,
+      "sourceExcerpt": "@PostMapping(\"/Logout\")",
+      "sourceAnchor": "@PostMapping(\"/Logout\")"
+    },
+    {
+      "id": "H01",
+      "project": "Hotel-Management-System-Spring-Boot",
+      "sourceView": "file:src/main/resources/templates/visitor/home.html",
+      "selector": "a[href=\"/admin/login\"]",
+      "kind": "navigate",
+      "expectedTargets": [
+        "file:src/main/resources/templates/admin/login.html"
+      ],
+      "sourceFile": "src/main/resources/templates/visitor/home.html",
+      "sourceLine": 16,
+      "sourceExcerpt": "<a href=\"/admin/login\" class=\"nav-btn\">Admin Login</a>",
+      "sourceAnchor": "href=\"/admin/login\""
+    },
+    {
+      "id": "H02",
+      "project": "Hotel-Management-System-Spring-Boot",
+      "sourceView": "file:src/main/resources/templates/admin/login.html",
+      "selector": "button[type=submit]",
+      "kind": "navigate",
+      "expectedTargets": [
+        "file:src/main/resources/templates/admin/login.html",
+        "file:src/main/resources/templates/admin/dashboard.html"
+      ],
+      "inputs": {
+        "#username": "trace_user",
+        "#password": "trace_test"
+      },
+      "choose": "file:src/main/resources/templates/admin/dashboard.html",
+      "sourceFile": "src/main/java/com/hotel/management/controller/AdminController.java",
+      "sourceLine": 22,
+      "sourceExcerpt": "public String login(@RequestParam String username,",
+      "sourceAnchor": "public String login("
+    },
+    {
+      "id": "H03",
+      "project": "Hotel-Management-System-Spring-Boot",
+      "sourceView": "file:src/main/resources/templates/admin/login.html",
+      "selector": ".alert-error",
+      "kind": "initialHidden",
+      "expectedTargets": [],
+      "sourceFile": "src/main/resources/templates/admin/login.html",
+      "sourceLine": 17,
+      "sourceExcerpt": "<div th:if=\"${error}\" class=\"alert alert-error\" th:text=\"${error}\">",
+      "sourceAnchor": "th:if=\"${error}\""
+    },
+    {
+      "id": "H04",
+      "project": "Hotel-Management-System-Spring-Boot",
+      "sourceView": "file:src/main/resources/templates/admin/dashboard.html",
+      "selector": "a[href=\"/admin/rooms\"]",
+      "kind": "navigate",
+      "expectedTargets": [
+        "file:src/main/resources/templates/admin/rooms.html",
+        "file:src/main/resources/templates/admin/login.html"
+      ],
+      "choose": "file:src/main/resources/templates/admin/rooms.html",
+      "sourceFile": "src/main/java/com/hotel/management/controller/RoomController.java",
+      "sourceLine": 20,
+      "sourceExcerpt": "public String getAllRooms(HttpSession session, Model model) {",
+      "sourceAnchor": "public String getAllRooms("
+    },
+    {
+      "id": "H05",
+      "project": "Hotel-Management-System-Spring-Boot",
+      "sourceView": "file:src/main/resources/templates/admin/rooms.html",
+      "selector": "a[href=\"/admin/rooms/add\"]",
+      "kind": "navigate",
+      "expectedTargets": [
+        "file:src/main/resources/templates/admin/room-form.html",
+        "file:src/main/resources/templates/admin/login.html"
+      ],
+      "choose": "file:src/main/resources/templates/admin/room-form.html",
+      "sourceFile": "src/main/java/com/hotel/management/controller/RoomController.java",
+      "sourceLine": 30,
+      "sourceExcerpt": "public String addRoomForm(HttpSession session, Model model) {",
+      "sourceAnchor": "public String addRoomForm("
+    },
+    {
+      "id": "H06",
+      "project": "Hotel-Management-System-Spring-Boot",
+      "sourceView": "file:src/main/resources/templates/admin/room-form.html",
+      "selector": "#roomNumber",
+      "kind": "attribute",
+      "expectedTargets": [],
+      "attribute": "name",
+      "expectedValue": "roomNumber",
+      "sourceFile": "src/main/resources/templates/admin/room-form.html",
+      "sourceLine": 46,
+      "sourceExcerpt": "th:field=\"*{roomNumber}\"",
+      "sourceAnchor": "th:field=\"*{roomNumber}\""
+    },
+    {
+      "id": "H07",
+      "project": "Hotel-Management-System-Spring-Boot",
+      "sourceView": "file:src/main/resources/templates/admin/room-form.html",
+      "selector": "form",
+      "kind": "requests",
+      "expectedTargets": [],
+      "expectedRequests": [
+        "/admin/rooms/add",
+        "/admin/rooms/update/{id}"
+      ],
+      "sourceFile": "src/main/resources/templates/admin/room-form.html",
+      "sourceLine": 35,
+      "sourceExcerpt": "th:action=\"${isEdit} ? @{/admin/rooms/update/{id}(id=${room.id})} : @{/admin/rooms/add}\"",
+      "sourceAnchor": "th:action="
+    },
+    {
+      "id": "H08",
+      "project": "Hotel-Management-System-Spring-Boot",
+      "sourceView": "file:src/main/resources/templates/admin/rooms.html",
+      "selector": "a[onclick]",
+      "kind": "cancelConfirm",
+      "expectedTargets": [],
+      "sourceFile": "src/main/resources/templates/admin/rooms.html",
+      "sourceLine": 77,
+      "sourceExcerpt": "onclick=\"return confirm('Are you sure you want to delete this room?')\"",
+      "sourceAnchor": "onclick="
+    },
+    {
+      "id": "H09",
+      "project": "Hotel-Management-System-Spring-Boot",
+      "sourceView": "file:src/main/resources/templates/visitor/home.html",
+      "selector": "a.book-btn",
+      "kind": "navigate",
+      "expectedTargets": [
+        "file:src/main/resources/templates/visitor/booking-form.html"
+      ],
+      "sourceFile": "src/main/resources/templates/visitor/home.html",
+      "sourceLine": 62,
+      "sourceExcerpt": "<a th:href=\"@{/book/{id}(id=${room.id})}\" class=\"book-btn\">",
+      "sourceAnchor": "class=\"book-btn\""
+    },
+    {
+      "id": "H10",
+      "project": "Hotel-Management-System-Spring-Boot",
+      "sourceView": "file:src/main/resources/templates/visitor/booking-form.html",
+      "selector": "button[type=submit]",
+      "kind": "navigate",
+      "expectedTargets": [
+        "file:src/main/resources/templates/visitor/booking-success.html"
+      ],
+      "inputs": {
+        "[name=guestName]": "Trace Guest 419",
+        "[name=guestPhone]": "0700419419",
+        "[name=guestEmail]": "trace@example.invalid",
+        "#checkInDate": "2026-11-01",
+        "#checkOutDate": "2026-11-03",
+        "[name=numberOfGuests]": "2"
+      },
+      "sourceFile": "src/main/java/com/hotel/management/controller/VisitorController.java",
+      "sourceLine": 44,
+      "sourceExcerpt": "public String createBooking(@ModelAttribute Booking booking,",
+      "sourceAnchor": "public String createBooking("
+    },
+    {
+      "id": "H11",
+      "project": "Hotel-Management-System-Spring-Boot",
+      "sourceView": "file:src/main/resources/templates/visitor/booking-form.html",
+      "selector": "button[type=submit]",
+      "kind": "record",
+      "expectedTargets": [
+        "file:src/main/resources/templates/visitor/booking-success.html"
+      ],
+      "inputs": {
+        "[name=guestName]": "Trace Guest 419",
+        "[name=guestPhone]": "0700419419",
+        "[name=guestEmail]": "trace@example.invalid",
+        "#checkInDate": "2026-11-01",
+        "#checkOutDate": "2026-11-03",
+        "[name=numberOfGuests]": "2"
+      },
+      "expectedText": [
+        "Trace Guest 419",
+        "0700419419",
+        "2026-11-01",
+        "2026-11-03"
+      ],
+      "sourceFile": "src/main/java/com/hotel/management/controller/VisitorController.java",
+      "sourceLine": 44,
+      "sourceExcerpt": "public String createBooking(@ModelAttribute Booking booking,",
+      "sourceAnchor": "public String createBooking("
+    },
+    {
+      "id": "H12",
+      "project": "Hotel-Management-System-Spring-Boot",
+      "sourceView": "file:src/main/resources/templates/admin/dashboard.html",
+      "selector": "a[href=\"/admin/logout\"]",
+      "kind": "navigate",
+      "expectedTargets": [
+        "file:src/main/resources/templates/admin/login.html"
+      ],
+      "sourceFile": "src/main/java/com/hotel/management/controller/AdminController.java",
+      "sourceLine": 43,
+      "sourceExcerpt": "public String logout(HttpSession session) {",
+      "sourceAnchor": "public String logout("
+    }
+  ],
+  "journeys": [
+    {
+      "id": "SJ1",
+      "project": "demo-struts1",
+      "steps": [
+        "S01",
+        "S02",
+        "S03",
+        "S04"
+      ]
+    },
+    {
+      "id": "LJ1",
+      "project": "App1Assignment5",
+      "steps": [
+        "L01",
+        "L02",
+        "L03",
+        "L04"
+      ]
+    },
+    {
+      "id": "LJ2",
+      "project": "App1Assignment5",
+      "steps": [
+        "L04",
+        "L08"
+      ]
+    },
+    {
+      "id": "HJ1",
+      "project": "Hotel-Management-System-Spring-Boot",
+      "steps": [
+        "H01",
+        "H02",
+        "H04",
+        "H05"
+      ]
+    },
+    {
+      "id": "HJ2",
+      "project": "Hotel-Management-System-Spring-Boot",
+      "steps": [
+        "H09",
+        "H11"
+      ]
+    }
+  ]
+}

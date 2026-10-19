@@ -1,0 +1,4036 @@
+{
+  "demo-struts1": {
+    "summary": {
+      "views": {
+        "source": 16,
+        "present": 16
+      },
+      "routes": {
+        "source": 10,
+        "present": 10
+      },
+      "controls": {
+        "source": 30,
+        "present": 30
+      },
+      "jsRequests": {
+        "source": 0,
+        "present": 0
+      },
+      "nodesMissingSourceEvidence": [],
+      "unmatchedBackendEndpoints": [],
+      "graphNodesByType": {
+        "COMPONENT": 32,
+        "ENDPOINT": 10,
+        "FORM_MODEL": 3,
+        "HANDLER": 10,
+        "SCREEN": 9,
+        "SOURCE_ARTIFACT": 1,
+        "VIEW": 23
+      },
+      "diagnosticsByCode": {
+        "ACTION_FORM_CONDITION_UNRESOLVED": 6,
+        "JSP_UNRESOLVED": 5,
+        "JS_SCRIPT_REFERENCE": 3,
+        "CONTEXT_PATH_UNSPECIFIED": 1,
+        "STRUTS_TARGET_UNRESOLVED": 4,
+        "STRUTS_ROUTE_UNRESOLVED": 8,
+        "UNKNOWN_CALL": 16
+      }
+    },
+    "views": [
+      {
+        "source": {
+          "file": "src/main/webapp/WEB-INF/view/common/baseLayout.jsp",
+          "line": 1
+        },
+        "matchedNodes": [
+          "screen:19071acc-bf03-3638-9678-4bacf668fc82",
+          "screen:2a9a3de7-5047-3a57-aff0-0870d79c8804",
+          "screen:398aec38-b8ee-3dc8-9916-2d670b11bbb9",
+          "screen:874022fd-e14f-3526-aba4-c9a90f342e85",
+          "view:6e959116-b447-3ec1-bd65-adf72046d8df",
+          "view:d9a45079-a667-3fcc-a53b-562182d896ad"
+        ],
+        "types": [
+          "SCREEN",
+          "VIEW"
+        ],
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/webapp/WEB-INF/view/common/defaultBody.jsp",
+          "line": 1
+        },
+        "matchedNodes": [
+          "view:b84a9322-5385-3e60-8db2-a2e76a705823"
+        ],
+        "types": [
+          "VIEW"
+        ],
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/webapp/WEB-INF/view/common/footer.jsp",
+          "line": 1
+        },
+        "matchedNodes": [
+          "view:8ede0399-f30d-35cc-8ea0-758317673f37"
+        ],
+        "types": [
+          "VIEW"
+        ],
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/webapp/WEB-INF/view/common/header.jsp",
+          "line": 1
+        },
+        "matchedNodes": [
+          "view:9c0c9e12-31f6-3c1f-a4f6-49d09649efdb"
+        ],
+        "types": [
+          "VIEW"
+        ],
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/webapp/WEB-INF/view/common/loadScript.jsp",
+          "line": 1
+        },
+        "matchedNodes": [
+          "view:911cfc6e-fa85-308e-b076-b371ef52f91a"
+        ],
+        "types": [
+          "VIEW"
+        ],
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/webapp/WEB-INF/view/common/navBar.jsp",
+          "line": 1
+        },
+        "matchedNodes": [
+          "view:55a321bb-a61f-3696-80b6-252b00cd6eb4"
+        ],
+        "types": [
+          "VIEW"
+        ],
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/webapp/WEB-INF/view/common/plainLayout.jsp",
+          "line": 1
+        },
+        "matchedNodes": [
+          "screen:0e8d95ea-94d0-3a24-b761-0893f85998ab",
+          "view:ba0bd848-d4a4-3a4d-bfdb-da7de42b7a94",
+          "view:ea91f34b-ae7d-3951-8be4-ad9d16018d12"
+        ],
+        "types": [
+          "SCREEN",
+          "VIEW"
+        ],
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/webapp/WEB-INF/view/common/sideNav.jsp",
+          "line": 1
+        },
+        "matchedNodes": [
+          "view:cf96fae4-44e6-3005-8a7b-2441a5a705a8"
+        ],
+        "types": [
+          "VIEW"
+        ],
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/webapp/WEB-INF/view/dashboard.jsp",
+          "line": 1
+        },
+        "matchedNodes": [
+          "view:f278d995-ba88-3df8-b090-3ae1b7655dc3"
+        ],
+        "types": [
+          "VIEW"
+        ],
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/webapp/WEB-INF/view/failure.jsp",
+          "line": 1
+        },
+        "matchedNodes": [
+          "screen:24a3e540-0059-31e7-91ff-946c024b6ff0",
+          "view:24a3e540-0059-31e7-91ff-946c024b6ff0"
+        ],
+        "types": [
+          "SCREEN",
+          "VIEW"
+        ],
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/webapp/WEB-INF/view/login.jsp",
+          "line": 1
+        },
+        "matchedNodes": [
+          "screen:04d0fa0d-7486-3d26-bc36-2f05a1214e41",
+          "view:04d0fa0d-7486-3d26-bc36-2f05a1214e41"
+        ],
+        "types": [
+          "SCREEN",
+          "VIEW"
+        ],
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/webapp/WEB-INF/view/spotifyInit.jsp",
+          "line": 1
+        },
+        "matchedNodes": [
+          "view:088c984a-c8c1-3e0a-ae5d-71a65d7ce894"
+        ],
+        "types": [
+          "VIEW"
+        ],
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/webapp/WEB-INF/view/spotifyList.jsp",
+          "line": 1
+        },
+        "matchedNodes": [
+          "view:53b9ef9a-aa64-30ba-987f-46e385c18804"
+        ],
+        "types": [
+          "VIEW"
+        ],
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/webapp/WEB-INF/view/spotifyListPagination.jsp",
+          "line": 1
+        },
+        "matchedNodes": [
+          "view:1a86e618-7440-32fe-98c6-f4ecc43ad27d"
+        ],
+        "types": [
+          "VIEW"
+        ],
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/webapp/WEB-INF/view/success.jsp",
+          "line": 1
+        },
+        "matchedNodes": [
+          "screen:a60f5afe-5c7d-33da-921e-e91f42307274",
+          "view:a60f5afe-5c7d-33da-921e-e91f42307274"
+        ],
+        "types": [
+          "SCREEN",
+          "VIEW"
+        ],
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/webapp/index.jsp",
+          "line": 1
+        },
+        "matchedNodes": [
+          "screen:4378b9cd-7d83-324d-8c2f-c09b9136d889",
+          "view:4378b9cd-7d83-324d-8c2f-c09b9136d889"
+        ],
+        "types": [
+          "SCREEN",
+          "VIEW"
+        ],
+        "result": "PRESENT"
+      }
+    ],
+    "endpoints": [
+      {
+        "source": {
+          "kind": "strutsAction",
+          "file": "src/main/webapp/WEB-INF/struts-config.xml",
+          "line": 17,
+          "path": "/login",
+          "type": "org.apache.struts.actions.ForwardAction",
+          "forward": "tiles.logon",
+          "forwards": []
+        },
+        "matchedNodes": [
+          "endpoint:4f4bfc49-fd16-3995-8ceb-cbfaf0a89316"
+        ],
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "kind": "strutsAction",
+          "file": "src/main/webapp/WEB-INF/struts-config.xml",
+          "line": 18,
+          "path": "/postLogin",
+          "type": "com.demo.struts1.action.User.LoginAction",
+          "name": "loginForm",
+          "scope": "request",
+          "validate": "true",
+          "input": "/WEB-INF/view/login.jsp",
+          "forwards": [
+            {
+              "name": "success",
+              "path": "/dashboard.do"
+            },
+            {
+              "name": "failure",
+              "path": "tiles.logon"
+            }
+          ]
+        },
+        "matchedNodes": [
+          "endpoint:ea86b271-84fc-3708-9067-b48e970d55f7"
+        ],
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "kind": "strutsAction",
+          "file": "src/main/webapp/WEB-INF/struts-config.xml",
+          "line": 22,
+          "path": "/dashboard",
+          "type": "com.demo.struts1.action.DashboardAction",
+          "name": "dashboardForm",
+          "forwards": [
+            {
+              "name": "success",
+              "path": "tiles.dashboard"
+            },
+            {
+              "name": "login",
+              "path": "/login.do"
+            }
+          ]
+        },
+        "matchedNodes": [
+          "endpoint:fc05cc21-d1cd-3a62-aa7e-b9be9dba8a2b"
+        ],
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "kind": "strutsAction",
+          "file": "src/main/webapp/WEB-INF/struts-config.xml",
+          "line": 26,
+          "path": "/spotify-list",
+          "type": "com.demo.struts1.action.Spotify.SpotifyListAction",
+          "forwards": [
+            {
+              "name": "success",
+              "path": "tiles.spotify.list"
+            },
+            {
+              "name": "login",
+              "path": "/login.do"
+            }
+          ]
+        },
+        "matchedNodes": [
+          "endpoint:5d00bb4c-d630-3a20-915e-63b1e5cb64d5"
+        ],
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "kind": "strutsAction",
+          "file": "src/main/webapp/WEB-INF/struts-config.xml",
+          "line": 30,
+          "path": "/spotify-pagination",
+          "type": "com.demo.struts1.action.Spotify.SpotifyListPaginationAction",
+          "scope": "request",
+          "validate": "false",
+          "forwards": [
+            {
+              "name": "success",
+              "path": "tiles.spotify.list.pagination"
+            },
+            {
+              "name": "login",
+              "path": "/login.do"
+            }
+          ]
+        },
+        "matchedNodes": [
+          "endpoint:8fe865c3-b915-3a5f-b079-d8439a116c5f"
+        ],
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "kind": "strutsAction",
+          "file": "src/main/webapp/WEB-INF/struts-config.xml",
+          "line": 34,
+          "path": "/spotify-init",
+          "type": "com.demo.struts1.action.Spotify.SpotifyInitAction",
+          "name": "spotifyForm",
+          "scope": "request",
+          "validate": "false",
+          "input": "tiles.spotify.init",
+          "forwards": [
+            {
+              "name": "success",
+              "path": "tiles.spotify.init"
+            },
+            {
+              "name": "login",
+              "path": "/login.do"
+            }
+          ]
+        },
+        "matchedNodes": [
+          "endpoint:d51b7703-4a8c-3d02-99bb-9faf9b253f42"
+        ],
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "kind": "strutsAction",
+          "file": "src/main/webapp/WEB-INF/struts-config.xml",
+          "line": 38,
+          "path": "/spotify-create",
+          "type": "com.demo.struts1.action.Spotify.SpotifyCreateAction",
+          "name": "spotifyForm",
+          "scope": "request",
+          "validate": "true",
+          "input": "tiles.spotify.init",
+          "forwards": [
+            {
+              "name": "success",
+              "path": "/spotify-pagination.do"
+            },
+            {
+              "name": "failure",
+              "path": "tiles.spotify.init"
+            },
+            {
+              "name": "login",
+              "path": "/login.do"
+            }
+          ]
+        },
+        "matchedNodes": [
+          "endpoint:67696c88-985e-32f5-b401-e8d144c38c02"
+        ],
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "kind": "strutsAction",
+          "file": "src/main/webapp/WEB-INF/struts-config.xml",
+          "line": 43,
+          "path": "/spotify-update",
+          "type": "com.demo.struts1.action.Spotify.SpotifyUpdateAction",
+          "name": "spotifyForm",
+          "scope": "request",
+          "validate": "true",
+          "input": "tiles.spotify.init",
+          "forwards": [
+            {
+              "name": "success",
+              "path": "/spotify-pagination.do"
+            },
+            {
+              "name": "failure",
+              "path": "tiles.spotify.init"
+            },
+            {
+              "name": "login",
+              "path": "/login.do"
+            }
+          ]
+        },
+        "matchedNodes": [
+          "endpoint:8e8d0bef-7e7d-3076-8bf9-7bc1b4bf41f8"
+        ],
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "kind": "strutsAction",
+          "file": "src/main/webapp/WEB-INF/struts-config.xml",
+          "line": 48,
+          "path": "/spotify-delete",
+          "type": "com.demo.struts1.action.Spotify.SpotifyDeleteAction",
+          "name": "spotifyForm",
+          "scope": "request",
+          "validate": "true",
+          "input": "tiles.spotify.init",
+          "forwards": [
+            {
+              "name": "success",
+              "path": "/spotify-pagination.do"
+            },
+            {
+              "name": "failure",
+              "path": "tiles.spotify.init"
+            },
+            {
+              "name": "login",
+              "path": "/login.do"
+            }
+          ]
+        },
+        "matchedNodes": [
+          "endpoint:8f051437-5ec4-34d6-9963-cd462f7c1a25"
+        ],
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "kind": "strutsAction",
+          "file": "src/main/webapp/WEB-INF/struts-config.xml",
+          "line": 53,
+          "path": "/logout",
+          "type": "com.demo.struts1.action.User.LogoutAction",
+          "forwards": [
+            {
+              "name": "login",
+              "path": "/login.do"
+            }
+          ]
+        },
+        "matchedNodes": [
+          "endpoint:08956983-39fa-37f0-8e52-0ab68b04e9ef"
+        ],
+        "result": "PRESENT"
+      }
+    ],
+    "controls": [
+      {
+        "source": {
+          "file": "src/main/webapp/WEB-INF/view/common/footer.jsp",
+          "line": 6,
+          "tag": "a",
+          "attrs": {
+            "href": "#"
+          }
+        },
+        "matchedNode": "component:93825fff-4401-378d-843d-35bc297d05a3",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/webapp/WEB-INF/view/common/footer.jsp",
+          "line": 8,
+          "tag": "a",
+          "attrs": {
+            "href": "#"
+          }
+        },
+        "matchedNode": "component:2330a933-ba5d-3161-b35c-b3b60a721727",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/webapp/WEB-INF/view/common/navBar.jsp",
+          "line": 5,
+          "tag": "a",
+          "attrs": {
+            "class": "navbar-brand ps-3",
+            "href": "index.html"
+          }
+        },
+        "matchedNode": "component:5055cb04-4e17-3ccb-9897-52527ea7d029",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/webapp/WEB-INF/view/common/navBar.jsp",
+          "line": 7,
+          "tag": "button",
+          "attrs": {
+            "class": "btn btn-link btn-sm order-1 order-lg-0 me-4 me-lg-0",
+            "id": "sidebarToggle",
+            "href": "#!"
+          }
+        },
+        "matchedNode": "component:c7668249-c409-39c7-9624-e113276d4c42",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/webapp/WEB-INF/view/common/navBar.jsp",
+          "line": 14,
+          "tag": "a",
+          "attrs": {
+            "class": "nav-link dropdown-toggle",
+            "id": "navbarDropdown",
+            "href": "#",
+            "role": "button",
+            "data-bs-toggle": "dropdown",
+            "aria-expanded": "false"
+          }
+        },
+        "matchedNode": "component:90bffb83-983a-3324-af3a-86c4b72dcd48",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/webapp/WEB-INF/view/common/navBar.jsp",
+          "line": 16,
+          "tag": "a",
+          "attrs": {
+            "class": "dropdown-item",
+            "href": "<c:url value='/logout.do' />"
+          }
+        },
+        "matchedNode": "component:7123a19f-57f1-3911-bdb2-e3e9f8a6ef1b",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/webapp/WEB-INF/view/common/sideNav.jsp",
+          "line": 9,
+          "tag": "a",
+          "attrs": {
+            "href": "<c:url value='/dashboard.do' />",
+            "class": "nav-link"
+          }
+        },
+        "matchedNode": "component:039c32d0-c2a4-3e9f-ad72-2e7321a5facb",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/webapp/WEB-INF/view/common/sideNav.jsp",
+          "line": 16,
+          "tag": "a",
+          "attrs": {
+            "href": "<c:url value='/spotify-list.do' />",
+            "class": "nav-link"
+          }
+        },
+        "matchedNode": "component:a2a694ef-0f37-312f-862c-c7a3ca925346",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/webapp/WEB-INF/view/common/sideNav.jsp",
+          "line": 21,
+          "tag": "a",
+          "attrs": {
+            "href": "<c:url value='/spotify-pagination.do' />",
+            "class": "nav-link"
+          }
+        },
+        "matchedNode": "component:cc45663b-2149-3c9e-ae31-2953c7b89491",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/webapp/WEB-INF/view/dashboard.jsp",
+          "line": 8,
+          "tag": "a",
+          "attrs": {
+            "href": "https://github.com/ImanNazirah/demo-struts1",
+            "target": "_blank"
+          }
+        },
+        "matchedNode": "component:5790d4b7-e1e3-388a-b3dc-30fae45a4823",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/webapp/WEB-INF/view/dashboard.jsp",
+          "line": 8,
+          "tag": "a",
+          "attrs": {
+            "href": "https://weblegacy.github.io/struts1/",
+            "target": "_blank"
+          }
+        },
+        "matchedNode": "component:b6850a38-b3b0-3e06-b4bb-1415ebf1e362",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/webapp/WEB-INF/view/dashboard.jsp",
+          "line": 9,
+          "tag": "a",
+          "attrs": {
+            "href": "https://startbootstrap.com/previews/sb-admin",
+            "target": "_blank"
+          }
+        },
+        "matchedNode": "component:f80afbb4-68a9-3842-b161-4e48a98ef81d",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/webapp/WEB-INF/view/dashboard.jsp",
+          "line": 10,
+          "tag": "a",
+          "attrs": {
+            "href": "https://github.com/ImanNazirah/demo-struts1/blob/main/README.md",
+            "target": "_blank"
+          }
+        },
+        "matchedNode": "component:c080aa50-6afc-363a-9a11-7f900b1a1138",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/webapp/WEB-INF/view/login.jsp",
+          "line": 11,
+          "tag": "form",
+          "attrs": {
+            "action": "<c:url value='/postLogin.do' />",
+            "method": "post"
+          }
+        },
+        "matchedNode": "component:e4c2ce16-2533-3daf-96b5-567e56b2ad54",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/webapp/WEB-INF/view/login.jsp",
+          "line": 13,
+          "tag": "input",
+          "attrs": {
+            "name": "username",
+            "class": "form-control",
+            "id": "inputUsername",
+            "type": "text",
+            "placeholder": "Username"
+          }
+        },
+        "matchedNode": "component:9ab0f9ba-e5f0-30c4-815d-d3e4f6ed41f5",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/webapp/WEB-INF/view/login.jsp",
+          "line": 17,
+          "tag": "input",
+          "attrs": {
+            "name": "password",
+            "class": "form-control",
+            "id": "inputPassword",
+            "type": "password",
+            "placeholder": "Password"
+          }
+        },
+        "matchedNode": "component:cb55ecea-c121-3c9a-982d-56ddba41bb19",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/webapp/WEB-INF/view/login.jsp",
+          "line": 21,
+          "tag": "button",
+          "attrs": {
+            "type": "submit",
+            "class": "btn btn-dark"
+          }
+        },
+        "matchedNode": "component:83617594-8d5f-3b15-9a81-c5aa075ad515",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/webapp/WEB-INF/view/spotifyInit.jsp",
+          "line": 36,
+          "tag": "form",
+          "attrs": {
+            "action": "<c:url value='${actionUrl}' />",
+            "method": "post"
+          }
+        },
+        "matchedNode": "component:32e80829-d8c9-3756-b393-142a0f4049f3",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/webapp/WEB-INF/view/spotifyInit.jsp",
+          "line": 38,
+          "tag": "input",
+          "attrs": {
+            "name": "id",
+            "class": "form-control",
+            "id": "inputUserId",
+            "type": "text",
+            "value": "${param.id}",
+            "style": "display:none;"
+          }
+        },
+        "matchedNode": "component:f4888fa5-85dc-3439-9329-73d3ec3dd8dd",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/webapp/WEB-INF/view/spotifyInit.jsp",
+          "line": 43,
+          "tag": "input",
+          "attrs": {
+            "name": "artistName",
+            "class": "form-control",
+            "id": "inputArtistName",
+            "type": "text",
+            "placeholder": "Enter input",
+            "value": "${spotifyForm.actionType == 'create' ? '' : spotifyForm.artistName}"
+          }
+        },
+        "matchedNode": "component:a4b7d323-7c81-38e1-8159-b5da391ce394",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/webapp/WEB-INF/view/spotifyInit.jsp",
+          "line": 52,
+          "tag": "input",
+          "attrs": {
+            "name": "trackName",
+            "class": "form-control",
+            "id": "inputTrackName",
+            "type": "text",
+            "placeholder": "Enter input",
+            "value": "${spotifyForm.actionType == 'create' ? '' : spotifyForm.trackName}"
+          }
+        },
+        "matchedNode": "component:02b4de09-44cd-3a07-8cbb-facc784c5651",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/webapp/WEB-INF/view/spotifyInit.jsp",
+          "line": 63,
+          "tag": "input",
+          "attrs": {
+            "name": "genre",
+            "class": "form-control",
+            "id": "inputGenre",
+            "type": "text",
+            "placeholder": "Enter input",
+            "value": "${spotifyForm.actionType == 'create' ? ''  : spotifyForm.genre}"
+          }
+        },
+        "matchedNode": "component:3b464260-ab52-35b6-8117-fbb686c61775",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/webapp/WEB-INF/view/spotifyInit.jsp",
+          "line": 72,
+          "tag": "input",
+          "attrs": {
+            "name": "popularity",
+            "class": "form-control",
+            "id": "inputPopularity",
+            "type": "text",
+            "placeholder": "Enter input",
+            "value": "${spotifyForm.actionType == 'create' ? '' : spotifyForm.popularity}"
+          }
+        },
+        "matchedNode": "component:87599d57-e715-3519-a1e3-909e64a4ab70",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/webapp/WEB-INF/view/spotifyInit.jsp",
+          "line": 82,
+          "tag": "button",
+          "attrs": {
+            "type": "submit",
+            "class": "btn btn-dark"
+          }
+        },
+        "matchedNode": "component:95fe89fc-6793-31b0-a77f-2facebc61f3c",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/webapp/WEB-INF/view/spotifyInit.jsp",
+          "line": 92,
+          "tag": "a",
+          "attrs": {
+            "href": "<c:url value='/spotify-pagination.do' />",
+            "class": "btn btn-dark"
+          }
+        },
+        "matchedNode": "component:2ca73c94-b8ed-3d58-bedf-f006a46393d1",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/webapp/WEB-INF/view/spotifyListPagination.jsp",
+          "line": 19,
+          "tag": "a",
+          "attrs": {
+            "class": "modal-effect btn btn-dark mx-2",
+            "href": "<c:url value='/spotify-init.do?action=create' />"
+          }
+        },
+        "matchedNode": "component:17d6f371-9636-37b7-a67d-2d87785d07e5",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/webapp/WEB-INF/view/spotifyListPagination.jsp",
+          "line": 46,
+          "tag": "a",
+          "attrs": {
+            "class": "modal-effect btn btn-dark mx-2",
+            "href": "<c:url value='/spotify-init.do?action=edit&id=${entity.id.toString()}' />"
+          }
+        },
+        "matchedNode": "component:1afea225-d473-362e-9921-c93db87d4d7c",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/webapp/WEB-INF/view/spotifyListPagination.jsp",
+          "line": 49,
+          "tag": "a",
+          "attrs": {
+            "class": "modal-effect btn btn-danger",
+            "href": "<c:url value='/spotify-init.do?action=delete&id=${entity.id.toString()}' />"
+          }
+        },
+        "matchedNode": "component:05686010-14b6-3d4a-af58-98fb0c2d56a5",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/webapp/WEB-INF/view/spotifyListPagination.jsp",
+          "line": 79,
+          "tag": "a",
+          "attrs": {
+            "data-page": "${page}",
+            "class": "datatable-pagination-list-item-link"
+          }
+        },
+        "matchedNode": "component:c9ec6272-1040-3582-b5a4-cc474cddeb45",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/webapp/WEB-INF/view/spotifyListPagination.jsp",
+          "line": 84,
+          "tag": "a",
+          "attrs": {
+            "href": "spotify-pagination.do?page=${page}",
+            "data-page": "${page}",
+            "class": "datatable-pagination-list-item-link"
+          }
+        },
+        "matchedNode": "component:18e19682-f6c4-337d-9aa4-2ac7761da924",
+        "result": "PRESENT"
+      }
+    ],
+    "jsRequests": []
+  },
+  "App1Assignment5": {
+    "summary": {
+      "views": {
+        "source": 5,
+        "present": 5
+      },
+      "routes": {
+        "source": 10,
+        "present": 10
+      },
+      "controls": {
+        "source": 42,
+        "present": 42
+      },
+      "jsRequests": {
+        "source": 0,
+        "present": 0
+      },
+      "nodesMissingSourceEvidence": [],
+      "unmatchedBackendEndpoints": [],
+      "graphNodesByType": {
+        "COMPONENT": 43,
+        "ENDPOINT": 10,
+        "HANDLER": 10,
+        "SCREEN": 9
+      },
+      "diagnosticsByCode": {
+        "SPRING_RETURN_UNRESOLVED": 4,
+        "ANALYSIS_DIAGNOSTIC": 8,
+        "JSP_ROUTE_UNRESOLVED": 25,
+        "JS_SCRIPT_REFERENCE": 4,
+        "CONTEXT_PATH_UNSPECIFIED": 22,
+        "UNKNOWN_CALL": 1,
+        "API_REDIRECT_UNRESOLVED": 2
+      }
+    },
+    "views": [
+      {
+        "source": {
+          "file": "src/main/webapp/AddBook.jsp",
+          "line": 1
+        },
+        "matchedNodes": [
+          "screen:dca18921-a4fe-3317-b8b2-63c030c96eba"
+        ],
+        "types": [
+          "SCREEN"
+        ],
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/webapp/EditBook.jsp",
+          "line": 1
+        },
+        "matchedNodes": [
+          "screen:d5e43178-929c-3a33-92be-7202a684a600"
+        ],
+        "types": [
+          "SCREEN"
+        ],
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/webapp/bookListing.jsp",
+          "line": 1
+        },
+        "matchedNodes": [
+          "screen:7e0222f2-352b-3b3e-b038-841fe557f563"
+        ],
+        "types": [
+          "SCREEN"
+        ],
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/webapp/login.jsp",
+          "line": 1
+        },
+        "matchedNodes": [
+          "screen:0dabd232-1575-327d-a141-89ea05d553c4"
+        ],
+        "types": [
+          "SCREEN"
+        ],
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/webapp/register.jsp",
+          "line": 1
+        },
+        "matchedNodes": [
+          "screen:53c3ffbe-8939-3e37-a91e-6c96b306190a"
+        ],
+        "types": [
+          "SCREEN"
+        ],
+        "result": "PRESENT"
+      }
+    ],
+    "endpoints": [
+      {
+        "source": {
+          "kind": "endpoint",
+          "file": "src/main/java/com/controller/AddController.java",
+          "line": 33,
+          "class": "AddController",
+          "method": "editBook",
+          "httpMethod": "POST",
+          "path": "/Add",
+          "params": "",
+          "rest": false
+        },
+        "matchedNodes": [
+          "endpoint:3c503a8c-6468-3870-bbab-762d7ecf2c98"
+        ],
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "kind": "endpoint",
+          "file": "src/main/java/com/controller/AddController.java",
+          "line": 60,
+          "class": "AddController",
+          "method": "addBook",
+          "httpMethod": "POST",
+          "path": "/Addbook",
+          "params": "",
+          "rest": false
+        },
+        "matchedNodes": [
+          "endpoint:72329773-4beb-3d86-b4ed-07d5f3c9bdb7"
+        ],
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "kind": "endpoint",
+          "file": "src/main/java/com/controller/DeleteController.java",
+          "line": 26,
+          "class": "DeleteController",
+          "method": "deleteBook",
+          "httpMethod": "POST",
+          "path": "/Delete",
+          "params": "",
+          "rest": false
+        },
+        "matchedNodes": [
+          "endpoint:810b0b4e-7523-3ebb-b07b-5a6b347a76c3"
+        ],
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "kind": "endpoint",
+          "file": "src/main/java/com/controller/EditController.java",
+          "line": 29,
+          "class": "EditController",
+          "method": "editBook",
+          "httpMethod": "POST",
+          "path": "/Edit",
+          "params": "",
+          "rest": false
+        },
+        "matchedNodes": [
+          "endpoint:a24e1583-8c3a-38b1-b7da-942743ad56b3"
+        ],
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "kind": "endpoint",
+          "file": "src/main/java/com/controller/EditController.java",
+          "line": 55,
+          "class": "EditController",
+          "method": "addBook",
+          "httpMethod": "POST",
+          "path": "/Editbook",
+          "params": "",
+          "rest": false
+        },
+        "matchedNodes": [
+          "endpoint:d768b8fc-df31-3133-a85d-995ea6c56fdc"
+        ],
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "kind": "endpoint",
+          "file": "src/main/java/com/controller/LoginController.java",
+          "line": 28,
+          "class": "LoginController",
+          "method": "getLoginRedirect",
+          "httpMethod": "GET",
+          "path": "/",
+          "params": "",
+          "rest": false
+        },
+        "matchedNodes": [
+          "endpoint:c8d8d47c-3f7f-3fad-8364-1efeeffd8664"
+        ],
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "kind": "endpoint",
+          "file": "src/main/java/com/controller/LoginController.java",
+          "line": 33,
+          "class": "LoginController",
+          "method": "checkUser",
+          "httpMethod": "POST",
+          "path": "/Login",
+          "params": "",
+          "rest": false
+        },
+        "matchedNodes": [
+          "endpoint:3d329990-f773-3067-b035-5b9d1dc647e7"
+        ],
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "kind": "endpoint",
+          "file": "src/main/java/com/controller/Logout.java",
+          "line": 14,
+          "class": "Logout",
+          "method": "checkUser",
+          "httpMethod": "POST",
+          "path": "/Logout",
+          "params": "",
+          "rest": false
+        },
+        "matchedNodes": [
+          "endpoint:547674d4-6abc-31c3-b769-9190a69f250b"
+        ],
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "kind": "endpoint",
+          "file": "src/main/java/com/controller/RegisterController.java",
+          "line": 24,
+          "class": "RegisterController",
+          "method": "getRegisterRedirect",
+          "httpMethod": "GET",
+          "path": "/Register",
+          "params": "",
+          "rest": false
+        },
+        "matchedNodes": [
+          "endpoint:84c1c2b8-ede0-31fa-a5d2-2046eb7592de"
+        ],
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "kind": "endpoint",
+          "file": "src/main/java/com/controller/RegisterController.java",
+          "line": 29,
+          "class": "RegisterController",
+          "method": "addUsers",
+          "httpMethod": "POST",
+          "path": "/Register",
+          "params": "",
+          "rest": false
+        },
+        "matchedNodes": [
+          "endpoint:39053745-4b50-34e4-bd47-edcae4f6c2ba"
+        ],
+        "result": "PRESENT"
+      }
+    ],
+    "controls": [
+      {
+        "source": {
+          "file": "src/main/webapp/AddBook.jsp",
+          "line": 32,
+          "tag": "form",
+          "attrs": {
+            "action": "Logout",
+            "method": "post"
+          }
+        },
+        "matchedNode": "component:cbc12122-9aa8-3d53-9d91-e45a245c7fca",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/webapp/AddBook.jsp",
+          "line": 33,
+          "tag": "input",
+          "attrs": {
+            "type": "submit",
+            "value": "Logout"
+          }
+        },
+        "matchedNode": "component:93c055b8-796b-3c1c-9c5a-3c5b0fb6e37b",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/webapp/AddBook.jsp",
+          "line": 41,
+          "tag": "form",
+          "attrs": {
+            "action": "Addbook",
+            "method": "post"
+          }
+        },
+        "matchedNode": "component:51b74936-06df-3e6c-932d-2e4d6e44c79f",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/webapp/AddBook.jsp",
+          "line": 43,
+          "tag": "input",
+          "attrs": {
+            "type": "text",
+            "class": "col-4",
+            "id": "bookCode",
+            "name": "bookCode",
+            "onkeypress": "return /[0-9]/i.test(event.key)",
+            "required": null
+          }
+        },
+        "matchedNode": "component:5ba99b0d-5ef3-3f41-b3e0-c8d42cb7ba26",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/webapp/AddBook.jsp",
+          "line": 49,
+          "tag": "input",
+          "attrs": {
+            "type": "text",
+            "class": "col-4",
+            "id": "bookName",
+            "name": "bookName",
+            "required": null
+          }
+        },
+        "matchedNode": "component:0c6cc303-2e48-3172-927e-175d464ba6d6",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/webapp/AddBook.jsp",
+          "line": 55,
+          "tag": "select",
+          "attrs": {
+            "class": "col-4",
+            "name": "author",
+            "id": "author",
+            "required": null
+          }
+        },
+        "matchedNode": "component:d70f3af7-8eee-37ad-a73d-0f4fe9db4927",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/webapp/AddBook.jsp",
+          "line": 64,
+          "tag": "input",
+          "attrs": {
+            "type": "text",
+            "id": "addedOn",
+            "class": "col-4",
+            "value": "${date}",
+            "name": "addedOn",
+            "readonly": null
+          }
+        },
+        "matchedNode": "component:2f887493-4630-34eb-8926-61b67e848ab6",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/webapp/AddBook.jsp",
+          "line": 73,
+          "tag": "button",
+          "attrs": {
+            "type": "submit",
+            "class": "btn btn-outline-success"
+          }
+        },
+        "matchedNode": "component:15438572-01f8-3c62-8c2f-e4324b4f3517",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/webapp/AddBook.jsp",
+          "line": 74,
+          "tag": "button",
+          "attrs": {
+            "type": "submit",
+            "class": "btn btn-outline-danger"
+          }
+        },
+        "matchedNode": "component:38e40c44-a92d-317a-a0f7-536d5208a442",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/webapp/AddBook.jsp",
+          "line": 74,
+          "tag": "a",
+          "attrs": {
+            "href": "bookListing.jsp"
+          }
+        },
+        "matchedNode": "component:9342c3d2-613c-3653-952e-5016be1c6f44",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/webapp/EditBook.jsp",
+          "line": 31,
+          "tag": "form",
+          "attrs": {
+            "action": "Logout",
+            "method": "post"
+          }
+        },
+        "matchedNode": "component:71a5a7a3-dec9-31c0-83e4-50ab6b55a0c2",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/webapp/EditBook.jsp",
+          "line": 32,
+          "tag": "input",
+          "attrs": {
+            "type": "submit",
+            "class": "btn btn-outline-success",
+            "value": "Logout"
+          }
+        },
+        "matchedNode": "component:1e7ed47e-cf50-3a98-8218-f58800dcb506",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/webapp/EditBook.jsp",
+          "line": 42,
+          "tag": "form",
+          "attrs": {
+            "action": "Editbook",
+            "method": "post"
+          }
+        },
+        "matchedNode": "component:dc9014d5-a388-3338-b691-79a80b822196",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/webapp/EditBook.jsp",
+          "line": 44,
+          "tag": "input",
+          "attrs": {
+            "type": "text",
+            "class": "col-4",
+            "id": "bookCode",
+            "value": "${book.getBookCode()}",
+            "name": "bookCode",
+            "readonly": null
+          }
+        },
+        "matchedNode": "component:67c09d28-505a-3b75-9b45-6242276ea1c1",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/webapp/EditBook.jsp",
+          "line": 50,
+          "tag": "input",
+          "attrs": {
+            "type": "text",
+            "class": "col-4",
+            "id": "bookName",
+            "value": "${book.getBookName()}",
+            "name": "bookName",
+            "required": null
+          }
+        },
+        "matchedNode": "component:9b08b37e-deb2-3ecf-9ca0-0d3a8ab46ec6",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/webapp/EditBook.jsp",
+          "line": 56,
+          "tag": "select",
+          "attrs": {
+            "class": "col-4",
+            "name": "author",
+            "id": "author",
+            "required": null
+          }
+        },
+        "matchedNode": "component:4612294c-54e1-3c73-a2c4-27a1a87f8838",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/webapp/EditBook.jsp",
+          "line": 65,
+          "tag": "input",
+          "attrs": {
+            "type": "text",
+            "id": "addedOn",
+            "class": "col-4",
+            "value": "${book.getAddedOn()}",
+            "name": "addedOn",
+            "readonly": null
+          }
+        },
+        "matchedNode": "component:82fa10e8-73ca-3025-99c4-332b954a403e",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/webapp/EditBook.jsp",
+          "line": 74,
+          "tag": "button",
+          "attrs": {
+            "type": "submit",
+            "class": "btn btn-outline-success"
+          }
+        },
+        "matchedNode": "component:703ca8a4-4f88-3704-8b30-b8bdeb02acd4",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/webapp/EditBook.jsp",
+          "line": 75,
+          "tag": "button",
+          "attrs": {
+            "type": "submit",
+            "class": "btn btn-outline-danger"
+          }
+        },
+        "matchedNode": "component:308beade-ef3b-3047-a69c-6699698e74d1",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/webapp/EditBook.jsp",
+          "line": 75,
+          "tag": "a",
+          "attrs": {
+            "href": "bookListing.jsp"
+          }
+        },
+        "matchedNode": "component:aff7bccd-16c2-3196-951f-42088d93924d",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/webapp/bookListing.jsp",
+          "line": 40,
+          "tag": "form",
+          "attrs": {
+            "action": "Logout",
+            "method": "post"
+          }
+        },
+        "matchedNode": "component:fa1bdcd6-27ef-3aa7-bd46-1aaa8314e79a",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/webapp/bookListing.jsp",
+          "line": 41,
+          "tag": "input",
+          "attrs": {
+            "type": "submit",
+            "class": "btn btn-outline-success ",
+            "value": "Logout"
+          }
+        },
+        "matchedNode": "component:abe58874-7bbc-3d9a-8305-d8a6f862cde3",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/webapp/bookListing.jsp",
+          "line": 50,
+          "tag": "form",
+          "attrs": {
+            "action": "Add",
+            "method": "post"
+          }
+        },
+        "matchedNode": "component:439ce50e-ff0c-32e3-a433-034d5e67956c",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/webapp/bookListing.jsp",
+          "line": 51,
+          "tag": "button",
+          "attrs": {
+            "type": "submit",
+            "class": " btn mt-5 px-3",
+            "style": "text-align: center; font-size: 25px; font-weight: 500; margin-left: 87%"
+          }
+        },
+        "matchedNode": "component:e96fb5d6-274c-3722-b1c3-827a64022865",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/webapp/bookListing.jsp",
+          "line": 77,
+          "tag": "form",
+          "attrs": {
+            "action": "Edit",
+            "method": "post"
+          }
+        },
+        "matchedNode": "component:4dd42766-a072-3531-9b7b-de9c89407fb7",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/webapp/bookListing.jsp",
+          "line": 78,
+          "tag": "input",
+          "attrs": {
+            "type": "text",
+            "name": "bookcode",
+            "value": "${Book.getBookCode()}",
+            "hidden": null
+          }
+        },
+        "matchedNode": "component:fe69410b-b154-39df-92a2-64902d763618",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/webapp/bookListing.jsp",
+          "line": 79,
+          "tag": "input",
+          "attrs": {
+            "type": "text",
+            "name": "bookname",
+            "value": "${Book.getBookName()}",
+            "hidden": null
+          }
+        },
+        "matchedNode": "component:f71ae6e3-13d2-38fa-92ae-8553fce271f9",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/webapp/bookListing.jsp",
+          "line": 80,
+          "tag": "input",
+          "attrs": {
+            "type": "text",
+            "name": "author",
+            "value": "${Book.getAuthor()}",
+            "hidden": null
+          }
+        },
+        "matchedNode": "component:8a3d7c39-04cc-377e-9d54-a5f3bcb20e3f",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/webapp/bookListing.jsp",
+          "line": 81,
+          "tag": "input",
+          "attrs": {
+            "type": "text",
+            "name": "addedOn",
+            "value": "${Book.getAddedOn()}",
+            "hidden": null
+          }
+        },
+        "matchedNode": "component:cbfc6eff-d86e-314c-9351-1e7b2b3edd94",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/webapp/bookListing.jsp",
+          "line": 82,
+          "tag": "button",
+          "attrs": {
+            "type": "submit",
+            "id": "submit-btn",
+            "class": " col-5 p-2 mx-5 btn btn-primary "
+          }
+        },
+        "matchedNode": "component:f19803ad-276a-3eb4-8225-c1b9412f4cc8",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/webapp/bookListing.jsp",
+          "line": 84,
+          "tag": "form",
+          "attrs": {
+            "action": "Delete",
+            "method": "post"
+          }
+        },
+        "matchedNode": "component:8eaaf64a-676f-3e44-ad62-4ecdcfe8ee5e",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/webapp/bookListing.jsp",
+          "line": 85,
+          "tag": "input",
+          "attrs": {
+            "type": "text",
+            "name": "bookCode",
+            "value": "${Book.getBookCode()}",
+            "hidden": null
+          }
+        },
+        "matchedNode": "component:f7aeb941-fe51-33d6-a504-a1dace09c211",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/webapp/bookListing.jsp",
+          "line": 86,
+          "tag": "button",
+          "attrs": {
+            "type": "submit",
+            "id": "submit-btn",
+            "class": "col-5 p-2 mx-5 mt-2 btn btn-danger "
+          }
+        },
+        "matchedNode": "component:b8f2b450-405e-3703-bf43-6e39c62a5869",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/webapp/login.jsp",
+          "line": 32,
+          "tag": "form",
+          "attrs": {
+            "action": "Login",
+            "method": "post"
+          }
+        },
+        "matchedNode": "component:b1f6fc67-974e-376c-825d-acd67fc6f644",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/webapp/login.jsp",
+          "line": 36,
+          "tag": "input",
+          "attrs": {
+            "type": "text",
+            "name": "uname",
+            "id": "uname",
+            "class": "form-control col-6",
+            "minlength": "5",
+            "maxlength": "50",
+            "pattern": "[A-Za-z0-9]{5,}",
+            "title": "No Spaces Allowed Minimum 5 characters",
+            "required": null
+          }
+        },
+        "matchedNode": "component:338d1dc7-71b5-3478-ab9c-b069d55e6827",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/webapp/login.jsp",
+          "line": 43,
+          "tag": "input",
+          "attrs": {
+            "type": "password",
+            "name": "pass",
+            "id": "pass",
+            "class": "form-control col-6",
+            "minlength": "5",
+            "maxlength": "50",
+            "required": null
+          }
+        },
+        "matchedNode": "component:a16b34f9-f720-3ac5-85e9-a71fb1d50a07",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/webapp/login.jsp",
+          "line": 50,
+          "tag": "a",
+          "attrs": {
+            "href": "Register"
+          }
+        },
+        "matchedNode": "component:20042f80-b119-3990-bb39-ddd854652964",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/webapp/login.jsp",
+          "line": 51,
+          "tag": "input",
+          "attrs": {
+            "type": "submit",
+            "class": "btn btn-outline-success ",
+            "value": "Login"
+          }
+        },
+        "matchedNode": "component:0bafbf3a-e592-36c3-b674-683904309f8d",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/webapp/register.jsp",
+          "line": 32,
+          "tag": "form",
+          "attrs": {
+            "action": "Register",
+            "method": "post"
+          }
+        },
+        "matchedNode": "component:42ca7a50-8110-302d-91eb-5de6965f590c",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/webapp/register.jsp",
+          "line": 36,
+          "tag": "input",
+          "attrs": {
+            "type": "text",
+            "name": "uname",
+            "id": "uname",
+            "class": "form-control col-6",
+            "minlength": "5",
+            "maxlength": "50",
+            "pattern": "[A-Za-z0-9]{5,}",
+            "title": "No Spaces Allowed Minimum 5 characters",
+            "required": null
+          }
+        },
+        "matchedNode": "component:d6f24a9b-2051-3105-8dc3-c431aa3cb9d5",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/webapp/register.jsp",
+          "line": 43,
+          "tag": "input",
+          "attrs": {
+            "type": "password",
+            "name": "pass",
+            "id": "pass",
+            "class": "form-control col-6",
+            "minlength": "5",
+            "maxlength": "50",
+            "required": null
+          }
+        },
+        "matchedNode": "component:bd17a442-8802-3a52-b01b-b2b52157c835",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/webapp/register.jsp",
+          "line": 50,
+          "tag": "input",
+          "attrs": {
+            "type": "submit",
+            "class": "btn btn-outline-success ",
+            "value": "Register"
+          }
+        },
+        "matchedNode": "component:fd84604f-3341-3830-a476-906ea16a1338",
+        "result": "PRESENT"
+      }
+    ],
+    "jsRequests": []
+  },
+  "Hotel-Management-System-Spring-Boot": {
+    "summary": {
+      "views": {
+        "source": 11,
+        "present": 11
+      },
+      "routes": {
+        "source": 32,
+        "present": 32
+      },
+      "controls": {
+        "source": 107,
+        "present": 107
+      },
+      "jsRequests": {
+        "source": 0,
+        "present": 0
+      },
+      "nodesMissingSourceEvidence": [],
+      "unmatchedBackendEndpoints": [],
+      "graphNodesByType": {
+        "COMPONENT": 115,
+        "ENDPOINT": 32,
+        "HANDLER": 32,
+        "SCREEN": 14
+      },
+      "diagnosticsByCode": {
+        "JSP_UNRESOLVED": 2,
+        "ANALYSIS_DIAGNOSTIC": 3,
+        "CONTEXT_PATH_UNSPECIFIED": 8,
+        "UNKNOWN_CALL": 5
+      }
+    },
+    "views": [
+      {
+        "source": {
+          "file": "src/main/resources/templates/admin/booking-edit.html",
+          "line": 1
+        },
+        "matchedNodes": [
+          "screen:76ff02a4-870a-3bcb-b149-6cf728bb3168"
+        ],
+        "types": [
+          "SCREEN"
+        ],
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/resources/templates/admin/bookings.html",
+          "line": 1
+        },
+        "matchedNodes": [
+          "screen:a6fb3118-d388-305d-9637-0bac3e04338c"
+        ],
+        "types": [
+          "SCREEN"
+        ],
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/resources/templates/admin/dashboard.html",
+          "line": 1
+        },
+        "matchedNodes": [
+          "screen:3a1b75e9-cff1-36f1-98e2-1fbfac753063"
+        ],
+        "types": [
+          "SCREEN"
+        ],
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/resources/templates/admin/guest-history.html",
+          "line": 1
+        },
+        "matchedNodes": [
+          "screen:bce85b51-4059-3503-9312-ea45ae7b47a9"
+        ],
+        "types": [
+          "SCREEN"
+        ],
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/resources/templates/admin/guests.html",
+          "line": 1
+        },
+        "matchedNodes": [
+          "screen:070a1790-a90a-3faf-aa8b-e1aed86b244b"
+        ],
+        "types": [
+          "SCREEN"
+        ],
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/resources/templates/admin/login.html",
+          "line": 1
+        },
+        "matchedNodes": [
+          "screen:339adfd4-894c-3f49-b7df-32b5317c8308"
+        ],
+        "types": [
+          "SCREEN"
+        ],
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/resources/templates/admin/room-form.html",
+          "line": 1
+        },
+        "matchedNodes": [
+          "screen:6b25390f-ec30-30ea-812f-85273915f88a"
+        ],
+        "types": [
+          "SCREEN"
+        ],
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/resources/templates/admin/rooms.html",
+          "line": 1
+        },
+        "matchedNodes": [
+          "screen:442d5f0e-13f1-3ab4-917b-68c9e1ea1e8b"
+        ],
+        "types": [
+          "SCREEN"
+        ],
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/resources/templates/visitor/booking-form.html",
+          "line": 1
+        },
+        "matchedNodes": [
+          "screen:11263f44-76ba-3941-9840-bdc6c8fbd9ce"
+        ],
+        "types": [
+          "SCREEN"
+        ],
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/resources/templates/visitor/booking-success.html",
+          "line": 1
+        },
+        "matchedNodes": [
+          "screen:1d0421e9-2f0b-3448-8748-2800cbbaa990"
+        ],
+        "types": [
+          "SCREEN"
+        ],
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/resources/templates/visitor/home.html",
+          "line": 1
+        },
+        "matchedNodes": [
+          "screen:01bdb5b7-be15-3af4-8a71-0adafd7cea5d"
+        ],
+        "types": [
+          "SCREEN"
+        ],
+        "result": "PRESENT"
+      }
+    ],
+    "endpoints": [
+      {
+        "source": {
+          "kind": "endpoint",
+          "file": "src/main/java/com/hotel/management/controller/AdminController.java",
+          "line": 16,
+          "class": "AdminController",
+          "method": "loginPage",
+          "httpMethod": "GET",
+          "path": "/admin/login",
+          "params": "",
+          "rest": false
+        },
+        "matchedNodes": [
+          "endpoint:8f21a300-f32a-388d-a669-82413db74ee2"
+        ],
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "kind": "endpoint",
+          "file": "src/main/java/com/hotel/management/controller/AdminController.java",
+          "line": 21,
+          "class": "AdminController",
+          "method": "login",
+          "httpMethod": "POST",
+          "path": "/admin/login",
+          "params": "",
+          "rest": false
+        },
+        "matchedNodes": [
+          "endpoint:a1a95e12-2875-3af2-a532-bf23c3f9ad50"
+        ],
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "kind": "endpoint",
+          "file": "src/main/java/com/hotel/management/controller/AdminController.java",
+          "line": 34,
+          "class": "AdminController",
+          "method": "dashboard",
+          "httpMethod": "GET",
+          "path": "/admin/dashboard",
+          "params": "",
+          "rest": false
+        },
+        "matchedNodes": [
+          "endpoint:f964b0b4-02c7-345e-a993-5a64f05d6e98"
+        ],
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "kind": "endpoint",
+          "file": "src/main/java/com/hotel/management/controller/AdminController.java",
+          "line": 42,
+          "class": "AdminController",
+          "method": "logout",
+          "httpMethod": "GET",
+          "path": "/admin/logout",
+          "params": "",
+          "rest": false
+        },
+        "matchedNodes": [
+          "endpoint:8a9fff37-bc2e-3511-9858-020e611ed507"
+        ],
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "kind": "endpoint",
+          "file": "src/main/java/com/hotel/management/controller/BookingController.java",
+          "line": 29,
+          "class": "BookingController",
+          "method": "getAllBookings",
+          "httpMethod": "GET",
+          "path": "/admin/bookings",
+          "params": "",
+          "rest": false
+        },
+        "matchedNodes": [
+          "endpoint:29d7139e-63c1-320c-bbac-8140142f5515"
+        ],
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "kind": "endpoint",
+          "file": "src/main/java/com/hotel/management/controller/BookingController.java",
+          "line": 39,
+          "class": "BookingController",
+          "method": "editBookingForm",
+          "httpMethod": "GET",
+          "path": "/admin/bookings/edit/{id}",
+          "params": "",
+          "rest": false
+        },
+        "matchedNodes": [
+          "endpoint:9b54dfee-888a-38da-a57b-3d12aff49753"
+        ],
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "kind": "endpoint",
+          "file": "src/main/java/com/hotel/management/controller/BookingController.java",
+          "line": 51,
+          "class": "BookingController",
+          "method": "updateBooking",
+          "httpMethod": "POST",
+          "path": "/admin/bookings/update/{id}",
+          "params": "",
+          "rest": false
+        },
+        "matchedNodes": [
+          "endpoint:76d20e13-0064-3713-9a38-0bdd877c5b43"
+        ],
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "kind": "endpoint",
+          "file": "src/main/java/com/hotel/management/controller/BookingController.java",
+          "line": 63,
+          "class": "BookingController",
+          "method": "deleteBooking",
+          "httpMethod": "GET",
+          "path": "/admin/bookings/delete/{id}",
+          "params": "",
+          "rest": false
+        },
+        "matchedNodes": [
+          "endpoint:c40c9e77-b9f8-3145-b579-adce2cda5d7d"
+        ],
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "kind": "endpoint",
+          "file": "src/main/java/com/hotel/management/controller/BookingController.java",
+          "line": 72,
+          "class": "BookingController",
+          "method": "cancelBooking",
+          "httpMethod": "GET",
+          "path": "/admin/bookings/cancel/{id}",
+          "params": "",
+          "rest": false
+        },
+        "matchedNodes": [
+          "endpoint:899301d1-64e5-3c7a-90c5-0629b76ee5f9"
+        ],
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "kind": "endpoint",
+          "file": "src/main/java/com/hotel/management/controller/BookingController.java",
+          "line": 82,
+          "class": "BookingController",
+          "method": "getAllBookingsAPI",
+          "httpMethod": "GET",
+          "path": "/admin/bookings/api/all",
+          "params": "",
+          "rest": true
+        },
+        "matchedNodes": [
+          "endpoint:1bc0a704-e8a2-399d-8d6c-3e47ced69bfb"
+        ],
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "kind": "endpoint",
+          "file": "src/main/java/com/hotel/management/controller/BookingController.java",
+          "line": 88,
+          "class": "BookingController",
+          "method": "getBookingByIdAPI",
+          "httpMethod": "GET",
+          "path": "/admin/bookings/api/{id}",
+          "params": "",
+          "rest": true
+        },
+        "matchedNodes": [
+          "endpoint:497beedb-02d4-34c7-b9af-7bf0daec10de"
+        ],
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "kind": "endpoint",
+          "file": "src/main/java/com/hotel/management/controller/BookingController.java",
+          "line": 94,
+          "class": "BookingController",
+          "method": "getBookingsByGuestIdAPI",
+          "httpMethod": "GET",
+          "path": "/admin/bookings/api/guest/{guestId}",
+          "params": "",
+          "rest": true
+        },
+        "matchedNodes": [
+          "endpoint:ce22e844-4745-307f-976f-b121f1c17008"
+        ],
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "kind": "endpoint",
+          "file": "src/main/java/com/hotel/management/controller/GuestController.java",
+          "line": 24,
+          "class": "GuestController",
+          "method": "getAllGuests",
+          "httpMethod": "GET",
+          "path": "/admin/guests",
+          "params": "",
+          "rest": false
+        },
+        "matchedNodes": [
+          "endpoint:905ac0a8-07ac-3793-b8c1-9876a7cdf7e1"
+        ],
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "kind": "endpoint",
+          "file": "src/main/java/com/hotel/management/controller/GuestController.java",
+          "line": 34,
+          "class": "GuestController",
+          "method": "guestHistory",
+          "httpMethod": "GET",
+          "path": "/admin/guests/history/{id}",
+          "params": "",
+          "rest": false
+        },
+        "matchedNodes": [
+          "endpoint:66399e94-6a55-337c-883c-4e00a9d10b2c"
+        ],
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "kind": "endpoint",
+          "file": "src/main/java/com/hotel/management/controller/GuestController.java",
+          "line": 46,
+          "class": "GuestController",
+          "method": "deleteGuest",
+          "httpMethod": "GET",
+          "path": "/admin/guests/delete/{id}",
+          "params": "",
+          "rest": false
+        },
+        "matchedNodes": [
+          "endpoint:ed514126-5480-3d3c-b0e9-0aaf1221d6bd"
+        ],
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "kind": "endpoint",
+          "file": "src/main/java/com/hotel/management/controller/GuestController.java",
+          "line": 56,
+          "class": "GuestController",
+          "method": "getAllGuestsAPI",
+          "httpMethod": "GET",
+          "path": "/admin/guests/api/all",
+          "params": "",
+          "rest": true
+        },
+        "matchedNodes": [
+          "endpoint:baf742e0-c0c2-347b-8076-b8f4cd01920a"
+        ],
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "kind": "endpoint",
+          "file": "src/main/java/com/hotel/management/controller/GuestController.java",
+          "line": 62,
+          "class": "GuestController",
+          "method": "getGuestByIdAPI",
+          "httpMethod": "GET",
+          "path": "/admin/guests/api/{id}",
+          "params": "",
+          "rest": true
+        },
+        "matchedNodes": [
+          "endpoint:9ff02e5d-6123-33c9-8238-9eb7fe12e3ae"
+        ],
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "kind": "endpoint",
+          "file": "src/main/java/com/hotel/management/controller/RoomController.java",
+          "line": 19,
+          "class": "RoomController",
+          "method": "getAllRooms",
+          "httpMethod": "GET",
+          "path": "/admin/rooms",
+          "params": "",
+          "rest": false
+        },
+        "matchedNodes": [
+          "endpoint:42fe01b9-ac77-39c4-8f22-96adcdecd846"
+        ],
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "kind": "endpoint",
+          "file": "src/main/java/com/hotel/management/controller/RoomController.java",
+          "line": 29,
+          "class": "RoomController",
+          "method": "addRoomForm",
+          "httpMethod": "GET",
+          "path": "/admin/rooms/add",
+          "params": "",
+          "rest": false
+        },
+        "matchedNodes": [
+          "endpoint:68f08f5a-61c9-374b-8765-d9513668fab2"
+        ],
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "kind": "endpoint",
+          "file": "src/main/java/com/hotel/management/controller/RoomController.java",
+          "line": 39,
+          "class": "RoomController",
+          "method": "addRoom",
+          "httpMethod": "POST",
+          "path": "/admin/rooms/add",
+          "params": "",
+          "rest": false
+        },
+        "matchedNodes": [
+          "endpoint:c8b7c922-30a7-3a29-8627-6eb1c2c3826a"
+        ],
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "kind": "endpoint",
+          "file": "src/main/java/com/hotel/management/controller/RoomController.java",
+          "line": 48,
+          "class": "RoomController",
+          "method": "editRoomForm",
+          "httpMethod": "GET",
+          "path": "/admin/rooms/edit/{id}",
+          "params": "",
+          "rest": false
+        },
+        "matchedNodes": [
+          "endpoint:c98c3c9e-90e4-381a-95d0-13b381553fb6"
+        ],
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "kind": "endpoint",
+          "file": "src/main/java/com/hotel/management/controller/RoomController.java",
+          "line": 59,
+          "class": "RoomController",
+          "method": "updateRoom",
+          "httpMethod": "POST",
+          "path": "/admin/rooms/update/{id}",
+          "params": "",
+          "rest": false
+        },
+        "matchedNodes": [
+          "endpoint:420e5de5-2ca5-3882-b678-80c3bed59b7e"
+        ],
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "kind": "endpoint",
+          "file": "src/main/java/com/hotel/management/controller/RoomController.java",
+          "line": 68,
+          "class": "RoomController",
+          "method": "deleteRoom",
+          "httpMethod": "GET",
+          "path": "/admin/rooms/delete/{id}",
+          "params": "",
+          "rest": false
+        },
+        "matchedNodes": [
+          "endpoint:9dd787d8-f49d-3437-ab8c-f3b3b4fd8fe2"
+        ],
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "kind": "endpoint",
+          "file": "src/main/java/com/hotel/management/controller/RoomController.java",
+          "line": 78,
+          "class": "RoomController",
+          "method": "getAllRoomsAPI",
+          "httpMethod": "GET",
+          "path": "/admin/rooms/api/all",
+          "params": "",
+          "rest": true
+        },
+        "matchedNodes": [
+          "endpoint:6f75e9e0-5822-35b6-85e8-89a1e89d5ced"
+        ],
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "kind": "endpoint",
+          "file": "src/main/java/com/hotel/management/controller/RoomController.java",
+          "line": 84,
+          "class": "RoomController",
+          "method": "getAvailableRoomsAPI",
+          "httpMethod": "GET",
+          "path": "/admin/rooms/api/available",
+          "params": "",
+          "rest": true
+        },
+        "matchedNodes": [
+          "endpoint:04a8e4a4-e793-3689-9465-cf29cfb844d2"
+        ],
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "kind": "endpoint",
+          "file": "src/main/java/com/hotel/management/controller/RoomController.java",
+          "line": 90,
+          "class": "RoomController",
+          "method": "getRoomByIdAPI",
+          "httpMethod": "GET",
+          "path": "/admin/rooms/api/{id}",
+          "params": "",
+          "rest": true
+        },
+        "matchedNodes": [
+          "endpoint:55b41d99-ea93-3f8f-b9a3-14b9c81a3bb4"
+        ],
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "kind": "endpoint",
+          "file": "src/main/java/com/hotel/management/controller/VisitorController.java",
+          "line": 27,
+          "class": "VisitorController",
+          "method": "home",
+          "httpMethod": "GET",
+          "path": "/",
+          "params": "",
+          "rest": false
+        },
+        "matchedNodes": [
+          "endpoint:7e54774f-a292-38c9-b6b7-1f941c44009d"
+        ],
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "kind": "endpoint",
+          "file": "src/main/java/com/hotel/management/controller/VisitorController.java",
+          "line": 34,
+          "class": "VisitorController",
+          "method": "bookingForm",
+          "httpMethod": "GET",
+          "path": "/book/{roomId}",
+          "params": "",
+          "rest": false
+        },
+        "matchedNodes": [
+          "endpoint:d1a91e43-f633-3a7a-8c08-75c861e49050"
+        ],
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "kind": "endpoint",
+          "file": "src/main/java/com/hotel/management/controller/VisitorController.java",
+          "line": 43,
+          "class": "VisitorController",
+          "method": "createBooking",
+          "httpMethod": "POST",
+          "path": "/book",
+          "params": "",
+          "rest": false
+        },
+        "matchedNodes": [
+          "endpoint:7173cf1a-c088-3725-86c7-06b2de7c516d"
+        ],
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "kind": "endpoint",
+          "file": "src/main/java/com/hotel/management/controller/VisitorController.java",
+          "line": 72,
+          "class": "VisitorController",
+          "method": "cancelBookingPage",
+          "httpMethod": "GET",
+          "path": "/cancel-booking",
+          "params": "",
+          "rest": false
+        },
+        "matchedNodes": [
+          "endpoint:cf4db092-86dd-3689-b394-62cfb1ed3ca1"
+        ],
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "kind": "endpoint",
+          "file": "src/main/java/com/hotel/management/controller/VisitorController.java",
+          "line": 77,
+          "class": "VisitorController",
+          "method": "cancelBooking",
+          "httpMethod": "POST",
+          "path": "/cancel-booking",
+          "params": "",
+          "rest": false
+        },
+        "matchedNodes": [
+          "endpoint:f14e8338-d7cc-349b-a676-a5a770ea5511"
+        ],
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "kind": "endpoint",
+          "file": "src/main/java/com/hotel/management/controller/VisitorController.java",
+          "line": 84,
+          "class": "VisitorController",
+          "method": "myBookings",
+          "httpMethod": "GET",
+          "path": "/my-bookings",
+          "params": "",
+          "rest": false
+        },
+        "matchedNodes": [
+          "endpoint:804c72fc-fa5d-3f96-8ae2-03c31832be40"
+        ],
+        "result": "PRESENT"
+      }
+    ],
+    "controls": [
+      {
+        "source": {
+          "file": "src/main/resources/templates/admin/booking-edit.html",
+          "line": 12,
+          "tag": "a",
+          "attrs": {
+            "href": "/admin/dashboard",
+            "class": "logo"
+          }
+        },
+        "matchedNode": "component:73ed9809-540b-3158-a6e3-757e7742a0bc",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/resources/templates/admin/booking-edit.html",
+          "line": 14,
+          "tag": "a",
+          "attrs": {
+            "href": "/admin/dashboard",
+            "class": "nav-link"
+          }
+        },
+        "matchedNode": "component:f20105b1-3ca5-3bd9-b313-8b9526d863ae",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/resources/templates/admin/booking-edit.html",
+          "line": 15,
+          "tag": "a",
+          "attrs": {
+            "href": "/admin/rooms",
+            "class": "nav-link"
+          }
+        },
+        "matchedNode": "component:c84c065c-47bd-332c-98c7-125f54101f79",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/resources/templates/admin/booking-edit.html",
+          "line": 16,
+          "tag": "a",
+          "attrs": {
+            "href": "/admin/bookings",
+            "class": "nav-link active"
+          }
+        },
+        "matchedNode": "component:8ad6608b-d7ab-3f71-8f2f-f1b8ae4bd373",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/resources/templates/admin/booking-edit.html",
+          "line": 17,
+          "tag": "a",
+          "attrs": {
+            "href": "/admin/guests",
+            "class": "nav-link"
+          }
+        },
+        "matchedNode": "component:52476bad-34f6-3c06-b112-97162502c81c",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/resources/templates/admin/booking-edit.html",
+          "line": 18,
+          "tag": "a",
+          "attrs": {
+            "href": "/admin/logout",
+            "class": "nav-btn"
+          }
+        },
+        "matchedNode": "component:f3114376-6b15-3964-ab16-f77be1994b1f",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/resources/templates/admin/booking-edit.html",
+          "line": 30,
+          "tag": "a",
+          "attrs": {
+            "href": "/admin/bookings",
+            "class": "btn outline"
+          }
+        },
+        "matchedNode": "component:87e6463f-8156-328f-91de-1b6922c64ccd",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/resources/templates/admin/booking-edit.html",
+          "line": 52,
+          "tag": "form",
+          "attrs": {
+            "th:action": "@{/admin/bookings/update/{id}(id=${booking.id})}",
+            "method": "post",
+            "th:object": "${booking}",
+            "class": "form"
+          }
+        },
+        "matchedNode": "component:0f7fce84-95b0-36fe-b66f-dc7b883d702e",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/resources/templates/admin/booking-edit.html",
+          "line": 61,
+          "tag": "select",
+          "attrs": {
+            "id": "roomId",
+            "name": "roomId",
+            "class": "form-control",
+            "required": null
+          }
+        },
+        "matchedNode": "component:2cfc8c12-1ef8-3250-bab4-8821db7adbbf",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/resources/templates/admin/booking-edit.html",
+          "line": 75,
+          "tag": "input",
+          "attrs": {
+            "type": "date",
+            "id": "checkInDate",
+            "th:field": "*{checkInDate}",
+            "class": "form-control",
+            "required": null
+          }
+        },
+        "matchedNode": "component:d937b1b2-1104-38ec-b6de-d12cf1bbbcc2",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/resources/templates/admin/booking-edit.html",
+          "line": 86,
+          "tag": "input",
+          "attrs": {
+            "type": "date",
+            "id": "checkOutDate",
+            "th:field": "*{checkOutDate}",
+            "class": "form-control",
+            "required": null
+          }
+        },
+        "matchedNode": "component:af53accb-4466-3b4c-8431-c8d3d279be35",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/resources/templates/admin/booking-edit.html",
+          "line": 97,
+          "tag": "input",
+          "attrs": {
+            "type": "number",
+            "id": "numberOfGuests",
+            "th:field": "*{numberOfGuests}",
+            "class": "form-control",
+            "min": "1",
+            "required": null
+          }
+        },
+        "matchedNode": "component:41155bb4-2376-3305-9e94-6c306693922f",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/resources/templates/admin/booking-edit.html",
+          "line": 109,
+          "tag": "select",
+          "attrs": {
+            "id": "status",
+            "th:field": "*{status}",
+            "class": "form-control",
+            "required": null
+          }
+        },
+        "matchedNode": "component:942ef9a9-5f09-3511-8ecb-bd9cf1f5800a",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/resources/templates/admin/booking-edit.html",
+          "line": 123,
+          "tag": "button",
+          "attrs": {
+            "type": "submit",
+            "class": "btn primary"
+          }
+        },
+        "matchedNode": "component:88d5fde0-bdf5-39f3-b756-b1605ac27310",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/resources/templates/admin/booking-edit.html",
+          "line": 124,
+          "tag": "a",
+          "attrs": {
+            "href": "/admin/bookings",
+            "class": "btn ghost"
+          }
+        },
+        "matchedNode": "component:bd39fab8-bf4b-3aee-bec0-20ad88028dee",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/resources/templates/admin/bookings.html",
+          "line": 12,
+          "tag": "a",
+          "attrs": {
+            "href": "/admin/dashboard",
+            "class": "logo"
+          }
+        },
+        "matchedNode": "component:47400722-5ae4-3eeb-b757-feabd4c0eaeb",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/resources/templates/admin/bookings.html",
+          "line": 14,
+          "tag": "a",
+          "attrs": {
+            "href": "/admin/dashboard",
+            "class": "nav-link"
+          }
+        },
+        "matchedNode": "component:3b3e7352-89e1-3ae2-a056-50d1838d7450",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/resources/templates/admin/bookings.html",
+          "line": 15,
+          "tag": "a",
+          "attrs": {
+            "href": "/admin/rooms",
+            "class": "nav-link"
+          }
+        },
+        "matchedNode": "component:ca9a02a6-34cc-36ff-9d74-3856eb56235c",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/resources/templates/admin/bookings.html",
+          "line": 16,
+          "tag": "a",
+          "attrs": {
+            "href": "/admin/bookings",
+            "class": "nav-link active"
+          }
+        },
+        "matchedNode": "component:0c70ac09-acf4-3a1f-9b27-ae958f50e8f0",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/resources/templates/admin/bookings.html",
+          "line": 17,
+          "tag": "a",
+          "attrs": {
+            "href": "/admin/guests",
+            "class": "nav-link"
+          }
+        },
+        "matchedNode": "component:b2ea1e06-942e-3981-b3f1-ebebd8f76741",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/resources/templates/admin/bookings.html",
+          "line": 18,
+          "tag": "a",
+          "attrs": {
+            "href": "/admin/logout",
+            "class": "nav-btn"
+          }
+        },
+        "matchedNode": "component:262623d7-c063-34e1-a7de-3f222fc7c202",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/resources/templates/admin/bookings.html",
+          "line": 67,
+          "tag": "a",
+          "attrs": {
+            "th:href": "@{/admin/bookings/edit/{id}(id=${booking.id})}",
+            "class": "action-btn btn-outline"
+          }
+        },
+        "matchedNode": "component:1b05dfdb-d892-3df8-a61f-b1c5f35c0d0c",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/resources/templates/admin/bookings.html",
+          "line": 68,
+          "tag": "a",
+          "attrs": {
+            "th:href": "@{/admin/bookings/cancel/{id}(id=${booking.id})}",
+            "class": "action-btn btn-warning",
+            "th:if": "${booking.status != 'Cancelled'}",
+            "onclick": "return confirm('Are you sure you want to cancel this booking?')"
+          }
+        },
+        "matchedNode": "component:a18ccb6e-f710-3742-ba33-d92e8d32c1f8",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/resources/templates/admin/bookings.html",
+          "line": 72,
+          "tag": "a",
+          "attrs": {
+            "th:href": "@{/admin/bookings/delete/{id}(id=${booking.id})}",
+            "class": "action-btn btn-danger",
+            "onclick": "return confirm('Are you sure you want to delete this booking?')"
+          }
+        },
+        "matchedNode": "component:0c726526-64c4-3511-99f5-1e3df43d66a8",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/resources/templates/admin/dashboard.html",
+          "line": 12,
+          "tag": "a",
+          "attrs": {
+            "href": "/admin/dashboard",
+            "class": "logo"
+          }
+        },
+        "matchedNode": "component:800fd717-e54a-3173-b5c9-fce908bb8e93",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/resources/templates/admin/dashboard.html",
+          "line": 14,
+          "tag": "a",
+          "attrs": {
+            "href": "/admin/dashboard",
+            "class": "nav-link active"
+          }
+        },
+        "matchedNode": "component:da0c1496-b2fb-39d7-9532-2d6db989d31b",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/resources/templates/admin/dashboard.html",
+          "line": 15,
+          "tag": "a",
+          "attrs": {
+            "href": "/admin/rooms",
+            "class": "nav-link"
+          }
+        },
+        "matchedNode": "component:e831b03a-04ab-3d87-8da2-3bc672a4eb65",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/resources/templates/admin/dashboard.html",
+          "line": 16,
+          "tag": "a",
+          "attrs": {
+            "href": "/admin/bookings",
+            "class": "nav-link"
+          }
+        },
+        "matchedNode": "component:c92a6b4b-96f1-3221-b8a6-22dbe5532f06",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/resources/templates/admin/dashboard.html",
+          "line": 17,
+          "tag": "a",
+          "attrs": {
+            "href": "/admin/guests",
+            "class": "nav-link"
+          }
+        },
+        "matchedNode": "component:fb115974-887b-3d60-b821-a51a7ec2da0a",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/resources/templates/admin/dashboard.html",
+          "line": 18,
+          "tag": "a",
+          "attrs": {
+            "href": "/admin/logout",
+            "class": "nav-btn"
+          }
+        },
+        "matchedNode": "component:22f48885-d319-3cb5-8140-6dd64ee264ee",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/resources/templates/admin/dashboard.html",
+          "line": 72,
+          "tag": "a",
+          "attrs": {
+            "href": "/admin/rooms",
+            "class": "btn ghost"
+          }
+        },
+        "matchedNode": "component:6ada4243-d2b9-37a4-98e7-9c6392a305ee",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/resources/templates/admin/dashboard.html",
+          "line": 80,
+          "tag": "a",
+          "attrs": {
+            "href": "/admin/bookings",
+            "class": "btn ghost"
+          }
+        },
+        "matchedNode": "component:e6122947-c089-38bc-aba2-132543742e19",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/resources/templates/admin/dashboard.html",
+          "line": 88,
+          "tag": "a",
+          "attrs": {
+            "href": "/admin/guests",
+            "class": "btn ghost"
+          }
+        },
+        "matchedNode": "component:5e461da5-71a1-3249-aa41-9a270ba46acf",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/resources/templates/admin/dashboard.html",
+          "line": 96,
+          "tag": "a",
+          "attrs": {
+            "href": "/",
+            "class": "btn ghost"
+          }
+        },
+        "matchedNode": "component:2c9fe150-5a6e-3746-9c44-85708a11f15d",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/resources/templates/admin/dashboard.html",
+          "line": 106,
+          "tag": "a",
+          "attrs": {
+            "href": "/admin/rooms/add",
+            "class": "btn primary"
+          }
+        },
+        "matchedNode": "component:999b0622-94d9-3e4f-bd3a-3e8e024ba611",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/resources/templates/admin/dashboard.html",
+          "line": 107,
+          "tag": "a",
+          "attrs": {
+            "href": "/admin/bookings",
+            "class": "btn outline"
+          }
+        },
+        "matchedNode": "component:b9f16e00-45fb-316a-bfbe-0c85f66d41c4",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/resources/templates/admin/dashboard.html",
+          "line": 108,
+          "tag": "a",
+          "attrs": {
+            "href": "/admin/guests",
+            "class": "btn warning"
+          }
+        },
+        "matchedNode": "component:58ddf1e3-a1f7-354a-a879-b8eec1c9ecc0",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/resources/templates/admin/dashboard.html",
+          "line": 109,
+          "tag": "a",
+          "attrs": {
+            "href": "/admin/logout",
+            "class": "btn danger"
+          }
+        },
+        "matchedNode": "component:2110eca1-315b-3fd7-8480-be5e8c9b023a",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/resources/templates/admin/guest-history.html",
+          "line": 12,
+          "tag": "a",
+          "attrs": {
+            "href": "/admin/dashboard",
+            "class": "logo"
+          }
+        },
+        "matchedNode": "component:64438f0f-f076-3c89-849f-b292ddcebae6",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/resources/templates/admin/guest-history.html",
+          "line": 14,
+          "tag": "a",
+          "attrs": {
+            "href": "/admin/dashboard",
+            "class": "nav-link"
+          }
+        },
+        "matchedNode": "component:3b435db1-48ff-3050-bb69-6e02d895c129",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/resources/templates/admin/guest-history.html",
+          "line": 15,
+          "tag": "a",
+          "attrs": {
+            "href": "/admin/rooms",
+            "class": "nav-link"
+          }
+        },
+        "matchedNode": "component:d9cd5636-7eac-32c1-a872-619ad640bbd0",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/resources/templates/admin/guest-history.html",
+          "line": 16,
+          "tag": "a",
+          "attrs": {
+            "href": "/admin/bookings",
+            "class": "nav-link"
+          }
+        },
+        "matchedNode": "component:f920fad6-9b6a-3182-b0d6-b6b09c48aee6",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/resources/templates/admin/guest-history.html",
+          "line": 17,
+          "tag": "a",
+          "attrs": {
+            "href": "/admin/guests",
+            "class": "nav-link active"
+          }
+        },
+        "matchedNode": "component:cbd2f9ae-10d3-3440-9295-c1e14a79722b",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/resources/templates/admin/guest-history.html",
+          "line": 18,
+          "tag": "a",
+          "attrs": {
+            "href": "/admin/logout",
+            "class": "nav-btn"
+          }
+        },
+        "matchedNode": "component:3ba4e29a-8aa5-30f9-885f-2ee00253ab05",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/resources/templates/admin/guest-history.html",
+          "line": 30,
+          "tag": "a",
+          "attrs": {
+            "href": "/admin/guests",
+            "class": "btn outline"
+          }
+        },
+        "matchedNode": "component:08f0403b-40e2-37af-86d4-6b3b73b9def2",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/resources/templates/admin/guests.html",
+          "line": 12,
+          "tag": "a",
+          "attrs": {
+            "href": "/admin/dashboard",
+            "class": "logo"
+          }
+        },
+        "matchedNode": "component:736075fd-b124-3316-bfe8-a12b58bb85b3",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/resources/templates/admin/guests.html",
+          "line": 14,
+          "tag": "a",
+          "attrs": {
+            "href": "/admin/dashboard",
+            "class": "nav-link"
+          }
+        },
+        "matchedNode": "component:f749cc77-b15e-3dca-9cc1-94b7de84e182",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/resources/templates/admin/guests.html",
+          "line": 15,
+          "tag": "a",
+          "attrs": {
+            "href": "/admin/rooms",
+            "class": "nav-link"
+          }
+        },
+        "matchedNode": "component:4eb97dd6-93c4-3552-bedc-2191d5fcb6fb",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/resources/templates/admin/guests.html",
+          "line": 16,
+          "tag": "a",
+          "attrs": {
+            "href": "/admin/bookings",
+            "class": "nav-link"
+          }
+        },
+        "matchedNode": "component:d4821207-e8f2-3172-920f-72fb220a9ab2",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/resources/templates/admin/guests.html",
+          "line": 17,
+          "tag": "a",
+          "attrs": {
+            "href": "/admin/guests",
+            "class": "nav-link active"
+          }
+        },
+        "matchedNode": "component:67bdbba8-4a00-315d-b5f8-cea629e93ae7",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/resources/templates/admin/guests.html",
+          "line": 18,
+          "tag": "a",
+          "attrs": {
+            "href": "/admin/logout",
+            "class": "nav-btn"
+          }
+        },
+        "matchedNode": "component:23378712-7a56-3ac3-9dcc-8bd9e0a13eae",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/resources/templates/admin/guests.html",
+          "line": 54,
+          "tag": "a",
+          "attrs": {
+            "th:href": "@{/admin/guests/history/{id}(id=${guest.id})}",
+            "class": "action-btn btn-outline"
+          }
+        },
+        "matchedNode": "component:93dc3d9c-1da6-3a62-a58d-edfa0d515d16",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/resources/templates/admin/guests.html",
+          "line": 55,
+          "tag": "a",
+          "attrs": {
+            "th:href": "@{/admin/guests/delete/{id}(id=${guest.id})}",
+            "class": "action-btn btn-danger",
+            "onclick": "return confirm('Are you sure you want to delete this guest? This will also delete all their bookings!')"
+          }
+        },
+        "matchedNode": "component:1f475ba1-ae2e-3bd7-b2ce-d3ac7aeb98fb",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/resources/templates/admin/login.html",
+          "line": 21,
+          "tag": "form",
+          "attrs": {
+            "action": "/admin/login",
+            "method": "post"
+          }
+        },
+        "matchedNode": "component:9cdc4093-0bc8-346b-bccc-d3a1e6792032",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/resources/templates/admin/login.html",
+          "line": 24,
+          "tag": "input",
+          "attrs": {
+            "type": "text",
+            "id": "username",
+            "name": "username",
+            "class": "form-control",
+            "placeholder": "Enter username",
+            "required": null,
+            "autofocus": null
+          }
+        },
+        "matchedNode": "component:1c3eb319-d475-33c7-a6dc-951bd423f61d",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/resources/templates/admin/login.html",
+          "line": 37,
+          "tag": "input",
+          "attrs": {
+            "type": "password",
+            "id": "password",
+            "name": "password",
+            "class": "form-control",
+            "placeholder": "Enter password",
+            "required": null
+          }
+        },
+        "matchedNode": "component:549caaef-9833-30ea-98d3-e98d78acc570",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/resources/templates/admin/login.html",
+          "line": 47,
+          "tag": "button",
+          "attrs": {
+            "type": "submit",
+            "class": "btn btn-primary",
+            "style": "width: 100%; margin-top: 10px"
+          }
+        },
+        "matchedNode": "component:56ee8c1a-a1ba-3720-9ec0-96346ea231c4",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/resources/templates/admin/login.html",
+          "line": 64,
+          "tag": "a",
+          "attrs": {
+            "href": "/",
+            "style": "color: #667eea; text-decoration: none"
+          }
+        },
+        "matchedNode": "component:cf2c9beb-5741-3be4-925e-bf3b5ea7cbf8",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/resources/templates/admin/room-form.html",
+          "line": 12,
+          "tag": "a",
+          "attrs": {
+            "href": "/admin/dashboard",
+            "class": "logo"
+          }
+        },
+        "matchedNode": "component:60361d74-48c8-3e1d-ac2f-5506cfc85b1b",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/resources/templates/admin/room-form.html",
+          "line": 14,
+          "tag": "a",
+          "attrs": {
+            "href": "/admin/dashboard",
+            "class": "nav-link"
+          }
+        },
+        "matchedNode": "component:909ac577-f905-3c45-a687-b814ab448b88",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/resources/templates/admin/room-form.html",
+          "line": 15,
+          "tag": "a",
+          "attrs": {
+            "href": "/admin/rooms",
+            "class": "nav-link active"
+          }
+        },
+        "matchedNode": "component:06bbcc51-3324-36f5-8beb-2442575ff572",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/resources/templates/admin/room-form.html",
+          "line": 16,
+          "tag": "a",
+          "attrs": {
+            "href": "/admin/bookings",
+            "class": "nav-link"
+          }
+        },
+        "matchedNode": "component:eff3775a-a683-3078-941f-a8162299f8f6",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/resources/templates/admin/room-form.html",
+          "line": 17,
+          "tag": "a",
+          "attrs": {
+            "href": "/admin/guests",
+            "class": "nav-link"
+          }
+        },
+        "matchedNode": "component:69f650ef-1bb8-361b-8435-a3ec7fc7322f",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/resources/templates/admin/room-form.html",
+          "line": 18,
+          "tag": "a",
+          "attrs": {
+            "href": "/admin/logout",
+            "class": "nav-btn"
+          }
+        },
+        "matchedNode": "component:cd0e36bc-bbcf-3825-93ff-748a6cc095da",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/resources/templates/admin/room-form.html",
+          "line": 30,
+          "tag": "a",
+          "attrs": {
+            "href": "/admin/rooms",
+            "class": "btn outline"
+          }
+        },
+        "matchedNode": "component:cac186fe-b0b8-3f55-b0ed-363a8b9e810a",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/resources/templates/admin/room-form.html",
+          "line": 34,
+          "tag": "form",
+          "attrs": {
+            "th:action": "${isEdit} ? @{/admin/rooms/update/{id}(id=${room.id})} : @{/admin/rooms/add}",
+            "method": "post",
+            "th:object": "${room}",
+            "class": "form"
+          }
+        },
+        "matchedNode": "component:595002f3-03b8-36bf-b0da-2b770924845d",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/resources/templates/admin/room-form.html",
+          "line": 43,
+          "tag": "input",
+          "attrs": {
+            "type": "text",
+            "id": "roomNumber",
+            "th:field": "*{roomNumber}",
+            "class": "form-control",
+            "placeholder": "e.g., 101",
+            "required": null
+          }
+        },
+        "matchedNode": "component:1313ca7d-48a8-30b0-b202-063a095b0007",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/resources/templates/admin/room-form.html",
+          "line": 55,
+          "tag": "select",
+          "attrs": {
+            "id": "roomType",
+            "th:field": "*{roomType}",
+            "class": "form-control",
+            "required": null
+          }
+        },
+        "matchedNode": "component:f467a990-347d-3857-ad6c-7d03a868c7ac",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/resources/templates/admin/room-form.html",
+          "line": 72,
+          "tag": "input",
+          "attrs": {
+            "type": "number",
+            "id": "floor",
+            "th:field": "*{floor}",
+            "class": "form-control",
+            "min": "1",
+            "placeholder": "e.g., 3",
+            "required": null
+          }
+        },
+        "matchedNode": "component:8f3ecd2d-5915-3fd4-94ca-9eb334e4624b",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/resources/templates/admin/room-form.html",
+          "line": 85,
+          "tag": "input",
+          "attrs": {
+            "type": "number",
+            "id": "capacity",
+            "th:field": "*{capacity}",
+            "class": "form-control",
+            "min": "1",
+            "max": "10",
+            "placeholder": "e.g., 2",
+            "required": null
+          }
+        },
+        "matchedNode": "component:3b066b01-a824-377a-b85f-0090cc2aba46",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/resources/templates/admin/room-form.html",
+          "line": 99,
+          "tag": "input",
+          "attrs": {
+            "type": "number",
+            "id": "pricePerNight",
+            "th:field": "*{pricePerNight}",
+            "class": "form-control",
+            "step": "0.01",
+            "min": "0",
+            "placeholder": "e.g., 15000.00",
+            "required": null
+          }
+        },
+        "matchedNode": "component:b3d6731f-b840-3ad6-a63c-ecfcfce2d34c",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/resources/templates/admin/room-form.html",
+          "line": 113,
+          "tag": "select",
+          "attrs": {
+            "id": "status",
+            "th:field": "*{status}",
+            "class": "form-control",
+            "required": null
+          }
+        },
+        "matchedNode": "component:58047b6d-8726-3f4e-9378-81b4fe70fec9",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/resources/templates/admin/room-form.html",
+          "line": 126,
+          "tag": "textarea",
+          "attrs": {
+            "id": "description",
+            "th:field": "*{description}",
+            "class": "form-control",
+            "rows": "4",
+            "placeholder": "Describe the room amenities and features..."
+          }
+        },
+        "matchedNode": "component:b9b49cb2-b310-3a58-8e04-18879d2a78dc",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/resources/templates/admin/room-form.html",
+          "line": 137,
+          "tag": "button",
+          "attrs": {
+            "type": "submit",
+            "class": "btn primary"
+          }
+        },
+        "matchedNode": "component:c7176065-f82d-3159-90f5-4ee078d60a59",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/resources/templates/admin/room-form.html",
+          "line": 140,
+          "tag": "a",
+          "attrs": {
+            "href": "/admin/rooms",
+            "class": "btn ghost"
+          }
+        },
+        "matchedNode": "component:358a222a-3438-3140-90f0-4b3bd1187086",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/resources/templates/admin/rooms.html",
+          "line": 12,
+          "tag": "a",
+          "attrs": {
+            "href": "/admin/dashboard",
+            "class": "logo"
+          }
+        },
+        "matchedNode": "component:e2fdd57f-aae3-39d2-bd27-4dd2a8bc3bb1",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/resources/templates/admin/rooms.html",
+          "line": 14,
+          "tag": "a",
+          "attrs": {
+            "href": "/admin/dashboard",
+            "class": "nav-link"
+          }
+        },
+        "matchedNode": "component:12aca19f-a49a-32f8-90d7-954c402af435",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/resources/templates/admin/rooms.html",
+          "line": 15,
+          "tag": "a",
+          "attrs": {
+            "href": "/admin/rooms",
+            "class": "nav-link active"
+          }
+        },
+        "matchedNode": "component:4b37d93a-69e8-3b6d-be2e-7f9f9e3d4f45",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/resources/templates/admin/rooms.html",
+          "line": 16,
+          "tag": "a",
+          "attrs": {
+            "href": "/admin/bookings",
+            "class": "nav-link"
+          }
+        },
+        "matchedNode": "component:ec1cbf15-0f83-3315-86c0-9abac05b11f4",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/resources/templates/admin/rooms.html",
+          "line": 17,
+          "tag": "a",
+          "attrs": {
+            "href": "/admin/guests",
+            "class": "nav-link"
+          }
+        },
+        "matchedNode": "component:ad02f0d6-e6fa-35b6-9d31-8e7588200c2d",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/resources/templates/admin/rooms.html",
+          "line": 18,
+          "tag": "a",
+          "attrs": {
+            "href": "/admin/logout",
+            "class": "nav-btn"
+          }
+        },
+        "matchedNode": "component:4ccbaf9a-3825-3ef5-b506-85865ab4eb56",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/resources/templates/admin/rooms.html",
+          "line": 30,
+          "tag": "a",
+          "attrs": {
+            "href": "/admin/rooms/add",
+            "class": "btn primary"
+          }
+        },
+        "matchedNode": "component:b590c787-2dd7-31d7-b94c-9acd44b0cc69",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/resources/templates/admin/rooms.html",
+          "line": 69,
+          "tag": "a",
+          "attrs": {
+            "th:href": "@{/admin/rooms/edit/{id}(id=${room.id})}",
+            "class": "action-btn btn-outline"
+          }
+        },
+        "matchedNode": "component:b2224692-0269-3b38-9acd-5afc4eaeb512",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/resources/templates/admin/rooms.html",
+          "line": 74,
+          "tag": "a",
+          "attrs": {
+            "th:href": "@{/admin/rooms/delete/{id}(id=${room.id})}",
+            "class": "action-btn btn-danger",
+            "onclick": "return confirm('Are you sure you want to delete this room?')"
+          }
+        },
+        "matchedNode": "component:2ce926cf-0943-3917-a510-f38947f26957",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/resources/templates/visitor/booking-form.html",
+          "line": 14,
+          "tag": "a",
+          "attrs": {
+            "href": "/",
+            "class": "logo"
+          }
+        },
+        "matchedNode": "component:530c85f2-9ba7-3433-ba73-e734238dc5fb",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/resources/templates/visitor/booking-form.html",
+          "line": 16,
+          "tag": "a",
+          "attrs": {
+            "href": "/",
+            "class": "nav-btn"
+          }
+        },
+        "matchedNode": "component:a59abf03-5342-38bf-a206-3fde7877c331",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/resources/templates/visitor/booking-form.html",
+          "line": 17,
+          "tag": "a",
+          "attrs": {
+            "href": "/admin/login",
+            "class": "nav-btn"
+          }
+        },
+        "matchedNode": "component:e04f3796-7322-36ba-9d16-a608747244cb",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/resources/templates/visitor/booking-form.html",
+          "line": 24,
+          "tag": "a",
+          "attrs": {
+            "href": "/",
+            "class": "back-button"
+          }
+        },
+        "matchedNode": "component:5ad5d0e7-4bde-3b59-a124-d40ae620ef67",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/resources/templates/visitor/booking-form.html",
+          "line": 52,
+          "tag": "form",
+          "attrs": {
+            "action": "/book",
+            "method": "post"
+          }
+        },
+        "matchedNode": "component:eed36801-16f4-3cec-8339-1b05bfd11fe9",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/resources/templates/visitor/booking-form.html",
+          "line": 53,
+          "tag": "input",
+          "attrs": {
+            "type": "hidden",
+            "name": "roomId",
+            "th:value": "${room.id}"
+          }
+        },
+        "matchedNode": "component:08572877-9972-31b6-94f2-939f132661b1",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/resources/templates/visitor/booking-form.html",
+          "line": 57,
+          "tag": "input",
+          "attrs": {
+            "type": "text",
+            "name": "guestName",
+            "class": "form-control",
+            "required": null
+          }
+        },
+        "matchedNode": "component:f5a33d3d-d587-3f0e-a982-570f9ff9c5ea",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/resources/templates/visitor/booking-form.html",
+          "line": 62,
+          "tag": "input",
+          "attrs": {
+            "type": "tel",
+            "name": "guestPhone",
+            "class": "form-control",
+            "required": null
+          }
+        },
+        "matchedNode": "component:3aebd293-2dd8-32c4-9e54-b355526f5b84",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/resources/templates/visitor/booking-form.html",
+          "line": 67,
+          "tag": "input",
+          "attrs": {
+            "type": "email",
+            "name": "guestEmail",
+            "class": "form-control"
+          }
+        },
+        "matchedNode": "component:521666ca-4815-3d75-a1b6-9b8ad1a133e7",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/resources/templates/visitor/booking-form.html",
+          "line": 72,
+          "tag": "textarea",
+          "attrs": {
+            "name": "guestAddress",
+            "class": "form-control",
+            "rows": "3"
+          }
+        },
+        "matchedNode": "component:e0a173ba-f72b-315e-92bd-5651073cdfc0",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/resources/templates/visitor/booking-form.html",
+          "line": 79,
+          "tag": "input",
+          "attrs": {
+            "type": "date",
+            "id": "checkInDate",
+            "name": "checkInDate",
+            "class": "form-control",
+            "required": null
+          }
+        },
+        "matchedNode": "component:9d0bae22-45d2-3ca9-ba00-8c032e884a63",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/resources/templates/visitor/booking-form.html",
+          "line": 84,
+          "tag": "input",
+          "attrs": {
+            "type": "date",
+            "id": "checkOutDate",
+            "name": "checkOutDate",
+            "class": "form-control",
+            "required": null
+          }
+        },
+        "matchedNode": "component:19c49695-1f9c-359d-b433-2736ec5e89cb",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/resources/templates/visitor/booking-form.html",
+          "line": 91,
+          "tag": "input",
+          "attrs": {
+            "type": "number",
+            "name": "numberOfGuests",
+            "class": "form-control",
+            "min": "1",
+            "th:max": "${room.capacity}",
+            "required": null
+          }
+        },
+        "matchedNode": "component:30f6ec95-c824-3350-91f8-94e79f644c13",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/resources/templates/visitor/booking-form.html",
+          "line": 95,
+          "tag": "button",
+          "attrs": {
+            "type": "submit",
+            "class": "btn btn-primary"
+          }
+        },
+        "matchedNode": "component:9e7b39d5-c808-3ace-91ee-fc575433016f",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/resources/templates/visitor/booking-form.html",
+          "line": 96,
+          "tag": "a",
+          "attrs": {
+            "href": "/",
+            "class": "btn btn-secondary"
+          }
+        },
+        "matchedNode": "component:68b3419f-9a22-309b-87d0-67d564c54a4b",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/resources/templates/visitor/booking-success.html",
+          "line": 12,
+          "tag": "a",
+          "attrs": {
+            "href": "/",
+            "class": "logo"
+          }
+        },
+        "matchedNode": "component:5956f120-b13e-3475-be3b-e9cb4a599e5e",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/resources/templates/visitor/booking-success.html",
+          "line": 14,
+          "tag": "a",
+          "attrs": {
+            "href": "/",
+            "class": "nav-btn"
+          }
+        },
+        "matchedNode": "component:5285b47d-7851-3d4f-b409-7a62ab725d84",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/resources/templates/visitor/booking-success.html",
+          "line": 15,
+          "tag": "a",
+          "attrs": {
+            "href": "/admin/login",
+            "class": "nav-btn"
+          }
+        },
+        "matchedNode": "component:9561e30f-5fe0-3aae-bbdc-dee755e4149e",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/resources/templates/visitor/booking-success.html",
+          "line": 77,
+          "tag": "a",
+          "attrs": {
+            "href": "/",
+            "class": "btn btn-primary",
+            "style": "flex: 1;"
+          }
+        },
+        "matchedNode": "component:42c5b94f-c55f-3703-9116-d6451a9ba4c0",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/resources/templates/visitor/booking-success.html",
+          "line": 78,
+          "tag": "a",
+          "attrs": {
+            "href": "/",
+            "class": "btn btn-secondary",
+            "style": "flex: 1;"
+          }
+        },
+        "matchedNode": "component:c6deb71b-97f4-346b-a589-360db1575ab5",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/resources/templates/visitor/home.html",
+          "line": 14,
+          "tag": "a",
+          "attrs": {
+            "href": "#",
+            "class": "logo"
+          }
+        },
+        "matchedNode": "component:abeed628-d6a5-32fb-a6b5-39aa8721936f",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/resources/templates/visitor/home.html",
+          "line": 16,
+          "tag": "a",
+          "attrs": {
+            "href": "/admin/login",
+            "class": "nav-btn"
+          }
+        },
+        "matchedNode": "component:7d7c6dc9-2b44-3835-acb5-ee6d516d2125",
+        "result": "PRESENT"
+      },
+      {
+        "source": {
+          "file": "src/main/resources/templates/visitor/home.html",
+          "line": 62,
+          "tag": "a",
+          "attrs": {
+            "th:href": "@{/book/{id}(id=${room.id})}",
+            "class": "book-btn"
+          }
+        },
+        "matchedNode": "component:d31c35b8-aefa-38d2-a849-7e9d7885ea9d",
+        "result": "PRESENT"
+      }
+    ],
+    "jsRequests": []
+  }
+}

@@ -110,3 +110,8 @@
 
 - 修正 WF-014–022、NC-002–003：Ajax、相對資源與請求、分支回傳、頁面組合、Struts 控制項、modal/offcanvas、回饋、有效 web root、Thymeleaf 表單及示範資料。新增 WF-023 的診斷排序已修正，頭像像素差異仍未解決。
 - 不放寬原斷言；原 B08 錯誤 selector 的 FAIL 保留，新增來源正確的開窗及四種表單切換案例。原專案缺少 API handler 與佔位功能另列，不能宣稱所有業務功能完整等價。見 [修正與驗收報告](reports/WORKFLOW_BATCH3_FIXES_20261019.md)、[ADR 0093](adr/0093-public-completeness-workflow-repairs.md)。
+
+## WP73 第四批不重複公開專案驗收（2026-10-19）
+
+- 三個新 repository：Struts 1／Tiles 音樂管理、MVC／JSP 圖書管理 App1、Boot／Thymeleaf 旅館。32 頁面／片段、52 路由、179 控制項都有發現；仍有路由／實體 view、事件、條件、樣式與資料支援缺口。
+- 有效檢查 33 項 10 PASS／23 FAIL，5 旅程 1 PASS／4 FAIL；原 H11 有格式／姓名預期限制，保留原結果並以來源正確的 X03 補驗。新增 WF-024–033、NC-004–005，外部依賴及原專案缺頁另列；未修改產品或宣稱修復。見 [測試報告](reports/COMPLETENESS_BATCH4_20261019.md)。
