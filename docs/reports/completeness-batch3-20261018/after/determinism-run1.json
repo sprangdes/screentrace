@@ -1,0 +1,1718 @@
+{
+  "contract-management-system/application-graph.json": {
+    "bytes": 103358,
+    "sha256": "a245633feb218bece19e3d0f7827a540679044db5fb653e42a738c83a54d9164"
+  },
+  "contract-management-system/preview-model.json": {
+    "bytes": 528879,
+    "sha256": "7939adf3f5120fbf2340dfe02e8a594e514c058135ca9507f6e7df1f8409de00"
+  },
+  "contract-management-system/prototype-model.json": {
+    "bytes": 8012,
+    "sha256": "7c8e342904527985204b1df98f8eb88baa18359824f1ec7b330ba9e988ad5e4b"
+  },
+  "contract-management-system/report/screentrace-report.html": {
+    "bytes": 858886,
+    "sha256": "195a052471f4f74184c9afbaf9bad115b6d7b7eccbfa011324a54a990314d659"
+  },
+  "contract-management-system/report-size.json": {
+    "bytes": 119,
+    "sha256": "1cec9b03c1182bce963eb9327a912bab62a8eb5ce8760ebfd427f584b48f0281"
+  },
+  "contract-management-system/screenshots/interactions.json": {
+    "bytes": 7778,
+    "sha256": "807a3dac55dd4b9dd1172f322f0835adb89dc3e83c8f635633f5186217b876a7"
+  },
+  "contract-management-system/screenshots/manifest.json": {
+    "bytes": 359,
+    "sha256": "238c1cf3ece8940079d908c42b42a38c679d52883124581a5075d4a354e1ebf8"
+  },
+  "contract-management-system/screenshots/static-screen_27bc9e3d-8cd5-3d1b-86c4-a4178d01d7d9.png": {
+    "bytes": 21213,
+    "sha256": "f10c309e6ca157cf7c2645a9085316cb41ec1f66eea86e12e5a395f87dba57cc"
+  },
+  "contract-management-system/screenshots/static-screen_87780f65-d49f-3717-82b4-232a29bcdf3a.png": {
+    "bytes": 26864,
+    "sha256": "f28f4b554b2ec287bd2aa2f9f4ab3aef22f84b30a88e6d39565cd37fb65d1044"
+  },
+  "contract-management-system/screenshots/static-screen_999252b7-f4c9-34b3-b9e8-649f0b8ce9ff.png": {
+    "bytes": 32364,
+    "sha256": "72e4777a05c9593042579c54baebb1865b0cf301d7efd0759ccc2b49d5d02a2c"
+  },
+  "contract-management-system/static-preview/diagnostics.json": {
+    "bytes": 2,
+    "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+  },
+  "contract-management-system/static-preview/element-styles.json": {
+    "bytes": 525017,
+    "sha256": "95788d29abe96b68ef34130b988d8e6e70066dc09fc8bdfbd55f782ec53bb5ff"
+  },
+  "contract-management-system/static-preview/manifest.json": {
+    "bytes": 350,
+    "sha256": "a9b0ab7d64e5f13a3d56bb62d5cb8afbc47d8af549e3debceec63cd5f15d0070"
+  },
+  "contract-management-system/static-preview/reconstruction.json": {
+    "bytes": 602,
+    "sha256": "85a9741d5b27a2e17af9a504e1c4a7a3cff1b14ced754516d52d2594ba0f4a30"
+  },
+  "contract-management-system/static-preview/screen_27bc9e3d-8cd5-3d1b-86c4-a4178d01d7d9.html": {
+    "bytes": 7342,
+    "sha256": "7493e0b7ced43a65f85d579cec932cea89034f7739097641af4d74c3f106e2b1"
+  },
+  "contract-management-system/static-preview/screen_87780f65-d49f-3717-82b4-232a29bcdf3a.html": {
+    "bytes": 6912,
+    "sha256": "93f9ab0a18fc50d44077bf9e1fc8aa809849f7dcf854f6df5cba0df18d1f0a52"
+  },
+  "contract-management-system/static-preview/screen_999252b7-f4c9-34b3-b9e8-649f0b8ce9ff.html": {
+    "bytes": 10252,
+    "sha256": "cdc33c7ebd0c31bd11bdbc6d43956254a019898de7e092b36928adf9ec250355"
+  },
+  "contract-management-system/viewer-documents.json": {
+    "bytes": 22644,
+    "sha256": "b8267c7c595f2bf7fa4099cf74faff2d14088817bd79f313d1b048632f6788a9"
+  },
+  "Fintech-Finance-Banking-Application/application-graph.json": {
+    "bytes": 653975,
+    "sha256": "5901359016de0a85b72ea0ed99fa8ab85171fb2edb9f2e0ea839df87fb435280"
+  },
+  "Fintech-Finance-Banking-Application/preview-model.json": {
+    "bytes": 1331887,
+    "sha256": "3ec6cb31f4e53b1019ba641208474930b5e20ac5eb18fd25d0972f771e213215"
+  },
+  "Fintech-Finance-Banking-Application/prototype-model.json": {
+    "bytes": 48194,
+    "sha256": "21e1789cc9c9e4b790037925aaeb47cc6a2411ed6450d43b8330d3e3831069a7"
+  },
+  "Fintech-Finance-Banking-Application/report/screentrace-report.html": {
+    "bytes": 5898201,
+    "sha256": "76842e3461648b80a66c62812736cc73bedf8f50803c75f857afd8aa84d4bdff"
+  },
+  "Fintech-Finance-Banking-Application/report-size.json": {
+    "bytes": 120,
+    "sha256": "c7924efcf42d70bfce823238907984a5c8b791da81edb3e8cdfaee85be2075f9"
+  },
+  "Fintech-Finance-Banking-Application/screenshots/interactions.json": {
+    "bytes": 28392,
+    "sha256": "05c5b5a6f6f2da59494267eb5964e77dab875e707d06ca8a6c6ec3dd9bd3339a"
+  },
+  "Fintech-Finance-Banking-Application/screenshots/manifest.json": {
+    "bytes": 835,
+    "sha256": "812fb4f2e84e4df6cc7d4f9397914756be135479ea1412fff9780ba430a208d3"
+  },
+  "Fintech-Finance-Banking-Application/screenshots/static-screen_19df9ab2-a0c5-398a-a4f2-080521b972fd.png": {
+    "bytes": 69122,
+    "sha256": "0776dce2cd7692505c51dd8352638c2efe10792c127020d48240afd200f49e76"
+  },
+  "Fintech-Finance-Banking-Application/screenshots/static-screen_2aa5ec76-bd5a-38fa-9869-37b910fa375b.png": {
+    "bytes": 16657,
+    "sha256": "704238972c70d5d4fce6470fc045285583d41599d5ddbe8597bad188eb36a070"
+  },
+  "Fintech-Finance-Banking-Application/screenshots/static-screen_2c3d5561-574b-3e00-b350-fda3753f2de4.png": {
+    "bytes": 28337,
+    "sha256": "86eb733e7f3cb402ac8211896b4a37dca10d11973ac33dd158ef45bc28963bc5"
+  },
+  "Fintech-Finance-Banking-Application/screenshots/static-screen_2ea540dc-a559-3bde-b087-df065ce3ab56.png": {
+    "bytes": 36835,
+    "sha256": "efaf3d215d4c7e5aef0895bdecef271a1c2aac4126742a18ad54a3b65220bb43"
+  },
+  "Fintech-Finance-Banking-Application/screenshots/static-screen_6e017311-9ac8-3c3e-83b6-e22db22272ce.png": {
+    "bytes": 61757,
+    "sha256": "298647a75e99535001abd783f68b7f4f4948795ab2ca508e583f78e1252c5646"
+  },
+  "Fintech-Finance-Banking-Application/screenshots/static-screen_8fabbc75-8f76-3ed0-93b6-171a1fecab50.png": {
+    "bytes": 21612,
+    "sha256": "be2b856bc1143a81d718e213579bc2a5a11d107c4160acf2e4cce52893f4f044"
+  },
+  "Fintech-Finance-Banking-Application/screenshots/static-screen_98dbcb0c-2d20-399f-89bc-f5d44c764452.png": {
+    "bytes": 68254,
+    "sha256": "d51aaa5ae158a9984ce8e985814ec38a444664061aa5b16520630a3b9366dcfa"
+  },
+  "Fintech-Finance-Banking-Application/screenshots/static-screen_bc23175f-0009-3f1d-b7ce-eb8ead805bf7.png": {
+    "bytes": 97125,
+    "sha256": "bfeb6fa695910e9aa4757b7f7a4f44eb3c0ecd067a4f4679d452ddd373dceaa9"
+  },
+  "Fintech-Finance-Banking-Application/screenshots/static-screen_c06552d6-a92c-352d-a448-a6be40cc3bc4.png": {
+    "bytes": 34187,
+    "sha256": "f1683adf238ce0296e85c8f3196f6aa1f742c548866b7cde26b85019f849518a"
+  },
+  "Fintech-Finance-Banking-Application/screenshots/static-screen_c8f3382d-d821-390c-9aa4-b5c33450aef6.png": {
+    "bytes": 14468,
+    "sha256": "d9920d41b070ca6bf7974f85ff264932fb7e06542c1120c5dd21ee4b26792752"
+  },
+  "Fintech-Finance-Banking-Application/screenshots/static-screen_ddcbc3e6-b137-37ef-8526-1c3e462b3559.png": {
+    "bytes": 16010,
+    "sha256": "175a684717de30c3284df0a52ee206a2f5c37114c6aace8df6a884e9c932bae7"
+  },
+  "Fintech-Finance-Banking-Application/static-preview/assets/css/bootstrap/bootstrap.css": {
+    "bytes": 195799,
+    "sha256": "9d607d59abe9310d9c1945f498d5c8439897c36ab16d6f1b24ac06833b8390f6"
+  },
+  "Fintech-Finance-Banking-Application/static-preview/assets/css/bootstrap/bootstrap.css.map": {
+    "bytes": 512055,
+    "sha256": "ed84c077929fb3b42e51676a51ad140d383184778857634225cb619cb2369334"
+  },
+  "Fintech-Finance-Banking-Application/static-preview/assets/css/default.css": {
+    "bytes": 1094,
+    "sha256": "cf3f6e4b081e89899dabd89e37c41d3808c0147be6a09e360609d8bbd50d2518"
+  },
+  "Fintech-Finance-Banking-Application/static-preview/assets/css/email.css": {
+    "bytes": 1035,
+    "sha256": "8b13818985640fd65c743bd88936db78b4d3502e01d2ff4d6ac48d9b25876cb8"
+  },
+  "Fintech-Finance-Banking-Application/static-preview/assets/css/fontawesome/LICENSE.txt": {
+    "bytes": 1548,
+    "sha256": "e779748dfe75e84f974df3c7bc07f842011a100159158b0f1f49b2f2a5a515cb"
+  },
+  "Fintech-Finance-Banking-Application/static-preview/assets/css/fontawesome/css/all.css": {
+    "bytes": 72670,
+    "sha256": "d928c1e14fb0d6b78a42b85b6c93a24050119005c0e421a8ca4e79f4f25e1b9f"
+  },
+  "Fintech-Finance-Banking-Application/static-preview/assets/css/fontawesome/css/all.min.css": {
+    "bytes": 58578,
+    "sha256": "876d023d9d10c97941b80c3b03e2a5b94631ff7a4af9cee5604a6a2d39718d84"
+  },
+  "Fintech-Finance-Banking-Application/static-preview/assets/css/fontawesome/css/brands.css": {
+    "bytes": 732,
+    "sha256": "50391a987c7b0d27c132fdf5752484519ca7f1bd3e575b2999edaa43519fd081"
+  },
+  "Fintech-Finance-Banking-Application/static-preview/assets/css/fontawesome/css/brands.min.css": {
+    "bytes": 675,
+    "sha256": "c1f6dbb101582a78b3422fd62cf5d2df0543bb40e98b6c944296410ec6f61f5b"
+  },
+  "Fintech-Finance-Banking-Application/static-preview/assets/css/fontawesome/css/fontawesome.css": {
+    "bytes": 71035,
+    "sha256": "9fcb06a0d1bb843762a2512505abca2293538f6a74b39588adc47c81f5aeab2a"
+  },
+  "Fintech-Finance-Banking-Application/static-preview/assets/css/fontawesome/css/fontawesome.min.css": {
+    "bytes": 57146,
+    "sha256": "0ae50f2a98ad805992350b8f0cbe5c11f3ce3894fff9bc149617ee98327d088e"
+  },
+  "Fintech-Finance-Banking-Application/static-preview/assets/css/fontawesome/css/regular.css": {
+    "bytes": 734,
+    "sha256": "f1c180e0c8dbce6f00b7418b7802a806d7c9d16465b6c951144637c277c2e119"
+  },
+  "Fintech-Finance-Banking-Application/static-preview/assets/css/fontawesome/css/regular.min.css": {
+    "bytes": 677,
+    "sha256": "80cb1bf451faf21b7bfb5cc96b6eb88a35ef4c9a2d5498839fe3828167ee68e9"
+  },
+  "Fintech-Finance-Banking-Application/static-preview/assets/css/fontawesome/css/solid.css": {
+    "bytes": 727,
+    "sha256": "3e3a568a30a47aac4b710c99a54c293650f3416f13d2a5903de5fbaa108b76f4"
+  },
+  "Fintech-Finance-Banking-Application/static-preview/assets/css/fontawesome/css/solid.min.css": {
+    "bytes": 669,
+    "sha256": "a4803373f048228fe14afb4d10322231306d47d11f2b708e9a71f6a6df1c3c36"
+  },
+  "Fintech-Finance-Banking-Application/static-preview/assets/css/fontawesome/css/svg-with-js.css": {
+    "bytes": 8077,
+    "sha256": "3d8ef658ee3d483c84226e8dc8cde2980a79bb96d18ed9de9e5f8a1201c14211"
+  },
+  "Fintech-Finance-Banking-Application/static-preview/assets/css/fontawesome/css/svg-with-js.min.css": {
+    "bytes": 6359,
+    "sha256": "1b20955d23342c8ec43ce45cf445b29112968e58a0e3d2e81cf2adeacf0d8c18"
+  },
+  "Fintech-Finance-Banking-Application/static-preview/assets/css/fontawesome/css/v4-shims.css": {
+    "bytes": 41312,
+    "sha256": "94d05b18591167fe6b630ec374669161780d4a71818f1963344fa8cd408a48c7"
+  },
+  "Fintech-Finance-Banking-Application/static-preview/assets/css/fontawesome/css/v4-shims.min.css": {
+    "bytes": 26702,
+    "sha256": "c0ded025aa80c10d37920521c8de04536a6145d0e42eb4186c57b412fa50eb45"
+  },
+  "Fintech-Finance-Banking-Application/static-preview/assets/css/fontawesome/js/all.js": {
+    "bytes": 1237763,
+    "sha256": "12149ddba03804163b731d6a7a7ac636681391eda0ce4192d070cf98b55543ac"
+  },
+  "Fintech-Finance-Banking-Application/static-preview/assets/css/fontawesome/js/all.min.js": {
+    "bytes": 1172040,
+    "sha256": "2b36622b2d03598b27c0c17e5f50ef427810dbf17117b305dc57fbd97729b8fb"
+  },
+  "Fintech-Finance-Banking-Application/static-preview/assets/css/fontawesome/js/brands.js": {
+    "bytes": 440292,
+    "sha256": "f32d04f906a9f82e169891dcb701d566b01d8b96a30152e5f1639dbd9f8612bd"
+  },
+  "Fintech-Finance-Banking-Application/static-preview/assets/css/fontawesome/js/brands.min.js": {
+    "bytes": 433156,
+    "sha256": "cf44f7afee2e4e3024079087c726c5f514300331c4745079fa125efe918070f8"
+  },
+  "Fintech-Finance-Banking-Application/static-preview/assets/css/fontawesome/js/conflict-detection.js": {
+    "bytes": 33929,
+    "sha256": "a42cb38e1f9ec4310daccc604780bddb5e79f6f787da8e760f01be5057e77583"
+  },
+  "Fintech-Finance-Banking-Application/static-preview/assets/css/fontawesome/js/conflict-detection.min.js": {
+    "bytes": 13502,
+    "sha256": "bd6cb1f46fef8c17723feedc257fa2c4ea3c9522b8aa5dcb0820a4198f0633a3"
+  },
+  "Fintech-Finance-Banking-Application/static-preview/assets/css/fontawesome/js/fontawesome.js": {
+    "bytes": 79139,
+    "sha256": "66bb9dfe18a8c737bd43568450d7acf6e4eb178ca6fc24742421afcdc5595fd2"
+  },
+  "Fintech-Finance-Banking-Application/static-preview/assets/css/fontawesome/js/fontawesome.min.js": {
+    "bytes": 37191,
+    "sha256": "34ff4dba3744cd2e66e19c6f36a91c6f1c87074753472f611b5dd1c135411b0a"
+  },
+  "Fintech-Finance-Banking-Application/static-preview/assets/css/fontawesome/js/regular.js": {
+    "bytes": 107110,
+    "sha256": "21745c8310388933c3a79f084bd54d7017cb69f83c255e753dcfd02266b591d4"
+  },
+  "Fintech-Finance-Banking-Application/static-preview/assets/css/fontawesome/js/regular.min.js": {
+    "bytes": 103386,
+    "sha256": "1f436f46e03c4b689d4ece08e8dcef1d19289e521034ef701aeb40334ffff585"
+  },
+  "Fintech-Finance-Banking-Application/static-preview/assets/css/fontawesome/js/solid.js": {
+    "bytes": 611780,
+    "sha256": "2557e4696237574d1b0388bbab4572f9dc58f0ac1101eb954611fe07df152c21"
+  },
+  "Fintech-Finance-Banking-Application/static-preview/assets/css/fontawesome/js/solid.min.js": {
+    "bytes": 598868,
+    "sha256": "50cd4746ed16775ea4e0be7082b935ec1616cca9236527b4058af94f9ab0d96c"
+  },
+  "Fintech-Finance-Banking-Application/static-preview/assets/css/fontawesome/js/v4-shims.js": {
+    "bytes": 17459,
+    "sha256": "bc9cb24d9e0646cd94fa5dcbe1f0312465c1bc5862efb943244464caaa754c09"
+  },
+  "Fintech-Finance-Banking-Application/static-preview/assets/css/fontawesome/js/v4-shims.min.js": {
+    "bytes": 15055,
+    "sha256": "a6b16689e5fd691561395fe57571a49545214bb3510505228d05381dc7673bc4"
+  },
+  "Fintech-Finance-Banking-Application/static-preview/assets/css/fontawesome/less/_animated.less": {
+    "bytes": 297,
+    "sha256": "5eebd1d573d45bf95f5bae81324b36b7da66c44cbee7b879be4fdaaef0e76d94"
+  },
+  "Fintech-Finance-Banking-Application/static-preview/assets/css/fontawesome/less/_bordered-pulled.less": {
+    "bytes": 422,
+    "sha256": "caa4d7780e0c8634997ff953ab66c9de8ba9232cb0c23439a876799d532788df"
+  },
+  "Fintech-Finance-Banking-Application/static-preview/assets/css/fontawesome/less/_core.less": {
+    "bytes": 297,
+    "sha256": "cbf75d5e89f265997c4f96e4153e2be1d1c910a36e4ba2c49800e84b19c8a10b"
+  },
+  "Fintech-Finance-Banking-Application/static-preview/assets/css/fontawesome/less/_fixed-width.less": {
+    "bytes": 119,
+    "sha256": "4206a000ca17bbe8a937f7f75da5a445250ee7ef176b7403233dff108f3aaff7"
+  },
+  "Fintech-Finance-Banking-Application/static-preview/assets/css/fontawesome/less/_icons.less": {
+    "bytes": 97769,
+    "sha256": "996d9bc5074073e8f53b7e39e1ea2e38891587f50824fb2e0d4b1cd66f3c95a9"
+  },
+  "Fintech-Finance-Banking-Application/static-preview/assets/css/fontawesome/less/_larger.less": {
+    "bytes": 454,
+    "sha256": "e12e81e921b508a819f2fe79c7cca64d8190d9291fdc056ef53d972c22ff895d"
+  },
+  "Fintech-Finance-Banking-Application/static-preview/assets/css/fontawesome/less/_list.less": {
+    "bytes": 322,
+    "sha256": "1d261e898ecfda4e1fcf380f3987695999bdfba914fe690cae263ac8ed267248"
+  },
+  "Fintech-Finance-Banking-Application/static-preview/assets/css/fontawesome/less/_mixins.less": {
+    "bytes": 1237,
+    "sha256": "db7af67ea6d0991d66de54f01897ee02045de92b8f79e01278ce5172662ad23a"
+  },
+  "Fintech-Finance-Banking-Application/static-preview/assets/css/fontawesome/less/_rotated-flipped.less": {
+    "bytes": 771,
+    "sha256": "516addf27a137dfc10896f0a3e63e8355ff161a2fc553170a727acb62fa6024a"
+  },
+  "Fintech-Finance-Banking-Application/static-preview/assets/css/fontawesome/less/_screen-reader.less": {
+    "bytes": 118,
+    "sha256": "b32ff7821a7b0a649f9202a02eeb8ce88fe671eb52d61ece50aabdbce21110c6"
+  },
+  "Fintech-Finance-Banking-Application/static-preview/assets/css/fontawesome/less/_shims.less": {
+    "bytes": 60766,
+    "sha256": "d9aaa0158812b4dd216d4b257c044fe251f4bf4caca07b5ff166c5c8c479027d"
+  },
+  "Fintech-Finance-Banking-Application/static-preview/assets/css/fontawesome/less/_stacked.less": {
+    "bytes": 478,
+    "sha256": "f8f01acec713703cf49013ccac03f9ca08f3b3957a9e116eac3d0d96a717b401"
+  },
+  "Fintech-Finance-Banking-Application/static-preview/assets/css/fontawesome/less/_variables.less": {
+    "bytes": 41271,
+    "sha256": "ecbd9684f343720c2c86e9835c77a9d1907009d865c8323df2c852a17196f32b"
+  },
+  "Fintech-Finance-Banking-Application/static-preview/assets/css/fontawesome/less/brands.less": {
+    "bytes": 811,
+    "sha256": "97339146a8bb4bdb1abbd725cda7dfa0b036223d0981670b003243da9d53d0ed"
+  },
+  "Fintech-Finance-Banking-Application/static-preview/assets/css/fontawesome/less/fontawesome.less": {
+    "bytes": 505,
+    "sha256": "dad64cc560fab0642c34dcb4f42a3d6fc744fac2e08e2a8329d96b19db04216f"
+  },
+  "Fintech-Finance-Banking-Application/static-preview/assets/css/fontawesome/less/regular.less": {
+    "bytes": 813,
+    "sha256": "44f112bdaa8686f150d8ad0ef1d09e022e14c8fd158e264166cc848a7a5835a6"
+  },
+  "Fintech-Finance-Banking-Application/static-preview/assets/css/fontawesome/less/solid.less": {
+    "bytes": 806,
+    "sha256": "6408a60a437805c875d8e8e26d747835d3566e72ae82b535baf5cb47aa823299"
+  },
+  "Fintech-Finance-Banking-Application/static-preview/assets/css/fontawesome/less/v4-shims.less": {
+    "bytes": 236,
+    "sha256": "cc9bccb50f5868274bef7c4c5ace3620cd6cfbdee16ecdf364e009129db5aac8"
+  },
+  "Fintech-Finance-Banking-Application/static-preview/assets/css/fontawesome/metadata/categories.yml": {
+    "bytes": 40184,
+    "sha256": "a71d98f6b3e61aa8425713cd42b1571458691be6367411e505c4c564375c80ea"
+  },
+  "Fintech-Finance-Banking-Application/static-preview/assets/css/fontawesome/metadata/icons.json": {
+    "bytes": 3219680,
+    "sha256": "3083942173430446882d06b396fc3ef94c08413792bfeb12e127639f597fe4d5"
+  },
+  "Fintech-Finance-Banking-Application/static-preview/assets/css/fontawesome/metadata/icons.yml": {
+    "bytes": 292522,
+    "sha256": "3259f0250fda5ec906ffce89b2d0f469fbdea8837aef9800a0cd4164a2082aca"
+  },
+  "Fintech-Finance-Banking-Application/static-preview/assets/css/fontawesome/metadata/shims.json": {
+    "bytes": 23699,
+    "sha256": "a07f081e38467ef9e8bb8f14b3677f45ff16787ac779f240631db833f1aade93"
+  },
+  "Fintech-Finance-Banking-Application/static-preview/assets/css/fontawesome/metadata/shims.yml": {
+    "bytes": 4682,
+    "sha256": "9c73d715959c32eb17d2ecd3364c48237c40504890363320478c993e17b15432"
+  },
+  "Fintech-Finance-Banking-Application/static-preview/assets/css/fontawesome/metadata/sponsors.yml": {
+    "bytes": 11932,
+    "sha256": "2770f06e1bf5b9502122cf79188af032269b8e71b635e2a607954540b85a4e2d"
+  },
+  "Fintech-Finance-Banking-Application/static-preview/assets/css/fontawesome/scss/_animated.scss": {
+    "bytes": 300,
+    "sha256": "424d457edfbd99cfcb05333d5ca174279a705fb6afed94703c2141df341dd62b"
+  },
+  "Fintech-Finance-Banking-Application/static-preview/assets/css/fontawesome/scss/_bordered-pulled.scss": {
+    "bytes": 428,
+    "sha256": "a32302a40cda902e45ec84c82426b902ee0a4aa1c8471ff2d6d20b7aca0a570f"
+  },
+  "Fintech-Finance-Banking-Application/static-preview/assets/css/fontawesome/scss/_core.scss": {
+    "bytes": 332,
+    "sha256": "0f1f7ae499046987efec2a8767bd1c905977ae1a895afec8f2227305d06edc3b"
+  },
+  "Fintech-Finance-Banking-Application/static-preview/assets/css/fontawesome/scss/_fixed-width.scss": {
+    "bytes": 121,
+    "sha256": "57f147918ba5f3063aa1200d21917d14dc551e627d47905e94bf8c2d9e4c0dea"
+  },
+  "Fintech-Finance-Banking-Application/static-preview/assets/css/fontawesome/scss/_icons.scss": {
+    "bytes": 116460,
+    "sha256": "d2f161d075d0ea2c9c14b5d5f7318f66376333e77af3accca71ebbabfde1d0f9"
+  },
+  "Fintech-Finance-Banking-Application/static-preview/assets/css/fontawesome/scss/_larger.scss": {
+    "bytes": 393,
+    "sha256": "4f2166be7e9a0cb0517ca8aefbdd373470c383f7ae849ecee509622c5918f39f"
+  },
+  "Fintech-Finance-Banking-Application/static-preview/assets/css/fontawesome/scss/_list.scss": {
+    "bytes": 322,
+    "sha256": "2b9e9d7c0f589a363e14544be44ca85d8a0998cdc1f1aef9d9d507f02e06b711"
+  },
+  "Fintech-Finance-Banking-Application/static-preview/assets/css/fontawesome/scss/_mixins.scss": {
+    "bytes": 1266,
+    "sha256": "eb8c687cfbc041fb82474e94dc833ee26a2c7b272ba7b8a00fec23dc002d2aaa"
+  },
+  "Fintech-Finance-Banking-Application/static-preview/assets/css/fontawesome/scss/_rotated-flipped.scss": {
+    "bytes": 833,
+    "sha256": "d5843772036999eaa9dc4b4e8abb27b4eaf320d8ea2e924b9c4661827fb5d1e2"
+  },
+  "Fintech-Finance-Banking-Application/static-preview/assets/css/fontawesome/scss/_screen-reader.scss": {
+    "bytes": 130,
+    "sha256": "a48f3c096ac40fc331e75855a073635125d62fab0efd59aeedd9881060c8f612"
+  },
+  "Fintech-Finance-Banking-Application/static-preview/assets/css/fontawesome/scss/_shims.scss": {
+    "bytes": 65388,
+    "sha256": "5c4cdcfdc6c5c16b44d75d1247578e0b0761573bd7d87fd75f321afddd0b63ec"
+  },
+  "Fintech-Finance-Banking-Application/static-preview/assets/css/fontawesome/scss/_stacked.scss": {
+    "bytes": 505,
+    "sha256": "66e89cdf90e4822b3c2b9b81d5a6a1f039426302242fb72f8fecc9c78195a759"
+  },
+  "Fintech-Finance-Banking-Application/static-preview/assets/css/fontawesome/scss/_variables.scss": {
+    "bytes": 38622,
+    "sha256": "2ee4c20d56ce8654d36ae505b347a743b8c3771b6718329cc5f489263ff5970b"
+  },
+  "Fintech-Finance-Banking-Application/static-preview/assets/css/fontawesome/scss/brands.scss": {
+    "bytes": 803,
+    "sha256": "7ae0631909a241b28755b7e5729bfe78d0f03a0f8bafe300affa029f2499a887"
+  },
+  "Fintech-Finance-Banking-Application/static-preview/assets/css/fontawesome/scss/fontawesome.scss": {
+    "bytes": 433,
+    "sha256": "ec22396a5dc81145000458699320d488ae590622b131f9fec717342e904b7b60"
+  },
+  "Fintech-Finance-Banking-Application/static-preview/assets/css/fontawesome/scss/regular.scss": {
+    "bytes": 805,
+    "sha256": "dedc2e3e0a4b9bcfb3082fefc4db4a7e2a9685418e8629d0f11f382174565488"
+  },
+  "Fintech-Finance-Banking-Application/static-preview/assets/css/fontawesome/scss/solid.scss": {
+    "bytes": 798,
+    "sha256": "be6d30c15c8cc7c277d62c765e5d2d15a4b2822f264949196214e415948c21d1"
+  },
+  "Fintech-Finance-Banking-Application/static-preview/assets/css/fontawesome/scss/v4-shims.scss": {
+    "bytes": 224,
+    "sha256": "5251868c0918a5077dee35746b3cefef920826cd685d115a571829e5c30bfcbc"
+  },
+  "Fintech-Finance-Banking-Application/static-preview/assets/css/fontawesome/sprites/brands.svg": {
+    "bytes": 453758,
+    "sha256": "e2d2d2b8504a6f78035f56f706a33964ba8d43a9c89bc86cf71273963854c128"
+  },
+  "Fintech-Finance-Banking-Application/static-preview/assets/css/fontawesome/sprites/regular.svg": {
+    "bytes": 109518,
+    "sha256": "f4b089530c87c3db330b56af3537c489214fcdcbe0d4954e1b3c75a50e8709a9"
+  },
+  "Fintech-Finance-Banking-Application/static-preview/assets/css/fontawesome/sprites/solid.svg": {
+    "bytes": 646260,
+    "sha256": "2f47c535e23d93d20e90c82aca818e37f6c69d89db5c2f810300d53c4c0a4f30"
+  },
+  "Fintech-Finance-Banking-Application/static-preview/assets/css/fontawesome/webfonts/fa-brands-400.eot": {
+    "bytes": 133034,
+    "sha256": "811e1577184066108ceca86d5a624a9012303df5206c5cb0b27d5e3fedcba5a3"
+  },
+  "Fintech-Finance-Banking-Application/static-preview/assets/css/fontawesome/webfonts/fa-brands-400.svg": {
+    "bytes": 715890,
+    "sha256": "02340ba1789d09bcc507563c89c4a847ba537bb8132082777a50519cf74bcb5b"
+  },
+  "Fintech-Finance-Banking-Application/static-preview/assets/css/fontawesome/webfonts/fa-brands-400.ttf": {
+    "bytes": 132728,
+    "sha256": "a0c145382acfe59767d1487d6505f349665b685c2885cd91b621d141a292b0f8"
+  },
+  "Fintech-Finance-Banking-Application/static-preview/assets/css/fontawesome/webfonts/fa-brands-400.woff": {
+    "bytes": 89824,
+    "sha256": "e836c5d5dfc13e18170c5bddefb4fdac7c65ac0ad43a4b431acdc4a98865a260"
+  },
+  "Fintech-Finance-Banking-Application/static-preview/assets/css/fontawesome/webfonts/fa-brands-400.woff2": {
+    "bytes": 76612,
+    "sha256": "5d9190292acdd48ba0fc35080f7e7448f3cdf0d79199a4d23f0f49b5341fdf29"
+  },
+  "Fintech-Finance-Banking-Application/static-preview/assets/css/fontawesome/webfonts/fa-regular-400.eot": {
+    "bytes": 34390,
+    "sha256": "01f4416f5db59e2dd6b6fbd9dc32336d99db18f7eb623a49f584d04afd279473"
+  },
+  "Fintech-Finance-Banking-Application/static-preview/assets/css/fontawesome/webfonts/fa-regular-400.svg": {
+    "bytes": 144322,
+    "sha256": "865fd23de13b1920280e182359579e09eff7a09eb24676eceec7552838559f55"
+  },
+  "Fintech-Finance-Banking-Application/static-preview/assets/css/fontawesome/webfonts/fa-regular-400.ttf": {
+    "bytes": 34092,
+    "sha256": "f32b94a29060dfec0c797a1dfe111357eb1d682f1aca4ac4b95cf0f4c3e2bfa9"
+  },
+  "Fintech-Finance-Banking-Application/static-preview/assets/css/fontawesome/webfonts/fa-regular-400.woff": {
+    "bytes": 16800,
+    "sha256": "8e2d96198711b63752e5f2f5987b8ffc536df6156a065bdbe28cb7231cad793d"
+  },
+  "Fintech-Finance-Banking-Application/static-preview/assets/css/fontawesome/webfonts/fa-regular-400.woff2": {
+    "bytes": 13584,
+    "sha256": "6a8c8e9e1e7f692c21af1956de163f3d026778e6449fe93a09a671847ca1ae65"
+  },
+  "Fintech-Finance-Banking-Application/static-preview/assets/css/fontawesome/webfonts/fa-solid-900.eot": {
+    "bytes": 202902,
+    "sha256": "32501727bb23fc77615b1ec76b5f298ec22198c0f3d6a3e7d6fe4ac3cf315db9"
+  },
+  "Fintech-Finance-Banking-Application/static-preview/assets/css/fontawesome/webfonts/fa-solid-900.svg": {
+    "bytes": 897426,
+    "sha256": "e768539808757f7eec20f09c9ee9b36b0e6c5636e90c9ee697995cbbc6ee0555"
+  },
+  "Fintech-Finance-Banking-Application/static-preview/assets/css/fontawesome/webfonts/fa-solid-900.ttf": {
+    "bytes": 202616,
+    "sha256": "231d68cefbc6846fb78cafca8467401a4f371e226418662e8900e3d52adc00ab"
+  },
+  "Fintech-Finance-Banking-Application/static-preview/assets/css/fontawesome/webfonts/fa-solid-900.woff": {
+    "bytes": 103300,
+    "sha256": "352f8ead280419dd953d2bc7843386bb9430e8152c2dbd2c2d2494f6b9567ee7"
+  },
+  "Fintech-Finance-Banking-Application/static-preview/assets/css/fontawesome/webfonts/fa-solid-900.woff2": {
+    "bytes": 79444,
+    "sha256": "7f4d3fd0a705dbf8403298aad91d5de6972e6b5d536068eba8b24954a5a0a8c7"
+  },
+  "Fintech-Finance-Banking-Application/static-preview/assets/css/main.css": {
+    "bytes": 1503,
+    "sha256": "647de06c63912a5c696b1fa66ee1173eb15cfaa28d0cb540f00e4619ab031470"
+  },
+  "Fintech-Finance-Banking-Application/static-preview/assets/images/main_bg.png": {
+    "bytes": 90205,
+    "sha256": "5781497b766996605e817b2e0d399407bd034c4bc6120980fa5c4744d70e9261"
+  },
+  "Fintech-Finance-Banking-Application/static-preview/assets/images/offcanvas_bg.png": {
+    "bytes": 21343,
+    "sha256": "99e455a8d71a6b0736b3531332d942f535b38ddb99345e79d966ab7ff590f11f"
+  },
+  "Fintech-Finance-Banking-Application/static-preview/assets/js/bootstrap.bundle.js": {
+    "bytes": 209769,
+    "sha256": "dfa7d72c78ddf576872a6a9ae3cc1082a02bb8afadf4d814c5fc18df0622d60e"
+  },
+  "Fintech-Finance-Banking-Application/static-preview/assets/js/bootstrap.bundle.js.map": {
+    "bytes": 429685,
+    "sha256": "6e05cc8b9c70629fe84e919a0fdb1b3eebbdd120e332e3a6c6193081c7f47090"
+  },
+  "Fintech-Finance-Banking-Application/static-preview/assets/js/main.js": {
+    "bytes": 1750,
+    "sha256": "e8b3cca07b3a4b6bea0aa68114f3ad4f33bc0c9bb08015283617e0845caea0e1"
+  },
+  "Fintech-Finance-Banking-Application/static-preview/diagnostics.json": {
+    "bytes": 300,
+    "sha256": "19b18e469c33f14e173afaca2728f9ee073af3747c2bcb6d8cccd6833f0265b3"
+  },
+  "Fintech-Finance-Banking-Application/static-preview/element-styles.json": {
+    "bytes": 1351047,
+    "sha256": "13d8d8e7342ac14eb1ecf706dd253dca72870235d7fef4d122b65026bc966df0"
+  },
+  "Fintech-Finance-Banking-Application/static-preview/manifest.json": {
+    "bytes": 814,
+    "sha256": "0d6a8cde7adbde391240e7368672b1d7ba791bf84992acc01cefdddc147e4157"
+  },
+  "Fintech-Finance-Banking-Application/static-preview/reconstruction.json": {
+    "bytes": 4319,
+    "sha256": "6508a04f338ddc748d09fc1285f7c8d1508ff61985cbbbdbd4d9b387412064f6"
+  },
+  "Fintech-Finance-Banking-Application/static-preview/screen_19df9ab2-a0c5-398a-a4f2-080521b972fd.html": {
+    "bytes": 14898,
+    "sha256": "8addfe5650fe53d77b81843c8bc4be8b6effd7cd8db97a5d146435464ae95392"
+  },
+  "Fintech-Finance-Banking-Application/static-preview/screen_2aa5ec76-bd5a-38fa-9869-37b910fa375b.html": {
+    "bytes": 5413,
+    "sha256": "11b8baeeab8f37bc383c1a1abbaddc891f2e293ddac5111753e9a028a7814965"
+  },
+  "Fintech-Finance-Banking-Application/static-preview/screen_2c3d5561-574b-3e00-b350-fda3753f2de4.html": {
+    "bytes": 8617,
+    "sha256": "3ae8019c1dadbcf643b2202fe56776a0c0f257238efafc0599625ecae1dfd906"
+  },
+  "Fintech-Finance-Banking-Application/static-preview/screen_2ea540dc-a559-3bde-b087-df065ce3ab56.html": {
+    "bytes": 14453,
+    "sha256": "049ef902b6c2ddfa44a7d1bd355b4d492f0b16fef6fdc5375be0de38b2794194"
+  },
+  "Fintech-Finance-Banking-Application/static-preview/screen_6e017311-9ac8-3c3e-83b6-e22db22272ce.html": {
+    "bytes": 64147,
+    "sha256": "19dc59b16155998408248a26fd478026f35aac053dbe65f8bc942fdb0749e6c1"
+  },
+  "Fintech-Finance-Banking-Application/static-preview/screen_8fabbc75-8f76-3ed0-93b6-171a1fecab50.html": {
+    "bytes": 7437,
+    "sha256": "9adafbb70d67e4e7a81521adfd088b59bdec4f81e464ecef3c8af7f1f84aceb7"
+  },
+  "Fintech-Finance-Banking-Application/static-preview/screen_98dbcb0c-2d20-399f-89bc-f5d44c764452.html": {
+    "bytes": 10389,
+    "sha256": "02d6a25d9d03ad1f85b4448977fea2cfffa48a905672d21d50aa127dbc047797"
+  },
+  "Fintech-Finance-Banking-Application/static-preview/screen_bc23175f-0009-3f1d-b7ce-eb8ead805bf7.html": {
+    "bytes": 5593,
+    "sha256": "aa9c49e48197b0fbe4f8684dccd92bb9cf398b2721bfa13e9c117c4ff95eb12b"
+  },
+  "Fintech-Finance-Banking-Application/static-preview/screen_c06552d6-a92c-352d-a448-a6be40cc3bc4.html": {
+    "bytes": 15113,
+    "sha256": "ac22870e5ac5cb7ed4f15ae28fd6ce7efcca09b517c6c0cb821e244c603d75e1"
+  },
+  "Fintech-Finance-Banking-Application/static-preview/screen_c8f3382d-d821-390c-9aa4-b5c33450aef6.html": {
+    "bytes": 5877,
+    "sha256": "40f4b55693158dae40b66a2a9b18faa6e4358d58a424b71c77b66f382e64fd84"
+  },
+  "Fintech-Finance-Banking-Application/static-preview/screen_ddcbc3e6-b137-37ef-8526-1c3e462b3559.html": {
+    "bytes": 5373,
+    "sha256": "1f9c1268a5bb02fc73db1db837bd07d691d016e94dbc2ed2b0f5fc3617258ffb"
+  },
+  "Fintech-Finance-Banking-Application/viewer-documents.json": {
+    "bytes": 3956162,
+    "sha256": "08beb6f103c89df900ca3a7b859ae747552dab691cd32d8608fe259ad40022b6"
+  },
+  "SpringMVC-IMS/application-graph.json": {
+    "bytes": 14878057,
+    "sha256": "0e70a6a535147f6c12a0a73b0467a8ffe3ceb605d216eb32f23833b6e3daad57"
+  },
+  "SpringMVC-IMS/preview-model.json": {
+    "bytes": 2848535,
+    "sha256": "64028c4f76aa7d000f6575ac9e04bf0893dfb76c13499b17cb762ac6df785c10"
+  },
+  "SpringMVC-IMS/prototype-model.json": {
+    "bytes": 226341,
+    "sha256": "ba54e6452a9d42e1d7781ef0191760c40d70964f28a0c0b4cbe151f6d3044e1c"
+  },
+  "SpringMVC-IMS/report/screentrace-report.html": {
+    "bytes": 17625767,
+    "sha256": "5836e9c48d588a85ce9378cbd65139a0eafa7c7f8dc61e16f2da858fb8d13c8d"
+  },
+  "SpringMVC-IMS/report-size.json": {
+    "bytes": 121,
+    "sha256": "6a718fe417ab65c63d6a6f6c4d12d4db4c956314765b8fec26ca767f493a4b37"
+  },
+  "SpringMVC-IMS/screenshots/interactions.json": {
+    "bytes": 84285,
+    "sha256": "85274a4cf4996babd5b6b7b2b8462b242f64faae9ba0f621ff9fbb6108b214fa"
+  },
+  "SpringMVC-IMS/screenshots/manifest.json": {
+    "bytes": 1192,
+    "sha256": "26e0fbfd061bb2ed7c7066cde98655c21a85e64dc581892c999ebf1450f21146"
+  },
+  "SpringMVC-IMS/screenshots/static-screen_338d9beb-e64b-3f9c-82bd-46c0973a1461.png": {
+    "bytes": 87305,
+    "sha256": "280cc464300a9a61133923be5c044997d2647ee2e3ba3a02fc7dfa212c64c4ab"
+  },
+  "SpringMVC-IMS/screenshots/static-screen_36e0ab56-3f7c-3648-b0dc-49076c983cef.png": {
+    "bytes": 84255,
+    "sha256": "9c9a01879df6f759abbd76fabd561f4db1e364a8d83c63c8a6f6134db29bbbcf"
+  },
+  "SpringMVC-IMS/screenshots/static-screen_65066324-e11d-383d-b1d7-7b6cb60d4fd0.png": {
+    "bytes": 32132,
+    "sha256": "35574a17db4fa467b61dc704eb2b605a87be9386b93d626ec0605bdb7b7e6ebb"
+  },
+  "SpringMVC-IMS/screenshots/static-screen_93e4c958-9f96-3dda-8d8d-a009b33cbd60.png": {
+    "bytes": 86358,
+    "sha256": "61008fbff6c48f8555c52d4d664d9310e8fa4ab9bc149391dd056942a8f59f3f"
+  },
+  "SpringMVC-IMS/screenshots/static-screen_a53f58e1-9479-30eb-905b-8b95e2bd79dd.png": {
+    "bytes": 7562,
+    "sha256": "334f0bd8309aef564761f75e9eff31e023e2c4f8ec33f826b3b30ab615a1a38f"
+  },
+  "SpringMVC-IMS/screenshots/static-screen_a75276a8-fd35-372c-975a-ebb75a5096b2.png": {
+    "bytes": 48830,
+    "sha256": "ef5bf4ed90d7365894b494cc7e4efc76a653bf916d6dc26032aef4e466164110"
+  },
+  "SpringMVC-IMS/screenshots/static-screen_a81744ce-8281-352b-83db-3990fe80e926.png": {
+    "bytes": 83781,
+    "sha256": "95f95ed7e5a3de230134b93721edc7d3d0c560f4fa669a555b0866ef53ecebfa"
+  },
+  "SpringMVC-IMS/screenshots/static-screen_b3c0dedf-ecb9-3ad7-a639-7aeca235f72e.png": {
+    "bytes": 86522,
+    "sha256": "750df3f091077a77f0a26ccfaca4768e6ebf1191443e6ccf2d1f93caa9c049fb"
+  },
+  "SpringMVC-IMS/screenshots/static-screen_c753b63a-ab4f-37bf-8f6f-178a1f550b72.png": {
+    "bytes": 83208,
+    "sha256": "da9472add66968b7f8e31da0b209b13efd2614343e0a4a648e319de4b5f6f045"
+  },
+  "SpringMVC-IMS/screenshots/static-screen_cb2c2d7d-8e6c-3aac-a1cc-3cf3da9f2db3.png": {
+    "bytes": 87730,
+    "sha256": "47a6e00d084d056af116a6cc839ca1b7cb9323b6d6a845c3fd7b9767e4a8a146"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/CSS/AdminLTE.min.css": {
+    "bytes": 86302,
+    "sha256": "0d46595715425dc9f5198e7b055b3975b371f7dc5d800c2ae8b2c5a0febd3cdd"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/CSS/_all-skins.min.css": {
+    "bytes": 41878,
+    "sha256": "29ea23bc563462cd642cd2b615b430b8bbc7229c8ebb6a64aa35c4cfbfe2afd3"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/CSS/bootstrap.min.css": {
+    "bytes": 122540,
+    "sha256": "31fbd99641c212a6ad3681a2397bde13c148c0ccd98385bce6a7eb7c81417d87"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/CSS/custom.css": {
+    "bytes": 641,
+    "sha256": "1eb55d1f264d1f7009a0ef18ddc104fed897bbd9289032e4e4060e39c9c27544"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/CSS/font-awesome.min.css": {
+    "bytes": 26711,
+    "sha256": "936ffccdc35bc55221e669d0e76034af76ba8c080c1b1149144dbbd3b5311829"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/CSS/ionicons.min.css": {
+    "bytes": 51284,
+    "sha256": "92ac508220f5bb60ec94e07650528eb66625f82a4740ada068cde05365781286"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/CSS/loader.css": {
+    "bytes": 10946,
+    "sha256": "8d823513c0007f06c4af56b5b7287ef3957ddaf8ef892c1e85b9a774dd407927"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/CSS/responsive.css": {
+    "bytes": 3815,
+    "sha256": "cf64420b870e7e0e0441deb766c66b921d643eb93d3521f12765f6ab0f5c8722"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/CSS/style.css": {
+    "bytes": 16051,
+    "sha256": "4c0713f7e5ee2a9fce51e0c5021f4c2481e98874010e33385900600a73e8cf17"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/Image/PIE.htc": {
+    "bytes": 41041,
+    "sha256": "7f460ab002f1bfbed953d1cd100ca515fd453fbc076c6737724a9e4875875d96"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/Image/favicon.png": {
+    "bytes": 10480,
+    "sha256": "c27e65c292daf29e4cde49a2aa94ef7b60301ab7e3ba22a35539c65173dd4e0c"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/Image/pw_maze_black_2X.png": {
+    "bytes": 818,
+    "sha256": "c98e8ee274dc69a7d376a419e8916146bf86eefa9a5104acea1aadf9c2bb8d53"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/Image/s.gif": {
+    "bytes": 2945,
+    "sha256": "3dd9b498a391fe6ebed7c9d7998fab39e2c285b9ab07396f7f499a97fa01d5de"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/Image/user2-160x160.jpg": {
+    "bytes": 43084,
+    "sha256": "46460c1ecab1b70fff70749a8c5628e93234f46992c68b7e9676370a6a1ac263"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/JS/app.min.js": {
+    "bytes": 9420,
+    "sha256": "5e1321bdefe0e7d328bc2ee280b26766d0eb38d331da55a95df1b22ee0ba3a9d"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/JS/bootstrap.min.js": {
+    "bytes": 35951,
+    "sha256": "267a83092a5fd6ec5fb746bce12d440abd37f1d649c072f653e17d0c800eb647"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/JS/brandEditValidation.js": {
+    "bytes": 2146,
+    "sha256": "97d47f2a54d2ab7d414c4fe72990e138d331c76416ab2768580a1ce313a25180"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/JS/brandHandaler.js": {
+    "bytes": 4205,
+    "sha256": "01cc174865dcd06eace2ba537dfc0f80dbadae0577409d3f0847871fb6102d3d"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/JS/brandValidation.js": {
+    "bytes": 2202,
+    "sha256": "02decbb148964876bc91ae83a2fd2c43dba11163b4655c6224ba2b3591cceaf4"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/JS/categoryEditValidation.js": {
+    "bytes": 2173,
+    "sha256": "6bd9731452f4c1f8309395f5df6bb33573032b3bd4069632eef9958754120538"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/JS/categoryHandaler.js": {
+    "bytes": 4218,
+    "sha256": "54a3710b09131c033de94fd71ac120c4881485bd915d2421ab97802453984726"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/JS/categoryValidation.js": {
+    "bytes": 2207,
+    "sha256": "419f958761578817a9830a7031ccd2a9e47a7c63aab047254fc7738187fa8d7e"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/JS/customerEditValidation.js": {
+    "bytes": 2919,
+    "sha256": "151c7571e61d114939abd4933a07bef7ce558815e73ee96214b77562fcc95629"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/JS/customerHandaler.js": {
+    "bytes": 4452,
+    "sha256": "33c7b7d97271be673404e91b9c8cbd42f0d0de283da05d567bc96333e6a38a87"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/JS/customerValidation.js": {
+    "bytes": 2934,
+    "sha256": "108e85bf7eeb7a79ec0e4066bfd47b00dd02df3a6b30b57ad44b19e56d1353fe"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/JS/fastclick.min.js": {
+    "bytes": 8776,
+    "sha256": "32c983a4b3b87d8f7eafa40840c8791351a593c869a3029d8b7356a8cf6d2a94"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/JS/jQuery-2.1.4.min.js": {
+    "bytes": 84345,
+    "sha256": "f16ab224bb962910558715c82f58c10c3ed20f153ddfaa199029f141b5b0255c"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/JS/jquery-3.1.1.min.js": {
+    "bytes": 86709,
+    "sha256": "85556761a8800d14ced8fcd41a6b8b26bf012d44a318866c0d81a62092efd9bf"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/JS/jquery.slimscroll.min.js": {
+    "bytes": 6230,
+    "sha256": "f7534a3e962da708c7b8a3b5f122669e4688a1c17f86e9fdb1b2684edca4f351"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/JS/modelHandaler.js": {
+    "bytes": 7189,
+    "sha256": "bec2f671d57c15b433d05a8a249a086be6e0637b3734d9ea510f86f4bd5bdf9c"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/JS/modelValidation.js": {
+    "bytes": 2484,
+    "sha256": "cbbbf7309586bab23cc50fa2511fd58dace932499e5021930cc5b0336162e6c7"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/JS/productHandaler.js": {
+    "bytes": 11433,
+    "sha256": "4a0edd8ffda280c041fc92c51d377a5cef732c746e3a8af2b98dcef915e05536"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/JS/productValidation.js": {
+    "bytes": 5319,
+    "sha256": "c48eb3c40cfceefc6cbaef2430e870a9d5afd449c707a3d0b3a73b3bdd634c94"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/JS/supplierEditValidation.js": {
+    "bytes": 2919,
+    "sha256": "3758b88a94b807d4ac5ca8c2616520091adbc1d290219420f2413074f42cefae"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/JS/supplierHandaler.js": {
+    "bytes": 4519,
+    "sha256": "379e651f171ffe9fecb1d71dcc51ba81bfaa7e0da589186d3027fd440ee2085c"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/JS/supplierValidation.js": {
+    "bytes": 2934,
+    "sha256": "3d6d0c917d8600dc673f2dece10c2bc09958793fc8d6d519941b17899df3109d"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/JS/sweetalert2.min.js": {
+    "bytes": 21857,
+    "sha256": "daf5fed50cb30212542cbaee9d070586ed065b65df0603812e4268c372b843f7"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/fonts/ODelI1aHBYDBqgeIAH2zlNV_2ngZ8dMf8fLgjYEouxg.woff2": {
+    "bytes": 14308,
+    "sha256": "599d93e0748728edc6bd55a82a52bff61196b149d566a67d4ed86d55d9c520aa"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/fonts/fontawesome-webfont.eot": {
+    "bytes": 68875,
+    "sha256": "d4f5a99224154f2a808e42a441ddc9248ffe78b7a4083684ce159270b30b912a"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/fonts/fontawesome-webfont.svg": {
+    "bytes": 355981,
+    "sha256": "7414288c272f6cc10304aa18e89bf24fb30f40afd644623f425c2c3d71fbe06a"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/fonts/fontawesome-webfont.ttf": {
+    "bytes": 138204,
+    "sha256": "1b7f3de49d68b01f415574ebb82e6110a1d09cda2071ad8451bdb5124131a292"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/fonts/fontawesome-webfont.woff": {
+    "bytes": 81284,
+    "sha256": "a7c7e4930090e038a280fd61d88f0dc03dad4aeaedbd8c9be3dd9aa4c3b6f8d1"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/fonts/fontawesome-webfont.woff2": {
+    "bytes": 64464,
+    "sha256": "3c4a1bb7ce3234407184f0d80cc4dec075e4ad616b44dcc5778e1cfb1bc24019"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/fonts/glyphicons-halflings-regular.eot": {
+    "bytes": 20127,
+    "sha256": "13634da87d9e23f8c3ed9108ce1724d183a39ad072e73e1b3d8cbf646d2d0407"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/fonts/glyphicons-halflings-regular.svg": {
+    "bytes": 108738,
+    "sha256": "42f60659d265c1a3c30f9fa42abcbb56bd4a53af4d83d316d6dd7a36903c43e5"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/fonts/glyphicons-halflings-regular.ttf": {
+    "bytes": 45404,
+    "sha256": "e395044093757d82afcb138957d06a1ea9361bdcf0b442d06a18a8051af57456"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/fonts/glyphicons-halflings-regular.woff": {
+    "bytes": 23424,
+    "sha256": "a26394f7ede100ca118eff2eda08596275a9839b959c226e15439557a5a80742"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/fonts/glyphicons-halflings-regular.woff2": {
+    "bytes": 18028,
+    "sha256": "fe185d11a49676890d47bb783312a0cda5a44c4039214094e7957b4c040ef11c"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/fonts/ionicons.eot": {
+    "bytes": 120724,
+    "sha256": "7e330dc533abbb86deb9abcf4f53a4263915f2887fa0ec026c5de36c7db1a36d"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/fonts/ionicons.svg": {
+    "bytes": 333834,
+    "sha256": "554bf0b1eb27004fcd2981a18c87d681b7107cda51d92aeaf965d0ace2b12d7f"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/fonts/ionicons.ttf": {
+    "bytes": 188508,
+    "sha256": "5e700835ec05293a3d0f9e354e7d038319d34521cd279e782198dff6d1dd58f2"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/fonts/ionicons.woff": {
+    "bytes": 67904,
+    "sha256": "a75e381026eced44f4e8d6ea4dc40e28e6a64dd953e8c0b6c239d1ac844c4a2d"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/fonts/toadOcfmlt9b38dHJxOBGCOFnW3Jk0f09zW_Yln67Ac.woff2": {
+    "bytes": 13992,
+    "sha256": "0b1dd42ccd2f5da83fa717b15fdd9f91879436b84a15d95340fc7ed5c2bc0269"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/fonts/toadOcfmlt9b38dHJxOBGEo0As1BFRXtCDhS66znb_k.woff2": {
+    "bytes": 13892,
+    "sha256": "895b2a4707f964bde44b6543d155f6dc43ddf4bcff2dc46094789a7e313e07f0"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/fonts/toadOcfmlt9b38dHJxOBGOode0-EuMkY--TSyExeINg.woff2": {
+    "bytes": 14308,
+    "sha256": "a4fac6d6f6782da9cfe8d8c756d89953e2e1ca6a5340724385b948e083bbf569"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/datepicker/bootstrap-datepicker.js": {
+    "bytes": 46838,
+    "sha256": "aa064cfea0251dc217370e185af66fe9b3ee37175cbbd7ba359e9fe54b704032"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/datepicker/datepicker.css": {
+    "bytes": 33745,
+    "sha256": "70438c52b83aee2485d277eb6bac6a1db3365782a3b850da51d083d669e13fc6"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/datepicker/locales/bootstrap-datepicker.ar.js": {
+    "bytes": 949,
+    "sha256": "d9d1589e7577b12893da553572e689594b8c55fa82b9f4d891a7a5771622746b"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/datepicker/locales/bootstrap-datepicker.az.js": {
+    "bytes": 659,
+    "sha256": "8db9617a83a8a02538f8cd912021aca2670ccffafc6798d4514043d9486c5663"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/datepicker/locales/bootstrap-datepicker.bg.js": {
+    "bytes": 836,
+    "sha256": "9391808fac0f7ca48592a89f354f0d775a8983b532bf0df7e682beaca6858a2b"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/datepicker/locales/bootstrap-datepicker.ca.js": {
+    "bytes": 639,
+    "sha256": "f6fbdb8011b4b1620d62a99c58700e2cc5a60bb856f3e5cb26afaee81e1c5f78"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/datepicker/locales/bootstrap-datepicker.cs.js": {
+    "bytes": 711,
+    "sha256": "d1c70974480aa38624283ec4ae88008ece4db5ff24ec5a69a1342e0abceb5b74"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/datepicker/locales/bootstrap-datepicker.cy.js": {
+    "bytes": 622,
+    "sha256": "62746eee33354170b927cabc0adb79e25bdbd6a1fe5b044bb97d8ef739e37208"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/datepicker/locales/bootstrap-datepicker.da.js": {
+    "bytes": 673,
+    "sha256": "205b5ef7e04ee54a0638efac8881173112cf9d5a78c359cc5676844d755eb890"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/datepicker/locales/bootstrap-datepicker.de.js": {
+    "bytes": 697,
+    "sha256": "00ad3a8237f84dd4b1a543e807de7df6604e56d6b8b3406b99102848f2eb86c2"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/datepicker/locales/bootstrap-datepicker.el.js": {
+    "bytes": 887,
+    "sha256": "15fbd97590083e8bce7b18be871af87a4b51bef467fc1b6ce34d9ab635bc2b8b"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/datepicker/locales/bootstrap-datepicker.es.js": {
+    "bytes": 647,
+    "sha256": "deb4ea5302ad20170d5f3566b19aa8c82af38fc6c66702b150fd400fb50ccb2a"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/datepicker/locales/bootstrap-datepicker.et.js": {
+    "bytes": 813,
+    "sha256": "f9c4e7287dcd51b131c90e058f4d42f9aa25bf7072716b0988f005289a285c82"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/datepicker/locales/bootstrap-datepicker.fa.js": {
+    "bytes": 866,
+    "sha256": "b81a01091a018d48936e7b25aee12e6bb1fcb95f6b75ae27797b02d7dcee4556"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/datepicker/locales/bootstrap-datepicker.fi.js": {
+    "bytes": 726,
+    "sha256": "0f197760e8584099e531e3366d848406078c9f6c7155d6d1e9ec7a51a3f0ec74"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/datepicker/locales/bootstrap-datepicker.fr.js": {
+    "bytes": 701,
+    "sha256": "f554d301007974984a8c398969a65e1f4c0ee5f304825f80d2ca098ed1f329c1"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/datepicker/locales/bootstrap-datepicker.gl.js": {
+    "bytes": 563,
+    "sha256": "f29a78a7da62fa5276b2e9189ca76d21b66b95e82f57c9285774c53c83bc04d7"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/datepicker/locales/bootstrap-datepicker.he.js": {
+    "bytes": 767,
+    "sha256": "6611bc14dd8722f5cf5563b41588280a78ac38f760b9d4660796066113062a0b"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/datepicker/locales/bootstrap-datepicker.hr.js": {
+    "bytes": 598,
+    "sha256": "3f12db49237661e085b64f97b8c48389e86d90c4e3973d71962a3c425e513bd1"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/datepicker/locales/bootstrap-datepicker.hu.js": {
+    "bytes": 715,
+    "sha256": "614044c8339bd4c334821f3a8d6d541658ac868d9642e7a6c050eebd2a0fde96"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/datepicker/locales/bootstrap-datepicker.id.js": {
+    "bytes": 652,
+    "sha256": "a69e70040d55b8b96411ef74b013ad6ab99e8e82fbcfbc6b269ad2cff4a31f72"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/datepicker/locales/bootstrap-datepicker.is.js": {
+    "bytes": 709,
+    "sha256": "3ccaaee0536d7668825017a62a6762bfe865ffba11e1eed6138c70f18cb88367"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/datepicker/locales/bootstrap-datepicker.it.js": {
+    "bytes": 715,
+    "sha256": "dcaa37c1f1c2958b1261864c55151ac313b0fb66e6db8f80edfc8db006e2db3a"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/datepicker/locales/bootstrap-datepicker.ja.js": {
+    "bytes": 665,
+    "sha256": "72bd2a4a6a8916dcf1504401fc3634ea643048592346eede8b98c7c1b10c1485"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/datepicker/locales/bootstrap-datepicker.ka.js": {
+    "bytes": 1261,
+    "sha256": "27b2f0bd2eed0105112a285a7dd6dc35d5baa66c9c87e9ee54be752c51be3797"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/datepicker/locales/bootstrap-datepicker.kk.js": {
+    "bytes": 871,
+    "sha256": "69d7d8e1d7659d3e377486a95ba774d65a7b69ecd8265a781c6f73ce6323e23d"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/datepicker/locales/bootstrap-datepicker.kr.js": {
+    "bytes": 637,
+    "sha256": "74fc1cdde8cd327eb811f85486a16c64f4ae70e8119163c53b5cfff8335c65bf"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/datepicker/locales/bootstrap-datepicker.lt.js": {
+    "bytes": 764,
+    "sha256": "79b4cd9e2ce742e693cd150ddbbb777d8d5fe12955633ebf4ad02908fa889911"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/datepicker/locales/bootstrap-datepicker.lv.js": {
+    "bytes": 732,
+    "sha256": "b740c26e77444480f8877c6cf969f68a9ffabc9e27202a17e0933d9cae9ccfeb"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/datepicker/locales/bootstrap-datepicker.mk.js": {
+    "bytes": 918,
+    "sha256": "4aeb3f142465e4b7442d1abe9aa55fff59818448f2495b7bf5f77a1c4790afac"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/datepicker/locales/bootstrap-datepicker.ms.js": {
+    "bytes": 621,
+    "sha256": "b9c43ca33998319661947981b76b69536d19c860dffcf6e2010bff3cb2bb983f"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/datepicker/locales/bootstrap-datepicker.nb.js": {
+    "bytes": 664,
+    "sha256": "a6f4c0bf8d9bc9801f6cef334a7fb0eba9e9cc6677509517f390cde11d70bc67"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/datepicker/locales/bootstrap-datepicker.nl-BE.js": {
+    "bytes": 736,
+    "sha256": "9443a6e8b7633abf68ce1a8ab0c4013cb1807dff601c2cbbb9d484cd74760735"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/datepicker/locales/bootstrap-datepicker.nl.js": {
+    "bytes": 643,
+    "sha256": "a3fd2d6195c92be36f72727480908a40095774ab0041943b49339f64eab74ee4"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/datepicker/locales/bootstrap-datepicker.no.js": {
+    "bytes": 622,
+    "sha256": "cfc2d9b4ee92e83730cd429e4aa1a9edb3b1512a8a97e8d46dea976c4af30ea1"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/datepicker/locales/bootstrap-datepicker.pl.js": {
+    "bytes": 775,
+    "sha256": "513cdc1848f492cd7aec104f8e1e9c863230011d1521a677a1bbef8fe44286af"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/datepicker/locales/bootstrap-datepicker.pt-BR.js": {
+    "bytes": 662,
+    "sha256": "5bc929b202ace113dfd4fc091e73c965ab1a2df50743f8701651b94e2403c8c6"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/datepicker/locales/bootstrap-datepicker.pt.js": {
+    "bytes": 717,
+    "sha256": "863d490ed201af72666e9d866fec0acf8441d9b7e5f1263008d0a0f876b61508"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/datepicker/locales/bootstrap-datepicker.ro.js": {
+    "bytes": 696,
+    "sha256": "aae917f38721614eb92be2bdb95dbcabb12e1708ea6d9808279e5316eedf0ef2"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/datepicker/locales/bootstrap-datepicker.rs-latin.js": {
+    "bytes": 647,
+    "sha256": "fd15a8c15e26a7cdc2edb189e5fc579c3df45eb3d5d1fb2100bc91d7607f4933"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/datepicker/locales/bootstrap-datepicker.rs.js": {
+    "bytes": 835,
+    "sha256": "4d37078dad12464c1ef5324bc5ab6e76e5e5f2eced56b85bc3ec537a91021c47"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/datepicker/locales/bootstrap-datepicker.ru.js": {
+    "bytes": 883,
+    "sha256": "958e498e8653c3077541f19de63dbd37801911f7b5be20b1a5aaf81ccb4a3b5f"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/datepicker/locales/bootstrap-datepicker.sk.js": {
+    "bytes": 693,
+    "sha256": "b5ba5111c70de6201492daef3d8e90098ddad1b469358c8af7c172e73cd30117"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/datepicker/locales/bootstrap-datepicker.sl.js": {
+    "bytes": 644,
+    "sha256": "18665b27663dc26822460f6d37894dd41282c6d7fd28586cf8c23d7b8ec8d173"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/datepicker/locales/bootstrap-datepicker.sq.js": {
+    "bytes": 659,
+    "sha256": "9bbbaf5e2bd23bd10520e379b4bf6a09130c55fbfb976c0dfe77c0512cd87e3a"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/datepicker/locales/bootstrap-datepicker.sv.js": {
+    "bytes": 689,
+    "sha256": "8c556be6cd41b49468adccda611dce8d7fba7f2fde98effd5aa98270c3cea281"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/datepicker/locales/bootstrap-datepicker.sw.js": {
+    "bytes": 773,
+    "sha256": "99fc46be0b526392b8048936bd4a37d20414b0d63c2b5f7a1de891b92039b44a"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/datepicker/locales/bootstrap-datepicker.th.js": {
+    "bytes": 1008,
+    "sha256": "352debe868a33a3f8c0cb78b79956af597c5f0a701404c3b719c9108e0e75444"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/datepicker/locales/bootstrap-datepicker.tr.js": {
+    "bytes": 671,
+    "sha256": "bbd21520ff8966668fd290ac1673f5771c8afad5d033c257899d18a6e681fa9b"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/datepicker/locales/bootstrap-datepicker.ua.js": {
+    "bytes": 868,
+    "sha256": "86070b368552c811b30d4bad1a28edd80d5b4418b1b647d0f7a946dba195ab18"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/datepicker/locales/bootstrap-datepicker.vi.js": {
+    "bytes": 761,
+    "sha256": "fab33dea33fc433b25b2140a2f3fb6ad78049e297ec71dbd32a608ac86059534"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/datepicker/locales/bootstrap-datepicker.zh-CN.js": {
+    "bytes": 796,
+    "sha256": "a6984509870409c52f21bfcaad4ac82d2913764aa7532d4279142fff93a2cb24"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/datepicker/locales/bootstrap-datepicker.zh-TW.js": {
+    "bytes": 891,
+    "sha256": "552b35736255ff64ad43ca967bec2c987e526e76a5f72c1bc2ddd16c277d6690"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/iCheck/all.css": {
+    "bytes": 1568,
+    "sha256": "292fca03a97afd382299c051a1b157d3bccee0b0236004ab5df17bf531419354"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/iCheck/flat/_all.css": {
+    "bytes": 13773,
+    "sha256": "a19cee2821ca39a17fd98a8b1ca6738dbf43e4b78d79ae9f2a747ef8e0ebec3f"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/iCheck/flat/aero.css": {
+    "bytes": 1428,
+    "sha256": "1bfa01f95dca10eb87674ca4455559669eea83bdd6f499f589f367b971358e01"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/iCheck/flat/aero.png": {
+    "bytes": 1520,
+    "sha256": "870db4ecdf5732a8fe5fb55e50d552f59fb8170fce3c321f3e1ef7f0605d1028"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/iCheck/flat/aero@2x.png": {
+    "bytes": 3218,
+    "sha256": "3ba32ee9bd791144850020cf9ce51409a2b95faf35bf7f40e9777dba2ba59de1"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/iCheck/flat/blue.css": {
+    "bytes": 1428,
+    "sha256": "c3eef5701de9d6ad02df4c45b5f7c6551090a9963a2296db5bef3af7ca861719"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/iCheck/flat/blue.png": {
+    "bytes": 1518,
+    "sha256": "f8cd711862ded984c4d8dfb70d8f0f890a1cc8037e883288a0a459d7524b3d42"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/iCheck/flat/blue@2x.png": {
+    "bytes": 3217,
+    "sha256": "f576f01791c658bb2e8cf4402b76c571fce5041753a8a7a2291548402c2fb94c"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/iCheck/flat/flat.css": {
+    "bytes": 1369,
+    "sha256": "b39672d66c788b59e9bb5774263f7fc0ffeceb8af8c8c032e222ec5c5413bb70"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/iCheck/flat/flat.png": {
+    "bytes": 1515,
+    "sha256": "649617bbce32ff4e0a8343c6f011a17116e86b13c50c1d9bfa92c0ee20605bec"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/iCheck/flat/flat@2x.png": {
+    "bytes": 3217,
+    "sha256": "761a11a1d4b30c951218c185ce70e208db481dd4d2516a73dfa53f7c3d0a62da"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/iCheck/flat/green.css": {
+    "bytes": 1443,
+    "sha256": "45dff3bdb72da877642f9d6149efb4100cdd8e1d4d61a42672f7f29feb8ed614"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/iCheck/flat/green.png": {
+    "bytes": 1444,
+    "sha256": "34858518bad21f9134e78e32fcfbc38ff468553c43944721cbdb5d80ca5472d4"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/iCheck/flat/green@2x.png": {
+    "bytes": 3117,
+    "sha256": "af0c9f69994fbb887a9f2d21aac89de946a6994a7f5a89e6f767b4f6473982ac"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/iCheck/flat/grey.css": {
+    "bytes": 1428,
+    "sha256": "7459fbc883c8ef9bcb653e0cdd581e1c30955df132c0b1ac39897f7a0355121a"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/iCheck/flat/grey.png": {
+    "bytes": 1516,
+    "sha256": "7e7ca23be1d7b29a14f919d31f9b45ab425da93be4c2171552fda986d003fa6d"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/iCheck/flat/grey@2x.png": {
+    "bytes": 3217,
+    "sha256": "cfbadf65db8b639977c46c6935593f72d13e6bb1a08dee64691804248a40c4ac"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/iCheck/flat/orange.css": {
+    "bytes": 1458,
+    "sha256": "3d29e22cb85e50d753ed85cccf8e631b3c886cadac8a568968283fa5d370c6ab"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/iCheck/flat/orange.png": {
+    "bytes": 1518,
+    "sha256": "e7c0220f2a222f0b1b4ed4ecfada3f67347cbd3a2c83fd75a1515378336421b0"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/iCheck/flat/orange@2x.png": {
+    "bytes": 3275,
+    "sha256": "a6d0bce44faca0c35a1e385aca6f924c4442245fdbb83ecb596f509cf2dc4b38"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/iCheck/flat/pink.css": {
+    "bytes": 1428,
+    "sha256": "7788f3c656f33abd84c4658ce67b9712cd9dcde00111d269795c2e720ff5af5c"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/iCheck/flat/pink.png": {
+    "bytes": 1522,
+    "sha256": "a6dc520b10c2ccdde3aefcc9f27f7c6a632b4b57a72b335473941ea4b9890c5b"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/iCheck/flat/pink@2x.png": {
+    "bytes": 3218,
+    "sha256": "c396b51e6f1cebe562fccf2fa266851f6e020f1efae533fabcb89e60efae8412"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/iCheck/flat/purple.css": {
+    "bytes": 1458,
+    "sha256": "2fe8e687b7a16b5a9b8ee0aaee4a332e0095e706773aaf7b43546e056e794420"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/iCheck/flat/purple.png": {
+    "bytes": 1519,
+    "sha256": "3266d60416a9231400d85042fa3e6678451c541113ec6a7b0cb6b1876909cfbe"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/iCheck/flat/purple@2x.png": {
+    "bytes": 3218,
+    "sha256": "811fd98232d50f6ae7802ef2525f8b0cebf4c2df4749e4789a70e17bbccc5f84"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/iCheck/flat/red.css": {
+    "bytes": 1413,
+    "sha256": "225b17aa157052b932a229d8cced8f059f91c569003a7764313b79e30d161d29"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/iCheck/flat/red.png": {
+    "bytes": 1516,
+    "sha256": "a959cd63012facd6b23b212e6ee8438248478759da0e00d88accaba3e2bf24ab"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/iCheck/flat/red@2x.png": {
+    "bytes": 3276,
+    "sha256": "da0cfba6ac94c007a870c150693c51c0365b584bb7e879eebaedc28f5d773111"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/iCheck/flat/yellow.css": {
+    "bytes": 1458,
+    "sha256": "511652a979c584e38e3704f468f89bfb2a6fea89f9ac95ad7e79330a87f57bd0"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/iCheck/flat/yellow.png": {
+    "bytes": 1516,
+    "sha256": "d50fb48ffdd5d676cf1cbc220719daa1f00937292d7a3673b63d316a9e58393a"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/iCheck/flat/yellow@2x.png": {
+    "bytes": 3216,
+    "sha256": "831e2f52cf2e796154cc228383632e659cc72dc60e3c57e0c5390d1bf88ef3b9"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/iCheck/futurico/futurico.css": {
+    "bytes": 1421,
+    "sha256": "39da4a95eacf6b9fde5ef5fd1df0abfbb08df8d040b7de57926ac50dee283cc1"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/iCheck/futurico/futurico.png": {
+    "bytes": 1734,
+    "sha256": "eddc1d52ee8d16a2261ca4b8d2df4f8a1d43a945a4766f8707cb71c2541021b9"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/iCheck/futurico/futurico@2x.png": {
+    "bytes": 3446,
+    "sha256": "b6ff49882ef46edb2d129f92cbc2f191292f87a587ce65ba695782fb4100c6c1"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/iCheck/icheck.js": {
+    "bytes": 14161,
+    "sha256": "026a3d67ce8d9ee741aaca458203cfce25b8785d38da133da8d6790cafdd8939"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/iCheck/icheck.min.js": {
+    "bytes": 4516,
+    "sha256": "6102d725c22f9bf27ef542ceae070843153f3e0926b89820a75f29b107e33cb2"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/iCheck/line/_all.css": {
+    "bytes": 21689,
+    "sha256": "9a4a602b96cf7b928d4599a3c861ff3c81e7fb353b55736b3aeb8c40cdbebc34"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/iCheck/line/aero.css": {
+    "bytes": 2222,
+    "sha256": "e4a380bb5be90d9a6d622cf40b673616aec651f8e5511e1684d0dee6bdda31d8"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/iCheck/line/blue.css": {
+    "bytes": 2222,
+    "sha256": "b7062fe393da25f31423709f7e75fd618f0e76ac48a439799d14cf97c59c5da8"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/iCheck/line/green.css": {
+    "bytes": 2244,
+    "sha256": "df11c009f8bc48be633cc550d6545c00f69645da08c2fd78184142cf07c8ce8c"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/iCheck/line/grey.css": {
+    "bytes": 2222,
+    "sha256": "4e03f3a9a2556bb026520fb690ddcc399b212bafeb396b1281ade8c5b299f3f1"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/iCheck/line/line.css": {
+    "bytes": 2103,
+    "sha256": "a4da8735b2cd1fa3d0428f630d0df30cd62fdcbeab733d319349b32bdbcbc20d"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/iCheck/line/line.png": {
+    "bytes": 588,
+    "sha256": "53f72f0f63f7b9d795feff387f3f76e9634f147604a43dcc9d67091b62f1cf43"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/iCheck/line/line@2x.png": {
+    "bytes": 1073,
+    "sha256": "c6de05f1759797a43cde5ba31a74f3b23eb175b70ac13812b12ab443475ece85"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/iCheck/line/orange.css": {
+    "bytes": 2260,
+    "sha256": "ee12df3270856981defc9cf2e73c606da6be31c05c91dde79da3ed5aedc23273"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/iCheck/line/pink.css": {
+    "bytes": 2222,
+    "sha256": "afc2951cae7d56229c22132e98f0d8ac8e428c986b47120b4567a674aed733e4"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/iCheck/line/purple.css": {
+    "bytes": 2266,
+    "sha256": "4b5b0cec385fa6ca36f7d94a971793b30ca11ed21ff9630d24f7b182bcb3834e"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/iCheck/line/red.css": {
+    "bytes": 2200,
+    "sha256": "efa23b1ef3855d7fbe42af0e1502df4495068055129b39431a9281b5f8b76b5d"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/iCheck/line/yellow.css": {
+    "bytes": 2266,
+    "sha256": "da8e0c222240f04f2ae23a5f809d8d9b3675e00a6f6d3b8e4a0b566b3c1cb57c"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/iCheck/minimal/_all.css": {
+    "bytes": 14176,
+    "sha256": "4d58e2ca02c7e649914c08be645422eb6ccd9d515d221c2c7d33d7f908f5b6a4"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/iCheck/minimal/aero.css": {
+    "bytes": 1626,
+    "sha256": "9a9397bd44e6c1c37117f4859ceddffc8e4887a23a2e1c99297c704bebe85749"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/iCheck/minimal/aero.png": {
+    "bytes": 1151,
+    "sha256": "dd315622eec3d7116566abc8400b484f08c2a4d18f06f1ba308886ba50e856e2"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/iCheck/minimal/aero@2x.png": {
+    "bytes": 1409,
+    "sha256": "57b9c071468da201173814c27496bb0e8f318c2945fb08e1f3c75531ae184e99"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/iCheck/minimal/blue.css": {
+    "bytes": 1626,
+    "sha256": "51ee426ea82e0ecb9b7be309d2e70a6ef082371cef11bebbe9d74a22b3cc6367"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/iCheck/minimal/blue.png": {
+    "bytes": 1132,
+    "sha256": "554d1c81ca2ad1da94f15b8d6446069244cbcb4d3d11028cd30940eb2d437b13"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/iCheck/minimal/blue@2x.png": {
+    "bytes": 1410,
+    "sha256": "703ab1d8cf4148e179021fdfdbb045297f0d383c872b8a433794b5ffe8480424"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/iCheck/minimal/green.css": {
+    "bytes": 1643,
+    "sha256": "31f70922b221fa7a59a0ceb53e65aa0c8e4113245ef73e5b0b6bb84eed3f08d3"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/iCheck/minimal/green.png": {
+    "bytes": 1143,
+    "sha256": "696e11dbe54fd4909439870ddb7c827c0799b2d565cffaf2804087ff58600e23"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/iCheck/minimal/green@2x.png": {
+    "bytes": 1408,
+    "sha256": "aad28af306b2aa916f459f466de51c7ce86fa5a60dc924a0572a64db102427f4"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/iCheck/minimal/grey.css": {
+    "bytes": 1626,
+    "sha256": "2ae7c4c7f94119a4d22c637c7b45f20e1200d61af6e0170960342a3cb6b20709"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/iCheck/minimal/grey.png": {
+    "bytes": 1142,
+    "sha256": "654da0ad45d54a5ec79ee661aba96b7113bccb52caedbcfd6629b044a0d80000"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/iCheck/minimal/grey@2x.png": {
+    "bytes": 1407,
+    "sha256": "94d3d7416dd0ecfb88bd0456d8ac4a0c87e3cc9bf0728f86e4bae0b38b6e4f70"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/iCheck/minimal/minimal.css": {
+    "bytes": 1563,
+    "sha256": "181dadcd632b0a9b62ec4686e2abc270cc9664419b8983586231fca410b4c418"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/iCheck/minimal/minimal.png": {
+    "bytes": 1114,
+    "sha256": "2ec52d6497f27f697e161200fcc0dae3c20ba11c3322d2e2e9d0ad19355ea298"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/iCheck/minimal/minimal@2x.png": {
+    "bytes": 1410,
+    "sha256": "c4e6567d9f75e60bcc26c0cc71ddd3268d02eff92e2907920ef2904028955b78"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/iCheck/minimal/orange.css": {
+    "bytes": 1660,
+    "sha256": "b561edaeef88aa3b18da220206c721189330d6724a252345ffce661edc77af98"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/iCheck/minimal/orange.png": {
+    "bytes": 1139,
+    "sha256": "488e581ddb601d3a12e355d96582a51df60d7701e447dc9b49fd59b335b710bf"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/iCheck/minimal/orange@2x.png": {
+    "bytes": 1407,
+    "sha256": "dd10fd94fa6aa469afe8d066985e1dbc79c64df38d83ce58201d97681cd52e25"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/iCheck/minimal/pink.css": {
+    "bytes": 1626,
+    "sha256": "6cb10a4caf8bf500a67f2db4b85da87828e6707c02bb97f26211370b98c4608e"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/iCheck/minimal/pink.png": {
+    "bytes": 1150,
+    "sha256": "7d0125de70c23a23bd517fdf88029ec95cc3db850790cc561d1e6489685629da"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/iCheck/minimal/pink@2x.png": {
+    "bytes": 1409,
+    "sha256": "40e1f51b7fe16e7db4841b3229256bb24e33ea0d28138b1ea73cda2a9c65b0fd"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/iCheck/minimal/purple.css": {
+    "bytes": 1660,
+    "sha256": "9dae77c17da4ad36a13e8675c81d89c2d601ae71753faeefe8315a2183c1e542"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/iCheck/minimal/purple.png": {
+    "bytes": 1132,
+    "sha256": "0d2562d66fc7b4323c406179bdca227125a15fd053392e3aa5eaf496795a8ee4"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/iCheck/minimal/purple@2x.png": {
+    "bytes": 1409,
+    "sha256": "df0f7e1b34738daa5c2d879823ee17986bed8a0457c4c90d489be645d01fdae2"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/iCheck/minimal/red.css": {
+    "bytes": 1609,
+    "sha256": "993a5f6dfd11443998666165560fe97fc0f27fcd2d5acb44ce634a08365f4057"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/iCheck/minimal/red.png": {
+    "bytes": 1130,
+    "sha256": "9c2ab7cc55dfafd7343804da7fa39111e1b225fdba40a532a7425ceb2171e4a9"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/iCheck/minimal/red@2x.png": {
+    "bytes": 1410,
+    "sha256": "bd22b4d271868f16cc2161ac0fae8ec07e3dd5aa1057b0e2712e3fa1c1e9d842"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/iCheck/minimal/yellow.css": {
+    "bytes": 1660,
+    "sha256": "ab1d91b678508f0c9699a17394d0e0d5af0df4d0694bb9d7ee6ee9a772ca5e89"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/iCheck/minimal/yellow.png": {
+    "bytes": 1135,
+    "sha256": "25996589dadb7140266f41d84843850db880fb6accc5a7f783fe57347ef8b7e4"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/iCheck/minimal/yellow@2x.png": {
+    "bytes": 1406,
+    "sha256": "090154cf3bb9a087b881de2697f02f3b25d960d4a3472c550de4dace1b6d2f55"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/iCheck/polaris/polaris.css": {
+    "bytes": 1557,
+    "sha256": "660a092c8a41877bcc29c9480393aea96ee81787bbcab6fcd24ca3ee09e55c7f"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/iCheck/polaris/polaris.png": {
+    "bytes": 6401,
+    "sha256": "5ba0e5aa645d88a194c248aaae7019af06d9628e8f9b12e4a6f5846bffb46ef1"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/iCheck/polaris/polaris@2x.png": {
+    "bytes": 16760,
+    "sha256": "91a870867e05e8a423f07e087036f6df33c8c0fc1a85ea03091268f901e8a6eb"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/iCheck/square/_all.css": {
+    "bytes": 15591,
+    "sha256": "b2273d192ca8456d0cc8960cdd9f3827f7f85a6baaa376b8f0b5af613ed59222"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/iCheck/square/aero.css": {
+    "bytes": 1611,
+    "sha256": "2801e672a0bb99a4db35dfe9b1e3055b4449f9bc2194dc19965fc916732f6029"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/iCheck/square/aero.png": {
+    "bytes": 2167,
+    "sha256": "0256fcd9601e1bad8dc98bad53f2de7c8e78d9416e92c1b5c4db3cccf0931768"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/iCheck/square/aero@2x.png": {
+    "bytes": 4455,
+    "sha256": "978e637c09ea1fa3cfbdb340142ad86a351c1fb863851a8fb86dba05f20e139f"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/iCheck/square/blue.css": {
+    "bytes": 1611,
+    "sha256": "467fefb5320f85af9c3dd29605d3a6f33cf29048143ae24dc2bdb1f345b16228"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/iCheck/square/blue.png": {
+    "bytes": 2185,
+    "sha256": "abff66ea99f7e2b2a51d02feb00d0385f2ac35100fdc65b5d4e4395228fd020b"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/iCheck/square/blue@2x.png": {
+    "bytes": 4485,
+    "sha256": "c0ce7ecfbd5605a7a0d0239d83b736eda75dbc71ff183472e02c6d6cdfbcc888"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/iCheck/square/green.css": {
+    "bytes": 1628,
+    "sha256": "9a6a0b8829747c608414fd48b869719ba6208e16e91b0de793f0c26f9156e1f7"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/iCheck/square/green.png": {
+    "bytes": 2193,
+    "sha256": "4828efe2a264a35e799fbd342fcf005ba57d8335750879bcf66279e573dcfa23"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/iCheck/square/green@2x.png": {
+    "bytes": 4498,
+    "sha256": "7b89106773bb4fc754f47e0f1cc0633d64b2ef8a4fb6ba3cbf2b4ede2de903ba"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/iCheck/square/grey.css": {
+    "bytes": 1611,
+    "sha256": "0178992cc26443ee38160c51f34269912c81e7203d621e855c15b3ca2be37fe4"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/iCheck/square/grey.png": {
+    "bytes": 2186,
+    "sha256": "80ed11e21b6c2f1217c83fd9150f90d73587ae049681750d5b75bba2a6aac87b"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/iCheck/square/grey@2x.png": {
+    "bytes": 4483,
+    "sha256": "40bb731297212c86a4c0141ca76dc6d4ed4a753a681336a8b92d75ab30cb7495"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/iCheck/square/orange.css": {
+    "bytes": 1645,
+    "sha256": "923002141405f6fab7ed0499422ce64c4860c403bf6aef7ba06af5608b9824f2"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/iCheck/square/orange.png": {
+    "bytes": 2181,
+    "sha256": "2bdda400b27bc002d0573094587f9a198e7b8e1e5fcf82f2e2932796f6a32c34"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/iCheck/square/orange@2x.png": {
+    "bytes": 4474,
+    "sha256": "52de7be969ad86e226bb1f93773a1933b44617069dae00a1f02f32fd2ad07c20"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/iCheck/square/pink.css": {
+    "bytes": 1611,
+    "sha256": "07eb24fae4bcb67589f5ac84f47690cac58a097fc1ffb986a63e6598718adaa5"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/iCheck/square/pink.png": {
+    "bytes": 2189,
+    "sha256": "bb85090ae0fedbd3fd0cadc1a74b0c9ceac38f09eb947c7d229a1b0b342a8d82"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/iCheck/square/pink@2x.png": {
+    "bytes": 4479,
+    "sha256": "775bb94369b6742d9cde67d8e65ce7b24c495866420ade49ae2291afc8d9a777"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/iCheck/square/purple.css": {
+    "bytes": 1645,
+    "sha256": "b6658788c23b6a4e047b83776baf6cb45270ecce2c3d3dcadd1a6f216518a6d2"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/iCheck/square/purple.png": {
+    "bytes": 2188,
+    "sha256": "1fe326c961b2a8320dca1b0041ca34df702c23bbe5d2a3fd2064539ebbbf06ce"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/iCheck/square/purple@2x.png": {
+    "bytes": 4501,
+    "sha256": "1fa92204f94dabdba60b69a0f4fed54ca83f4367a97f384ae8f4bb01e0b6eea7"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/iCheck/square/red.css": {
+    "bytes": 1594,
+    "sha256": "4a97545d9af919896f2365f0627cc893db39d84701f5238c361135422c55c88b"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/iCheck/square/red.png": {
+    "bytes": 2190,
+    "sha256": "07396c4458cd328a3ad8c3de309f5cbc948babb2d022f212e8bdbb7cb571ddb5"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/iCheck/square/red@2x.png": {
+    "bytes": 4490,
+    "sha256": "44008e3df669f173ad9e67364f419caed9bbf243d7bdc57e46c38bdd2e9d8657"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/iCheck/square/square.css": {
+    "bytes": 1546,
+    "sha256": "3fa349766d6f6cd82105a1f31496e249c7f7c925344e495f6941767547823484"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/iCheck/square/square.png": {
+    "bytes": 2175,
+    "sha256": "8a7989b98489642a7862a32e1f66748a3671d6677941af3129d5504e31cfbccd"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/iCheck/square/square@2x.png": {
+    "bytes": 4478,
+    "sha256": "8ed64c959db4f6f50081d5de7430983af90c88ef10abd334b2b53f9a61424b9d"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/iCheck/square/yellow.css": {
+    "bytes": 1645,
+    "sha256": "19689bcbe3320cba8a573b954636c6c95af04dc0841c453587227c79b5361ba1"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/iCheck/square/yellow.png": {
+    "bytes": 2131,
+    "sha256": "5c2016d71a7eb13a848f0c1441486d2d01f8de05a0e4f10e1c8a6c7e1ccf30bf"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/plugins/iCheck/square/yellow@2x.png": {
+    "bytes": 4385,
+    "sha256": "7cba0273efb682c044ff6b908a81a013fd7a58d8e8ca23ec282b62f58e6595f6"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/sweetalert/sweetalert.css": {
+    "bytes": 13051,
+    "sha256": "67c4d6f91122526f73490306647e1b7d98b9d9526032a11309b3c5946441d4ff"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/sweetalert/sweetalert.js": {
+    "bytes": 34735,
+    "sha256": "66f31ff658b4339186ae219410a9f583a94bc278f9bbe10da826cb33922d8d0d"
+  },
+  "SpringMVC-IMS/static-preview/assets/resources/sweetalert/sweetalert.min.js": {
+    "bytes": 16651,
+    "sha256": "262ad846a6dffaacdfa95b441381844f21e501b882a42d34e720536b8ae3eb18"
+  },
+  "SpringMVC-IMS/static-preview/diagnostics.json": {
+    "bytes": 2,
+    "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+  },
+  "SpringMVC-IMS/static-preview/element-styles.json": {
+    "bytes": 2993262,
+    "sha256": "101b914158b7508d6c232188a022a9ce81c007347986bd5124ef28f48bd02d3e"
+  },
+  "SpringMVC-IMS/static-preview/manifest.json": {
+    "bytes": 1162,
+    "sha256": "dd8a5670c0157fad429bf90d1875299535275dfaa167d6d40cbb96c9991a20ea"
+  },
+  "SpringMVC-IMS/static-preview/reconstruction.json": {
+    "bytes": 12595,
+    "sha256": "5bc35bbd762a03c4c3cc540e3629c5963a23fb30db7b20e6839f8a4113c2bb2c"
+  },
+  "SpringMVC-IMS/static-preview/screen_338d9beb-e64b-3f9c-82bd-46c0973a1461.html": {
+    "bytes": 58369,
+    "sha256": "139a3a1f5ceecce61ea28b2696ab507d0a95e0a61f93022dfaecff215a5bb8bf"
+  },
+  "SpringMVC-IMS/static-preview/screen_36e0ab56-3f7c-3648-b0dc-49076c983cef.html": {
+    "bytes": 56081,
+    "sha256": "d81a98a2a01b322725107c2e975b271ceca278f4380da93cd86b03d4927755b1"
+  },
+  "SpringMVC-IMS/static-preview/screen_65066324-e11d-383d-b1d7-7b6cb60d4fd0.html": {
+    "bytes": 12386,
+    "sha256": "844ba77d46ec42b69a65ae5211d40c8d58033c94bf068fffc8e05f82c382b70d"
+  },
+  "SpringMVC-IMS/static-preview/screen_93e4c958-9f96-3dda-8d8d-a009b33cbd60.html": {
+    "bytes": 66639,
+    "sha256": "44f4a8d631d58fc16fb166eecf9634fe1bb5fd2092ce2e1f9ef06966170631c9"
+  },
+  "SpringMVC-IMS/static-preview/screen_a53f58e1-9479-30eb-905b-8b95e2bd79dd.html": {
+    "bytes": 361,
+    "sha256": "a9b838cc90a391ef670768da32a505bc7adf23dcb9578909f2bd48ea23a8e03b"
+  },
+  "SpringMVC-IMS/static-preview/screen_a75276a8-fd35-372c-975a-ebb75a5096b2.html": {
+    "bytes": 23469,
+    "sha256": "3267fb6f5e881ce2084581eb3d6a7f3d83305fb4df9d5a4e2c267ad087d30974"
+  },
+  "SpringMVC-IMS/static-preview/screen_a81744ce-8281-352b-83db-3990fe80e926.html": {
+    "bytes": 6315,
+    "sha256": "fca32a9eedcb37da7feeb905e19f1b73f8426e2702891295474275ce62e887b5"
+  },
+  "SpringMVC-IMS/static-preview/screen_b3c0dedf-ecb9-3ad7-a639-7aeca235f72e.html": {
+    "bytes": 53319,
+    "sha256": "2a9b1216f3b0c931f27fb9e73909d3385a6166bd5c6eddd2f39a9e7cba602da8"
+  },
+  "SpringMVC-IMS/static-preview/screen_c753b63a-ab4f-37bf-8f6f-178a1f550b72.html": {
+    "bytes": 52439,
+    "sha256": "9b637f109e22d79adbcf57b89ca71bd6dc47d1698c6ed85cfd360816375ae3a7"
+  },
+  "SpringMVC-IMS/static-preview/screen_cb2c2d7d-8e6c-3aac-a1cc-3cf3da9f2db3.html": {
+    "bytes": 58369,
+    "sha256": "6ab138e98d9175c5284320739c18513730f6eb3638252865b4087de5d9eb446e"
+  },
+  "SpringMVC-IMS/viewer-documents.json": {
+    "bytes": 2821807,
+    "sha256": "75198667db326589de68dea04c42263c8c43799f0a52fb510a52ccd039405692"
+  },
+  "airline_system/application-graph.json": {
+    "bytes": 281599,
+    "sha256": "348176e2d3fdd86a0aa1da6a46c95ebd292bde7b50cfdd6f18a842fbc20e67e0"
+  },
+  "airline_system/preview-model.json": {
+    "bytes": 823339,
+    "sha256": "e7d4f44093f81f3521d63103c4df39b569fee10f70d947244d3123609ca373cf"
+  },
+  "airline_system/prototype-model.json": {
+    "bytes": 30624,
+    "sha256": "628cf9901b2133f7f33f69df46a4358a53094b04815ba6f4e9aceac09357303f"
+  },
+  "airline_system/report/screentrace-report.html": {
+    "bytes": 1277389,
+    "sha256": "f5e3e632c3bb43d78ea35139ec78862a8c0f92d428b24ad405517e8c8e3d684f"
+  },
+  "airline_system/report-size.json": {
+    "bytes": 120,
+    "sha256": "36ca131f08af66e9234864a5b7db4c6068f382f4a3add90a18744c057b9d7066"
+  },
+  "airline_system/screenshots/interactions.json": {
+    "bytes": 26948,
+    "sha256": "ab2df5bb4ae9ce94b63958bd8389e386dea8280127a316a9d3fdbdc1ecdcd298"
+  },
+  "airline_system/screenshots/manifest.json": {
+    "bytes": 478,
+    "sha256": "56beaec9dde79f93130543d81d30a7e9710fcdfa1a945e2007502646a95aec46"
+  },
+  "airline_system/screenshots/static-screen_32b5b43a-4c70-3646-9077-8ec02ec726b4.png": {
+    "bytes": 40738,
+    "sha256": "f2f70216bc718fa6e04c1a0d336db41e936b861674f1bbf110f42f2a48c0cbc6"
+  },
+  "airline_system/screenshots/static-screen_61485b0f-dcde-3509-8980-7affe8c0ea6b.png": {
+    "bytes": 37561,
+    "sha256": "17896b8df0fecc8c02e5c3457c905b9ebea0ec967b3fc6d5644aa5d344f22422"
+  },
+  "airline_system/screenshots/static-screen_7bce6bf3-7aaa-3e41-861d-593299d13979.png": {
+    "bytes": 323225,
+    "sha256": "c17d4b02964c837a2e6688342960ab1586883f40f9c14fd24dbe5ec7622e36fa"
+  },
+  "airline_system/screenshots/static-screen_b578d8f4-6e89-3103-a16d-6b23525d4373.png": {
+    "bytes": 30020,
+    "sha256": "82f37abab8b1ef5562d041b679d5768cac0730ddacd48bf2a7de614fd39e4bcf"
+  },
+  "airline_system/static-preview/diagnostics.json": {
+    "bytes": 2,
+    "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+  },
+  "airline_system/static-preview/element-styles.json": {
+    "bytes": 838538,
+    "sha256": "d4eee06fc4d61402f8e30a55ea3a8e9502d048d154dbdb923b8646b9373a0500"
+  },
+  "airline_system/static-preview/manifest.json": {
+    "bytes": 466,
+    "sha256": "499b484e7d89624018ffc67b76b9306b56811599f4a52ac9f9d340557d59db5a"
+  },
+  "airline_system/static-preview/reconstruction.json": {
+    "bytes": 2553,
+    "sha256": "edd11f2719a7f070ac6b06ad3e5ed31cb9571f6fea59c699367792c7d8455e31"
+  },
+  "airline_system/static-preview/screen_32b5b43a-4c70-3646-9077-8ec02ec726b4.html": {
+    "bytes": 19183,
+    "sha256": "a8f40a2f8ab6ae0715b90a133caee6084cbe0dadfc90374886a8aa3f9fb176fd"
+  },
+  "airline_system/static-preview/screen_61485b0f-dcde-3509-8980-7affe8c0ea6b.html": {
+    "bytes": 21198,
+    "sha256": "0ffab381ee8befbb3d6308346186f2a2502674e27e89053c3b4368dc365a1365"
+  },
+  "airline_system/static-preview/screen_7bce6bf3-7aaa-3e41-861d-593299d13979.html": {
+    "bytes": 23286,
+    "sha256": "e34b49ef87d2a01b00d1b639dd8c592a327d3d9de097c25b8567b3074c81e473"
+  },
+  "airline_system/static-preview/screen_b578d8f4-6e89-3103-a16d-6b23525d4373.html": {
+    "bytes": 18127,
+    "sha256": "03ff5d665b873440851f58a7d9d872974bfa66e4e73542bf80eff19d4969d443"
+  },
+  "airline_system/viewer-documents.json": {
+    "bytes": 60254,
+    "sha256": "f0989db5fce6588bc27162fb3d5325135a8b8e1f75cda74df148a4e6c79f0964"
+  }
+}

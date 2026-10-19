@@ -3,9 +3,10 @@ import {chromium} from '../../../screentrace-capture/node_modules/playwright/ind
 import {readFile,writeFile,mkdir} from 'node:fs/promises';
 import {fileURLToPath,pathToFileURL} from 'node:url';
 import path from 'node:path';
-const here=path.dirname(fileURLToPath(import.meta.url)),root=path.resolve(here,'../../..'),out=path.join(root,'analyze/completeness-batch3-20261018');
+const here=path.dirname(fileURLToPath(import.meta.url)),root=path.resolve(here,'../../..'),out=process.env.ST_BATCH3_OUTPUT??path.join(root,'analyze/completeness-batch3-20261018');
 const baseline=JSON.parse(await readFile(path.join(here,'workflow-baseline.json'))),results=[],journeys=[],infra=[];
-const shots=path.join(here,'screenshots');await mkdir(shots,{recursive:true});
+const resultsDir=process.env.ST_BATCH3_RESULTS??here;await mkdir(resultsDir,{recursive:true});
+const shots=path.join(resultsDir,'screenshots');await mkdir(shots,{recursive:true});
 const browser=await chromium.launch({headless:true});
 const frame=p=>p.frameLocator('.focus-layer:not([hidden]):not(.is-leaving) iframe');
 const view=(g,id)=>g.nodes.find(n=>n.id===id)?.attributes.view??null;
@@ -65,6 +66,6 @@ try{
   const r={...chain,result:'FAIL',stepsExecuted:[]};try{const first=baseline.cases.find(c=>c.id===chain.steps[0]);await open(first.sourceView);for(const id of chain.steps){const c=baseline.cases.find(c=>c.id===id);if((await snap(p,g)).view!==c.sourceView){r.blockedAt=id;r.reason='PREVIOUS_STEP_DID_NOT_REACH_SOURCE';break;}const step=await perform(p,g,c,chain.id+'-'+id);r.stepsExecuted.push(step);if(step.result!=='PASS'){r.blockedAt=id;break;}}if(r.stepsExecuted.length===chain.steps.length&&r.stepsExecuted.every(s=>s.result==='PASS'))r.result='PASS';}catch(e){r.error=String(e).slice(0,800);}journeys.push(r);console.log(chain.id,r.result,r.blockedAt??'');}
  infra.push({project,pageErrors:errors,externalRequests:requests});await context.close();
  }
-}finally{await browser.close();await writeFile(path.join(here,'ui-results.json'),JSON.stringify({cases:results,journeys,infrastructure:infra},null,2)+'\n');}
+}finally{await browser.close();await writeFile(path.join(resultsDir,'ui-results.json'),JSON.stringify({cases:results,journeys,infrastructure:infra},null,2)+'\n');}
 console.log(JSON.stringify({cases:results.reduce((a,r)=>(a[r.result]=(a[r.result]??0)+1,a),{}),journeys:journeys.map(j=>({id:j.id,result:j.result,blockedAt:j.blockedAt}))}));
 process.exitCode=results.every(r=>r.result==='PASS')?0:1;

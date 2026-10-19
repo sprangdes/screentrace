@@ -20,12 +20,80 @@ final class SpringControllerReturns {
       if(!belongsTo(statement,method)||statement.getExpression().isEmpty())continue;
       Expression expression=statement.getExpression().get();String raw=expression.toString();
       SourceLocation source=new SourceLocation(file,statement.getBegin().map(p->p.line).orElse(1));
+      if(expression.isNameExpr()) {
+        var definitions=method.findAll(VariableDeclarator.class).stream().filter(v->belongsTo(v,method)&&v.getNameAsString().equals(expression.asNameExpr().getNameAsString())).toList();
+        if(definitions.size()==1&&definitions.get(0).getInitializer().isEmpty()) {
+          var paths=assignedPaths(method,statement,expression.asNameExpr().getNameAsString(),constants);
+          for(var path:paths) {
+            var proof=new SourceLocation(file,path.source==null?source.line():path.source.getBegin().map(p->p.line).orElse(source.line()));
+            String detail="類別="+className+"；方法="+className+"."+method.getNameAsString()+"；原始運算式="+raw+"；目標="+Objects.toString(path.value.value(),"UNRESOLVED")+"；條件="+path.guard;
+            targets.add(new Target(path.value.kind(),path.value.value(),raw,source,List.of(new AnalysisEvidence(source,"SpringControllerReturns",path.value.kind()==Kind.UNKNOWN?ResolutionStatus.UNRESOLVED:ResolutionStatus.INFERRED,detail),new AnalysisEvidence(proof,"SpringControllerReturns",ResolutionStatus.INFERRED,"分支內賦值來源；column="+(path.source==null?0:path.source.getBegin().map(p->p.column).orElse(0))))));
+          }
+          continue;
+        }
+      }
       Value value=value(expression,method,statement,constants);
       String detail="類別="+className+"；方法="+className+"."+method.getNameAsString()+"；原始運算式="+raw+"；目標="+Objects.toString(value.value(),"UNRESOLVED")+"；條件="+guards(statement,method);
-      targets.add(new Target(value.kind(),value.value(),raw,source,List.of(new AnalysisEvidence(source,"SpringControllerReturns",value.kind()==Kind.UNKNOWN?ResolutionStatus.UNRESOLVED:value.kind()==Kind.VIEW?ResolutionStatus.CONFIRMED:ResolutionStatus.INFERRED,detail))));
+      List<AnalysisEvidence> evidence=new ArrayList<>();evidence.add(new AnalysisEvidence(source,"SpringControllerReturns",value.kind()==Kind.UNKNOWN?ResolutionStatus.UNRESOLVED:value.kind()==Kind.VIEW?ResolutionStatus.CONFIRMED:ResolutionStatus.INFERRED,detail));
+      if(value.kind()!=Kind.UNKNOWN)evidence.addAll(feedback(method,statement,file));
+      targets.add(new Target(value.kind(),value.value(),raw,source,evidence));
     }
     return List.copyOf(targets);
   }
+  static String branchKey(Target target){return target.evidence().stream().filter(e->e.detail()!=null&&e.detail().startsWith("分支內賦值來源；column=")).map(e->":assign:"+e.source().line()+":"+e.detail().substring(e.detail().indexOf("column=")+7)).findFirst().orElse("");}
+  private static List<AnalysisEvidence> feedback(MethodDeclaration method,ReturnStmt use,String file){
+    if(use.getExpression().isEmpty()||!use.getExpression().get().isNameExpr())return List.of();
+    String variable=use.getExpression().get().asNameExpr().getNameAsString();Node block=use.getParentNode().orElse(null);
+    Map<String,String> values=new TreeMap<>();List<AnalysisEvidence> result=new ArrayList<>();
+    for(var call:method.findAll(MethodCallExpr.class))if(belongsTo(call,method)&&call.getNameAsString().equals("addObject")&&call.getScope().filter(e->e.isNameExpr()&&e.asNameExpr().getNameAsString().equals(variable)).isPresent()&&call.getArguments().size()==2&&call.getArgument(0).isStringLiteralExpr()){
+      var statement=call.findAncestor(ExpressionStmt.class);if(statement.isEmpty()||statement.get().getParentNode().orElse(null)!=block||!call.getEnd().orElseThrow().isBefore(use.getBegin().orElseThrow()))continue;
+      String key=call.getArgument(0).asStringLiteralExpr().asString(),value=null;Expression argument=call.getArgument(1);
+      if(argument.isStringLiteralExpr())value=argument.asStringLiteralExpr().asString();
+      else if(argument.isNameExpr()){
+        String name=argument.asNameExpr().getNameAsString();var definitions=method.findAll(VariableDeclarator.class).stream().filter(v->belongsTo(v,method)&&v.getNameAsString().equals(name)).toList();
+        if(definitions.size()==1){var definition=definitions.get(0);if(definition.getInitializer().filter(Expression::isStringLiteralExpr).isPresent()&&definition.getEnd().orElseThrow().isBefore(call.getBegin().orElseThrow())&&definition.findAncestor(BlockStmt.class).filter(b->b.isAncestorOf(call)).isPresent()&&method.findAll(AssignExpr.class).stream().noneMatch(a->a.getTarget().isNameExpr()&&a.getTarget().asNameExpr().getNameAsString().equals(name)))value=definition.getInitializer().get().asStringLiteralExpr().asString();}
+      }
+      if(value==null)continue;if(!key.matches("[A-Za-z_][A-Za-z0-9_]*")||value.length()>4000)continue;
+      values.put(key,value);
+      try{result.add(new AnalysisEvidence(new SourceLocation(file,call.getBegin().orElseThrow().line),"SpringModelFeedback",ResolutionStatus.INFERRED,new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(new TreeMap<>(Map.of("version",1,"values",Map.of(key,value))))));}catch(Exception ignored){}
+    }
+    return result;
+  }
+  private record PathValue(Value value,String guard,Node source) { }
+  private static List<PathValue> assignedPaths(MethodDeclaration method,ReturnStmt use,String name,Map<String,String> constants) {
+    // Only an uninitialized, unaliased local may enter this finite path analysis.
+    for(var n:method.findAll(NameExpr.class))if(n.getNameAsString().equals(name)&&belongsTo(n,method)) {
+      Node parent=n.getParentNode().orElse(null);
+      if(parent instanceof ReturnStmt)continue;
+      if(parent instanceof AssignExpr a&&a.getTarget()==n&&a.getOperator()==AssignExpr.Operator.ASSIGN)continue;
+      if(parent instanceof MethodCallExpr c&&c.getScope().orElse(null)==n&&Set.of("addObject","addAllObjects").contains(c.getNameAsString()))continue;
+      return List.of(new PathValue(unknown(),"變數逸出或不支援的修改",null));
+    }
+    List<PathValue> result=new ArrayList<>();
+    flow(method.getBody().orElseThrow(),List.of(new PathValue(unknown(),"",null)),method,use,name,constants,result,0);
+    return result.isEmpty()?List.of(new PathValue(unknown(),"無可證明的賦值",null)):result;
+  }
+  private static List<PathValue> flow(Statement statement,List<PathValue> paths,MethodDeclaration method,ReturnStmt use,String name,Map<String,String> constants,List<PathValue> result,int depth) {
+    if(depth>32||paths.size()>64)return List.of(new PathValue(unknown(),"分析界限",null));
+    if(statement==use){result.addAll(paths);return List.of();}
+    if(statement.isReturnStmt()||statement.isThrowStmt())return List.of();
+    if(statement.isBlockStmt()) {for(var child:statement.asBlockStmt().getStatements())paths=flow(child,paths,method,use,name,constants,result,depth+1);return paths;}
+    if(statement.isIfStmt()) {
+      var branch=statement.asIfStmt();List<PathValue> yes=new ArrayList<>(),no=new ArrayList<>();
+      for(var p:paths){yes.add(new PathValue(p.value,join(p.guard,"("+branch.getCondition()+")"),p.source));no.add(new PathValue(p.value,join(p.guard,"!("+branch.getCondition()+")"),p.source));}
+      List<PathValue> merged=new ArrayList<>(flow(branch.getThenStmt(),yes,method,use,name,constants,result,depth+1));
+      merged.addAll(branch.getElseStmt().map(e->flow(e,no,method,use,name,constants,result,depth+1)).orElse(no));return merged;
+    }
+    if(statement.isExpressionStmt()&&statement.asExpressionStmt().getExpression() instanceof AssignExpr a&&a.getTarget().isNameExpr()&&a.getTarget().asNameExpr().getNameAsString().equals(name)) {
+      Value v=a.getValue().isObjectCreationExpr()?value(a.getValue(),method,use,constants):unknown();
+      return paths.stream().map(p->new PathValue(v,p.guard,a)).toList();
+    }
+    if(statement instanceof WhileStmt||statement instanceof ForStmt||statement instanceof ForEachStmt||statement instanceof TryStmt||statement instanceof SwitchStmt||statement instanceof DoStmt) {
+      if(statement.isAncestorOf(use)||statement.findAll(NameExpr.class).stream().anyMatch(n->n.getNameAsString().equals(name))){result.add(new PathValue(unknown(),"不支援的控制流程",statement));return List.of();}
+    }
+    return paths;
+  }
+  private static String join(String a,String b){return a.isEmpty()?b:a+" && "+b;}
   private record Value(Kind kind,String value) { }
   private static Value unknown() {return new Value(Kind.UNKNOWN,null);}
   private static Value classify(String value) {

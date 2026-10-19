@@ -79,6 +79,16 @@ public final class UrlVariableResolver {
         return new Resolution(nested.get(0).attribute("value"),raw,List.of(new AnalysisEvidence(new SourceLocation(path,use.line()),"JspUrlVariableResolver",ResolutionStatus.CONFIRMED,"巢狀 URL 常值定義；param 不解析")));
       return new Resolution(raw,raw,List.of());
     }
+    int query=raw.indexOf('?');
+    if(query>0&&!MarkupAnalysis.dynamic(raw.substring(0,query))&&raw.substring(query).contains("<bean:write")) {
+      StringBuilder value=new StringBuilder();int cursor=0;boolean supported=true;
+      for(var token:MarkupTag.scan(raw))if(token.start()>query){
+        String property=token.attribute("property"),name=token.attribute("name");
+        if(!token.name().equals("bean:write")||name==null||property==null||!name.matches("[A-Za-z_][A-Za-z0-9_]*")||!property.matches("[A-Za-z_][A-Za-z0-9_]*")){supported=false;break;}
+        value.append(raw,cursor,token.start()).append('{').append(property).append('}');cursor=token.end()+1;
+      }
+      if(supported&&cursor>0)return new Resolution(value.append(raw.substring(cursor)).toString(),raw,List.of(new AnalysisEvidence(new SourceLocation(path,use.line()),"JspUrlVariableResolver",ResolutionStatus.INFERRED,"查詢參數來自 bean:write；保留參數樣板，執行時值未知；原文="+raw)));
+    }
     if(!raw.startsWith("${")||!raw.endsWith("}")) return new Resolution(raw,raw,List.of());
     String expression=raw.substring(2,raw.length()-1).trim();
     if(expression.startsWith("fn:escapeXml(")&&expression.endsWith(")")) expression=expression.substring(13,expression.length()-1).trim();

@@ -15,7 +15,7 @@ final class SpringControllerFlow {
     for(var item:pending) {
       List<String> failures=new ArrayList<>();var destinations=resolver.resolve(item,new LinkedHashSet<>(List.of(item.handlerId())),0,failures);
       for(var destination:destinations) {
-        String id=ApplicationGraph.id(NodeType.COMPONENT,"FORWARDS_TO:"+item.handlerId()+":"+destination.screen()+":"+item.target().source().line()+":"+item.target().expression());
+        String id=ApplicationGraph.id(NodeType.COMPONENT,"FORWARDS_TO:"+item.handlerId()+":"+destination.screen()+":"+item.target().source().line()+":"+item.target().expression()+SpringControllerReturns.branchKey(item.target()));
         edges.add(new Relationship(id,EdgeType.FORWARDS_TO,item.handlerId(),destination.screen(),destination.confidence(),item.target().source(),destination.evidence()));
       }
       if(destinations.stream().anyMatch(d->d.confidence()==Confidence.AMBIGUOUS)) {

@@ -1,10 +1,11 @@
+import os
 """Independent source possible-view union audit, not evaluation of branch predicates."""
 import json
 from pathlib import Path
 H=Path(__file__).resolve().parent; R=H.parents[2]
 census=json.loads((H/'source-census.json').read_text()); results=[]
 for project,c in census.items():
- g=json.loads((R/'analyze/completeness-batch3-20261018'/project/'application-graph.json').read_text());nodes={n['id']:n for n in g['nodes']}
+ g=json.loads((Path(os.environ.get('ST_BATCH3_OUTPUT',str(R/'analyze/completeness-batch3-20261018')))/project/'application-graph.json').read_text());nodes={n['id']:n for n in g['nodes']}
  if not c['java']:continue
  records=c['java']; eps=[r for r in records if r['kind']=='endpoint']; views={v['file'] for v in c['views']}
  def source_targets(ep,seen=()):
@@ -44,6 +45,6 @@ for project,c in census.items():
     continue
    todo.extend(e['to'] for e in g['relationships'] if e['from']==nid and e['type'] in ('RENDERS','FORWARDS_TO','HANDLED_BY'))
   results.append(dict(project=project,endpoint=ep,expectedViews=sorted(expected),actualViews=sorted(actual),missing=sorted(expected-actual),extra=sorted(actual-expected),result='PASS' if expected==actual else 'FAIL',basis=[r for r in records if r['kind'] in ('return','modelAndView') and r['file']==ep['file'] and r['method']==ep['method']]))
-(H/'return-results.json').write_text(json.dumps(results,indent=2,ensure_ascii=False)+'\n')
+(Path(os.environ.get('ST_BATCH3_RESULTS',str(H)))/'return-results.json').write_text(json.dumps(results,indent=2,ensure_ascii=False)+'\n')
 for project in census:
  rs=[r for r in results if r['project']==project];print(project,len(rs),sum(r['result']=='PASS' for r in rs),'pass',sum(len(r['missing']) for r in rs),'missing',sum(len(r['extra']) for r in rs),'extra')

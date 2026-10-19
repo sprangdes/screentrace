@@ -1,7 +1,7 @@
-import {applyDataAction} from './simulation-data';
+import {applyDataAction,setModelFeedback} from './simulation-data';
 import {needsSimulationSurface,simulationSurface} from './simulation-surface';
 import {assessSimulation,Effect,staticAction} from './simulation';
-import {previewElement,previewSelector} from './preview';
+import {previewElement,previewSelector,registerPreviewClone} from './preview';
 import {Payload,ElementRecord} from './contracts';
 import {element} from './text';
 
@@ -17,13 +17,13 @@ function editableInput(node:Element):boolean{return ['input','select','textarea'
 function submitControl(node:Element):boolean{return node.localName==='button'&&(!node.getAttribute('type')||node.getAttribute('type')==='submit')||node.localName==='input'&&['submit','image'].includes(node.getAttribute('type')||'');}
 
 /** Simulates a click as the real page would: a submit control acts for its form, and forms are always treated as valid. */
-export function simulateElement(payload:Payload,id:string,node:Element,dialogIds=[...dialogRecords(payload,id,node.ownerDocument).keys()],componentId?:string){
+export function simulateElement(payload:Payload,id:string,node:Element,dialogIds=[...dialogRecords(payload,id,node.ownerDocument).keys()],componentId?:string,event?:string){
  const own=previewElement(payload,id,node),submitter=payload.graph.nodes.find(n=>n.id===own?.graphComponentId)?.attributes.submitterAction==='true'||payload.graph.behaviors?.some(b=>b.triggerId===own?.graphComponentId&&staticAction(b)?.operation==='preventSubmit');
  const form=submitControl(node)&&!submitter?(node as HTMLButtonElement|HTMLInputElement).form:undefined;
  const parentLink=!form&&node.localName==='button'&&!payload.graph.behaviors?.some(b=>b.triggerId===own?.graphComponentId)?node.closest('a[href]'):null;
  const target=form||parentLink||node,record=previewElement(payload,id,target);
  const identity=target.getAttribute('data-st-component-id');if(!componentId&&record?.componentResolution==='AMBIGUOUS'&&identity&&record.graphComponentCandidates?.includes(identity))componentId=identity;
- const result=assessSimulation(payload,id,record,{tag:target.localName,href:target.getAttribute('href')||undefined,valid:true,dialogIds,componentId});
+ const result=assessSimulation(payload,id,record,{tag:target.localName,href:target.getAttribute('href')||undefined,valid:true,dialogIds,componentId,event});
  return {...(!result.possible&&editableInput(target)?{...result,reason:undefined}:result),node:target,record,delegated:target!==node};
 }
 export function elementSimulationAssessment(payload:Payload,id:string,node:Element,dialogIds=[...dialogRecords(payload,id,node.ownerDocument).keys()]){
@@ -52,23 +52,26 @@ export function attachSimulation(payload:Payload,id:string,frame:HTMLIFrameEleme
  const popup=(target:string)=>{
   const source=available.get(target);if(!source){say('彈窗內容無法從原始碼重建');return;}
   close?.();
-  const active=surface?globalThis.document.activeElement as HTMLElement|null:doc.activeElement as HTMLElement|null,backdrop=doc.createElement('div'),modal=doc.createElement('section'),button=doc.createElement('button'),content=source.cloneNode(true) as HTMLElement;
+  const active=surface?globalThis.document.activeElement as HTMLElement|null:doc.activeElement as HTMLElement|null,backdrop=doc.createElement('div'),modal=doc.createElement('section'),button=doc.createElement('button'),content=source as HTMLElement;
+  const slot=doc.createComment('simulation-dialog-position'),oldStyle=content.getAttribute('style'),oldHidden=content.hidden,oldAria=content.getAttribute('aria-hidden');
+  registerPreviewClone(payload,id,source,source);source.before(slot);
   backdrop.className='simulation-backdrop';backdrop.dataset.stSimulationUi='true';
   const scale=Number(viewer.dataset.scale||'1'),rect=frame.getBoundingClientRect(),scroll=viewer.querySelector('.prototype-scroll');
   backdrop.style.cssText=`position:absolute;left:0;top:${Math.max(0,-rect.top+(scroll?.getBoundingClientRect().top||0))/scale}px;width:100%;height:${(scroll?.clientHeight||rect.height)/scale}px;background:#0007;z-index:2147483647;display:flex;align-items:center;justify-content:center;`;
   modal.className='simulation-modal';modal.setAttribute('role','dialog');modal.setAttribute('aria-modal','true');
   modal.style.cssText='background:white;color:#1b1e22;padding:20px;max-width:85%;max-height:85%;overflow:auto;border-radius:8px;';
   button.textContent='關閉模擬彈窗';button.type='button';
-  content.hidden=false;content.removeAttribute('aria-hidden');content.style.setProperty('display','block','important');content.style.setProperty('visibility','visible','important');content.style.position='static';content.style.opacity='1';
+  content.hidden=false;content.removeAttribute('aria-hidden');content.style.setProperty('display','block','important');content.style.setProperty('visibility','visible','important');content.style.position='static';content.style.opacity='1';content.style.setProperty('transform','none','important');
   modal.append(button,content);backdrop.append(modal);doc.body.append(backdrop);
-  close=()=>{backdrop.remove();close=undefined;surface?.update();if(active?.isConnected)active.focus();};
+  close=()=>{slot.replaceWith(content);if(oldStyle===null)content.removeAttribute('style');else content.setAttribute('style',oldStyle);content.hidden=oldHidden;if(oldAria!==null)content.setAttribute('aria-hidden',oldAria);backdrop.remove();close=undefined;surface?.update();if(active?.isConnected)active.focus();};
   button.onclick=event=>{event.preventDefault();close?.();};
   backdrop.onclick=event=>{if(event.target===backdrop)close?.();};
   if(surface){surface.update();surface.focusDialog();}else button.focus();
+  if((payload.graph.behaviors||[]).some(b=>b.triggerId===target&&b.event==='shown.bs.modal')){const result=simulateElement(payload,id,content,dialogIds,undefined,'shown.bs.modal');render(result.effect,result.record,content);}
  };
  /** A conditional result with a single outcome is that outcome; the condition is noted in its label. */
  const outcomeOf=(choice:Effect):Effect=>choice.kind==='choices'&&choice.choices?.length===1?choice.choices[0]:choice;
- const label=(choice:Effect):string=>choice.kind==='sequence'?`${choice.callback==='error'?'失敗':'成功'}：${(choice.choices||[]).map(c=>c.kind==='message'?c.message:c.kind==='ui'&&c.operation==='reload'?'重新顯示本頁':label(c)).join('；')}`:choice.kind==='choices'&&choice.choices?.length===1?`${label(choice.choices[0])}（有條件）`:choice.kind==='message'?`${choice.callback==='error'?'失敗':choice.callback==='success'?'成功':'訊息'}：${choice.message}`:choice.kind==='navigate'?choice.label||'畫面':choice.kind==='api'?`呼叫 API：${choice.method} ${choice.path}`:choice.kind==='dialog'?`開啟彈窗：${choice.label||''}`:choice.kind==='form'?`送出到 ${choice.path}`:unknownDestination;
+ const label=(choice:Effect):string=>choice.kind==='sequence'?`${choice.callback==='error'?'失敗':'成功'}：${(choice.choices||[]).map(c=>c.kind==='message'?c.message:c.kind==='ui'&&c.operation==='reload'?'重新顯示本頁':c.kind==='ui'&&c.operation==='setText'?c.value:label(c)).join('；')}`:choice.kind==='choices'&&choice.choices?.length===1?`${label(choice.choices[0])}（有條件）`:choice.kind==='message'?`${choice.callback==='error'?'失敗':choice.callback==='success'?'成功':'訊息'}：${choice.message}`:choice.kind==='navigate'?choice.label||'畫面':choice.kind==='api'?`呼叫 API：${choice.method} ${choice.path}`:choice.kind==='dialog'?`開啟彈窗：${choice.label||''}`:choice.kind==='form'?`送出到 ${choice.path}`:unknownDestination;
  const choose=(choices:Effect[],node:Element,record:ElementRecord|undefined,calls:Effect[]=[])=>{
   closePicker();
   const box=element('div',undefined,'simulation-picker');box.setAttribute('role','dialog');box.setAttribute('aria-label','可能的結果');box.dataset.stSimulationUi='true';
@@ -100,11 +103,15 @@ export function attachSimulation(payload:Payload,id:string,frame:HTMLIFrameEleme
   if(effect.operation==='preventSubmit')return;
   if(effect.operation==='reload'){say('重新顯示本頁示例（不會送出請求）');return;}
   if(effect.operation==='print'){say('列印目前的靜態畫面');window.print();return;}
+  if(effect.when){let control:HTMLInputElement|null=null;try{control=doc.querySelector(effect.when.selector);}catch{}if(control?.value!==effect.when.value)return;}
   let targets:Element[]=[];try{targets=effect.selector?Array.from(doc.querySelectorAll(effect.selector)):[];}catch{}
   if(effect.index!==undefined)targets=targets[effect.index]?[targets[effect.index]]:[];
   if(effect.operation==='datePicker'&&targets.length!==1){say('無法確認日期欄位');return;}
+  if(effect.relative)targets=targets.map(n=>effect.relative==='previousElementSibling'?n.previousElementSibling:n.nextElementSibling).filter((n):n is Element=>!!n);
   for(const target of targets){
-   if(effect.operation==='setValue'&&'value'in target)(target as HTMLInputElement).value=effect.value??'';
+   if(effect.operation==='setText')target.textContent=effect.value??'';
+   else if(effect.operation==='setStyle'&&['display','color'].includes(effect.property||''))(target as HTMLElement).style.setProperty(effect.property!,effect.value??'');
+   else if(effect.operation==='setValue'&&'value'in target)(target as HTMLInputElement).value=effect.value??'';
    else if(['show','hide','toggle'].includes(effect.operation||'')){
     const hidden=effect.operation==='hide'||effect.operation==='toggle'&&doc.defaultView!.getComputedStyle(target).display!=='none';
     (target as HTMLElement).hidden=hidden;(target as HTMLElement).style.display=hidden?'none':'block';
@@ -142,7 +149,7 @@ export function attachSimulation(payload:Payload,id:string,frame:HTMLIFrameEleme
     choose(rest,node,record,calls);return;
    }
   }
-  if(effect.kind==='navigate'&&effect.targetId){if(effect.dataAction&&!applyDataAction(payload,effect.dataAction,node)){say('示範資料無法確認操作的資料列或欄位');return;}options.focus(effect.targetId);return;}
+  if(effect.kind==='navigate'&&effect.targetId){if(effect.dataAction&&!applyDataAction(payload,effect.dataAction,node)){say('示範資料無法確認操作的資料列或欄位');return;}setModelFeedback(payload,effect.targetId,effect.feedback??{});options.focus(effect.targetId);return;}
   if(effect.kind==='dialog'&&effect.targetId){popup(effect.targetId);return;}
   if(effect.kind==='api'&&effect.targetId){const target=effect.targetId;say(`呼叫 API：${effect.method} ${effect.path}（不會真的送出）`,{label:'在 API 頁查看',run:()=>options.api(target)});return;}
   if(effect.kind==='external'){say('外部連結（不會開啟）');return;}
@@ -162,12 +169,13 @@ export function attachSimulation(payload:Payload,id:string,frame:HTMLIFrameEleme
   const result=simulateElement(payload,id,target,dialogIds);
   render(result.effect,result.record,target);
  };
- const change=(node:Element)=>{
+ const change=(node:Element,event='change')=>{
   const record=previewElement(payload,id,node);
-  if(node.localName!=='select'&&!(payload.graph.behaviors||[]).some(b=>b.triggerId===record?.graphComponentId&&b.event==='change'))return;
-  const result=simulateElement(payload,id,node,dialogIds);
+  if(!(node.localName==='select'&&event==='change')&&!(payload.graph.behaviors||[]).some(b=>b.triggerId===record?.graphComponentId&&b.event?.split('.')[0]===event))return;
+  const result=simulateElement(payload,id,node,dialogIds,undefined,event);
   render(result.effect,result.record,node);
  };
+ for(const type of ['keyup','keydown','input','blur','focus'])doc.addEventListener(type,event=>{const node=eventElement(event.target);if(node)change(node,type);},true);
  doc.addEventListener('click',event=>{
   closePicker();
   const target=eventElement(event.target)?.closest(operable);

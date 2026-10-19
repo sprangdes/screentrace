@@ -15,3 +15,9 @@ test('demo CRUD accepts named form strings and rejects unknown row IDs',()=>{
  assert.equal(applyDataAction(payload,{...action,operation:'delete'},{closest:()=>({getAttribute:()=> '2'})}),false);
  assert.equal(applyDataAction({}, {...action,operation:'delete'},{closest:()=>({getAttribute:()=> '2'})}),false);
 });
+test('data actions validate optional exception-path marker and accept supplied string identity',()=>{
+ assert.equal(parseDataAction({...action,conditional:'true'}),undefined);assert.ok(parseDataAction({...action,conditional:true}));
+ const field=(name,value)=>({getAttribute:k=>k==='name'?name:null,hasAttribute:()=>false,value});const payload={};
+ assert.equal(applyDataAction(payload,action,{localName:'form',closest:()=>null,elements:[field('id','CODE-ONE'),field('name','Named')]}),true);
+ assert.equal(applyDataAction(payload,{...action,operation:'delete'},{closest:()=>({getAttribute:()=> 'CODE-ONE'})}),true);
+});

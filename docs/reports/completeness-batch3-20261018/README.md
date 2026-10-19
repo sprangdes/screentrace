@@ -23,3 +23,5 @@ python3 docs/reports/completeness-batch3-20261018/check-integrity.py
 UI runner 因已記錄的功能失敗預期 exit 1。工具自身失敗會列錯誤，不能將「未執行」當作成功。瀏覽器封鎖 HTTP(S)，只載入生成的離線原型。`artifact-hashes.json` 凍結本輪 jar、graph、preview、prototype、viewer document 及 HTML；`analysis-runs.json` 保存實際 CLI 命令。
 
 來源 Java／JS AST 清單、控制項、返回值及 guard 是有限度靜態語法盤點，不是 target runtime、模板引擎或資料庫執行的替代品。各種未知／未覆蓋能力保留在主報告。
+
+修復後的獨立輸出、保留的原 B08 FAIL、補充語意案例及新快照差異見 [WP72 報告](../WORKFLOW_BATCH3_FIXES_20261019.md)。修復後腳本透過 ST_BATCH3_OUTPUT／ST_BATCH3_RESULTS 指向 fixed 輸出與 after 證據，不覆寫歷史失敗基線。

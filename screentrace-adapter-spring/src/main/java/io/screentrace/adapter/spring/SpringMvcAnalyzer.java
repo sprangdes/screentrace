@@ -154,6 +154,11 @@ public final class SpringMvcAnalyzer {
         var returns=rest?List.<SpringControllerReturns.Target>of():SpringControllerReturns.extract(method,relative,type.getNameAsString(),constants);
         List<String> views = returns.stream().filter(t->t.kind()!=SpringControllerReturns.Kind.UNKNOWN)
             .map(t->t.kind()==SpringControllerReturns.Kind.VIEW?t.value():(t.kind()==SpringControllerReturns.Kind.FORWARD?"forward:":"redirect:")+t.value()).distinct().toList();
+        var unknownReturns=returns.stream().filter(t->t.kind()==SpringControllerReturns.Kind.UNKNOWN).toList();
+        if(!unknownReturns.isEmpty()){
+            var old=state.nodes.stream().filter(n->n.id().equals(handlerId)).findFirst().orElseThrow();var attrs=new TreeMap<>(old.attributes());attrs.put("unresolvedReturnCount",Integer.toString(unknownReturns.size()));
+            var proof=new ArrayList<>(old.evidence());unknownReturns.forEach(t->proof.addAll(t.evidence()));state.nodes.remove(old);state.nodes.add(new GraphNode(old.id(),old.type(),old.name(),attrs,old.source(),old.confidence(),proof));
+        }
         for(var target:returns) {
             if(target.kind()==SpringControllerReturns.Kind.UNKNOWN)SpringControllerFlow.unresolved(state.diagnostics,target,"無法證明常值或未改寫的回傳物件");
             else if(target.kind()!=SpringControllerReturns.Kind.VIEW)state.returnTargets.add(new SpringControllerFlow.Pending(handlerId,httpMethod(mapping),target));
@@ -170,8 +175,8 @@ public final class SpringMvcAnalyzer {
             state.apiContracts.add(state.contracts.contract(endpointId, method, mapping, source, views));
             for (var target : returns.stream().filter(t->t.kind()==SpringControllerReturns.Kind.VIEW).toList()) {
                 String view=target.value();String screenId = screenForView(view, target.source(), state);
-                Confidence confidence=resolvedScreenId(view, state) != null ? Confidence.CONFIRMED : Confidence.INFERRED;
-                String returnId=ApplicationGraph.id(NodeType.COMPONENT,"RENDERS:"+handlerId+":"+screenId+":"+target.source().line()+":"+target.expression());
+                Confidence confidence=resolvedScreenId(view, state) != null&&!target.evidence().stream().anyMatch(e->e.parser().equals("SpringControllerReturns")&&e.resolution()==ApplicationGraph.ResolutionStatus.INFERRED) ? Confidence.CONFIRMED : Confidence.INFERRED;
+                String returnId=ApplicationGraph.id(NodeType.COMPONENT,"RENDERS:"+handlerId+":"+screenId+":"+target.source().line()+":"+target.expression()+SpringControllerReturns.branchKey(target));
                 if(state.edges.stream().noneMatch(e->e.id().equals(returnId)))state.edges.add(new Relationship(returnId,EdgeType.RENDERS,handlerId,screenId,confidence,target.source(),target.evidence()));
                 state.endpointsByScreen.computeIfAbsent(screenId, ignored -> new ArrayList<>()).add(endpoint);
                 state.screensByEndpoint.computeIfAbsent(endpointId, ignored -> new ArrayList<>()).add(screenId);

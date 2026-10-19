@@ -388,3 +388,7 @@ ScreenTrace should generate graph data equivalent to:
 The exact JSON schema may change during domain-model design.
 
 The important acceptance criterion is trace correctness.
+
+## WP72 公開專案完整性修正（2026-10-19）
+
+新增有來源證據的 Ajax callback／DOM 效果、分支 ModelAndView 回傳、c:import 組合、modal/offcanvas、分支文字回饋與有限 Thymeleaf 表單／資料選項投影。未知條件讓使用者選擇示範分支；未知回傳與缺少後端處理器保持未解析。示範資料不執行服務、日期計算或真實交易，不代表後端功能等價。驗收範圍、原 B08 無效斷言與全部保留證據見 [WP72 修正報告](reports/WORKFLOW_BATCH3_FIXES_20261019.md)。

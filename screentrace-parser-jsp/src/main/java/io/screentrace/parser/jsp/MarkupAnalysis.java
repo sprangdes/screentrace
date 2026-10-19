@@ -65,7 +65,7 @@ public record MarkupAnalysis(List<Component> components, List<Event> events,
       }
     }
     for (Component component : components) {
-      if (!"modal".equals(first(component.attributes(),"data-bs-toggle","data-toggle"))) continue;
+      if (!Set.of("modal","offcanvas").contains(Objects.toString(first(component.attributes(),"data-bs-toggle","data-toggle"),""))) continue;
       String selector = first(component.attributes(),"data-bs-target","data-target","href");
       List<Component> targets = components.stream().filter(c -> c.kind()==ComponentKind.MODAL && selector != null && selector.equals("#"+c.attributes().get("id"))).toList();
       Confidence status = targets.size()==1?Confidence.CONFIRMED:targets.size()>1?Confidence.AMBIGUOUS:Confidence.UNRESOLVED;
@@ -88,7 +88,7 @@ public record MarkupAnalysis(List<Component> components, List<Event> events,
   static AnalysisEvidence evidence(SourceLocation source,Confidence confidence,String detail) { return new AnalysisEvidence(source,"JspMarkupParser",ResolutionStatus.valueOf(confidence.name()),detail); }
   private static String first(Map<String,String> attrs,String... keys) { for(String key:keys) if(attrs.containsKey(key)) return attrs.get(key); return null; }
   public static ComponentKind kind(String tag, Map<String,String> attrs) {
-    if (tag.equals("dialog") || "dialog".equals(attrs.get("role")) || Arrays.asList(Objects.toString(attrs.get("class"),"").split("\\s+")).contains("modal")) return ComponentKind.MODAL;
+    if (tag.equals("dialog") || "dialog".equals(attrs.get("role")) || Arrays.asList(Objects.toString(attrs.get("class"),"").split("\\s+")).stream().anyMatch(c->Set.of("modal","offcanvas").contains(c))) return ComponentKind.MODAL;
     String local = tag.contains(":")?tag.substring(tag.indexOf(':')+1):tag;
     if (tag.contains(":") && !(tag.startsWith("html:")||tag.startsWith("html-el:")||tag.startsWith("form:"))) return attrs.keySet().stream().anyMatch(k->k.startsWith("on"))?ComponentKind.OTHER:null;
     return switch (local) {

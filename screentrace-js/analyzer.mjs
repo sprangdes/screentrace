@@ -12,6 +12,8 @@ export function identifyLibrary(file,header='') {
  // Specific library signatures take precedence over the generic jQuery signature.
  const comments=header.slice(0,4096).match(/^\s*(?:(?:\/\*[\s\S]*?\*\/|\/\/[^\n]*)(?:\s*))/)?.[0]??'';
  if(/Popup Calendar\(Window\)/.test(header.slice(0,4096))&&/yxscripts\.com/.test(header.slice(0,4096)))return 'yx-calendar';
+ if(/(?:^|\/)(?:jquery\.slimscroll|fastclick|sweetalert)(?:\.min)?\.js$/i.test(file))return 'bundled-widget';
+ if(/AdminLTE app\.js/i.test(comments))return 'adminlte';
  if(/(?:^|\/)angular(?:[.-][^/]*)?\.js$/i.test(file)||/AngularJS\s+v\d/i.test(comments))return 'angularjs';
  for(const name of ['jquery.validate','jquery-ui','bootstrap','select2','datepicker','jquery']) {
   const entry=table[name];if(new RegExp(entry.file,'i').test(file)||new RegExp(entry.header,'i').test(comments))return name;
@@ -44,7 +46,17 @@ export function analyze(request) {
   const symbolKey=name=>{const alias=unit.aliases?.[name]??unit.aliases?.[name?.split('.')[0]];return alias?'module:'+alias.file+':'+(alias.name==='*'?name.split('.').slice(1).join('.'):alias.name):'global:'+name;};
   const valueGlobals={get:name=>globalValues.get(unit.screenId)?.get(symbolKey(name))};
   const value=n=>{const v=resolveValue(n,{env:currentContext?.env??rootEnv,code,elValues:unit.elValues??{},globals:valueGlobals});return {...v,value:v.status==='UNRESOLVED'?null:v.value};};
-  const asObject=node=>{const seen=new Set();while(node?.type==='Identifier'&&!seen.has(node.name)){seen.add(node.name);const found=lookup(currentContext?.env??rootEnv,node.name);if(!found||found.scope.invalid.has(node.name))return null;node=found.entry.node;}return node?.type==='ObjectExpression'&&!node.properties.some(p=>p.computed||p.type==='SpreadElement')?node:null;};
+  const parents=new WeakMap(),flowObjects=new WeakMap();
+  const indexParents=n=>{for(const child of children(n)){parents.set(child,n);indexParents(child);}};indexParents(parsed.ast);
+  function precedingObject(use){
+   let statement=use;while(parents.get(statement)&&!['BlockStatement','Program'].includes(parents.get(statement).type))statement=parents.get(statement);
+   const block=parents.get(statement);if(statement.type!=='ExpressionStatement'||!block?.body)return null;
+   let at=block.body.indexOf(statement)-1;while(at>=0&&block.body[at].type==='EmptyStatement')at--;const previous=block.body[at];let object=null;
+   if(previous?.type==='VariableDeclaration'&&previous.declarations.length===1&&previous.declarations[0].id.name===use.name)object=previous.declarations[0].init;
+   if(previous?.type==='ExpressionStatement'&&previous.expression.type==='AssignmentExpression'&&previous.expression.operator==='='&&previous.expression.left.type==='Identifier'&&previous.expression.left.name===use.name)object=previous.expression.right;
+   if(object?.type!=='ObjectExpression')return null;flowObjects.set(object,source(previous));return object;
+  }
+  const asObject=node=>{const seen=new Set();while(node?.type==='Identifier'&&!seen.has(node.name)){seen.add(node.name);const found=lookup(currentContext?.env??rootEnv,node.name);if(!found)return null;node=found.scope.invalid.has(node.name)||found.entry.at>node.start?precedingObject(node):found.entry.node;}return node?.type==='ObjectExpression'&&!node.properties.some(p=>p.computed||p.type==='SpreadElement')?node:null;};
   const prop=(object,name)=>asObject(object)?.properties.find(p=>(p.key.name??p.key.value)===name)?.value??null;
   const fields=n=>{
    if(asObject(n))return asObject(n).properties.filter(p=>p.type==='Property'&&!p.computed).map(p=>String(p.key.name??p.key.value)).sort();
@@ -68,7 +80,7 @@ export function analyze(request) {
   const httpMethod=(n,fallback='GET')=>n?value(n).value:fallback;
   const configuredMethod=(object)=>object?(asObject(object)?httpMethod(prop(object,'method')??prop(object,'type')):null):'GET';
   const xhr=new Map();walk(parsed.ast,n=>{if(n.type==='VariableDeclarator'&&n.init?.type==='NewExpression'&&calleeName(n.init.callee)==='XMLHttpRequest')xhr.set(n.id.name,[]);if(n.type==='CallExpression'&&n.callee.type==='MemberExpression'&&!n.callee.computed&&n.callee.property.name==='open'&&xhr.has(n.callee.object.name))xhr.get(n.callee.object.name).push(n.arguments);});
-  const registered=new Map();for(const b of unit.event?[]:bindings(unit,unitDom,{resolveSelector:value})){if(b.handler){if(!registered.has(b.expression))registered.set(b.expression,[]);registered.get(b.expression).push(b);}}
+  const registered=new Map();for(const b of unit.event?[]:bindings(unit,unitDom,{resolveSelector:value,resolveReceiver:n=>domReference(n)?.selector})){if(b.handler){if(!registered.has(b.expression))registered.set(b.expression,[]);registered.get(b.expression).push(b);}}
   function visit(node,ctx) {const previous=currentContext;currentContext=ctx;try{return visitNode(node,ctx);}finally{currentContext=previous;}}
   function visitNestedApiCalls(values,ctx) {
    const isRequest=node=>{
@@ -83,10 +95,14 @@ export function analyze(request) {
    };
    for(const valueNode of values)scan(valueNode);
   }
-  function domReference(node){
+  function domReference(node,seen=new Set()){
+   if(node?.type==='Identifier') {const found=lookup(currentContext?.env??rootEnv,node.name);if(!found||found.scope.invalid.has(node.name)||seen.has(found.entry)||found.entry.at>node.start)return null;return domReference(found.entry.node,new Set([...seen,found.entry]));}
+   if(node?.type==='MemberExpression'&&['previousElementSibling','nextElementSibling'].includes(node.property?.name)){const ref=domReference(node.object,seen);return ref?{...ref,relative:node.property.name}:null;}
+
    if(node?.type==='MemberExpression'&&node.computed&&node.property?.value===0){const ref=domReference(node.object);return ref?{...ref,index:0}:null;}
    if(node?.type!=='CallExpression')return null;
-   const name=calleeName(node.callee),arg=node.arguments[0]?.value;if(typeof arg!=='string')return null;
+   const name=calleeName(node.callee),arg=node.arguments[0]?.value;const head=name?.split('.')[0];if(head&&(['$','jQuery','document'].includes(head))&&(lookup(currentContext?.env??rootEnv,head)||lookup(currentContext?.env??rootEnv,head,'functions')))return null;if(['$','jQuery'].includes(name)&&node.arguments[0]?.type==='ThisExpression')return {selector:'this',library:'jquery'};if(typeof arg!=='string')return null;
+   if(['$','jQuery'].includes(name))return {selector:arg,library:'jquery'};
    if(name==='document.getElementById')return {selector:'#'+arg};
    if(name==='document.getElementsByName')return {selector:'[name="'+arg.replaceAll('"','')+'"]'};
    if(name==='document.querySelector')return {selector:arg,index:0};
@@ -101,9 +117,18 @@ export function analyze(request) {
     }
    }
    if(node.type==='ReturnStatement'&&node.argument?.value===false&&!ctx.guard){emit('UI_STATE_CHANGE',node,ctx,{operation:'preventSubmit'});return;}
+   if(node.type==='SwitchStatement'){
+    const ref=node.discriminant?.type==='MemberExpression'&&node.discriminant.property?.name==='value'?domReference(node.discriminant.object):null;
+    if(ref&&node.cases.every(c=>c.test?.type==='Literal'&&typeof c.test.value==='string'&&c.consequent.at(-1)?.type==='BreakStatement')){
+     for(const branch of node.cases)for(const child of branch.consequent)if(child.type!=='BreakStatement')visit(child,{...ctx,when:{selector:ref.selector,value:branch.test.value}});return;
+    }
+   }
    if(node.type==='IfStatement') {visit(node.test,ctx);visit(node.consequent,{...ctx,guard:ctx.guard?ctx.guard+' && '+text(node.test,code):text(node.test,code)});if(node.alternate)visit(node.alternate,{...ctx,guard:'!('+text(node.test,code)+')'});return;}
    if(node.type==='AssignmentExpression') {
     const name=calleeName(node.left);
+    if(node.left?.type==='MemberExpression'&&node.left.property?.name==='display'&&node.left.object?.property?.name==='style'){
+     const ref=domReference(node.left.object.object),v=value(node.right);if(ref&&v.status==='CONFIRMED'){emit('UI_STATE_CHANGE',node,ctx,{operation:'setStyle',...ref,property:'display',value:v.value,...(ctx.when?{when:ctx.when}:{})});return;}
+    }
     if(node.left.type==='MemberExpression'&&node.left.property?.name==='value'){
      const ref=domReference(node.left.object),v=value(node.right);
      if(ref&&v.status==='CONFIRMED'){emit('SELECT_CHANGE',node,ctx,{operation:'setValue',...ref,value:v.value});return;}
@@ -127,15 +152,15 @@ export function analyze(request) {
     const ready=(name==='$'||name==='jQuery')&&functionTypes.has(args[0]?.type);
     const load=method==='ready'||(method==='addEventListener'&&args[0]?.value==='load'&&['window','document'].includes(calleeName(receiver)));
     if(ready||load||(['$','jQuery'].includes(name)&&args[0]?.type==='Identifier')){const fn=ready||['$','jQuery'].includes(name)?args[0]:args[method==='ready'?0:1];execute(fn,[],{...root,event:load&&method!=='ready'?'load':'ready'},node,true);return;}
-    if(['done','then','success','catch','finally'].includes(method)&&receiver?.type==='CallExpression'){const parent=visit(receiver,ctx);for(const fn of args)if(functionTypes.has(fn?.type)||fn?.type==='Identifier')execute(fn,[],{...ctx,parentId:parent?.id??ctx.parentId,event:method},node,true);return parent;}
-    const registration=registered.get(text(node,code))??(['on','click','change','submit','blur','focus','input','keydown','keyup','addEventListener'].includes(method)?bindings(unit,unitDom,{node,status:parsed.status,resolveSelector:value,thisId:ctx.triggerId}):[]);if(registration.some(b=>b.handler)){for(const b of registration)if(b.handler)bound(b,ctx);return;}
+    if(['done','then','success','catch','fail','finally'].includes(method)&&receiver?.type==='CallExpression'){const parent=visit(receiver,ctx);for(const fn of args)if(functionTypes.has(fn?.type)||fn?.type==='Identifier')execute(fn,[],{...ctx,parentId:parent?.id??ctx.parentId,event:method},node,true);return parent;}
+    const registration=registered.get(text(node,code))??(['on','click','change','submit','blur','focus','input','keydown','keyup','addEventListener'].includes(method)?bindings(unit,unitDom,{node,status:parsed.status,resolveSelector:value,resolveReceiver:n=>domReference(n)?.selector,thisId:ctx.triggerId}):[]);if(registration.some(b=>b.handler)){for(const b of registration)if(b.handler)bound(b,ctx);return;}
     if(!name&&node.callee.type==='MemberExpression'&&node.callee.computed){emit('UNKNOWN',node,ctx,{},'UNRESOLVED');diagnostics.push(diagnostic(unit.file,source(node).line,'UNKNOWN_CALL','動態呼叫：'+text(node.callee,code)));return;}
     if(name==='eval'||name==='Function'){emit('UNKNOWN',node,ctx,{},'UNRESOLVED');diagnostics.push(diagnostic(unit.file,source(node).line,'UNKNOWN_CALL','禁止解析執行式呼叫：'+name));return;}
     if(['location.assign','location.replace','window.location.assign','window.location.replace','history.pushState','window.history.pushState','window.open'].includes(name)){const v=value(args[name?.endsWith('pushState')?2:0]);emit(name==='window.open'?'OPEN_DIALOG':'NAVIGATE',node,ctx,{url:v.value},v.status);return;}
     if(['alert','confirm','prompt','window.alert','window.confirm','window.prompt'].includes(name)){const message=value(args[0]);emit('OPEN_DIALOG',node,ctx,{operation:'message',message:message.value},message.status);return;}
     if(['location.reload','window.location.reload'].includes(name)){emit('UI_STATE_CHANGE',node,ctx,{operation:'reload'});return;}
     if(['window.print','print'].includes(name)){emit('UI_STATE_CHANGE',node,ctx,{operation:'print'});return;}
-    const jquery=receiver?.type==='CallExpression'&&['$','jQuery'].includes(calleeName(receiver.callee));
+    const ref=domReference(receiver);const jquery=ref?.library==='jquery';
     let api=false,urlNode=null,methodValue='GET',data=null;
     if(['$.ajax','jQuery.ajax'].includes(name)){api=true;urlNode=prop(args[0],'url');methodValue=configuredMethod(args[0]);data=prop(args[0],'data');}
     else if(['$.get','$.post','$.getJSON','jQuery.get','jQuery.post','jQuery.getJSON'].includes(name)){api=true;urlNode=args[0];methodValue=name.endsWith('.post')?'POST':'GET';data=args[1];}
@@ -145,7 +170,7 @@ export function analyze(request) {
     else if(name==='axios'||name?.startsWith('axios.')){api=true;urlNode=name==='axios'?prop(args[0],'url'):args[0];methodValue=name==='axios'?configuredMethod(args[0]):name.slice(6).toUpperCase();data=name==='axios'?prop(args[0],'data'):args[1];}
     else if(jquery&&method==='load'&&args.length){api=true;urlNode=args[0];data=args[1];methodValue=data?.type==='ObjectExpression'?'POST':'GET';}
     else if(method==='send'&&xhr.has(receiver?.name)){api=true;const opens=xhr.get(receiver.name);if(opens.length>1){const urlCandidates=[...new Set(opens.map(a=>value(a[1]).value).filter(Boolean))].sort();return emit('CALL_API',node,ctx,{url:null,method:null,urlCandidates,dataFields:fields(args[0])},'AMBIGUOUS');}const opened=opens[0];urlNode=opened?.[1];methodValue=value(opened?.[0]).value??null;data=args[0];}
-    if(api){const v=value(urlNode);const b=emit('CALL_API',node,ctx,{url:v.value,method:methodValue?.toUpperCase()??null,dataFields:fields(data)},methodValue?v.status:'UNRESOLVED');for(const event of ['success','error']){const callback=prop(args[0],event);if(callback)execute(callback,[],{...ctx,parentId:b.id,event},node,true);}return b;}
+    if(api){const v=value(urlNode),configurationSource=flowObjects.get(asObject(args[0]))??flowObjects.get(asObject(args[1]));const b=emit('CALL_API',node,ctx,{url:v.value,method:methodValue?.toUpperCase()??null,dataFields:fields(data),...(configurationSource?{configurationSource}:{})},methodValue?configurationSource?status(v.status,'INFERRED'):v.status:'UNRESOLVED');for(const event of ['success','error']){const callback=prop(args[0],event);if(callback)execute(callback,[],{...ctx,parentId:b.id,event},node,true);}return b;}
     if(method==='open'&&xhr.has(receiver?.name))return;
     if(method==='submit'&&!args.length){emit('SUBMIT_FORM',node,ctx,{selector:selectorOf(receiver,code)});return;}
     if(method==='setCustomValidity') {const ids=select(selectorOf(receiver,code),unitDom,ctx.triggerId),v=value(args[0]);for(const id of ids.length?ids:[selectorOf(receiver,code)])rule('custom',node,ctx,id,v.value,{},ids.length?v.status:'UNRESOLVED');return;}
@@ -158,7 +183,9 @@ export function analyze(request) {
     }
     if(bootstrapInstances.has(receiver?.name)&&['show','hide','toggle'].includes(method)){const instance=bootstrapInstances.get(receiver.name);const dialog=instance.name==='bootstrap.Modal'&&method!=='hide';const target=dialog?dialogTarget(instance.selector):{};const {status:targetStatus,...attributes}=target;emit(dialog?'OPEN_DIALOG':'UI_STATE_CHANGE',node,ctx,{library:'bootstrap',...attributes},targetStatus);return;}
     if(jquery) {
-     const selector=value(receiver.arguments[0]);
+     const selector={value:ref.selector,status:'CONFIRMED'};
+     if(method==='text'&&args.length){const v=value(args[0]);if(v.status==='CONFIRMED'){emit('UI_STATE_CHANGE',node,ctx,{operation:'setText',selector:selector.value,value:v.value},v.status);return;}}
+     if(method==='css'&&args.length===2&&['color','display'].includes(args[0]?.value)){const v=value(args[1]);if(v.status==='CONFIRMED'){emit('UI_STATE_CHANGE',node,ctx,{operation:'setStyle',selector:selector.value,property:args[0].value,value:v.value},v.status);return;}}
      if(['show','hide','toggle'].includes(method)&&selector.status==='CONFIRMED'){emit('UI_STATE_CHANGE',node,ctx,{operation:method,selector:selector.value});return;}
      if(method==='val'&&args.length&&selector.status==='CONFIRMED'){const v=value(args[0]);if(v.status==='CONFIRMED'){emit('SELECT_CHANGE',node,ctx,{operation:'setValue',selector:selector.value,value:v.value});return;}}
 
@@ -174,7 +201,7 @@ export function analyze(request) {
   }
   function bound(binding,ctx) {
    const ids=binding.triggerIds.length?binding.triggerIds:[unit.screenId??ctx.triggerId];
-   for(const triggerId of ids){const domGuard=unitDom.find(d=>d.componentId===triggerId)?.guard;const child={...ctx,triggerId,event:binding.event,selector:binding.selector,status:binding.status,guard:domGuard?(ctx.guard?ctx.guard+" && "+domGuard:domGuard):ctx.guard,trace:[...(ctx.trace??[]),{source:binding.source,callee:binding.expression}]};if(binding.handler?.type==='Program')visit(binding.handler,child);else if(binding.handler&&!execute(binding.handler,[],child,binding.handler,true))emit('UNKNOWN',binding.handler,child,{callee:text(binding.handler,code)},'UNRESOLVED');}
+   for(const triggerId of ids){const domGuard=unitDom.find(d=>d.componentId===triggerId)?.guard;const child={...ctx,triggerId,event:binding.event,selector:binding.selector,status:binding.status,guard:domGuard?(ctx.guard?ctx.guard+" && "+domGuard:domGuard):ctx.guard,trace:[...(ctx.trace??[]),{source:binding.source,callee:binding.callee??binding.expression}]};if(binding.handler?.type==='Program')visit(binding.handler,child);else if(binding.handler&&!execute(binding.handler,[],child,binding.handler,true))emit('UNKNOWN',binding.handler,child,{callee:text(binding.handler,code)},'UNRESOLVED');}
   }
   function invoke(fn,args,ctx,call,declEnv,asHandler=false) {
    const key=unit.file+':'+fn.start;

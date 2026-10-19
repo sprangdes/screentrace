@@ -21,6 +21,12 @@ public final class ThymeleafMarkup {
     String target=url(expression);
     attributes.append(' ').append(key).append("=\"").append(escape(target==null?"${unresolvedTemplateTarget}":target)).append('"');
    }
+   String field=tag.attribute("th:field");
+   if(field!=null) {
+    if(tag.attribute("name")!=null)opening=renameFallback(opening,"name");
+    if(field.matches("\\*\\{[A-Za-z_][A-Za-z0-9_]*}"))attributes.append(" name=\"").append(field.substring(2,field.length()-1)).append('"');
+    else attributes.append(" data-st-template-field-status=\"UNRESOLVED\"");
+   }
    if(attributes.isEmpty())continue;
    int end=opening.length()-1;if(opening.charAt(end-1)=='/')end--;
    result.append(source,cursor,tag.start()).append(opening,0,end).append(attributes).append(opening.substring(end));cursor=tag.end()+1;

@@ -1,13 +1,15 @@
 import {Payload,Node as GraphNode,Evidence,Behavior} from './contracts';
 import {registerPreviewClone} from './preview';
-export interface DataAction {version:1;operation:'readAll'|'readOne'|'upsert'|'delete';collection:string;fields:string[];idField:string;model?:string}
+export interface DataAction {version:1;operation:'readAll'|'readOne'|'upsert'|'delete';collection:string;fields:string[];idField:string;model?:string;conditional?:boolean}
 type RecordData=Record<string,string>;
 interface Collection {records:Map<string,RecordData>;next:number;selected?:string}
+const modelFeedback=new WeakMap<Payload,Map<string,Record<string,string>>>();
+export function setModelFeedback(payload:Payload,screen:string,values:Record<string,string>){let map=modelFeedback.get(payload);if(!map){map=new Map();modelFeedback.set(payload,map);}map.set(screen,values);}
 const sessions=new WeakMap<Payload,Map<string,Collection>>();
 const safeField=(s:unknown):s is string=>typeof s==='string'&&/^[A-Za-z_][\w]*$/.test(s)&&!['__proto__','prototype','constructor'].includes(s);
 export function parseDataAction(value:unknown):DataAction|undefined {
  if(!value||typeof value!=='object')return;const a=value as DataAction;
- if(a.version!==1||!['readAll','readOne','upsert','delete'].includes(a.operation)||typeof a.collection!=='string'||a.collection.length>500||!safeField(a.idField)||!Array.isArray(a.fields)||!a.fields.length||a.fields.length>64||!a.fields.every(safeField)||!a.fields.includes(a.idField)||a.model!==undefined&&!safeField(a.model))return;
+ if(a.version!==1||!['readAll','readOne','upsert','delete'].includes(a.operation)||typeof a.collection!=='string'||a.collection.length>500||!safeField(a.idField)||!Array.isArray(a.fields)||!a.fields.length||a.fields.length>64||!a.fields.every(safeField)||!a.fields.includes(a.idField)||a.model!==undefined&&!safeField(a.model)||a.conditional!==undefined&&typeof a.conditional!=='boolean')return;
  return a;
 }
 function contract(node:GraphNode|undefined,key:string):DataAction[]{
@@ -45,18 +47,21 @@ function pattern(text:string,variable:string,record:RecordData,fields:string[]):
 }
 /** Called on each focused screen; session data survives focus, but never alters the graph. */
 export function projectSimulationData(payload:Payload,id:string,doc:Document):void {
+ const feedback=modelFeedback.get(payload)?.get(id);if(feedback)for(const node of doc.querySelectorAll<HTMLElement>('[data-st-model-key]')){const key=node.dataset.stModelKey!;if(Object.hasOwn(feedback,key))node.textContent=feedback[key];}
  const bindings=contract(payload.graph.nodes.find(n=>n.id===id),'simulationBindings');
  for(const binding of bindings){const data=collection(payload,binding);
   if(binding.operation==='readOne'){
    const record=data.selected?data.records.get(data.selected):undefined;if(!record)continue;
    for(const input of doc.querySelectorAll<HTMLInputElement>('input[name],textarea[name],select[name]'))if(binding.fields.includes(input.name)&&record[input.name]!==undefined)input.value=record[input.name];
   }else if(binding.operation==='readAll'){
+   for(const node of doc.querySelectorAll<HTMLElement>('[data-st-demo-empty]'))if(node.dataset.stDemoEmpty===binding.collection)node.hidden=node.dataset.stDemoEmptyNegated==='true'?data.records.size===0:data.records.size!==0;
    for(const template of Array.from(doc.querySelectorAll<HTMLElement>('[data-st-demo-row]'))){
     if(template.dataset.stDemoRow!==binding.collection||!safeField(template.dataset.stDemoVariable))continue;
     const variable=template.dataset.stDemoVariable;
     for(const [key,record] of data.records){const row=template.cloneNode(true) as HTMLElement;row.dataset.stDemoKey=key;
      registerPreviewClone(payload,id,template,row);
-     for(const node of [row,...row.querySelectorAll<HTMLElement>('[data-st-demo-text],[data-st-demo-attrs]')]){
+     for(const node of [row,...row.querySelectorAll<HTMLElement>('[data-st-demo-text],[data-st-demo-attrs],[data-st-demo-parts]')]){
+      if(node.dataset.stDemoParts)try{const parts=JSON.parse(node.dataset.stDemoParts);if(Array.isArray(parts)&&parts.length<=64&&parts.every(p=>p&&typeof p==='object'&&Object.keys(p).length===1&&(typeof p.literal==='string'&&p.literal.length<=4000||typeof p.field==='string'&&binding.fields.includes(p.field))))node.textContent=parts.map(p=>p.literal??record[p.field]??'').join('');}catch{}
       if(node.dataset.stDemoText)node.textContent=pattern(node.dataset.stDemoText,variable,record,binding.fields);
       if(node.dataset.stDemoAttrs)try{const attrs=JSON.parse(node.dataset.stDemoAttrs);for(const [name,value] of Object.entries(attrs))if(['href','value','action'].includes(name)&&typeof value==='string')node.setAttribute(name,pattern(value,variable,record,binding.fields));}catch{}
      }

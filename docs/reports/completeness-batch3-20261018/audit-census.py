@@ -1,7 +1,8 @@
+import os
 """Compare the independent complete source inventory against canonical output."""
 from pathlib import Path
 import json,collections
-HERE=Path(__file__).resolve().parent;ROOT=HERE.parents[2];OUT=ROOT/'analyze/completeness-batch3-20261018';baseline=json.loads((HERE/'baseline.json').read_text());census=json.loads((HERE/'source-census.json').read_text());js=json.loads((HERE/'js-census.json').read_text());results={}
+HERE=Path(__file__).resolve().parent;ROOT=HERE.parents[2];OUT=Path(os.environ.get('ST_BATCH3_OUTPUT',str(ROOT/'analyze/completeness-batch3-20261018')));baseline=json.loads((HERE/'baseline.json').read_text());census=json.loads((HERE/'source-census.json').read_text());js=json.loads((HERE/'js-census.json').read_text());results={}
 for project,source in census.items():
  g=json.loads((OUT/project/'application-graph.json').read_text());nodes=g['nodes'];backend=[n for n in nodes if n['type']=='ENDPOINT' and n.get('attributes',{}).get('origin')!='javascript-request'];endpoints=[];matched=set()
  for route in [n for n in source['java'] if n['kind']=='endpoint']+source['struts']:
@@ -42,4 +43,4 @@ for project,source in census.items():
  summary={'views':{'source':len(views),'present':sum(x['result']=='PRESENT' for x in views)},'routes':{'source':len(endpoints),'present':sum(x['result']=='PRESENT' for x in endpoints)},'controls':{'source':len(controls),'present':sum(x['result']=='PRESENT' for x in controls)},'jsRequests':{'source':len(requests),'present':sum(x['result']=='PRESENT' for x in requests)},'nodesMissingSourceEvidence':missingProof,'unmatchedBackendEndpoints':[{'id':n['id'],'attributes':n['attributes'],'source':n.get('source'),'confidence':n['confidence']} for n in backend if n['id'] not in matched],'graphNodesByType':dict(collections.Counter(n['type'] for n in nodes)),'diagnosticsByCode':dict(collections.Counter(d.get('code','noCode') for d in g.get('diagnostics',[])))}
  results[project]={'summary':summary,'views':views,'endpoints':endpoints,'controls':controls,'jsRequests':requests}
  print(project,json.dumps(summary,ensure_ascii=False))
-(HERE/'census-results.json').write_text(json.dumps(results,ensure_ascii=False,indent=2))
+(Path(os.environ.get('ST_BATCH3_RESULTS',str(HERE)))/'census-results.json').write_text(json.dumps(results,ensure_ascii=False,indent=2))

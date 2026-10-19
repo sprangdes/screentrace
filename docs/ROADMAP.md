@@ -105,3 +105,8 @@
 
 - 四個不重複業務應用：Struts 契約、Boot/JSP 網銀、MVC 庫存、Thymeleaf 航空。獨立來源盤點 37 頁面／片段、73 路由、334 控制項均被發現，但 36 個 Ajax 呼叫未還原；48 個 Spring 非 REST handler 的可能目的頁集合只有 24 個完整。
 - 真實離線原型操作 41 案例 14 PASS／27 FAIL，5 旅程 3 PASS／2 FAIL；新增資料與回饋失敗保留，不以導覽成功宣稱功能等價。新增 WF-014–022、NC-002–003，只有測試記錄，未修改產品／宣稱修復。見 [完整性實測報告](reports/COMPLETENESS_BATCH3_20261018.md)。
+
+## WP72 第三批公開專案問題修正
+
+- 修正 WF-014–022、NC-002–003：Ajax、相對資源與請求、分支回傳、頁面組合、Struts 控制項、modal/offcanvas、回饋、有效 web root、Thymeleaf 表單及示範資料。新增 WF-023 的診斷排序已修正，頭像像素差異仍未解決。
+- 不放寬原斷言；原 B08 錯誤 selector 的 FAIL 保留，新增來源正確的開窗及四種表單切換案例。原專案缺少 API handler 與佔位功能另列，不能宣稱所有業務功能完整等價。見 [修正與驗收報告](reports/WORKFLOW_BATCH3_FIXES_20261019.md)、[ADR 0093](adr/0093-public-completeness-workflow-repairs.md)。

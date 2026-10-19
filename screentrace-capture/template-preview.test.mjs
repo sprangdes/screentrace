@@ -15,3 +15,31 @@ test('two template links on one source line keep their own graph-proven destinat
  const result=templatePreview('<a th:href="@{/one}">One</a><a th:href="@{/two}">Two</a>',screen,nodes);
  assert.match(result,/<a[^>]* href="\/one"[^>]*>One/);assert.match(result,/<a[^>]* href="\/two"[^>]*>Two/);
 });
+test('Thymeleaf rows, text and select options use only graph-proven model fields',()=>{
+ const screen={attributes:{view:'list.html',simulationBindings:JSON.stringify([{operation:'readAll',model:'items',collection:'R',fields:['code','name']}])}};
+ const result=templatePreview('<table><tr th:each="row : ${items}"><td th:text="${row.name}">Name</td></tr></table><select><option th:each="row : ${items}" th:value="${row.code}" th:text="${row.name}">Example</option></select>',screen,[]);
+ assert.equal((result.match(/data-st-demo-row="R"/g)||[]).length,2);assert.match(result,/data-st-demo-text="&#36;\{row.name}/);assert.match(result,/data-st-demo-attrs=/);
+});
+test('server model feedback markers require graph evidence and preserve request-scope keys',()=>{
+ const nodes=[],screen={id:'form',attributes:{view:'form.jsp'}},edges=[{to:'form',evidence:[{parser:'SpringModelFeedback',resolution:'INFERRED',detail:JSON.stringify({version:1,values:{error:'Mismatch'}})}]}];
+ assert.match(templatePreview('<b>${requestScope.error}</b>',screen,nodes,edges),/data-st-model-key="error"/);
+ assert.doesNotMatch(templatePreview('<b>${requestScope.error}</b>',screen,nodes,[]),/data-st-model-key/);
+});
+test('string concatenated option labels keep proven fields while calls and numeric addition remain unresolved',()=>{
+ const screen={attributes:{view:'list.html',simulationBindings:JSON.stringify([{operation:'readAll',model:'items',collection:'R',fields:['code','name']}])}};
+ assert.match(templatePreview(`<option th:each="row : \${items}" th:text="\${row.code + ' - ' + row.name}">Example</option>`,screen,[]),/data-st-demo-parts=/);
+ for(const expression of ["${row.code + row.name + 'x'}","${service.call()}","${row.unknown + 'x'}"]){assert.doesNotMatch(templatePreview(`<option th:each="row : \${items}" th:text="${expression}">Example</option>`,screen,[]),/data-st-demo-parts=/);}
+});
+test('request directories retain multiple bases and reject unknown path segments',async()=>{
+ const {requestDirectories}=await import('./template-preview.mjs');const g={nodes:[{id:'e',type:'ENDPOINT',attributes:{httpMethod:'GET',path:'/app/home'}}],relationships:[{type:'HANDLED_BY',from:'e',to:'h'},{type:'RENDERS',from:'h',to:'s'}]};assert.deepEqual(requestDirectories(g,'s'),['/app/']);g.nodes.push({id:'other',type:'ENDPOINT',attributes:{httpMethod:'GET',path:'/other/home'}});g.relationships.push({type:'HANDLED_BY',from:'other',to:'h'});assert.deepEqual(requestDirectories(g,'s'),['/app/','/other/']);g.nodes[0].attributes.path='/app/{id}/home';assert.deepEqual(requestDirectories(g,'s'),[]);
+});
+
+test('public source aliases prove relative bases without exposing private templates',async()=>{
+ const {requestDirectories}=await import('./template-preview.mjs');
+ for(const [view,routeAliases,expected]of [['src/main/webapp/forms/input.jsp','/forms/input.jsp',['/forms/']],['src/main/webapp/forms/input.jsp','/start.do',[]],['src/main/webapp/WEB-INF/input.jsp','/WEB-INF/input.jsp',[]],['src/main/resources/templates/input.html','/input.html',[]]])assert.deepEqual(requestDirectories({nodes:[{id:'s',type:'SCREEN',attributes:{view,routeAliases}}],relationships:[]},'s'),expected);
+});
+
+test('model feedback for another destination cannot authorize a screen projection',()=>{
+ const screen={id:'form',attributes:{view:'form.jsp'}},edges=[{to:'other',evidence:[{parser:'SpringModelFeedback',resolution:'INFERRED',detail:JSON.stringify({version:1,values:{error:'Other form error'}})}]}];
+ assert.doesNotMatch(templatePreview('<b>${error}</b>',screen,[],edges),/data-st-model-key/);
+});

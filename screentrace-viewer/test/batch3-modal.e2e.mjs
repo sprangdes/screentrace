@@ -1,0 +1,7 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {chromium} from '../../screentrace-capture/node_modules/playwright/index.mjs';import {fileFixture} from './fixture.mjs';import {simulationFixture} from './wp26-fixture.mjs';import {openScreen} from './decision-controls.mjs';
+test('modal moves its source once, preserves form values, restores position and never duplicates IDs',async()=>{
+ const p=simulationFixture();p.documents.a=p.documents.a.replace('<p>示例彈窗內容</p>','<input id="modal-name" value="initial"><p>示例彈窗內容</p>');
+ const browser=await chromium.launch();try{const page=await browser.newPage({reducedMotion:'reduce'});await page.goto(await fileFixture(p));await openScreen(page,'a');await page.locator('.preview[aria-busy=false]').waitFor();const frame=page.frameLocator('iframe');
+ await frame.locator('#open').click();assert.equal(await frame.locator('#dialog').count(),1);assert.equal(await frame.locator('#dialog').isVisible(),true);await frame.locator('#modal-name').fill('retained');await frame.getByRole('button',{name:'關閉模擬彈窗',exact:true}).click();assert.equal(await frame.locator('#dialog').isVisible(),false);assert.equal(await frame.locator('#dialog').count(),1);await frame.locator('#open').click();assert.equal(await frame.locator('#modal-name').inputValue(),'retained');assert.equal(await frame.locator('#dialog').count(),1);
+ }finally{await browser.close();}
+});

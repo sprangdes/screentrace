@@ -23,7 +23,8 @@ public final class ScriptSources {
   private static final Set<String> VOID=Set.of("input","img","br","hr","meta","link","area","base","col","embed","param","source","track","wbr");
   private static final Pattern PREFIX=Pattern.compile("^\\$\\{([A-Za-z_][A-Za-z0-9_]*|pageContext\\.(?:request|servletContext)\\.contextPath)\\}(/[^$#<]*)$");
   private ScriptSources() { }
-  public static Result collect(ProjectScanner.ProjectInventory inventory) {
+  public static Result collect(ProjectScanner.ProjectInventory inventory) {return collect(inventory,Map.of());}
+  public static Result collect(ProjectScanner.ProjectInventory inventory,Map<String,List<String>> requestDirectories) {
     Map<String,String> markup=new TreeMap<>();Map<String,List<Definition>> defs=new TreeMap<>();List<Diagnostic> diagnostics=new ArrayList<>();boolean unknownDefinitions=false;
     List<Path> files=inventory.files().stream().sorted().toList();
     for(var file:files) {
@@ -43,7 +44,7 @@ public final class ScriptSources {
         }
         continue;
       }
-      if(!path.endsWith(".xml"))markup.put(path,source);
+      if(!path.endsWith(".xml"))markup.put(path,ThymeleafMarkup.normalize(source));
       List<String> scopes=new ArrayList<>();
       for(var tag:MarkupTag.scan(source)) {
         String name=tag.name().toLowerCase(Locale.ROOT);
@@ -73,7 +74,7 @@ public final class ScriptSources {
         for(var declared:defs.entrySet())if(declared.getValue().size()==1&&!unknownDefinitions){var d=declared.getValue().get(0);if(d.file().equals(path)&&d.end()<tag.end()&&d.scopeProven()&&Set.of("${pageContext.request.contextPath}","${pageContext.servletContext.contextPath}").contains(Objects.toString(d.value(),""))){elValues.put(declared.getKey(),d.value());valueProof.add(proof(d.source(),"CONFIRMED","context 別名："+declared.getKey()));}}
         String id="dom:"+path+":"+ordinal++;Map<String,Object> element=new TreeMap<>();element.put("id",id);element.put("tag",name);element.put("sourceTag",name);element.put("source",new SourceLocation(path,tag.line()));element.put("attrs",tag.attributes());element.put("ownerFile",path);if(!stack.isEmpty())element.put("parent",stack.get(stack.size()-1).get("id"));
         var queue=byTag.get(name+new TreeMap<>(tag.attributes()));var component=queue==null?null:queue.poll();if(component!=null){if(component.repeated()||Set.of("form:checkboxes","form:radiobuttons").contains(name))element.put("dynamic",true);element.put("componentId",component.id());element.put("kind",component.kind().name());if(component.guard()!=null)element.put("guard",component.guard());
-          if(name.startsWith("form:")||name.startsWith("html:")){String htmlTag=switch(component.kind()){case FORM -> "form";case TEXTAREA -> "textarea";case SELECT,MULTI_SELECT -> "select";case LINK -> "a";case TABLE -> "table";default -> "input";};element.put("tag",htmlTag);var rendered=new TreeMap<>(tag.attributes());if(component.kind()!=ComponentKind.FORM&&component.field()!=null)rendered.putIfAbsent("name",component.field());element.put("attrs",rendered);}
+          if(name.startsWith("form:")||name.startsWith("html:")){String htmlTag=switch(component.kind()){case FORM -> "form";case TEXTAREA -> "textarea";case SELECT,MULTI_SELECT -> "select";case LINK -> "a";case TABLE -> "table";default -> "input";};element.put("tag",htmlTag);var rendered=new TreeMap<>(tag.attributes());if(rendered.containsKey("styleid"))rendered.put("id",rendered.get("styleid"));if(component.kind()!=ComponentKind.FORM&&component.field()!=null)rendered.putIfAbsent("name",component.field());element.put("attrs",rendered);}
         }else if(!name.contains(":")&&!name.startsWith("@")){var identity=new TreeMap<>(tag.attributes());identity.put("tag",name);String key=identity.toString();element.put("componentId",StableGraphIds.component(path,ComponentKind.OTHER,identity,domOccurrences.merge(key,1,Integer::sum)-1));element.put("kind","OTHER");}
         String guard=stack.stream().filter(d->MarkupAnalysis.isConditional(d.get("sourceTag").toString())).map(d->{var a=(Map<?,?>)d.get("attrs");return a.get("test")!=null?a.get("test").toString():d.get("sourceTag")+a.toString();}).reduce((a,b)->a+" && "+b).orElse(null);
         if(guard!=null)element.put("guard",guard);if(stack.stream().anyMatch(d->Set.of("c:foreach","logic:iterate").contains(d.get("sourceTag"))))element.put("dynamic",true);dom.add(element);
@@ -96,7 +97,9 @@ public final class ScriptSources {
               } else eligible=false;
             }
             if(target.startsWith("http:")||target.startsWith("https:")||target.startsWith("//")||MarkupAnalysis.dynamic(target))eligible=false;
-            List<String> candidates=eligible?candidates(inventory,path,target):List.of();
+            List<String> candidates=eligible?candidates(inventory,path,target,requestDirectories.getOrDefault(path,List.of())):List.of();
+            if(candidates.size()==1&&!target.startsWith("/")&&Path.of(path).getParent()!=null&&!Path.of(path).getParent().resolve(target).normalize().toString().replace('\\','/').equals(candidates.get(0))){status="INFERRED";evidence.add(proof(new SourceLocation(path,tag.line()),"INFERRED","相對 script 資源依有效 web root 唯一定位；未假設執行時 context path"));}
+            if(!requestDirectories.getOrDefault(path,List.of()).isEmpty()&&!target.startsWith("/"))evidence.add(proof(new SourceLocation(path,tag.line()),"INFERRED","相對資源的來源畫面 GET 路由目錄="+requestDirectories.get(path)));
             if(candidates.size()>1)status="AMBIGUOUS";else if(candidates.isEmpty())status="UNRESOLVED";
             var location=new SourceLocation(path,tag.attributeLine("src"));evidence.add(proof(location,status,"原始 script src："+raw+"；候選："+candidates));
             references.add(new Reference(location,raw,status,candidates,List.copyOf(evidence)));
@@ -122,18 +125,24 @@ public final class ScriptSources {
     }
     return new Result(List.copyOf(scripts),List.copyOf(references),List.copyOf(diagnostics),List.copyOf(dom),Collections.unmodifiableMap(moduleFiles));
   }
-  private static List<String> candidates(ProjectScanner.ProjectInventory inventory,String owner,String target) {
-    String clean=target.split("[?#]",2)[0];Set<String> candidates=new TreeSet<>();
-    if(clean.startsWith("//")||clean.contains(":")||Arrays.asList(clean.split("/")).contains(".."))return List.of();
-    for(var file:inventory.files()) {
-      String relative=inventory.root().relativize(file).toString().replace('\\','/');
-      if(clean.startsWith("/")) {
-        for(String root:List.of("src/main/webapp/","WebContent/","WebRoot/","webapp/","web/")) {
-          int offset=relative.indexOf(root);if(offset>=0&&(offset==0||relative.charAt(offset-1)=='/')&&relative.substring(offset+root.length()).equals(clean.substring(1)))candidates.add(relative);
-        }
-      } else if(Path.of(owner).getParent()!=null&&Path.of(owner).getParent().resolve(clean).normalize().toString().replace('\\','/').equals(relative))candidates.add(relative);
+  private static List<String> candidates(ProjectScanner.ProjectInventory inventory,String owner,String target,List<String> requestDirectories) {
+    Set<String> candidates=new TreeSet<>(),targets=new TreeSet<>();String raw=target.split("[?#]",2)[0];
+    if(raw.startsWith("//")||raw.contains(":"))return List.of();
+    if(!Arrays.asList(raw.split("/")).contains(".."))targets.add(raw);
+    if(!raw.startsWith("/"))for(String base:requestDirectories)try{String path=java.net.URI.create(base).resolve(raw).normalize().getPath();if(path.startsWith("/")&&!Arrays.asList(path.split("/")).contains(".."))targets.add(path);}catch(Exception ignored){}
+    for(String clean:targets){
+      for(var file:inventory.files()) {
+        String relative=inventory.root().relativize(file).toString().replace('\\','/');
+        if(clean.startsWith("/")) {
+          for(String root:inventory.webRoots()){
+            int offset=relative.indexOf(root);if(relative.equals(root+clean.substring(1))||inventory.webRoots().size()>1&&offset>0&&relative.charAt(offset-1)=='/'&&relative.substring(offset+root.length()).equals(clean.substring(1)))candidates.add(relative);
+          }
+          if(inventory.technologies().contains("Spring Boot"))for(String root:List.of("src/main/resources/static/","src/main/resources/public/"))if(relative.equals(root+clean.substring(1)))candidates.add(relative);
+        }else if(Path.of(owner).getParent()!=null&&Path.of(owner).getParent().resolve(clean).normalize().toString().replace('\\','/').equals(relative))candidates.add(relative);
+      }
+      if(!clean.startsWith("/"))for(String root:inventory.webRoots())for(var file:inventory.files())if(inventory.root().relativize(file).toString().replace('\\','/').equals(root+clean))candidates.add(root+clean);
+      resourceMappings(inventory,clean).forEach(mapping->candidates.add(mapping.file()));
     }
-    resourceMappings(inventory,clean).forEach(mapping->candidates.add(mapping.file()));
     return List.copyOf(candidates);
   }
   private record ResourceMapping(String file,String mapping,String location,SourceLocation source) { }
@@ -142,7 +151,7 @@ public final class ScriptSources {
     for(Path config:inventory.files())if(config.toString().endsWith(".xml"))try {
       String xml=SafeProjectFiles.readUtf8Limited(inventory.root(),config,SafeProjectFiles.MAX_XML_FILE_BYTES);if(!xml.contains("resources"))continue;
       var factory=DocumentBuilderFactory.newInstance();factory.setNamespaceAware(true);factory.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING,true);factory.setFeature("http://apache.org/xml/features/disallow-doctype-decl",true);factory.setAttribute(XMLConstants.ACCESS_EXTERNAL_DTD,"");factory.setAttribute(XMLConstants.ACCESS_EXTERNAL_SCHEMA,"");factory.setExpandEntityReferences(false);var doc=factory.newDocumentBuilder().parse(new InputSource(new StringReader(xml)));var all=doc.getElementsByTagName("*");
-      for(int i=0;i<all.getLength();i++){var element=(org.w3c.dom.Element)all.item(i);String name=element.getLocalName()==null?element.getTagName().replaceFirst("^.*:",""):element.getLocalName();if(!name.equals("resources")||!element.hasAttribute("mapping")||!element.hasAttribute("location"))continue;String mapping=element.getAttribute("mapping"),location=element.getAttribute("location");String prefix=mapping.endsWith("**")?mapping.substring(0,mapping.length()-2):null;if(prefix==null||!clean.startsWith(prefix))continue;String suffix=clean.substring(prefix.length()),base=location.split(",",2)[0].strip();if(!base.startsWith("/"))continue;String relative="src/main/webapp"+base+suffix;if(inventory.files().stream().anyMatch(f->inventory.root().relativize(f).toString().replace('\\','/').equals(relative))){int offset=xml.indexOf("mapping");int line=offset<0?1:1+(int)xml.substring(0,offset).chars().filter(c->c=='\n').count();result.add(new ResourceMapping(relative,mapping,location,new SourceLocation(inventory.root().relativize(config).toString().replace('\\','/'),line)));}}
+      for(int i=0;i<all.getLength();i++){var element=(org.w3c.dom.Element)all.item(i);String name=element.getLocalName()==null?element.getTagName().replaceFirst("^.*:",""):element.getLocalName();if(!name.equals("resources")||!element.hasAttribute("mapping")||!element.hasAttribute("location"))continue;String mapping=element.getAttribute("mapping"),location=element.getAttribute("location");String prefix=mapping.endsWith("**")?mapping.substring(0,mapping.length()-2):null;if(prefix==null||!clean.startsWith(prefix))continue;String suffix=clean.substring(prefix.length()),base=location.split(",",2)[0].strip();if(!base.startsWith("/"))continue;for(String webRoot:inventory.webRoots()){String relative=webRoot.replaceFirst("/$","")+base+suffix;if(inventory.files().stream().anyMatch(f->inventory.root().relativize(f).toString().replace('\\','/').equals(relative))){int offset=xml.indexOf("mapping");int line=offset<0?1:1+(int)xml.substring(0,offset).chars().filter(c->c=='\n').count();result.add(new ResourceMapping(relative,mapping,location,new SourceLocation(inventory.root().relativize(config).toString().replace('\\','/'),line)));}}}
     }catch(Exception ignored){/* Unsafe or malformed XML never authorizes a resource mapping. */}
     return result.stream().distinct().sorted(Comparator.comparing(ResourceMapping::file).thenComparing(m->m.source().file())).toList();
   }

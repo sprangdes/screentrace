@@ -32,7 +32,11 @@ public final class UrlGraphContribution {
    boolean proven=raw!=null&&(raw.startsWith("{pageContext.request.contextPath}")||raw.startsWith("{pageContext.servletContext.contextPath}")||raw.startsWith("${pageContext.request.contextPath}")||raw.startsWith("${pageContext.servletContext.contextPath}"));
    UrlResolution.Result result;
    if("<current-view>".equals(raw)){Set<String> owners=new TreeSet<>();graph.relationships().stream().filter(e->e.type()==EdgeType.CONTAINS&&e.to().equals(b.triggerId())).forEach(e->owners.add(e.from()));Set<String> handlers=new TreeSet<>();graph.relationships().stream().filter(e->e.type()==EdgeType.RENDERS&&owners.contains(e.to())).forEach(e->handlers.add(e.from()));var paths=endpoints.stream().filter(n->graph.relationships().stream().anyMatch(e->e.type()==EdgeType.HANDLED_BY&&e.from().equals(n.id())&&handlers.contains(e.to()))).map(UrlResolution.Endpoint::path).collect(java.util.stream.Collectors.toSet());var current=endpoints.stream().filter(n->paths.contains(n.path())).toList();List<String> candidates=new ArrayList<>();for(var endpoint:current)if(UrlResolution.resolve(endpoint.path(),method,context,List.of(endpoint),false).candidates().contains(endpoint.id()))candidates.add(endpoint.id());var proof=UrlResolution.resolve(null,method,context,List.of(),false).evidence();result=new UrlResolution.Result(candidates.isEmpty()?Confidence.UNRESOLVED:candidates.size()>1?Confidence.AMBIGUOUS:Confidence.INFERRED,candidates.stream().sorted().toList(),List.of(),List.of(),proof);}
-   else result=UrlResolution.resolve(raw,dynamicMethod?"UNKNOWN":method,context,endpoints,extensions,proven);
+   else {
+    String relative=relativeRequestPath(raw,b.triggerId(),graph,endpoints);
+    var baseResult=UrlResolution.resolve(relative==null?raw:relative,dynamicMethod?"UNKNOWN":method,context,endpoints,extensions,proven);
+    if(relative!=null){var proof=new ArrayList<>(baseResult.evidence());proof.add(new AnalysisEvidence(source,"RelativeRequestPath",ResolutionStatus.INFERRED,"原始相對 URL="+raw+"；由所有來源畫面唯一的已證明請求目錄推導="+relative));result=new UrlResolution.Result(baseResult.confidence()==Confidence.CONFIRMED?Confidence.INFERRED:baseResult.confidence(),baseResult.candidates(),baseResult.paths(),baseResult.diagnostics(),proof);}else result=baseResult;
+   }
    if(b.type()==BehaviorType.NAVIGATE&&result.candidates().isEmpty())continue;
    List<AnalysisEvidence> proof=new ArrayList<>(b.evidence());proof.addAll(result.evidence());proof.add(new AnalysisEvidence(source,"UrlResolution",result.confidence().resolutionStatus(),"原始 URL="+Objects.toString(raw,"UNRESOLVED")+"；方法="+Objects.toString(method,"GET")+"；正規化="+result.paths()+"；候選="+result.candidates()));
    for(String code:result.diagnostics())diagnostics.add(new Diagnostic("URL 靜態對應："+code,Confidence.UNRESOLVED,source,code,List.of(new AnalysisEvidence(source,"UrlResolution",ResolutionStatus.UNRESOLVED,"原始 URL="+Objects.toString(raw,"UNRESOLVED")))));
@@ -47,6 +51,33 @@ public final class UrlGraphContribution {
   nodes.entrySet().removeIf(entry->"javascript-request".equals(entry.getValue().attributes().get("origin"))&&behaviors.values().stream().noneMatch(b->entry.getKey().equals(b.targetId()))&&edges.values().stream().noneMatch(e->entry.getKey().equals(e.to())));
   var enriched=new ApplicationGraph(graph.application(),List.copyOf(nodes.values()),List.copyOf(edges.values()),diagnostics.stream().distinct().toList(),graph.apiContracts(),graph.schemaVersion(),List.copyOf(behaviors.values()),graph.validationRules());
   return hidePrivateLocations(enriched);
+ }
+ private static String relativeRequestPath(String raw,String trigger,ApplicationGraph graph,List<UrlResolution.Endpoint> endpoints){
+  if(raw==null||raw.isBlank()||raw.startsWith("/")||raw.startsWith("#")||raw.contains(":")||raw.contains("{")||raw.contains("<"))return null;
+  Set<String> owners=new TreeSet<>();graph.relationships().stream().filter(e->e.type()==EdgeType.CONTAINS&&e.to().equals(trigger)).forEach(e->owners.add(e.from()));
+  graph.nodes().stream().filter(n->n.id().equals(trigger)&&n.type()==NodeType.SCREEN).forEach(n->owners.add(n.id()));
+  var bases=requestDirectories(graph,owners);
+  if(bases.size()!=1)return null;
+  try{return java.net.URI.create(bases.iterator().next()).resolve(raw).normalize().toString();}catch(Exception ignored){return null;}
+ }
+ public static List<String> requestDirectories(ApplicationGraph graph,Set<String> owners){
+  var endpoints=graph.nodes().stream().filter(n->n.type()==NodeType.ENDPOINT).map(n->new UrlResolution.Endpoint(n.id(),n.attributes().getOrDefault("path",""),n.attributes().getOrDefault("httpMethod","ANY"),n.evidence())).toList();
+  Set<String> bases=new TreeSet<>();
+  for(String owner:owners){Set<String> handlers=new HashSet<>();graph.relationships().stream().filter(e->e.type()==EdgeType.RENDERS&&e.to().equals(owner)).forEach(e->handlers.add(e.from()));
+   var routes=endpoints.stream().filter(e->Set.of("GET","ANY").contains(e.method())&&graph.relationships().stream().anyMatch(r->r.type()==EdgeType.HANDLED_BY&&r.from().equals(e.id())&&handlers.contains(r.to()))).toList();
+   var paths=new TreeSet<String>();routes.forEach(r->paths.add(r.path()));
+   graph.nodes().stream().filter(n->n.id().equals(owner)&&n.type()==NodeType.SCREEN).forEach(n->{
+    String view=n.attributes().getOrDefault("view","");
+    if(!view.toLowerCase(Locale.ROOT).contains("/web-inf/")&&!view.contains("/resources/templates/"))
+     for(String alias:n.attributes().getOrDefault("routeAliases","").split("\\u001f")){
+      String path=alias.split("[?#]",2)[0];
+      if(path.startsWith("/")&&!path.startsWith("//")&&!path.contains("..")&&!path.contains("{")&&!path.contains(":")&&(path.endsWith(".jsp")||path.endsWith(".html"))&&view.endsWith(path))paths.add(path);
+     }
+   });
+   if(paths.isEmpty())return List.of();
+   for(String path:paths){String base=path.substring(0,path.lastIndexOf('/')+1);if(!base.startsWith("/")||base.contains("{"))return List.of();bases.add(base);}
+  }
+  return List.copyOf(bases);
  }
  private static boolean frontendRequest(GraphNode node,String url,String method){return node!=null&&"javascript-request".equals(node.attributes().get("origin"))&&Objects.equals(url,node.attributes().get("path"))&&Objects.equals(method,node.attributes().get("httpMethod"));}
  public static ApplicationGraph hidePrivateLocations(ApplicationGraph graph){String home=System.getProperty("user.home","");if(home.length()<2)return graph;try{return JSON.treeToValue(redact(JSON.valueToTree(graph),home),ApplicationGraph.class);}catch(Exception error){throw new IllegalStateException("圖隱私處理失敗",error);}}

@@ -16,6 +16,10 @@ public final class MarkupGraphContribution {
     Map<String,ValidationRule> rules=new TreeMap<>();graph.validationRules().forEach(r->rules.put(r.id(),r));
     for(var markup:jsp.markup().values()) for(var c:markup.components()) {
       var old=nodes.get(c.id());var attrs=new TreeMap<>(c.attributes());if(old!=null)attrs.putAll(old.attributes());
+      if(c.tag().equals("a")&&c.attributes().containsKey("target")){
+        attrs.put("htmlTarget",c.attributes().get("target"));
+        if(!c.attributes().containsKey("href")&&!c.attributes().containsKey("action")&&!c.attributes().containsKey("page")&&Objects.equals(attrs.get("target"),c.attributes().get("target")))attrs.remove("target");
+      }
       attrs.put("kindStatus",MarkupAnalysis.dynamic(c.attributes().get("type"))||MarkupAnalysis.dynamic(c.attributes().get("multiple"))?"UNRESOLVED":"CONFIRMED");
       attrs.put("kind",c.kind().name());attrs.put("tag",c.tag());attrs.put("conditional",Boolean.toString(c.guard()!=null));attrs.put("repeated",Boolean.toString(c.repeated()));
       if(c.guard()!=null)attrs.put("guard",c.guard());if(c.formId()!=null)attrs.put("formId",c.formId());

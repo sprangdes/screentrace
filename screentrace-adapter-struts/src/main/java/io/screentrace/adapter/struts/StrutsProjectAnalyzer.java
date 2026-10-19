@@ -559,7 +559,7 @@ public final class StrutsProjectAnalyzer {
           if(kind==ComponentKind.FORM){String formAction=action;action=(name.equals("html:form")||name.equals("html-el:form")||name.equals("form:form"))?normalizeStrutsAction(action,moduleValue,state):action!=null&&!action.startsWith("/")&&!action.contains(":")?resolveRelativeJspUrl(path,action):action;if(action!=null){target=action;attrs.put("originalTarget",formAction);attrs.put("target",action);}}
           else if(target!=null){
             if(Set.of("html:link","html-el:link","html:rewrite","html-el:rewrite","logic:redirect","logic:forward").contains(name)&&tag.attribute("action")!=null)target=normalizeStrutsAction(target,moduleValue,state);
-            else if(Set.of("a","form","html:link","html-el:link").contains(name)&&!target.startsWith("/")&&!target.startsWith("#")&&!target.contains(":")&&tag.attribute("action")==null)target=resolveRelativeJspUrl(path,target);
+            else if(Set.of("a","form","html:link","html-el:link").contains(name)&&!target.startsWith("/")&&!target.startsWith("#")&&!target.matches("(?is)^[a-z][a-z0-9+.-]*:.*")&&tag.attribute("action")==null)target=resolveRelativeJspUrl(path,target);
             if(target!=null&&target.toLowerCase(Locale.ROOT).endsWith(".faces")){String facesTarget=normalizeFacesPath(target,state);if(facesTarget!=null&&!facesTarget.equals(target)){originalTarget=target;target=facesTarget;}}
             if(target!=null){attrs.put("target",target);if(!Objects.equals(originalTarget,target))attrs.put("originalTarget",originalTarget);}
           }
@@ -575,7 +575,7 @@ public final class StrutsProjectAnalyzer {
           if(target!=null){
             if(Set.of("html:link","html-el:link","html:rewrite","html-el:rewrite","logic:redirect","logic:forward").contains(name)&&tag.attribute("action")!=null)target=normalizeStrutsAction(tag.attribute("action"),moduleValue,state);
             else if((name.equals("html:submit")||name.equals("html:button")||name.equals("button")||name.equals("input"))&&tag.attribute("formaction")==null&&action!=null)target=action;
-            else if(Set.of("a","form","html:link","html-el:link").contains(name)&&!target.startsWith("/")&&!target.startsWith("#")&&!target.contains(":")&&tag.attribute("action")==null)target=resolveRelativeJspUrl(path,target);
+            else if(Set.of("a","form","html:link","html-el:link").contains(name)&&!target.startsWith("/")&&!target.startsWith("#")&&!target.matches("(?is)^[a-z][a-z0-9+.-]*:.*")&&tag.attribute("action")==null)target=resolveRelativeJspUrl(path,target);
             attrs.put("target",target);
           }
           if(kind==ComponentKind.FORM) formGroup=id;

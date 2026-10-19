@@ -1,11 +1,11 @@
-import {templatePreview,snapshotMotionCss} from './template-preview.mjs';
+import {templatePreview,snapshotMotionCss,requestDirectories,openStaticSnapshot} from './template-preview.mjs';
 import {metadataValue} from './expansion-anchor.mjs';
 import { lstat, mkdir, readdir } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { chromium } from 'playwright';
 import {collectElementStyles,thumbnailDataUri,captureOptions} from './element-styles.mjs';
-import {annotateConditions,annotateSource,convertControls,expressionList,markupTokens,replaceDynamicExpressions} from './preview-markup.mjs';
+import {annotateConditions,annotateSource,convertControls,expressionList,markupTokens,markupAttributes,replaceMarkupAttribute,stripMarkupAttributes,replaceDynamicExpressions} from './preview-markup.mjs';
 import { deduplicateMappings, discoverSpringResourceMappings } from './spring-resource-mappings.mjs';
 import {loadStrutsMessageCatalog,renderStrutsMessages} from './struts-messages.mjs';
 import {renderUnsupportedJsfTags} from './unsupported-components.mjs';
@@ -38,7 +38,7 @@ async function exists(file, root = projectRoot, kind = 'file') {
   try { return kind === 'directory' ? !!(await resolveExistingDirectoryWithin(root, file)) : !!(await resolveExistingFileWithin(root, file)); }
   catch { return false; }
 }
-async function text(file) { return readUtf8Limited(projectRoot, file); }
+async function text(file) { const source=await readUtf8Limited(projectRoot,file);return /\.(?:jspf?|html?|tagx?)$/i.test(file)?markupTokens(source).map(t=>t.name&&!t.closing?stripMarkupAttributes(t.text,n=>n.startsWith('data-st-demo-')||n==='data-st-model-key'):t.text).join(''):source; }
 async function writeOutput(file, content) { await writeBufferWithin(output, file, content); }
 const captureDiagnostics = [];
 const conventionalAssetMappings = [
@@ -105,7 +105,7 @@ async function expandIncludes(source, currentFile, stack = new Set(), depth = 0)
     const included=await text(file);
     return expandIncludes(previewV2?annotateSource(included,path.relative(target,file).replaceAll(path.sep,'/'),graph.nodes):included, file, next, depth + 1);
   });
-  if(previewV2)expanded=await replaceAsync(expanded, /<jsp:include\b([^>]*?)(?:\/>|>[\s\S]*?<\/jsp:include\s*>)/gi,async match=>{const includePath=attrs(match[1]).page;if(!includePath||includePath.includes('${')){captureDiagnostics.push('Dynamic include not rendered.');return '';}const file=includePath.startsWith('/')?path.join(webRoot,includePath):path.resolve(path.dirname(currentFile),includePath);if(stack.has(file)||!(await exists(file,webRoot))){captureDiagnostics.push('Missing or cyclic include not rendered.');return '';}const next=new Set(stack);next.add(file);return expandIncludes(annotateSource(await text(file),path.relative(target,file).replaceAll(path.sep,'/'),graph.nodes),file,next,depth+1);});
+  if(previewV2)expanded=await replaceAsync(expanded, /<(?:jsp:include|c:import)\b([^>]*?)(?:\/>|>[\s\S]*?<\/(?:jsp:include|c:import)\s*>)/gi,async match=>{const includePath=attrs(match[1]).page??attrs(match[1]).url;if(!includePath||includePath.includes('${')){captureDiagnostics.push('Dynamic include not rendered.');return '';}let file=includePath.startsWith('/')?path.join(webRoot,includePath):path.resolve(path.dirname(currentFile),includePath);if(match[0].startsWith('<c:import')&&!includePath.startsWith('/')&&!(await exists(file,webRoot))){const candidates=[];for(let parent=path.dirname(path.dirname(currentFile));parent.startsWith(webRoot)&&parent!==path.dirname(parent);parent=path.dirname(parent)){const candidate=path.resolve(parent,includePath);if(await exists(candidate,webRoot))candidates.push(candidate);}if(candidates.length===1){file=candidates[0];captureDiagnostics.push('JSP_IMPORT_BASE_INFERRED: '+includePath);}}if(stack.has(file)||!(await exists(file,webRoot))){captureDiagnostics.push('Missing or cyclic include not rendered.');return '';}const next=new Set(stack);next.add(file);return expandIncludes(annotateSource(await text(file),path.relative(target,file).replaceAll(path.sep,'/'),graph.nodes),file,next,depth+1);});
   return expanded;
 }
 // Struts Tiles: a page definition's template is rendered with its resolved put values (screen.attributes.tilesAttributes).
@@ -211,6 +211,17 @@ async function replaceAsync(source, expression, mapper) {
   matches.forEach((match, index) => { result += source.slice(cursor, match.index) + replacements[index]; cursor = match.index + match[0].length; });
   return result + source.slice(cursor);
 }
+async function projectRequestAssets(source,screen){
+ const bases=requestDirectories(graph,screen.id);if(bases.length!==1)return source;
+ let result='';for(const token of markupTokens(source)){
+  if(!token.name||token.closing){result+=token.text;continue;}
+  const attrs=markupAttributes(token.text),key=token.name==='link'&&attrs.rel==='stylesheet'?'href':['img','source','video','audio'].includes(token.name)?'src':null;
+  if(!key||!attrs[key]||attrs[key].includes('${')||/^(?:[a-z][a-z0-9+.-]*:|\/\/)/i.test(attrs[key])){result+=token.text;continue;}
+  let candidate;try{const url=new URL(attrs[key],'https://offline.invalid'+bases[0]);if(url.origin!=='https://offline.invalid'){result+=token.text;continue;}candidate=path.join(htmlRootReal,'assets',url.pathname);if(!(await exists(candidate,htmlRootReal))){result+=token.text;continue;}}catch{result+=token.text;continue;}
+  const target=path.relative(htmlRootReal,candidate).replaceAll(path.sep,'/');
+  result+=replaceMarkupAttribute(token.text,key,target);
+ }return result;
+}
 function rewriteAssetUrls(source) {
   return source.replace(/url\(\s*(['"]?)(\/[^)'"\s]+)\1\s*\)/g,(original,quote,url)=>{const mapping=mappingFor(url);return mapping?`url(${quote}assets/${mapping.assetKey}${url.substring(mapping.urlPrefix.length-1)}${quote})`:original;}).replace(/\b(href|src)=(['"])(\/[^'"]*)/gi, (_, attribute, quote, url) => {
     const mapping = mappingFor(url);
@@ -261,7 +272,7 @@ async function renderJsp(screen) {
   if (!view || !(previewV2?/\.(?:jsp|jspf|html?|xhtml)$/i.test(view):view.endsWith('.jsp'))) return null;
   const jsp = path.join(target, view);
   if (!(await exists(jsp))) return null;
-  const original=previewV2?templatePreview(await text(jsp),screen,graph.nodes):await text(jsp);
+  const original=previewV2?templatePreview(await text(jsp),screen,graph.nodes,graph.relationships):await text(jsp);
   if(previewV2){localTagDirs=new Map();previewExpressions=new Set();declaredTagDirs(original);}
   let source = await expandIncludes(previewV2?annotateSource(original,view,graph.nodes):original, jsp, new Set([jsp]));
   if(previewV2)source=await expandTiles(source,tilesContext(screen),jsp,new Set([jsp]),0);
@@ -288,6 +299,7 @@ async function renderJsp(screen) {
     return '';
   });
   if(previewV2){source=convertControls(annotateConditions(source));source=source.replace(/<%(?!@|--)[\s\S]*?%>/g,'示例值');}
+  if(previewV2)source=await projectRequestAssets(source,screen);
   source = rewriteAssetUrls(htmlControls(replaceExpressions(source, urls)));
   if (!/<html[\s>]/i.test(source)) source = `<!doctype html><html><head></head><body>${source}</body></html>`;
   source = source.replace(/<html\b[^>]*>\s*<html\b[^>]*>/gi, '<html>').replace(/<\/head>\s*<head\b[^>]*>/gi, '');
@@ -322,7 +334,7 @@ for (const screen of screens) {
   if (!rendered) {if(previewV2){const diagnostic={code:'PREVIEW_SOURCE_UNAVAILABLE',screenId:screen.id,message:'缺少可重建的畫面來源'};styleCapture.diagnostics.push(diagnostic);styleCapture.screens[screen.id]={rendering:{mode:'skipped',diagnostic:diagnostic.message},elements:[],diagnostics:[diagnostic]};}continue;}
   manifest[screen.id] = `static-preview/${path.basename(rendered.htmlFile)}`;
   reconstruction[screen.id] = { view: screen.attributes?.view, assets: rendered.assets, dynamicExpressions: rendered.dynamicExpressions, rendering: { mode: 'reconstructed' } };
-  await page.goto(pathToFileURL(rendered.htmlFile).href, { waitUntil: 'domcontentloaded', timeout: 5_000 });
+  await openStaticSnapshot(page,pathToFileURL(rendered.htmlFile).href);
   const elementCount = await page.locator('*').count();
   if (!previewV2 && elementCount > 50_000) throw new Error(`Rendered page element limit exceeded: ${elementCount}`);
   if(previewV2){const captured=await collectElementStyles(page,context,graph,screen.id,styleOptions);Object.assign(styleCapture.styles,captured.styles);Object.assign(styleCapture.defaults,captured.defaults);styleCapture.diagnostics.push(...captured.diagnostics);styleCapture.screens[screen.id]={elements:captured.elements,diagnostics:captured.diagnostics,...reconstruction[screen.id]};}
@@ -363,6 +375,6 @@ await writeOutput(path.join(htmlRoot, 'manifest.json'), JSON.stringify(manifest,
 await writeOutput(path.join(htmlRoot, 'reconstruction.json'), JSON.stringify(reconstruction, null, 2));
 await writeOutput(path.join(screenshotRoot, 'manifest.json'), JSON.stringify(screenshots, null, 2));
 await writeOutput(path.join(screenshotRoot, 'interactions.json'), JSON.stringify(interactions, null, 2));
-await writeOutput(path.join(htmlRoot, 'diagnostics.json'), JSON.stringify(captureDiagnostics, null, 2));
+await writeOutput(path.join(htmlRoot, 'diagnostics.json'), JSON.stringify([...captureDiagnostics].sort(), null, 2));
 
 if(previewV2)await writeOutput(path.join(htmlRoot,'element-styles.json'),JSON.stringify(styleCapture,null,2));

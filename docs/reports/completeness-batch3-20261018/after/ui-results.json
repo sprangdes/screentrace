@@ -1,0 +1,1797 @@
+{
+  "cases": [
+    {
+      "id": "C01",
+      "project": "contract-management-system",
+      "result": "PASS",
+      "expectedViews": [
+        "src/main/webapp/list.jsp"
+      ],
+      "effectiveSelector": "[data-st-component-id=\"component:9392ba9b-7bfc-3037-ba45-eb17834e8147\"]",
+      "controlCount": 1,
+      "visible": true,
+      "actual": {
+        "view": "src/main/webapp/list.jsp",
+        "choices": [],
+        "calls": [],
+        "status": [
+          ""
+        ]
+      },
+      "offeredViews": [
+        "src/main/webapp/list.jsp"
+      ]
+    },
+    {
+      "id": "C02",
+      "project": "contract-management-system",
+      "result": "PASS",
+      "expectedViews": [
+        "src/main/webapp/input.jsp"
+      ],
+      "effectiveSelector": "[data-st-component-id=\"component:041bc587-2d2f-3756-89f4-27e5f1edbfc9\"]",
+      "controlCount": 1,
+      "visible": true,
+      "actual": {
+        "view": "src/main/webapp/input.jsp",
+        "choices": [],
+        "calls": [],
+        "status": [
+          ""
+        ]
+      },
+      "offeredViews": [
+        "src/main/webapp/input.jsp"
+      ]
+    },
+    {
+      "id": "C03",
+      "project": "contract-management-system",
+      "result": "PASS",
+      "expectedViews": [
+        "src/main/webapp/result.jsp",
+        "src/main/webapp/input.jsp"
+      ],
+      "effectiveSelector": "input[type=submit],button[type=submit]",
+      "controlCount": 1,
+      "visible": true,
+      "actual": {
+        "view": "src/main/webapp/input.jsp",
+        "choices": [
+          {
+            "target": "screen:87780f65-d49f-3717-82b4-232a29bcdf3a",
+            "label": "result",
+            "view": "src/main/webapp/result.jsp"
+          },
+          {
+            "target": "screen:999252b7-f4c9-34b3-b9e8-649f0b8ce9ff",
+            "label": "input",
+            "view": "src/main/webapp/input.jsp"
+          }
+        ],
+        "calls": [],
+        "status": [
+          ""
+        ]
+      },
+      "offeredViews": [
+        "src/main/webapp/result.jsp",
+        "src/main/webapp/input.jsp"
+      ],
+      "selected": {
+        "view": "src/main/webapp/result.jsp",
+        "choices": [],
+        "calls": [],
+        "status": [
+          ""
+        ]
+      }
+    },
+    {
+      "id": "C04",
+      "project": "contract-management-system",
+      "result": "PASS",
+      "expectedViews": [
+        "src/main/webapp/input.jsp"
+      ],
+      "effectiveSelector": "[data-st-component-id=\"component:3532f4b5-0818-36d6-9a00-c0ba64faf595\"]",
+      "controlCount": 1,
+      "visible": true,
+      "actual": {
+        "view": "src/main/webapp/input.jsp",
+        "choices": [],
+        "calls": [],
+        "status": [
+          ""
+        ]
+      },
+      "offeredViews": [
+        "src/main/webapp/input.jsp"
+      ]
+    },
+    {
+      "id": "C05",
+      "project": "contract-management-system",
+      "result": "PASS",
+      "expectedViews": [],
+      "effectiveSelector": "[data-st-source-file=\"src/main/webapp/input.jsp\"][data-st-source-line=\"207\"]",
+      "controlCount": 1,
+      "visible": true,
+      "actual": {
+        "view": "src/main/webapp/input.jsp",
+        "choices": [
+          {
+            "label": "成功：❌ この名前はすでに登録されています！；無法確定前往哪個畫面",
+            "view": null
+          },
+          {
+            "label": "成功：⭕ 登録可能な名前です。；無法確定前往哪個畫面",
+            "view": null
+          },
+          {
+            "label": "成功：❌ 通信エラーが発生しました；無法確定前往哪個畫面",
+            "view": null
+          }
+        ],
+        "calls": [
+          "呼叫 API：ANY /checkName.do"
+        ],
+        "status": [
+          ""
+        ]
+      },
+      "branchObservations": [],
+      "expectedFeedbackFound": [
+        {
+          "text": "登録されています",
+          "found": true
+        },
+        {
+          "text": "登録可能",
+          "found": true
+        },
+        {
+          "text": "通信エラー",
+          "found": true
+        }
+      ],
+      "bodyChanged": true
+    },
+    {
+      "id": "C06",
+      "project": "contract-management-system",
+      "result": "PASS",
+      "expectedViews": [],
+      "effectiveSelector": "[name=contractorName]",
+      "controlCount": 1,
+      "visible": true,
+      "actualValue": "contractorNameField"
+    },
+    {
+      "id": "C07",
+      "project": "contract-management-system",
+      "result": "PASS",
+      "expectedViews": [],
+      "effectiveSelector": "[data-st-component-id=\"component:f5a122dd-5689-3a76-9d66-c17e20a98316\"]",
+      "controlCount": 1,
+      "visible": true,
+      "actual": {
+        "view": "src/main/webapp/list.jsp",
+        "choices": [],
+        "calls": [],
+        "status": [
+          ""
+        ]
+      },
+      "dialogs": [
+        "本当に削除しますか？取消確認"
+      ]
+    },
+    {
+      "id": "B01",
+      "project": "Fintech-Finance-Banking-Application",
+      "result": "PASS",
+      "expectedViews": [
+        "src/main/webapp/WEB-INF/jsp/register.jsp"
+      ],
+      "effectiveSelector": "[data-st-component-id=\"component:571a7dd3-840a-3a46-b82c-a5b1b9d7b38b\"]",
+      "controlCount": 1,
+      "visible": true,
+      "actual": {
+        "view": "src/main/webapp/WEB-INF/jsp/register.jsp",
+        "choices": [],
+        "calls": [],
+        "status": [
+          ""
+        ]
+      },
+      "offeredViews": [
+        "src/main/webapp/WEB-INF/jsp/register.jsp"
+      ]
+    },
+    {
+      "id": "B02",
+      "project": "Fintech-Finance-Banking-Application",
+      "result": "PASS",
+      "expectedViews": [
+        "src/main/webapp/WEB-INF/jsp/login.jsp"
+      ],
+      "effectiveSelector": "[data-st-component-id=\"component:945ce500-b3f9-3938-b65b-2e5e08a1e950\"]",
+      "controlCount": 1,
+      "visible": true,
+      "actual": {
+        "view": "src/main/webapp/WEB-INF/jsp/login.jsp",
+        "choices": [],
+        "calls": [],
+        "status": [
+          ""
+        ]
+      },
+      "offeredViews": [
+        "src/main/webapp/WEB-INF/jsp/login.jsp"
+      ]
+    },
+    {
+      "id": "B03",
+      "project": "Fintech-Finance-Banking-Application",
+      "result": "PASS",
+      "expectedViews": [
+        "src/main/webapp/WEB-INF/jsp/index.jsp"
+      ],
+      "effectiveSelector": "[data-st-component-id=\"component:32863826-25ec-3d5c-a341-744397717161\"]",
+      "controlCount": 1,
+      "visible": true,
+      "actual": {
+        "view": "src/main/webapp/WEB-INF/jsp/index.jsp",
+        "choices": [],
+        "calls": [],
+        "status": [
+          ""
+        ]
+      },
+      "offeredViews": [
+        "src/main/webapp/WEB-INF/jsp/index.jsp"
+      ]
+    },
+    {
+      "id": "B04",
+      "project": "Fintech-Finance-Banking-Application",
+      "result": "PASS",
+      "expectedViews": [
+        "src/main/webapp/WEB-INF/jsp/login.jsp",
+        "src/main/webapp/WEB-INF/jsp/error.jsp",
+        "src/main/webapp/WEB-INF/jsp/dashboard.jsp"
+      ],
+      "effectiveSelector": "button",
+      "controlCount": 1,
+      "visible": true,
+      "actual": {
+        "view": "src/main/webapp/WEB-INF/jsp/login.jsp",
+        "choices": [
+          {
+            "target": "screen:6e017311-9ac8-3c3e-83b6-e22db22272ce",
+            "label": "dashboard",
+            "view": "src/main/webapp/WEB-INF/jsp/dashboard.jsp"
+          },
+          {
+            "target": "screen:98dbcb0c-2d20-399f-89bc-f5d44c764452",
+            "label": "login",
+            "view": "src/main/webapp/WEB-INF/jsp/login.jsp"
+          },
+          {
+            "target": "screen:98dbcb0c-2d20-399f-89bc-f5d44c764452",
+            "label": "login",
+            "view": "src/main/webapp/WEB-INF/jsp/login.jsp"
+          },
+          {
+            "target": "screen:98dbcb0c-2d20-399f-89bc-f5d44c764452",
+            "label": "login",
+            "view": "src/main/webapp/WEB-INF/jsp/login.jsp"
+          },
+          {
+            "target": "screen:c8f3382d-d821-390c-9aa4-b5c33450aef6",
+            "label": "error",
+            "view": "src/main/webapp/WEB-INF/jsp/error.jsp"
+          }
+        ],
+        "calls": [],
+        "status": [
+          ""
+        ]
+      },
+      "offeredViews": [
+        "src/main/webapp/WEB-INF/jsp/dashboard.jsp",
+        "src/main/webapp/WEB-INF/jsp/login.jsp",
+        "src/main/webapp/WEB-INF/jsp/login.jsp",
+        "src/main/webapp/WEB-INF/jsp/login.jsp",
+        "src/main/webapp/WEB-INF/jsp/error.jsp"
+      ],
+      "selected": {
+        "view": "src/main/webapp/WEB-INF/jsp/login.jsp",
+        "choices": [],
+        "calls": [],
+        "status": [
+          ""
+        ]
+      }
+    },
+    {
+      "id": "B05",
+      "project": "Fintech-Finance-Banking-Application",
+      "result": "PASS",
+      "expectedViews": [
+        "src/main/webapp/WEB-INF/jsp/paymentHistory.jsp"
+      ],
+      "effectiveSelector": "[data-st-component-id=\"component:2531fb48-35e2-3a7c-8469-39c1695ef8cc\"]",
+      "controlCount": 1,
+      "visible": true,
+      "actual": {
+        "view": "src/main/webapp/WEB-INF/jsp/paymentHistory.jsp",
+        "choices": [],
+        "calls": [],
+        "status": [
+          ""
+        ]
+      },
+      "offeredViews": [
+        "src/main/webapp/WEB-INF/jsp/paymentHistory.jsp"
+      ]
+    },
+    {
+      "id": "B06",
+      "project": "Fintech-Finance-Banking-Application",
+      "result": "PASS",
+      "expectedViews": [],
+      "effectiveSelector": "button#add-account-btn",
+      "controlCount": 1,
+      "visible": true,
+      "visibleBefore": false,
+      "actual": {
+        "view": "src/main/webapp/WEB-INF/jsp/dashboard.jsp",
+        "choices": [],
+        "calls": [],
+        "status": [
+          ""
+        ]
+      },
+      "visibleAfter": true
+    },
+    {
+      "id": "B07",
+      "project": "Fintech-Finance-Banking-Application",
+      "result": "PASS",
+      "expectedViews": [],
+      "effectiveSelector": "button#transact-btn",
+      "controlCount": 1,
+      "visible": true,
+      "visibleBefore": false,
+      "actual": {
+        "view": "src/main/webapp/WEB-INF/jsp/dashboard.jsp",
+        "choices": [],
+        "calls": [],
+        "status": [
+          ""
+        ]
+      },
+      "visibleAfter": true
+    },
+    {
+      "id": "B08",
+      "project": "Fintech-Finance-Banking-Application",
+      "result": "FAIL",
+      "expectedViews": [],
+      "effectiveSelector": "#transact-type",
+      "controlCount": 1,
+      "visible": false,
+      "reason": "CONTROL_NOT_VISIBLE"
+    },
+    {
+      "id": "B09",
+      "project": "Fintech-Finance-Banking-Application",
+      "result": "PASS",
+      "expectedViews": [],
+      "effectiveSelector": "button",
+      "controlCount": 1,
+      "visible": true,
+      "actual": {
+        "view": "src/main/webapp/WEB-INF/jsp/register.jsp",
+        "choices": [
+          {
+            "target": "screen:19df9ab2-a0c5-398a-a4f2-080521b972fd",
+            "label": "register · The confirm Field is required",
+            "view": "src/main/webapp/WEB-INF/jsp/register.jsp"
+          },
+          {
+            "target": "screen:19df9ab2-a0c5-398a-a4f2-080521b972fd",
+            "label": "register · Email already exists, please try another email",
+            "view": "src/main/webapp/WEB-INF/jsp/register.jsp"
+          },
+          {
+            "target": "screen:19df9ab2-a0c5-398a-a4f2-080521b972fd",
+            "label": "register · passwords do not match",
+            "view": "src/main/webapp/WEB-INF/jsp/register.jsp"
+          },
+          {
+            "target": "screen:19df9ab2-a0c5-398a-a4f2-080521b972fd",
+            "label": "register · Account Registered Successfully",
+            "view": "src/main/webapp/WEB-INF/jsp/register.jsp"
+          }
+        ],
+        "calls": [],
+        "status": [
+          ""
+        ]
+      },
+      "branchObservations": [
+        {
+          "index": 0,
+          "body": " Register\nThe confirm Field is required\nRegister\n\nAlready have an account? Sign In\n\n Back",
+          "state": {
+            "view": "src/main/webapp/WEB-INF/jsp/register.jsp",
+            "choices": [],
+            "calls": [],
+            "status": [
+              ""
+            ]
+          }
+        },
+        {
+          "index": 1,
+          "body": " Register\nEmail already exists, please try another email\nRegister\n\nAlready have an account? Sign In\n\n Back",
+          "state": {
+            "view": "src/main/webapp/WEB-INF/jsp/register.jsp",
+            "choices": [],
+            "calls": [],
+            "status": [
+              ""
+            ]
+          }
+        },
+        {
+          "index": 2,
+          "body": " Register\npasswords do not match\nRegister\n\nAlready have an account? Sign In\n\n Back",
+          "state": {
+            "view": "src/main/webapp/WEB-INF/jsp/register.jsp",
+            "choices": [],
+            "calls": [],
+            "status": [
+              ""
+            ]
+          }
+        },
+        {
+          "index": 3,
+          "body": " Register\nAccount Registered Successfully\nRegister\n\nAlready have an account? Sign In\n\n Back",
+          "state": {
+            "view": "src/main/webapp/WEB-INF/jsp/register.jsp",
+            "choices": [],
+            "calls": [],
+            "status": [
+              ""
+            ]
+          }
+        }
+      ],
+      "expectedFeedbackFound": [
+        {
+          "text": "passwords do not match",
+          "found": true
+        }
+      ],
+      "bodyChanged": true
+    },
+    {
+      "id": "I01",
+      "project": "SpringMVC-IMS",
+      "result": "PASS",
+      "expectedViews": [
+        "web/WEB-INF/jsp/loginform.jsp"
+      ],
+      "effectiveSelector": "[data-st-component-id=\"component:c773440a-0461-39fe-beb6-a550625b9f73\"]",
+      "controlCount": 1,
+      "visible": true,
+      "actual": {
+        "view": "web/WEB-INF/jsp/loginform.jsp",
+        "choices": [],
+        "calls": [],
+        "status": [
+          ""
+        ]
+      },
+      "offeredViews": [
+        "web/WEB-INF/jsp/loginform.jsp"
+      ]
+    },
+    {
+      "id": "I02",
+      "project": "SpringMVC-IMS",
+      "result": "PASS",
+      "expectedViews": [
+        "web/WEB-INF/jsp/dashboard.jsp",
+        "web/WEB-INF/jsp/loginform.jsp"
+      ],
+      "effectiveSelector": "#loginBtn",
+      "controlCount": 1,
+      "visible": true,
+      "actual": {
+        "view": "web/WEB-INF/jsp/loginform.jsp",
+        "choices": [
+          {
+            "target": "screen:65066324-e11d-383d-b1d7-7b6cb60d4fd0",
+            "label": "loginform",
+            "view": "web/WEB-INF/jsp/loginform.jsp"
+          },
+          {
+            "target": "screen:65066324-e11d-383d-b1d7-7b6cb60d4fd0",
+            "label": "loginform",
+            "view": "web/WEB-INF/jsp/loginform.jsp"
+          },
+          {
+            "target": "screen:a75276a8-fd35-372c-975a-ebb75a5096b2",
+            "label": "dashboard",
+            "view": "web/WEB-INF/jsp/dashboard.jsp"
+          }
+        ],
+        "calls": [],
+        "status": [
+          ""
+        ]
+      },
+      "offeredViews": [
+        "web/WEB-INF/jsp/loginform.jsp",
+        "web/WEB-INF/jsp/loginform.jsp",
+        "web/WEB-INF/jsp/dashboard.jsp"
+      ],
+      "selected": {
+        "view": "web/WEB-INF/jsp/dashboard.jsp",
+        "choices": [],
+        "calls": [],
+        "status": [
+          ""
+        ]
+      }
+    },
+    {
+      "id": "I03",
+      "project": "SpringMVC-IMS",
+      "result": "PASS",
+      "expectedViews": [
+        "web/WEB-INF/jsp/dashboard.jsp",
+        "web/WEB-INF/jsp/loginform.jsp"
+      ],
+      "effectiveSelector": "[data-st-component-id=\"component:45c1cf9c-687d-3311-b934-7897580cf5e6\"]",
+      "controlCount": 1,
+      "visible": true,
+      "actual": {
+        "view": "web/WEB-INF/jsp/dashboard.jsp",
+        "choices": [
+          {
+            "target": "screen:65066324-e11d-383d-b1d7-7b6cb60d4fd0",
+            "label": "loginform",
+            "view": "web/WEB-INF/jsp/loginform.jsp"
+          },
+          {
+            "target": "screen:a75276a8-fd35-372c-975a-ebb75a5096b2",
+            "label": "dashboard",
+            "view": "web/WEB-INF/jsp/dashboard.jsp"
+          }
+        ],
+        "calls": [],
+        "status": [
+          ""
+        ]
+      },
+      "offeredViews": [
+        "web/WEB-INF/jsp/loginform.jsp",
+        "web/WEB-INF/jsp/dashboard.jsp"
+      ],
+      "selected": {
+        "view": "web/WEB-INF/jsp/dashboard.jsp",
+        "choices": [],
+        "calls": [],
+        "status": [
+          ""
+        ]
+      }
+    },
+    {
+      "id": "I04",
+      "project": "SpringMVC-IMS",
+      "result": "PASS",
+      "expectedViews": [
+        "web/WEB-INF/jsp/customers.jsp",
+        "web/WEB-INF/jsp/loginform.jsp"
+      ],
+      "effectiveSelector": "[data-st-component-id=\"component:4bf42451-1208-37dd-9c2f-d8905fdfaaa7\"]",
+      "controlCount": 1,
+      "visible": true,
+      "actual": {
+        "view": "web/WEB-INF/jsp/dashboard.jsp",
+        "choices": [
+          {
+            "target": "screen:65066324-e11d-383d-b1d7-7b6cb60d4fd0",
+            "label": "loginform",
+            "view": "web/WEB-INF/jsp/loginform.jsp"
+          },
+          {
+            "target": "screen:cb2c2d7d-8e6c-3aac-a1cc-3cf3da9f2db3",
+            "label": "customers",
+            "view": "web/WEB-INF/jsp/customers.jsp"
+          }
+        ],
+        "calls": [],
+        "status": [
+          ""
+        ]
+      },
+      "offeredViews": [
+        "web/WEB-INF/jsp/loginform.jsp",
+        "web/WEB-INF/jsp/customers.jsp"
+      ],
+      "selected": {
+        "view": "web/WEB-INF/jsp/customers.jsp",
+        "choices": [],
+        "calls": [],
+        "status": [
+          ""
+        ]
+      }
+    },
+    {
+      "id": "I05",
+      "project": "SpringMVC-IMS",
+      "result": "PASS",
+      "expectedViews": [
+        "web/WEB-INF/jsp/suppliers.jsp",
+        "web/WEB-INF/jsp/loginform.jsp"
+      ],
+      "effectiveSelector": "[data-st-component-id=\"component:0d0339e4-6eae-30aa-8d2d-adb612a253fd\"]",
+      "controlCount": 1,
+      "visible": true,
+      "actual": {
+        "view": "web/WEB-INF/jsp/dashboard.jsp",
+        "choices": [
+          {
+            "target": "screen:338d9beb-e64b-3f9c-82bd-46c0973a1461",
+            "label": "suppliers",
+            "view": "web/WEB-INF/jsp/suppliers.jsp"
+          },
+          {
+            "target": "screen:65066324-e11d-383d-b1d7-7b6cb60d4fd0",
+            "label": "loginform",
+            "view": "web/WEB-INF/jsp/loginform.jsp"
+          }
+        ],
+        "calls": [],
+        "status": [
+          ""
+        ]
+      },
+      "offeredViews": [
+        "web/WEB-INF/jsp/suppliers.jsp",
+        "web/WEB-INF/jsp/loginform.jsp"
+      ],
+      "selected": {
+        "view": "web/WEB-INF/jsp/suppliers.jsp",
+        "choices": [],
+        "calls": [],
+        "status": [
+          ""
+        ]
+      }
+    },
+    {
+      "id": "I06",
+      "project": "SpringMVC-IMS",
+      "result": "PASS",
+      "expectedViews": [
+        "web/WEB-INF/jsp/brand.jsp",
+        "web/WEB-INF/jsp/loginform.jsp"
+      ],
+      "effectiveSelector": "[data-st-component-id=\"component:5bf32403-c5ab-342a-a1eb-e623d91419de\"]",
+      "controlCount": 1,
+      "visible": true,
+      "actual": {
+        "view": "web/WEB-INF/jsp/dashboard.jsp",
+        "choices": [
+          {
+            "target": "screen:65066324-e11d-383d-b1d7-7b6cb60d4fd0",
+            "label": "loginform",
+            "view": "web/WEB-INF/jsp/loginform.jsp"
+          },
+          {
+            "target": "screen:c753b63a-ab4f-37bf-8f6f-178a1f550b72",
+            "label": "brand",
+            "view": "web/WEB-INF/jsp/brand.jsp"
+          }
+        ],
+        "calls": [],
+        "status": [
+          ""
+        ]
+      },
+      "offeredViews": [
+        "web/WEB-INF/jsp/loginform.jsp",
+        "web/WEB-INF/jsp/brand.jsp"
+      ],
+      "selected": {
+        "view": "web/WEB-INF/jsp/brand.jsp",
+        "choices": [],
+        "calls": [],
+        "status": [
+          ""
+        ]
+      }
+    },
+    {
+      "id": "I07",
+      "project": "SpringMVC-IMS",
+      "result": "PASS",
+      "expectedViews": [
+        "web/WEB-INF/jsp/category.jsp",
+        "web/WEB-INF/jsp/loginform.jsp"
+      ],
+      "effectiveSelector": "[data-st-component-id=\"component:e2dc03ce-8da5-3a74-9ed7-e5db6543bde8\"]",
+      "controlCount": 1,
+      "visible": true,
+      "actual": {
+        "view": "web/WEB-INF/jsp/dashboard.jsp",
+        "choices": [
+          {
+            "target": "screen:65066324-e11d-383d-b1d7-7b6cb60d4fd0",
+            "label": "loginform",
+            "view": "web/WEB-INF/jsp/loginform.jsp"
+          },
+          {
+            "target": "screen:b3c0dedf-ecb9-3ad7-a639-7aeca235f72e",
+            "label": "category",
+            "view": "web/WEB-INF/jsp/category.jsp"
+          }
+        ],
+        "calls": [],
+        "status": [
+          ""
+        ]
+      },
+      "offeredViews": [
+        "web/WEB-INF/jsp/loginform.jsp",
+        "web/WEB-INF/jsp/category.jsp"
+      ],
+      "selected": {
+        "view": "web/WEB-INF/jsp/category.jsp",
+        "choices": [],
+        "calls": [],
+        "status": [
+          ""
+        ]
+      }
+    },
+    {
+      "id": "I08",
+      "project": "SpringMVC-IMS",
+      "result": "PASS",
+      "expectedViews": [
+        "web/WEB-INF/jsp/model.jsp",
+        "web/WEB-INF/jsp/loginform.jsp"
+      ],
+      "effectiveSelector": "[data-st-component-id=\"component:482b4d66-fef8-3f97-8e0a-9b1170c9eefc\"]",
+      "controlCount": 1,
+      "visible": true,
+      "actual": {
+        "view": "web/WEB-INF/jsp/dashboard.jsp",
+        "choices": [
+          {
+            "target": "screen:36e0ab56-3f7c-3648-b0dc-49076c983cef",
+            "label": "model",
+            "view": "web/WEB-INF/jsp/model.jsp"
+          },
+          {
+            "target": "screen:65066324-e11d-383d-b1d7-7b6cb60d4fd0",
+            "label": "loginform",
+            "view": "web/WEB-INF/jsp/loginform.jsp"
+          }
+        ],
+        "calls": [],
+        "status": [
+          ""
+        ]
+      },
+      "offeredViews": [
+        "web/WEB-INF/jsp/model.jsp",
+        "web/WEB-INF/jsp/loginform.jsp"
+      ],
+      "selected": {
+        "view": "web/WEB-INF/jsp/model.jsp",
+        "choices": [],
+        "calls": [],
+        "status": [
+          ""
+        ]
+      }
+    },
+    {
+      "id": "I09",
+      "project": "SpringMVC-IMS",
+      "result": "PASS",
+      "expectedViews": [
+        "web/WEB-INF/jsp/product.jsp",
+        "web/WEB-INF/jsp/loginform.jsp"
+      ],
+      "effectiveSelector": "[data-st-component-id=\"component:d4d3c1e0-7b42-3b8f-9442-c89b9dcd9c4f\"]",
+      "controlCount": 1,
+      "visible": true,
+      "actual": {
+        "view": "web/WEB-INF/jsp/dashboard.jsp",
+        "choices": [
+          {
+            "target": "screen:65066324-e11d-383d-b1d7-7b6cb60d4fd0",
+            "label": "loginform",
+            "view": "web/WEB-INF/jsp/loginform.jsp"
+          },
+          {
+            "target": "screen:93e4c958-9f96-3dda-8d8d-a009b33cbd60",
+            "label": "product",
+            "view": "web/WEB-INF/jsp/product.jsp"
+          }
+        ],
+        "calls": [],
+        "status": [
+          ""
+        ]
+      },
+      "offeredViews": [
+        "web/WEB-INF/jsp/loginform.jsp",
+        "web/WEB-INF/jsp/product.jsp"
+      ],
+      "selected": {
+        "view": "web/WEB-INF/jsp/product.jsp",
+        "choices": [],
+        "calls": [],
+        "status": [
+          ""
+        ]
+      }
+    },
+    {
+      "id": "I10",
+      "project": "SpringMVC-IMS",
+      "result": "PASS",
+      "expectedViews": [],
+      "effectiveSelector": "button[title=\"Insert New Category\"]",
+      "controlCount": 1,
+      "visible": true,
+      "visibleBefore": false,
+      "actual": {
+        "view": "web/WEB-INF/jsp/category.jsp",
+        "choices": [
+          {
+            "label": "無法確定前往哪個畫面",
+            "view": null
+          },
+          {
+            "label": "無法確定前往哪個畫面",
+            "view": null
+          },
+          {
+            "label": "成功：無法確定前往哪個畫面",
+            "view": null
+          }
+        ],
+        "calls": [
+          "呼叫 API：POST /newCategoryID（有條件）"
+        ],
+        "status": [
+          ""
+        ]
+      },
+      "visibleAfter": true
+    },
+    {
+      "id": "I11",
+      "project": "SpringMVC-IMS",
+      "result": "PASS",
+      "expectedViews": [],
+      "effectiveSelector": "#searchCategory",
+      "controlCount": 1,
+      "visible": true,
+      "actual": {
+        "view": "web/WEB-INF/jsp/category.jsp",
+        "choices": [
+          {
+            "label": "無法確定前往哪個畫面",
+            "view": null
+          },
+          {
+            "label": "無法確定前往哪個畫面",
+            "view": null
+          },
+          {
+            "label": "無法確定前往哪個畫面",
+            "view": null
+          },
+          {
+            "label": "無法確定前往哪個畫面",
+            "view": null
+          },
+          {
+            "label": "無法確定前往哪個畫面",
+            "view": null
+          }
+        ],
+        "calls": [
+          "呼叫 API：GET /searchCategory（有條件）"
+        ],
+        "status": [
+          ""
+        ]
+      }
+    },
+    {
+      "id": "I12",
+      "project": "SpringMVC-IMS",
+      "result": "PASS",
+      "expectedViews": [],
+      "effectiveSelector": "a[title=\"Edit\"]",
+      "controlCount": 1,
+      "visible": true,
+      "visibleBefore": false,
+      "actual": {
+        "view": "web/WEB-INF/jsp/category.jsp",
+        "choices": [
+          {
+            "label": "無法確定前往哪個畫面",
+            "view": null
+          },
+          {
+            "label": "無法確定前往哪個畫面",
+            "view": null
+          },
+          {
+            "label": "無法確定前往哪個畫面",
+            "view": null
+          },
+          {
+            "label": "無法確定前往哪個畫面",
+            "view": null
+          },
+          {
+            "label": "無法確定前往哪個畫面",
+            "view": null
+          },
+          {
+            "label": "無法確定前往哪個畫面",
+            "view": null
+          },
+          {
+            "label": "無法確定前往哪個畫面",
+            "view": null
+          }
+        ],
+        "calls": [
+          "呼叫 API：POST /retriveCategoryInfo（有條件）"
+        ],
+        "status": [
+          ""
+        ]
+      },
+      "visibleAfter": true
+    },
+    {
+      "id": "I13",
+      "project": "SpringMVC-IMS",
+      "result": "PASS",
+      "expectedViews": [],
+      "effectiveSelector": "a[title=\"Delete\"]",
+      "controlCount": 1,
+      "visible": true,
+      "visibleBefore": false,
+      "actual": {
+        "view": "web/WEB-INF/jsp/category.jsp",
+        "choices": [
+          {
+            "label": "無法確定前往哪個畫面",
+            "view": null
+          },
+          {
+            "label": "無法確定前往哪個畫面",
+            "view": null
+          },
+          {
+            "label": "無法確定前往哪個畫面",
+            "view": null
+          },
+          {
+            "label": "無法確定前往哪個畫面",
+            "view": null
+          }
+        ],
+        "calls": [
+          "呼叫 API：POST /retriveCategoryInfo（有條件）"
+        ],
+        "status": [
+          ""
+        ]
+      },
+      "visibleAfter": true
+    },
+    {
+      "id": "A01",
+      "project": "airline_system",
+      "result": "PASS",
+      "expectedViews": [
+        "src/main/resources/templates/flights.html"
+      ],
+      "effectiveSelector": "[data-st-component-id=\"component:2b47478d-acbd-34ca-9143-aefd09192622\"]",
+      "controlCount": 1,
+      "visible": true,
+      "actual": {
+        "view": "src/main/resources/templates/flights.html",
+        "choices": [],
+        "calls": [],
+        "status": [
+          ""
+        ]
+      },
+      "offeredViews": [
+        "src/main/resources/templates/flights.html"
+      ]
+    },
+    {
+      "id": "A02",
+      "project": "airline_system",
+      "result": "PASS",
+      "expectedViews": [
+        "src/main/resources/templates/passengers.html"
+      ],
+      "effectiveSelector": "[data-st-component-id=\"component:4cee1d09-7c16-3638-b466-d560b4139ccb\"]",
+      "controlCount": 1,
+      "visible": true,
+      "actual": {
+        "view": "src/main/resources/templates/passengers.html",
+        "choices": [],
+        "calls": [],
+        "status": [
+          ""
+        ]
+      },
+      "offeredViews": [
+        "src/main/resources/templates/passengers.html"
+      ]
+    },
+    {
+      "id": "A03",
+      "project": "airline_system",
+      "result": "PASS",
+      "expectedViews": [
+        "src/main/resources/templates/reservations.html"
+      ],
+      "effectiveSelector": "[data-st-component-id=\"component:eb9560b4-2e53-3ca3-9a1b-6a3812ef476a\"]",
+      "controlCount": 1,
+      "visible": true,
+      "actual": {
+        "view": "src/main/resources/templates/reservations.html",
+        "choices": [],
+        "calls": [],
+        "status": [
+          ""
+        ]
+      },
+      "offeredViews": [
+        "src/main/resources/templates/reservations.html"
+      ]
+    },
+    {
+      "id": "A04",
+      "project": "airline_system",
+      "result": "PASS",
+      "expectedViews": [
+        "src/main/resources/templates/index.html"
+      ],
+      "effectiveSelector": "[data-st-component-id=\"component:64bb23c3-9ba7-37cf-bbe8-1f06a388acb0\"]",
+      "controlCount": 1,
+      "visible": true,
+      "actual": {
+        "view": "src/main/resources/templates/index.html",
+        "choices": [],
+        "calls": [],
+        "status": [
+          ""
+        ]
+      },
+      "offeredViews": [
+        "src/main/resources/templates/index.html"
+      ]
+    },
+    {
+      "id": "A05",
+      "project": "airline_system",
+      "result": "PASS",
+      "expectedViews": [],
+      "effectiveSelector": "#passengerId",
+      "controlCount": 1,
+      "visible": true,
+      "actualValue": "passengerId"
+    },
+    {
+      "id": "A06",
+      "project": "airline_system",
+      "result": "PASS",
+      "expectedViews": [],
+      "effectiveSelector": "#firstName",
+      "controlCount": 1,
+      "visible": true,
+      "actualValue": "firstName"
+    },
+    {
+      "id": "A07",
+      "project": "airline_system",
+      "result": "PASS",
+      "expectedViews": [],
+      "effectiveSelector": "#lastName",
+      "controlCount": 1,
+      "visible": true,
+      "actualValue": "lastName"
+    },
+    {
+      "id": "A08",
+      "project": "airline_system",
+      "result": "PASS",
+      "expectedViews": [],
+      "effectiveSelector": "#flightNumber",
+      "controlCount": 1,
+      "visible": true,
+      "actualValue": "flightNumber"
+    },
+    {
+      "id": "A09",
+      "project": "airline_system",
+      "result": "PASS",
+      "expectedViews": [],
+      "effectiveSelector": "#seatCapacity",
+      "controlCount": 1,
+      "visible": true,
+      "actualValue": "seatCapacity"
+    },
+    {
+      "id": "A10",
+      "project": "airline_system",
+      "result": "PASS",
+      "expectedViews": [
+        "src/main/resources/templates/passengers.html"
+      ],
+      "effectiveSelector": "button[type=submit]",
+      "controlCount": 1,
+      "visible": true,
+      "actual": {
+        "view": "src/main/resources/templates/passengers.html",
+        "choices": [],
+        "calls": [],
+        "status": [
+          ""
+        ]
+      },
+      "offeredViews": [
+        "src/main/resources/templates/passengers.html"
+      ],
+      "body": "Airline System\nUçuşlar Yolcular Rezervasyonlar\nYeni Yolcu Ekle\nYolcu ID \nAd \nSoyad \nYolcu Ekle\nKayıtlı Yolcular\nID\tAd\tSoyad\tİşlemler\n示例 passengerId\t示例 firstName\t示例 lastName\t \nST-BATCH3\tScreenTrace\tCompleteness\t ",
+      "expectedDataPresent": true,
+      "tableDataPresent": true
+    },
+    {
+      "id": "A11",
+      "project": "airline_system",
+      "result": "PASS",
+      "expectedViews": [
+        "src/main/resources/templates/flights.html"
+      ],
+      "effectiveSelector": "button[type=submit]",
+      "controlCount": 1,
+      "visible": true,
+      "actual": {
+        "view": "src/main/resources/templates/flights.html",
+        "choices": [
+          {
+            "target": "screen:32b5b43a-4c70-3646-9077-8ec02ec726b4",
+            "label": "flights.html · 示範成功路徑",
+            "view": "src/main/resources/templates/flights.html"
+          },
+          {
+            "target": "screen:32b5b43a-4c70-3646-9077-8ec02ec726b4",
+            "label": "flights.html · 示範例外路徑（不寫入資料）",
+            "view": "src/main/resources/templates/flights.html"
+          }
+        ],
+        "calls": [],
+        "status": [
+          ""
+        ]
+      },
+      "offeredViews": [
+        "src/main/resources/templates/flights.html",
+        "src/main/resources/templates/flights.html"
+      ],
+      "selected": {
+        "view": "src/main/resources/templates/flights.html",
+        "choices": [],
+        "calls": [],
+        "status": [
+          ""
+        ]
+      },
+      "body": "Airline System\nUçuşlar Yolcular Rezervasyonlar\nYeni Uçuş Ekle\nUçuş Numarası \nKalkış Noktası \nVarış Noktası \nKalkış Tarihi \nKoltuk Kapasitesi \nUçuş Ekle\nMevcut Uçuşlar\nUçuş No\tKalkış\tVarış\tTarih\tKoltuk\n示例 flightNumber\t示例 departure\t示例 destination\tDate\t示例 availableSeats/示例 seatCapacity\nST-318\tTaipei\tTokyo\tDate\t/180",
+      "expectedDataPresent": true,
+      "tableDataPresent": true
+    },
+    {
+      "id": "A12",
+      "project": "airline_system",
+      "result": "PASS",
+      "expectedViews": [],
+      "effectiveSelector": "select[name=flightNumber]",
+      "controlCount": 1,
+      "visible": true,
+      "options": [
+        {
+          "value": "",
+          "text": "Uçuş seçin..."
+        },
+        {
+          "value": "示例 flightNumber",
+          "text": "示例 flightNumber - 示例 departure → 示例 destination"
+        }
+      ]
+    }
+  ],
+  "journeys": [
+    {
+      "id": "CJ1",
+      "project": "contract-management-system",
+      "steps": [
+        "C01",
+        "C02",
+        "C03",
+        "C04"
+      ],
+      "result": "PASS",
+      "stepsExecuted": [
+        {
+          "id": "C01",
+          "project": "contract-management-system",
+          "result": "PASS",
+          "expectedViews": [
+            "src/main/webapp/list.jsp"
+          ],
+          "effectiveSelector": "[data-st-component-id=\"component:9392ba9b-7bfc-3037-ba45-eb17834e8147\"]",
+          "controlCount": 1,
+          "visible": true,
+          "actual": {
+            "view": "src/main/webapp/list.jsp",
+            "choices": [],
+            "calls": [],
+            "status": [
+              ""
+            ]
+          },
+          "offeredViews": [
+            "src/main/webapp/list.jsp"
+          ]
+        },
+        {
+          "id": "C02",
+          "project": "contract-management-system",
+          "result": "PASS",
+          "expectedViews": [
+            "src/main/webapp/input.jsp"
+          ],
+          "effectiveSelector": "[data-st-component-id=\"component:041bc587-2d2f-3756-89f4-27e5f1edbfc9\"]",
+          "controlCount": 1,
+          "visible": true,
+          "actual": {
+            "view": "src/main/webapp/input.jsp",
+            "choices": [],
+            "calls": [],
+            "status": [
+              ""
+            ]
+          },
+          "offeredViews": [
+            "src/main/webapp/input.jsp"
+          ]
+        },
+        {
+          "id": "C03",
+          "project": "contract-management-system",
+          "result": "PASS",
+          "expectedViews": [
+            "src/main/webapp/result.jsp",
+            "src/main/webapp/input.jsp"
+          ],
+          "effectiveSelector": "input[type=submit],button[type=submit]",
+          "controlCount": 1,
+          "visible": true,
+          "actual": {
+            "view": "src/main/webapp/input.jsp",
+            "choices": [
+              {
+                "target": "screen:87780f65-d49f-3717-82b4-232a29bcdf3a",
+                "label": "result",
+                "view": "src/main/webapp/result.jsp"
+              },
+              {
+                "target": "screen:999252b7-f4c9-34b3-b9e8-649f0b8ce9ff",
+                "label": "input",
+                "view": "src/main/webapp/input.jsp"
+              }
+            ],
+            "calls": [],
+            "status": [
+              ""
+            ]
+          },
+          "offeredViews": [
+            "src/main/webapp/result.jsp",
+            "src/main/webapp/input.jsp"
+          ],
+          "selected": {
+            "view": "src/main/webapp/result.jsp",
+            "choices": [],
+            "calls": [],
+            "status": [
+              ""
+            ]
+          }
+        },
+        {
+          "id": "C04",
+          "project": "contract-management-system",
+          "result": "PASS",
+          "expectedViews": [
+            "src/main/webapp/input.jsp"
+          ],
+          "effectiveSelector": "[data-st-component-id=\"component:3532f4b5-0818-36d6-9a00-c0ba64faf595\"]",
+          "controlCount": 1,
+          "visible": true,
+          "actual": {
+            "view": "src/main/webapp/input.jsp",
+            "choices": [],
+            "calls": [],
+            "status": [
+              ""
+            ]
+          },
+          "offeredViews": [
+            "src/main/webapp/input.jsp"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "BJ1",
+      "project": "Fintech-Finance-Banking-Application",
+      "steps": [
+        "B01",
+        "B02",
+        "B03"
+      ],
+      "result": "PASS",
+      "stepsExecuted": [
+        {
+          "id": "B01",
+          "project": "Fintech-Finance-Banking-Application",
+          "result": "PASS",
+          "expectedViews": [
+            "src/main/webapp/WEB-INF/jsp/register.jsp"
+          ],
+          "effectiveSelector": "[data-st-component-id=\"component:571a7dd3-840a-3a46-b82c-a5b1b9d7b38b\"]",
+          "controlCount": 1,
+          "visible": true,
+          "actual": {
+            "view": "src/main/webapp/WEB-INF/jsp/register.jsp",
+            "choices": [],
+            "calls": [],
+            "status": [
+              ""
+            ]
+          },
+          "offeredViews": [
+            "src/main/webapp/WEB-INF/jsp/register.jsp"
+          ]
+        },
+        {
+          "id": "B02",
+          "project": "Fintech-Finance-Banking-Application",
+          "result": "PASS",
+          "expectedViews": [
+            "src/main/webapp/WEB-INF/jsp/login.jsp"
+          ],
+          "effectiveSelector": "[data-st-component-id=\"component:945ce500-b3f9-3938-b65b-2e5e08a1e950\"]",
+          "controlCount": 1,
+          "visible": true,
+          "actual": {
+            "view": "src/main/webapp/WEB-INF/jsp/login.jsp",
+            "choices": [],
+            "calls": [],
+            "status": [
+              ""
+            ]
+          },
+          "offeredViews": [
+            "src/main/webapp/WEB-INF/jsp/login.jsp"
+          ]
+        },
+        {
+          "id": "B03",
+          "project": "Fintech-Finance-Banking-Application",
+          "result": "PASS",
+          "expectedViews": [
+            "src/main/webapp/WEB-INF/jsp/index.jsp"
+          ],
+          "effectiveSelector": "[data-st-component-id=\"component:32863826-25ec-3d5c-a341-744397717161\"]",
+          "controlCount": 1,
+          "visible": true,
+          "actual": {
+            "view": "src/main/webapp/WEB-INF/jsp/index.jsp",
+            "choices": [],
+            "calls": [],
+            "status": [
+              ""
+            ]
+          },
+          "offeredViews": [
+            "src/main/webapp/WEB-INF/jsp/index.jsp"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "IJ1",
+      "project": "SpringMVC-IMS",
+      "steps": [
+        "I01",
+        "I02",
+        "I07"
+      ],
+      "result": "PASS",
+      "stepsExecuted": [
+        {
+          "id": "I01",
+          "project": "SpringMVC-IMS",
+          "result": "PASS",
+          "expectedViews": [
+            "web/WEB-INF/jsp/loginform.jsp"
+          ],
+          "effectiveSelector": "[data-st-component-id=\"component:c773440a-0461-39fe-beb6-a550625b9f73\"]",
+          "controlCount": 1,
+          "visible": true,
+          "actual": {
+            "view": "web/WEB-INF/jsp/loginform.jsp",
+            "choices": [],
+            "calls": [],
+            "status": [
+              ""
+            ]
+          },
+          "offeredViews": [
+            "web/WEB-INF/jsp/loginform.jsp"
+          ]
+        },
+        {
+          "id": "I02",
+          "project": "SpringMVC-IMS",
+          "result": "PASS",
+          "expectedViews": [
+            "web/WEB-INF/jsp/dashboard.jsp",
+            "web/WEB-INF/jsp/loginform.jsp"
+          ],
+          "effectiveSelector": "#loginBtn",
+          "controlCount": 1,
+          "visible": true,
+          "actual": {
+            "view": "web/WEB-INF/jsp/loginform.jsp",
+            "choices": [
+              {
+                "target": "screen:65066324-e11d-383d-b1d7-7b6cb60d4fd0",
+                "label": "loginform",
+                "view": "web/WEB-INF/jsp/loginform.jsp"
+              },
+              {
+                "target": "screen:65066324-e11d-383d-b1d7-7b6cb60d4fd0",
+                "label": "loginform",
+                "view": "web/WEB-INF/jsp/loginform.jsp"
+              },
+              {
+                "target": "screen:a75276a8-fd35-372c-975a-ebb75a5096b2",
+                "label": "dashboard",
+                "view": "web/WEB-INF/jsp/dashboard.jsp"
+              }
+            ],
+            "calls": [],
+            "status": [
+              ""
+            ]
+          },
+          "offeredViews": [
+            "web/WEB-INF/jsp/loginform.jsp",
+            "web/WEB-INF/jsp/loginform.jsp",
+            "web/WEB-INF/jsp/dashboard.jsp"
+          ],
+          "selected": {
+            "view": "web/WEB-INF/jsp/dashboard.jsp",
+            "choices": [],
+            "calls": [],
+            "status": [
+              ""
+            ]
+          }
+        },
+        {
+          "id": "I07",
+          "project": "SpringMVC-IMS",
+          "result": "PASS",
+          "expectedViews": [
+            "web/WEB-INF/jsp/category.jsp",
+            "web/WEB-INF/jsp/loginform.jsp"
+          ],
+          "effectiveSelector": "[data-st-component-id=\"component:e2dc03ce-8da5-3a74-9ed7-e5db6543bde8\"]",
+          "controlCount": 1,
+          "visible": true,
+          "actual": {
+            "view": "web/WEB-INF/jsp/dashboard.jsp",
+            "choices": [
+              {
+                "target": "screen:65066324-e11d-383d-b1d7-7b6cb60d4fd0",
+                "label": "loginform",
+                "view": "web/WEB-INF/jsp/loginform.jsp"
+              },
+              {
+                "target": "screen:b3c0dedf-ecb9-3ad7-a639-7aeca235f72e",
+                "label": "category",
+                "view": "web/WEB-INF/jsp/category.jsp"
+              }
+            ],
+            "calls": [],
+            "status": [
+              ""
+            ]
+          },
+          "offeredViews": [
+            "web/WEB-INF/jsp/loginform.jsp",
+            "web/WEB-INF/jsp/category.jsp"
+          ],
+          "selected": {
+            "view": "web/WEB-INF/jsp/category.jsp",
+            "choices": [],
+            "calls": [],
+            "status": [
+              ""
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "AJ1",
+      "project": "airline_system",
+      "steps": [
+        "A01",
+        "A02",
+        "A03",
+        "A04"
+      ],
+      "result": "PASS",
+      "stepsExecuted": [
+        {
+          "id": "A01",
+          "project": "airline_system",
+          "result": "PASS",
+          "expectedViews": [
+            "src/main/resources/templates/flights.html"
+          ],
+          "effectiveSelector": "[data-st-component-id=\"component:2b47478d-acbd-34ca-9143-aefd09192622\"]",
+          "controlCount": 1,
+          "visible": true,
+          "actual": {
+            "view": "src/main/resources/templates/flights.html",
+            "choices": [],
+            "calls": [],
+            "status": [
+              ""
+            ]
+          },
+          "offeredViews": [
+            "src/main/resources/templates/flights.html"
+          ]
+        },
+        {
+          "id": "A02",
+          "project": "airline_system",
+          "result": "PASS",
+          "expectedViews": [
+            "src/main/resources/templates/passengers.html"
+          ],
+          "effectiveSelector": "[data-st-component-id=\"component:4cee1d09-7c16-3638-b466-d560b4139ccb\"]",
+          "controlCount": 1,
+          "visible": true,
+          "actual": {
+            "view": "src/main/resources/templates/passengers.html",
+            "choices": [],
+            "calls": [],
+            "status": [
+              ""
+            ]
+          },
+          "offeredViews": [
+            "src/main/resources/templates/passengers.html"
+          ]
+        },
+        {
+          "id": "A03",
+          "project": "airline_system",
+          "result": "PASS",
+          "expectedViews": [
+            "src/main/resources/templates/reservations.html"
+          ],
+          "effectiveSelector": "[data-st-component-id=\"component:eb9560b4-2e53-3ca3-9a1b-6a3812ef476a\"]",
+          "controlCount": 1,
+          "visible": true,
+          "actual": {
+            "view": "src/main/resources/templates/reservations.html",
+            "choices": [],
+            "calls": [],
+            "status": [
+              ""
+            ]
+          },
+          "offeredViews": [
+            "src/main/resources/templates/reservations.html"
+          ]
+        },
+        {
+          "id": "A04",
+          "project": "airline_system",
+          "result": "PASS",
+          "expectedViews": [
+            "src/main/resources/templates/index.html"
+          ],
+          "effectiveSelector": "[data-st-component-id=\"component:64bb23c3-9ba7-37cf-bbe8-1f06a388acb0\"]",
+          "controlCount": 1,
+          "visible": true,
+          "actual": {
+            "view": "src/main/resources/templates/index.html",
+            "choices": [],
+            "calls": [],
+            "status": [
+              ""
+            ]
+          },
+          "offeredViews": [
+            "src/main/resources/templates/index.html"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "AJ2",
+      "project": "airline_system",
+      "steps": [
+        "A02",
+        "A10",
+        "A03",
+        "A12"
+      ],
+      "result": "PASS",
+      "stepsExecuted": [
+        {
+          "id": "A02",
+          "project": "airline_system",
+          "result": "PASS",
+          "expectedViews": [
+            "src/main/resources/templates/passengers.html"
+          ],
+          "effectiveSelector": "[data-st-component-id=\"component:4cee1d09-7c16-3638-b466-d560b4139ccb\"]",
+          "controlCount": 1,
+          "visible": true,
+          "actual": {
+            "view": "src/main/resources/templates/passengers.html",
+            "choices": [],
+            "calls": [],
+            "status": [
+              ""
+            ]
+          },
+          "offeredViews": [
+            "src/main/resources/templates/passengers.html"
+          ]
+        },
+        {
+          "id": "A10",
+          "project": "airline_system",
+          "result": "PASS",
+          "expectedViews": [
+            "src/main/resources/templates/passengers.html"
+          ],
+          "effectiveSelector": "button[type=submit]",
+          "controlCount": 1,
+          "visible": true,
+          "actual": {
+            "view": "src/main/resources/templates/passengers.html",
+            "choices": [],
+            "calls": [],
+            "status": [
+              ""
+            ]
+          },
+          "offeredViews": [
+            "src/main/resources/templates/passengers.html"
+          ],
+          "body": "Airline System\nUçuşlar Yolcular Rezervasyonlar\nYeni Yolcu Ekle\nYolcu ID \nAd \nSoyad \nYolcu Ekle\nKayıtlı Yolcular\nID\tAd\tSoyad\tİşlemler\n示例 passengerId\t示例 firstName\t示例 lastName\t \nST-BATCH3\tScreenTrace\tCompleteness\t ",
+          "expectedDataPresent": true,
+          "tableDataPresent": true
+        },
+        {
+          "id": "A03",
+          "project": "airline_system",
+          "result": "PASS",
+          "expectedViews": [
+            "src/main/resources/templates/reservations.html"
+          ],
+          "effectiveSelector": "[data-st-component-id=\"component:eb9560b4-2e53-3ca3-9a1b-6a3812ef476a\"]",
+          "controlCount": 1,
+          "visible": true,
+          "actual": {
+            "view": "src/main/resources/templates/reservations.html",
+            "choices": [],
+            "calls": [],
+            "status": [
+              ""
+            ]
+          },
+          "offeredViews": [
+            "src/main/resources/templates/reservations.html"
+          ]
+        },
+        {
+          "id": "A12",
+          "project": "airline_system",
+          "result": "PASS",
+          "expectedViews": [],
+          "effectiveSelector": "select[name=flightNumber]",
+          "controlCount": 1,
+          "visible": true,
+          "options": [
+            {
+              "value": "",
+              "text": "Uçuş seçin..."
+            },
+            {
+              "value": "示例 flightNumber",
+              "text": "示例 flightNumber - 示例 departure → 示例 destination"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "infrastructure": [
+    {
+      "project": "contract-management-system",
+      "pageErrors": [],
+      "externalRequests": []
+    },
+    {
+      "project": "Fintech-Finance-Banking-Application",
+      "pageErrors": [],
+      "externalRequests": []
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "pageErrors": [],
+      "externalRequests": []
+    },
+    {
+      "project": "airline_system",
+      "pageErrors": [],
+      "externalRequests": []
+    }
+  ]
+}

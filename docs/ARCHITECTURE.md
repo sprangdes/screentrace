@@ -626,3 +626,7 @@ JS AST 的來源 evidence 可攜帶固定操作 metadata（show/hide/toggle、se
 ## WP70 — public workflow state and template projection
 
 [ADR 0092](adr/0092-public-workflows-state-and-template-projection.md) adds bounded Thymeleaf URL normalization in the markup parser and physical HTML view correlation in the Spring adapter. Direct source-proven Spring Data paths emit INFERRED `simulationData` handler attributes and `simulationBindings` screen attributes. Capture emits graph-derived inert template bindings; the viewer stores demonstration CRUD state in a payload-scoped WeakMap, retaining preview records across cloned rows and refreshing same-screen returns. No target source, backend, database, review or graph is mutated. Graph 2.2 / Preview 2 and all existing assertions remain unchanged. Returned inline confirm gates continuation; common preview lookup narrows only within original anchor candidates. Snapshot CSS settles animations at a deterministic completed frame while ordinary hidden content stays hidden.
+
+## WP72 有限工作流程語意
+
+來源掃描以安全常值 web.docbase.dir 限定有效 web root。相對腳本／請求／預覽資源使用 canonical graph 的 GET 渲染鏈或直接公開頁 alias 目錄證據；多目錄與私有模板不猜測。JavaParser 保留有限 alias 賦值分支及 unresolvedReturnCount，Acorn 產生 callback、文字、樣式及選項條件效果。ModelFeedback、simulationData conditional 與多 readAll bindings 沿用既有 attributes／evidence 擴充點；Graph 2.2、Preview 2 不變。capture 僅投影有證據的模板標記，viewer 執行工具自己的狀態機，modal 移動原節點並還原，避免 duplicate ID。詳細邊界見 [ADR 0093](adr/0093-public-completeness-workflow-repairs.md)。
