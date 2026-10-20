@@ -5,20 +5,21 @@ import io.screentrace.scanner.ProjectScanner.ProjectInventory;
 import io.screentrace.scanner.SafeProjectFiles;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.*;
-/** Finite literal alternatives only. Conditions are recorded, never evaluated. */
+/** Finite literal alternatives only. Conditions are recorded, never evaluated.
+ * Idempotent: components that already carry alternatives are left unchanged on a repeated pass. */
 final class ConditionalUrlTargets {
  private static final ObjectMapper JSON=new ObjectMapper();
  record Alternative(String path,String guard,int line){}
  static ApplicationGraph enrich(ApplicationGraph graph,ProjectInventory inventory) {
   Map<String,GraphNode> nodes=new TreeMap<>();graph.nodes().forEach(n->nodes.put(n.id(),n));Map<String,String> sources=new HashMap<>();
-  for(var n:graph.nodes())if(n.type()==NodeType.COMPONENT&&"FORM".equals(n.attributes().get("kind")))try {
+  for(var n:graph.nodes())if(n.type()==NodeType.COMPONENT&&"FORM".equals(n.attributes().get("kind"))&&!n.attributes().containsKey("requestAlternatives"))try {
    String file=n.source().file();String source=sources.get(file);if(source==null){source=SafeProjectFiles.readUtf8Limited(inventory.root(),inventory.root().resolve(file),SafeProjectFiles.MAX_JSP_FILE_BYTES);sources.put(file,source);}
    List<Alternative> alternatives=ternary(n.attributes().get("th:action"),n.source().line());
    if(alternatives.isEmpty())alternatives=jstl(source,n.attributes().get("action"),n.source().line(),JspProjectParser.includedWrites(inventory.root(),file,source,new HashSet<>()));
    if(alternatives.isEmpty())continue;
    var attrs=new TreeMap<>(n.attributes());attrs.put("requestAlternatives",JSON.writeValueAsString(alternatives));var proof=new ArrayList<>(n.evidence());for(var a:alternatives)proof.add(new AnalysisEvidence(new SourceLocation(file,a.line()),"ConditionalUrlTargets",ResolutionStatus.INFERRED,"有限字面路徑="+a.path()+"；條件未求值="+a.guard()));nodes.put(n.id(),new GraphNode(n.id(),n.type(),n.name(),attrs,n.source(),n.confidence(),proof));
   }catch(Exception ignored){}
-  for(var n:graph.nodes())if(n.type()==NodeType.COMPONENT&&n.attributes().get("formId")!=null){var form=nodes.get(n.attributes().get("formId"));if(form!=null&&form.attributes().containsKey("requestAlternatives")&&!n.attributes().containsKey("formaction")){var attrs=new TreeMap<>(n.attributes());attrs.put("requestAlternatives",form.attributes().get("requestAlternatives"));var proof=new ArrayList<>(n.evidence());proof.addAll(form.evidence().stream().filter(e->e.parser().equals("ConditionalUrlTargets")).toList());nodes.put(n.id(),new GraphNode(n.id(),n.type(),n.name(),attrs,n.source(),n.confidence(),proof));}}
+  for(var n:graph.nodes())if(n.type()==NodeType.COMPONENT&&n.attributes().get("formId")!=null){var form=nodes.get(n.attributes().get("formId"));if(form!=null&&form.attributes().containsKey("requestAlternatives")&&!n.attributes().containsKey("formaction")&&!n.attributes().containsKey("requestAlternatives")){var attrs=new TreeMap<>(n.attributes());attrs.put("requestAlternatives",form.attributes().get("requestAlternatives"));var proof=new ArrayList<>(n.evidence());proof.addAll(form.evidence().stream().filter(e->e.parser().equals("ConditionalUrlTargets")).toList());nodes.put(n.id(),new GraphNode(n.id(),n.type(),n.name(),attrs,n.source(),n.confidence(),proof));}}
   return new ApplicationGraph(graph.application(),List.copyOf(nodes.values()),graph.relationships(),graph.diagnostics(),graph.apiContracts(),graph.schemaVersion(),graph.behaviors(),graph.validationRules());
  }
  static List<Alternative> ternary(String raw,int line) {

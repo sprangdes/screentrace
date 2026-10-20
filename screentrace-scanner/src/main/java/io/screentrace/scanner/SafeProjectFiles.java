@@ -62,20 +62,35 @@ public final class SafeProjectFiles {
 
   public static String readUtf8Limited(Path root, Path file, long maxBytes) throws IOException {
     byte[] bytes=readBytesLimited(root,file,maxBytes);
-    String charset=declaredEncoding(file,bytes);
-    try{if(charset.equals("UTF-8")||charset.equals("UTF8"))return new String(bytes,StandardCharsets.UTF_8);return java.nio.charset.Charset.forName(charset).newDecoder().onMalformedInput(java.nio.charset.CodingErrorAction.REPORT).onUnmappableCharacter(java.nio.charset.CodingErrorAction.REPORT).decode(java.nio.ByteBuffer.wrap(bytes)).toString();}
-    catch(IllegalArgumentException error){throw new IOException("Unsupported declared source encoding: "+charset,error);}
+    String charset;
+    try{charset=declaredEncoding(file,bytes);}catch(IOException unsupported){return new String(bytes,StandardCharsets.UTF_8);}
+    if(charset.equals("UTF-8")||charset.equals("UTF8"))return new String(bytes,StandardCharsets.UTF_8);
+    try{return strictDecode(charset,bytes);}
+    catch(java.nio.charset.CharacterCodingException malformed){return new String(bytes,StandardCharsets.UTF_8);}
+  }
+
+  /** Why the declared encoding could not be applied, or null when it decodes cleanly.
+   * Callers record this; readUtf8Limited keeps the legacy UTF-8 reading instead of skipping the file. */
+  public static String decodingProblem(Path file,byte[] bytes) {
+    try{String charset=declaredEncoding(file,bytes);if(!charset.equals("UTF-8")&&!charset.equals("UTF8"))strictDecode(charset,bytes);return null;}
+    catch(java.nio.charset.CharacterCodingException malformed){return "Source bytes are not valid for the declared encoding";}
+    catch(IOException unsupported){return unsupported.getMessage();}
+  }
+
+  private static String strictDecode(String charset,byte[] bytes)throws java.nio.charset.CharacterCodingException {
+    return java.nio.charset.Charset.forName(charset).newDecoder().onMalformedInput(java.nio.charset.CodingErrorAction.REPORT).onUnmappableCharacter(java.nio.charset.CodingErrorAction.REPORT).decode(java.nio.ByteBuffer.wrap(bytes)).toString();
   }
 
   /** Encoding declarations are lexical metadata, never expressions or guessed byte encodings. */
   public static String declaredEncoding(Path file,byte[] bytes)throws IOException {
     if(!file.getFileName().toString().toLowerCase(java.util.Locale.ROOT).matches(".*\\.(jsp|jspf|html|htm|tag|tagx)"))return "UTF-8";
     String header=new String(bytes,0,Math.min(bytes.length,8192),StandardCharsets.ISO_8859_1).replaceAll("(?s)<%--.*?--%>|<!--.*?-->","");
-    var directive=java.util.regex.Pattern.compile("(?is)<%@\\s*page\\b[^%]*?\\bpageEncoding\\s*=\\s*['\"]([A-Za-z0-9_-]+)['\"]").matcher(header);
+    var directive=java.util.regex.Pattern.compile("(?is)<%@\\s*page\\b[^%]*?\\bpageEncoding\\s*=\\s*['\"]([A-Za-z0-9_.:-]+)['\"]").matcher(header);
     java.util.Set<String> values=new java.util.TreeSet<>();while(directive.find())values.add(directive.group(1).toUpperCase(java.util.Locale.ROOT));
-    if(values.size()>1)throw new IOException("Conflicting source encoding declarations");
+    if(values.size()>1)throw new IOException("Conflicting source encoding declarations: "+values);
     String value=values.isEmpty()?"UTF-8":values.iterator().next();
-    if(!java.util.Set.of("UTF-8","UTF8","GB18030","GBK","GB2312","ISO-8859-1","US-ASCII").contains(value))throw new IOException("Unsupported declared source encoding: "+value);
+    boolean supported;try{supported=java.nio.charset.Charset.isSupported(value);}catch(IllegalArgumentException illegal){supported=false;}
+    if(!supported)throw new IOException("Unsupported declared source encoding: "+value);
     return value;
   }
 

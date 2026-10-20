@@ -211,7 +211,13 @@ public final class JspProjectParser {
     java.util.Set<String> result=new java.util.HashSet<>();
     if(!visited.add(path)||visited.size()>SafeProjectFiles.MAX_DIRECTORY_DEPTH) return java.util.Set.of("*");
     for(MarkupTag tag:MarkupTag.scan(text)) if(!tag.closing() && java.util.Set.of("@include","jsp:include","c:import").contains(tag.name().toLowerCase(Locale.ROOT))) {
-      String target=target(tag,"file","page");String child=literal(target)?resolveInclude(root,path,target):null;
+      boolean imported=tag.name().equalsIgnoreCase("c:import");
+      String target=imported?tag.attribute("url"):target(tag,"file","page");
+      // An absolute external import is a separate HTTP request and cannot write this request's variables.
+      if(imported&&literal(target)&&tag.attribute("context")==null&&target.matches("(?i)^(https?:)?//.*")) continue;
+      if(imported&&literal(target)&&tag.attribute("context")==null)target=target.split("[?#]",2)[0];
+      else if(imported)target=null;
+      String child=literal(target)?resolveInclude(root,path,target):null;
       if(child==null) {result.add("*");continue;}
       try {
         String included=SafeProjectFiles.readUtf8Limited(root,root.resolve(child),SafeProjectFiles.MAX_JSP_FILE_BYTES);
