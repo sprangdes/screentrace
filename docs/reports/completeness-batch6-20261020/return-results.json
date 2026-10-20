@@ -1,0 +1,631 @@
+[
+  {
+    "project": "java7-struts1-jquery-bootstrap3-web-project",
+    "source": {
+      "kind": "strutsAction",
+      "file": "src/main/webapp/WEB-INF/struts-config.xml",
+      "line": 19,
+      "lineEnd": 19,
+      "path": "/home",
+      "type": "com.my_app.page.home.HomeAction",
+      "scope": "request",
+      "input": "/home.jsp",
+      "forwards": [
+        {
+          "name": "homePage",
+          "path": "/home.jsp"
+        }
+      ]
+    },
+    "startHandlers": [
+      "handler:36a2ba6e-1dc5-331e-8780-b4ea73569744"
+    ],
+    "expectedTargets": [
+      "src/main/webapp/home.jsp",
+      "src/main/webapp/login.jsp"
+    ],
+    "actualTargets": [
+      "src/main/webapp/home.jsp",
+      "src/main/webapp/login.jsp"
+    ],
+    "missing": [],
+    "extra": [],
+    "result": "PASS"
+  },
+  {
+    "project": "java7-struts1-jquery-bootstrap3-web-project",
+    "source": {
+      "kind": "strutsAction",
+      "file": "src/main/webapp/WEB-INF/struts-config.xml",
+      "line": 23,
+      "lineEnd": 23,
+      "name": "loginForm",
+      "path": "/login",
+      "type": "com.my_app.page.login.LoginAction",
+      "scope": "request",
+      "input": "/login.jsp",
+      "forwards": [
+        {
+          "name": "loginPage",
+          "path": "/login.jsp"
+        }
+      ]
+    },
+    "startHandlers": [
+      "handler:0d4ae306-76ef-34d0-81d1-abd954a12171"
+    ],
+    "expectedTargets": [
+      "src/main/webapp/home.jsp",
+      "src/main/webapp/login.jsp"
+    ],
+    "actualTargets": [
+      "src/main/webapp/home.jsp",
+      "src/main/webapp/login.jsp"
+    ],
+    "missing": [],
+    "extra": [],
+    "result": "PASS"
+  },
+  {
+    "project": "java7-struts1-jquery-bootstrap3-web-project",
+    "source": {
+      "kind": "strutsAction",
+      "file": "src/main/webapp/WEB-INF/struts-config.xml",
+      "line": 27,
+      "lineEnd": 27,
+      "path": "/users",
+      "type": "com.my_app.page.user.list.UserListAction",
+      "scope": "request",
+      "input": "/user/list.jsp",
+      "forwards": []
+    },
+    "startHandlers": [
+      "handler:80fd0e26-4e5a-3e20-8be9-39ff578933c8"
+    ],
+    "expectedTargets": [
+      "src/main/webapp/home.jsp",
+      "src/main/webapp/login.jsp",
+      "src/main/webapp/user/list.jsp"
+    ],
+    "actualTargets": [
+      "src/main/webapp/home.jsp",
+      "src/main/webapp/login.jsp",
+      "src/main/webapp/user/list.jsp"
+    ],
+    "missing": [],
+    "extra": [],
+    "result": "PASS"
+  },
+  {
+    "project": "java7-struts1-jquery-bootstrap3-web-project",
+    "source": {
+      "kind": "strutsAction",
+      "file": "src/main/webapp/WEB-INF/struts-config.xml",
+      "line": 28,
+      "lineEnd": 28,
+      "name": "userSaveForm",
+      "path": "/user/save",
+      "type": "com.my_app.page.user.save.UserSaveAction",
+      "scope": "request",
+      "input": "/user/save/form.jsp",
+      "forwards": [
+        {
+          "name": "form",
+          "path": "/user/save/form.jsp"
+        }
+      ]
+    },
+    "startHandlers": [
+      "handler:769fad0e-b05f-3657-a508-b6e8c999966f"
+    ],
+    "expectedTargets": [
+      "src/main/webapp/home.jsp",
+      "src/main/webapp/login.jsp",
+      "src/main/webapp/user/list.jsp",
+      "src/main/webapp/user/save/form.jsp"
+    ],
+    "actualTargets": [
+      "src/main/webapp/home.jsp",
+      "src/main/webapp/login.jsp",
+      "src/main/webapp/user/list.jsp",
+      "src/main/webapp/user/save/form.jsp"
+    ],
+    "missing": [],
+    "extra": [],
+    "result": "PASS"
+  },
+  {
+    "project": "java7-struts1-jquery-bootstrap3-web-project",
+    "source": {
+      "kind": "strutsAction",
+      "file": "src/main/webapp/WEB-INF/struts-config.xml",
+      "line": 31,
+      "lineEnd": 31,
+      "path": "/user/user-delete",
+      "type": "com.my_app.page.user.delete.UserDeleteAction",
+      "scope": "request",
+      "forwards": []
+    },
+    "startHandlers": [
+      "handler:66465090-880a-38ab-a311-5329fca53b61"
+    ],
+    "expectedTargets": [
+      "src/main/webapp/home.jsp",
+      "src/main/webapp/login.jsp",
+      "src/main/webapp/user/list.jsp"
+    ],
+    "actualTargets": [
+      "src/main/webapp/home.jsp",
+      "src/main/webapp/login.jsp",
+      "src/main/webapp/user/list.jsp"
+    ],
+    "missing": [],
+    "extra": [],
+    "result": "PASS"
+  },
+  {
+    "project": "java7-struts1-jquery-bootstrap3-web-project",
+    "source": {
+      "kind": "strutsAction",
+      "file": "src/main/webapp/WEB-INF/struts-config.xml",
+      "line": 33,
+      "lineEnd": 33,
+      "path": "/api/city/by-country",
+      "type": "com.my_app.api.http_action.city.CityApiFindByCountryId",
+      "scope": "request",
+      "forwards": []
+    },
+    "startHandlers": [
+      "handler:05638015-1bdf-3b15-9f95-70ac69e44ad2"
+    ],
+    "expectedTargets": [],
+    "actualTargets": [],
+    "missing": [],
+    "extra": [],
+    "result": "PASS"
+  },
+  {
+    "project": "InventoryMGRSpringMVCCRUD",
+    "source": {
+      "kind": "endpoint",
+      "file": "src/controllers/ProductController.java",
+      "line": 36,
+      "class": "ProductController",
+      "method": "getInventory",
+      "lineEnd": 43,
+      "httpMethod": "GET",
+      "path": "/GetInventory.do",
+      "params": "",
+      "rest": false
+    },
+    "startHandlers": [
+      "handler:f7a6ae91-3192-33e6-9400-8396498c7636"
+    ],
+    "expectedTargets": [
+      "WebContent/WEB-INF/viewInventory.jsp"
+    ],
+    "actualTargets": [
+      "WebContent/WEB-INF/viewInventory.jsp"
+    ],
+    "missing": [],
+    "extra": [],
+    "result": "PASS"
+  },
+  {
+    "project": "InventoryMGRSpringMVCCRUD",
+    "source": {
+      "kind": "endpoint",
+      "file": "src/controllers/ProductController.java",
+      "line": 45,
+      "class": "ProductController",
+      "method": "viewEdit",
+      "lineEnd": 57,
+      "httpMethod": "GET",
+      "path": "/EditProduct.do",
+      "params": "",
+      "rest": false
+    },
+    "startHandlers": [
+      "handler:77274f94-86cf-3bc3-9f59-06b46f5507c6"
+    ],
+    "expectedTargets": [
+      "WebContent/WEB-INF/editProduct.jsp"
+    ],
+    "actualTargets": [
+      "WebContent/WEB-INF/editProduct.jsp"
+    ],
+    "missing": [],
+    "extra": [],
+    "result": "PASS"
+  },
+  {
+    "project": "InventoryMGRSpringMVCCRUD",
+    "source": {
+      "kind": "endpoint",
+      "file": "src/controllers/ProductController.java",
+      "line": 59,
+      "class": "ProductController",
+      "method": "editByID",
+      "lineEnd": 70,
+      "httpMethod": "POST",
+      "path": "/EditProductData.do",
+      "params": "",
+      "rest": false
+    },
+    "startHandlers": [
+      "handler:6d11c23e-9526-3547-bb1e-b9724e13a3ff"
+    ],
+    "expectedTargets": [
+      "WebContent/WEB-INF/editProduct.jsp",
+      "WebContent/WEB-INF/viewInventory.jsp"
+    ],
+    "actualTargets": [
+      "WebContent/WEB-INF/editProduct.jsp",
+      "WebContent/WEB-INF/viewInventory.jsp"
+    ],
+    "missing": [],
+    "extra": [],
+    "result": "PASS"
+  },
+  {
+    "project": "InventoryMGRSpringMVCCRUD",
+    "source": {
+      "kind": "endpoint",
+      "file": "src/controllers/ProductController.java",
+      "line": 72,
+      "class": "ProductController",
+      "method": "viewAdd",
+      "lineEnd": 78,
+      "httpMethod": "GET",
+      "path": "/AddProduct.do",
+      "params": "",
+      "rest": false
+    },
+    "startHandlers": [
+      "handler:91797d22-5321-363d-aba3-5b709f63a972"
+    ],
+    "expectedTargets": [
+      "WebContent/WEB-INF/addProduct.jsp"
+    ],
+    "actualTargets": [
+      "WebContent/WEB-INF/addProduct.jsp"
+    ],
+    "missing": [],
+    "extra": [],
+    "result": "PASS"
+  },
+  {
+    "project": "InventoryMGRSpringMVCCRUD",
+    "source": {
+      "kind": "endpoint",
+      "file": "src/controllers/ProductController.java",
+      "line": 80,
+      "class": "ProductController",
+      "method": "addByID",
+      "lineEnd": 92,
+      "httpMethod": "POST",
+      "path": "/AddProductData.do",
+      "params": "",
+      "rest": false
+    },
+    "startHandlers": [
+      "handler:5782f3c9-a2ca-3e71-b101-69025c4efbec"
+    ],
+    "expectedTargets": [
+      "WebContent/WEB-INF/addProduct.jsp",
+      "WebContent/WEB-INF/viewInventory.jsp"
+    ],
+    "actualTargets": [
+      "WebContent/WEB-INF/addProduct.jsp",
+      "WebContent/WEB-INF/viewInventory.jsp"
+    ],
+    "missing": [],
+    "extra": [],
+    "result": "PASS"
+  },
+  {
+    "project": "InventoryMGRSpringMVCCRUD",
+    "source": {
+      "kind": "endpoint",
+      "file": "src/controllers/ProductController.java",
+      "line": 94,
+      "class": "ProductController",
+      "method": "viewDelete",
+      "lineEnd": 100,
+      "httpMethod": "GET",
+      "path": "/DeleteProduct.do",
+      "params": "",
+      "rest": false
+    },
+    "startHandlers": [
+      "handler:bd9b1717-980c-36e4-85d7-64dec0c06fcd"
+    ],
+    "expectedTargets": [
+      "WebContent/WEB-INF/deleteProduct.jsp"
+    ],
+    "actualTargets": [
+      "WebContent/WEB-INF/deleteProduct.jsp"
+    ],
+    "missing": [],
+    "extra": [],
+    "result": "PASS"
+  },
+  {
+    "project": "InventoryMGRSpringMVCCRUD",
+    "source": {
+      "kind": "endpoint",
+      "file": "src/controllers/ProductController.java",
+      "line": 102,
+      "class": "ProductController",
+      "method": "viewDelete",
+      "lineEnd": 109,
+      "httpMethod": "POST",
+      "path": "/DeleteProductData.do",
+      "params": "",
+      "rest": false
+    },
+    "startHandlers": [
+      "handler:60ac4281-4f5e-3779-bf3d-8aef8670e018"
+    ],
+    "expectedTargets": [
+      "WebContent/WEB-INF/viewInventory.jsp"
+    ],
+    "actualTargets": [
+      "WebContent/WEB-INF/viewInventory.jsp"
+    ],
+    "missing": [],
+    "extra": [],
+    "result": "PASS"
+  },
+  {
+    "project": "InventoryMGRSpringMVCCRUD",
+    "source": {
+      "kind": "endpoint",
+      "file": "src/controllers/ProductController.java",
+      "line": 111,
+      "class": "ProductController",
+      "method": "viewProduct",
+      "lineEnd": 122,
+      "httpMethod": "GET",
+      "path": "/ViewProduct.do",
+      "params": "",
+      "rest": false
+    },
+    "startHandlers": [
+      "handler:1f7a2bcb-55e7-318d-8699-fdcceb93fcc2"
+    ],
+    "expectedTargets": [
+      "WebContent/WEB-INF/viewProduct.jsp"
+    ],
+    "actualTargets": [
+      "WebContent/WEB-INF/viewProduct.jsp"
+    ],
+    "missing": [],
+    "extra": [],
+    "result": "PASS"
+  },
+  {
+    "project": "InventoryMGRSpringMVCCRUD",
+    "source": {
+      "kind": "endpoint",
+      "file": "src/controllers/ProductController.java",
+      "line": 124,
+      "class": "ProductController",
+      "method": "viewProduct",
+      "lineEnd": 130,
+      "httpMethod": "POST",
+      "path": "/ViewProductData.do",
+      "params": "",
+      "rest": false
+    },
+    "startHandlers": [
+      "handler:84a9a2dd-d5c3-3981-97b0-c82fdb36d7ca"
+    ],
+    "expectedTargets": [
+      "WebContent/WEB-INF/viewProduct.jsp"
+    ],
+    "actualTargets": [
+      "WebContent/WEB-INF/viewProduct.jsp"
+    ],
+    "missing": [],
+    "extra": [],
+    "result": "PASS"
+  },
+  {
+    "project": "springboot-todolist",
+    "source": {
+      "kind": "endpoint",
+      "file": "src/main/java/com/example/springbasicfinal/controller/TodoController.java",
+      "line": 32,
+      "class": "TodoController",
+      "method": "index",
+      "lineEnd": 36,
+      "httpMethod": "GET",
+      "path": "/todos",
+      "params": "",
+      "rest": false
+    },
+    "startHandlers": [
+      "handler:6a27675a-6a47-3efc-ad12-51b270b3c6d3"
+    ],
+    "expectedTargets": [
+      "src/main/resources/templates/todo/index.html"
+    ],
+    "actualTargets": [
+      "src/main/resources/templates/todo/index.html"
+    ],
+    "missing": [],
+    "extra": [],
+    "result": "PASS"
+  },
+  {
+    "project": "springboot-todolist",
+    "source": {
+      "kind": "endpoint",
+      "file": "src/main/java/com/example/springbasicfinal/controller/TodoController.java",
+      "line": 39,
+      "class": "TodoController",
+      "method": "detail",
+      "lineEnd": 48,
+      "httpMethod": "GET",
+      "path": "/todos/detail/{id}",
+      "params": "",
+      "rest": false
+    },
+    "startHandlers": [
+      "handler:72d6b452-cba6-31d0-aebf-7c6ee944e30f"
+    ],
+    "expectedTargets": [
+      "src/main/resources/templates/todo/detail.html",
+      "src/main/resources/templates/todo/index.html"
+    ],
+    "actualTargets": [
+      "src/main/resources/templates/todo/detail.html",
+      "src/main/resources/templates/todo/index.html"
+    ],
+    "missing": [],
+    "extra": [],
+    "result": "PASS"
+  },
+  {
+    "project": "springboot-todolist",
+    "source": {
+      "kind": "endpoint",
+      "file": "src/main/java/com/example/springbasicfinal/controller/TodoController.java",
+      "line": 51,
+      "class": "TodoController",
+      "method": "create",
+      "lineEnd": 55,
+      "httpMethod": "GET",
+      "path": "/todos/create",
+      "params": "",
+      "rest": false
+    },
+    "startHandlers": [
+      "handler:d1b77af1-b214-3fbc-932f-fd6e83d6edae"
+    ],
+    "expectedTargets": [
+      "src/main/resources/templates/todo/create.html"
+    ],
+    "actualTargets": [
+      "src/main/resources/templates/todo/create.html"
+    ],
+    "missing": [],
+    "extra": [],
+    "result": "PASS"
+  },
+  {
+    "project": "springboot-todolist",
+    "source": {
+      "kind": "endpoint",
+      "file": "src/main/java/com/example/springbasicfinal/controller/TodoController.java",
+      "line": 58,
+      "class": "TodoController",
+      "method": "createPost",
+      "lineEnd": 73,
+      "httpMethod": "POST",
+      "path": "/todos/create",
+      "params": "",
+      "rest": false
+    },
+    "startHandlers": [
+      "handler:fafc2afd-c8b1-354f-a9c7-0f645cd2ac7e"
+    ],
+    "expectedTargets": [
+      "src/main/resources/templates/todo/create.html",
+      "src/main/resources/templates/todo/index.html"
+    ],
+    "actualTargets": [
+      "src/main/resources/templates/todo/create.html",
+      "src/main/resources/templates/todo/index.html"
+    ],
+    "missing": [],
+    "extra": [],
+    "result": "PASS"
+  },
+  {
+    "project": "springboot-todolist",
+    "source": {
+      "kind": "endpoint",
+      "file": "src/main/java/com/example/springbasicfinal/controller/TodoController.java",
+      "line": 76,
+      "class": "TodoController",
+      "method": "update",
+      "lineEnd": 92,
+      "httpMethod": "GET",
+      "path": "/todos/update/{id}",
+      "params": "",
+      "rest": false
+    },
+    "startHandlers": [
+      "handler:f4ca3b3f-52fe-362c-b4d7-46070e934459"
+    ],
+    "expectedTargets": [
+      "src/main/resources/templates/todo/index.html",
+      "src/main/resources/templates/todo/update.html"
+    ],
+    "actualTargets": [
+      "src/main/resources/templates/todo/index.html",
+      "src/main/resources/templates/todo/update.html"
+    ],
+    "missing": [],
+    "extra": [],
+    "result": "PASS"
+  },
+  {
+    "project": "springboot-todolist",
+    "source": {
+      "kind": "endpoint",
+      "file": "src/main/java/com/example/springbasicfinal/controller/TodoController.java",
+      "line": 95,
+      "class": "TodoController",
+      "method": "updatePost",
+      "lineEnd": 119,
+      "httpMethod": "POST",
+      "path": "/todos/update/{id}",
+      "params": "",
+      "rest": false
+    },
+    "startHandlers": [
+      "handler:0aec080d-77c3-3084-beb3-b958a0774671"
+    ],
+    "expectedTargets": [
+      "src/main/resources/templates/todo/index.html",
+      "src/main/resources/templates/todo/update.html"
+    ],
+    "actualTargets": [
+      "src/main/resources/templates/todo/index.html",
+      "src/main/resources/templates/todo/update.html"
+    ],
+    "missing": [],
+    "extra": [],
+    "result": "PASS"
+  },
+  {
+    "project": "springboot-todolist",
+    "source": {
+      "kind": "endpoint",
+      "file": "src/main/java/com/example/springbasicfinal/controller/TodoController.java",
+      "line": 122,
+      "class": "TodoController",
+      "method": "delete",
+      "lineEnd": 130,
+      "httpMethod": "GET",
+      "path": "/todos/delete/{id}",
+      "params": "",
+      "rest": false
+    },
+    "startHandlers": [
+      "handler:44ec2f87-f8d8-35b8-8d0e-cf138d72b08e"
+    ],
+    "expectedTargets": [
+      "src/main/resources/templates/todo/index.html"
+    ],
+    "actualTargets": [
+      "src/main/resources/templates/todo/index.html"
+    ],
+    "missing": [],
+    "extra": [],
+    "result": "PASS"
+  }
+]

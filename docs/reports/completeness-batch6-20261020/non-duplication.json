@@ -1,0 +1,55 @@
+{
+  "previousRepositories": [
+    "https://github.com/DXChaos/Materials-Program-Management",
+    "https://github.com/FathimaNufla2000/Hotel-Management-System-Spring-Boot",
+    "https://github.com/ImanNazirah/demo-struts1",
+    "https://github.com/NguyenHuyHoangCodeGym-C0718L01/struts1_CRUD_ProductManagement",
+    "https://github.com/RahulDahekar/Hospital-Bed-Availability-Management-System",
+    "https://github.com/RameshMF/spring-mvc-jsp-petclinic",
+    "https://github.com/amiSotun/SpringMVC-IMS",
+    "https://github.com/apache/struts1",
+    "https://github.com/atankit/Student-Management-system",
+    "https://github.com/bradd-pandey/eBazaar",
+    "https://github.com/deep1020/Fintech-Finance-Banking-Application",
+    "https://github.com/gothinkster/spring-boot-realworld-example-app",
+    "https://github.com/isilkiziltas/airlines_system",
+    "https://github.com/kyungseo/spring-boot-todo-jsp",
+    "https://github.com/mbitiutskyi/ShoppingCart",
+    "https://github.com/mjstewart/hotel-reservation-springmvc",
+    "https://github.com/mohamed0sawy/Expenses-Tracker-WebApp",
+    "https://github.com/murthyns18/Employee-Management-System",
+    "https://github.com/r-watanabe-02/contract-management-system",
+    "https://github.com/ranveer5289/OLMS",
+    "https://github.com/satyam131/Library-Management-Web-Application-with-RESTful-Web-Services"
+  ],
+  "selectedRepositories": [
+    "https://github.com/maiconfz/java7-struts1-jquery-bootstrap3-web-project",
+    "https://github.com/chiangs/InventoryMGRSpringMVCCRUD",
+    "https://github.com/Prayzez/springboot-todolist"
+  ],
+  "intersection": [],
+  "allSelectedNonFork": true,
+  "selectionMetadata": [
+    {
+      "full_name": "maiconfz/java7-struts1-jquery-bootstrap3-web-project",
+      "fork": false,
+      "size": 7443,
+      "default_branch": "main",
+      "html_url": "https://github.com/maiconfz/java7-struts1-jquery-bootstrap3-web-project"
+    },
+    {
+      "full_name": "chiangs/InventoryMGRSpringMVCCRUD",
+      "fork": false,
+      "size": 19672,
+      "default_branch": "master",
+      "html_url": "https://github.com/chiangs/InventoryMGRSpringMVCCRUD"
+    },
+    {
+      "full_name": "Prayzez/springboot-todolist",
+      "fork": false,
+      "size": 55,
+      "default_branch": "main",
+      "html_url": "https://github.com/Prayzez/springboot-todolist"
+    }
+  ]
+}

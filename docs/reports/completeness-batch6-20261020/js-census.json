@@ -1,0 +1,176 @@
+{
+  "units": 12,
+  "rows": [
+    {
+      "project": "java7-struts1-jquery-bootstrap3-web-project",
+      "file": "src/main/webapp/js/my-app.js",
+      "line": 10,
+      "kind": "eventBinding",
+      "callee": "click",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$('a[href!=\"#\"], button[type=\"submit\"]').click(() => {\n            this.loading(true);\n        })"
+    },
+    {
+      "project": "java7-struts1-jquery-bootstrap3-web-project",
+      "file": "src/main/webapp/js/service/city-service.js",
+      "line": 8,
+      "kind": "request",
+      "callee": "$.get",
+      "url": "/MyApp/api/city/by-country.do",
+      "httpMethod": "GET",
+      "expression": "$.get('/MyApp/api/city/by-country.do', {\n            \"countryId\": countryId\n        }, (res) => {\n            $def.resolve(res.cities);\n        })"
+    },
+    {
+      "project": "java7-struts1-jquery-bootstrap3-web-project",
+      "file": "src/main/webapp/user/save/js/form.js",
+      "line": 28,
+      "kind": "uiCall",
+      "callee": "form.$action.val",
+      "url": null,
+      "httpMethod": null,
+      "expression": "form.$action.val('validate')"
+    },
+    {
+      "project": "java7-struts1-jquery-bootstrap3-web-project",
+      "file": "src/main/webapp/user/save/js/form.js",
+      "line": 29,
+      "kind": "eventBinding",
+      "callee": "form.$form.submit",
+      "url": null,
+      "httpMethod": null,
+      "expression": "form.$form.submit()"
+    },
+    {
+      "project": "java7-struts1-jquery-bootstrap3-web-project",
+      "file": "src/main/webapp/user/save/js/form.js",
+      "line": 35,
+      "kind": "uiCall",
+      "callee": "form.$action.val",
+      "url": null,
+      "httpMethod": null,
+      "expression": "form.$action.val('save')"
+    },
+    {
+      "project": "java7-struts1-jquery-bootstrap3-web-project",
+      "file": "src/main/webapp/user/save/js/form.js",
+      "line": 36,
+      "kind": "eventBinding",
+      "callee": "form.$form.submit",
+      "url": null,
+      "httpMethod": null,
+      "expression": "form.$form.submit()"
+    },
+    {
+      "project": "java7-struts1-jquery-bootstrap3-web-project",
+      "file": "src/main/webapp/user/save/js/form.js",
+      "line": 43,
+      "kind": "uiCall",
+      "callee": "append",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$city.prop('disabled', true).val('').empty().append($(`<option value=\"\" hidden>Choose a city</option>`))"
+    },
+    {
+      "project": "java7-struts1-jquery-bootstrap3-web-project",
+      "file": "src/main/webapp/user/save/js/form.js",
+      "line": 43,
+      "kind": "uiCall",
+      "callee": "empty",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$city.prop('disabled', true).val('').empty()"
+    },
+    {
+      "project": "java7-struts1-jquery-bootstrap3-web-project",
+      "file": "src/main/webapp/user/save/js/form.js",
+      "line": 43,
+      "kind": "uiCall",
+      "callee": "val",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$city.prop('disabled', true).val('')"
+    },
+    {
+      "project": "java7-struts1-jquery-bootstrap3-web-project",
+      "file": "src/main/webapp/user/save/js/form.js",
+      "line": 45,
+      "kind": "uiCall",
+      "callee": "$country.val",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$country.val()"
+    },
+    {
+      "project": "java7-struts1-jquery-bootstrap3-web-project",
+      "file": "src/main/webapp/user/save/js/form.js",
+      "line": 46,
+      "kind": "uiCall",
+      "callee": "$country.val",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$country.val()"
+    },
+    {
+      "project": "java7-struts1-jquery-bootstrap3-web-project",
+      "file": "src/main/webapp/user/save/js/form.js",
+      "line": 54,
+      "kind": "uiCall",
+      "callee": "$city.append",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$city.append($(`<option value=\"${city.id}\">${city.name}</option>`))"
+    },
+    {
+      "project": "java7-struts1-jquery-bootstrap3-web-project",
+      "file": "src/main/webapp/user/save/js/form.js",
+      "line": 63,
+      "kind": "eventBinding",
+      "callee": "form.btn.$validate.on",
+      "url": null,
+      "httpMethod": null,
+      "expression": "form.btn.$validate.on('click', btnValidateClickHandler)"
+    },
+    {
+      "project": "java7-struts1-jquery-bootstrap3-web-project",
+      "file": "src/main/webapp/user/save/js/form.js",
+      "line": 64,
+      "kind": "eventBinding",
+      "callee": "form.btn.$save.on",
+      "url": null,
+      "httpMethod": null,
+      "expression": "form.btn.$save.on('click', btnSaveClickHandler)"
+    },
+    {
+      "project": "java7-struts1-jquery-bootstrap3-web-project",
+      "file": "src/main/webapp/user/save/js/form.js",
+      "line": 66,
+      "kind": "eventBinding",
+      "callee": "form.user.$country.on",
+      "url": null,
+      "httpMethod": null,
+      "expression": "form.user.$country.on('change', countryChangeHandler)"
+    },
+    {
+      "project": "springboot-todolist",
+      "file": "src/main/resources/templates/todo/detail.html",
+      "line": 21,
+      "kind": "uiCall",
+      "callee": "confirm",
+      "url": null,
+      "httpMethod": null,
+      "expression": "confirm('削除しますか？')"
+    },
+    {
+      "project": "springboot-todolist",
+      "file": "src/main/resources/templates/todo/index.html",
+      "line": 35,
+      "kind": "uiCall",
+      "callee": "confirm",
+      "url": null,
+      "httpMethod": null,
+      "expression": "confirm('削除しますか？')"
+    }
+  ],
+  "parseFailures": []
+}

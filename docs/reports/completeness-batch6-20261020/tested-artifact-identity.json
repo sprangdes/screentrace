@@ -1,0 +1,62 @@
+[
+  {
+    "suite": "ui-results.json",
+    "project": "java7-struts1-jquery-bootstrap3-web-project",
+    "file": "application-graph.json",
+    "matches": true
+  },
+  {
+    "suite": "ui-results.json",
+    "project": "java7-struts1-jquery-bootstrap3-web-project",
+    "file": "report/screentrace-report.html",
+    "matches": true
+  },
+  {
+    "suite": "ui-results.json",
+    "project": "InventoryMGRSpringMVCCRUD",
+    "file": "application-graph.json",
+    "matches": true
+  },
+  {
+    "suite": "ui-results.json",
+    "project": "InventoryMGRSpringMVCCRUD",
+    "file": "report/screentrace-report.html",
+    "matches": true
+  },
+  {
+    "suite": "ui-results.json",
+    "project": "springboot-todolist",
+    "file": "application-graph.json",
+    "matches": true
+  },
+  {
+    "suite": "ui-results.json",
+    "project": "springboot-todolist",
+    "file": "report/screentrace-report.html",
+    "matches": true
+  },
+  {
+    "suite": "supplementary-results.json",
+    "project": "InventoryMGRSpringMVCCRUD",
+    "file": "application-graph.json",
+    "matches": true
+  },
+  {
+    "suite": "supplementary-results.json",
+    "project": "InventoryMGRSpringMVCCRUD",
+    "file": "report/screentrace-report.html",
+    "matches": true
+  },
+  {
+    "suite": "supplementary-results.json",
+    "project": "java7-struts1-jquery-bootstrap3-web-project",
+    "file": "application-graph.json",
+    "matches": true
+  },
+  {
+    "suite": "supplementary-results.json",
+    "project": "java7-struts1-jquery-bootstrap3-web-project",
+    "file": "report/screentrace-report.html",
+    "matches": true
+  }
+]

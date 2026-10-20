@@ -133,3 +133,9 @@
 - 修正 WF-039–049、NC-006 的來源可證明範圍，另修正新發現的 WF-050 巢狀候選選取。21／21 目的頁集合、12／12 本地 CSS、2／2 Security 入口通過；原始斷言與失敗保留。
 - 原 30 項操作 23 PASS／7 個錯誤 oracle 的 FAIL；來源修正及新增資料補驗合計有效 32 項 31 PASS／1 FAIL，3 條有效旅程全通過。學生新增後資料回顯 NC-007 仍未解決；支出已驗證本機 scalar 資料新增與修改，認證、SQL／JPQL、關聯及日期計算不宣稱等價。
 - 標準套件 809 PASS／既有 1 SKIP；兩次各 41 份產物一致，377 檔來源及原始 41 份產物未改。前批 WF-035／036 保留。見 [修正報告](reports/WORKFLOW_BATCH5_FIXES_20261020.md)、[ADR 0095](adr/0095-public-batch5-workflow-repairs.md)。
+
+## WP77 第六批不重複公開專案驗收（2026-10-20）
+
+- 三個新 repository：Struts 1／jQuery 使用者管理、MVC／JSP／CSV 庫存、Boot／Thymeleaf Todo，與既有 21 個 repository 無交集。22 頁面／片段、22 路由、186 控制項均有發現，22／22 可能目的頁集合通過；Ajax 0／1、現存本地 CSS 0／17。
+- 有效操作 42 項為 19 PASS／23 FAIL，6 條有效旅程 4 PASS／2 FAIL。原錯誤 selector 與同頁候選未選取的結果分別保留；補驗未放寬來源訊息／資料斷言。新增 WF-051–055、NC-008–009，全數 OPEN；不能以導覽成功宣稱資料功能等價。
+- 本批只有測試、證據及文件，未修改產品。217 檔來源不變，兩次各 41 份產物一致，前批 WF-035／036、NC-007 保留。詳見 [第六批報告](reports/COMPLETENESS_BATCH6_20261020.md)。

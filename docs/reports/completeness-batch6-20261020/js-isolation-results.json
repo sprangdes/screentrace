@@ -1,0 +1,895 @@
+{
+  "purpose": "Remove script src resolution as a blocker, without executing source code.",
+  "sources": [
+    "src/main/webapp/js/service/city-service.js",
+    "src/main/webapp/user/save/js/form.js"
+  ],
+  "dom": [
+    {
+      "id": "form",
+      "componentId": "form",
+      "tag": "form",
+      "attrs": {
+        "id": "user-save-fome"
+      }
+    },
+    {
+      "id": "action",
+      "componentId": "action",
+      "tag": "input",
+      "attrs": {
+        "name": "action"
+      },
+      "parent": "form"
+    },
+    {
+      "id": "validate",
+      "componentId": "validate",
+      "tag": "button",
+      "attrs": {
+        "class": "btn-validate"
+      },
+      "parent": "form"
+    },
+    {
+      "id": "save",
+      "componentId": "save",
+      "tag": "button",
+      "attrs": {
+        "class": "btn-save"
+      },
+      "parent": "form"
+    },
+    {
+      "id": "country",
+      "componentId": "country",
+      "tag": "select",
+      "attrs": {
+        "id": "user-country"
+      },
+      "parent": "form"
+    },
+    {
+      "id": "city",
+      "componentId": "city",
+      "tag": "select",
+      "attrs": {
+        "id": "user-city"
+      },
+      "parent": "form"
+    }
+  ],
+  "schemaVersion": "1.0",
+  "behaviors": [
+    {
+      "id": "behavior:js:f4f13c8b80b71f54361be946",
+      "type": "UNKNOWN",
+      "triggerId": "probe",
+      "event": "load",
+      "selector": null,
+      "guard": null,
+      "parentId": null,
+      "expression": "console.debug('city-service.js initialized')",
+      "ownerFile": "source-form",
+      "entryFile": "src/main/webapp/js/service/city-service.js",
+      "source": {
+        "file": "src/main/webapp/js/service/city-service.js",
+        "line": 22
+      },
+      "parser": "AcornStaticAnalyzer",
+      "status": "UNRESOLVED",
+      "trace": [],
+      "callee": "console.debug"
+    },
+    {
+      "id": "behavior:js:99e5fd404b36f8c3532fe773",
+      "type": "UNKNOWN",
+      "triggerId": "probe",
+      "event": "click",
+      "selector": "form.btn.$validate",
+      "guard": null,
+      "parentId": null,
+      "expression": "event.preventDefault()",
+      "ownerFile": "source-form",
+      "entryFile": "src/main/webapp/user/save/js/form.js",
+      "source": {
+        "file": "src/main/webapp/user/save/js/form.js",
+        "line": 26
+      },
+      "parser": "AcornStaticAnalyzer",
+      "status": "UNRESOLVED",
+      "trace": [
+        {
+          "source": {
+            "file": "src/main/webapp/user/save/js/form.js",
+            "line": 72
+          },
+          "callee": "main"
+        },
+        {
+          "source": {
+            "file": "src/main/webapp/user/save/js/form.js",
+            "line": 63
+          },
+          "callee": "form.btn.$validate.on"
+        },
+        {
+          "source": {
+            "file": "src/main/webapp/user/save/js/form.js",
+            "line": 63
+          },
+          "callee": "btnValidateClickHandler"
+        }
+      ],
+      "callee": "event.preventDefault"
+    },
+    {
+      "id": "behavior:js:92874bc75e012db370d6a12c",
+      "type": "UNKNOWN",
+      "triggerId": "probe",
+      "event": "click",
+      "selector": "form.btn.$validate",
+      "guard": null,
+      "parentId": null,
+      "expression": "console.debug('btn validate clicked')",
+      "ownerFile": "source-form",
+      "entryFile": "src/main/webapp/user/save/js/form.js",
+      "source": {
+        "file": "src/main/webapp/user/save/js/form.js",
+        "line": 27
+      },
+      "parser": "AcornStaticAnalyzer",
+      "status": "UNRESOLVED",
+      "trace": [
+        {
+          "source": {
+            "file": "src/main/webapp/user/save/js/form.js",
+            "line": 72
+          },
+          "callee": "main"
+        },
+        {
+          "source": {
+            "file": "src/main/webapp/user/save/js/form.js",
+            "line": 63
+          },
+          "callee": "form.btn.$validate.on"
+        },
+        {
+          "source": {
+            "file": "src/main/webapp/user/save/js/form.js",
+            "line": 63
+          },
+          "callee": "btnValidateClickHandler"
+        }
+      ],
+      "callee": "console.debug"
+    },
+    {
+      "id": "behavior:js:ff62ddc47ce6fb0a61b76657",
+      "type": "UNKNOWN",
+      "triggerId": "probe",
+      "event": "click",
+      "selector": "form.btn.$validate",
+      "guard": null,
+      "parentId": null,
+      "expression": "form.$action.val('validate')",
+      "ownerFile": "source-form",
+      "entryFile": "src/main/webapp/user/save/js/form.js",
+      "source": {
+        "file": "src/main/webapp/user/save/js/form.js",
+        "line": 28
+      },
+      "parser": "AcornStaticAnalyzer",
+      "status": "UNRESOLVED",
+      "trace": [
+        {
+          "source": {
+            "file": "src/main/webapp/user/save/js/form.js",
+            "line": 72
+          },
+          "callee": "main"
+        },
+        {
+          "source": {
+            "file": "src/main/webapp/user/save/js/form.js",
+            "line": 63
+          },
+          "callee": "form.btn.$validate.on"
+        },
+        {
+          "source": {
+            "file": "src/main/webapp/user/save/js/form.js",
+            "line": 63
+          },
+          "callee": "btnValidateClickHandler"
+        }
+      ],
+      "callee": "form.$action.val"
+    },
+    {
+      "id": "behavior:js:ef7e0fe7cd90d1accb3cf369",
+      "type": "SUBMIT_FORM",
+      "triggerId": "probe",
+      "event": "click",
+      "selector": "form.$form",
+      "guard": null,
+      "parentId": null,
+      "expression": "form.$form.submit()",
+      "ownerFile": "source-form",
+      "entryFile": "src/main/webapp/user/save/js/form.js",
+      "source": {
+        "file": "src/main/webapp/user/save/js/form.js",
+        "line": 29
+      },
+      "parser": "AcornStaticAnalyzer",
+      "status": "UNRESOLVED",
+      "trace": [
+        {
+          "source": {
+            "file": "src/main/webapp/user/save/js/form.js",
+            "line": 72
+          },
+          "callee": "main"
+        },
+        {
+          "source": {
+            "file": "src/main/webapp/user/save/js/form.js",
+            "line": 63
+          },
+          "callee": "form.btn.$validate.on"
+        },
+        {
+          "source": {
+            "file": "src/main/webapp/user/save/js/form.js",
+            "line": 63
+          },
+          "callee": "btnValidateClickHandler"
+        }
+      ]
+    },
+    {
+      "id": "behavior:js:46f86d942d95b745d5c90651",
+      "type": "UNKNOWN",
+      "triggerId": "probe",
+      "event": "click",
+      "selector": "form.btn.$save",
+      "guard": null,
+      "parentId": null,
+      "expression": "event.preventDefault()",
+      "ownerFile": "source-form",
+      "entryFile": "src/main/webapp/user/save/js/form.js",
+      "source": {
+        "file": "src/main/webapp/user/save/js/form.js",
+        "line": 33
+      },
+      "parser": "AcornStaticAnalyzer",
+      "status": "UNRESOLVED",
+      "trace": [
+        {
+          "source": {
+            "file": "src/main/webapp/user/save/js/form.js",
+            "line": 72
+          },
+          "callee": "main"
+        },
+        {
+          "source": {
+            "file": "src/main/webapp/user/save/js/form.js",
+            "line": 64
+          },
+          "callee": "form.btn.$save.on"
+        },
+        {
+          "source": {
+            "file": "src/main/webapp/user/save/js/form.js",
+            "line": 64
+          },
+          "callee": "btnSaveClickHandler"
+        }
+      ],
+      "callee": "event.preventDefault"
+    },
+    {
+      "id": "behavior:js:aa1e22ed1060a10a97a5c4e7",
+      "type": "UNKNOWN",
+      "triggerId": "probe",
+      "event": "click",
+      "selector": "form.btn.$save",
+      "guard": null,
+      "parentId": null,
+      "expression": "console.debug('btn save clicked')",
+      "ownerFile": "source-form",
+      "entryFile": "src/main/webapp/user/save/js/form.js",
+      "source": {
+        "file": "src/main/webapp/user/save/js/form.js",
+        "line": 34
+      },
+      "parser": "AcornStaticAnalyzer",
+      "status": "UNRESOLVED",
+      "trace": [
+        {
+          "source": {
+            "file": "src/main/webapp/user/save/js/form.js",
+            "line": 72
+          },
+          "callee": "main"
+        },
+        {
+          "source": {
+            "file": "src/main/webapp/user/save/js/form.js",
+            "line": 64
+          },
+          "callee": "form.btn.$save.on"
+        },
+        {
+          "source": {
+            "file": "src/main/webapp/user/save/js/form.js",
+            "line": 64
+          },
+          "callee": "btnSaveClickHandler"
+        }
+      ],
+      "callee": "console.debug"
+    },
+    {
+      "id": "behavior:js:1a4a1abdd138d02b550bbfc6",
+      "type": "UNKNOWN",
+      "triggerId": "probe",
+      "event": "click",
+      "selector": "form.btn.$save",
+      "guard": null,
+      "parentId": null,
+      "expression": "form.$action.val('save')",
+      "ownerFile": "source-form",
+      "entryFile": "src/main/webapp/user/save/js/form.js",
+      "source": {
+        "file": "src/main/webapp/user/save/js/form.js",
+        "line": 35
+      },
+      "parser": "AcornStaticAnalyzer",
+      "status": "UNRESOLVED",
+      "trace": [
+        {
+          "source": {
+            "file": "src/main/webapp/user/save/js/form.js",
+            "line": 72
+          },
+          "callee": "main"
+        },
+        {
+          "source": {
+            "file": "src/main/webapp/user/save/js/form.js",
+            "line": 64
+          },
+          "callee": "form.btn.$save.on"
+        },
+        {
+          "source": {
+            "file": "src/main/webapp/user/save/js/form.js",
+            "line": 64
+          },
+          "callee": "btnSaveClickHandler"
+        }
+      ],
+      "callee": "form.$action.val"
+    },
+    {
+      "id": "behavior:js:41331243dbd00a5be0fcad7f",
+      "type": "SUBMIT_FORM",
+      "triggerId": "probe",
+      "event": "click",
+      "selector": "form.$form",
+      "guard": null,
+      "parentId": null,
+      "expression": "form.$form.submit()",
+      "ownerFile": "source-form",
+      "entryFile": "src/main/webapp/user/save/js/form.js",
+      "source": {
+        "file": "src/main/webapp/user/save/js/form.js",
+        "line": 36
+      },
+      "parser": "AcornStaticAnalyzer",
+      "status": "UNRESOLVED",
+      "trace": [
+        {
+          "source": {
+            "file": "src/main/webapp/user/save/js/form.js",
+            "line": 72
+          },
+          "callee": "main"
+        },
+        {
+          "source": {
+            "file": "src/main/webapp/user/save/js/form.js",
+            "line": 64
+          },
+          "callee": "form.btn.$save.on"
+        },
+        {
+          "source": {
+            "file": "src/main/webapp/user/save/js/form.js",
+            "line": 64
+          },
+          "callee": "btnSaveClickHandler"
+        }
+      ]
+    },
+    {
+      "id": "behavior:js:17d02d2ca1f222afa5bc4f89",
+      "type": "UNKNOWN",
+      "triggerId": "probe",
+      "event": "change",
+      "selector": "form.user.$country",
+      "guard": null,
+      "parentId": null,
+      "expression": "$city.prop('disabled', true).val('').empty().append($(`<option value=\"\" hidden>Choose a city</option>`))",
+      "ownerFile": "source-form",
+      "entryFile": "src/main/webapp/user/save/js/form.js",
+      "source": {
+        "file": "src/main/webapp/user/save/js/form.js",
+        "line": 43
+      },
+      "parser": "AcornStaticAnalyzer",
+      "status": "UNRESOLVED",
+      "trace": [
+        {
+          "source": {
+            "file": "src/main/webapp/user/save/js/form.js",
+            "line": 72
+          },
+          "callee": "main"
+        },
+        {
+          "source": {
+            "file": "src/main/webapp/user/save/js/form.js",
+            "line": 66
+          },
+          "callee": "form.user.$country.on"
+        },
+        {
+          "source": {
+            "file": "src/main/webapp/user/save/js/form.js",
+            "line": 66
+          },
+          "callee": "countryChangeHandler"
+        }
+      ],
+      "callee": "$city.prop('disabled', true).val('').empty().append"
+    },
+    {
+      "id": "behavior:js:6ccbda699c032ebe275c8ef2",
+      "type": "UNKNOWN",
+      "triggerId": "probe",
+      "event": "change",
+      "selector": "form.user.$country",
+      "guard": null,
+      "parentId": null,
+      "expression": "$country.val()",
+      "ownerFile": "source-form",
+      "entryFile": "src/main/webapp/user/save/js/form.js",
+      "source": {
+        "file": "src/main/webapp/user/save/js/form.js",
+        "line": 45
+      },
+      "parser": "AcornStaticAnalyzer",
+      "status": "UNRESOLVED",
+      "trace": [
+        {
+          "source": {
+            "file": "src/main/webapp/user/save/js/form.js",
+            "line": 72
+          },
+          "callee": "main"
+        },
+        {
+          "source": {
+            "file": "src/main/webapp/user/save/js/form.js",
+            "line": 66
+          },
+          "callee": "form.user.$country.on"
+        },
+        {
+          "source": {
+            "file": "src/main/webapp/user/save/js/form.js",
+            "line": 66
+          },
+          "callee": "countryChangeHandler"
+        }
+      ],
+      "callee": "$country.val"
+    },
+    {
+      "id": "behavior:js:f98e3eabf9b48a4032cfd39e",
+      "type": "UNKNOWN",
+      "triggerId": "probe",
+      "event": "change",
+      "selector": "form.user.$country",
+      "guard": "$country.val()",
+      "parentId": null,
+      "expression": "Number($country.val())",
+      "ownerFile": "source-form",
+      "entryFile": "src/main/webapp/user/save/js/form.js",
+      "source": {
+        "file": "src/main/webapp/user/save/js/form.js",
+        "line": 46
+      },
+      "parser": "AcornStaticAnalyzer",
+      "status": "UNRESOLVED",
+      "trace": [
+        {
+          "source": {
+            "file": "src/main/webapp/user/save/js/form.js",
+            "line": 72
+          },
+          "callee": "main"
+        },
+        {
+          "source": {
+            "file": "src/main/webapp/user/save/js/form.js",
+            "line": 66
+          },
+          "callee": "form.user.$country.on"
+        },
+        {
+          "source": {
+            "file": "src/main/webapp/user/save/js/form.js",
+            "line": 66
+          },
+          "callee": "countryChangeHandler"
+        }
+      ],
+      "callee": "Number"
+    },
+    {
+      "id": "behavior:js:6fdb1cd46c675406e426ce79",
+      "type": "UNKNOWN",
+      "triggerId": "probe",
+      "event": "change",
+      "selector": "form.user.$country",
+      "guard": "$country.val()",
+      "parentId": null,
+      "expression": "cityService.findAllByCountryId(countryId)",
+      "ownerFile": "source-form",
+      "entryFile": "src/main/webapp/user/save/js/form.js",
+      "source": {
+        "file": "src/main/webapp/user/save/js/form.js",
+        "line": 48
+      },
+      "parser": "AcornStaticAnalyzer",
+      "status": "UNRESOLVED",
+      "trace": [
+        {
+          "source": {
+            "file": "src/main/webapp/user/save/js/form.js",
+            "line": 72
+          },
+          "callee": "main"
+        },
+        {
+          "source": {
+            "file": "src/main/webapp/user/save/js/form.js",
+            "line": 66
+          },
+          "callee": "form.user.$country.on"
+        },
+        {
+          "source": {
+            "file": "src/main/webapp/user/save/js/form.js",
+            "line": 66
+          },
+          "callee": "countryChangeHandler"
+        }
+      ],
+      "callee": "cityService.findAllByCountryId"
+    },
+    {
+      "id": "behavior:js:b2062adb1429b9e391a270cb",
+      "type": "UNKNOWN",
+      "triggerId": "probe",
+      "event": "done",
+      "selector": "form.user.$country",
+      "guard": "$country.val()",
+      "parentId": null,
+      "expression": "console.debug(cities)",
+      "ownerFile": "source-form",
+      "entryFile": "src/main/webapp/user/save/js/form.js",
+      "source": {
+        "file": "src/main/webapp/user/save/js/form.js",
+        "line": 49
+      },
+      "parser": "AcornStaticAnalyzer",
+      "status": "UNRESOLVED",
+      "trace": [
+        {
+          "source": {
+            "file": "src/main/webapp/user/save/js/form.js",
+            "line": 72
+          },
+          "callee": "main"
+        },
+        {
+          "source": {
+            "file": "src/main/webapp/user/save/js/form.js",
+            "line": 66
+          },
+          "callee": "form.user.$country.on"
+        },
+        {
+          "source": {
+            "file": "src/main/webapp/user/save/js/form.js",
+            "line": 66
+          },
+          "callee": "countryChangeHandler"
+        }
+      ],
+      "callee": "console.debug"
+    },
+    {
+      "id": "behavior:js:a8fbcba66136f40c3056c453",
+      "type": "UNKNOWN",
+      "triggerId": "probe",
+      "event": "done",
+      "selector": "form.user.$country",
+      "guard": "$country.val() && cities != null && cities.length > 0",
+      "parentId": null,
+      "expression": "$city.prop('disabled', false)",
+      "ownerFile": "source-form",
+      "entryFile": "src/main/webapp/user/save/js/form.js",
+      "source": {
+        "file": "src/main/webapp/user/save/js/form.js",
+        "line": 52
+      },
+      "parser": "AcornStaticAnalyzer",
+      "status": "UNRESOLVED",
+      "trace": [
+        {
+          "source": {
+            "file": "src/main/webapp/user/save/js/form.js",
+            "line": 72
+          },
+          "callee": "main"
+        },
+        {
+          "source": {
+            "file": "src/main/webapp/user/save/js/form.js",
+            "line": 66
+          },
+          "callee": "form.user.$country.on"
+        },
+        {
+          "source": {
+            "file": "src/main/webapp/user/save/js/form.js",
+            "line": 66
+          },
+          "callee": "countryChangeHandler"
+        }
+      ],
+      "callee": "$city.prop"
+    },
+    {
+      "id": "behavior:js:38a167f23a374788c5dd8f7a",
+      "type": "UNKNOWN",
+      "triggerId": "probe",
+      "event": "done",
+      "selector": "form.user.$country",
+      "guard": "$country.val() && cities != null && cities.length > 0",
+      "parentId": null,
+      "expression": "cities.forEach((city) => {\n                    $city.append($(`<option value=\"${city.id}\">${city.name}</option>`));\n                })",
+      "ownerFile": "source-form",
+      "entryFile": "src/main/webapp/user/save/js/form.js",
+      "source": {
+        "file": "src/main/webapp/user/save/js/form.js",
+        "line": 53
+      },
+      "parser": "AcornStaticAnalyzer",
+      "status": "UNRESOLVED",
+      "trace": [
+        {
+          "source": {
+            "file": "src/main/webapp/user/save/js/form.js",
+            "line": 72
+          },
+          "callee": "main"
+        },
+        {
+          "source": {
+            "file": "src/main/webapp/user/save/js/form.js",
+            "line": 66
+          },
+          "callee": "form.user.$country.on"
+        },
+        {
+          "source": {
+            "file": "src/main/webapp/user/save/js/form.js",
+            "line": 66
+          },
+          "callee": "countryChangeHandler"
+        }
+      ],
+      "callee": "cities.forEach"
+    },
+    {
+      "id": "behavior:js:e8a9d652b3eca2e9f9251ba1",
+      "type": "UNKNOWN",
+      "triggerId": "probe",
+      "event": "ready",
+      "selector": null,
+      "guard": null,
+      "parentId": null,
+      "expression": "console.debug('form.js initialized')",
+      "ownerFile": "source-form",
+      "entryFile": "src/main/webapp/user/save/js/form.js",
+      "source": {
+        "file": "src/main/webapp/user/save/js/form.js",
+        "line": 68
+      },
+      "parser": "AcornStaticAnalyzer",
+      "status": "UNRESOLVED",
+      "trace": [
+        {
+          "source": {
+            "file": "src/main/webapp/user/save/js/form.js",
+            "line": 72
+          },
+          "callee": "main"
+        }
+      ],
+      "callee": "console.debug"
+    }
+  ],
+  "rules": [],
+  "diagnostics": [
+    {
+      "code": "UNKNOWN_CALL",
+      "message": "未知函式呼叫：console.debug",
+      "source": {
+        "file": "src/main/webapp/js/service/city-service.js",
+        "line": 22
+      },
+      "parser": "AcornStaticParser",
+      "status": "UNRESOLVED"
+    },
+    {
+      "code": "UNKNOWN_CALL",
+      "message": "未知函式呼叫：event.preventDefault",
+      "source": {
+        "file": "src/main/webapp/user/save/js/form.js",
+        "line": 26
+      },
+      "parser": "AcornStaticParser",
+      "status": "UNRESOLVED"
+    },
+    {
+      "code": "UNKNOWN_CALL",
+      "message": "未知函式呼叫：console.debug",
+      "source": {
+        "file": "src/main/webapp/user/save/js/form.js",
+        "line": 27
+      },
+      "parser": "AcornStaticParser",
+      "status": "UNRESOLVED"
+    },
+    {
+      "code": "UNKNOWN_CALL",
+      "message": "未知函式呼叫：form.$action.val",
+      "source": {
+        "file": "src/main/webapp/user/save/js/form.js",
+        "line": 28
+      },
+      "parser": "AcornStaticParser",
+      "status": "UNRESOLVED"
+    },
+    {
+      "code": "UNKNOWN_CALL",
+      "message": "未知函式呼叫：event.preventDefault",
+      "source": {
+        "file": "src/main/webapp/user/save/js/form.js",
+        "line": 33
+      },
+      "parser": "AcornStaticParser",
+      "status": "UNRESOLVED"
+    },
+    {
+      "code": "UNKNOWN_CALL",
+      "message": "未知函式呼叫：console.debug",
+      "source": {
+        "file": "src/main/webapp/user/save/js/form.js",
+        "line": 34
+      },
+      "parser": "AcornStaticParser",
+      "status": "UNRESOLVED"
+    },
+    {
+      "code": "UNKNOWN_CALL",
+      "message": "未知函式呼叫：form.$action.val",
+      "source": {
+        "file": "src/main/webapp/user/save/js/form.js",
+        "line": 35
+      },
+      "parser": "AcornStaticParser",
+      "status": "UNRESOLVED"
+    },
+    {
+      "code": "UNKNOWN_CALL",
+      "message": "未知函式呼叫：$city.prop('disabled', true).val('').empty().append",
+      "source": {
+        "file": "src/main/webapp/user/save/js/form.js",
+        "line": 43
+      },
+      "parser": "AcornStaticParser",
+      "status": "UNRESOLVED"
+    },
+    {
+      "code": "UNKNOWN_CALL",
+      "message": "未知函式呼叫：$country.val",
+      "source": {
+        "file": "src/main/webapp/user/save/js/form.js",
+        "line": 45
+      },
+      "parser": "AcornStaticParser",
+      "status": "UNRESOLVED"
+    },
+    {
+      "code": "UNKNOWN_CALL",
+      "message": "未知函式呼叫：Number",
+      "source": {
+        "file": "src/main/webapp/user/save/js/form.js",
+        "line": 46
+      },
+      "parser": "AcornStaticParser",
+      "status": "UNRESOLVED"
+    },
+    {
+      "code": "UNKNOWN_CALL",
+      "message": "未知函式呼叫：cityService.findAllByCountryId",
+      "source": {
+        "file": "src/main/webapp/user/save/js/form.js",
+        "line": 48
+      },
+      "parser": "AcornStaticParser",
+      "status": "UNRESOLVED"
+    },
+    {
+      "code": "UNKNOWN_CALL",
+      "message": "未知函式呼叫：console.debug",
+      "source": {
+        "file": "src/main/webapp/user/save/js/form.js",
+        "line": 49
+      },
+      "parser": "AcornStaticParser",
+      "status": "UNRESOLVED"
+    },
+    {
+      "code": "UNKNOWN_CALL",
+      "message": "未知函式呼叫：$city.prop",
+      "source": {
+        "file": "src/main/webapp/user/save/js/form.js",
+        "line": 52
+      },
+      "parser": "AcornStaticParser",
+      "status": "UNRESOLVED"
+    },
+    {
+      "code": "UNKNOWN_CALL",
+      "message": "未知函式呼叫：cities.forEach",
+      "source": {
+        "file": "src/main/webapp/user/save/js/form.js",
+        "line": 53
+      },
+      "parser": "AcornStaticParser",
+      "status": "UNRESOLVED"
+    },
+    {
+      "code": "UNKNOWN_CALL",
+      "message": "未知函式呼叫：console.debug",
+      "source": {
+        "file": "src/main/webapp/user/save/js/form.js",
+        "line": 68
+      },
+      "parser": "AcornStaticParser",
+      "status": "UNRESOLVED"
+    }
+  ],
+  "libraries": []
+}
