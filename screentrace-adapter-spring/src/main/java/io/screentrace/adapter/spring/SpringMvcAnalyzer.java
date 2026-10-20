@@ -70,10 +70,12 @@ public final class SpringMvcAnalyzer {
                 state.nodes, state.edges, state.diagnostics, state.apiContracts, ApplicationGraph.BEHAVIOR_SCHEMA_VERSION, List.of(), List.of());
         graph=MarkupGraphContribution.enrich(graph,jsp);
         graph=SpringFormBindings.bind(graph,inventory);
-        var completed=SpringControllerFlow.project(SpringServerValidation.enrich(io.screentrace.parser.jsp.UrlGraphContribution.enrich(io.screentrace.parser.jsp.JavaScriptGraphContribution.enrich(MarkupGraphContribution.enrich(graph,jsp),inventory),inventory),inventory));
+        var completed=SpringControllerFlow.project(SpringServerValidation.enrich(io.screentrace.parser.jsp.UrlGraphContribution.enrich(io.screentrace.parser.jsp.JavaScriptGraphContribution.enrich(io.screentrace.parser.jsp.ThymeleafFragments.enrich(MarkupGraphContribution.enrich(graph,jsp),inventory),inventory),inventory),inventory));
         completed=io.screentrace.parser.jsp.RouteTemplateInference.enrich(completed,inventory);
         completed=MarkupGraphContribution.inheritLinkActions(SpringWebFlowContribution.enrich(SpringSecurityRedirects.enrich(completed,inventory),inventory));
+        completed=io.screentrace.parser.jsp.UrlGraphContribution.enrich(SpringSecurityProcessors.enrich(completed,inventory),inventory);
         completed=SpringDataSimulation.enrich(completed,inventory);
+        completed=SpringDtoSimulation.enrich(completed,inventory);
         return io.screentrace.core.GraphIntegrityValidator.requireAnalysis(SpringSubmittedModel.enrich(completed,inventory));
     }
 

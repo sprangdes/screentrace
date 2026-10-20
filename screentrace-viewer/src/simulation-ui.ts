@@ -1,6 +1,6 @@
 import {applyDataAction,setModelFeedback,setSubmittedValues} from './simulation-data';
 import {needsSimulationSurface,simulationSurface} from './simulation-surface';
-import {assessSimulation,Effect,staticAction} from './simulation';
+import {assessSimulation,Effect,staticAction,choiceLeaves} from './simulation';
 import {previewElement,previewSelector,registerPreviewClone} from './preview';
 import {Payload,ElementRecord} from './contracts';
 import {element} from './text';
@@ -73,6 +73,7 @@ export function attachSimulation(payload:Payload,id:string,frame:HTMLIFrameEleme
  const outcomeOf=(choice:Effect):Effect=>choice.kind==='choices'&&choice.choices?.length===1?choice.choices[0]:choice;
  const label=(choice:Effect):string=>choice.kind==='sequence'?`${choice.callback==='error'?'失敗':'成功'}：${(choice.choices||[]).map(c=>c.kind==='message'?c.message:c.kind==='ui'&&c.operation==='reload'?'重新顯示本頁':c.kind==='ui'&&c.operation==='setText'?c.value:label(c)).join('；')}`:choice.kind==='choices'&&choice.choices?.length===1?`${label(choice.choices[0])}（有條件）`:choice.kind==='message'?`${choice.callback==='error'?'失敗':choice.callback==='success'?'成功':'訊息'}：${choice.message}`:choice.kind==='navigate'?choice.label||'畫面':choice.kind==='api'?`呼叫 API：${choice.method} ${choice.path}`:choice.kind==='dialog'?`開啟彈窗：${choice.label||''}`:choice.kind==='form'?`送出到 ${choice.path}`:unknownDestination;
  const choose=(choices:Effect[],node:Element,record:ElementRecord|undefined,calls:Effect[]=[])=>{
+  choices=choiceLeaves(choices);
   closePicker();
   const box=element('div',undefined,'simulation-picker');box.setAttribute('role','dialog');box.setAttribute('aria-label','可能的結果');box.dataset.stSimulationUi='true';
   if(calls.length){box.append(element('strong','這個操作會呼叫：'));const list=element('ul',undefined,'simulation-calls');for(const call of calls)list.append(element('li',label(call)));box.append(list);}
@@ -110,6 +111,7 @@ export function attachSimulation(payload:Payload,id:string,frame:HTMLIFrameEleme
   if(effect.relative)targets=targets.map(n=>effect.relative==='previousElementSibling'?n.previousElementSibling:n.nextElementSibling).filter((n):n is Element=>!!n);
   for(const target of targets){
    if(effect.operation==='toggleDisclosure'&&effect.inputSelector){let button:Element|null=null;try{button=doc.querySelector(effect.inputSelector);}catch{}if(button){const expanded=button.getAttribute('aria-expanded')==='true';button.setAttribute('aria-expanded',String(!expanded));target.classList.toggle('show',!expanded);(target as HTMLElement).hidden=expanded;}}
+   else if(effect.operation==='toggleDisplay'){const current=(target as HTMLElement).style.display;(target as HTMLElement).style.display=current==='none'||current===''?'block':'none';}
    else if(effect.operation==='setText')target.textContent=effect.value??'';
    else if(effect.operation==='setStyle'&&['display','color'].includes(effect.property||''))(target as HTMLElement).style.setProperty(effect.property!,effect.value??'');
    else if(['classAdd','classRemove','classToggle'].includes(effect.operation||'')&&/^[A-Za-z_][A-Za-z0-9_-]{0,127}$/.test(effect.value||'')){const operation=effect.operation==='classAdd'?'add':effect.operation==='classRemove'?'remove':'toggle';target.classList[operation](effect.value!);}
@@ -132,6 +134,13 @@ export function attachSimulation(payload:Payload,id:string,frame:HTMLIFrameEleme
    accept.onclick=()=>{close?.();const next=effect.choices||[];if(next.length)render(next.length===1?next[0]:{kind:'choices',choices:next},record,node);};
    modal.append(accept);cancel.focus();return;
   }
+  if(effect.kind==='gate'){
+   for(const check of effect.checks||[]){let nodes:HTMLInputElement[]=[];try{nodes=Array.from(doc.querySelectorAll<HTMLInputElement>(check.selector));}catch{say('無法確認檢核欄位');return;}
+    if(!nodes.length||check.kind==='required'&&nodes.length!==1){say('無法確認檢核欄位');return;}const count=nodes.filter(n=>n.checked).length;
+    if(check.kind==='required'&&nodes.length===1&&!nodes[0].value.trim()||check.kind==='selection'&&count!==1){message(check.kind==='selection'&&count>1?check.maximumMessage||check.message:check.message);return;}
+   }
+   const next=effect.choices||[];if(next.length)render(next.length===1?next[0]:{kind:'choices',choices:next},record,node);return;
+  }
   if(effect.kind==='sequence'){for(const item of effect.choices||[])render(item,record,node);return;}
   if(effect.kind==='ui'){apply(effect);return;}
   if(effect.kind==='message'){message(effect.message||'');return;}
@@ -152,7 +161,7 @@ export function attachSimulation(payload:Payload,id:string,frame:HTMLIFrameEleme
     choose(rest,node,record,calls);return;
    }
   }
-  if(effect.kind==='navigate'&&effect.targetId){if(effect.dataAction&&!applyDataAction(payload,effect.dataAction,node)){say('示範資料無法確認操作的資料列或欄位');return;}setModelFeedback(payload,effect.targetId,effect.feedback??{});setSubmittedValues(payload,effect.targetId,effect.inputProjection??{},node);options.focus(effect.targetId,effect.inputProjection?'已回放提交欄位；其他資料為來源範例':undefined);return;}
+  if(effect.kind==='navigate'&&effect.targetId){let dataNotice:string|undefined;if(effect.dataAction&&!applyDataAction(payload,effect.dataAction,node)){if(effect.dataAction.scope==='submitted-fields-only'&&effect.dataAction.useSelectedIdentity)dataNotice='來源正常回傳路徑；未選定資料列，未回放更新資料';else{say('示範資料無法確認操作的資料列或欄位');return;}}setModelFeedback(payload,effect.targetId,effect.feedback??{});setSubmittedValues(payload,effect.targetId,effect.inputProjection??{},node);options.focus(effect.targetId,dataNotice||(effect.inputProjection?'已回放提交欄位；其他資料為來源範例':undefined));return;}
   if(effect.kind==='dialog'&&effect.targetId){popup(effect.targetId);return;}
   if(effect.kind==='api'&&effect.targetId){const target=effect.targetId;say(`呼叫 API：${effect.method} ${effect.path}（不會真的送出）`,{label:'在 API 頁查看',run:()=>options.api(target)});return;}
   if(effect.kind==='external'){say('外部連結（不會開啟）');return;}

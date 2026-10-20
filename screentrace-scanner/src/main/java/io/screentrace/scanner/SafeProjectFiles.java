@@ -61,7 +61,22 @@ public final class SafeProjectFiles {
   }
 
   public static String readUtf8Limited(Path root, Path file, long maxBytes) throws IOException {
-    return new String(readBytesLimited(root,file,maxBytes),StandardCharsets.UTF_8);
+    byte[] bytes=readBytesLimited(root,file,maxBytes);
+    String charset=declaredEncoding(file,bytes);
+    try{if(charset.equals("UTF-8")||charset.equals("UTF8"))return new String(bytes,StandardCharsets.UTF_8);return java.nio.charset.Charset.forName(charset).newDecoder().onMalformedInput(java.nio.charset.CodingErrorAction.REPORT).onUnmappableCharacter(java.nio.charset.CodingErrorAction.REPORT).decode(java.nio.ByteBuffer.wrap(bytes)).toString();}
+    catch(IllegalArgumentException error){throw new IOException("Unsupported declared source encoding: "+charset,error);}
+  }
+
+  /** Encoding declarations are lexical metadata, never expressions or guessed byte encodings. */
+  public static String declaredEncoding(Path file,byte[] bytes)throws IOException {
+    if(!file.getFileName().toString().toLowerCase(java.util.Locale.ROOT).matches(".*\\.(jsp|jspf|html|htm|tag|tagx)"))return "UTF-8";
+    String header=new String(bytes,0,Math.min(bytes.length,8192),StandardCharsets.ISO_8859_1).replaceAll("(?s)<%--.*?--%>|<!--.*?-->","");
+    var directive=java.util.regex.Pattern.compile("(?is)<%@\\s*page\\b[^%]*?\\bpageEncoding\\s*=\\s*['\"]([A-Za-z0-9_-]+)['\"]").matcher(header);
+    java.util.Set<String> values=new java.util.TreeSet<>();while(directive.find())values.add(directive.group(1).toUpperCase(java.util.Locale.ROOT));
+    if(values.size()>1)throw new IOException("Conflicting source encoding declarations");
+    String value=values.isEmpty()?"UTF-8":values.iterator().next();
+    if(!java.util.Set.of("UTF-8","UTF8","GB18030","GBK","GB2312","ISO-8859-1","US-ASCII").contains(value))throw new IOException("Unsupported declared source encoding: "+value);
+    return value;
   }
 
   /** Same path and size boundary, preserving original bytes for content digests. */

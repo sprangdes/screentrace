@@ -1,0 +1,37 @@
+{
+  "total": 810,
+  "passed": 809,
+  "failed": 0,
+  "skipped": 1,
+  "suites": {
+    "java": {
+      "total": 448,
+      "passed": 447,
+      "skipped": 1,
+      "command": "mvn -q test"
+    },
+    "javascript": {
+      "total": 84,
+      "passed": 84,
+      "command": "npm --prefix screentrace-js test"
+    },
+    "capture": {
+      "total": 76,
+      "passed": 76,
+      "command": "node --test screentrace-capture/*.test.mjs"
+    },
+    "viewer": {
+      "total": 116,
+      "passed": 116,
+      "command": "npm --prefix screentrace-viewer test"
+    },
+    "chromiumE2E": {
+      "total": 86,
+      "passed": 86,
+      "command": "npm --prefix screentrace-viewer run e2e"
+    }
+  },
+  "failureHistory": "parallel-build-java-failure.log retains a CLI output-byte mismatch while builds and suites overlapped; a full run without overlapping builds passed unchanged assertions. No root-cause remediation is claimed for that historical harness failure.",
+  "finalFullJavaExitCode": 0,
+  "finalProductSourcesMatchedToolState": true
+}

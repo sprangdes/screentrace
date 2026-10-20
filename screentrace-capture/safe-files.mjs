@@ -84,7 +84,17 @@ export async function createDirectoryWithin(root, candidate) {
 }
 
 export async function readUtf8Limited(root, file, maxBytes = 8 * 1024 * 1024) {
-  return (await readBufferLimited(root, file, maxBytes)).toString('utf8');
+  const bytes=await readBufferLimited(root,file,maxBytes);
+  const encoding=declaredSourceEncoding(file,bytes);
+  return encoding==='UTF-8'?bytes.toString('utf8'):new TextDecoder(encoding,{fatal:true}).decode(bytes);
+}
+
+export function declaredSourceEncoding(file,bytes){
+ if(!/\.(jspf?|html?|tagx?)$/i.test(file))return 'UTF-8';
+ const header=bytes.subarray(0,8192).toString('latin1').replace(/<%--[\s\S]*?--%>|<!--[\s\S]*?-->/g,'');
+ const values=[...new Set([...header.matchAll(/<%@\s*page\b[^%]*?\bpageEncoding\s*=\s*['"]([A-Za-z0-9_-]+)['"]/gi)].map(m=>m[1].toUpperCase()))];
+ if(values.length>1)throw Error('Conflicting source encoding declarations');
+ const value=values[0]||'UTF-8';if(!['UTF-8','UTF8','GB18030','GBK','GB2312','ISO-8859-1','US-ASCII'].includes(value))throw Error('Unsupported declared source encoding: '+value);return value;
 }
 
 export async function readBufferLimited(root, file, maxBytes = 8 * 1024 * 1024) {

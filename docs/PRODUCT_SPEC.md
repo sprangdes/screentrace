@@ -394,3 +394,9 @@ The important acceptance criterion is trace correctness.
 ## WP72 公開專案完整性修正（2026-10-19）
 
 新增有來源證據的 Ajax callback／DOM 效果、分支 ModelAndView 回傳、c:import 組合、modal/offcanvas、分支文字回饋與有限 Thymeleaf 表單／資料選項投影。未知條件讓使用者選擇示範分支；未知回傳與缺少後端處理器保持未解析。示範資料不執行服務、日期計算或真實交易，不代表後端功能等價。驗收範圍、原 B08 無效斷言與全部保留證據見 [WP72 修正報告](reports/WORKFLOW_BATCH3_FIXES_20261019.md)。
+
+### WP76 公開專案流程補強的範圍
+
+離線原型支援有來源證據的 JSP 宣告編碼、Spring-managed Struts Action、具名 Thymeleaf 片段、Security 處理入口，以及完整 AST 形狀的 class／display／confirm／必填與單筆選取操作。未知分支保留並可選，不會執行來源事件或認證。
+
+DTO 的直接 scalar 複製可在本機示範集合回放提交與清單顯示；category、client、session、日期轉換、SQL／JPQL 結果不視為已還原。未選列更新會明示未回放資料。學生自訂 Hibernate DAO 資料回顯仍屬缺口，不能以可操作旅程宣稱完整功能等價。見 [WP76 報告](reports/WORKFLOW_BATCH5_FIXES_20261020.md)。

@@ -1,6 +1,6 @@
 import {Payload,Node as GraphNode,Evidence,Behavior} from './contracts';
 import {registerPreviewClone} from './preview';
-export interface DataAction {version:1;operation:'readAll'|'readOne'|'upsert'|'delete';collection:string;fields:string[];idField:string;model?:string;conditional?:boolean}
+export interface DataAction {version:1;operation:'readAll'|'readOne'|'upsert'|'delete';collection:string;fields:string[];idField:string;model?:string;conditional?:boolean;inputFields?:Record<string,string>;generatedIdentity?:boolean;useSelectedIdentity?:boolean;scope?:string}
 type RecordData=Record<string,string>;
 interface Collection {records:Map<string,RecordData>;next:number;selected?:string}
 const modelFeedback=new WeakMap<Payload,Map<string,Record<string,string>>>();
@@ -16,10 +16,12 @@ const safeField=(s:unknown):s is string=>typeof s==='string'&&/^[A-Za-z_][\w]*$/
 export function parseDataAction(value:unknown):DataAction|undefined {
  if(!value||typeof value!=='object')return;const a=value as DataAction;
  if(a.version!==1||!['readAll','readOne','upsert','delete'].includes(a.operation)||typeof a.collection!=='string'||a.collection.length>500||!safeField(a.idField)||!Array.isArray(a.fields)||!a.fields.length||a.fields.length>64||!a.fields.every(safeField)||!a.fields.includes(a.idField)||a.model!==undefined&&!safeField(a.model)||a.conditional!==undefined&&typeof a.conditional!=='boolean')return;
+ if(a.inputFields!==undefined&&(!a.inputFields||typeof a.inputFields!=='object'||Object.keys(a.inputFields).length>64||!Object.entries(a.inputFields).every(([field,input])=>a.fields.includes(field)&&safeField(field)&&safeField(input))))return;
+ if(a.generatedIdentity!==undefined&&typeof a.generatedIdentity!=='boolean'||a.useSelectedIdentity!==undefined&&typeof a.useSelectedIdentity!=='boolean')return;
  return a;
 }
 function contract(node:GraphNode|undefined,key:string):DataAction[]{
- if(!node||(node.attributes[key]?.length||0)>16384||!(node.evidence as Evidence[]||[]).some(e=>e.parser==='SpringDataSimulation'&&e.resolution==='INFERRED'))return [];
+ if(!node||(node.attributes[key]?.length||0)>16384||!(node.evidence as Evidence[]||[]).some(e=>['SpringDataSimulation','SpringDtoSimulation'].includes(e.parser)&&e.resolution==='INFERRED'))return [];
  try{const raw=JSON.parse(node.attributes[key]||'null');return (key==='simulationBindings'&&Array.isArray(raw)?raw:[raw]).map(parseDataAction).filter((a):a is DataAction=>!!a);}catch{return [];}
 }
 export function endpointDataAction(payload:Payload,endpoint:string):DataAction|undefined {
@@ -43,9 +45,10 @@ export function applyDataAction(payload:Payload,action:DataAction,node:Element):
  if(action.operation!=='upsert')return true;
  const form=node.localName==='form'?node as HTMLFormElement:(node as HTMLButtonElement).form;if(!form)return false;
  const record:RecordData=Object.create(null);let supplied=false;
- for(const field of action.fields){const controls=Array.from(form.elements).filter(e=>e.getAttribute('name')===field&&'value'in e&&!e.hasAttribute('disabled'));if(controls.length>1)return false;if(controls.length){record[field]=String((controls[0] as HTMLInputElement).value).slice(0,4000);if(field!==action.idField)supplied=true;}}
+ for(const field of action.fields){const controls=Array.from(form.elements).filter(e=>e.getAttribute('name')===(action.inputFields?.[field]||field)&&'value'in e&&!e.hasAttribute('disabled'));if(controls.length>1)return false;if(controls.length){record[field]=String((controls[0] as HTMLInputElement).value).slice(0,4000);if(field!==action.idField)supplied=true;}}
  if(!supplied||data.records.size>=200&&!record[action.idField])return false;
- const id=record[action.idField]||String(data.next++);record[action.idField]=id;
+ if(action.useSelectedIdentity&&(!data.selected||!data.records.has(data.selected)))return false;
+ const id=action.useSelectedIdentity?data.selected!:action.generatedIdentity?String(data.next++):record[action.idField]||String(data.next++);record[action.idField]=id;
  data.records.set(id,{...data.records.get(id),...record});data.selected=id;return true;
 }
 function pattern(text:string,variable:string,record:RecordData,fields:string[]):string {

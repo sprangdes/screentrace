@@ -1,0 +1,166 @@
+{
+  "Materials-Program-Management/application-graph.json": {
+    "bytes": 892183,
+    "sha256": "74f5545fce09fdba11ada7f5014ce729b096f1460db41d412dbe671c4f8724b5"
+  },
+  "Materials-Program-Management/preview-model.json": {
+    "bytes": 837528,
+    "sha256": "50e72bc7dc7f22f8751c7f4adf4542a5c495fb834d0ea890cdf4f1e238dc7973"
+  },
+  "Materials-Program-Management/prototype-model.json": {
+    "bytes": 45609,
+    "sha256": "65fd882798dc10659e1f633f08138f39352c851c66f7158148c0939ae98a4a35"
+  },
+  "Materials-Program-Management/viewer-documents.json": {
+    "bytes": 58614,
+    "sha256": "f23600f85b4c734730536927f0e39d069eade5cd13b4ce7f6027759cc2bb794f"
+  },
+  "Materials-Program-Management/report-size.json": {
+    "bytes": 120,
+    "sha256": "61cada33690d606b124d202b89354e94cbc6f643e61bce23f6d604cbe39b1c38"
+  },
+  "Materials-Program-Management/report/screentrace-report.html": {
+    "bytes": 1757399,
+    "sha256": "7d05ec292c7e667450cdc3108aef3dd22f24e89b009b6b01ea9ecb887d42ab9c"
+  },
+  "Materials-Program-Management/static-preview/element-styles.json": {
+    "bytes": 861520,
+    "sha256": "69bedaf2ca4358ba1470dd801127403495ac0db5c73badb9dab8f47c9c1958c0"
+  },
+  "Materials-Program-Management/screenshots/static-screen_0ef4bf95-8598-3a77-8a47-df9edfa030d8.png": {
+    "bytes": 18810,
+    "sha256": "4c02025859e3d0d22e524bbb6a94477a14d985a38581abbc4d9070b71fb30bbb"
+  },
+  "Materials-Program-Management/screenshots/static-screen_3a7b0beb-6aa0-30b8-ab12-6e2730f35547.png": {
+    "bytes": 26329,
+    "sha256": "49ffa3db3a8d0de2afbbff6d4f69bdea8ee42e00f037db5c40db252ff514d369"
+  },
+  "Materials-Program-Management/screenshots/static-screen_4e673396-7619-3523-9470-e55bc506a9e3.png": {
+    "bytes": 21381,
+    "sha256": "b4bf3f1ca1440fb164aeef6097f1430bbe249220113cc302b814b35335878adc"
+  },
+  "Materials-Program-Management/screenshots/static-screen_6548a29f-b32a-397e-873d-361b60ac39d1.png": {
+    "bytes": 19922,
+    "sha256": "0e9ff692f1be560feaefc47aa2ca10c2eaa396faa0d153a16443a238079f1b9e"
+  },
+  "Materials-Program-Management/screenshots/static-screen_843925b7-14d6-38f3-86fc-6d670e8dff65.png": {
+    "bytes": 10735,
+    "sha256": "00505cf134e74acdea27161b2805f3cdb380d4aee6d17bed6f985f05332c5dec"
+  },
+  "Materials-Program-Management/screenshots/static-screen_eb8ef3fb-4ed7-3f40-b002-be3138672510.png": {
+    "bytes": 20950,
+    "sha256": "7c3d0259700496c549cfdbf8fb3964132c6815982ece4fe6306393c2714e4e1e"
+  },
+  "Materials-Program-Management/screenshots/static-screen_ffc4ba2a-f8dd-352b-85bb-ea2ba05aaae2.png": {
+    "bytes": 25209,
+    "sha256": "fdaad7a6fdb2503831025beea056d436a39368e7eb03111d5547037a5e950e87"
+  },
+  "Student-Management-system/application-graph.json": {
+    "bytes": 335447,
+    "sha256": "18728499c3abdd22b9e676e0d860773779b7a9ec54a657e78c7ca03777ba874f"
+  },
+  "Student-Management-system/preview-model.json": {
+    "bytes": 1140432,
+    "sha256": "56e2c8e5909c13ee30ff72cbac36cd80d0425fff528bf5f225bfd3c6f9a584f6"
+  },
+  "Student-Management-system/prototype-model.json": {
+    "bytes": 42492,
+    "sha256": "06f351145a256691a2d2fb2d68279cb2a90f1ab917e119038084d622f8cc0bde"
+  },
+  "Student-Management-system/viewer-documents.json": {
+    "bytes": 1239410,
+    "sha256": "0e75971a99ef3bd417766f949e433c4e413d000ccd72636cec91417a02960d27"
+  },
+  "Student-Management-system/report-size.json": {
+    "bytes": 120,
+    "sha256": "d0f63a0ae770766ac78a57c2cb180a7ca43908e1b1848faf011e798cbe6a8070"
+  },
+  "Student-Management-system/report/screentrace-report.html": {
+    "bytes": 2801010,
+    "sha256": "bb3fcd91c442738b3d5aeed54ac2b90b37aa816ec45cc78fd2a0604ad5accf80"
+  },
+  "Student-Management-system/static-preview/element-styles.json": {
+    "bytes": 1162733,
+    "sha256": "b22b5d168732ff37e2e54de87bf6c731a24b925be8c9349ea71d4c309d92c3f1"
+  },
+  "Student-Management-system/screenshots/static-screen_29c25ff9-27a0-3bb9-b026-15d33d502e5a.png": {
+    "bytes": 13572,
+    "sha256": "a316ed9ac7c934d9dc4ac7ba9049c416dd3457ec356863f6b8ba0a257854b9d1"
+  },
+  "Student-Management-system/screenshots/static-screen_45c6a9a6-f025-3eb0-a4e6-de5270c1dc6a.png": {
+    "bytes": 813254,
+    "sha256": "bd532a70b3c96d3902d0604025bba2c17ae5105943492dae7a01afe155d4f0a8"
+  },
+  "Student-Management-system/screenshots/static-screen_eb6c6bfa-c372-353a-a334-384d9481843d.png": {
+    "bytes": 81378,
+    "sha256": "a1916f395470f2564ebbb88d5dce8798be387e330c16749b890bf406f1031528"
+  },
+  "Student-Management-system/screenshots/static-screen_f2e5890e-5696-348a-a3ee-34d3512560b5.png": {
+    "bytes": 69813,
+    "sha256": "65a6033e6a161059ad6b2409dc994ac51e697a52e005d0eb6f5635298a025211"
+  },
+  "Student-Management-system/screenshots/static-screen_f8b0806c-64a9-3e65-b742-f3f4365625fd.png": {
+    "bytes": 41173,
+    "sha256": "66633a75444dad80864e023a29d3b858d4825d906d1cce2c2798fce7a059a5e0"
+  },
+  "Expenses-Tracker-WebApp/application-graph.json": {
+    "bytes": 639942,
+    "sha256": "7139885ad6eea4891afda8b461cc8bc181af67ab4f41a2cd573e9c17f90b3062"
+  },
+  "Expenses-Tracker-WebApp/preview-model.json": {
+    "bytes": 1215773,
+    "sha256": "f516d0335aa51ec4225341909a0a6220f1364e481cfa28be38a3e222485ad045"
+  },
+  "Expenses-Tracker-WebApp/prototype-model.json": {
+    "bytes": 83750,
+    "sha256": "be1a4239871ca9086433172cf88ea5020490f668fbe70768367b8d6fb328218f"
+  },
+  "Expenses-Tracker-WebApp/viewer-documents.json": {
+    "bytes": 138234,
+    "sha256": "99db205b37126f2f3622b5caa804f1f98a40f14c90f3d1f5ffec3208983f14ed"
+  },
+  "Expenses-Tracker-WebApp/report-size.json": {
+    "bytes": 120,
+    "sha256": "def7f769366beacb22c5f57787808f2d5c89a49ffe816e65bb4cf4afd81b5371"
+  },
+  "Expenses-Tracker-WebApp/report/screentrace-report.html": {
+    "bytes": 1970308,
+    "sha256": "f6acf34a4ee38f9951ed916fbb50449e156126dea83ce5b1457a189e9846d279"
+  },
+  "Expenses-Tracker-WebApp/static-preview/element-styles.json": {
+    "bytes": 1259528,
+    "sha256": "fe5f8b1057471992621dbba2104c8e0f2c9ca48a957f59e89c14b838897d0e55"
+  },
+  "Expenses-Tracker-WebApp/screenshots/static-screen_1d8df445-6a99-3a50-86bc-525d92e22c57.png": {
+    "bytes": 43782,
+    "sha256": "c6a4482b7ce54806c7f908c280f80b05e5abf570201dd3bdc97da85db3204d4c"
+  },
+  "Expenses-Tracker-WebApp/screenshots/static-screen_547b441b-4e53-3cc8-876b-74c324e4ed15.png": {
+    "bytes": 22945,
+    "sha256": "42f726cda1d2958b5ac23f97abff6627f2df2f825ba68737514fd54c5981b2a8"
+  },
+  "Expenses-Tracker-WebApp/screenshots/static-screen_55000fa0-35bc-3cd7-bf73-641a64049726.png": {
+    "bytes": 27104,
+    "sha256": "c747189dfefde56e3d99f6dde551dc038855f91981084885cd92c9dcd03e3e18"
+  },
+  "Expenses-Tracker-WebApp/screenshots/static-screen_8527892d-b350-36be-87b4-c0e4434328a0.png": {
+    "bytes": 27625,
+    "sha256": "21bee96a4dc3223b89e349ada7c9998e1d42fdd55900177608c87bbde4e80ec4"
+  },
+  "Expenses-Tracker-WebApp/screenshots/static-screen_8c124f9b-6ab0-3db1-8e23-c1a8dbee0acd.png": {
+    "bytes": 17452,
+    "sha256": "8930505f9020fd232ce87648529f455eb07415760e24bc629db43be7e05a66de"
+  },
+  "Expenses-Tracker-WebApp/screenshots/static-screen_be395e36-d921-32c9-8a98-8d4878ac7028.png": {
+    "bytes": 25718,
+    "sha256": "58ab4b54fa1808c917cfcf438813b978c68a44702ac7c6a9cf90552b66f06da3"
+  },
+  "Expenses-Tracker-WebApp/screenshots/static-screen_e7aad658-cf90-3d4b-a611-1e86f5f322b8.png": {
+    "bytes": 24138,
+    "sha256": "e01d448fe6789a751e41bfffc060c390a88ce69b707d915ebc5fabe7a54046e8"
+  },
+  "Expenses-Tracker-WebApp/screenshots/static-screen_f5ea35c7-c8d5-378c-87b4-e20d987645f6.png": {
+    "bytes": 24027,
+    "sha256": "cccc43929b94ce95f90533a6700f04e0f9fea9e6e08b9b177238e986908be784"
+  }
+}

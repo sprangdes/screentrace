@@ -13,3 +13,6 @@ test('UI effects can be simulated without inventing a destination node',()=>{
  const effect=simulate(payload,'s',{graphComponentId:'button',componentResolution:'CONFIRMED'},{tag:'button'});
  assert.equal(effect.kind,'ui');assert.equal(effect.simulatable,true);assert.equal(effect.value,'');
 });
+test('nested source alternatives expose every destination and retain unknown branches',async()=>{
+ const {choiceLeaves}=await ownModule('simulation');const unknown={kind:'unknown',expression:'originalHandler()'};const choices=choiceLeaves([unknown,{kind:'choices',expression:'session == null',choices:[{kind:'navigate',targetId:'login',label:'Login'},{kind:'navigate',targetId:'list',label:'List'}]}]);assert.deepEqual(choices.map(c=>c.targetId||c.kind),['unknown','login','list']);assert.equal(choices[0],unknown);assert.ok(choices[1].label.includes('session == null'));
+});

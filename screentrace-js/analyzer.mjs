@@ -1,4 +1,5 @@
-import {keyFilter,dependentDate,disclosure} from './workflow-shapes.mjs';
+import {workflowGate,trimHelpers} from './workflow-gates.mjs';
+import {keyFilter,dependentDate,disclosure,displayToggle} from './workflow-shapes.mjs';
 import {createHash} from 'node:crypto';
 import {readFileSync} from 'node:fs';
 import {parseSource,diagnostic} from './parser.mjs';
@@ -37,6 +38,7 @@ export function analyze(request) {
    if(calleeName(n.callee)==='addCalendar'&&n.arguments.length===4&&n.arguments.every(a=>a.type==='Literal'&&typeof a.value==='string')){const [name,title,field,form]=n.arguments.map(a=>a.value);list.set(name,list.has(name)?null:{title,field,form});}
   }calendars.set(unit.screenId,list);
  }
+ const provenTrim=trimHelpers(expanded.sources);
  for(const unit of expanded.sources) {
   const library=identifyLibrary(unit.file,unit.code);if(library){libraries.push({file:unit.file,name:library,source:{file:unit.file,line:1}});continue;}
   const parsed=parseSource(unit);diagnostics.push(...parsed.diagnostics);if(!parsed.ast)continue;
@@ -47,6 +49,12 @@ export function analyze(request) {
   const symbolKey=name=>{const alias=unit.aliases?.[name]??unit.aliases?.[name?.split('.')[0]];return alias?'module:'+alias.file+':'+(alias.name==='*'?name.split('.').slice(1).join('.'):alias.name):'global:'+name;};
   const valueGlobals={get:name=>globalValues.get(unit.screenId)?.get(symbolKey(name))};
   const value=n=>{const v=resolveValue(n,{env:currentContext?.env??rootEnv,code,elValues:unit.elValues??{},globals:valueGlobals});return {...v,value:v.status==='UNRESOLVED'?null:v.value};};
+  const navigationValue=node=>{
+   const resolved=value(node);if(resolved.value!==null)return resolved;
+   const parts=[];const flatten=n=>{if(n?.type==='BinaryExpression'&&n.operator==='+'){flatten(n.left);flatten(n.right);}else parts.push(n);};flatten(node);
+   let result='',slot=0;for(const part of parts){const v=value(part);if((v.status==='CONFIRMED'||part?.type==='Literal'&&v.status==='INFERRED')&&typeof v.value==='string')result+=v.value;else if(result.includes('?')&&part?.type==='MemberExpression'&&part.property?.name==='value')result+='{input'+(++slot)+'}';else return resolved;}
+   return result&&slot?{value:result,status:'INFERRED'}:resolved;
+  };
   const parents=new WeakMap(),flowObjects=new WeakMap();
   const indexParents=n=>{for(const child of children(n)){parents.set(child,n);indexParents(child);}};indexParents(parsed.ast);
   function precedingObject(use){
@@ -122,11 +130,25 @@ export function analyze(request) {
     }
    }
    if(node.type==='ReturnStatement'&&node.argument?.value===false&&!ctx.guard){emit('UI_STATE_CHANGE',node,ctx,{operation:'preventSubmit'});return;}
+   if(node.type==='WithStatement'){
+    const ref=domReference(node.object),list=node.body?.body;
+    const assignments=list?.slice(0,2).map(s=>s.type==='ExpressionStatement'?s.expression:null),last=list?.[2]?.expression;
+    if(ref&&list.length===3&&assignments.every(a=>a?.type==='AssignmentExpression'&&a.operator==='='&&a.left.type==='Identifier')&&assignments.map(a=>a.left.name).sort().join(',')==='action,method'&&last?.type==='CallExpression'&&last.callee.type==='Identifier'&&last.callee.name==='submit'&&!last.arguments.length){
+     const form=selectNodes(ref.selector,unitDom);const ids=new Set(form.map(f=>f.id));let changed=true;while(changed){changed=false;for(const d of unitDom)if(ids.has(d.parent)&&!ids.has(d.id)){ids.add(d.id);changed=true;}}
+     const action=assignments.find(a=>a.left.name==='action'),method=assignments.find(a=>a.left.name==='method'),url=value(action.right),verb=value(method.right);
+     if(form.length===1&&form[0].tag==='form'&&!unitDom.some(d=>ids.has(d.id)&&['action','method','submit'].includes(d.attrs?.name))&&url.value&&['get','post'].includes(verb.value?.toLowerCase())){emit('SUBMIT_FORM',node,ctx,{selector:ref.selector,url:url.value,method:verb.value.toUpperCase()},url.status);return;}
+    }
+    emit('UNKNOWN',node,ctx,{},'UNRESOLVED');return;
+   }
    if(node.type==='SwitchStatement'){
     const ref=node.discriminant?.type==='MemberExpression'&&node.discriminant.property?.name==='value'?domReference(node.discriminant.object):null;
     if(ref&&node.cases.every(c=>c.test?.type==='Literal'&&typeof c.test.value==='string'&&c.consequent.at(-1)?.type==='BreakStatement')){
      for(const branch of node.cases)for(const child of branch.consequent)if(child.type!=='BreakStatement')visit(child,{...ctx,when:{selector:ref.selector,value:branch.test.value}});return;
     }
+   }
+   if(node.type==='IfStatement'&&unit.event&&ctx.depth===0&&!ctx.guard&&!ctx.parentId&&parsed.ast.body.length===1&&!node.alternate&&node.test.type==='UnaryExpression'&&node.test.operator==='!'){
+    const call=node.test.argument,statements=node.consequent.type==='BlockStatement'?node.consequent.body:[node.consequent];
+    if(call.type==='CallExpression'&&['confirm','window.confirm'].includes(calleeName(call.callee))&&call.arguments.length===1&&statements.length===1&&statements[0].type==='ReturnStatement'&&statements[0].argument?.value===false&&!lookup(ctx.env,calleeName(call.callee))&&!lookup(ctx.env,calleeName(call.callee),'functions')&&!lookup(ctx.env,calleeName(call.callee).split('.')[0])){const message=value(call.arguments[0]);if(message.status==='CONFIRMED'){emit('OPEN_DIALOG',call,ctx,{operation:'confirm',cancelsDefault:true,message:message.value});return;}}
    }
    if(node.type==='IfStatement') {const exists=n=>{if(n?.type==='LogicalExpression'&&n.operator==='&&')return exists(n.left)&&exists(n.right);const ref=domReference(n);if(!ref)return false;const matched=selectNodes(ref.selector,unitDom,ctx.triggerId);return matched.length===1&&!matched[0].dynamic;};if(exists(node.test)){visit(node.consequent,ctx);return;}visit(node.test,ctx);visit(node.consequent,{...ctx,guard:ctx.guard?ctx.guard+' && '+text(node.test,code):text(node.test,code)});if(node.alternate)visit(node.alternate,{...ctx,guard:'!('+text(node.test,code)+')'});return;}
    if(node.type==='AssignmentExpression') {
@@ -139,7 +161,7 @@ export function analyze(request) {
      if(ref&&v.status==='CONFIRMED'){emit('SELECT_CHANGE',node,ctx,{operation:'setValue',...ref,value:v.value});return;}
     }
     if(['window.onload','document.onload'].includes(name)&&functionTypes.has(node.right.type)){visit(node.right.body,{...root,event:'load'});return;}
-    if(['location.href','window.location.href','window.location','location'].includes(name)){const v=value(node.right);emit('NAVIGATE',node,ctx,{url:v.value},v.status);return;}
+    if(['location.href','window.location.href','window.location','location','window.self.location','window.self.location.href','self.location','self.location.href'].includes(name)){if(['window','self','location'].includes(name.split('.')[0])&&(lookup(ctx.env,name.split('.')[0])||lookup(ctx.env,name.split('.')[0],'functions')))return;const v=navigationValue(node.right);emit('NAVIGATE',node,ctx,{url:v.value,...(v.status==='INFERRED'?{operation:'queryNavigation'}:{})},v.status);return;}
     if(node.left.type==='MemberExpression'&&node.left.computed){emit('UNKNOWN',node,ctx,{},'UNRESOLVED');return;}
     if(name?.endsWith('.value')||name?.includes('.style.')||['innerHTML','textContent','disabled','checked'].includes(node.left.property?.name)) {emit(name?.endsWith('.value')?'SELECT_CHANGE':'UI_STATE_CHANGE',node,ctx);return;}
     const registration=registered.get(text(node,code));if(registration){for(const b of registration)bound(b,ctx);return;}
@@ -189,6 +211,7 @@ export function analyze(request) {
     if(bootstrapInstances.has(receiver?.name)&&['show','hide','toggle'].includes(method)){const instance=bootstrapInstances.get(receiver.name);const dialog=instance.name==='bootstrap.Modal'&&method!=='hide';const target=dialog?dialogTarget(instance.selector):{};const {status:targetStatus,...attributes}=target;emit(dialog?'OPEN_DIALOG':'UI_STATE_CHANGE',node,ctx,{library:'bootstrap',...attributes},targetStatus);return;}
     if(jquery) {
      const selector={value:ref.selector,status:'CONFIRMED'};
+     if(['addClass','removeClass','toggleClass'].includes(method)&&args.length===1){const v=value(args[0]);if(v.status==='CONFIRMED'&&/^[A-Za-z_][A-Za-z0-9_-]{0,127}$/.test(v.value)){emit('UI_STATE_CHANGE',node,ctx,{operation:method==='addClass'?'classAdd':method==='removeClass'?'classRemove':'classToggle',selector:selector.value,value:v.value});return;}}
      if(method==='text'&&args.length){const v=value(args[0]);if(v.status==='CONFIRMED'){emit('UI_STATE_CHANGE',node,ctx,{operation:'setText',selector:selector.value,value:v.value},v.status);return;}}
      if(method==='css'&&args.length===2&&['color','display'].includes(args[0]?.value)){const v=value(args[1]);if(v.status==='CONFIRMED'){emit('UI_STATE_CHANGE',node,ctx,{operation:'setStyle',selector:selector.value,property:args[0].value,value:v.value},v.status);return;}}
      if(['show','hide','toggle'].includes(method)&&selector.status==='CONFIRMED'){emit('UI_STATE_CHANGE',node,ctx,{operation:method,selector:selector.value});return;}
@@ -214,6 +237,8 @@ export function analyze(request) {
    const env=environment(fn.body,declEnv);fn.params.forEach((p,i)=>{if(p.type==='Identifier')env.values.set(p.name,{resolved:args[i]&&(args[i].value!==null||args[i].properties)?args[i]:{value:'{'+p.name+'}',status:'UNRESOLVED',known:false,tainted:false},at:0});});
    const next={...ctx,env,depth:asHandler?ctx.depth:ctx.depth+1,stack:[...ctx.stack,key]};
    if(/^validate/i.test(fn.id?.name??call.name??'')) {walk(fn.body,n=>{if(n.type==='IfStatement'){let ids=[];walk(n.test,c=>{if(c.type==='CallExpression'&&c.callee.type==='MemberExpression')ids.push(...select(selectorOf(c.callee.object,code),unitDom,ctx.triggerId));});let message=null;walk(n.consequent,c=>{if(c.type==='CallExpression'&&['alert','window.alert'].includes(calleeName(c.callee)))message=c.arguments[0]?.value??null;});for(const id of new Set(ids))rule('custom',n,{...next,guard:text(n.test,code)},id,message,{condition:text(n.test,code)});}});}
+   if(ctx.event==='click'&&!ctx.guard&&!ctx.parentId&&!lookup(env,'document')&&!lookup(env,'document','functions')){const gate=workflowGate(fn,{trimProven:provenTrim(unit.screenId)&&!env.values.has('trim')&&!env.functions.has('trim'),domReference});if(gate){emit('VALIDATE',fn.body,next,{operation:'workflowGate',checks:gate.checks});for(const statement of gate.remaining)visit(statement,next);return;}}
+   if(asHandler&&ctx.event==='click'){const shape=displayToggle(fn),target=shape&&domReference(shape);if(target){emit('UI_STATE_CHANGE',fn.body,next,{operation:'toggleDisplay',selector:target.selector});return;}}
    if(asHandler&&ctx.event==='click'){const shape=disclosure(fn),button=shape&&domReference(shape.button),menu=shape&&domReference(shape.menu);if(button&&menu){emit('UI_STATE_CHANGE',fn.body,next,{operation:'toggleDisclosure',selector:menu.selector,inputSelector:button.selector});return;}}
    if(asHandler&&ctx.event==='change'&&!lookup(env,'Date')&&!lookup(env,'Date','functions')){const date=dependentDate(fn);const ref=date&&domReference(date.target);if(ref){emit('UI_STATE_CHANGE',fn.body,next,{operation:'dateMin',...ref,days:date.days,inputSelector:ctx.selector});return;}}
    visit(fn.body,next);

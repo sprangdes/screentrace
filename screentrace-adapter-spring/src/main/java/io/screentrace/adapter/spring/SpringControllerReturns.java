@@ -38,6 +38,7 @@ final class SpringControllerReturns {
       Value value=value(expression,method,statement,constants);
       String detail="類別="+className+"；方法="+className+"."+method.getNameAsString()+"；原始運算式="+raw+"；目標="+Objects.toString(value.value(),"UNRESOLVED")+"；條件="+guards(statement,method);
       List<AnalysisEvidence> evidence=new ArrayList<>();evidence.add(new AnalysisEvidence(source,"SpringControllerReturns",value.kind()==Kind.UNKNOWN?ResolutionStatus.UNRESOLVED:value.kind()==Kind.VIEW?ResolutionStatus.CONFIRMED:ResolutionStatus.INFERRED,detail));
+      if(value.kind()==Kind.REDIRECT&&expression.isNameExpr())for(var setter:method.findAll(MethodCallExpr.class))if(setter.getNameAsString().equals("setUrl")&&setter.getScope().filter(v->v.toString().equals(expression.toString())).isPresent())evidence.add(new AnalysisEvidence(new SourceLocation(file,setter.getBegin().orElseThrow().line),"SpringControllerReturns",ResolutionStatus.INFERRED,"RedirectView setter 來源；column="+setter.getBegin().orElseThrow().column+"；原始運算式="+setter));
       if(value.kind()!=Kind.UNKNOWN)evidence.addAll(feedback(method,statement,file));
       targets.add(new Target(value.kind(),value.value(),raw,source,evidence));
     }
@@ -158,6 +159,7 @@ final class SpringControllerReturns {
       String name=expression.asNameExpr().getNameAsString();
       var definitions=method.findAll(VariableDeclarator.class).stream().filter(v->belongsTo(v,method)&&v.getNameAsString().equals(name)).toList();
       if(definitions.size()!=1)return unknown();var definition=definitions.get(0);
+      if(definition.getInitializer().filter(Expression::isObjectCreationExpr).map(Expression::asObjectCreationExpr).filter(o->o.getType().getNameAsString().equals("RedirectView")&&o.getArguments().isEmpty()).isPresent())return contextRedirect(name,definition,method,use,constants);
       if(definition.getInitializer().isEmpty()||!definition.getInitializer().get().isObjectCreationExpr()
           ||!definition.getInitializer().get().asObjectCreationExpr().getType().getNameAsString().equals("ModelAndView")
           ||definition.getEnd().orElseThrow().isAfter(use.getBegin().orElseThrow()))return unknown();
@@ -184,6 +186,25 @@ final class SpringControllerReturns {
       return value(definition.getInitializer().get(),method,use,constants);
     }
     return unknown();
+  }
+  private static Value contextRedirect(String name,VariableDeclarator definition,MethodDeclaration method,ReturnStmt use,Map<String,String> constants){
+    var block=definition.findAncestor(BlockStmt.class);if(block.isEmpty()||!block.get().isAncestorOf(use))return unknown();
+    List<MethodCallExpr> setters=new ArrayList<>();
+    for(var n:method.findAll(NameExpr.class))if(n.getNameAsString().equals(name)){
+      if(!belongsTo(n,method))return unknown();Node parent=n.getParentNode().orElse(null);
+      if(parent==use)continue;
+      if(parent instanceof MethodCallExpr call&&call.getScope().orElse(null)==n&&call.getNameAsString().equals("setUrl")){setters.add(call);continue;}
+      return unknown();
+    }
+    if(setters.size()!=1)return unknown();var setter=setters.get(0);
+    if(setter.getArguments().size()!=1||setter.findAncestor(ExpressionStmt.class).filter(s->s.getParentNode().orElse(null)==block.get()).isEmpty()||!setter.getBegin().orElseThrow().isAfter(definition.getEnd().orElseThrow())||!setter.getEnd().orElseThrow().isBefore(use.getBegin().orElseThrow()))return unknown();
+    var e=unwrap(setter.getArgument(0));if(!e.isBinaryExpr()||e.asBinaryExpr().getOperator()!=BinaryExpr.Operator.PLUS)return unknown();
+    var binary=e.asBinaryExpr();String suffix=literal(binary.getRight(),constants);var left=unwrap(binary.getLeft());
+    if(suffix==null||!suffix.startsWith("/")||suffix.startsWith("//")||suffix.contains("..")||!left.isMethodCallExpr())return unknown();
+    var context=left.asMethodCallExpr();if(!context.getNameAsString().equals("getContextPath")||!context.getArguments().isEmpty()||context.getScope().filter(Expression::isNameExpr).isEmpty())return unknown();
+    String request=context.getScope().get().asNameExpr().getNameAsString();var parameters=method.getParameters().stream().filter(p->p.getNameAsString().equals(request)&&Set.of("HttpServletRequest","javax.servlet.http.HttpServletRequest","jakarta.servlet.http.HttpServletRequest").contains(p.getType().asString())).toList();
+    if(parameters.size()!=1||method.findAll(VariableDeclarator.class).stream().anyMatch(v->v.getNameAsString().equals(request))||method.findAll(AssignExpr.class).stream().anyMatch(a->a.getTarget().toString().equals(request)))return unknown();
+    return new Value(Kind.REDIRECT,suffix);
   }
   private static void flatten(Expression expression,List<Expression> parts) {
     expression=unwrap(expression);

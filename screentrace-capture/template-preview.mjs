@@ -70,11 +70,12 @@ export function templatePreview(source,screen,nodes,relationships=[]){
 export const snapshotMotionCss='*,*::before,*::after{animation-duration:0s!important;animation-delay:0s!important;animation-iteration-count:1!important;animation-fill-mode:forwards!important;animation-play-state:paused!important;transition:none!important;caret-color:transparent!important}';
 /** Request bases require graph render chains or literal aliases to a public source page. */
 export function requestDirectories(graph,screen){
- const handlers=new Set((graph.relationships||[]).filter(e=>e.type==='RENDERS'&&e.to===screen).map(e=>e.from));
+ const handlers=new Set((graph.relationships||[]).filter(e=>['RENDERS','FORWARDS_TO'].includes(e.type)&&e.to===screen).map(e=>e.from));
  const ids=new Set((graph.relationships||[]).filter(e=>e.type==='HANDLED_BY'&&handlers.has(e.to)).map(e=>e.from));
  const routes=(graph.nodes||[]).filter(n=>ids.has(n.id)&&n.type==='ENDPOINT'&&['GET','ANY'].includes(n.attributes?.httpMethod));
  const node=(graph.nodes||[]).find(n=>n.id===screen&&n.type==='SCREEN'),view=node?.attributes?.view||'';
- const paths=routes.map(n=>n.attributes.path||'');
+ const paths=routes.filter(n=>n.attributes.category!=='REDIRECT').map(n=>n.attributes.path||'');
+ if(node?.attributes?.sourceRequestPaths&&node.evidence?.some(e=>e.parser==='StrutsRequestPath')){paths.length=0;paths.push(...node.attributes.sourceRequestPaths.split('\u001f'));}
  if(!view.toLowerCase().includes('/web-inf/')&&!view.includes('/resources/templates/'))for(const alias of (node?.attributes?.routeAliases||'').split('\u001f')){
   const p=alias.split(/[?#]/,1)[0];if(p.startsWith('/')&&!p.startsWith('//')&&!p.includes('..')&&!/[{:]/.test(p)&&/\.(jsp|html)$/.test(p)&&view.endsWith(p))paths.push(p);
  }

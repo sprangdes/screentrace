@@ -1,3 +1,4 @@
+import {expandGraphFragments} from './template-fragments.mjs';
 import {templatePreview,snapshotMotionCss,requestDirectories,openStaticSnapshot,offlineIconAffordances,offlineDisclosureState} from './template-preview.mjs';
 import {metadataValue} from './expansion-anchor.mjs';
 import { lstat, mkdir, readdir } from 'node:fs/promises';
@@ -27,7 +28,7 @@ const endpointByPath = new Map(graph.nodes.filter(node => node.type === 'ENDPOIN
 const handlerByEndpoint = new Map(graph.relationships.filter(edge => edge.type === 'HANDLED_BY').map(edge => [edge.from, edge.to]));
 const screenByHandler = new Map(graph.relationships.filter(edge => edge.type === 'RENDERS').map(edge => [edge.from, edge.to]));
 let webRoot = path.join(target, 'src/main/webapp');
-if(previewV2){for(const candidate of ['src/main/webapp','WebContent','web']){try{await resolveExistingDirectoryWithin(target,path.join(target,candidate));webRoot=path.join(target,candidate);break;}catch{}}}
+if(previewV2){for(const candidate of ['src/main/webapp','WebContent','WebRoot','webapp','web']){try{await resolveExistingDirectoryWithin(target,path.join(target,candidate));webRoot=path.join(target,candidate);break;}catch{}}}
 const tagRoot = path.join(webRoot, 'WEB-INF/tags');
 const strutsMessages=await loadStrutsMessageCatalog(target,webRoot);
 const htmlRoot = path.join(output, 'static-preview');
@@ -44,10 +45,22 @@ const captureDiagnostics = [];
 const conventionalAssetMappings = [
   [path.join(webRoot, 'resources'), 'resources'], [path.join(webRoot, 'css'), 'css'],
   [path.join(webRoot, 'js'), 'js'], [path.join(webRoot, 'images'), 'images'],
+  [path.join(webRoot,'style'),'style'],[path.join(webRoot,'script'),'script'],
   [path.join(target, 'src/main/resources/static'), ''], [path.join(target, 'src/main/resources/public'), '']
 ].map(([sourceDir, assetKey]) => ({ urlPrefix: assetKey ? `/${assetKey}/` : null, assetKey, sourceDir }));
 const resourceMappings = deduplicateMappings([...conventionalAssetMappings,
   ...await discoverSpringResourceMappings(target, webRoot, file => readUtf8Limited(projectRoot, file, 4 * 1024 * 1024))]);
+async function resourceEncodings(file){
+ const consumers=[];
+ for(const ref of graph.nodes.filter(n=>n.attributes?.kind==='STATIC_RESOURCE_REFERENCE')){
+  const raw=ref.attributes.href;if(!raw||/[:{]/.test(raw))continue;
+  const owners=graph.nodes.filter(n=>n.type==='SCREEN'&&n.attributes?.view===ref.source.file);
+  for(const owner of owners){const urls=raw.startsWith('/')?[raw]:requestDirectories(graph,owner.id).map(base=>path.posix.normalize(base+raw));
+   if(urls.some(url=>{const mapping=mappingFor(url);return mapping&&path.resolve(mapping.sourceDir,url.slice(mapping.urlPrefix.length))===file;}))consumers.push(owner.attributes.sourceEncoding||'UTF-8');
+  }
+ }
+ return [...new Set(consumers)];
+}
 async function copyAssets() {
   for (const mapping of resourceMappings) if (await exists(mapping.sourceDir, projectRoot, 'directory')) {
     const source = await resolveExistingDirectoryWithin(projectRoot, mapping.sourceDir);
@@ -66,7 +79,9 @@ async function copyDirectory(source, destination, depth) {
     if (info.isSymbolicLink()) { captureDiagnostics.push(`Symbolic link asset skipped: ${path.relative(projectRoot, from)}`); continue; }
     if (info.isDirectory()) await copyDirectory(from, to, depth + 1);
     else if (info.isFile() && info.size <= 8 * 1024 * 1024 && assetBudget.bytes + info.size <= 1024 * 1024 * 1024) {
-      const content = await readBufferLimited(projectRoot, from, Math.min(8 * 1024 * 1024, 1024 * 1024 * 1024 - assetBudget.bytes));
+      let content = await readBufferLimited(projectRoot, from, Math.min(8 * 1024 * 1024, 1024 * 1024 * 1024 - assetBudget.bytes));
+      if(/\.css$/i.test(from)){try{new TextDecoder('utf-8',{fatal:true}).decode(content);}catch{const encodings=await resourceEncodings(from);if(encodings.length===1&&encodings[0]!=='UTF-8'){content=Buffer.from(new TextDecoder(encodings[0],{fatal:true}).decode(content),'utf8');captureDiagnostics.push('SOURCE_RESOURCE_ENCODING: '+path.relative(projectRoot,from)+'; '+encodings[0]);}else captureDiagnostics.push('SOURCE_RESOURCE_ENCODING_UNRESOLVED: '+path.relative(projectRoot,from));}if(content.byteLength>8*1024*1024)continue;}
+      if(assetBudget.bytes+content.byteLength>1024*1024*1024){captureDiagnostics.push('Converted asset byte limit reached.');continue;}
       assetBudget.bytes += content.byteLength;
       await writeBufferWithin(output, to, content);
     } else if (info.isFile()) captureDiagnostics.push(`Asset byte limit reached; skipped ${path.relative(projectRoot, from)}.`);
@@ -276,8 +291,14 @@ async function renderJsp(screen) {
   if(previewV2){localTagDirs=new Map();previewExpressions=new Set();declaredTagDirs(original);}
   let source = await expandIncludes(previewV2?annotateSource(original,view,graph.nodes):original, jsp, new Set([jsp]));
   if(previewV2)source=await expandTiles(source,tilesContext(screen),jsp,new Set([jsp]),0);
+  if(previewV2)source=await expandGraphFragments(source,view,screen,graph,file=>readUtf8Limited(projectRoot,path.join(target,file)));
   if(previewV2)declaredTagDirs(source);
   source = removeDirectives(source);
+  if(screen.attributes?.sourceEncoding)source=markupTokens(source).map(t=>{
+   if(t.name!=='meta'||t.closing)return t.text;const a=markupAttributes(t.text);
+   if(a.charset)return replaceMarkupAttribute(t.text,'charset','UTF-8');
+   if(a['http-equiv']?.toLowerCase()==='content-type'&&a.content)return replaceMarkupAttribute(t.text,'content',a.content.replace(/charset\s*=\s*[A-Za-z0-9_-]+/i,'charset=UTF-8'));return t.text;
+  }).join('');
   const unresolved = previewV2?expressionList(source):dynamicExpressions(source);
   const custom = source.match(/<jsp:attribute\s+name=["']customScript["'][^>]*>([\s\S]*?)<\/jsp:attribute>/)?.[1] || '';
   source = source.replace(/<jsp:attribute\s+name=["']customScript["'][^>]*>[\s\S]*?<\/jsp:attribute>/g, '');

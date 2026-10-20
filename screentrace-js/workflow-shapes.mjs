@@ -26,3 +26,13 @@ export function disclosure(fn) {
  if(yes?.callee?.property?.name!=='remove'||no?.callee?.property?.name!=='add'||yes.callee.object?.property?.name!=='classList'||no.callee.object?.property?.name!=='classList'||calleeName(yes.callee.object.object)!==calleeName(no.callee.object.object)||yes.arguments.length!==1||no.arguments.length!==1||yes.arguments[0]?.value!=='show'||no.arguments[0]?.value!=='show')return null;
  return {button:call.callee.object,menu:yes.callee.object.object};
 }
+export function displayToggle(fn){
+ const list=fn.body?.body;if(list?.length!==1||list[0].type!=='IfStatement')return null;
+ const branch=list[0],test=branch.test;
+ if(test.type!=='LogicalExpression'||test.operator!=='||')return null;
+ const a=test.left,b=test.right;if(a.type!=='BinaryExpression'||b.type!=='BinaryExpression'||a.operator!=='==='||b.operator!=='==='||a.right?.value!=='none'||b.right?.value!==''||calleeName(a.left)!==calleeName(b.left)||a.left?.property?.name!=='display'||a.left.object?.property?.name!=='style')return null;
+ const assignment=block=>block?.type==='BlockStatement'&&block.body.length===1&&block.body[0].type==='ExpressionStatement'?block.body[0].expression:null;
+ const yes=assignment(branch.consequent),no=assignment(branch.alternate);
+ if(yes?.type!=='AssignmentExpression'||no?.type!=='AssignmentExpression'||yes.operator!=='='||no.operator!=='='||calleeName(yes.left)!==calleeName(a.left)||calleeName(no.left)!==calleeName(a.left)||yes.right?.value!=='block'||no.right?.value!=='none')return null;
+ return a.left.object.object;
+}

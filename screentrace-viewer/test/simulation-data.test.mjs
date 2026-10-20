@@ -24,3 +24,13 @@ test('data actions validate optional exception-path marker and accept supplied s
 test('missing source row permits known read navigation without selecting a fabricated record',()=>{
  const payload={};assert.equal(applyDataAction(payload,{...action,operation:'readOne'},{closest:()=>null}),true);assert.equal(applyDataAction(payload,{...action,operation:'readOne'},{closest:()=>({getAttribute:()=> 'nonexistent'})}),false);
 });
+test('DTO input mapping creates independent IDs and an update requires a source-selected row',()=>{
+ const mapped={...action,inputFields:{name:'caption'},generatedIdentity:true,scope:'submitted-fields-only'};
+ const field=(name,value)=>({getAttribute:k=>k==='name'?name:null,hasAttribute:()=>false,value});const form=value=>({localName:'form',closest:()=>null,elements:[field('caption',value)]});const payload={};
+ assert.equal(applyDataAction(payload,mapped,form('First')),true);assert.equal(applyDataAction(payload,mapped,form('Second')),true);
+ assert.equal(applyDataAction({}, {...mapped,generatedIdentity:false,useSelectedIdentity:true},form('Missing')),false);
+ assert.equal(applyDataAction(payload,{...mapped,generatedIdentity:false,useSelectedIdentity:true},form('Changed')),true);
+ assert.equal(applyDataAction(payload,{...action,operation:'delete'},{closest:()=>({getAttribute:()=> '2'})}),true);
+ assert.equal(applyDataAction(payload,{...action,operation:'delete'},{closest:()=>({getAttribute:()=> '3'})}),true);
+ assert.equal(parseDataAction({...mapped,inputFields:{name:'__proto__'}}),undefined);
+});

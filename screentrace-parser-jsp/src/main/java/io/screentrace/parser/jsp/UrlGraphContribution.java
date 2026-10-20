@@ -15,7 +15,7 @@ public final class UrlGraphContribution {
  private static final ObjectMapper JSON=new ObjectMapper();
  private UrlGraphContribution() { }
  public static ApplicationGraph enrich(ApplicationGraph input,ProjectInventory inventory) {
-  ApplicationGraph graph=ConditionalUrlTargets.enrich(ResourceGraphContribution.enrich(input,inventory),inventory);
+  ApplicationGraph graph=ConditionalUrlTargets.enrich(ResourceGraphContribution.enrich(SourceEncodingContribution.enrich(input,inventory),inventory),inventory);
   Map<String,GraphNode> nodes=new TreeMap<>();graph.nodes().forEach(n->nodes.put(n.id(),n));Map<String,Relationship> edges=new TreeMap<>();graph.relationships().forEach(e->edges.put(e.id(),e));Map<String,Behavior> behaviors=new TreeMap<>();graph.behaviors().forEach(b->behaviors.put(b.id(),b));List<Diagnostic> diagnostics=new ArrayList<>(graph.diagnostics());
   var context=UrlResolution.context(inventory,List.of());var extensions=extensions(inventory,diagnostics);
   for(var node:graph.nodes())if(node.type()==NodeType.COMPONENT&&"FORM".equals(node.attributes().get("kind"))&&behaviors.values().stream().noneMatch(b->b.triggerId().equals(node.id())&&b.type()==BehaviorType.SUBMIT_FORM)){
@@ -23,13 +23,17 @@ public final class UrlGraphContribution {
   }
   var endpoints=nodes.values().stream().filter(n->n.type()==NodeType.ENDPOINT&&!"javascript-request".equals(n.attributes().get("origin"))).map(n->new UrlResolution.Endpoint(n.id(),n.attributes().getOrDefault("path",""),n.attributes().getOrDefault("httpMethod","ANY"),n.evidence())).toList();
   for(var b:new ArrayList<>(behaviors.values())){
-   if(!Set.of(BehaviorType.CALL_API,BehaviorType.SUBMIT_FORM,BehaviorType.NAVIGATE).contains(b.type()))continue;if(b.type()==BehaviorType.NAVIGATE&&b.evidence().stream().noneMatch(e->e.parser().equals("AcornStaticAnalyzer")&&Objects.toString(e.detail(),"").contains("\"url\"")))continue;var trigger=nodes.get(b.triggerId());if(trigger==null)continue;
+   if(!Set.of(BehaviorType.CALL_API,BehaviorType.SUBMIT_FORM,BehaviorType.NAVIGATE).contains(b.type()))continue;var trigger=nodes.get(b.triggerId());if(trigger==null)continue;
    if("true".equals(trigger.attributes().get("strutsInheritedFormAction"))&&!trigger.attributes().containsKey("requestAlternatives"))continue;
    boolean strutsRouteAlreadyProven=edges.values().stream().filter(edge->edge.type()==EdgeType.TRIGGERS&&edge.from().equals(b.triggerId())).map(edge->nodes.get(edge.to())).filter(Objects::nonNull).anyMatch(endpoint->endpoint.type()==NodeType.ENDPOINT&&"ACTION".equals(endpoint.attributes().get("category"))&&"PROVEN".equals(endpoint.attributes().get("servletMappingStatus")));
    if(strutsRouteAlreadyProven)continue;
    String raw=null,method=null;boolean dynamicMethod=false;SourceLocation source=b.evidence().isEmpty()?trigger.source():b.evidence().get(0).source();
-   if(b.type()==BehaviorType.CALL_API||b.type()==BehaviorType.NAVIGATE){for(var e:b.evidence())try{var item=JSON.readTree(Objects.toString(e.detail(),""));if(item!=null&&item.has("url")){raw=item.path("url").isNull()?null:item.path("url").asText();method=item.path("method").isNull()?null:item.path("method").asText();if(b.type()==BehaviorType.NAVIGATE)method="GET";dynamicMethod=method==null;source=e.source();break;}}catch(Exception ignored){}if(raw==null&&b.targetId()!=null){var target=nodes.get(b.targetId());if(target!=null&&"javascript-request".equals(target.attributes().get("origin"))){raw=target.attributes().get("path");method=target.attributes().get("httpMethod");}}}
+   if(b.type()==BehaviorType.CALL_API||b.type()==BehaviorType.NAVIGATE||b.type()==BehaviorType.SUBMIT_FORM&&b.evidence().stream().anyMatch(e->e.parser().equals("AcornStaticAnalyzer")&&Objects.toString(e.detail(),"").contains("\"url\""))){for(var e:b.evidence())try{var item=JSON.readTree(Objects.toString(e.detail(),""));if(item!=null&&item.has("url")){raw=item.path("url").isNull()?null:item.path("url").asText();method=item.path("method").isNull()?null:item.path("method").asText();if(b.type()==BehaviorType.NAVIGATE)method="GET";dynamicMethod=method==null;source=e.source();break;}}catch(Exception ignored){}if(raw==null&&b.targetId()!=null){var target=nodes.get(b.targetId());if(target!=null&&"javascript-request".equals(target.attributes().get("origin"))){raw=target.attributes().get("path");method=target.attributes().get("httpMethod");}}}
    else {raw=trigger.attributes().getOrDefault("target",trigger.attributes().getOrDefault("action",b.expression()));String module=trigger.attributes().get("module");if(module!=null&&!module.isBlank()&&raw!=null&&raw.startsWith("/")){String prefix=module.endsWith("/")?module.substring(0,module.length()-1):module;if(!raw.equals(prefix)&&!raw.startsWith(prefix+"/"))raw=prefix+raw;}method=trigger.attributes().getOrDefault("httpMethod",trigger.attributes().getOrDefault("method","GET")).toUpperCase(Locale.ROOT);}
+   if(b.type()==BehaviorType.NAVIGATE&&raw==null){raw=trigger.attributes().get("href");method="GET";}
+   String originalRequest=raw;if(b.type()!=BehaviorType.CALL_API)raw=templatePath(raw);
+   boolean nativeContext=b.type()!=BehaviorType.CALL_API&&raw!=null&&raw.matches("^\\$?\\{pageContext\\.(request|servletContext)\\.contextPath}(/.*)?$");
+   if(nativeContext)raw=raw.substring(raw.indexOf('}')+1);
    boolean proven=raw!=null&&(raw.startsWith("{pageContext.request.contextPath}")||raw.startsWith("{pageContext.servletContext.contextPath}")||raw.startsWith("${pageContext.request.contextPath}")||raw.startsWith("${pageContext.servletContext.contextPath}"));
    UrlResolution.Result result;
    if(trigger.attributes().containsKey("requestAlternatives")&&trigger.evidence().stream().anyMatch(e->e.parser().equals("ConditionalUrlTargets"))) {
@@ -41,10 +45,10 @@ public final class UrlGraphContribution {
    else {
     String relative=relativeRequestPath(raw,b.triggerId(),graph,endpoints);
     var baseResult=UrlResolution.resolve(relative==null?raw:relative,dynamicMethod?"UNKNOWN":method,context,endpoints,extensions,proven);
-    if(relative!=null){var proof=new ArrayList<>(baseResult.evidence());proof.add(new AnalysisEvidence(source,"RelativeRequestPath",ResolutionStatus.INFERRED,"原始相對 URL="+raw+"；由所有來源畫面唯一的已證明請求目錄推導="+relative));result=new UrlResolution.Result(baseResult.confidence()==Confidence.CONFIRMED?Confidence.INFERRED:baseResult.confidence(),baseResult.candidates(),baseResult.paths(),baseResult.diagnostics(),proof);}else result=baseResult;
+    if(relative!=null||nativeContext){var proof=new ArrayList<>(baseResult.evidence());if(relative!=null)proof.add(new AnalysisEvidence(source,"RelativeRequestPath",ResolutionStatus.INFERRED,"原始相對 URL="+raw+"；由所有來源畫面唯一的已證明請求目錄推導="+relative));result=new UrlResolution.Result(baseResult.confidence()==Confidence.CONFIRMED?Confidence.INFERRED:baseResult.confidence(),baseResult.candidates(),baseResult.paths(),baseResult.diagnostics(),proof);}else result=baseResult;
    }
    if(b.type()==BehaviorType.NAVIGATE&&result.candidates().isEmpty())continue;
-   List<AnalysisEvidence> proof=new ArrayList<>(b.evidence());proof.addAll(result.evidence());proof.add(new AnalysisEvidence(source,"UrlResolution",result.confidence().resolutionStatus(),"原始 URL="+Objects.toString(raw,"UNRESOLVED")+"；方法="+Objects.toString(method,"GET")+"；正規化="+result.paths()+"；候選="+result.candidates()));
+   List<AnalysisEvidence> proof=new ArrayList<>(b.evidence());if(nativeContext)proof.add(new AnalysisEvidence(source,"ApplicationRelativeContext",ResolutionStatus.INFERRED,"來源目前 request 的 contextPath；不假設部署值；原文="+originalRequest));proof.addAll(result.evidence());proof.add(new AnalysisEvidence(source,"UrlResolution",result.confidence().resolutionStatus(),"原始 URL="+Objects.toString(raw,"UNRESOLVED")+"；方法="+Objects.toString(method,"GET")+"；正規化="+result.paths()+"；候選="+result.candidates()));
    for(String code:result.diagnostics())diagnostics.add(new Diagnostic("URL 靜態對應："+code,Confidence.UNRESOLVED,source,code,List.of(new AnalysisEvidence(source,"UrlResolution",ResolutionStatus.UNRESOLVED,"原始 URL="+Objects.toString(raw,"UNRESOLVED")))));
    // Rebuild only request edges; unmatched frontend descriptions still retain their caller.
    final String previous=b.targetId(),requestUrl=raw,requestMethod=method;edges.entrySet().removeIf(entry->{var edge=entry.getValue();return edge.from().equals(b.triggerId())&&Set.of(EdgeType.CALLS,EdgeType.TRIGGERS).contains(edge.type())&&(result.candidates().contains(edge.to())||Objects.equals(previous,edge.to())||!result.candidates().isEmpty()&&frontendRequest(nodes.get(edge.to()),requestUrl,requestMethod));});
@@ -58,22 +62,29 @@ public final class UrlGraphContribution {
   var enriched=new ApplicationGraph(graph.application(),List.copyOf(nodes.values()),List.copyOf(edges.values()),diagnostics.stream().distinct().toList(),graph.apiContracts(),graph.schemaVersion(),List.copyOf(behaviors.values()),graph.validationRules());
   return hidePrivateLocations(enriched);
  }
+ private static String templatePath(String raw){
+  if(raw==null)return null;var matcher=java.util.regex.Pattern.compile("\\$\\{\\s*([A-Za-z_][A-Za-z0-9_]*(?:\\s*\\.\\s*[A-Za-z_][A-Za-z0-9_]*)*)\\s*}").matcher(raw);StringBuffer text=new StringBuffer();while(matcher.find())matcher.appendReplacement(text,java.util.regex.Matcher.quoteReplacement("{"+matcher.group(1).replaceAll("\\s+","")+"}"));matcher.appendTail(text);return text.toString();
+ }
+ private static String resolveRelative(String base,String raw){
+  Map<String,String> slots=new LinkedHashMap<>();var matcher=java.util.regex.Pattern.compile("\\{[^{}]*}").matcher(raw);StringBuffer clean=new StringBuffer();while(matcher.find()){String slot="__ST_SLOT_"+slots.size()+"__";slots.put(slot,matcher.group());matcher.appendReplacement(clean,slot);}matcher.appendTail(clean);String result=java.net.URI.create(base).resolve(clean.toString()).normalize().toString();for(var slot:slots.entrySet())result=result.replace(slot.getKey(),slot.getValue());return result;
+ }
  private static String relativeRequestPath(String raw,String trigger,ApplicationGraph graph,List<UrlResolution.Endpoint> endpoints){
-  if(raw==null||raw.isBlank()||raw.startsWith("/")||raw.startsWith("#")||raw.contains(":")||raw.contains("{")||raw.contains("<"))return null;
+  if(raw==null||raw.isBlank()||raw.startsWith("/")||raw.startsWith("#")||raw.startsWith("{")||raw.startsWith("${")||raw.contains(":")||raw.contains("<"))return null;
   Set<String> owners=new TreeSet<>();graph.relationships().stream().filter(e->e.type()==EdgeType.CONTAINS&&e.to().equals(trigger)).forEach(e->owners.add(e.from()));
   graph.nodes().stream().filter(n->n.id().equals(trigger)&&n.type()==NodeType.SCREEN).forEach(n->owners.add(n.id()));
   var bases=requestDirectories(graph,owners);
   if(bases.size()!=1)return null;
-  try{return java.net.URI.create(bases.iterator().next()).resolve(raw).normalize().toString();}catch(Exception ignored){return null;}
+  try{return resolveRelative(bases.iterator().next(),raw);}catch(Exception ignored){return null;}
  }
  public static List<String> requestDirectories(ApplicationGraph graph,Set<String> owners){
   var endpoints=graph.nodes().stream().filter(n->n.type()==NodeType.ENDPOINT).map(n->new UrlResolution.Endpoint(n.id(),n.attributes().getOrDefault("path",""),n.attributes().getOrDefault("httpMethod","ANY"),n.evidence())).toList();
   Set<String> bases=new TreeSet<>();
-  for(String owner:owners){Set<String> handlers=new HashSet<>();graph.relationships().stream().filter(e->e.type()==EdgeType.RENDERS&&e.to().equals(owner)).forEach(e->handlers.add(e.from()));
+  for(String owner:owners){Set<String> handlers=new HashSet<>();graph.relationships().stream().filter(e->Set.of(EdgeType.RENDERS,EdgeType.FORWARDS_TO).contains(e.type())&&e.to().equals(owner)).forEach(e->handlers.add(e.from()));
    var routes=endpoints.stream().filter(e->Set.of("GET","ANY").contains(e.method())&&graph.relationships().stream().anyMatch(r->r.type()==EdgeType.HANDLED_BY&&r.from().equals(e.id())&&handlers.contains(r.to()))).toList();
-   var paths=new TreeSet<String>();routes.forEach(r->paths.add(r.path()));
+   var paths=new TreeSet<String>();routes.stream().filter(r->graph.nodes().stream().noneMatch(n->n.id().equals(r.id())&&"REDIRECT".equals(n.attributes().get("category")))).forEach(r->paths.add(r.path()));
    graph.nodes().stream().filter(n->n.id().equals(owner)&&n.type()==NodeType.SCREEN).forEach(n->{
     String view=n.attributes().getOrDefault("view","");
+    if(n.attributes().containsKey("sourceRequestPaths")&&n.evidence().stream().anyMatch(e->e.parser().equals("StrutsRequestPath"))){paths.clear();for(String request:n.attributes().get("sourceRequestPaths").split("\\u001f"))paths.add(request);return;}
     if(!view.toLowerCase(Locale.ROOT).contains("/web-inf/")&&!view.contains("/resources/templates/"))
      for(String alias:n.attributes().getOrDefault("routeAliases","").split("\\u001f")){
       String path=alias.split("[?#]",2)[0];

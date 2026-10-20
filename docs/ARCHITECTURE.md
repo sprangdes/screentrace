@@ -632,3 +632,9 @@ JS AST 的來源 evidence 可攜帶固定操作 metadata（show/hide/toggle、se
 ## WP72 有限工作流程語意
 
 來源掃描以安全常值 web.docbase.dir 限定有效 web root。相對腳本／請求／預覽資源使用 canonical graph 的 GET 渲染鏈或直接公開頁 alias 目錄證據；多目錄與私有模板不猜測。JavaParser 保留有限 alias 賦值分支及 unresolvedReturnCount，Acorn 產生 callback、文字、樣式及選項條件效果。ModelFeedback、simulationData conditional 與多 readAll bindings 沿用既有 attributes／evidence 擴充點；Graph 2.2、Preview 2 不變。capture 僅投影有證據的模板標記，viewer 執行工具自己的狀態機，modal 移動原節點並還原，避免 duplicate ID。詳細邊界見 [ADR 0093](adr/0093-public-completeness-workflow-repairs.md)。
+
+### WP76 來源編碼、片段、Security processor 與 DTO 示範契約
+
+JSP 宣告編碼由 scanner 的受限位元組讀取處理，非 UTF-8 metadata 經 SourceEncoding evidence 進圖；capture 僅轉換產出，保留來源位元組。Thymeleaf 的具名片段、Struts 代理／具參數 action 鏈、Spring Security DSL 均在各 adapter／parser 貢獻既有圖節點與證據，不進 Core。
+
+有限 JavaScript workflowGate／display／class／confirm 操作與 DTO scalar 欄位契約由同一圖供 viewer 消費。DTO contract 的 scope 為 submitted-fields-only，認證、session、SQL、關聯、日期計算仍未知；未選列的更新只顯示來源正常目的且明示未回放資料。來源條件未知時保留所有候選，巢狀候選可直接選取。決定與邊界見 [ADR 0095](adr/0095-public-batch5-workflow-repairs.md)。
