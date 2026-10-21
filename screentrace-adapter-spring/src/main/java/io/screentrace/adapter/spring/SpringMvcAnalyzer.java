@@ -34,12 +34,9 @@ import java.util.TreeSet;
 import java.util.TreeMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import javax.xml.XMLConstants;
-import javax.xml.parsers.DocumentBuilderFactory;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
-import org.xml.sax.InputSource;
 
 /** Static analysis for annotation-based, server-rendered Spring MVC applications. */
 public final class SpringMvcAnalyzer {
@@ -234,7 +231,7 @@ public final class SpringMvcAnalyzer {
         for (Path file : inventory.springXmlFiles()) {
             String relative = state.root.relativize(file).toString().replace('\\', '/');
             try {
-                Document document = xml(SafeProjectFiles.xmlWithoutExternalDoctype(SafeProjectFiles.readUtf8Limited(inventory.root(), file, SafeProjectFiles.MAX_XML_FILE_BYTES)));
+                Document document = xml(SafeProjectFiles.readUtf8Limited(inventory.root(), file, SafeProjectFiles.MAX_XML_FILE_BYTES));
                 Map<String, Element> beans = beans(document);
                 addViewResolvers(beans, state);
                 addXmlViewControllers(document, relative, state);
@@ -408,19 +405,7 @@ public final class SpringMvcAnalyzer {
     }
 
     private static Document xml(String source) throws Exception {
-        DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
-        factory.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
-        factory.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
-        factory.setFeature("http://xml.org/sax/features/external-general-entities", false);
-        factory.setFeature("http://xml.org/sax/features/external-parameter-entities", false);
-        factory.setFeature("http://apache.org/xml/features/nonvalidating/load-external-dtd", false);
-        factory.setXIncludeAware(false);
-        factory.setAttribute(XMLConstants.ACCESS_EXTERNAL_DTD, "");
-        factory.setAttribute(XMLConstants.ACCESS_EXTERNAL_SCHEMA, "");
-        factory.setExpandEntityReferences(false);
-        var builder = factory.newDocumentBuilder();
-        builder.setEntityResolver((publicId, systemId) -> new InputSource(new StringReader("")));
-        return builder.parse(new InputSource(new StringReader(source)));
+        return SafeProjectFiles.parseXml(source, false);
     }
 
     private static void addJspFragments(JspAnalysis jsp, Set<String> includedViews, State state) {
