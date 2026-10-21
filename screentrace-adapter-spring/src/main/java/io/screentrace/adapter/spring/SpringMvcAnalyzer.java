@@ -64,6 +64,7 @@ public final class SpringMvcAnalyzer {
         for (Path java : inventory.javaFiles()) parseController(java, state, units);
         SpringControllerFlow.resolve(state.nodes,state.edges,state.diagnostics,state.returnTargets,
             io.screentrace.parser.jsp.UrlResolution.context(inventory,List.of()));
+        foldUnroutedTileBodies(state);
         addJspInteractions(jsp, state);
         addJspIncludes(jsp, state);
         state.diagnostics.addAll(jsp.diagnostics());
@@ -456,20 +457,104 @@ public final class SpringMvcAnalyzer {
                 if (names.contains(attribute.value())) fragments.add(attribute.value());
         }
         for (JspAnalysis.Include include : jsp.includes()) if (names.contains(include.targetPath())) fragments.add(include.targetPath());
+        Map<String, JspAnalysis.TilesDefinition> byName = new TreeMap<>();
+        jsp.tilesDefinitions().forEach(definition -> byName.put(definition.name(), definition));
         for (JspAnalysis.TilesDefinition definition : jsp.tilesDefinitions()) {
             if (fragments.contains(definition.name())) continue;
             String id = ApplicationGraph.id(NodeType.SCREEN, "tiles:" + definition.name());
-            addNode(state, new GraphNode(id, NodeType.SCREEN, definition.name(),
-                    Map.of("tilesDefinition", "true", "template", definition.template()), definition.source(), Confidence.CONFIRMED));
+            Map<String, String> attributes = new TreeMap<>();
+            attributes.put("tilesDefinition", "true");
+            attributes.put("tilesDefinitionName", definition.name());
+            attributes.put("template", definition.template());
+            // The static preview renders the template and fills each tiles:insertAttribute slot from tilesAttributes.
+            String template = tilesJspPath(definition.template(), jsp);
+            if (template != null) attributes.put("view", template);
+            attributes.put("tilesAttributes", tilesAttributesJson(definition, byName, jsp));
+            addNode(state, new GraphNode(id, NodeType.SCREEN, definition.name(), attributes, definition.source(), Confidence.CONFIRMED));
             state.screensByView.put(definition.name(), id);
+            Set<String> paths = new TreeSet<>();
+            collectTilesJspPaths(definition, byName, jsp, paths, new HashSet<>());
+            for (String path : paths) state.tileOwnersByView.computeIfAbsent(path, ignored -> new TreeSet<>()).add(id);
+        }
+    }
+
+    /** Resolves a Tiles web path such as /WEB-INF/views/home.jsp to the analyzed project-relative JSP. */
+    private static String tilesJspPath(String value, JspAnalysis jsp) {
+        if (value == null || value.isBlank() || value.contains("${") || value.contains("#{") || !value.startsWith("/")) return null;
+        for (String candidate : List.of("src/main/webapp" + value, value.substring(1)))
+            if (jsp.markup().containsKey(candidate)) return candidate;
+        return null;
+    }
+
+    private static void collectTilesJspPaths(JspAnalysis.TilesDefinition definition, Map<String, JspAnalysis.TilesDefinition> byName,
+                                             JspAnalysis jsp, Set<String> paths, Set<String> seen) {
+        if (!seen.add(definition.name())) return;
+        List<String> targets = new ArrayList<>();
+        targets.add(definition.template());
+        definition.attributes().forEach(attribute -> targets.add(attribute.value()));
+        for (String target : targets) {
+            JspAnalysis.TilesDefinition nested = byName.get(target);
+            if (nested != null) collectTilesJspPaths(nested, byName, jsp, paths, seen);
+            else {
+                String path = tilesJspPath(target, jsp);
+                if (path != null) paths.add(path);
+            }
+        }
+    }
+
+    /** The resolved put values of a page definition, in the shape the static preview's Tiles expansion reads. */
+    private static String tilesAttributesJson(JspAnalysis.TilesDefinition definition, Map<String, JspAnalysis.TilesDefinition> byName, JspAnalysis jsp) {
+        try {
+            return new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(tilesContext(definition, byName, jsp, new HashSet<>()));
+        } catch (com.fasterxml.jackson.core.JsonProcessingException error) {
+            throw new java.io.UncheckedIOException(error);
+        }
+    }
+
+    private static Map<String, Object> tilesContext(JspAnalysis.TilesDefinition definition, Map<String, JspAnalysis.TilesDefinition> byName,
+                                                    JspAnalysis jsp, Set<String> stack) {
+        stack.add(definition.name());
+        Map<String, Object> attributes = new TreeMap<>();
+        for (JspAnalysis.TilesAttribute attribute : definition.attributes()) {
+            String value = attribute.value() == null ? "" : attribute.value();
+            JspAnalysis.TilesDefinition nested = byName.get(value);
+            if (nested != null && !stack.contains(value)) attributes.put(attribute.name(), Map.of("definition", tilesContext(nested, byName, jsp, stack)));
+            else if (nested != null) attributes.put(attribute.name(), Map.of("unresolved", value));
+            else if (value.startsWith("/") || value.matches("(?i).*\\.(jspf?|html?)$")) {
+                String path = tilesJspPath(value, jsp);
+                attributes.put(attribute.name(), path == null ? Map.of("unresolved", value) : Map.of("path", path));
+            } else attributes.put(attribute.name(), Map.of("value", value));
+        }
+        stack.remove(definition.name());
+        Map<String, Object> context = new TreeMap<>();
+        String template = tilesJspPath(definition.template(), jsp);
+        context.put("template", template == null ? definition.template() : template);
+        context.put("attributes", attributes);
+        return context;
+    }
+
+    /**
+     * A JSP that only fills a Tiles page definition is part of that page, not a screen of its own. Once controller
+     * returns are resolved, such body screens that nothing renders or forwards to are folded into their Tiles screens.
+     */
+    private static void foldUnroutedTileBodies(State state) {
+        for (var entry : state.tileOwnersByView.entrySet()) {
+            String bodyScreen = state.screensByView.get(entry.getKey());
+            if (bodyScreen == null || entry.getValue().contains(bodyScreen)) continue;
+            if (state.nodes.stream().noneMatch(n -> n.id().equals(bodyScreen) && n.type() == NodeType.SCREEN
+                    && !"true".equals(n.attributes().get("tilesDefinition")))) continue;
+            if (state.edges.stream().anyMatch(e -> e.to().equals(bodyScreen) || e.from().equals(bodyScreen))) continue;
+            state.nodes.removeIf(n -> n.id().equals(bodyScreen));
+            String owner = entry.getValue().iterator().next();
+            state.screensByView.replaceAll((view, screen) -> screen.equals(bodyScreen) ? owner : screen);
         }
     }
 
     private static void addJspInteractions(JspAnalysis jsp, State state) {
         for (JspAnalysis.Interaction rawInteraction : jsp.interactions()) {
             JspAnalysis.Interaction interaction=resolveRelativeJspTarget(rawInteraction,state);
-            String screenId = state.screensByView.get(interaction.viewPath());
-            if (screenId == null) continue;
+            List<String> screenIds = interactionScreens(interaction.viewPath(), state);
+            if (screenIds.isEmpty()) continue;
             String id = interaction.componentId()!=null?interaction.componentId():ApplicationGraph.id(NodeType.COMPONENT, interaction.viewPath() + ":" + interaction.source().line() + ":" + interaction.target());
             Map<String, String> attributes = new TreeMap<>();
             attributes.put("componentType", interaction.type().name());
@@ -479,9 +564,9 @@ public final class SpringMvcAnalyzer {
             if (!interaction.viewPath().equals(interaction.source().file())) attributes.put("includedBy", interaction.viewPath());
             if (interaction.httpMethod() != null) attributes.put("httpMethod", interaction.httpMethod());
             addNode(state, new GraphNode(id, NodeType.COMPONENT, interaction.label(), attributes, interaction.source(), interaction.confidence(), interactionEvidence(interaction)));
-            edge(state, EdgeType.CONTAINS, screenId, id, Confidence.CONFIRMED, interaction.source());
+            for (String screenId : screenIds) edge(state, EdgeType.CONTAINS, screenId, id, Confidence.CONFIRMED, interaction.source());
             if (interaction.confidence() == Confidence.UNRESOLVED || !canTriggerEndpoint(interaction.type())) continue;
-            for (EndpointMatch match : endpointsFor(interaction, screenId, state)) {
+            for (String screenId : screenIds) for (EndpointMatch match : endpointsFor(interaction, screenId, state)) {
                 edge(state, EdgeType.TRIGGERS, id, match.endpointId(), match.confidence(), interaction.source());
                 List<String> targetScreens = state.screensByEndpoint.getOrDefault(match.endpointId(), List.of()).stream()
                     .distinct().toList();
@@ -494,6 +579,14 @@ public final class SpringMvcAnalyzer {
             if(next!=null&&state.nodes.stream().anyMatch(n->n.id().equals(direct)&&n.attributes().getOrDefault("view","").startsWith("src/main/resources/templates/")))next=null;
             if (next != null) edge(state, EdgeType.NAVIGATES_TO, id, next, Confidence.CONFIRMED, interaction.source());
         }
+    }
+
+    /** A Tiles template or body belongs to every page definition that inserts it; any other JSP to its own screen. */
+    private static List<String> interactionScreens(String viewPath, State state) {
+        String screenId = state.screensByView.get(viewPath);
+        Set<String> owners = state.tileOwnersByView.get(viewPath);
+        if (owners != null && (screenId == null || owners.contains(screenId))) return List.copyOf(owners);
+        return screenId == null ? List.of() : List.of(screenId);
     }
 
     private static JspAnalysis.Interaction resolveRelativeJspTarget(JspAnalysis.Interaction interaction,State state) {
@@ -566,6 +659,9 @@ public final class SpringMvcAnalyzer {
     }
 
     private static int pathScore(String target, String endpoint) {
+        // Query strings and fragments never take part in Spring request mapping.
+        target = target.replaceFirst("[?#].*$", "");
+        if (target.isEmpty()) return 0;
         if (target.equals(endpoint)) return 1_000;
         String[] targetSegments = segments(target);
         String[] endpointSegments = segments(endpoint);
@@ -652,6 +748,7 @@ public final class SpringMvcAnalyzer {
         private final Map<String, List<EndpointReference>> endpointsByScreen = new HashMap<>();
         private final Map<String, List<String>> screensByEndpoint = new HashMap<>(); private final Map<String, String> screensByView = new HashMap<>();
         private final Map<String, String> fragmentsByPath = new HashMap<>(); private final List<ViewResolver> viewResolvers = new ArrayList<>();
+        private final Map<String, Set<String>> tileOwnersByView = new TreeMap<>();
         private final List<SpringControllerFlow.Pending> returnTargets=new ArrayList<>();
         private String defaultExceptionView;
         private State(Path root, List<Path> javaFiles) { this.root = root; this.contracts = new ApiContractExtractor(root, javaFiles); }
