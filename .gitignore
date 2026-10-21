@@ -11,3 +11,7 @@ screentrace-viewer/dist/
 
 # Default analysis output of `./bin/screentrace <project-path>`
 /analyze/
+
+# Python bytecode from report audit scripts
+__pycache__/
+*.py[cod]

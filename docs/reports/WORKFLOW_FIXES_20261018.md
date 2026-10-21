@@ -84,7 +84,7 @@
 
 ## 產物與證據
 
-- [OLMS 報表](../../analyze/workflows-20261018/MyStrutsApp/report/screentrace-report.html)、[eBazaar 報表](../../analyze/workflows-20261018/eBazaar/report/screentrace-report.html)、[醫院報表](../../analyze/workflows-20261018/Hospital-Bed-Availability-Management-System/report/screentrace-report.html)
+- 本機報表（位於受 `/analyze/` ignore 規則排除的目錄，不隨 repository 保存）：OLMS `analyze/workflows-20261018/MyStrutsApp/report/screentrace-report.html`、eBazaar `analyze/workflows-20261018/eBazaar/report/screentrace-report.html`、醫院 `analyze/workflows-20261018/Hospital-Bed-Availability-Management-System/report/screentrace-report.html`
 - [逐項實際操作／三條旅程](workflows-20261018/after/ui-results.json)、[graph 核對](workflows-20261018/after/graph-results.json)、[固定來源與預期](workflows-20261018/baseline.json)
 - [提交版本、CLI exit code、來源不變與產物雜湊](workflows-20261018/after/run-metadata.json)、[兩輪輸出比較](workflows-20261018/after/repeat-results.json)
 - 截圖：[清除欄位](workflows-20261018/after/images/O06-after.png)、[日期回填](workflows-20261018/after/images/O07-after.png)、[產品詳情](workflows-20261018/after/images/E03-after.png)、[購物車](workflows-20261018/after/images/E07-after.png)、[結帳前進](workflows-20261018/after/images/E10-after.png)、[病患登記](workflows-20261018/after/images/H07-after.png)

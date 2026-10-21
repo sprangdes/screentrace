@@ -151,7 +151,7 @@ ScreenTrace 版本：`5260f64cf7607cecab75e895a529b614c3c39444`。本輪沒有�
 - [逐項 graph 比對結果](workflows-20261018/graph-results.json)、[逐項實際點擊與旅程結果](workflows-20261018/ui-results.json)、[O06 清除功能補查](workflows-20261018/clear-followup.json)。
 - [執行版本、來源不變檢查、CLI exit code、graph／HTML 雜湊、醫院來源設定](workflows-20261018/run-metadata.json)。三個目標 repository 分析後的 `git status --porcelain --untracked-files=all` 全為空。
 - 分析器原始日誌：[OLMS](workflows-20261018/MyStrutsApp.log)、[eBazaar](workflows-20261018/eBazaar.log)、[醫院](workflows-20261018/Hospital-Bed-Availability-Management-System.log)。
-- [OLMS 靜態報表](../../analyze/workflows-20261018/MyStrutsApp/report/screentrace-report.html)、[eBazaar 靜態報表](../../analyze/workflows-20261018/eBazaar/report/screentrace-report.html)。醫院沒有報表，僅有中間分析產物。
+- 本機靜態報表（受 `/analyze/` ignore 規則排除，不隨 repository 保存）：OLMS `analyze/workflows-20261018/MyStrutsApp/report/screentrace-report.html`、eBazaar `analyze/workflows-20261018/eBazaar/report/screentrace-report.html`。醫院沒有報表，僅有中間分析產物。
 - 完整 graph／preview／前後截圖位於 `analyze/workflows-20261018/`，受既有 `/analyze/` ignore 規則排除；本報告與 JSON／腳本／關鍵截圖位於 docs，可隨 repository 保存。
 
 來源 checkout 位於 `/private/tmp/screentrace-workflows-20261018/sources/`。依專案表下載並 checkout 指定 commit，OLMS 使用其 `MyStrutsApp` 子目錄；其餘使用 repository 根目錄。若暫存 checkout 不在，需先重新取得這三份來源。腳本使用獨立測試 user.home，不讀寫日常 ScreenTrace 設定。從 ScreenTrace 根目錄執行：
