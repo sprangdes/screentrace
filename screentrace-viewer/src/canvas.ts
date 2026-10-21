@@ -40,6 +40,8 @@ const REVEAL={from:0.3,span:0.45},LEAVE_SPAN=0.3,READY_MS=600,FADE_MS=180;
 const ease=(t:number)=>t<.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2;
 const clamp=(value:number)=>Math.max(0,Math.min(1,value));
 const wait=(ms:number)=>new Promise<void>(resolve=>setTimeout(resolve,ms));
+/** Resolves once the element's running transitions have ended or were cancelled. */
+const settled=(element:Element)=>Promise.allSettled(element.getAnimations().map(animation=>animation.finished)).then(()=>{});
 const svgNs='http://www.w3.org/2000/svg';
 const reducedMotion=()=>matchMedia('(prefers-reduced-motion: reduce)').matches;
 type Edge='right'|'bottom'|'left'|'top';
@@ -90,6 +92,8 @@ export function canvas(index:Index,payload:Payload,options:CanvasOptions):Canvas
  let focused:string|undefined,overview:(CanvasTransform&{left:number;top:number})|undefined,sequence=0,frameId=0;
  // Where the canvas sat on the page while showing the overview; a zoom may already have moved it by the time focus() runs.
  let rest:{left:number;top:number}|undefined;
+ // Back on the overview a side panel may still be sliding; until the canvas is moved, it stays where the overview was.
+ let settling:(CanvasTransform&{target:()=>CanvasTransform})|undefined;
  const keepRest=()=>{if(!focused&&viewport.isConnected){const r=viewport.getBoundingClientRect();rest={left:r.left,top:r.top};}};
  const apply=()=>{
   keepRest();
@@ -405,6 +409,7 @@ export function canvas(index:Index,payload:Payload,options:CanvasOptions):Canvas
  const focus=(id:string)=>{
   // Opening a screen ends any single-click zoom still in motion and drops the pinned lines.
   cancelAnimationFrame(frameId);frameId=0;pinned=undefined;for(const card of cards.values())card.classList.remove('is-pinned');
+  settling=undefined;
   const token=++sequence,previous=focused,old=previous?layer:undefined,oldOpacity=old?Number(getComputedStyle(old).opacity)||0:0;
   // Full-window previews skip the zoom: the old one stays in place until the new one has faded in over it.
   const crossfade=!!previous&&!!options.presenting?.();
@@ -429,7 +434,8 @@ export function canvas(index:Index,payload:Payload,options:CanvasOptions):Canvas
     const hide=()=>{if(token===sequence)cards.get(id)?.classList.add('is-under-focus');};
     if(loaded||reducedMotion())hide();else wait(FADE_MS).then(hide);
     showLines(id,token);
-    if(crossfade)wait(FADE_MS+20).then(()=>{if(token===sequence)dropLeaving();});
+    // The old preview goes only once the new one has fully faded in, however late the fade started.
+    if(crossfade)settled(host).then(()=>{if(token===sequence)dropLeaving();});
    };
    if(loaded||reducedMotion())reveal();else Promise.race([ready!,wait(READY_MS)]).then(reveal);
   };
@@ -455,8 +461,9 @@ export function canvas(index:Index,payload:Payload,options:CanvasOptions):Canvas
   if(!saved){dropLeaving();cards.get(id)?.classList.remove('is-morphing');fit();cards.get(id)?.focus({preventScroll:true});}
   else{
    const target=()=>{const o=origin();return {zoom:saved.zoom,x:saved.x+(saved.left-o.left),y:saved.y+(saved.top-o.top)};};
-   if(reducedMotion()){({zoom,x,y}=target());end();}
-   else animate(target,center(id),t=>{fadeLeaving(id,t,oldOpacity);if(t>=.5)cards.get(id)?.classList.remove('is-morphing');},end);
+   const land=()=>{if(token!==sequence)return;({zoom,x,y}=target());settling={zoom,x,y,target};end();};
+   if(reducedMotion())land();
+   else animate(target,center(id),t=>{fadeLeaving(id,t,oldOpacity);if(t>=.5)cards.get(id)?.classList.remove('is-morphing');},land);
   }
  };
 
@@ -497,7 +504,11 @@ export function canvas(index:Index,payload:Payload,options:CanvasOptions):Canvas
    placeLayer();({zoom,x,y}=aligned(focused,layer));apply();glue(layer,focused);
    if(lines.style.display!=='none')drawLines(focused);
   }
-  else if(!options.transform&&!overview)fit();
+  else{
+   if(settling&&(settling.zoom!==zoom||settling.x!==x||settling.y!==y))settling=undefined;
+   if(settling){({zoom,x,y}=settling.target());Object.assign(settling,{zoom,x,y});apply();}
+   else if(!options.transform&&!overview)fit();
+  }
  }).observe(viewport);
  requestAnimationFrame(()=>{if(options.transform){viewport.dataset.fitted='true';apply();}else fit();});
  return {element:viewport,update,focus,exit,lightLines,get focused(){return focused;}};

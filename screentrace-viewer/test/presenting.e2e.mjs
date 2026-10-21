@@ -62,7 +62,11 @@ test('moving to another screen while presenting never shows the page underneath'
     });
     await page.frameLocator('.focus-layer:not(.is-leaving) iframe').locator('#go').click();
     await page.locator('aside .panel-header h2').filter({hasText: '乙'}).waitFor();
-    await page.waitForTimeout(1200);
+    // Sample until the switch is over: one preview left, faded in, with nothing still moving.
+    await page.waitForFunction(() => {
+      const layers = document.querySelectorAll('.focus-layer:not([hidden])');
+      return layers.length === 1 && !layers[0].classList.contains('is-entering') && layers[0].getAnimations().length === 0;
+    });
     const uncovered = await page.evaluate(() => {window.sampling = false;return window.uncovered.length;});
     assert.equal(uncovered, 0, 'the switch stays full-window throughout');
     assert.equal(await page.locator('.focus-layer:not([hidden])').count(), 1, 'the old preview is gone once the new one is shown');

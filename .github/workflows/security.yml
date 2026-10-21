@@ -68,10 +68,25 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-dependency-check-12.2.2-
       - name: Audit Java dependencies
+        shell: bash
         env:
           DEPENDENCY_CHECK_DATA: ${{ runner.temp }}/dependency-check-data
         # Package in the same invocation so the reactor modules resolve without a full test run.
-        run: mvn -B -DskipTests package org.owasp:dependency-check-maven:aggregate -DdataDirectory="$DEPENDENCY_CHECK_DATA"
+        # Only a failed NVD feed download is retried; a vulnerability above the threshold fails at once.
+        run: |
+          for attempt in 1 2 3; do
+            if mvn -B -DskipTests package org.owasp:dependency-check-maven:aggregate -DdataDirectory="$DEPENDENCY_CHECK_DATA" 2>&1 | tee "$RUNNER_TEMP/dependency-audit.log"; then
+              exit 0
+            fi
+            if ! grep -qE 'Error downloading NVD|DownloadFailedException' "$RUNNER_TEMP/dependency-audit.log"; then
+              exit 1
+            fi
+            if [ "$attempt" -lt 3 ]; then
+              echo "::warning::NVD feed download failed on attempt $attempt; retrying"
+              sleep $((attempt * 60))
+            fi
+          done
+          exit 1
       - name: Upload dependency audit reports
         if: always()
         uses: actions/upload-artifact@v4
