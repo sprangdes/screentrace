@@ -59,9 +59,10 @@ jobs:
       - name: Set vulnerability cache date
         id: cache-date
         run: echo "day=$(date -u +%Y-%m-%d)" >> "$GITHUB_OUTPUT"
-      - name: Cache vulnerability database
+      - name: Restore vulnerability database
         id: vulnerability-cache
-        uses: actions/cache@v4
+        # The split restore action exposes cache-matched-key; the combined actions/cache does not.
+        uses: actions/cache/restore@v4
         with:
           path: ${{ runner.temp }}/dependency-check-data
           # Isolate the scanner's database schema from previous plugin versions.
@@ -69,6 +70,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-dependency-check-12.2.2-
       - name: Audit Java dependencies
+        id: audit
         shell: bash
         env:
           DEPENDENCY_CHECK_DATA: ${{ runner.temp }}/dependency-check-data
@@ -76,18 +78,27 @@ jobs:
         # Package in the same invocation so the reactor modules resolve without a full test run.
         # Only a failed NVD feed update is retried; a vulnerability above the threshold fails at once.
         # If the NVD feed stays down, the audit runs once on the restored database when it is at most a week old.
+        # database-updated=true only when the feed update completed, so a stale database is never saved under a newer date.
         run: |
           log="$RUNNER_TEMP/dependency-audit.log"
           audit() {
             mvn -B -DskipTests package org.owasp:dependency-check-maven:aggregate -DdataDirectory="$DEPENDENCY_CHECK_DATA" "$@" 2>&1 | tee "$log"
           }
+          vulnerable() {
+            grep -q 'CVSS score greater than or equal to' "$log"
+          }
           feed_failed() {
-            ! grep -q 'CVSS score greater than or equal to' "$log" &&
+            ! vulnerable &&
               grep -qE 'Error downloading NVD|DownloadFailedException|UpdateException|Unable to download & parse the data feed' "$log"
           }
           for attempt in 1 2 3; do
             if audit; then
+              echo "database-updated=true" >> "$GITHUB_OUTPUT"
               exit 0
+            fi
+            if vulnerable; then
+              echo "database-updated=true" >> "$GITHUB_OUTPUT"
+              exit 1
             fi
             feed_failed || exit 1
             if [ "$attempt" -lt 3 ]; then
@@ -107,6 +118,14 @@ jobs:
           fi
           echo "::warning::NVD feed update failed three times; auditing with the vulnerability database from $cached_day"
           audit -DautoUpdate=false
+      - name: Save vulnerability database
+        # Also saves when the audit fails on a vulnerability, since the database was still updated.
+        # A fallback run reuses the restored database unchanged, which keeps its original date key.
+        if: always() && steps.audit.outputs.database-updated == 'true' && steps.vulnerability-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ runner.temp }}/dependency-check-data
+          key: ${{ steps.vulnerability-cache.outputs.cache-primary-key }}
       - name: Upload dependency audit reports
         if: always()
         uses: actions/upload-artifact@v4
