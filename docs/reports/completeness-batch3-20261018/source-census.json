@@ -1,0 +1,5758 @@
+{
+  "contract-management-system": {
+    "javaFilesParsed": 7,
+    "java": [],
+    "views": [
+      {
+        "file": "src/main/webapp/input.jsp",
+        "line": 1
+      },
+      {
+        "file": "src/main/webapp/list.jsp",
+        "line": 1
+      },
+      {
+        "file": "src/main/webapp/result.jsp",
+        "line": 1
+      }
+    ],
+    "controls": [
+      {
+        "file": "src/main/webapp/input.jsp",
+        "line": 190,
+        "tag": "a",
+        "attrs": {
+          "href": "contractList.do",
+          "class": "nav-link"
+        }
+      },
+      {
+        "file": "src/main/webapp/input.jsp",
+        "line": 198,
+        "tag": "html:form",
+        "attrs": {
+          "action": "/contract"
+        }
+      },
+      {
+        "file": "src/main/webapp/input.jsp",
+        "line": 204,
+        "tag": "html:text",
+        "attrs": {
+          "property": "contractorName",
+          "styleid": "contractorNameField"
+        }
+      },
+      {
+        "file": "src/main/webapp/input.jsp",
+        "line": 207,
+        "tag": "button",
+        "attrs": {
+          "type": "button",
+          "class": "btn btn-secondary",
+          "onclick": "checkDuplicateName()"
+        }
+      },
+      {
+        "file": "src/main/webapp/input.jsp",
+        "line": 215,
+        "tag": "html:text",
+        "attrs": {
+          "property": "age",
+          "size": "3",
+          "styleclass": "input-age"
+        }
+      },
+      {
+        "file": "src/main/webapp/input.jsp",
+        "line": 220,
+        "tag": "html:select",
+        "attrs": {
+          "property": "plan"
+        }
+      },
+      {
+        "file": "src/main/webapp/input.jsp",
+        "line": 227,
+        "tag": "html:submit",
+        "attrs": {
+          "value": "この内容で送信する",
+          "styleclass": "btn btn-primary"
+        }
+      },
+      {
+        "file": "src/main/webapp/list.jsp",
+        "line": 86,
+        "tag": "a",
+        "attrs": {
+          "href": "input.jsp",
+          "class": "nav-link"
+        }
+      },
+      {
+        "file": "src/main/webapp/list.jsp",
+        "line": 103,
+        "tag": "a",
+        "attrs": {
+          "href": "contractDelete.do?id=<bean:write name=",
+          "contract\"": null,
+          "property": "id"
+        }
+      },
+      {
+        "file": "src/main/webapp/result.jsp",
+        "line": 122,
+        "tag": "a",
+        "attrs": {
+          "href": "input.jsp",
+          "class": "nav-link"
+        }
+      }
+    ],
+    "struts": [
+      {
+        "kind": "strutsAction",
+        "file": "src/main/webapp/WEB-INF/struts-config.xml",
+        "line": 10,
+        "path": "/contract",
+        "type": "sample.ContractAction",
+        "name": "contractForm",
+        "scope": "request",
+        "forwards": [
+          {
+            "name": "success",
+            "path": "/result.jsp"
+          },
+          {
+            "name": "error",
+            "path": "/input.jsp"
+          }
+        ]
+      },
+      {
+        "kind": "strutsAction",
+        "file": "src/main/webapp/WEB-INF/struts-config.xml",
+        "line": 14,
+        "path": "/contractList",
+        "type": "sample.ContractListAction",
+        "forwards": [
+          {
+            "name": "success",
+            "path": "/list.jsp"
+          }
+        ]
+      },
+      {
+        "kind": "strutsAction",
+        "file": "src/main/webapp/WEB-INF/struts-config.xml",
+        "line": 17,
+        "path": "/checkName",
+        "type": "sample.ContractCheckAction",
+        "forwards": []
+      },
+      {
+        "kind": "strutsAction",
+        "file": "src/main/webapp/WEB-INF/struts-config.xml",
+        "line": 18,
+        "path": "/contractDelete",
+        "type": "sample.ContractDeleteAction",
+        "forwards": [
+          {
+            "name": "success",
+            "path": "/contractList.do"
+          }
+        ]
+      }
+    ]
+  },
+  "Fintech-Finance-Banking-Application": {
+    "javaFilesParsed": 28,
+    "java": [
+      {
+        "kind": "endpoint",
+        "file": "src/main/java/com/bank_springboot/controllers/AccountController.java",
+        "line": 22,
+        "class": "AccountController",
+        "method": "createAccount",
+        "httpMethod": "POST",
+        "path": "/account/create_account",
+        "params": "",
+        "rest": false
+      },
+      {
+        "kind": "return",
+        "file": "src/main/java/com/bank_springboot/controllers/AccountController.java",
+        "line": 31,
+        "class": "AccountController",
+        "method": "createAccount",
+        "expression": "\"redirect:/app/dashboard\"",
+        "guards": [
+          "accountName.isEmpty() || accountType.isEmpty()"
+        ]
+      },
+      {
+        "kind": "return",
+        "file": "src/main/java/com/bank_springboot/controllers/AccountController.java",
+        "line": 46,
+        "class": "AccountController",
+        "method": "createAccount",
+        "expression": "\"redirect:/app/dashboard\"",
+        "guards": []
+      },
+      {
+        "kind": "endpoint",
+        "file": "src/main/java/com/bank_springboot/controllers/AppController.java",
+        "line": 35,
+        "class": "AppController",
+        "method": "getDashboard",
+        "httpMethod": "GET",
+        "path": "/app/dashboard",
+        "params": "",
+        "rest": false
+      },
+      {
+        "kind": "return",
+        "file": "src/main/java/com/bank_springboot/controllers/AppController.java",
+        "line": 52,
+        "class": "AppController",
+        "method": "getDashboard",
+        "expression": "getDashboardPage",
+        "guards": []
+      },
+      {
+        "kind": "modelAndView",
+        "file": "src/main/java/com/bank_springboot/controllers/AppController.java",
+        "line": 37,
+        "method": "getDashboard",
+        "expression": "new ModelAndView(\"dashboard\")",
+        "literalView": "dashboard"
+      },
+      {
+        "kind": "endpoint",
+        "file": "src/main/java/com/bank_springboot/controllers/AppController.java",
+        "line": 55,
+        "class": "AppController",
+        "method": "getPaymentHistory",
+        "httpMethod": "GET",
+        "path": "/app/payment_history",
+        "params": "",
+        "rest": false
+      },
+      {
+        "kind": "return",
+        "file": "src/main/java/com/bank_springboot/controllers/AppController.java",
+        "line": 68,
+        "class": "AppController",
+        "method": "getPaymentHistory",
+        "expression": "getPaymentHistoryPage",
+        "guards": []
+      },
+      {
+        "kind": "modelAndView",
+        "file": "src/main/java/com/bank_springboot/controllers/AppController.java",
+        "line": 58,
+        "method": "getPaymentHistory",
+        "expression": "new ModelAndView(\"paymentHistory\")",
+        "literalView": "paymentHistory"
+      },
+      {
+        "kind": "endpoint",
+        "file": "src/main/java/com/bank_springboot/controllers/AppController.java",
+        "line": 73,
+        "class": "AppController",
+        "method": "getTransactHistory",
+        "httpMethod": "GET",
+        "path": "/app/transact_history",
+        "params": "",
+        "rest": false
+      },
+      {
+        "kind": "return",
+        "file": "src/main/java/com/bank_springboot/controllers/AppController.java",
+        "line": 86,
+        "class": "AppController",
+        "method": "getTransactHistory",
+        "expression": "getTransactHistoryPage",
+        "guards": []
+      },
+      {
+        "kind": "modelAndView",
+        "file": "src/main/java/com/bank_springboot/controllers/AppController.java",
+        "line": 76,
+        "method": "getTransactHistory",
+        "expression": "new ModelAndView(\"transactHistory\")",
+        "literalView": "transactHistory"
+      },
+      {
+        "kind": "endpoint",
+        "file": "src/main/java/com/bank_springboot/controllers/AuthController.java",
+        "line": 34,
+        "class": "AuthController",
+        "method": "getLogin",
+        "httpMethod": "GET",
+        "path": "/login",
+        "params": "",
+        "rest": false
+      },
+      {
+        "kind": "return",
+        "file": "src/main/java/com/bank_springboot/controllers/AuthController.java",
+        "line": 45,
+        "class": "AuthController",
+        "method": "getLogin",
+        "expression": "getLoginPage",
+        "guards": []
+      },
+      {
+        "kind": "modelAndView",
+        "file": "src/main/java/com/bank_springboot/controllers/AuthController.java",
+        "line": 37,
+        "method": "getLogin",
+        "expression": "new ModelAndView(\"login\")",
+        "literalView": "login"
+      },
+      {
+        "kind": "endpoint",
+        "file": "src/main/java/com/bank_springboot/controllers/AuthController.java",
+        "line": 48,
+        "class": "AuthController",
+        "method": "login",
+        "httpMethod": "POST",
+        "path": "/login",
+        "params": "",
+        "rest": false
+      },
+      {
+        "kind": "return",
+        "file": "src/main/java/com/bank_springboot/controllers/AuthController.java",
+        "line": 58,
+        "class": "AuthController",
+        "method": "login",
+        "expression": "\"login\"",
+        "guards": [
+          "email.isEmpty() || email == null || password.isEmpty() || password == null"
+        ]
+      },
+      {
+        "kind": "return",
+        "file": "src/main/java/com/bank_springboot/controllers/AuthController.java",
+        "line": 72,
+        "class": "AuthController",
+        "method": "login",
+        "expression": "\"login\"",
+        "guards": [
+          "!BCrypt.checkpw(password, getPasswordInDatabase)",
+          "getEmailInDatabase != null"
+        ]
+      },
+      {
+        "kind": "return",
+        "file": "src/main/java/com/bank_springboot/controllers/AuthController.java",
+        "line": 78,
+        "class": "AuthController",
+        "method": "login",
+        "expression": "\"error\"",
+        "guards": [
+          "getEmailInDatabase != null"
+        ]
+      },
+      {
+        "kind": "return",
+        "file": "src/main/java/com/bank_springboot/controllers/AuthController.java",
+        "line": 93,
+        "class": "AuthController",
+        "method": "login",
+        "expression": "\"login\"",
+        "guards": [
+          "verified != 1"
+        ]
+      },
+      {
+        "kind": "return",
+        "file": "src/main/java/com/bank_springboot/controllers/AuthController.java",
+        "line": 103,
+        "class": "AuthController",
+        "method": "login",
+        "expression": "\"redirect:/app/dashboard\"",
+        "guards": []
+      },
+      {
+        "kind": "endpoint",
+        "file": "src/main/java/com/bank_springboot/controllers/AuthController.java",
+        "line": 113,
+        "class": "AuthController",
+        "method": "logout",
+        "httpMethod": "GET",
+        "path": "/logout",
+        "params": "",
+        "rest": false
+      },
+      {
+        "kind": "return",
+        "file": "src/main/java/com/bank_springboot/controllers/AuthController.java",
+        "line": 122,
+        "class": "AuthController",
+        "method": "logout",
+        "expression": "\"redirect:/login?logout=true\"",
+        "guards": []
+      },
+      {
+        "kind": "endpoint",
+        "file": "src/main/java/com/bank_springboot/controllers/IndexController.java",
+        "line": 16,
+        "class": "IndexController",
+        "method": "getIndex",
+        "httpMethod": "GET",
+        "path": "/",
+        "params": "",
+        "rest": false
+      },
+      {
+        "kind": "return",
+        "file": "src/main/java/com/bank_springboot/controllers/IndexController.java",
+        "line": 21,
+        "class": "IndexController",
+        "method": "getIndex",
+        "expression": "getIndexPage",
+        "guards": []
+      },
+      {
+        "kind": "modelAndView",
+        "file": "src/main/java/com/bank_springboot/controllers/IndexController.java",
+        "line": 18,
+        "method": "getIndex",
+        "expression": "new ModelAndView(\"index\")",
+        "literalView": "index"
+      },
+      {
+        "kind": "endpoint",
+        "file": "src/main/java/com/bank_springboot/controllers/IndexController.java",
+        "line": 25,
+        "class": "IndexController",
+        "method": "getError",
+        "httpMethod": "GET",
+        "path": "/error",
+        "params": "",
+        "rest": false
+      },
+      {
+        "kind": "return",
+        "file": "src/main/java/com/bank_springboot/controllers/IndexController.java",
+        "line": 30,
+        "class": "IndexController",
+        "method": "getError",
+        "expression": "getErrorPage",
+        "guards": []
+      },
+      {
+        "kind": "modelAndView",
+        "file": "src/main/java/com/bank_springboot/controllers/IndexController.java",
+        "line": 27,
+        "method": "getError",
+        "expression": "new ModelAndView(\"error\")",
+        "literalView": "error"
+      },
+      {
+        "kind": "endpoint",
+        "file": "src/main/java/com/bank_springboot/controllers/IndexController.java",
+        "line": 33,
+        "class": "IndexController",
+        "method": "getVerify",
+        "httpMethod": "GET",
+        "path": "/verify",
+        "params": "",
+        "rest": false
+      },
+      {
+        "kind": "return",
+        "file": "src/main/java/com/bank_springboot/controllers/IndexController.java",
+        "line": 45,
+        "class": "IndexController",
+        "method": "getVerify",
+        "expression": "getVerifyPage",
+        "guards": [
+          "dbToken == null"
+        ]
+      },
+      {
+        "kind": "return",
+        "file": "src/main/java/com/bank_springboot/controllers/IndexController.java",
+        "line": 52,
+        "class": "IndexController",
+        "method": "getVerify",
+        "expression": "getVerifyPage",
+        "guards": [
+          "dbToken == null"
+        ]
+      },
+      {
+        "kind": "modelAndView",
+        "file": "src/main/java/com/bank_springboot/controllers/IndexController.java",
+        "line": 43,
+        "method": "getVerify",
+        "expression": "new ModelAndView(\"error\")",
+        "literalView": "error"
+      },
+      {
+        "kind": "modelAndView",
+        "file": "src/main/java/com/bank_springboot/controllers/IndexController.java",
+        "line": 49,
+        "method": "getVerify",
+        "expression": "new ModelAndView(\"login\")",
+        "literalView": "login"
+      },
+      {
+        "kind": "endpoint",
+        "file": "src/main/java/com/bank_springboot/controllers/RegisterController.java",
+        "line": 31,
+        "class": "RegisterController",
+        "method": "getRegister",
+        "httpMethod": "GET",
+        "path": "/register",
+        "params": "",
+        "rest": false
+      },
+      {
+        "kind": "return",
+        "file": "src/main/java/com/bank_springboot/controllers/RegisterController.java",
+        "line": 36,
+        "class": "RegisterController",
+        "method": "getRegister",
+        "expression": "getRegisterPage",
+        "guards": []
+      },
+      {
+        "kind": "modelAndView",
+        "file": "src/main/java/com/bank_springboot/controllers/RegisterController.java",
+        "line": 33,
+        "method": "getRegister",
+        "expression": "new ModelAndView(\"register\")",
+        "literalView": "register"
+      },
+      {
+        "kind": "endpoint",
+        "file": "src/main/java/com/bank_springboot/controllers/RegisterController.java",
+        "line": 39,
+        "class": "RegisterController",
+        "method": "register",
+        "httpMethod": "POST",
+        "path": "/register",
+        "params": "",
+        "rest": false
+      },
+      {
+        "kind": "return",
+        "file": "src/main/java/com/bank_springboot/controllers/RegisterController.java",
+        "line": 53,
+        "class": "RegisterController",
+        "method": "register",
+        "expression": "registrationPage",
+        "guards": [
+          "result.hasErrors() && confirm_password.isEmpty()"
+        ]
+      },
+      {
+        "kind": "return",
+        "file": "src/main/java/com/bank_springboot/controllers/RegisterController.java",
+        "line": 59,
+        "class": "RegisterController",
+        "method": "register",
+        "expression": "registrationPage",
+        "guards": [
+          "existingEmail != null"
+        ]
+      },
+      {
+        "kind": "return",
+        "file": "src/main/java/com/bank_springboot/controllers/RegisterController.java",
+        "line": 64,
+        "class": "RegisterController",
+        "method": "register",
+        "expression": "registrationPage",
+        "guards": [
+          "!password.equals(confirm_password)"
+        ]
+      },
+      {
+        "kind": "return",
+        "file": "src/main/java/com/bank_springboot/controllers/RegisterController.java",
+        "line": 91,
+        "class": "RegisterController",
+        "method": "register",
+        "expression": "registrationPage",
+        "guards": []
+      },
+      {
+        "kind": "modelAndView",
+        "file": "src/main/java/com/bank_springboot/controllers/RegisterController.java",
+        "line": 48,
+        "method": "register",
+        "expression": "new ModelAndView(\"register\")",
+        "literalView": "register"
+      },
+      {
+        "kind": "validationAnnotation",
+        "file": "src/main/java/com/bank_springboot/controllers/RegisterController.java",
+        "line": 40,
+        "expression": "@Valid"
+      },
+      {
+        "kind": "endpoint",
+        "file": "src/main/java/com/bank_springboot/controllers/TransactController.java",
+        "line": 35,
+        "class": "TransactController",
+        "method": "deposit",
+        "httpMethod": "POST",
+        "path": "/transact/deposit",
+        "params": "",
+        "rest": false
+      },
+      {
+        "kind": "return",
+        "file": "src/main/java/com/bank_springboot/controllers/TransactController.java",
+        "line": 44,
+        "class": "TransactController",
+        "method": "deposit",
+        "expression": "\"redirect:/app/dashboard\"",
+        "guards": [
+          "depositAmount.isEmpty() || accountID.isEmpty()"
+        ]
+      },
+      {
+        "kind": "return",
+        "file": "src/main/java/com/bank_springboot/controllers/TransactController.java",
+        "line": 57,
+        "class": "TransactController",
+        "method": "deposit",
+        "expression": "\"redirect:/app/dashboard\"",
+        "guards": [
+          "depositAmountValue == 0"
+        ]
+      },
+      {
+        "kind": "return",
+        "file": "src/main/java/com/bank_springboot/controllers/TransactController.java",
+        "line": 72,
+        "class": "TransactController",
+        "method": "deposit",
+        "expression": "\"redirect:/app/dashboard\"",
+        "guards": []
+      },
+      {
+        "kind": "endpoint",
+        "file": "src/main/java/com/bank_springboot/controllers/TransactController.java",
+        "line": 76,
+        "class": "TransactController",
+        "method": "transfer",
+        "httpMethod": "POST",
+        "path": "/transact/transfer",
+        "params": "",
+        "rest": false
+      },
+      {
+        "kind": "return",
+        "file": "src/main/java/com/bank_springboot/controllers/TransactController.java",
+        "line": 89,
+        "class": "TransactController",
+        "method": "transfer",
+        "expression": "\"redirect:/app/dashboard\"",
+        "guards": [
+          "transfer_from.isEmpty() || transfer_to.isEmpty() || transfer_amount.isEmpty()"
+        ]
+      },
+      {
+        "kind": "return",
+        "file": "src/main/java/com/bank_springboot/controllers/TransactController.java",
+        "line": 101,
+        "class": "TransactController",
+        "method": "transfer",
+        "expression": "\"redirect:/app/dashboard\"",
+        "guards": [
+          "transferFromId == transferToId"
+        ]
+      },
+      {
+        "kind": "return",
+        "file": "src/main/java/com/bank_springboot/controllers/TransactController.java",
+        "line": 108,
+        "class": "TransactController",
+        "method": "transfer",
+        "expression": "\"redirect:/app/dashboard\"",
+        "guards": [
+          "transferAmount == 0"
+        ]
+      },
+      {
+        "kind": "return",
+        "file": "src/main/java/com/bank_springboot/controllers/TransactController.java",
+        "line": 123,
+        "class": "TransactController",
+        "method": "transfer",
+        "expression": "\"redirect:/app/dashboard\"",
+        "guards": [
+          "currentBalanceOfAccountTransferringFrom < transferAmount"
+        ]
+      },
+      {
+        "kind": "return",
+        "file": "src/main/java/com/bank_springboot/controllers/TransactController.java",
+        "line": 144,
+        "class": "TransactController",
+        "method": "transfer",
+        "expression": "\"redirect:/app/dashboard\"",
+        "guards": []
+      },
+      {
+        "kind": "endpoint",
+        "file": "src/main/java/com/bank_springboot/controllers/TransactController.java",
+        "line": 148,
+        "class": "TransactController",
+        "method": "withdraw",
+        "httpMethod": "POST",
+        "path": "/transact/withdraw",
+        "params": "",
+        "rest": false
+      },
+      {
+        "kind": "return",
+        "file": "src/main/java/com/bank_springboot/controllers/TransactController.java",
+        "line": 161,
+        "class": "TransactController",
+        "method": "withdraw",
+        "expression": "\"redirect:/app/dashboard\"",
+        "guards": [
+          "withdrawalAmount.isEmpty() || accountID.isEmpty()"
+        ]
+      },
+      {
+        "kind": "return",
+        "file": "src/main/java/com/bank_springboot/controllers/TransactController.java",
+        "line": 171,
+        "class": "TransactController",
+        "method": "withdraw",
+        "expression": "\"redirect:/app/dashboard\"",
+        "guards": [
+          "withdrawal_amount == 0"
+        ]
+      },
+      {
+        "kind": "return",
+        "file": "src/main/java/com/bank_springboot/controllers/TransactController.java",
+        "line": 186,
+        "class": "TransactController",
+        "method": "withdraw",
+        "expression": "\"redirect:/app/dashboard\"",
+        "guards": [
+          "currentBalance < withdrawal_amount"
+        ]
+      },
+      {
+        "kind": "return",
+        "file": "src/main/java/com/bank_springboot/controllers/TransactController.java",
+        "line": 200,
+        "class": "TransactController",
+        "method": "withdraw",
+        "expression": "\"redirect:/app/dashboard\"",
+        "guards": []
+      },
+      {
+        "kind": "endpoint",
+        "file": "src/main/java/com/bank_springboot/controllers/TransactController.java",
+        "line": 210,
+        "class": "TransactController",
+        "method": "payment",
+        "httpMethod": "POST",
+        "path": "/transact/payment",
+        "params": "",
+        "rest": false
+      },
+      {
+        "kind": "return",
+        "file": "src/main/java/com/bank_springboot/controllers/TransactController.java",
+        "line": 226,
+        "class": "TransactController",
+        "method": "payment",
+        "expression": "\"redirect:/app/dashboard\"",
+        "guards": [
+          "beneficiary.isEmpty() || account_number.isEmpty() || account_id.isEmpty() || payment_amount.isEmpty()"
+        ]
+      },
+      {
+        "kind": "return",
+        "file": "src/main/java/com/bank_springboot/controllers/TransactController.java",
+        "line": 238,
+        "class": "TransactController",
+        "method": "payment",
+        "expression": "\"redirect:/app/dashboard\"",
+        "guards": [
+          "paymentAmount == 0"
+        ]
+      },
+      {
+        "kind": "return",
+        "file": "src/main/java/com/bank_springboot/controllers/TransactController.java",
+        "line": 246,
+        "class": "TransactController",
+        "method": "payment",
+        "expression": "\"redirect:/app/dashboard\"",
+        "guards": [
+          "!isBeneficiaryAccountNumberValid(account_number)"
+        ]
+      },
+      {
+        "kind": "return",
+        "file": "src/main/java/com/bank_springboot/controllers/TransactController.java",
+        "line": 269,
+        "class": "TransactController",
+        "method": "payment",
+        "expression": "\"redirect:/app/dashboard\"",
+        "guards": [
+          "currentBalance < paymentAmount"
+        ]
+      },
+      {
+        "kind": "return",
+        "file": "src/main/java/com/bank_springboot/controllers/TransactController.java",
+        "line": 299,
+        "class": "TransactController",
+        "method": "payment",
+        "expression": "\"redirect:/app/dashboard\"",
+        "guards": []
+      },
+      {
+        "kind": "validationAnnotation",
+        "file": "src/main/java/com/bank_springboot/models/User.java",
+        "line": 14,
+        "expression": "@NotEmpty(message = \"The First name field cannot be empty\")"
+      },
+      {
+        "kind": "validationAnnotation",
+        "file": "src/main/java/com/bank_springboot/models/User.java",
+        "line": 15,
+        "expression": "@Size(min = 3, message = \"The First name field must greater that 3 characters\")"
+      },
+      {
+        "kind": "validationAnnotation",
+        "file": "src/main/java/com/bank_springboot/models/User.java",
+        "line": 17,
+        "expression": "@NotEmpty(message = \"The Last name field cannot be empty\")"
+      },
+      {
+        "kind": "validationAnnotation",
+        "file": "src/main/java/com/bank_springboot/models/User.java",
+        "line": 18,
+        "expression": "@Size(min = 3, message = \"The First name field must greater that 3 characters\")"
+      },
+      {
+        "kind": "validationAnnotation",
+        "file": "src/main/java/com/bank_springboot/models/User.java",
+        "line": 20,
+        "expression": "@Email"
+      },
+      {
+        "kind": "validationAnnotation",
+        "file": "src/main/java/com/bank_springboot/models/User.java",
+        "line": 21,
+        "expression": "@NotEmpty"
+      },
+      {
+        "kind": "validationAnnotation",
+        "file": "src/main/java/com/bank_springboot/models/User.java",
+        "line": 22,
+        "expression": "@Pattern(regexp = \"([a-zA-Z0-9]+(?:[._+-][a-zA-Z0-9]+)*)@([a-zA-Z0-9]+(?:[.-][a-zA-Z0-9]+)*[.][a-zA-Z]{2,})\", message = \"Please Enter a Valid Email\")"
+      },
+      {
+        "kind": "validationAnnotation",
+        "file": "src/main/java/com/bank_springboot/models/User.java",
+        "line": 24,
+        "expression": "@NotEmpty"
+      },
+      {
+        "kind": "validationAnnotation",
+        "file": "src/main/java/com/bank_springboot/models/User.java",
+        "line": 25,
+        "expression": "@NotNull"
+      },
+      {
+        "kind": "endpoint",
+        "file": "src/main/java/com/bank_springboot/rest_controllers/RestAuthApiController.java",
+        "line": 19,
+        "class": "RestAuthApiController",
+        "method": "validateUserEmail",
+        "httpMethod": "GET",
+        "path": "/api/auth/login",
+        "params": "",
+        "rest": true
+      },
+      {
+        "kind": "return",
+        "file": "src/main/java/com/bank_springboot/rest_controllers/RestAuthApiController.java",
+        "line": 30,
+        "class": "RestAuthApiController",
+        "method": "validateUserEmail",
+        "expression": "new ResponseEntity<>(userPassword, HttpStatus.OK)",
+        "guards": [
+          "userEmail != null"
+        ]
+      },
+      {
+        "kind": "return",
+        "file": "src/main/java/com/bank_springboot/rest_controllers/RestAuthApiController.java",
+        "line": 33,
+        "class": "RestAuthApiController",
+        "method": "validateUserEmail",
+        "expression": "new ResponseEntity<>(\"User Not Found\", HttpStatus.NOT_FOUND)",
+        "guards": [
+          "userEmail != null"
+        ]
+      }
+    ],
+    "views": [
+      {
+        "file": "src/main/webapp/WEB-INF/jsp/components/accounts_display.jsp",
+        "line": 1
+      },
+      {
+        "file": "src/main/webapp/WEB-INF/jsp/components/add_account_offcanvas.jsp",
+        "line": 1
+      },
+      {
+        "file": "src/main/webapp/WEB-INF/jsp/components/incl/footer.jsp",
+        "line": 1
+      },
+      {
+        "file": "src/main/webapp/WEB-INF/jsp/components/incl/header.jsp",
+        "line": 1
+      },
+      {
+        "file": "src/main/webapp/WEB-INF/jsp/components/no_accounts_display.jsp",
+        "line": 1
+      },
+      {
+        "file": "src/main/webapp/WEB-INF/jsp/components/transact_forms/deposit_form.jsp",
+        "line": 1
+      },
+      {
+        "file": "src/main/webapp/WEB-INF/jsp/components/transact_forms/payment_form.jsp",
+        "line": 1
+      },
+      {
+        "file": "src/main/webapp/WEB-INF/jsp/components/transact_forms/transfer_form.jsp",
+        "line": 1
+      },
+      {
+        "file": "src/main/webapp/WEB-INF/jsp/components/transact_forms/withdraw_form.jsp",
+        "line": 1
+      },
+      {
+        "file": "src/main/webapp/WEB-INF/jsp/components/transact_offcanvas.jsp",
+        "line": 1
+      },
+      {
+        "file": "src/main/webapp/WEB-INF/jsp/dashboard.jsp",
+        "line": 1
+      },
+      {
+        "file": "src/main/webapp/WEB-INF/jsp/error.jsp",
+        "line": 1
+      },
+      {
+        "file": "src/main/webapp/WEB-INF/jsp/index.jsp",
+        "line": 1
+      },
+      {
+        "file": "src/main/webapp/WEB-INF/jsp/login.jsp",
+        "line": 1
+      },
+      {
+        "file": "src/main/webapp/WEB-INF/jsp/paymentHistory.jsp",
+        "line": 1
+      },
+      {
+        "file": "src/main/webapp/WEB-INF/jsp/register.jsp",
+        "line": 1
+      },
+      {
+        "file": "src/main/webapp/WEB-INF/jsp/transactHistory.jsp",
+        "line": 1
+      }
+    ],
+    "controls": [
+      {
+        "file": "src/main/webapp/WEB-INF/jsp/components/accounts_display.jsp",
+        "line": 8,
+        "tag": "button",
+        "attrs": {
+          "id": "add-account-btn",
+          "class": "btn btn-lg shadow",
+          "type": "button",
+          "data-bs-toggle": "offcanvas",
+          "data-bs-target": "#offcanvasRight",
+          "aria-controls": "offcanvasRight"
+        }
+      },
+      {
+        "file": "src/main/webapp/WEB-INF/jsp/components/accounts_display.jsp",
+        "line": 13,
+        "tag": "button",
+        "attrs": {
+          "id": "transact-btn",
+          "class": "btn btn-lg ms-auto shadow",
+          "type": "button",
+          "data-bs-toggle": "offcanvas",
+          "data-bs-target": "#offcanvasExample",
+          "aria-controls": "offcanvasExample"
+        }
+      },
+      {
+        "file": "src/main/webapp/WEB-INF/jsp/components/accounts_display.jsp",
+        "line": 42,
+        "tag": "button",
+        "attrs": {
+          "class": "accordion-button collapsed",
+          "type": "button",
+          "data-bs-toggle": "collapse",
+          "data-bs-target": "#flush-${account.account_id}",
+          "aria-expanded": "false",
+          "aria-controls": "flush-collapseOne"
+        }
+      },
+      {
+        "file": "src/main/webapp/WEB-INF/jsp/components/add_account_offcanvas.jsp",
+        "line": 9,
+        "tag": "button",
+        "attrs": {
+          "type": "button",
+          "class": "btn-close text-reset",
+          "data-bs-dismiss": "offcanvas",
+          "aria-label": "Close"
+        }
+      },
+      {
+        "file": "src/main/webapp/WEB-INF/jsp/components/add_account_offcanvas.jsp",
+        "line": 17,
+        "tag": "form",
+        "attrs": {
+          "action": "/account/create_account",
+          "method": "POST",
+          "class": "add-account-form"
+        }
+      },
+      {
+        "file": "src/main/webapp/WEB-INF/jsp/components/add_account_offcanvas.jsp",
+        "line": 21,
+        "tag": "input",
+        "attrs": {
+          "type": "text",
+          "name": "account_name",
+          "class": "form-control",
+          "placeholder": "Enter Account name..."
+        }
+      },
+      {
+        "file": "src/main/webapp/WEB-INF/jsp/components/add_account_offcanvas.jsp",
+        "line": 27,
+        "tag": "select",
+        "attrs": {
+          "name": "account_type",
+          "class": "form-control",
+          "id": ""
+        }
+      },
+      {
+        "file": "src/main/webapp/WEB-INF/jsp/components/add_account_offcanvas.jsp",
+        "line": 38,
+        "tag": "button",
+        "attrs": {
+          "id": "",
+          "class": "btn btn-md transact-btn"
+        }
+      },
+      {
+        "file": "src/main/webapp/WEB-INF/jsp/components/incl/header.jsp",
+        "line": 17,
+        "tag": "a",
+        "attrs": {
+          "href": "/app/dashboard"
+        }
+      },
+      {
+        "file": "src/main/webapp/WEB-INF/jsp/components/incl/header.jsp",
+        "line": 18,
+        "tag": "a",
+        "attrs": {
+          "href": "/app/payment_history"
+        }
+      },
+      {
+        "file": "src/main/webapp/WEB-INF/jsp/components/incl/header.jsp",
+        "line": 19,
+        "tag": "a",
+        "attrs": {
+          "href": "/app/transact_history"
+        }
+      },
+      {
+        "file": "src/main/webapp/WEB-INF/jsp/components/incl/header.jsp",
+        "line": 30,
+        "tag": "a",
+        "attrs": {
+          "href": "/logout",
+          "class": "btn btn-sm text-white ms-2",
+          "id": "logoutButton"
+        }
+      },
+      {
+        "file": "src/main/webapp/WEB-INF/jsp/components/no_accounts_display.jsp",
+        "line": 24,
+        "tag": "button",
+        "attrs": {
+          "id": "",
+          "class": "btn btn-primary btn-lg shadow",
+          "type": "button",
+          "data-bs-toggle": "offcanvas",
+          "data-bs-target": "#offcanvasRight",
+          "aria-controls": "offcanvasRight"
+        }
+      },
+      {
+        "file": "src/main/webapp/WEB-INF/jsp/components/transact_forms/deposit_form.jsp",
+        "line": 11,
+        "tag": "form",
+        "attrs": {
+          "action": "/transact/deposit",
+          "method": "POST",
+          "class": "deposit-form"
+        }
+      },
+      {
+        "file": "src/main/webapp/WEB-INF/jsp/components/transact_forms/deposit_form.jsp",
+        "line": 15,
+        "tag": "input",
+        "attrs": {
+          "type": "text",
+          "name": "deposit_amount",
+          "class": "form-control",
+          "placeholder": "Enter Deposit Amount"
+        }
+      },
+      {
+        "file": "src/main/webapp/WEB-INF/jsp/components/transact_forms/deposit_form.jsp",
+        "line": 24,
+        "tag": "select",
+        "attrs": {
+          "name": "account_id",
+          "class": "form-control",
+          "id": ""
+        }
+      },
+      {
+        "file": "src/main/webapp/WEB-INF/jsp/components/transact_forms/deposit_form.jsp",
+        "line": 39,
+        "tag": "button",
+        "attrs": {
+          "id": "",
+          "class": "btn btn-md transact-btn"
+        }
+      },
+      {
+        "file": "src/main/webapp/WEB-INF/jsp/components/transact_forms/payment_form.jsp",
+        "line": 10,
+        "tag": "form",
+        "attrs": {
+          "action": "/transact/payment",
+          "method": "POST"
+        }
+      },
+      {
+        "file": "src/main/webapp/WEB-INF/jsp/components/transact_forms/payment_form.jsp",
+        "line": 15,
+        "tag": "input",
+        "attrs": {
+          "type": "text",
+          "name": "beneficiary",
+          "class": "form-control",
+          "placeholder": "Enter Account holder / Beneficiary name"
+        }
+      },
+      {
+        "file": "src/main/webapp/WEB-INF/jsp/components/transact_forms/payment_form.jsp",
+        "line": 22,
+        "tag": "input",
+        "attrs": {
+          "type": "text",
+          "name": "account_number",
+          "class": "form-control",
+          "placeholder": "Enter Beneficiary Account No"
+        }
+      },
+      {
+        "file": "src/main/webapp/WEB-INF/jsp/components/transact_forms/payment_form.jsp",
+        "line": 30,
+        "tag": "select",
+        "attrs": {
+          "name": "account_id",
+          "class": "form-control",
+          "id": ""
+        }
+      },
+      {
+        "file": "src/main/webapp/WEB-INF/jsp/components/transact_forms/payment_form.jsp",
+        "line": 45,
+        "tag": "input",
+        "attrs": {
+          "type": "text",
+          "name": "reference",
+          "class": "form-control",
+          "placeholder": "Enter Reference"
+        }
+      },
+      {
+        "file": "src/main/webapp/WEB-INF/jsp/components/transact_forms/payment_form.jsp",
+        "line": 52,
+        "tag": "input",
+        "attrs": {
+          "type": "text",
+          "name": "payment_amount",
+          "class": "form-control",
+          "placeholder": "Enter Payment Amount"
+        }
+      },
+      {
+        "file": "src/main/webapp/WEB-INF/jsp/components/transact_forms/payment_form.jsp",
+        "line": 58,
+        "tag": "button",
+        "attrs": {
+          "id": "",
+          "class": "btn btn-md transact-btn"
+        }
+      },
+      {
+        "file": "src/main/webapp/WEB-INF/jsp/components/transact_forms/transfer_form.jsp",
+        "line": 11,
+        "tag": "form",
+        "attrs": {
+          "action": "/transact/transfer",
+          "method": "POST"
+        }
+      },
+      {
+        "file": "src/main/webapp/WEB-INF/jsp/components/transact_forms/transfer_form.jsp",
+        "line": 17,
+        "tag": "select",
+        "attrs": {
+          "name": "transfer_from",
+          "class": "form-control",
+          "id": ""
+        }
+      },
+      {
+        "file": "src/main/webapp/WEB-INF/jsp/components/transact_forms/transfer_form.jsp",
+        "line": 33,
+        "tag": "select",
+        "attrs": {
+          "name": "transfer_to",
+          "class": "form-control",
+          "id": ""
+        }
+      },
+      {
+        "file": "src/main/webapp/WEB-INF/jsp/components/transact_forms/transfer_form.jsp",
+        "line": 49,
+        "tag": "input",
+        "attrs": {
+          "type": "text",
+          "name": "transfer_amount",
+          "class": "form-control",
+          "placeholder": "Enter transfer Amount"
+        }
+      },
+      {
+        "file": "src/main/webapp/WEB-INF/jsp/components/transact_forms/transfer_form.jsp",
+        "line": 55,
+        "tag": "button",
+        "attrs": {
+          "id": "",
+          "class": "btn btn-md transact-btn"
+        }
+      },
+      {
+        "file": "src/main/webapp/WEB-INF/jsp/components/transact_forms/withdraw_form.jsp",
+        "line": 11,
+        "tag": "form",
+        "attrs": {
+          "action": "/transact/withdraw",
+          "method": "POST",
+          "class": "deposit-form"
+        }
+      },
+      {
+        "file": "src/main/webapp/WEB-INF/jsp/components/transact_forms/withdraw_form.jsp",
+        "line": 15,
+        "tag": "input",
+        "attrs": {
+          "type": "text",
+          "name": "withdrawal_amount",
+          "class": "form-control",
+          "placeholder": "Enter Withdrawal Amount"
+        }
+      },
+      {
+        "file": "src/main/webapp/WEB-INF/jsp/components/transact_forms/withdraw_form.jsp",
+        "line": 23,
+        "tag": "select",
+        "attrs": {
+          "name": "account_id",
+          "class": "form-control",
+          "id": ""
+        }
+      },
+      {
+        "file": "src/main/webapp/WEB-INF/jsp/components/transact_forms/withdraw_form.jsp",
+        "line": 38,
+        "tag": "button",
+        "attrs": {
+          "id": "",
+          "class": "btn btn-md transact-btn"
+        }
+      },
+      {
+        "file": "src/main/webapp/WEB-INF/jsp/components/transact_offcanvas.jsp",
+        "line": 10,
+        "tag": "button",
+        "attrs": {
+          "type": "button",
+          "class": "btn-close text-reset",
+          "data-bs-dismiss": "offcanvas",
+          "aria-label": "Close"
+        }
+      },
+      {
+        "file": "src/main/webapp/WEB-INF/jsp/components/transact_offcanvas.jsp",
+        "line": 18,
+        "tag": "select",
+        "attrs": {
+          "name": "transact-type",
+          "class": "form-control my-3",
+          "id": "transact-type"
+        }
+      },
+      {
+        "file": "src/main/webapp/WEB-INF/jsp/error.jsp",
+        "line": 55,
+        "tag": "a",
+        "attrs": {
+          "href": "/login",
+          "class": "btn btn-sm btn-danger"
+        }
+      },
+      {
+        "file": "src/main/webapp/WEB-INF/jsp/index.jsp",
+        "line": 41,
+        "tag": "a",
+        "attrs": {
+          "href": "/register",
+          "class": "btn btn-md register",
+          "role": "button"
+        }
+      },
+      {
+        "file": "src/main/webapp/WEB-INF/jsp/index.jsp",
+        "line": 42,
+        "tag": "a",
+        "attrs": {
+          "href": "/login",
+          "class": "btn btn-md login",
+          "role": "button"
+        }
+      },
+      {
+        "file": "src/main/webapp/WEB-INF/jsp/login.jsp",
+        "line": 83,
+        "tag": "form",
+        "attrs": {
+          "action": "/login",
+          "method": "POST",
+          "class": "login-form"
+        }
+      },
+      {
+        "file": "src/main/webapp/WEB-INF/jsp/login.jsp",
+        "line": 87,
+        "tag": "input",
+        "attrs": {
+          "type": "email",
+          "id": "email",
+          "name": "email",
+          "class": "form-control form-control-lg",
+          "placeholder": "Enter Email"
+        }
+      },
+      {
+        "file": "src/main/webapp/WEB-INF/jsp/login.jsp",
+        "line": 93,
+        "tag": "input",
+        "attrs": {
+          "type": "password",
+          "id": "password",
+          "name": "password",
+          "class": "form-control form-control-lg",
+          "placeholder": "Enter Password"
+        }
+      },
+      {
+        "file": "src/main/webapp/WEB-INF/jsp/login.jsp",
+        "line": 99,
+        "tag": "input",
+        "attrs": {
+          "type": "hidden",
+          "name": "_token",
+          "value": "${token}"
+        }
+      },
+      {
+        "file": "src/main/webapp/WEB-INF/jsp/login.jsp",
+        "line": 105,
+        "tag": "button",
+        "attrs": {
+          "class": "btn btn-lg"
+        }
+      },
+      {
+        "file": "src/main/webapp/WEB-INF/jsp/login.jsp",
+        "line": 114,
+        "tag": "a",
+        "attrs": {
+          "href": "/register",
+          "class": "btn bt-sm text-warning"
+        }
+      },
+      {
+        "file": "src/main/webapp/WEB-INF/jsp/login.jsp",
+        "line": 120,
+        "tag": "a",
+        "attrs": {
+          "href": "/",
+          "class": "btn btn-sm text-warning"
+        }
+      },
+      {
+        "file": "src/main/webapp/WEB-INF/jsp/register.jsp",
+        "line": 51,
+        "tag": "form:form",
+        "attrs": {
+          "action": "/register",
+          "class": "reg-form",
+          "modelattribute": "registerUser"
+        }
+      },
+      {
+        "file": "src/main/webapp/WEB-INF/jsp/register.jsp",
+        "line": 56,
+        "tag": "form:input",
+        "attrs": {
+          "type": "text",
+          "path": "first_name",
+          "class": "form-control form-control-lg",
+          "placeholder": "Enter First Name"
+        }
+      },
+      {
+        "file": "src/main/webapp/WEB-INF/jsp/register.jsp",
+        "line": 63,
+        "tag": "form:input",
+        "attrs": {
+          "type": "text",
+          "path": "last_name",
+          "class": "form-control form-control-lg",
+          "placeholder": "Enter Last Name"
+        }
+      },
+      {
+        "file": "src/main/webapp/WEB-INF/jsp/register.jsp",
+        "line": 72,
+        "tag": "form:input",
+        "attrs": {
+          "type": "email",
+          "path": "email",
+          "class": "form-control form-control-lg",
+          "placeholder": "Enter Email"
+        }
+      },
+      {
+        "file": "src/main/webapp/WEB-INF/jsp/register.jsp",
+        "line": 82,
+        "tag": "form:input",
+        "attrs": {
+          "type": "password",
+          "path": "password",
+          "class": "form-control form-control-lg",
+          "placeholder": "Enter Password"
+        }
+      },
+      {
+        "file": "src/main/webapp/WEB-INF/jsp/register.jsp",
+        "line": 89,
+        "tag": "input",
+        "attrs": {
+          "type": "password",
+          "name": "confirm_password",
+          "class": "form-control form-control-lg",
+          "placeholder": "Confirm Password"
+        }
+      },
+      {
+        "file": "src/main/webapp/WEB-INF/jsp/register.jsp",
+        "line": 98,
+        "tag": "button",
+        "attrs": {
+          "class": "btn btn-lg"
+        }
+      },
+      {
+        "file": "src/main/webapp/WEB-INF/jsp/register.jsp",
+        "line": 107,
+        "tag": "a",
+        "attrs": {
+          "href": "/login",
+          "class": "btn bt-sm text-warning"
+        }
+      },
+      {
+        "file": "src/main/webapp/WEB-INF/jsp/register.jsp",
+        "line": 113,
+        "tag": "a",
+        "attrs": {
+          "href": "/",
+          "class": "btn btn-sm text-warning"
+        }
+      }
+    ],
+    "struts": []
+  },
+  "SpringMVC-IMS": {
+    "javaFilesParsed": 30,
+    "java": [
+      {
+        "kind": "endpoint",
+        "file": "src/java/com/emp/controller/brandController.java",
+        "line": 44,
+        "class": "brandController",
+        "method": "brand",
+        "httpMethod": "GET",
+        "path": "/brand",
+        "params": "",
+        "rest": false
+      },
+      {
+        "kind": "return",
+        "file": "src/java/com/emp/controller/brandController.java",
+        "line": 60,
+        "class": "brandController",
+        "method": "brand",
+        "expression": "model",
+        "guards": []
+      },
+      {
+        "kind": "modelAndView",
+        "file": "src/java/com/emp/controller/brandController.java",
+        "line": 52,
+        "method": "brand",
+        "expression": "new ModelAndView(\"brand\")",
+        "literalView": "brand"
+      },
+      {
+        "kind": "modelAndView",
+        "file": "src/java/com/emp/controller/brandController.java",
+        "line": 58,
+        "method": "brand",
+        "expression": "new ModelAndView(\"redirect:/loginform\")",
+        "literalView": "redirect:/loginform"
+      },
+      {
+        "kind": "endpoint",
+        "file": "src/java/com/emp/controller/brandController.java",
+        "line": 63,
+        "class": "brandController",
+        "method": "newBrandID",
+        "httpMethod": "POST",
+        "path": "/newBrandID",
+        "params": "",
+        "rest": true
+      },
+      {
+        "kind": "return",
+        "file": "src/java/com/emp/controller/brandController.java",
+        "line": 68,
+        "class": "brandController",
+        "method": "newBrandID",
+        "expression": "str",
+        "guards": []
+      },
+      {
+        "kind": "endpoint",
+        "file": "src/java/com/emp/controller/brandController.java",
+        "line": 71,
+        "class": "brandController",
+        "method": "insertBrand",
+        "httpMethod": "POST",
+        "path": "/insertBrand",
+        "params": "",
+        "rest": false
+      },
+      {
+        "kind": "return",
+        "file": "src/java/com/emp/controller/brandController.java",
+        "line": 86,
+        "class": "brandController",
+        "method": "insertBrand",
+        "expression": "new ModelAndView(\"redirect:/brand\")",
+        "guards": []
+      },
+      {
+        "kind": "modelAndView",
+        "file": "src/java/com/emp/controller/brandController.java",
+        "line": 86,
+        "method": "insertBrand",
+        "expression": "new ModelAndView(\"redirect:/brand\")",
+        "literalView": "redirect:/brand"
+      },
+      {
+        "kind": "endpoint",
+        "file": "src/java/com/emp/controller/brandController.java",
+        "line": 90,
+        "class": "brandController",
+        "method": "retriveBrandInfo",
+        "httpMethod": "POST",
+        "path": "/retriveBrandInfo",
+        "params": "",
+        "rest": true
+      },
+      {
+        "kind": "return",
+        "file": "src/java/com/emp/controller/brandController.java",
+        "line": 96,
+        "class": "brandController",
+        "method": "retriveBrandInfo",
+        "expression": "json",
+        "guards": []
+      },
+      {
+        "kind": "endpoint",
+        "file": "src/java/com/emp/controller/brandController.java",
+        "line": 99,
+        "class": "brandController",
+        "method": "editBrand",
+        "httpMethod": "POST",
+        "path": "/editBrand",
+        "params": "",
+        "rest": false
+      },
+      {
+        "kind": "return",
+        "file": "src/java/com/emp/controller/brandController.java",
+        "line": 105,
+        "class": "brandController",
+        "method": "editBrand",
+        "expression": "new ModelAndView(\"redirect:/brand\")",
+        "guards": []
+      },
+      {
+        "kind": "modelAndView",
+        "file": "src/java/com/emp/controller/brandController.java",
+        "line": 105,
+        "method": "editBrand",
+        "expression": "new ModelAndView(\"redirect:/brand\")",
+        "literalView": "redirect:/brand"
+      },
+      {
+        "kind": "endpoint",
+        "file": "src/java/com/emp/controller/brandController.java",
+        "line": 109,
+        "class": "brandController",
+        "method": "deleteBrand",
+        "httpMethod": "POST",
+        "path": "/deleteBrand",
+        "params": "",
+        "rest": false
+      },
+      {
+        "kind": "return",
+        "file": "src/java/com/emp/controller/brandController.java",
+        "line": 116,
+        "class": "brandController",
+        "method": "deleteBrand",
+        "expression": "new ModelAndView(\"redirect:/brand\")",
+        "guards": []
+      },
+      {
+        "kind": "modelAndView",
+        "file": "src/java/com/emp/controller/brandController.java",
+        "line": 116,
+        "method": "deleteBrand",
+        "expression": "new ModelAndView(\"redirect:/brand\")",
+        "literalView": "redirect:/brand"
+      },
+      {
+        "kind": "endpoint",
+        "file": "src/java/com/emp/controller/brandController.java",
+        "line": 119,
+        "class": "brandController",
+        "method": "searchBrand",
+        "httpMethod": "GET",
+        "path": "/searchBrand",
+        "params": "",
+        "rest": true
+      },
+      {
+        "kind": "return",
+        "file": "src/java/com/emp/controller/brandController.java",
+        "line": 125,
+        "class": "brandController",
+        "method": "searchBrand",
+        "expression": "json",
+        "guards": []
+      },
+      {
+        "kind": "endpoint",
+        "file": "src/java/com/emp/controller/categoryController.java",
+        "line": 44,
+        "class": "categoryController",
+        "method": "category",
+        "httpMethod": "GET",
+        "path": "/category",
+        "params": "",
+        "rest": false
+      },
+      {
+        "kind": "return",
+        "file": "src/java/com/emp/controller/categoryController.java",
+        "line": 60,
+        "class": "categoryController",
+        "method": "category",
+        "expression": "model",
+        "guards": []
+      },
+      {
+        "kind": "modelAndView",
+        "file": "src/java/com/emp/controller/categoryController.java",
+        "line": 52,
+        "method": "category",
+        "expression": "new ModelAndView(\"category\")",
+        "literalView": "category"
+      },
+      {
+        "kind": "modelAndView",
+        "file": "src/java/com/emp/controller/categoryController.java",
+        "line": 58,
+        "method": "category",
+        "expression": "new ModelAndView(\"redirect:/loginform\")",
+        "literalView": "redirect:/loginform"
+      },
+      {
+        "kind": "endpoint",
+        "file": "src/java/com/emp/controller/categoryController.java",
+        "line": 63,
+        "class": "categoryController",
+        "method": "newCategoryID",
+        "httpMethod": "POST",
+        "path": "/newCategoryID",
+        "params": "",
+        "rest": true
+      },
+      {
+        "kind": "return",
+        "file": "src/java/com/emp/controller/categoryController.java",
+        "line": 68,
+        "class": "categoryController",
+        "method": "newCategoryID",
+        "expression": "str",
+        "guards": []
+      },
+      {
+        "kind": "endpoint",
+        "file": "src/java/com/emp/controller/categoryController.java",
+        "line": 71,
+        "class": "categoryController",
+        "method": "insertCategory",
+        "httpMethod": "POST",
+        "path": "/insertCategory",
+        "params": "",
+        "rest": false
+      },
+      {
+        "kind": "return",
+        "file": "src/java/com/emp/controller/categoryController.java",
+        "line": 85,
+        "class": "categoryController",
+        "method": "insertCategory",
+        "expression": "new ModelAndView(\"redirect:/category\")",
+        "guards": []
+      },
+      {
+        "kind": "modelAndView",
+        "file": "src/java/com/emp/controller/categoryController.java",
+        "line": 85,
+        "method": "insertCategory",
+        "expression": "new ModelAndView(\"redirect:/category\")",
+        "literalView": "redirect:/category"
+      },
+      {
+        "kind": "endpoint",
+        "file": "src/java/com/emp/controller/categoryController.java",
+        "line": 88,
+        "class": "categoryController",
+        "method": "retriveCategoryInfo",
+        "httpMethod": "POST",
+        "path": "/retriveCategoryInfo",
+        "params": "",
+        "rest": true
+      },
+      {
+        "kind": "return",
+        "file": "src/java/com/emp/controller/categoryController.java",
+        "line": 94,
+        "class": "categoryController",
+        "method": "retriveCategoryInfo",
+        "expression": "json",
+        "guards": []
+      },
+      {
+        "kind": "endpoint",
+        "file": "src/java/com/emp/controller/categoryController.java",
+        "line": 97,
+        "class": "categoryController",
+        "method": "editCategory",
+        "httpMethod": "POST",
+        "path": "/editCategory",
+        "params": "",
+        "rest": false
+      },
+      {
+        "kind": "return",
+        "file": "src/java/com/emp/controller/categoryController.java",
+        "line": 103,
+        "class": "categoryController",
+        "method": "editCategory",
+        "expression": "new ModelAndView(\"redirect:/category\")",
+        "guards": []
+      },
+      {
+        "kind": "modelAndView",
+        "file": "src/java/com/emp/controller/categoryController.java",
+        "line": 103,
+        "method": "editCategory",
+        "expression": "new ModelAndView(\"redirect:/category\")",
+        "literalView": "redirect:/category"
+      },
+      {
+        "kind": "endpoint",
+        "file": "src/java/com/emp/controller/categoryController.java",
+        "line": 106,
+        "class": "categoryController",
+        "method": "deleteCategory",
+        "httpMethod": "POST",
+        "path": "/deleteCategory",
+        "params": "",
+        "rest": false
+      },
+      {
+        "kind": "return",
+        "file": "src/java/com/emp/controller/categoryController.java",
+        "line": 113,
+        "class": "categoryController",
+        "method": "deleteCategory",
+        "expression": "new ModelAndView(\"redirect:/category\")",
+        "guards": []
+      },
+      {
+        "kind": "modelAndView",
+        "file": "src/java/com/emp/controller/categoryController.java",
+        "line": 113,
+        "method": "deleteCategory",
+        "expression": "new ModelAndView(\"redirect:/category\")",
+        "literalView": "redirect:/category"
+      },
+      {
+        "kind": "endpoint",
+        "file": "src/java/com/emp/controller/categoryController.java",
+        "line": 116,
+        "class": "categoryController",
+        "method": "searchCategory",
+        "httpMethod": "GET",
+        "path": "/searchCategory",
+        "params": "",
+        "rest": true
+      },
+      {
+        "kind": "return",
+        "file": "src/java/com/emp/controller/categoryController.java",
+        "line": 122,
+        "class": "categoryController",
+        "method": "searchCategory",
+        "expression": "json",
+        "guards": []
+      },
+      {
+        "kind": "endpoint",
+        "file": "src/java/com/emp/controller/customerController.java",
+        "line": 46,
+        "class": "customerController",
+        "method": "customers",
+        "httpMethod": "GET",
+        "path": "/customers",
+        "params": "",
+        "rest": false
+      },
+      {
+        "kind": "return",
+        "file": "src/java/com/emp/controller/customerController.java",
+        "line": 62,
+        "class": "customerController",
+        "method": "customers",
+        "expression": "model",
+        "guards": []
+      },
+      {
+        "kind": "modelAndView",
+        "file": "src/java/com/emp/controller/customerController.java",
+        "line": 54,
+        "method": "customers",
+        "expression": "new ModelAndView(\"customers\")",
+        "literalView": "customers"
+      },
+      {
+        "kind": "modelAndView",
+        "file": "src/java/com/emp/controller/customerController.java",
+        "line": 60,
+        "method": "customers",
+        "expression": "new ModelAndView(\"redirect:/loginform\")",
+        "literalView": "redirect:/loginform"
+      },
+      {
+        "kind": "endpoint",
+        "file": "src/java/com/emp/controller/customerController.java",
+        "line": 65,
+        "class": "customerController",
+        "method": "newCustomerID",
+        "httpMethod": "POST",
+        "path": "/newCustomerID",
+        "params": "",
+        "rest": true
+      },
+      {
+        "kind": "return",
+        "file": "src/java/com/emp/controller/customerController.java",
+        "line": 70,
+        "class": "customerController",
+        "method": "newCustomerID",
+        "expression": "str",
+        "guards": []
+      },
+      {
+        "kind": "endpoint",
+        "file": "src/java/com/emp/controller/customerController.java",
+        "line": 73,
+        "class": "customerController",
+        "method": "insertCustomer",
+        "httpMethod": "POST",
+        "path": "/insertCustomer",
+        "params": "",
+        "rest": false
+      },
+      {
+        "kind": "return",
+        "file": "src/java/com/emp/controller/customerController.java",
+        "line": 90,
+        "class": "customerController",
+        "method": "insertCustomer",
+        "expression": "new ModelAndView(\"redirect:/customers\")",
+        "guards": []
+      },
+      {
+        "kind": "modelAndView",
+        "file": "src/java/com/emp/controller/customerController.java",
+        "line": 90,
+        "method": "insertCustomer",
+        "expression": "new ModelAndView(\"redirect:/customers\")",
+        "literalView": "redirect:/customers"
+      },
+      {
+        "kind": "endpoint",
+        "file": "src/java/com/emp/controller/customerController.java",
+        "line": 94,
+        "class": "customerController",
+        "method": "retriveCustomerInfo",
+        "httpMethod": "POST",
+        "path": "/retriveCustomerInfo",
+        "params": "",
+        "rest": true
+      },
+      {
+        "kind": "return",
+        "file": "src/java/com/emp/controller/customerController.java",
+        "line": 100,
+        "class": "customerController",
+        "method": "retriveCustomerInfo",
+        "expression": "json",
+        "guards": []
+      },
+      {
+        "kind": "endpoint",
+        "file": "src/java/com/emp/controller/customerController.java",
+        "line": 104,
+        "class": "customerController",
+        "method": "editCustomer",
+        "httpMethod": "POST",
+        "path": "/editCustomer",
+        "params": "",
+        "rest": false
+      },
+      {
+        "kind": "return",
+        "file": "src/java/com/emp/controller/customerController.java",
+        "line": 111,
+        "class": "customerController",
+        "method": "editCustomer",
+        "expression": "new ModelAndView(\"redirect:/customers\")",
+        "guards": []
+      },
+      {
+        "kind": "modelAndView",
+        "file": "src/java/com/emp/controller/customerController.java",
+        "line": 111,
+        "method": "editCustomer",
+        "expression": "new ModelAndView(\"redirect:/customers\")",
+        "literalView": "redirect:/customers"
+      },
+      {
+        "kind": "endpoint",
+        "file": "src/java/com/emp/controller/customerController.java",
+        "line": 114,
+        "class": "customerController",
+        "method": "deleteCustomer",
+        "httpMethod": "POST",
+        "path": "/deleteCustomer",
+        "params": "",
+        "rest": false
+      },
+      {
+        "kind": "return",
+        "file": "src/java/com/emp/controller/customerController.java",
+        "line": 121,
+        "class": "customerController",
+        "method": "deleteCustomer",
+        "expression": "new ModelAndView(\"redirect:/customers\")",
+        "guards": []
+      },
+      {
+        "kind": "modelAndView",
+        "file": "src/java/com/emp/controller/customerController.java",
+        "line": 121,
+        "method": "deleteCustomer",
+        "expression": "new ModelAndView(\"redirect:/customers\")",
+        "literalView": "redirect:/customers"
+      },
+      {
+        "kind": "endpoint",
+        "file": "src/java/com/emp/controller/customerController.java",
+        "line": 124,
+        "class": "customerController",
+        "method": "searchCustomer",
+        "httpMethod": "GET",
+        "path": "/searchCustomer",
+        "params": "",
+        "rest": true
+      },
+      {
+        "kind": "return",
+        "file": "src/java/com/emp/controller/customerController.java",
+        "line": 131,
+        "class": "customerController",
+        "method": "searchCustomer",
+        "expression": "json",
+        "guards": []
+      },
+      {
+        "kind": "endpoint",
+        "file": "src/java/com/emp/controller/dashboardController.java",
+        "line": 24,
+        "class": "dashboardController",
+        "method": "dashboard",
+        "httpMethod": "GET",
+        "path": "/dashboard",
+        "params": "",
+        "rest": false
+      },
+      {
+        "kind": "return",
+        "file": "src/java/com/emp/controller/dashboardController.java",
+        "line": 38,
+        "class": "dashboardController",
+        "method": "dashboard",
+        "expression": "model",
+        "guards": []
+      },
+      {
+        "kind": "modelAndView",
+        "file": "src/java/com/emp/controller/dashboardController.java",
+        "line": 31,
+        "method": "dashboard",
+        "expression": "new ModelAndView(\"dashboard\")",
+        "literalView": "dashboard"
+      },
+      {
+        "kind": "modelAndView",
+        "file": "src/java/com/emp/controller/dashboardController.java",
+        "line": 36,
+        "method": "dashboard",
+        "expression": "new ModelAndView(\"redirect:/loginform\")",
+        "literalView": "redirect:/loginform"
+      },
+      {
+        "kind": "endpoint",
+        "file": "src/java/com/emp/controller/loginController.java",
+        "line": 40,
+        "class": "loginController",
+        "method": "index",
+        "httpMethod": "GET",
+        "path": "/index",
+        "params": "",
+        "rest": false
+      },
+      {
+        "kind": "return",
+        "file": "src/java/com/emp/controller/loginController.java",
+        "line": 43,
+        "class": "loginController",
+        "method": "index",
+        "expression": "model",
+        "guards": []
+      },
+      {
+        "kind": "modelAndView",
+        "file": "src/java/com/emp/controller/loginController.java",
+        "line": 42,
+        "method": "index",
+        "expression": "new ModelAndView(\"index\")",
+        "literalView": "index"
+      },
+      {
+        "kind": "endpoint",
+        "file": "src/java/com/emp/controller/loginController.java",
+        "line": 46,
+        "class": "loginController",
+        "method": "loginform",
+        "httpMethod": "GET",
+        "path": "/loginform",
+        "params": "",
+        "rest": false
+      },
+      {
+        "kind": "return",
+        "file": "src/java/com/emp/controller/loginController.java",
+        "line": 49,
+        "class": "loginController",
+        "method": "loginform",
+        "expression": "model",
+        "guards": []
+      },
+      {
+        "kind": "modelAndView",
+        "file": "src/java/com/emp/controller/loginController.java",
+        "line": 48,
+        "method": "loginform",
+        "expression": "new ModelAndView(\"loginform\")",
+        "literalView": "loginform"
+      },
+      {
+        "kind": "endpoint",
+        "file": "src/java/com/emp/controller/loginController.java",
+        "line": 52,
+        "class": "loginController",
+        "method": "loginCheck",
+        "httpMethod": "POST",
+        "path": "/loginCheck",
+        "params": "",
+        "rest": false
+      },
+      {
+        "kind": "return",
+        "file": "src/java/com/emp/controller/loginController.java",
+        "line": 80,
+        "class": "loginController",
+        "method": "loginCheck",
+        "expression": "model",
+        "guards": []
+      },
+      {
+        "kind": "modelAndView",
+        "file": "src/java/com/emp/controller/loginController.java",
+        "line": 71,
+        "method": "loginCheck",
+        "expression": "new ModelAndView(\"redirect:/loginform\")",
+        "literalView": "redirect:/loginform"
+      },
+      {
+        "kind": "modelAndView",
+        "file": "src/java/com/emp/controller/loginController.java",
+        "line": 78,
+        "method": "loginCheck",
+        "expression": "new ModelAndView(\"redirect:/dashboard\")",
+        "literalView": "redirect:/dashboard"
+      },
+      {
+        "kind": "endpoint",
+        "file": "src/java/com/emp/controller/modelController.java",
+        "line": 46,
+        "class": "modelController",
+        "method": "model",
+        "httpMethod": "GET",
+        "path": "/model",
+        "params": "",
+        "rest": false
+      },
+      {
+        "kind": "return",
+        "file": "src/java/com/emp/controller/modelController.java",
+        "line": 62,
+        "class": "modelController",
+        "method": "model",
+        "expression": "model",
+        "guards": []
+      },
+      {
+        "kind": "modelAndView",
+        "file": "src/java/com/emp/controller/modelController.java",
+        "line": 54,
+        "method": "model",
+        "expression": "new ModelAndView(\"model\")",
+        "literalView": "model"
+      },
+      {
+        "kind": "modelAndView",
+        "file": "src/java/com/emp/controller/modelController.java",
+        "line": 60,
+        "method": "model",
+        "expression": "new ModelAndView(\"redirect:/loginform\")",
+        "literalView": "redirect:/loginform"
+      },
+      {
+        "kind": "endpoint",
+        "file": "src/java/com/emp/controller/modelController.java",
+        "line": 65,
+        "class": "modelController",
+        "method": "retriveBrandList",
+        "httpMethod": "POST",
+        "path": "/retriveBrandList",
+        "params": "",
+        "rest": true
+      },
+      {
+        "kind": "return",
+        "file": "src/java/com/emp/controller/modelController.java",
+        "line": 70,
+        "class": "modelController",
+        "method": "retriveBrandList",
+        "expression": "json",
+        "guards": []
+      },
+      {
+        "kind": "endpoint",
+        "file": "src/java/com/emp/controller/modelController.java",
+        "line": 73,
+        "class": "modelController",
+        "method": "retriveCategoryList",
+        "httpMethod": "POST",
+        "path": "/retriveCategoryList",
+        "params": "",
+        "rest": true
+      },
+      {
+        "kind": "return",
+        "file": "src/java/com/emp/controller/modelController.java",
+        "line": 78,
+        "class": "modelController",
+        "method": "retriveCategoryList",
+        "expression": "json",
+        "guards": []
+      },
+      {
+        "kind": "endpoint",
+        "file": "src/java/com/emp/controller/modelController.java",
+        "line": 81,
+        "class": "modelController",
+        "method": "insertModel",
+        "httpMethod": "POST",
+        "path": "/insertModel",
+        "params": "",
+        "rest": false
+      },
+      {
+        "kind": "return",
+        "file": "src/java/com/emp/controller/modelController.java",
+        "line": 98,
+        "class": "modelController",
+        "method": "insertModel",
+        "expression": "model",
+        "guards": []
+      },
+      {
+        "kind": "modelAndView",
+        "file": "src/java/com/emp/controller/modelController.java",
+        "line": 97,
+        "method": "insertModel",
+        "expression": "new ModelAndView(\"redirect:/model\")",
+        "literalView": "redirect:/model"
+      },
+      {
+        "kind": "endpoint",
+        "file": "src/java/com/emp/controller/modelController.java",
+        "line": 101,
+        "class": "modelController",
+        "method": "retriveModelInfo",
+        "httpMethod": "POST",
+        "path": "/retriveModelInfo",
+        "params": "",
+        "rest": true
+      },
+      {
+        "kind": "return",
+        "file": "src/java/com/emp/controller/modelController.java",
+        "line": 107,
+        "class": "modelController",
+        "method": "retriveModelInfo",
+        "expression": "json",
+        "guards": []
+      },
+      {
+        "kind": "endpoint",
+        "file": "src/java/com/emp/controller/modelController.java",
+        "line": 110,
+        "class": "modelController",
+        "method": "editModel",
+        "httpMethod": "POST",
+        "path": "/editModel",
+        "params": "",
+        "rest": false
+      },
+      {
+        "kind": "return",
+        "file": "src/java/com/emp/controller/modelController.java",
+        "line": 116,
+        "class": "modelController",
+        "method": "editModel",
+        "expression": "new ModelAndView(\"redirect:/model\")",
+        "guards": []
+      },
+      {
+        "kind": "modelAndView",
+        "file": "src/java/com/emp/controller/modelController.java",
+        "line": 116,
+        "method": "editModel",
+        "expression": "new ModelAndView(\"redirect:/model\")",
+        "literalView": "redirect:/model"
+      },
+      {
+        "kind": "endpoint",
+        "file": "src/java/com/emp/controller/modelController.java",
+        "line": 119,
+        "class": "modelController",
+        "method": "deleteModel",
+        "httpMethod": "POST",
+        "path": "/deleteModel",
+        "params": "",
+        "rest": false
+      },
+      {
+        "kind": "return",
+        "file": "src/java/com/emp/controller/modelController.java",
+        "line": 126,
+        "class": "modelController",
+        "method": "deleteModel",
+        "expression": "new ModelAndView(\"redirect:/model\")",
+        "guards": []
+      },
+      {
+        "kind": "modelAndView",
+        "file": "src/java/com/emp/controller/modelController.java",
+        "line": 126,
+        "method": "deleteModel",
+        "expression": "new ModelAndView(\"redirect:/model\")",
+        "literalView": "redirect:/model"
+      },
+      {
+        "kind": "endpoint",
+        "file": "src/java/com/emp/controller/modelController.java",
+        "line": 129,
+        "class": "modelController",
+        "method": "searchModel",
+        "httpMethod": "GET",
+        "path": "/searchModel",
+        "params": "",
+        "rest": true
+      },
+      {
+        "kind": "return",
+        "file": "src/java/com/emp/controller/modelController.java",
+        "line": 136,
+        "class": "modelController",
+        "method": "searchModel",
+        "expression": "json",
+        "guards": []
+      },
+      {
+        "kind": "endpoint",
+        "file": "src/java/com/emp/controller/productController.java",
+        "line": 48,
+        "class": "productController",
+        "method": "product",
+        "httpMethod": "GET",
+        "path": "/product",
+        "params": "",
+        "rest": false
+      },
+      {
+        "kind": "return",
+        "file": "src/java/com/emp/controller/productController.java",
+        "line": 64,
+        "class": "productController",
+        "method": "product",
+        "expression": "model",
+        "guards": []
+      },
+      {
+        "kind": "modelAndView",
+        "file": "src/java/com/emp/controller/productController.java",
+        "line": 56,
+        "method": "product",
+        "expression": "new ModelAndView(\"product\")",
+        "literalView": "product"
+      },
+      {
+        "kind": "modelAndView",
+        "file": "src/java/com/emp/controller/productController.java",
+        "line": 62,
+        "method": "product",
+        "expression": "new ModelAndView(\"redirect:/loginform\")",
+        "literalView": "redirect:/loginform"
+      },
+      {
+        "kind": "endpoint",
+        "file": "src/java/com/emp/controller/productController.java",
+        "line": 67,
+        "class": "productController",
+        "method": "newSupplierID",
+        "httpMethod": "POST",
+        "path": "/newStockID",
+        "params": "",
+        "rest": true
+      },
+      {
+        "kind": "return",
+        "file": "src/java/com/emp/controller/productController.java",
+        "line": 72,
+        "class": "productController",
+        "method": "newSupplierID",
+        "expression": "str",
+        "guards": []
+      },
+      {
+        "kind": "endpoint",
+        "file": "src/java/com/emp/controller/productController.java",
+        "line": 75,
+        "class": "productController",
+        "method": "newEntryID",
+        "httpMethod": "POST",
+        "path": "/newEntryID",
+        "params": "",
+        "rest": true
+      },
+      {
+        "kind": "return",
+        "file": "src/java/com/emp/controller/productController.java",
+        "line": 80,
+        "class": "productController",
+        "method": "newEntryID",
+        "expression": "str",
+        "guards": []
+      },
+      {
+        "kind": "endpoint",
+        "file": "src/java/com/emp/controller/productController.java",
+        "line": 83,
+        "class": "productController",
+        "method": "retriveSupplierList",
+        "httpMethod": "POST",
+        "path": "/retriveSupplierList",
+        "params": "",
+        "rest": true
+      },
+      {
+        "kind": "return",
+        "file": "src/java/com/emp/controller/productController.java",
+        "line": 88,
+        "class": "productController",
+        "method": "retriveSupplierList",
+        "expression": "json",
+        "guards": []
+      },
+      {
+        "kind": "endpoint",
+        "file": "src/java/com/emp/controller/productController.java",
+        "line": 91,
+        "class": "productController",
+        "method": "retriveModelList",
+        "httpMethod": "POST",
+        "path": "/retriveModelList",
+        "params": "",
+        "rest": true
+      },
+      {
+        "kind": "return",
+        "file": "src/java/com/emp/controller/productController.java",
+        "line": 98,
+        "class": "productController",
+        "method": "retriveModelList",
+        "expression": "json",
+        "guards": []
+      },
+      {
+        "kind": "endpoint",
+        "file": "src/java/com/emp/controller/supplierController.java",
+        "line": 41,
+        "class": "supplierController",
+        "method": "suppliers",
+        "httpMethod": "GET",
+        "path": "/suppliers",
+        "params": "",
+        "rest": false
+      },
+      {
+        "kind": "return",
+        "file": "src/java/com/emp/controller/supplierController.java",
+        "line": 57,
+        "class": "supplierController",
+        "method": "suppliers",
+        "expression": "model",
+        "guards": []
+      },
+      {
+        "kind": "modelAndView",
+        "file": "src/java/com/emp/controller/supplierController.java",
+        "line": 49,
+        "method": "suppliers",
+        "expression": "new ModelAndView(\"suppliers\")",
+        "literalView": "suppliers"
+      },
+      {
+        "kind": "modelAndView",
+        "file": "src/java/com/emp/controller/supplierController.java",
+        "line": 55,
+        "method": "suppliers",
+        "expression": "new ModelAndView(\"redirect:/loginform\")",
+        "literalView": "redirect:/loginform"
+      },
+      {
+        "kind": "endpoint",
+        "file": "src/java/com/emp/controller/supplierController.java",
+        "line": 61,
+        "class": "supplierController",
+        "method": "newSupplierID",
+        "httpMethod": "POST",
+        "path": "/newSupplierID",
+        "params": "",
+        "rest": true
+      },
+      {
+        "kind": "return",
+        "file": "src/java/com/emp/controller/supplierController.java",
+        "line": 66,
+        "class": "supplierController",
+        "method": "newSupplierID",
+        "expression": "str",
+        "guards": []
+      },
+      {
+        "kind": "endpoint",
+        "file": "src/java/com/emp/controller/supplierController.java",
+        "line": 69,
+        "class": "supplierController",
+        "method": "insertSupplier",
+        "httpMethod": "POST",
+        "path": "/insertSupplier",
+        "params": "",
+        "rest": false
+      },
+      {
+        "kind": "return",
+        "file": "src/java/com/emp/controller/supplierController.java",
+        "line": 85,
+        "class": "supplierController",
+        "method": "insertSupplier",
+        "expression": "new ModelAndView(\"redirect:/suppliers\")",
+        "guards": []
+      },
+      {
+        "kind": "modelAndView",
+        "file": "src/java/com/emp/controller/supplierController.java",
+        "line": 85,
+        "method": "insertSupplier",
+        "expression": "new ModelAndView(\"redirect:/suppliers\")",
+        "literalView": "redirect:/suppliers"
+      },
+      {
+        "kind": "endpoint",
+        "file": "src/java/com/emp/controller/supplierController.java",
+        "line": 88,
+        "class": "supplierController",
+        "method": "retriveSupplierInfo",
+        "httpMethod": "POST",
+        "path": "/retriveSupplierInfo",
+        "params": "",
+        "rest": true
+      },
+      {
+        "kind": "return",
+        "file": "src/java/com/emp/controller/supplierController.java",
+        "line": 94,
+        "class": "supplierController",
+        "method": "retriveSupplierInfo",
+        "expression": "json",
+        "guards": []
+      },
+      {
+        "kind": "endpoint",
+        "file": "src/java/com/emp/controller/supplierController.java",
+        "line": 98,
+        "class": "supplierController",
+        "method": "editSupplier",
+        "httpMethod": "POST",
+        "path": "/editSupplier",
+        "params": "",
+        "rest": false
+      },
+      {
+        "kind": "return",
+        "file": "src/java/com/emp/controller/supplierController.java",
+        "line": 104,
+        "class": "supplierController",
+        "method": "editSupplier",
+        "expression": "new ModelAndView(\"redirect:/suppliers\")",
+        "guards": []
+      },
+      {
+        "kind": "modelAndView",
+        "file": "src/java/com/emp/controller/supplierController.java",
+        "line": 104,
+        "method": "editSupplier",
+        "expression": "new ModelAndView(\"redirect:/suppliers\")",
+        "literalView": "redirect:/suppliers"
+      },
+      {
+        "kind": "endpoint",
+        "file": "src/java/com/emp/controller/supplierController.java",
+        "line": 107,
+        "class": "supplierController",
+        "method": "deleteSupplier",
+        "httpMethod": "POST",
+        "path": "/deleteSupplier",
+        "params": "",
+        "rest": false
+      },
+      {
+        "kind": "return",
+        "file": "src/java/com/emp/controller/supplierController.java",
+        "line": 114,
+        "class": "supplierController",
+        "method": "deleteSupplier",
+        "expression": "new ModelAndView(\"redirect:/suppliers\")",
+        "guards": []
+      },
+      {
+        "kind": "modelAndView",
+        "file": "src/java/com/emp/controller/supplierController.java",
+        "line": 114,
+        "method": "deleteSupplier",
+        "expression": "new ModelAndView(\"redirect:/suppliers\")",
+        "literalView": "redirect:/suppliers"
+      },
+      {
+        "kind": "endpoint",
+        "file": "src/java/com/emp/controller/supplierController.java",
+        "line": 117,
+        "class": "supplierController",
+        "method": "searchSupplier",
+        "httpMethod": "GET",
+        "path": "/searchSupplier",
+        "params": "",
+        "rest": true
+      },
+      {
+        "kind": "return",
+        "file": "src/java/com/emp/controller/supplierController.java",
+        "line": 124,
+        "class": "supplierController",
+        "method": "searchSupplier",
+        "expression": "json",
+        "guards": []
+      }
+    ],
+    "views": [
+      {
+        "file": "web/WEB-INF/jsp/brand.jsp",
+        "line": 1
+      },
+      {
+        "file": "web/WEB-INF/jsp/category.jsp",
+        "line": 1
+      },
+      {
+        "file": "web/WEB-INF/jsp/customers.jsp",
+        "line": 1
+      },
+      {
+        "file": "web/WEB-INF/jsp/dashboard.jsp",
+        "line": 1
+      },
+      {
+        "file": "web/WEB-INF/jsp/footer.jsp",
+        "line": 1
+      },
+      {
+        "file": "web/WEB-INF/jsp/header.jsp",
+        "line": 1
+      },
+      {
+        "file": "web/WEB-INF/jsp/index.jsp",
+        "line": 1
+      },
+      {
+        "file": "web/WEB-INF/jsp/loginform.jsp",
+        "line": 1
+      },
+      {
+        "file": "web/WEB-INF/jsp/menu.jsp",
+        "line": 1
+      },
+      {
+        "file": "web/WEB-INF/jsp/model.jsp",
+        "line": 1
+      },
+      {
+        "file": "web/WEB-INF/jsp/product.jsp",
+        "line": 1
+      },
+      {
+        "file": "web/WEB-INF/jsp/suppliers.jsp",
+        "line": 1
+      },
+      {
+        "file": "web/redirect.jsp",
+        "line": 1
+      }
+    ],
+    "controls": [
+      {
+        "file": "web/WEB-INF/jsp/brand.jsp",
+        "line": 21,
+        "tag": "input",
+        "attrs": {
+          "type": "text",
+          "class": "input-sm",
+          "id": "searchBrand",
+          "name": "search",
+          "placeholder": "Search"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/brand.jsp",
+        "line": 23,
+        "tag": "button",
+        "attrs": {
+          "class": "btn btn-box-tool",
+          "data-toggle": "modal",
+          "data-target": "#insertBrandModal",
+          "title": "Insert New Brand"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/brand.jsp",
+        "line": 24,
+        "tag": "button",
+        "attrs": {
+          "class": "btn btn-box-tool",
+          "data-widget": "collapse",
+          "data-toggle": "tooltip",
+          "title": "Collapse"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/brand.jsp",
+        "line": 25,
+        "tag": "button",
+        "attrs": {
+          "class": "btn btn-box-tool",
+          "data-widget": "remove",
+          "data-toggle": "tooltip",
+          "title": "Remove"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/brand.jsp",
+        "line": 33,
+        "tag": "a",
+        "attrs": {
+          "class": "close",
+          "data-dismiss": "alert",
+          "aria-label": "close"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/brand.jsp",
+        "line": 41,
+        "tag": "a",
+        "attrs": {
+          "class": "close",
+          "data-dismiss": "alert",
+          "aria-label": "close"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/brand.jsp",
+        "line": 49,
+        "tag": "a",
+        "attrs": {
+          "class": "close",
+          "data-dismiss": "alert",
+          "aria-label": "close"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/brand.jsp",
+        "line": 57,
+        "tag": "a",
+        "attrs": {
+          "class": "close",
+          "data-dismiss": "alert",
+          "aria-label": "close"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/brand.jsp",
+        "line": 65,
+        "tag": "a",
+        "attrs": {
+          "class": "close",
+          "data-dismiss": "alert",
+          "aria-label": "close"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/brand.jsp",
+        "line": 73,
+        "tag": "a",
+        "attrs": {
+          "class": "close",
+          "data-dismiss": "alert",
+          "aria-label": "close"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/brand.jsp",
+        "line": 94,
+        "tag": "a",
+        "attrs": {
+          "class": "btn btn-sm btn-default",
+          "target": "_blank",
+          "data-toggle": "modal",
+          "data-target": "#editBrandPopUp",
+          "data-id": "${brand.brandid}",
+          "title": "Edit",
+          "data-original-title": "Edit"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/brand.jsp",
+        "line": 95,
+        "tag": "a",
+        "attrs": {
+          "class": "btn btn-sm btn-danger",
+          "target": "_blank",
+          "data-toggle": "modal",
+          "data-target": "#deleteBrandPopUp",
+          "data-id": "${brand.brandid}",
+          "title": "Delete",
+          "data-original-title": "Delete"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/brand.jsp",
+        "line": 114,
+        "tag": "button",
+        "attrs": {
+          "type": "button",
+          "class": "close",
+          "data-dismiss": "modal"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/brand.jsp",
+        "line": 118,
+        "tag": "form",
+        "attrs": {
+          "action": "insertBrand",
+          "method": "post",
+          "id": "addBrand",
+          "name": "addBrand"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/brand.jsp",
+        "line": 124,
+        "tag": "input",
+        "attrs": {
+          "type": "text",
+          "class": "form-control",
+          "name": "brandid",
+          "disabled": null
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/brand.jsp",
+        "line": 130,
+        "tag": "input",
+        "attrs": {
+          "type": "text",
+          "class": "form-control",
+          "name": "brandName",
+          "placeholder": "Enter Brand Name",
+          "required": null
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/brand.jsp",
+        "line": 136,
+        "tag": "textarea",
+        "attrs": {
+          "class": "form-control",
+          "name": "description",
+          "placeholder": "Enter Description"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/brand.jsp",
+        "line": 142,
+        "tag": "button",
+        "attrs": {
+          "id": "submitBrand",
+          "name": "submit",
+          "class": "btn btn-info"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/brand.jsp",
+        "line": 160,
+        "tag": "button",
+        "attrs": {
+          "type": "button",
+          "class": "close",
+          "data-dismiss": "modal"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/brand.jsp",
+        "line": 164,
+        "tag": "form",
+        "attrs": {
+          "action": "editBrand",
+          "method": "post",
+          "id": "editBrand",
+          "name": "editBrand"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/brand.jsp",
+        "line": 170,
+        "tag": "input",
+        "attrs": {
+          "type": "text",
+          "class": "form-control",
+          "name": "editBrandid",
+          "disabled": null
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/brand.jsp",
+        "line": 172,
+        "tag": "input",
+        "attrs": {
+          "type": "hidden",
+          "id": "hiddenBrandID",
+          "name": "brandid"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/brand.jsp",
+        "line": 176,
+        "tag": "input",
+        "attrs": {
+          "type": "text",
+          "class": "form-control",
+          "name": "brandName",
+          "placeholder": "Enter Brand Name",
+          "required": null
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/brand.jsp",
+        "line": 182,
+        "tag": "textarea",
+        "attrs": {
+          "class": "form-control",
+          "name": "description",
+          "placeholder": "Enter Description"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/brand.jsp",
+        "line": 188,
+        "tag": "button",
+        "attrs": {
+          "id": "editBrandSubmit",
+          "name": "editSubmit",
+          "class": "btn btn-info"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/brand.jsp",
+        "line": 204,
+        "tag": "button",
+        "attrs": {
+          "type": "button",
+          "class": "close",
+          "data-dismiss": "modal"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/brand.jsp",
+        "line": 211,
+        "tag": "form",
+        "attrs": {
+          "action": "deleteBrand",
+          "method": "post",
+          "id": "deleteBrand",
+          "name": "deleteBrand"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/brand.jsp",
+        "line": 212,
+        "tag": "input",
+        "attrs": {
+          "type": "hidden",
+          "id": "hiddenBndID",
+          "name": "brandid"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/brand.jsp",
+        "line": 213,
+        "tag": "button",
+        "attrs": {
+          "id": "deleteBrandBtn",
+          "name": "deleteBrandBtn",
+          "class": "btn btn-danger"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/brand.jsp",
+        "line": 215,
+        "tag": "button",
+        "attrs": {
+          "type": "button",
+          "class": "btn btn-default",
+          "data-dismiss": "modal"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/category.jsp",
+        "line": 21,
+        "tag": "input",
+        "attrs": {
+          "type": "text",
+          "class": "input-sm",
+          "id": "searchCategory",
+          "name": "search",
+          "placeholder": "Search"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/category.jsp",
+        "line": 23,
+        "tag": "button",
+        "attrs": {
+          "class": "btn btn-box-tool",
+          "data-toggle": "modal",
+          "data-target": "#insertCategoryModal",
+          "title": "Insert New Category"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/category.jsp",
+        "line": 24,
+        "tag": "button",
+        "attrs": {
+          "class": "btn btn-box-tool",
+          "data-widget": "collapse",
+          "data-toggle": "tooltip",
+          "title": "Collapse"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/category.jsp",
+        "line": 25,
+        "tag": "button",
+        "attrs": {
+          "class": "btn btn-box-tool",
+          "data-widget": "remove",
+          "data-toggle": "tooltip",
+          "title": "Remove"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/category.jsp",
+        "line": 33,
+        "tag": "a",
+        "attrs": {
+          "class": "close",
+          "data-dismiss": "alert",
+          "aria-label": "close"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/category.jsp",
+        "line": 41,
+        "tag": "a",
+        "attrs": {
+          "class": "close",
+          "data-dismiss": "alert",
+          "aria-label": "close"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/category.jsp",
+        "line": 49,
+        "tag": "a",
+        "attrs": {
+          "class": "close",
+          "data-dismiss": "alert",
+          "aria-label": "close"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/category.jsp",
+        "line": 57,
+        "tag": "a",
+        "attrs": {
+          "class": "close",
+          "data-dismiss": "alert",
+          "aria-label": "close"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/category.jsp",
+        "line": 65,
+        "tag": "a",
+        "attrs": {
+          "class": "close",
+          "data-dismiss": "alert",
+          "aria-label": "close"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/category.jsp",
+        "line": 73,
+        "tag": "a",
+        "attrs": {
+          "class": "close",
+          "data-dismiss": "alert",
+          "aria-label": "close"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/category.jsp",
+        "line": 94,
+        "tag": "a",
+        "attrs": {
+          "class": "btn btn-sm btn-default",
+          "target": "_blank",
+          "data-toggle": "modal",
+          "data-target": "#editCategoryPopUp",
+          "data-id": "${cat.catid}",
+          "title": "Edit",
+          "data-original-title": "Edit"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/category.jsp",
+        "line": 95,
+        "tag": "a",
+        "attrs": {
+          "class": "btn btn-sm btn-danger",
+          "target": "_blank",
+          "data-toggle": "modal",
+          "data-target": "#deleteCategoryPopUp",
+          "data-id": "${cat.catid}",
+          "title": "Delete",
+          "data-original-title": "Delete"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/category.jsp",
+        "line": 114,
+        "tag": "button",
+        "attrs": {
+          "type": "button",
+          "class": "close",
+          "data-dismiss": "modal"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/category.jsp",
+        "line": 118,
+        "tag": "form",
+        "attrs": {
+          "action": "insertCategory",
+          "method": "post",
+          "id": "addCategory",
+          "name": "addCategory"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/category.jsp",
+        "line": 124,
+        "tag": "input",
+        "attrs": {
+          "type": "text",
+          "class": "form-control",
+          "name": "catid",
+          "disabled": null
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/category.jsp",
+        "line": 130,
+        "tag": "input",
+        "attrs": {
+          "type": "text",
+          "class": "form-control",
+          "name": "catName",
+          "placeholder": "Enter Category Name",
+          "required": null
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/category.jsp",
+        "line": 136,
+        "tag": "textarea",
+        "attrs": {
+          "class": "form-control",
+          "name": "description",
+          "placeholder": "Enter Description"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/category.jsp",
+        "line": 142,
+        "tag": "button",
+        "attrs": {
+          "id": "submitCategory",
+          "name": "submit",
+          "class": "btn btn-info"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/category.jsp",
+        "line": 160,
+        "tag": "button",
+        "attrs": {
+          "type": "button",
+          "class": "close",
+          "data-dismiss": "modal"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/category.jsp",
+        "line": 164,
+        "tag": "form",
+        "attrs": {
+          "action": "editCategory",
+          "method": "post",
+          "id": "editCategory",
+          "name": "editCategory"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/category.jsp",
+        "line": 170,
+        "tag": "input",
+        "attrs": {
+          "type": "text",
+          "class": "form-control",
+          "name": "editCategoryid",
+          "disabled": null
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/category.jsp",
+        "line": 172,
+        "tag": "input",
+        "attrs": {
+          "type": "hidden",
+          "id": "hiddenCategoryID",
+          "name": "catid"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/category.jsp",
+        "line": 176,
+        "tag": "input",
+        "attrs": {
+          "type": "text",
+          "class": "form-control",
+          "name": "catName",
+          "placeholder": "Enter Category Name",
+          "required": null
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/category.jsp",
+        "line": 182,
+        "tag": "textarea",
+        "attrs": {
+          "class": "form-control",
+          "name": "description",
+          "placeholder": "Enter Description"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/category.jsp",
+        "line": 188,
+        "tag": "button",
+        "attrs": {
+          "id": "editCategorySubmit",
+          "name": "editSubmit",
+          "class": "btn btn-info"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/category.jsp",
+        "line": 204,
+        "tag": "button",
+        "attrs": {
+          "type": "button",
+          "class": "close",
+          "data-dismiss": "modal"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/category.jsp",
+        "line": 211,
+        "tag": "form",
+        "attrs": {
+          "action": "deleteCategory",
+          "method": "post",
+          "id": "deleteCategory",
+          "name": "deleteCategory"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/category.jsp",
+        "line": 212,
+        "tag": "input",
+        "attrs": {
+          "type": "hidden",
+          "id": "hiddenCatID",
+          "name": "catid"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/category.jsp",
+        "line": 213,
+        "tag": "button",
+        "attrs": {
+          "id": "deleteCategoryBtn",
+          "name": "deleteCategoryBtn",
+          "class": "btn btn-danger"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/category.jsp",
+        "line": 215,
+        "tag": "button",
+        "attrs": {
+          "type": "button",
+          "class": "btn btn-default",
+          "data-dismiss": "modal"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/customers.jsp",
+        "line": 21,
+        "tag": "input",
+        "attrs": {
+          "type": "text",
+          "class": "input-sm",
+          "id": "searchCustomer",
+          "name": "search",
+          "placeholder": "Search"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/customers.jsp",
+        "line": 23,
+        "tag": "button",
+        "attrs": {
+          "class": "btn btn-box-tool",
+          "data-toggle": "modal",
+          "data-target": "#insertCustomerModal",
+          "title": "Insert New Customer"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/customers.jsp",
+        "line": 24,
+        "tag": "button",
+        "attrs": {
+          "class": "btn btn-box-tool",
+          "data-widget": "collapse",
+          "data-toggle": "tooltip",
+          "title": "Collapse"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/customers.jsp",
+        "line": 25,
+        "tag": "button",
+        "attrs": {
+          "class": "btn btn-box-tool",
+          "data-widget": "remove",
+          "data-toggle": "tooltip",
+          "title": "Remove"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/customers.jsp",
+        "line": 33,
+        "tag": "a",
+        "attrs": {
+          "class": "close",
+          "data-dismiss": "alert",
+          "aria-label": "close"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/customers.jsp",
+        "line": 41,
+        "tag": "a",
+        "attrs": {
+          "class": "close",
+          "data-dismiss": "alert",
+          "aria-label": "close"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/customers.jsp",
+        "line": 49,
+        "tag": "a",
+        "attrs": {
+          "class": "close",
+          "data-dismiss": "alert",
+          "aria-label": "close"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/customers.jsp",
+        "line": 57,
+        "tag": "a",
+        "attrs": {
+          "class": "close",
+          "data-dismiss": "alert",
+          "aria-label": "close"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/customers.jsp",
+        "line": 65,
+        "tag": "a",
+        "attrs": {
+          "class": "close",
+          "data-dismiss": "alert",
+          "aria-label": "close"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/customers.jsp",
+        "line": 73,
+        "tag": "a",
+        "attrs": {
+          "class": "close",
+          "data-dismiss": "alert",
+          "aria-label": "close"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/customers.jsp",
+        "line": 96,
+        "tag": "a",
+        "attrs": {
+          "class": "btn btn-sm btn-default",
+          "target": "_blank",
+          "data-toggle": "modal",
+          "data-target": "#editCustomerPopUp",
+          "data-id": "${customer.customerid}",
+          "title": "Edit",
+          "data-original-title": "Edit"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/customers.jsp",
+        "line": 97,
+        "tag": "a",
+        "attrs": {
+          "class": "btn btn-sm btn-danger",
+          "target": "_blank",
+          "data-toggle": "modal",
+          "data-target": "#deleteCustomerPopUp",
+          "data-id": "${customer.customerid}",
+          "title": "Delete",
+          "data-original-title": "Delete"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/customers.jsp",
+        "line": 116,
+        "tag": "button",
+        "attrs": {
+          "type": "button",
+          "class": "close",
+          "data-dismiss": "modal"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/customers.jsp",
+        "line": 120,
+        "tag": "form",
+        "attrs": {
+          "action": "insertCustomer",
+          "method": "post",
+          "id": "addCustomer",
+          "name": "addCustomer"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/customers.jsp",
+        "line": 126,
+        "tag": "input",
+        "attrs": {
+          "type": "text",
+          "class": "form-control",
+          "name": "customerid",
+          "disabled": null
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/customers.jsp",
+        "line": 132,
+        "tag": "input",
+        "attrs": {
+          "type": "text",
+          "class": "form-control",
+          "name": "name",
+          "placeholder": "Enter Name",
+          "required": null
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/customers.jsp",
+        "line": 138,
+        "tag": "input",
+        "attrs": {
+          "type": "text",
+          "class": "form-control",
+          "name": "email",
+          "placeholder": "Enter Email Address"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/customers.jsp",
+        "line": 144,
+        "tag": "input",
+        "attrs": {
+          "type": "text",
+          "class": "form-control",
+          "name": "phone",
+          "placeholder": "Enter Phone Number",
+          "required": null
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/customers.jsp",
+        "line": 150,
+        "tag": "textarea",
+        "attrs": {
+          "class": "form-control",
+          "name": "address",
+          "placeholder": "Enter Address"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/customers.jsp",
+        "line": 156,
+        "tag": "button",
+        "attrs": {
+          "id": "submitCustomer",
+          "name": "submit",
+          "class": "btn btn-info"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/customers.jsp",
+        "line": 174,
+        "tag": "button",
+        "attrs": {
+          "type": "button",
+          "class": "close",
+          "data-dismiss": "modal"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/customers.jsp",
+        "line": 178,
+        "tag": "form",
+        "attrs": {
+          "action": "editCustomer",
+          "method": "post",
+          "id": "editCustomer",
+          "name": "editCustomer"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/customers.jsp",
+        "line": 184,
+        "tag": "input",
+        "attrs": {
+          "type": "text",
+          "class": "form-control",
+          "name": "editCustomerid",
+          "disabled": null
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/customers.jsp",
+        "line": 186,
+        "tag": "input",
+        "attrs": {
+          "type": "hidden",
+          "id": "hiddenID",
+          "name": "customerid"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/customers.jsp",
+        "line": 190,
+        "tag": "input",
+        "attrs": {
+          "type": "text",
+          "class": "form-control",
+          "name": "name",
+          "placeholder": "Enter Name",
+          "required": null
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/customers.jsp",
+        "line": 196,
+        "tag": "input",
+        "attrs": {
+          "type": "text",
+          "class": "form-control",
+          "name": "email",
+          "placeholder": "Enter Email Address"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/customers.jsp",
+        "line": 202,
+        "tag": "input",
+        "attrs": {
+          "type": "text",
+          "class": "form-control",
+          "name": "phone",
+          "placeholder": "Enter Phone Number",
+          "required": null
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/customers.jsp",
+        "line": 208,
+        "tag": "textarea",
+        "attrs": {
+          "class": "form-control",
+          "name": "address",
+          "placeholder": "Enter Address"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/customers.jsp",
+        "line": 214,
+        "tag": "button",
+        "attrs": {
+          "id": "editCustomerSubmit",
+          "name": "editSubmit",
+          "class": "btn btn-info"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/customers.jsp",
+        "line": 230,
+        "tag": "button",
+        "attrs": {
+          "type": "button",
+          "class": "close",
+          "data-dismiss": "modal"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/customers.jsp",
+        "line": 237,
+        "tag": "form",
+        "attrs": {
+          "action": "deleteCustomer",
+          "method": "post",
+          "id": "deleteCustomer",
+          "name": "deleteCustomer"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/customers.jsp",
+        "line": 238,
+        "tag": "input",
+        "attrs": {
+          "type": "hidden",
+          "id": "hiddenCustomerID",
+          "name": "customerid"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/customers.jsp",
+        "line": 239,
+        "tag": "button",
+        "attrs": {
+          "id": "deleteCustomerBtn",
+          "name": "deleteCustomerBtn",
+          "class": "btn btn-danger"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/customers.jsp",
+        "line": 241,
+        "tag": "button",
+        "attrs": {
+          "type": "button",
+          "class": "btn btn-default",
+          "data-dismiss": "modal"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/dashboard.jsp",
+        "line": 22,
+        "tag": "button",
+        "attrs": {
+          "class": "btn btn-box-tool",
+          "data-widget": "collapse",
+          "data-toggle": "tooltip",
+          "title": "Collapse"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/dashboard.jsp",
+        "line": 23,
+        "tag": "button",
+        "attrs": {
+          "class": "btn btn-box-tool",
+          "data-widget": "remove",
+          "data-toggle": "tooltip",
+          "title": "Remove"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/footer.jsp",
+        "line": 6,
+        "tag": "a",
+        "attrs": {
+          "href": "http://facebook.com/amiSotun"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/header.jsp",
+        "line": 43,
+        "tag": "a",
+        "attrs": {
+          "href": "#",
+          "class": "logo"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/header.jsp",
+        "line": 52,
+        "tag": "a",
+        "attrs": {
+          "href": "#",
+          "class": "sidebar-toggle",
+          "data-toggle": "offcanvas",
+          "role": "button"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/header.jsp",
+        "line": 63,
+        "tag": "a",
+        "attrs": {
+          "href": "#",
+          "class": "dropdown-toggle",
+          "data-toggle": "dropdown"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/header.jsp",
+        "line": 80,
+        "tag": "a",
+        "attrs": {
+          "href": "#",
+          "class": "btn btn-default btn-flat"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/header.jsp",
+        "line": 84,
+        "tag": "a",
+        "attrs": {
+          "href": "loginform",
+          "id": "user_logout",
+          "name": "user_logout",
+          "class": "btn btn-default btn-flat"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/index.jsp",
+        "line": 30,
+        "tag": "a",
+        "attrs": {
+          "href": "#"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/index.jsp",
+        "line": 36,
+        "tag": "a",
+        "attrs": {
+          "class": "link animated fadeInUp delay-1s",
+          "href": "loginform"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/index.jsp",
+        "line": 42,
+        "tag": "a",
+        "attrs": {
+          "href": "#"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/index.jsp",
+        "line": 43,
+        "tag": "a",
+        "attrs": {
+          "href": "#"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/loginform.jsp",
+        "line": 34,
+        "tag": "button",
+        "attrs": {
+          "type": "button",
+          "class": "close",
+          "data-dismiss": "alert",
+          "aria-hidden": "true"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/loginform.jsp",
+        "line": 41,
+        "tag": "button",
+        "attrs": {
+          "type": "button",
+          "class": "close",
+          "data-dismiss": "alert",
+          "aria-hidden": "true"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/loginform.jsp",
+        "line": 59,
+        "tag": "form",
+        "attrs": {
+          "action": "loginCheck",
+          "method": "post",
+          "id": "loginForm",
+          "name": "loginForm"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/loginform.jsp",
+        "line": 61,
+        "tag": "select",
+        "attrs": {
+          "class": "form-control",
+          "id": "usertype",
+          "name": "usertype",
+          "required": null
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/loginform.jsp",
+        "line": 70,
+        "tag": "input",
+        "attrs": {
+          "type": "text",
+          "class": "form-control",
+          "id": "userid",
+          "name": "userid",
+          "placeholder": "User ID",
+          "required": null
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/loginform.jsp",
+        "line": 74,
+        "tag": "input",
+        "attrs": {
+          "type": "password",
+          "class": "form-control",
+          "id": "password",
+          "name": "password",
+          "placeholder": "Password",
+          "required": null
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/loginform.jsp",
+        "line": 81,
+        "tag": "a",
+        "attrs": {
+          "href": "#"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/loginform.jsp",
+        "line": 88,
+        "tag": "button",
+        "attrs": {
+          "type": "submit",
+          "value": "submit",
+          "class": "btn btn-primary btn-block btn-flat",
+          "id": "loginBtn",
+          "name": "loginBtn"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/menu.jsp",
+        "line": 17,
+        "tag": "a",
+        "attrs": {
+          "href": "#"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/menu.jsp",
+        "line": 25,
+        "tag": "a",
+        "attrs": {
+          "href": "dashboard"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/menu.jsp",
+        "line": 32,
+        "tag": "a",
+        "attrs": {
+          "href": "customers"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/menu.jsp",
+        "line": 38,
+        "tag": "a",
+        "attrs": {
+          "href": "suppliers"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/menu.jsp",
+        "line": 44,
+        "tag": "a",
+        "attrs": {
+          "href": "brand"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/menu.jsp",
+        "line": 50,
+        "tag": "a",
+        "attrs": {
+          "href": "category"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/menu.jsp",
+        "line": 56,
+        "tag": "a",
+        "attrs": {
+          "href": "model"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/menu.jsp",
+        "line": 62,
+        "tag": "a",
+        "attrs": {
+          "href": "product"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/model.jsp",
+        "line": 21,
+        "tag": "input",
+        "attrs": {
+          "type": "text",
+          "class": "input-sm",
+          "id": "searchModel",
+          "name": "search",
+          "placeholder": "Search"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/model.jsp",
+        "line": 23,
+        "tag": "button",
+        "attrs": {
+          "class": "btn btn-box-tool",
+          "data-toggle": "modal",
+          "data-target": "#insertModelModal",
+          "title": "Insert New Model"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/model.jsp",
+        "line": 24,
+        "tag": "button",
+        "attrs": {
+          "class": "btn btn-box-tool",
+          "data-widget": "collapse",
+          "data-toggle": "tooltip",
+          "title": "Collapse"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/model.jsp",
+        "line": 25,
+        "tag": "button",
+        "attrs": {
+          "class": "btn btn-box-tool",
+          "data-widget": "remove",
+          "data-toggle": "tooltip",
+          "title": "Remove"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/model.jsp",
+        "line": 33,
+        "tag": "a",
+        "attrs": {
+          "class": "close",
+          "data-dismiss": "alert",
+          "aria-label": "close"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/model.jsp",
+        "line": 41,
+        "tag": "a",
+        "attrs": {
+          "class": "close",
+          "data-dismiss": "alert",
+          "aria-label": "close"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/model.jsp",
+        "line": 49,
+        "tag": "a",
+        "attrs": {
+          "class": "close",
+          "data-dismiss": "alert",
+          "aria-label": "close"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/model.jsp",
+        "line": 57,
+        "tag": "a",
+        "attrs": {
+          "class": "close",
+          "data-dismiss": "alert",
+          "aria-label": "close"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/model.jsp",
+        "line": 65,
+        "tag": "a",
+        "attrs": {
+          "class": "close",
+          "data-dismiss": "alert",
+          "aria-label": "close"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/model.jsp",
+        "line": 73,
+        "tag": "a",
+        "attrs": {
+          "class": "close",
+          "data-dismiss": "alert",
+          "aria-label": "close"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/model.jsp",
+        "line": 95,
+        "tag": "a",
+        "attrs": {
+          "class": "btn btn-sm btn-default",
+          "target": "_blank",
+          "data-toggle": "modal",
+          "data-target": "#editModelPopUp",
+          "data-id": "${model.modelid}",
+          "title": "Edit",
+          "data-original-title": "Edit"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/model.jsp",
+        "line": 96,
+        "tag": "a",
+        "attrs": {
+          "class": "btn btn-sm btn-danger",
+          "target": "_blank",
+          "data-toggle": "modal",
+          "data-target": "#deleteModelPopUp",
+          "data-id": "${model.modelid}",
+          "title": "Delete",
+          "data-original-title": "Delete"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/model.jsp",
+        "line": 115,
+        "tag": "button",
+        "attrs": {
+          "type": "button",
+          "class": "close",
+          "data-dismiss": "modal"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/model.jsp",
+        "line": 119,
+        "tag": "form",
+        "attrs": {
+          "action": "insertModel",
+          "method": "post",
+          "id": "addModel",
+          "name": "addModel"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/model.jsp",
+        "line": 128,
+        "tag": "select",
+        "attrs": {
+          "class": "form-control",
+          "id": "brandList",
+          "name": "brandid",
+          "required": null
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/model.jsp",
+        "line": 136,
+        "tag": "select",
+        "attrs": {
+          "class": "form-control",
+          "id": "catList",
+          "name": "catid",
+          "required": null
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/model.jsp",
+        "line": 144,
+        "tag": "input",
+        "attrs": {
+          "type": "text",
+          "class": "form-control",
+          "name": "modelid",
+          "placeholder": "Model Name Required"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/model.jsp",
+        "line": 150,
+        "tag": "textarea",
+        "attrs": {
+          "class": "form-control",
+          "name": "details",
+          "placeholder": "Enter Details Information(Optional)"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/model.jsp",
+        "line": 157,
+        "tag": "button",
+        "attrs": {
+          "id": "submitModel",
+          "name": "submit",
+          "class": "btn btn-info"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/model.jsp",
+        "line": 175,
+        "tag": "button",
+        "attrs": {
+          "type": "button",
+          "class": "close",
+          "data-dismiss": "modal"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/model.jsp",
+        "line": 179,
+        "tag": "form",
+        "attrs": {
+          "action": "editModel",
+          "method": "post",
+          "id": "editModel",
+          "name": "editModel"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/model.jsp",
+        "line": 188,
+        "tag": "select",
+        "attrs": {
+          "class": "form-control",
+          "id": "editBrandList",
+          "name": "brandid",
+          "required": null
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/model.jsp",
+        "line": 196,
+        "tag": "select",
+        "attrs": {
+          "class": "form-control",
+          "id": "editCatList",
+          "name": "catid",
+          "required": null
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/model.jsp",
+        "line": 204,
+        "tag": "input",
+        "attrs": {
+          "type": "text",
+          "class": "form-control",
+          "name": "modelid",
+          "placeholder": "Model Name Required",
+          "disabled": null
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/model.jsp",
+        "line": 205,
+        "tag": "input",
+        "attrs": {
+          "type": "hidden",
+          "id": "hiddenID",
+          "name": "modelid"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/model.jsp",
+        "line": 211,
+        "tag": "textarea",
+        "attrs": {
+          "class": "form-control",
+          "name": "details",
+          "placeholder": "Enter Details Information(Optional)"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/model.jsp",
+        "line": 217,
+        "tag": "button",
+        "attrs": {
+          "id": "editSubmitModel",
+          "name": "submit",
+          "class": "btn btn-info"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/model.jsp",
+        "line": 233,
+        "tag": "button",
+        "attrs": {
+          "type": "button",
+          "class": "close",
+          "data-dismiss": "modal"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/model.jsp",
+        "line": 240,
+        "tag": "form",
+        "attrs": {
+          "action": "deleteModel",
+          "method": "post",
+          "id": "deleteModel",
+          "name": "deleteModel"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/model.jsp",
+        "line": 241,
+        "tag": "input",
+        "attrs": {
+          "type": "hidden",
+          "id": "hiddenModelID",
+          "name": "modelid"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/model.jsp",
+        "line": 242,
+        "tag": "button",
+        "attrs": {
+          "id": "deleteModelBtn",
+          "name": "deleteModelBtn",
+          "class": "btn btn-danger"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/model.jsp",
+        "line": 244,
+        "tag": "button",
+        "attrs": {
+          "type": "button",
+          "class": "btn btn-default",
+          "data-dismiss": "modal"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/product.jsp",
+        "line": 21,
+        "tag": "input",
+        "attrs": {
+          "type": "text",
+          "class": "input-sm",
+          "id": "searchProduct",
+          "name": "search",
+          "placeholder": "Search"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/product.jsp",
+        "line": 23,
+        "tag": "button",
+        "attrs": {
+          "class": "btn btn-box-tool",
+          "data-toggle": "modal",
+          "data-target": "#insertProductModal",
+          "title": "Insert New Product"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/product.jsp",
+        "line": 24,
+        "tag": "button",
+        "attrs": {
+          "class": "btn btn-box-tool",
+          "data-widget": "collapse",
+          "data-toggle": "tooltip",
+          "title": "Collapse"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/product.jsp",
+        "line": 25,
+        "tag": "button",
+        "attrs": {
+          "class": "btn btn-box-tool",
+          "data-widget": "remove",
+          "data-toggle": "tooltip",
+          "title": "Remove"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/product.jsp",
+        "line": 33,
+        "tag": "a",
+        "attrs": {
+          "class": "close",
+          "data-dismiss": "alert",
+          "aria-label": "close"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/product.jsp",
+        "line": 41,
+        "tag": "a",
+        "attrs": {
+          "class": "close",
+          "data-dismiss": "alert",
+          "aria-label": "close"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/product.jsp",
+        "line": 49,
+        "tag": "a",
+        "attrs": {
+          "class": "close",
+          "data-dismiss": "alert",
+          "aria-label": "close"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/product.jsp",
+        "line": 57,
+        "tag": "a",
+        "attrs": {
+          "class": "close",
+          "data-dismiss": "alert",
+          "aria-label": "close"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/product.jsp",
+        "line": 65,
+        "tag": "a",
+        "attrs": {
+          "class": "close",
+          "data-dismiss": "alert",
+          "aria-label": "close"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/product.jsp",
+        "line": 73,
+        "tag": "a",
+        "attrs": {
+          "class": "close",
+          "data-dismiss": "alert",
+          "aria-label": "close"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/product.jsp",
+        "line": 96,
+        "tag": "a",
+        "attrs": {
+          "class": "btn btn-sm btn-default",
+          "target": "_blank",
+          "data-toggle": "modal",
+          "data-target": "#editProductPopUp",
+          "data-id": "${product.productid}",
+          "title": "Edit",
+          "data-original-title": "Edit"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/product.jsp",
+        "line": 97,
+        "tag": "a",
+        "attrs": {
+          "class": "btn btn-sm btn-danger",
+          "target": "_blank",
+          "data-toggle": "modal",
+          "data-target": "#deleteProductPopUp",
+          "data-id": "${product.productid}",
+          "title": "Delete",
+          "data-original-title": "Delete"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/product.jsp",
+        "line": 116,
+        "tag": "button",
+        "attrs": {
+          "type": "button",
+          "class": "close",
+          "data-dismiss": "modal"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/product.jsp",
+        "line": 120,
+        "tag": "form",
+        "attrs": {
+          "action": "insertProduct",
+          "method": "post",
+          "id": "addProduct",
+          "name": "addProduct"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/product.jsp",
+        "line": 126,
+        "tag": "input",
+        "attrs": {
+          "type": "text",
+          "class": "form-control",
+          "name": "entryid",
+          "disabled": null
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/product.jsp",
+        "line": 127,
+        "tag": "input",
+        "attrs": {
+          "type": "hidden",
+          "id": "hiddenEntryId",
+          "name": "entryid"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/product.jsp",
+        "line": 133,
+        "tag": "input",
+        "attrs": {
+          "type": "text",
+          "class": "form-control",
+          "name": "stockid",
+          "disabled": null
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/product.jsp",
+        "line": 134,
+        "tag": "input",
+        "attrs": {
+          "type": "hidden",
+          "id": "hiddenStockId",
+          "name": "stockid"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/product.jsp",
+        "line": 140,
+        "tag": "input",
+        "attrs": {
+          "type": "text",
+          "class": "form-control",
+          "name": "invoice"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/product.jsp",
+        "line": 146,
+        "tag": "input",
+        "attrs": {
+          "type": "date",
+          "class": "datepicker form-control",
+          "name": "invoiceData",
+          "placeholder": "Enter Invoice Date"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/product.jsp",
+        "line": 154,
+        "tag": "select",
+        "attrs": {
+          "class": "form-control",
+          "id": "brandList",
+          "name": "brandid",
+          "required": null
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/product.jsp",
+        "line": 162,
+        "tag": "input",
+        "attrs": {
+          "type": "text",
+          "class": "form-control",
+          "name": "reorderlevel",
+          "placeholder": "Enter Reorder Level",
+          "required": null
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/product.jsp",
+        "line": 168,
+        "tag": "select",
+        "attrs": {
+          "class": "form-control",
+          "id": "catList",
+          "name": "catid",
+          "required": null
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/product.jsp",
+        "line": 177,
+        "tag": "input",
+        "attrs": {
+          "type": "text",
+          "class": "form-control",
+          "name": "quantity",
+          "placeholder": "Enter Quantity",
+          "required": null
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/product.jsp",
+        "line": 183,
+        "tag": "select",
+        "attrs": {
+          "class": "form-control",
+          "id": "modelList",
+          "name": "modelid",
+          "required": null
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/product.jsp",
+        "line": 192,
+        "tag": "input",
+        "attrs": {
+          "type": "text",
+          "class": "form-control",
+          "name": "ppi",
+          "placeholder": "Enter Price"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/product.jsp",
+        "line": 199,
+        "tag": "select",
+        "attrs": {
+          "class": "form-control",
+          "id": "supplierList",
+          "name": "supplierid",
+          "required": null
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/product.jsp",
+        "line": 209,
+        "tag": "input",
+        "attrs": {
+          "type": "text",
+          "class": "form-control",
+          "name": "spi",
+          "placeholder": "Enter Price"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/product.jsp",
+        "line": 215,
+        "tag": "button",
+        "attrs": {
+          "id": "submitProduct",
+          "name": "submit",
+          "class": "btn btn-info"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/product.jsp",
+        "line": 233,
+        "tag": "button",
+        "attrs": {
+          "type": "button",
+          "class": "close",
+          "data-dismiss": "modal"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/product.jsp",
+        "line": 237,
+        "tag": "form",
+        "attrs": {
+          "action": "editProduct",
+          "method": "post",
+          "id": "editProduct",
+          "name": "editProduct"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/product.jsp",
+        "line": 243,
+        "tag": "input",
+        "attrs": {
+          "type": "text",
+          "class": "form-control",
+          "name": "editProductid",
+          "disabled": null
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/product.jsp",
+        "line": 245,
+        "tag": "input",
+        "attrs": {
+          "type": "hidden",
+          "id": "hiddenID",
+          "name": "productid"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/product.jsp",
+        "line": 249,
+        "tag": "input",
+        "attrs": {
+          "type": "text",
+          "class": "form-control",
+          "name": "name",
+          "placeholder": "Enter Name",
+          "required": null
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/product.jsp",
+        "line": 255,
+        "tag": "input",
+        "attrs": {
+          "type": "text",
+          "class": "form-control",
+          "name": "email",
+          "placeholder": "Enter Email Address"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/product.jsp",
+        "line": 261,
+        "tag": "input",
+        "attrs": {
+          "type": "text",
+          "class": "form-control",
+          "name": "phone",
+          "placeholder": "Enter Phone Number",
+          "required": null
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/product.jsp",
+        "line": 267,
+        "tag": "textarea",
+        "attrs": {
+          "class": "form-control",
+          "name": "address",
+          "placeholder": "Enter Address"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/product.jsp",
+        "line": 273,
+        "tag": "button",
+        "attrs": {
+          "id": "editProductSubmit",
+          "name": "editSubmit",
+          "class": "btn btn-info"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/product.jsp",
+        "line": 289,
+        "tag": "button",
+        "attrs": {
+          "type": "button",
+          "class": "close",
+          "data-dismiss": "modal"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/product.jsp",
+        "line": 296,
+        "tag": "form",
+        "attrs": {
+          "action": "deleteProduct",
+          "method": "post",
+          "id": "deleteProduct",
+          "name": "deleteProduct"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/product.jsp",
+        "line": 297,
+        "tag": "input",
+        "attrs": {
+          "type": "hidden",
+          "id": "hiddenProductID",
+          "name": "productid"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/product.jsp",
+        "line": 298,
+        "tag": "button",
+        "attrs": {
+          "id": "deleteProductBtn",
+          "name": "deleteProductBtn",
+          "class": "btn btn-danger"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/product.jsp",
+        "line": 300,
+        "tag": "button",
+        "attrs": {
+          "type": "button",
+          "class": "btn btn-default",
+          "data-dismiss": "modal"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/suppliers.jsp",
+        "line": 21,
+        "tag": "input",
+        "attrs": {
+          "type": "text",
+          "class": "input-sm",
+          "id": "searchSupplier",
+          "name": "search",
+          "placeholder": "Search"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/suppliers.jsp",
+        "line": 23,
+        "tag": "button",
+        "attrs": {
+          "class": "btn btn-box-tool",
+          "data-toggle": "modal",
+          "data-target": "#insertSupplierModal",
+          "title": "Insert New Supplier"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/suppliers.jsp",
+        "line": 24,
+        "tag": "button",
+        "attrs": {
+          "class": "btn btn-box-tool",
+          "data-widget": "collapse",
+          "data-toggle": "tooltip",
+          "title": "Collapse"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/suppliers.jsp",
+        "line": 25,
+        "tag": "button",
+        "attrs": {
+          "class": "btn btn-box-tool",
+          "data-widget": "remove",
+          "data-toggle": "tooltip",
+          "title": "Remove"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/suppliers.jsp",
+        "line": 33,
+        "tag": "a",
+        "attrs": {
+          "class": "close",
+          "data-dismiss": "alert",
+          "aria-label": "close"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/suppliers.jsp",
+        "line": 41,
+        "tag": "a",
+        "attrs": {
+          "class": "close",
+          "data-dismiss": "alert",
+          "aria-label": "close"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/suppliers.jsp",
+        "line": 49,
+        "tag": "a",
+        "attrs": {
+          "class": "close",
+          "data-dismiss": "alert",
+          "aria-label": "close"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/suppliers.jsp",
+        "line": 57,
+        "tag": "a",
+        "attrs": {
+          "class": "close",
+          "data-dismiss": "alert",
+          "aria-label": "close"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/suppliers.jsp",
+        "line": 65,
+        "tag": "a",
+        "attrs": {
+          "class": "close",
+          "data-dismiss": "alert",
+          "aria-label": "close"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/suppliers.jsp",
+        "line": 73,
+        "tag": "a",
+        "attrs": {
+          "class": "close",
+          "data-dismiss": "alert",
+          "aria-label": "close"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/suppliers.jsp",
+        "line": 96,
+        "tag": "a",
+        "attrs": {
+          "class": "btn btn-sm btn-default",
+          "target": "_blank",
+          "data-toggle": "modal",
+          "data-target": "#editSupplierPopUp",
+          "data-id": "${supplier.supplierid}",
+          "title": "Edit",
+          "data-original-title": "Edit"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/suppliers.jsp",
+        "line": 97,
+        "tag": "a",
+        "attrs": {
+          "class": "btn btn-sm btn-danger",
+          "target": "_blank",
+          "data-toggle": "modal",
+          "data-target": "#deleteSupplierPopUp",
+          "data-id": "${supplier.supplierid}",
+          "title": "Delete",
+          "data-original-title": "Delete"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/suppliers.jsp",
+        "line": 116,
+        "tag": "button",
+        "attrs": {
+          "type": "button",
+          "class": "close",
+          "data-dismiss": "modal"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/suppliers.jsp",
+        "line": 120,
+        "tag": "form",
+        "attrs": {
+          "action": "insertSupplier",
+          "method": "post",
+          "id": "addSupplier",
+          "name": "addSupplier"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/suppliers.jsp",
+        "line": 126,
+        "tag": "input",
+        "attrs": {
+          "type": "text",
+          "class": "form-control",
+          "name": "supplierid",
+          "disabled": null
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/suppliers.jsp",
+        "line": 132,
+        "tag": "input",
+        "attrs": {
+          "type": "text",
+          "class": "form-control",
+          "name": "name",
+          "placeholder": "Enter Name",
+          "required": null
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/suppliers.jsp",
+        "line": 138,
+        "tag": "input",
+        "attrs": {
+          "type": "text",
+          "class": "form-control",
+          "name": "email",
+          "placeholder": "Enter Email Address"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/suppliers.jsp",
+        "line": 144,
+        "tag": "input",
+        "attrs": {
+          "type": "text",
+          "class": "form-control",
+          "name": "phone",
+          "placeholder": "Enter Phone Number",
+          "required": null
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/suppliers.jsp",
+        "line": 150,
+        "tag": "textarea",
+        "attrs": {
+          "class": "form-control",
+          "name": "address",
+          "placeholder": "Enter Address"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/suppliers.jsp",
+        "line": 156,
+        "tag": "button",
+        "attrs": {
+          "id": "submitSupplier",
+          "name": "submit",
+          "class": "btn btn-info"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/suppliers.jsp",
+        "line": 174,
+        "tag": "button",
+        "attrs": {
+          "type": "button",
+          "class": "close",
+          "data-dismiss": "modal"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/suppliers.jsp",
+        "line": 178,
+        "tag": "form",
+        "attrs": {
+          "action": "editSupplier",
+          "method": "post",
+          "id": "editSupplier",
+          "name": "editSupplier"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/suppliers.jsp",
+        "line": 184,
+        "tag": "input",
+        "attrs": {
+          "type": "text",
+          "class": "form-control",
+          "name": "editSupplierid",
+          "disabled": null
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/suppliers.jsp",
+        "line": 186,
+        "tag": "input",
+        "attrs": {
+          "type": "hidden",
+          "id": "hiddenID",
+          "name": "supplierid"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/suppliers.jsp",
+        "line": 190,
+        "tag": "input",
+        "attrs": {
+          "type": "text",
+          "class": "form-control",
+          "name": "name",
+          "placeholder": "Enter Name",
+          "required": null
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/suppliers.jsp",
+        "line": 196,
+        "tag": "input",
+        "attrs": {
+          "type": "text",
+          "class": "form-control",
+          "name": "email",
+          "placeholder": "Enter Email Address"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/suppliers.jsp",
+        "line": 202,
+        "tag": "input",
+        "attrs": {
+          "type": "text",
+          "class": "form-control",
+          "name": "phone",
+          "placeholder": "Enter Phone Number",
+          "required": null
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/suppliers.jsp",
+        "line": 208,
+        "tag": "textarea",
+        "attrs": {
+          "class": "form-control",
+          "name": "address",
+          "placeholder": "Enter Address"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/suppliers.jsp",
+        "line": 214,
+        "tag": "button",
+        "attrs": {
+          "id": "editSupplierSubmit",
+          "name": "editSubmit",
+          "class": "btn btn-info"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/suppliers.jsp",
+        "line": 230,
+        "tag": "button",
+        "attrs": {
+          "type": "button",
+          "class": "close",
+          "data-dismiss": "modal"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/suppliers.jsp",
+        "line": 237,
+        "tag": "form",
+        "attrs": {
+          "action": "deleteSupplier",
+          "method": "post",
+          "id": "deleteSupplier",
+          "name": "deleteSupplier"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/suppliers.jsp",
+        "line": 238,
+        "tag": "input",
+        "attrs": {
+          "type": "hidden",
+          "id": "hiddenSupplierID",
+          "name": "supplierid"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/suppliers.jsp",
+        "line": 239,
+        "tag": "button",
+        "attrs": {
+          "id": "deleteSupplierBtn",
+          "name": "deleteSupplierBtn",
+          "class": "btn btn-danger"
+        }
+      },
+      {
+        "file": "web/WEB-INF/jsp/suppliers.jsp",
+        "line": 241,
+        "tag": "button",
+        "attrs": {
+          "type": "button",
+          "class": "btn btn-default",
+          "data-dismiss": "modal"
+        }
+      }
+    ],
+    "struts": []
+  },
+  "airline_system": {
+    "javaFilesParsed": 12,
+    "java": [
+      {
+        "kind": "endpoint",
+        "file": "src/main/java/com/airline/controller/WebController.java",
+        "line": 30,
+        "class": "WebController",
+        "method": "home",
+        "httpMethod": "GET",
+        "path": "/",
+        "params": "",
+        "rest": false
+      },
+      {
+        "kind": "return",
+        "file": "src/main/java/com/airline/controller/WebController.java",
+        "line": 39,
+        "class": "WebController",
+        "method": "home",
+        "expression": "\"index\"",
+        "guards": []
+      },
+      {
+        "kind": "endpoint",
+        "file": "src/main/java/com/airline/controller/WebController.java",
+        "line": 42,
+        "class": "WebController",
+        "method": "flights",
+        "httpMethod": "GET",
+        "path": "/flights",
+        "params": "",
+        "rest": false
+      },
+      {
+        "kind": "return",
+        "file": "src/main/java/com/airline/controller/WebController.java",
+        "line": 47,
+        "class": "WebController",
+        "method": "flights",
+        "expression": "\"flights\"",
+        "guards": []
+      },
+      {
+        "kind": "endpoint",
+        "file": "src/main/java/com/airline/controller/WebController.java",
+        "line": 50,
+        "class": "WebController",
+        "method": "addFlight",
+        "httpMethod": "POST",
+        "path": "/flights/add",
+        "params": "",
+        "rest": false
+      },
+      {
+        "kind": "return",
+        "file": "src/main/java/com/airline/controller/WebController.java",
+        "line": 61,
+        "class": "WebController",
+        "method": "addFlight",
+        "expression": "\"redirect:/flights\"",
+        "guards": []
+      },
+      {
+        "kind": "endpoint",
+        "file": "src/main/java/com/airline/controller/WebController.java",
+        "line": 64,
+        "class": "WebController",
+        "method": "passengers",
+        "httpMethod": "GET",
+        "path": "/passengers",
+        "params": "",
+        "rest": false
+      },
+      {
+        "kind": "return",
+        "file": "src/main/java/com/airline/controller/WebController.java",
+        "line": 69,
+        "class": "WebController",
+        "method": "passengers",
+        "expression": "\"passengers\"",
+        "guards": []
+      },
+      {
+        "kind": "endpoint",
+        "file": "src/main/java/com/airline/controller/WebController.java",
+        "line": 72,
+        "class": "WebController",
+        "method": "addPassenger",
+        "httpMethod": "POST",
+        "path": "/passengers/add",
+        "params": "",
+        "rest": false
+      },
+      {
+        "kind": "return",
+        "file": "src/main/java/com/airline/controller/WebController.java",
+        "line": 75,
+        "class": "WebController",
+        "method": "addPassenger",
+        "expression": "\"redirect:/passengers\"",
+        "guards": []
+      },
+      {
+        "kind": "endpoint",
+        "file": "src/main/java/com/airline/controller/WebController.java",
+        "line": 78,
+        "class": "WebController",
+        "method": "reservations",
+        "httpMethod": "GET",
+        "path": "/reservations",
+        "params": "",
+        "rest": false
+      },
+      {
+        "kind": "return",
+        "file": "src/main/java/com/airline/controller/WebController.java",
+        "line": 87,
+        "class": "WebController",
+        "method": "reservations",
+        "expression": "\"reservations\"",
+        "guards": []
+      },
+      {
+        "kind": "endpoint",
+        "file": "src/main/java/com/airline/controller/WebController.java",
+        "line": 90,
+        "class": "WebController",
+        "method": "addReservation",
+        "httpMethod": "POST",
+        "path": "/reservations/add",
+        "params": "",
+        "rest": false
+      },
+      {
+        "kind": "return",
+        "file": "src/main/java/com/airline/controller/WebController.java",
+        "line": 97,
+        "class": "WebController",
+        "method": "addReservation",
+        "expression": "\"redirect:/reservations\"",
+        "guards": []
+      }
+    ],
+    "views": [
+      {
+        "file": "src/main/resources/templates/flights.html",
+        "line": 1
+      },
+      {
+        "file": "src/main/resources/templates/index.html",
+        "line": 1
+      },
+      {
+        "file": "src/main/resources/templates/passengers.html",
+        "line": 1
+      },
+      {
+        "file": "src/main/resources/templates/reservations.html",
+        "line": 1
+      }
+    ],
+    "controls": [
+      {
+        "file": "src/main/resources/templates/flights.html",
+        "line": 32,
+        "tag": "a",
+        "attrs": {
+          "class": "navbar-brand fw-bold text-primary",
+          "href": "/"
+        }
+      },
+      {
+        "file": "src/main/resources/templates/flights.html",
+        "line": 36,
+        "tag": "a",
+        "attrs": {
+          "class": "nav-link active",
+          "href": "/flights"
+        }
+      },
+      {
+        "file": "src/main/resources/templates/flights.html",
+        "line": 37,
+        "tag": "a",
+        "attrs": {
+          "class": "nav-link",
+          "href": "/passengers"
+        }
+      },
+      {
+        "file": "src/main/resources/templates/flights.html",
+        "line": 38,
+        "tag": "a",
+        "attrs": {
+          "class": "nav-link",
+          "href": "/reservations"
+        }
+      },
+      {
+        "file": "src/main/resources/templates/flights.html",
+        "line": 52,
+        "tag": "form",
+        "attrs": {
+          "th:action": "@{/flights/add}",
+          "method": "post",
+          "th:object": "${newFlight}"
+        }
+      },
+      {
+        "file": "src/main/resources/templates/flights.html",
+        "line": 55,
+        "tag": "input",
+        "attrs": {
+          "type": "text",
+          "class": "form-control",
+          "id": "flightNumber",
+          "th:field": "*{flightNumber}",
+          "required": null
+        }
+      },
+      {
+        "file": "src/main/resources/templates/flights.html",
+        "line": 59,
+        "tag": "input",
+        "attrs": {
+          "type": "text",
+          "class": "form-control",
+          "id": "departure",
+          "th:field": "*{departure}",
+          "required": null
+        }
+      },
+      {
+        "file": "src/main/resources/templates/flights.html",
+        "line": 63,
+        "tag": "input",
+        "attrs": {
+          "type": "text",
+          "class": "form-control",
+          "id": "destination",
+          "th:field": "*{destination}",
+          "required": null
+        }
+      },
+      {
+        "file": "src/main/resources/templates/flights.html",
+        "line": 67,
+        "tag": "input",
+        "attrs": {
+          "type": "datetime-local",
+          "class": "form-control",
+          "id": "departureTime",
+          "name": "departureTimeStr",
+          "required": null
+        }
+      },
+      {
+        "file": "src/main/resources/templates/flights.html",
+        "line": 71,
+        "tag": "input",
+        "attrs": {
+          "type": "number",
+          "class": "form-control",
+          "id": "seatCapacity",
+          "th:field": "*{seatCapacity}",
+          "required": null
+        }
+      },
+      {
+        "file": "src/main/resources/templates/flights.html",
+        "line": 73,
+        "tag": "button",
+        "attrs": {
+          "type": "submit",
+          "class": "btn btn-primary w-100"
+        }
+      },
+      {
+        "file": "src/main/resources/templates/index.html",
+        "line": 41,
+        "tag": "a",
+        "attrs": {
+          "class": "navbar-brand fw-bold text-primary",
+          "href": "/"
+        }
+      },
+      {
+        "file": "src/main/resources/templates/index.html",
+        "line": 45,
+        "tag": "a",
+        "attrs": {
+          "class": "nav-link",
+          "href": "/flights"
+        }
+      },
+      {
+        "file": "src/main/resources/templates/index.html",
+        "line": 46,
+        "tag": "a",
+        "attrs": {
+          "class": "nav-link",
+          "href": "/passengers"
+        }
+      },
+      {
+        "file": "src/main/resources/templates/index.html",
+        "line": 47,
+        "tag": "a",
+        "attrs": {
+          "class": "nav-link",
+          "href": "/reservations"
+        }
+      },
+      {
+        "file": "src/main/resources/templates/index.html",
+        "line": 129,
+        "tag": "a",
+        "attrs": {
+          "href": "/flights",
+          "class": "btn btn-primary"
+        }
+      },
+      {
+        "file": "src/main/resources/templates/index.html",
+        "line": 140,
+        "tag": "a",
+        "attrs": {
+          "href": "/flights",
+          "class": "card text-decoration-none"
+        }
+      },
+      {
+        "file": "src/main/resources/templates/index.html",
+        "line": 149,
+        "tag": "a",
+        "attrs": {
+          "href": "/passengers",
+          "class": "card text-decoration-none"
+        }
+      },
+      {
+        "file": "src/main/resources/templates/index.html",
+        "line": 158,
+        "tag": "a",
+        "attrs": {
+          "href": "/reservations",
+          "class": "card text-decoration-none"
+        }
+      },
+      {
+        "file": "src/main/resources/templates/passengers.html",
+        "line": 32,
+        "tag": "a",
+        "attrs": {
+          "class": "navbar-brand fw-bold text-primary",
+          "href": "/"
+        }
+      },
+      {
+        "file": "src/main/resources/templates/passengers.html",
+        "line": 36,
+        "tag": "a",
+        "attrs": {
+          "class": "nav-link",
+          "href": "/flights"
+        }
+      },
+      {
+        "file": "src/main/resources/templates/passengers.html",
+        "line": 37,
+        "tag": "a",
+        "attrs": {
+          "class": "nav-link active",
+          "href": "/passengers"
+        }
+      },
+      {
+        "file": "src/main/resources/templates/passengers.html",
+        "line": 38,
+        "tag": "a",
+        "attrs": {
+          "class": "nav-link",
+          "href": "/reservations"
+        }
+      },
+      {
+        "file": "src/main/resources/templates/passengers.html",
+        "line": 52,
+        "tag": "form",
+        "attrs": {
+          "th:action": "@{/passengers/add}",
+          "method": "post",
+          "th:object": "${newPassenger}"
+        }
+      },
+      {
+        "file": "src/main/resources/templates/passengers.html",
+        "line": 55,
+        "tag": "input",
+        "attrs": {
+          "type": "text",
+          "class": "form-control",
+          "id": "passengerId",
+          "th:field": "*{passengerId}",
+          "required": null
+        }
+      },
+      {
+        "file": "src/main/resources/templates/passengers.html",
+        "line": 59,
+        "tag": "input",
+        "attrs": {
+          "type": "text",
+          "class": "form-control",
+          "id": "firstName",
+          "th:field": "*{firstName}",
+          "required": null
+        }
+      },
+      {
+        "file": "src/main/resources/templates/passengers.html",
+        "line": 63,
+        "tag": "input",
+        "attrs": {
+          "type": "text",
+          "class": "form-control",
+          "id": "lastName",
+          "th:field": "*{lastName}",
+          "required": null
+        }
+      },
+      {
+        "file": "src/main/resources/templates/passengers.html",
+        "line": 65,
+        "tag": "button",
+        "attrs": {
+          "type": "submit",
+          "class": "btn btn-success w-100"
+        }
+      },
+      {
+        "file": "src/main/resources/templates/passengers.html",
+        "line": 102,
+        "tag": "button",
+        "attrs": {
+          "class": "btn btn-sm btn-outline-primary"
+        }
+      },
+      {
+        "file": "src/main/resources/templates/passengers.html",
+        "line": 105,
+        "tag": "button",
+        "attrs": {
+          "class": "btn btn-sm btn-outline-danger"
+        }
+      },
+      {
+        "file": "src/main/resources/templates/reservations.html",
+        "line": 32,
+        "tag": "a",
+        "attrs": {
+          "class": "navbar-brand fw-bold text-primary",
+          "href": "/"
+        }
+      },
+      {
+        "file": "src/main/resources/templates/reservations.html",
+        "line": 36,
+        "tag": "a",
+        "attrs": {
+          "class": "nav-link",
+          "href": "/flights"
+        }
+      },
+      {
+        "file": "src/main/resources/templates/reservations.html",
+        "line": 37,
+        "tag": "a",
+        "attrs": {
+          "class": "nav-link",
+          "href": "/passengers"
+        }
+      },
+      {
+        "file": "src/main/resources/templates/reservations.html",
+        "line": 38,
+        "tag": "a",
+        "attrs": {
+          "class": "nav-link active",
+          "href": "/reservations"
+        }
+      },
+      {
+        "file": "src/main/resources/templates/reservations.html",
+        "line": 52,
+        "tag": "form",
+        "attrs": {
+          "th:action": "@{/reservations/add}",
+          "method": "post"
+        }
+      },
+      {
+        "file": "src/main/resources/templates/reservations.html",
+        "line": 55,
+        "tag": "select",
+        "attrs": {
+          "class": "form-select",
+          "id": "flightNumber",
+          "name": "flightNumber",
+          "required": null
+        }
+      },
+      {
+        "file": "src/main/resources/templates/reservations.html",
+        "line": 66,
+        "tag": "select",
+        "attrs": {
+          "class": "form-select",
+          "id": "passengerId",
+          "name": "passengerId",
+          "required": null
+        }
+      },
+      {
+        "file": "src/main/resources/templates/reservations.html",
+        "line": 75,
+        "tag": "button",
+        "attrs": {
+          "type": "submit",
+          "class": "btn btn-warning w-100"
+        }
+      },
+      {
+        "file": "src/main/resources/templates/reservations.html",
+        "line": 122,
+        "tag": "button",
+        "attrs": {
+          "class": "btn btn-sm btn-outline-danger"
+        }
+      }
+    ],
+    "struts": []
+  }
+}

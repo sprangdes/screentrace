@@ -1,0 +1,828 @@
+[
+  {
+    "id": "O01",
+    "project": "MyStrutsApp",
+    "result": "FAIL",
+    "matchedComponents": [
+      {
+        "id": "component:1b0531c5-b01a-394d-a0d6-a73c4ca38adc",
+        "kind": "LINK",
+        "name": "REGISTER YOURSELF"
+      }
+    ],
+    "behaviorTypes": [
+      "UNKNOWN"
+    ],
+    "actualViews": [],
+    "actualRoutes": [],
+    "expectedViews": [
+      "web/Registration.jsp"
+    ],
+    "missingViews": [
+      "web/Registration.jsp"
+    ],
+    "extraViews": []
+  },
+  {
+    "id": "O02",
+    "project": "MyStrutsApp",
+    "result": "FAIL",
+    "matchedComponents": [
+      {
+        "id": "component:fe166d83-a58e-3d2e-9414-8e0b467f0c24",
+        "kind": "LINK",
+        "name": "Forget Password"
+      }
+    ],
+    "behaviorTypes": [
+      "UNKNOWN"
+    ],
+    "actualViews": [],
+    "actualRoutes": [],
+    "expectedViews": [
+      "web/ForgetPassword.jsp"
+    ],
+    "missingViews": [
+      "web/ForgetPassword.jsp"
+    ],
+    "extraViews": []
+  },
+  {
+    "id": "O03",
+    "project": "MyStrutsApp",
+    "result": "PASS",
+    "matchedComponents": [
+      {
+        "id": "component:8042e9a3-b996-3adf-8277-9eb26ca94f5f",
+        "kind": "FORM",
+        "name": "表單 1"
+      }
+    ],
+    "behaviorTypes": [
+      "SUBMIT_FORM"
+    ],
+    "actualViews": [
+      "web/WEB-INF/success.jsp",
+      "web/login.jsp"
+    ],
+    "actualRoutes": [
+      "/login.do"
+    ],
+    "expectedViews": [
+      "web/WEB-INF/success.jsp",
+      "web/login.jsp"
+    ],
+    "missingViews": [],
+    "extraViews": []
+  },
+  {
+    "id": "O04",
+    "project": "MyStrutsApp",
+    "result": "PASS",
+    "matchedComponents": [
+      {
+        "id": "component:215053ac-c21f-39e6-85c6-b90b76f57144",
+        "kind": "FORM",
+        "name": "表單 1"
+      }
+    ],
+    "behaviorTypes": [
+      "SUBMIT_FORM"
+    ],
+    "actualViews": [
+      "web/Registration.jsp"
+    ],
+    "actualRoutes": [
+      "/Registration.do"
+    ],
+    "expectedViews": [
+      "web/Registration.jsp"
+    ],
+    "missingViews": [],
+    "extraViews": []
+  },
+  {
+    "id": "O05",
+    "project": "MyStrutsApp",
+    "result": "PASS",
+    "matchedComponents": [
+      {
+        "id": "component:f367a614-fb01-30c8-bc4f-60f96fb1cf29",
+        "kind": "FORM",
+        "name": "表單 1"
+      }
+    ],
+    "behaviorTypes": [
+      "SUBMIT_FORM"
+    ],
+    "actualViews": [
+      "web/AddBook.jsp"
+    ],
+    "actualRoutes": [
+      "/AddBook.do"
+    ],
+    "expectedViews": [
+      "web/AddBook.jsp"
+    ],
+    "missingViews": [],
+    "extraViews": []
+  },
+  {
+    "id": "O06",
+    "project": "MyStrutsApp",
+    "result": "FUNCTION_REQUIRES_UI_CHECK",
+    "matchedComponents": [
+      {
+        "id": "component:abc87527-8389-3953-a4cc-93d2c24b3285",
+        "kind": "SUBMIT",
+        "name": "表單送出 1"
+      },
+      {
+        "id": "component:de049e60-2b09-353d-aa86-68a04b518ed5",
+        "kind": "BUTTON",
+        "name": "按鈕 1"
+      }
+    ],
+    "behaviorTypes": [
+      "SUBMIT_FORM",
+      "UNKNOWN"
+    ],
+    "actualViews": [],
+    "actualRoutes": [],
+    "expectedViews": [],
+    "missingViews": [],
+    "extraViews": []
+  },
+  {
+    "id": "O07",
+    "project": "MyStrutsApp",
+    "result": "FUNCTION_REQUIRES_UI_CHECK",
+    "matchedComponents": [
+      {
+        "id": "component:b0329e2e-8e44-390c-9c14-531a400bc6d4",
+        "kind": "TEXT_INPUT",
+        "name": "文字欄位 3"
+      },
+      {
+        "id": "component:e9bffdf4-1139-361f-bca3-3c6415bd23b5",
+        "kind": "LINK",
+        "name": "Select Date"
+      }
+    ],
+    "behaviorTypes": [
+      "OPEN_DIALOG",
+      "UNKNOWN"
+    ],
+    "actualViews": [],
+    "actualRoutes": [],
+    "expectedViews": [],
+    "missingViews": [],
+    "extraViews": []
+  },
+  {
+    "id": "E01",
+    "project": "eBazaar",
+    "result": "FAIL",
+    "matchedComponents": [
+      {
+        "id": "component:a0e398bb-d6ef-35f8-95a3-83d54e5230bf",
+        "kind": "BUTTON",
+        "name": "Go to Products"
+      },
+      {
+        "id": "component:e6c743ab-4a08-3def-bc6e-8db7430c5695",
+        "kind": "LINK",
+        "name": "Go to Products"
+      }
+    ],
+    "behaviorTypes": [
+      "NAVIGATE"
+    ],
+    "actualViews": [],
+    "actualRoutes": [
+      "/product"
+    ],
+    "expectedViews": [
+      "src/main/webapp/WEB-INF/views/products.jsp"
+    ],
+    "missingViews": [
+      "src/main/webapp/WEB-INF/views/products.jsp"
+    ],
+    "extraViews": []
+  },
+  {
+    "id": "E02",
+    "project": "eBazaar",
+    "result": "PASS",
+    "matchedComponents": [
+      {
+        "id": "component:10cff120-abe2-3f5a-ab5c-736687b8eb91",
+        "kind": "LINK",
+        "name": "Add Product"
+      },
+      {
+        "id": "component:e65e2c73-6cac-3e98-b147-390d16c75eaa",
+        "kind": "BUTTON",
+        "name": "Add Product"
+      }
+    ],
+    "behaviorTypes": [
+      "NAVIGATE"
+    ],
+    "actualViews": [
+      "src/main/webapp/WEB-INF/views/productForm.jsp"
+    ],
+    "actualRoutes": [
+      "/product/addProduct"
+    ],
+    "expectedViews": [
+      "src/main/webapp/WEB-INF/views/productForm.jsp"
+    ],
+    "missingViews": [],
+    "extraViews": []
+  },
+  {
+    "id": "E03",
+    "project": "eBazaar",
+    "result": "FAIL",
+    "matchedComponents": [
+      {
+        "id": "component:67ba11e1-2106-35ed-8254-b96f907dcb00",
+        "kind": "BUTTON",
+        "name": "Details"
+      }
+    ],
+    "behaviorTypes": [],
+    "actualViews": [],
+    "actualRoutes": [],
+    "expectedViews": [
+      "src/main/webapp/WEB-INF/views/productDetails.jsp"
+    ],
+    "missingViews": [
+      "src/main/webapp/WEB-INF/views/productDetails.jsp"
+    ],
+    "extraViews": []
+  },
+  {
+    "id": "E04",
+    "project": "eBazaar",
+    "result": "FAIL",
+    "matchedComponents": [
+      {
+        "id": "component:2b57986e-8723-3319-bbfa-aab5f330292c",
+        "kind": "FORM",
+        "name": "表單 1"
+      }
+    ],
+    "behaviorTypes": [
+      "SUBMIT_FORM"
+    ],
+    "actualViews": [
+      "src/main/webapp/WEB-INF/views/productForm.jsp"
+    ],
+    "actualRoutes": [
+      "/product",
+      "/product/addProduct"
+    ],
+    "expectedViews": [
+      "src/main/webapp/WEB-INF/views/productForm.jsp",
+      "src/main/webapp/WEB-INF/views/products.jsp"
+    ],
+    "missingViews": [
+      "src/main/webapp/WEB-INF/views/products.jsp"
+    ],
+    "extraViews": []
+  },
+  {
+    "id": "E05",
+    "project": "eBazaar",
+    "result": "PASS",
+    "matchedComponents": [
+      {
+        "id": "component:c5173f1d-5044-34c2-b04e-180c67529f66",
+        "kind": "LINK",
+        "name": "Show Cart"
+      },
+      {
+        "id": "component:d0cb2c56-ea64-3ccb-8af4-dee6dcb7d3ab",
+        "kind": "BUTTON",
+        "name": "Show Cart"
+      }
+    ],
+    "behaviorTypes": [
+      "NAVIGATE"
+    ],
+    "actualViews": [
+      "src/main/webapp/WEB-INF/views/myCart.jsp"
+    ],
+    "actualRoutes": [
+      "/order/showCart"
+    ],
+    "expectedViews": [
+      "src/main/webapp/WEB-INF/views/myCart.jsp"
+    ],
+    "missingViews": [],
+    "extraViews": []
+  },
+  {
+    "id": "E06",
+    "project": "eBazaar",
+    "result": "FUNCTION_REQUIRES_UI_CHECK",
+    "matchedComponents": [
+      {
+        "id": "component:0da1c1f3-90ee-38bc-97f8-922dc8bf431f",
+        "kind": "BUTTON",
+        "name": "Order Now"
+      }
+    ],
+    "behaviorTypes": [
+      "SELECT_CHANGE",
+      "UI_STATE_CHANGE"
+    ],
+    "actualViews": [],
+    "actualRoutes": [],
+    "expectedViews": [],
+    "missingViews": [],
+    "extraViews": []
+  },
+  {
+    "id": "E07",
+    "project": "eBazaar",
+    "result": "FAIL",
+    "matchedComponents": [
+      {
+        "id": "component:25a734b3-07c0-3e97-aecc-33ec97728a07",
+        "kind": "BUTTON",
+        "name": "Add to Cart"
+      }
+    ],
+    "behaviorTypes": [
+      "CALL_API",
+      "OPEN_DIALOG",
+      "SUBMIT_FORM"
+    ],
+    "actualViews": [
+      "src/main/webapp/WEB-INF/views/productDetails.jsp"
+    ],
+    "actualRoutes": [
+      "/product/productDetail"
+    ],
+    "expectedViews": [],
+    "missingViews": [],
+    "extraViews": [
+      "src/main/webapp/WEB-INF/views/productDetails.jsp"
+    ]
+  },
+  {
+    "id": "E08",
+    "project": "eBazaar",
+    "result": "FAIL",
+    "matchedComponents": [
+      {
+        "id": "component:3348153b-833f-3b72-a4c8-02e9211776cf",
+        "kind": "BUTTON",
+        "name": "Remove"
+      }
+    ],
+    "behaviorTypes": [
+      "CALL_API",
+      "OPEN_DIALOG",
+      "UNKNOWN"
+    ],
+    "actualViews": [],
+    "actualRoutes": [],
+    "expectedViews": [],
+    "missingViews": [],
+    "extraViews": []
+  },
+  {
+    "id": "E09",
+    "project": "eBazaar",
+    "result": "FAIL",
+    "matchedComponents": [
+      {
+        "id": "component:89ac8f1f-7944-3d31-b4a4-c4b465077388",
+        "kind": "LINK",
+        "name": "Check out"
+      },
+      {
+        "id": "component:9568a8b1-1903-3869-bda0-4cd2beb90b88",
+        "kind": "BUTTON",
+        "name": "Check out"
+      }
+    ],
+    "behaviorTypes": [
+      "NAVIGATE"
+    ],
+    "actualViews": [],
+    "actualRoutes": [],
+    "expectedViews": [
+      "src/main/webapp/WEB-INF/flow/jsp/shippingDetails.jsp"
+    ],
+    "missingViews": [
+      "src/main/webapp/WEB-INF/flow/jsp/shippingDetails.jsp"
+    ],
+    "extraViews": []
+  },
+  {
+    "id": "E10",
+    "project": "eBazaar",
+    "result": "FAIL",
+    "matchedComponents": [
+      {
+        "id": "component:c5658236-f53e-3d06-a1a9-262f73cdf905",
+        "kind": "SUBMIT",
+        "name": "Continue"
+      }
+    ],
+    "behaviorTypes": [
+      "SUBMIT_FORM"
+    ],
+    "actualViews": [],
+    "actualRoutes": [],
+    "expectedViews": [
+      "src/main/webapp/WEB-INF/flow/jsp/paymentDetails.jsp"
+    ],
+    "missingViews": [
+      "src/main/webapp/WEB-INF/flow/jsp/paymentDetails.jsp"
+    ],
+    "extraViews": []
+  },
+  {
+    "id": "E11",
+    "project": "eBazaar",
+    "result": "FAIL",
+    "matchedComponents": [
+      {
+        "id": "component:fd4c82a0-9acc-3beb-9e70-c7e65af4c10f",
+        "kind": "BUTTON",
+        "name": "Back"
+      }
+    ],
+    "behaviorTypes": [
+      "SUBMIT_FORM"
+    ],
+    "actualViews": [],
+    "actualRoutes": [],
+    "expectedViews": [
+      "src/main/webapp/WEB-INF/flow/jsp/shippingDetails.jsp"
+    ],
+    "missingViews": [
+      "src/main/webapp/WEB-INF/flow/jsp/shippingDetails.jsp"
+    ],
+    "extraViews": []
+  },
+  {
+    "id": "E12",
+    "project": "eBazaar",
+    "result": "FAIL",
+    "matchedComponents": [
+      {
+        "id": "component:4a46eb23-4eff-361f-80ab-2acb324e3184",
+        "kind": "SUBMIT",
+        "name": "Continue"
+      }
+    ],
+    "behaviorTypes": [
+      "SUBMIT_FORM"
+    ],
+    "actualViews": [],
+    "actualRoutes": [],
+    "expectedViews": [
+      "src/main/webapp/WEB-INF/flow/jsp/orderConfirmation.jsp"
+    ],
+    "missingViews": [
+      "src/main/webapp/WEB-INF/flow/jsp/orderConfirmation.jsp"
+    ],
+    "extraViews": []
+  },
+  {
+    "id": "E13",
+    "project": "eBazaar",
+    "result": "FAIL",
+    "matchedComponents": [
+      {
+        "id": "component:bfb83a0f-bb0b-33ac-820e-eeec76f48f0a",
+        "kind": "SUBMIT",
+        "name": "Confirm"
+      }
+    ],
+    "behaviorTypes": [
+      "SUBMIT_FORM"
+    ],
+    "actualViews": [],
+    "actualRoutes": [],
+    "expectedViews": [
+      "src/main/webapp/WEB-INF/flow/jsp/thanks.jsp"
+    ],
+    "missingViews": [
+      "src/main/webapp/WEB-INF/flow/jsp/thanks.jsp"
+    ],
+    "extraViews": []
+  },
+  {
+    "id": "E14",
+    "project": "eBazaar",
+    "result": "FAIL",
+    "matchedComponents": [
+      {
+        "id": "component:d42d58af-5ed3-3e8b-b115-ca57c303f4ae",
+        "kind": "BUTTON",
+        "name": "Cancel"
+      }
+    ],
+    "behaviorTypes": [
+      "SUBMIT_FORM"
+    ],
+    "actualViews": [],
+    "actualRoutes": [],
+    "expectedViews": [
+      "src/main/webapp/WEB-INF/flow/jsp/cancelOrder.jsp"
+    ],
+    "missingViews": [
+      "src/main/webapp/WEB-INF/flow/jsp/cancelOrder.jsp"
+    ],
+    "extraViews": []
+  },
+  {
+    "id": "H01",
+    "project": "Hospital-Bed-Availability-Management-System",
+    "result": "FAIL",
+    "matchedComponents": [
+      {
+        "id": "component:8485ef1c-cf61-332c-92a6-5c4f01febaa8",
+        "kind": "LINK",
+        "name": "連結 3"
+      }
+    ],
+    "behaviorTypes": [
+      "NAVIGATE"
+    ],
+    "actualViews": [
+      "/hospital/login"
+    ],
+    "actualRoutes": [
+      "/hospital/login"
+    ],
+    "expectedViews": [
+      "src/main/webapp/WEB-INF/views/hospital/login.jsp"
+    ],
+    "missingViews": [
+      "src/main/webapp/WEB-INF/views/hospital/login.jsp"
+    ],
+    "extraViews": [
+      "/hospital/login"
+    ]
+  },
+  {
+    "id": "H02",
+    "project": "Hospital-Bed-Availability-Management-System",
+    "result": "FAIL",
+    "matchedComponents": [
+      {
+        "id": "component:6cecea74-d186-339a-924a-44682d58443d",
+        "kind": "LINK",
+        "name": "Sign up now"
+      }
+    ],
+    "behaviorTypes": [
+      "NAVIGATE"
+    ],
+    "actualViews": [
+      "/hospital/register"
+    ],
+    "actualRoutes": [
+      "/hospital/register"
+    ],
+    "expectedViews": [
+      "src/main/webapp/WEB-INF/views/hospital/register.jsp"
+    ],
+    "missingViews": [
+      "src/main/webapp/WEB-INF/views/hospital/register.jsp"
+    ],
+    "extraViews": [
+      "/hospital/register"
+    ]
+  },
+  {
+    "id": "H03",
+    "project": "Hospital-Bed-Availability-Management-System",
+    "result": "FAIL",
+    "matchedComponents": [
+      {
+        "id": "component:d3dcc066-c588-3c96-8438-a7b0f70534fc",
+        "kind": "FORM",
+        "name": "表單 1"
+      }
+    ],
+    "behaviorTypes": [
+      "SUBMIT_FORM"
+    ],
+    "actualViews": [],
+    "actualRoutes": [],
+    "expectedViews": [
+      "src/main/webapp/WEB-INF/views/hospital/register.jsp",
+      "src/main/webapp/WEB-INF/views/roomtype/form.jsp"
+    ],
+    "missingViews": [
+      "src/main/webapp/WEB-INF/views/hospital/register.jsp",
+      "src/main/webapp/WEB-INF/views/roomtype/form.jsp"
+    ],
+    "extraViews": []
+  },
+  {
+    "id": "H04",
+    "project": "Hospital-Bed-Availability-Management-System",
+    "result": "FAIL",
+    "matchedComponents": [
+      {
+        "id": "component:9f5cdd36-fd11-311f-b2a5-71d84a4f8013",
+        "kind": "FORM",
+        "name": "表單 1"
+      }
+    ],
+    "behaviorTypes": [
+      "SUBMIT_FORM"
+    ],
+    "actualViews": [],
+    "actualRoutes": [],
+    "expectedViews": [
+      "src/main/webapp/WEB-INF/views/roomtype/form.jsp",
+      "src/main/webapp/WEB-INF/views/hospital/login.jsp"
+    ],
+    "missingViews": [
+      "src/main/webapp/WEB-INF/views/hospital/login.jsp",
+      "src/main/webapp/WEB-INF/views/roomtype/form.jsp"
+    ],
+    "extraViews": []
+  },
+  {
+    "id": "H05",
+    "project": "Hospital-Bed-Availability-Management-System",
+    "result": "FAIL",
+    "matchedComponents": [
+      {
+        "id": "component:03558a25-8ea0-30b7-9226-b51e12289b02",
+        "kind": "FORM",
+        "name": "Enter Hospital Unique ID: Password: Logi…"
+      }
+    ],
+    "behaviorTypes": [
+      "SUBMIT_FORM"
+    ],
+    "actualViews": [],
+    "actualRoutes": [],
+    "expectedViews": [
+      "src/main/webapp/WEB-INF/views/hospital/login.jsp",
+      "src/main/webapp/WEB-INF/views/hospital/welcome.jsp"
+    ],
+    "missingViews": [
+      "src/main/webapp/WEB-INF/views/hospital/login.jsp",
+      "src/main/webapp/WEB-INF/views/hospital/welcome.jsp"
+    ],
+    "extraViews": []
+  },
+  {
+    "id": "H06",
+    "project": "Hospital-Bed-Availability-Management-System",
+    "result": "FAIL",
+    "matchedComponents": [
+      {
+        "id": "component:f2a1e593-91dc-38b6-ab95-2a00f76d2529",
+        "kind": "LINK",
+        "name": "連結 2"
+      }
+    ],
+    "behaviorTypes": [
+      "NAVIGATE"
+    ],
+    "actualViews": [
+      "/patient/register"
+    ],
+    "actualRoutes": [
+      "/patient/register"
+    ],
+    "expectedViews": [
+      "src/main/webapp/WEB-INF/views/patient/register.jsp"
+    ],
+    "missingViews": [
+      "src/main/webapp/WEB-INF/views/patient/register.jsp"
+    ],
+    "extraViews": [
+      "/patient/register"
+    ]
+  },
+  {
+    "id": "H07",
+    "project": "Hospital-Bed-Availability-Management-System",
+    "result": "FAIL",
+    "matchedComponents": [
+      {
+        "id": "component:cb1a57c1-e0fd-3d9d-9e9b-a1de6cf6ae17",
+        "kind": "FORM",
+        "name": "表單 1"
+      }
+    ],
+    "behaviorTypes": [
+      "SUBMIT_FORM"
+    ],
+    "actualViews": [],
+    "actualRoutes": [],
+    "expectedViews": [
+      "src/main/webapp/WEB-INF/views/patient/register.jsp",
+      "src/main/webapp/WEB-INF/views/room/allocate.jsp"
+    ],
+    "missingViews": [
+      "src/main/webapp/WEB-INF/views/patient/register.jsp",
+      "src/main/webapp/WEB-INF/views/room/allocate.jsp"
+    ],
+    "extraViews": []
+  },
+  {
+    "id": "H08",
+    "project": "Hospital-Bed-Availability-Management-System",
+    "result": "FAIL",
+    "matchedComponents": [
+      {
+        "id": "component:c386f74c-2a89-39bd-9fe3-2989fd0ac10f",
+        "kind": "FORM",
+        "name": "表單 1"
+      }
+    ],
+    "behaviorTypes": [
+      "SUBMIT_FORM"
+    ],
+    "actualViews": [],
+    "actualRoutes": [],
+    "expectedViews": [
+      "src/main/webapp/WEB-INF/views/room/allocate.jsp",
+      "src/main/webapp/WEB-INF/views/hospital/welcome.jsp"
+    ],
+    "missingViews": [
+      "src/main/webapp/WEB-INF/views/hospital/welcome.jsp",
+      "src/main/webapp/WEB-INF/views/room/allocate.jsp"
+    ],
+    "extraViews": []
+  },
+  {
+    "id": "H09",
+    "project": "Hospital-Bed-Availability-Management-System",
+    "result": "FAIL",
+    "matchedComponents": [
+      {
+        "id": "component:893b7219-0ef3-34ca-a122-f77e7af7c70f",
+        "kind": "FORM",
+        "name": "Enter City Name Search"
+      }
+    ],
+    "behaviorTypes": [
+      "SUBMIT_FORM"
+    ],
+    "actualViews": [],
+    "actualRoutes": [],
+    "expectedViews": [
+      "src/main/webapp/WEB-INF/views/user/enduserlist.jsp"
+    ],
+    "missingViews": [
+      "src/main/webapp/WEB-INF/views/user/enduserlist.jsp"
+    ],
+    "extraViews": []
+  },
+  {
+    "id": "H10",
+    "project": "Hospital-Bed-Availability-Management-System",
+    "result": "FAIL",
+    "matchedComponents": [],
+    "behaviorTypes": [],
+    "actualViews": [],
+    "actualRoutes": [],
+    "expectedViews": [
+      "src/main/webapp/WEB-INF/views/user/bedlist.jsp"
+    ],
+    "missingViews": [
+      "src/main/webapp/WEB-INF/views/user/bedlist.jsp"
+    ],
+    "extraViews": []
+  },
+  {
+    "id": "H11",
+    "project": "Hospital-Bed-Availability-Management-System",
+    "result": "FUNCTION_REQUIRES_UI_CHECK",
+    "matchedComponents": [
+      {
+        "id": "component:7d4b989d-8aaf-3a6e-b6f4-8ba1869a93a3",
+        "kind": "LINK",
+        "name": "Print the Bill"
+      }
+    ],
+    "behaviorTypes": [
+      "NAVIGATE",
+      "UNKNOWN"
+    ],
+    "actualViews": [],
+    "actualRoutes": [],
+    "expectedViews": [],
+    "missingViews": [],
+    "extraViews": []
+  }
+]

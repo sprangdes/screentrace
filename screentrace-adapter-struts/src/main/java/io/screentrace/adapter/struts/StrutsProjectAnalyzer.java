@@ -45,8 +45,26 @@ public final class StrutsProjectAnalyzer {
     parseValidation(state);
     parseActionForms(state);
     ApplicationGraph enriched=GraphIntegrityValidator.requireAnalysis(io.screentrace.parser.jsp.UrlGraphContribution.enrich(JavaScriptGraphContribution.enrich(MarkupGraphContribution.enrich(ActionContracts.enrich(state.graph(),inventory),jsp),inventory),inventory));
+    enriched=projectDispatchBehaviors(enriched,state);
     enriched=linkValidatorFields(enriched,state);
     return retainActionAndInlineEventEvidence(enriched,state);
+  }
+  private static ApplicationGraph projectDispatchBehaviors(ApplicationGraph graph,State state){
+    Map<String,GraphNode> nodes=new TreeMap<>();graph.nodes().forEach(n->nodes.put(n.id(),n));Map<String,Relationship> edges=new TreeMap<>();graph.relationships().forEach(e->edges.put(e.id(),e));List<Behavior> behaviors=new ArrayList<>();var json=new com.fasterxml.jackson.databind.ObjectMapper();
+    Set<String> previousNodes=new HashSet<>(state.nodes.keySet()),previousEdges=new HashSet<>(state.edges.keySet());
+    for(var b:graph.behaviors()){
+      if(!Set.of(BehaviorType.NAVIGATE,BehaviorType.SUBMIT_FORM).contains(b.type())){behaviors.add(b);continue;}String raw=null;for(var proof:b.evidence())if(proof.parser().equals("AcornStaticAnalyzer"))try{var item=json.readTree(proof.detail());if(item.has("url")&&item.get("url").isTextual()){raw=item.get("url").asText();break;}}catch(Exception ignored){}
+      if(raw==null&&nodes.containsKey(b.triggerId()))raw=nodes.get(b.triggerId()).attributes().get("target");if(raw==null){behaviors.add(b);continue;}
+      GraphNode target=b.targetId()==null?null:nodes.get(b.targetId());String path=target!=null&&target.type()==NodeType.ENDPOINT?target.attributes().get("path"):raw.split("[?#]",2)[0];
+      if(path==null){behaviors.add(b);continue;}if(!path.startsWith("/")){Set<String> owners=new TreeSet<>();graph.relationships().stream().filter(e->e.type()==EdgeType.CONTAINS&&e.to().equals(b.triggerId())).forEach(e->owners.add(e.from()));var bases=UrlGraphContribution.requestDirectories(graph,owners);if(bases.size()==1)try{path=java.net.URI.create(bases.get(0)).resolve(path).toString();}catch(Exception ignored){}}
+      var mappings=state.routes.getOrDefault(path,List.of());if(mappings.size()!=1||mappings.get(0).family().isBlank()){behaviors.add(b);continue;}var mapping=mappings.get(0);String command=dispatchValue(raw,mapping.parameter());var type=state.types.get(mapping.type());var methods=type==null||command==null?List.<MethodDeclaration>of():type.declaration().getMethodsByName(command).stream().filter(StrutsProjectAnalyzer::validDispatchSignature).toList();if(methods.size()!=1){behaviors.add(b);continue;}
+      var source=new SourceLocation(type.source().file(),methods.get(0).getBegin().orElseThrow().line);String endpoint=StableGraphIds.endpoint("ANY",path+"?"+mapping.parameter()+"="+command),handler=ApplicationGraph.id(NodeType.HANDLER,mapping.type()+"#"+command);var proof=new ArrayList<>(b.evidence());proof.add(new AnalysisEvidence(source,"StrutsDispatchResolution",ResolutionStatus.INFERRED,"來源 parameter="+mapping.parameter()+"；字面方法="+command+"；原文="+raw));
+      nodes.put(handler,new GraphNode(handler,NodeType.HANDLER,mapping.type()+"."+command+"()",Map.of("class",mapping.type(),"method",command,"actionPath",path),source,Confidence.CONFIRMED,proof));nodes.put(endpoint,new GraphNode(endpoint,NodeType.ENDPOINT,"ANY "+path+"?"+mapping.parameter()+"="+command,Map.of("path",path,"httpMethod","ANY","parameter",mapping.parameter(),"parameterValue",command,"category","ACTION","servletMappingStatus","PROVEN"),mapping.source(),Confidence.CONFIRMED,proof));
+      String handled=ApplicationGraph.id(NodeType.COMPONENT,"dispatch:"+endpoint+":"+handler);edges.put(handled,new Relationship(handled,EdgeType.HANDLED_BY,endpoint,handler,Confidence.INFERRED,source,proof));String invoked=ApplicationGraph.id(NodeType.COMPONENT,"dispatch:"+b.triggerId()+":"+endpoint);edges.put(invoked,new Relationship(invoked,EdgeType.TRIGGERS,b.triggerId(),endpoint,Confidence.INFERRED,source,proof));
+      for(var value:sourceTargets(mapping,command,state))forward(value.target(),handler,mapping.module(),value.source(),state);
+      behaviors.add(new Behavior(b.id(),b.triggerId(),b.event(),b.type(),endpoint,b.guard(),b.parentId(),b.expression(),proof));
+    }
+    state.nodes.forEach((id,n)->{if(!previousNodes.contains(id))nodes.putIfAbsent(id,n);});state.edges.forEach((id,e)->{if(!previousEdges.contains(id))edges.putIfAbsent(id,e);});return new ApplicationGraph(graph.application(),List.copyOf(nodes.values()),List.copyOf(edges.values()),graph.diagnostics(),graph.apiContracts(),graph.schemaVersion(),behaviors,graph.validationRules());
   }
   private static ApplicationGraph retainActionAndInlineEventEvidence(ApplicationGraph graph,State state) {
     Map<String,GraphNode> nodes=new TreeMap<>();graph.nodes().forEach(node->nodes.put(node.id(),node));
@@ -77,6 +95,7 @@ public final class StrutsProjectAnalyzer {
       Map<String,String> attributes=new TreeMap<>();attributes.put("view",view.path());if(view.displayName()!=null)attributes.put("messageTitle",view.displayName());
       addNode(state,id,NodeType.SCREEN,view.displayName()==null?Path.of(view.path()).getFileName().toString().replaceFirst("\\.jsp$",""):view.displayName(),attributes,view.source(),Confidence.CONFIRMED);
       indexView(state.screens,view.path(),id);
+      for(String root:state.inventory.webRoots())if(view.path().startsWith(root)&&!view.path().substring(root.length()).startsWith("WEB-INF/")){addScreenRouteAlias(id,"/"+view.path().substring(root.length()),state);addSourceRequestPath(id,"/"+view.path().substring(root.length()),view.source(),state);}
     } else if(view.kind()==JspAnalysis.ViewKind.HTML&&view.path().replace('\\','/').startsWith("src/main/webapp/")) {
       String id=StableGraphIds.screen(view.path());String publicUrl="/"+view.path().substring("src/main/webapp/".length());
       Map<String,String> attributes=new TreeMap<>();attributes.put("view",view.path());attributes.put("route",publicUrl);
@@ -163,7 +182,7 @@ public final class StrutsProjectAnalyzer {
       }
       Map<String,String> global=new TreeMap<>();
       for(Element group:StrutsSources.elements(document,"global-forwards")) for(Element forward:StrutsSources.elements(group,"forward")) {
-        global.put(forward.getAttribute("name"),forward.getAttribute("path"));
+        state.forwardRedirects.computeIfAbsent(forward.getAttribute("path"),k->new TreeSet<>()).add("true".equalsIgnoreCase(forward.getAttribute("redirect")));global.put(forward.getAttribute("name"),forward.getAttribute("path"));
         state.globalForwards.put(module+":"+forward.getAttribute("name"),forward.getAttribute("path"));
         String id=ApplicationGraph.id(NodeType.SOURCE_ARTIFACT,path+":global:"+forward.getAttribute("name"));
         addNode(state,id,NodeType.SOURCE_ARTIFACT,"GLOBAL "+forward.getAttribute("name"),StrutsSources.attributes(forward),StrutsSources.source(path,forward),Confidence.CONFIRMED);
@@ -186,17 +205,20 @@ public final class StrutsProjectAnalyzer {
       for(Element action:StrutsSources.elements(document,"action")) {
         String route=module+action.getAttribute("path");if(action.getAttribute("path").isBlank()) continue;
         String type=state.beans.getOrDefault(action.getAttribute("type"),action.getAttribute("type"));
+        boolean proxy=type.equals("org.springframework.web.struts.DelegatingActionProxy");if(proxy&&!state.ambiguousBeans.contains(route))type=state.beans.getOrDefault(route,type);
         var source=StrutsSources.source(path,action);Map<String,String> attrs=new TreeMap<>(StrutsSources.attributes(action));attrs.put("actionType",type);attrs.put("module",module);
         String handlerId=ApplicationGraph.id(NodeType.HANDLER,path+":"+route);
         String family=dispatchFamily(type,state,new HashSet<>());
         boolean executeProven=state.types.containsKey(type)&&state.types.get(type).declaration().getMethodsByName("execute").stream().anyMatch(StrutsProjectAnalyzer::validDispatchSignature);
         Confidence status=family.isBlank()?(type.isBlank()?Confidence.UNRESOLVED:executeProven?Confidence.CONFIRMED:Confidence.INFERRED):Confidence.UNRESOLVED;
+        if(directActionForward(action,type)!=null&&StrutsSources.literal(directActionForward(action,type)))status=Confidence.CONFIRMED;
         if(!family.isBlank()) attrs.put("dispatchFamily",family);
         addNode(state,handlerId,NodeType.HANDLER,type.isBlank()?"未解析的處理器":type+(family.isBlank()?".execute()":".<dispatch>()"),attrs,source,status);
+        if(proxy&&state.beanSources.containsKey(route)&&!type.equals(action.getAttribute("type"))){var old=state.nodes.get(handlerId);var proof=new ArrayList<>(old.evidence());proof.add(new AnalysisEvidence(state.beanSources.get(route),"SpringActionBinding",ResolutionStatus.CONFIRMED,"action path="+route+"；代理="+action.getAttribute("type")+"；唯一 Spring bean class="+type));state.nodes.put(handlerId,new GraphNode(old.id(),old.type(),old.name(),old.attributes(),old.source(),old.confidence(),proof));}
         String formId=state.forms.get(module+":"+action.getAttribute("name"));
         if(formId!=null) edge(state,EdgeType.DECLARED_BY,handlerId,formId,Confidence.CONFIRMED,source);
         Map<String,String> forwards=new TreeMap<>(global);Map<String,SourceLocation> forwardSources=new TreeMap<>();
-        for(Element item:StrutsSources.elements(action,"forward")) {forwards.put(item.getAttribute("name"),item.getAttribute("path"));forwardSources.put(item.getAttribute("name"),StrutsSources.source(path,item));}
+        for(Element item:StrutsSources.elements(action,"forward")) {state.forwardRedirects.computeIfAbsent(item.getAttribute("path"),k->new TreeSet<>()).add("true".equalsIgnoreCase(item.getAttribute("redirect")));forwards.put(item.getAttribute("name"),item.getAttribute("path"));forwardSources.put(item.getAttribute("name"),StrutsSources.source(path,item));}
         String input=action.getAttribute("input");if(inputForward&&!input.isBlank())input=global.getOrDefault(input,input);
         Map<String,String> localForwards=new TreeMap<>();for(Element item:StrutsSources.elements(action,"forward"))localForwards.put(item.getAttribute("name"),item.getAttribute("path"));
         String direct=directActionForward(action,type);if(direct!=null){localForwards.put(DIRECT_FORWARD,direct);forwardSources.put(DIRECT_FORWARD,source);}
@@ -407,12 +429,13 @@ public final class StrutsProjectAnalyzer {
     for(Path file:state.inventory.springXmlFiles()) try {
       for(Element bean:StrutsSources.elements(readXml(file,state),"bean")) {
         String type=bean.getAttribute("class");if(type.isBlank()) continue;
-        if(!bean.getAttribute("id").isBlank()) state.beans.put(bean.getAttribute("id"),type);
-        for(String name:bean.getAttribute("name").split("[,;\\s]+")) if(!name.isBlank()) state.beans.put(name,type);
+        if(!bean.getAttribute("id").isBlank()) recordBean(bean.getAttribute("id"),type,StrutsSources.source(relative(state,file),bean),state);
+        for(String name:bean.getAttribute("name").split("[,;\\s]+")) if(!name.isBlank()) recordBean(name,type,StrutsSources.source(relative(state,file),bean),state);
       }
     } catch(Exception error) {diagnostic(state,"Spring bean 設定無法解析",new SourceLocation(relative(state,file),1),"SPRING_BEAN_UNRESOLVED");}
   }
 
+  private static void recordBean(String name,String type,SourceLocation source,State state){String old=state.beans.putIfAbsent(name,type);if(old!=null&&!old.equals(type))state.ambiguousBeans.add(name);state.beanSources.putIfAbsent(name,source);}
   private static StrutsVersionEvidence detectStrutsVersion(ProjectInventory inventory) {
     Map<String,SourceLocation> versions=new TreeMap<>();
     for(Path file:inventory.files())try {
@@ -460,25 +483,42 @@ public final class StrutsProjectAnalyzer {
     return Set.of("ForwardAction","IncludeAction").contains(shortName)&&!parameter.isBlank()?parameter:null;
   }
   private static void analyzeForwards(Mapping mapping,State state) {
+    var declared=state.types.get(mapping.type());if(declared!=null)for(var call:declared.declaration().findAll(MethodCallExpr.class))if(call.getNameAsString().equals("findForward")&&call.getArguments().size()==1&&!call.getArgument(0).isStringLiteralExpr())diagnostic(state,"forward 運算式無法靜態解析："+call.getArgument(0),new SourceLocation(declared.source().file(),call.getBegin().orElseThrow().line),"STRUTS_FORWARD_EXPRESSION");
+    if(declared!=null)for(var call:declared.declaration().findAll(MethodCallExpr.class))if(call.getNameAsString().equals("findForward")&&call.getArguments().size()==1&&call.getArgument(0).isStringLiteralExpr()&&!mapping.forwards().containsKey(call.getArgument(0).asStringLiteralExpr().asString()))diagnostic(state,"forward 名稱沒有來源設定："+call.getArgument(0),new SourceLocation(declared.source().file(),call.getBegin().orElseThrow().line),"STRUTS_FORWARD_UNRESOLVED");
     String direct=mapping.localForwards().get(DIRECT_FORWARD);
     if(direct!=null)forward(direct,mapping.handlerId(),mapping.module(),mapping.forwardSources().getOrDefault(DIRECT_FORWARD,mapping.source()),state);
-    var type=state.types.get(mapping.type());if(type==null) return;
-    for(MethodDeclaration method:type.declaration().getMethods()) for(MethodCallExpr call:method.findAll(MethodCallExpr.class)) {
-      if(!call.getNameAsString().equals("findForward")||call.getArguments().size()!=1) continue;
-      var source=new SourceLocation(type.source().file(),call.getBegin().map(p->p.line).orElse(type.source().line()));
-      if(call.getArgument(0).isStringLiteralExpr()) {
-        String target=mapping.forwards().get(call.getArgument(0).asStringLiteralExpr().asString());
-        if(target==null) diagnostic(state,"找不到指定 forward："+call.getArgument(0),source,"STRUTS_FORWARD_UNRESOLVED");
-        else {state.actionForwardTargets.computeIfAbsent(mapping.handlerId(),ignored->new ArrayList<>()).add(new PendingForward(mapping.handlerId(),mapping.module(),target,source));forward(target,mapping.handlerId(),mapping.module(),source,state);}
-      } else diagnostic(state,"forward 運算式無法靜態解析："+call.getArgument(0),source,"STRUTS_FORWARD_EXPRESSION");
-    }
+    for(var target:sourceTargets(mapping,null,state)){state.actionForwardTargets.computeIfAbsent(mapping.handlerId(),ignored->new ArrayList<>()).add(target);forward(target.target(),mapping.handlerId(),mapping.module(),target.source(),state);}
   }
+  private static List<PendingForward> sourceTargets(Mapping mapping,String wanted,State state){
+    List<PendingForward> result=new ArrayList<>();Set<String> seen=new HashSet<>();String name=mapping.type();boolean own=true;
+    while(name!=null&&seen.add(name)&&seen.size()<16){var type=state.types.get(name);if(type==null)break;
+      for(var method:type.declaration().getMethods())if(method.getType().asString().endsWith("ActionForward")&&(own&&(wanted==null||method.getNameAsString().equals(wanted))||!own&&method.getNameAsString().equals("execute"))){
+        for(var call:method.findAll(MethodCallExpr.class))if(call.findAncestor(MethodDeclaration.class).orElse(null)==method&&call.getNameAsString().equals("findForward")&&call.getArguments().size()==1&&call.getArgument(0).isStringLiteralExpr()){
+          String target=mapping.forwards().get(call.getArgument(0).asStringLiteralExpr().asString());if(target!=null)result.add(new PendingForward(mapping.handlerId(),mapping.module(),target,new SourceLocation(type.source().file(),call.getBegin().orElseThrow().line)));
+        }
+        for(var ret:method.findAll(ReturnStmt.class))if(ret.getExpression().isPresent()&&ret.findAncestor(MethodDeclaration.class).orElse(null)==method){Expression expression=ret.getExpression().get();if(expression.isNameExpr()){String variable=expression.asNameExpr().getNameAsString();var definitions=method.findAll(com.github.javaparser.ast.body.VariableDeclarator.class).stream().filter(v->v.getNameAsString().equals(variable)&&v.getInitializer().isPresent()).toList();if(definitions.size()!=1||method.findAll(AssignExpr.class).stream().anyMatch(a->a.getTarget().toString().equals(variable)))continue;expression=definitions.get(0).getInitializer().get();}
+          if(!expression.isObjectCreationExpr()||!expression.asObjectCreationExpr().getType().getNameAsString().equals("ActionForward")||expression.asObjectCreationExpr().getArguments().isEmpty())continue;String target=forwardString(expression.asObjectCreationExpr().getArgument(0));if(target==null)continue;
+          if(!target.startsWith("/")){String path=target.split("[?#]",2)[0];String query=target.substring(path.length());try{target=java.net.URI.create(mapping.route()).resolve(path).toString()+query;}catch(Exception ignored){continue;}}
+          var constructor=expression.asObjectCreationExpr();if(constructor.getArguments().size()==2&&constructor.getArgument(1).isBooleanLiteralExpr())state.forwardRedirects.computeIfAbsent(target,k->new TreeSet<>()).add(constructor.getArgument(1).asBooleanLiteralExpr().getValue());
+          result.add(new PendingForward(mapping.handlerId(),mapping.module(),target,new SourceLocation(type.source().file(),ret.getBegin().orElseThrow().line)));
+        }
+      }
+      own=false;String parent=type.parent();if(!parent.contains(".")){String prefix=name.contains(".")?name.substring(0,name.lastIndexOf('.')+1):"";if(state.types.containsKey(prefix+parent))parent=prefix+parent;}name=parent;
+    }
+    return result.stream().distinct().toList();
+  }
+  private static String forwardString(Expression expression){
+    List<Expression> pieces=new ArrayList<>();forwardPieces(expression,pieces);StringBuilder text=new StringBuilder();int slot=0;for(var piece:pieces){if(piece.isStringLiteralExpr())text.append(piece.asStringLiteralExpr().asString());else if(text.indexOf("?")>=0)text.append("{expression").append(++slot).append('}');else return null;}return text.length()<4096?text.toString():null;
+  }
+  private static void forwardPieces(Expression value,List<Expression> pieces){if(value.isBinaryExpr()&&value.asBinaryExpr().getOperator()==BinaryExpr.Operator.PLUS){forwardPieces(value.asBinaryExpr().getLeft(),pieces);forwardPieces(value.asBinaryExpr().getRight(),pieces);}else pieces.add(value);}
+  private static String dispatchValue(String target,String parameter){if(parameter==null||parameter.isBlank()||!target.contains("?"))return null;String found=null;for(String pair:target.substring(target.indexOf('?')+1).split("&")){String[] parts=pair.split("=",2);if(parts.length==2&&parts[0].equals(parameter)){if(found!=null||!parts[1].matches("[A-Za-z_][A-Za-z0-9_]*"))return null;found=parts[1];}}return found;}
+
   private static void forward(String target,String owner,String module,SourceLocation source,State state) {
     if(target==null||target.isBlank())return;
     if(!StrutsSources.literal(target)){diagnostic(state,"forward 無法靜態解析："+target,source,"STRUTS_FORWARD_UNRESOLVED");return;}
     List<String> screens=resolveForwardScreens(target,module,state,new LinkedHashSet<>(),0,source);
     if(screens.isEmpty()){diagnostic(state,"forward 無法對應 JSP / Tiles 畫面："+target,source,"STRUTS_FORWARD_UNRESOLVED");return;}
-    for(String screen:screens){edge(state,EdgeType.FORWARDS_TO,owner,screen,Confidence.CONFIRMED,source);String view=state.nodes.get(screen)==null?null:state.nodes.get(screen).attributes().get("view");if(view!=null&&!module.isBlank())state.jspModuleOwners.computeIfAbsent(view,key->new TreeSet<>()).add(module);}
+    for(String screen:screens){edge(state,EdgeType.FORWARDS_TO,owner,screen,Confidence.CONFIRMED,source);var redirects=state.forwardRedirects.getOrDefault(target,Set.of(false));if(screenForView(target.split("[?#]",2)[0],state,source)!=null&&redirects.contains(true))addSourceRequestPath(screen,target.split("[?#]",2)[0],source,state);if(screenForView(target.split("[?#]",2)[0],state,source)!=null&&redirects.contains(false))for(var mapping:state.actionMappings)if(mapping.handlerId().equals(owner))addSourceRequestPath(screen,publicPath(mapping.route(),mapping.module(),state),source,state);String view=state.nodes.get(screen)==null?null:state.nodes.get(screen).attributes().get("view");if(view!=null&&!module.isBlank())state.jspModuleOwners.computeIfAbsent(view,key->new TreeSet<>()).add(module);}
   }
   private static List<String> resolveForwardScreens(String target,String module,State state,Set<String> visited,int depth,SourceLocation source) {
     if(depth>=5){diagnostic(state,"forward 鏈超過 5 層",source,"STRUTS_FORWARD_DEPTH");return List.of();}
@@ -492,24 +532,29 @@ public final class StrutsProjectAnalyzer {
       String screen=ensureTileScreen(resolvedTarget,state);return screen==null?List.of():List.of(screen);
     }
     String direct=screenForView(resolvedTarget,state,source);if(direct!=null)return List.of(direct);
-    String logical=logicalPath(target,module,state);if(logical==null&&target.startsWith("/")&&!target.startsWith("/WEB-INF/")&&!target.contains(".jsp"))logical=module.isBlank()||target.startsWith(module+"/")?target:module+target;
+    String routePath=target.split("[?#]",2)[0];String logical=logicalPath(routePath,module,state);if(logical==null&&target.startsWith("/")&&!target.startsWith("/WEB-INF/")&&!target.contains(".jsp"))logical=module.isBlank()||target.startsWith(module+"/")?target:module+target;
     if(logical==null)logical=target;
     List<Mapping> mappings=state.routes.getOrDefault(logical,List.of());
     if(mappings.isEmpty())return List.of();
     if(mappings.size()>1){diagnostic(state,"forward 目標對應多個 action："+target,source,"STRUTS_FORWARD_AMBIGUOUS");return List.of();}
-    Mapping mapping=mappings.get(0);if(!visited.add(mapping.route())){diagnostic(state,"forward action 鏈形成循環："+mapping.route(),source,"STRUTS_FORWARD_CYCLE");return List.of();}
-    List<String> result=resolveMappingScreens(mapping,state,visited,depth+1,source);visited.remove(mapping.route());return result.stream().distinct().sorted().toList();
+    Mapping mapping=mappings.get(0);String command=dispatchValue(target,mapping.parameter());String visitKey=mapping.route()+"?"+Objects.toString(command,"");if(!visited.add(visitKey)){diagnostic(state,"forward action 鏈形成循環："+mapping.route(),source,"STRUTS_FORWARD_CYCLE");return List.of();}
+    List<String> result=resolveMappingScreens(mapping,command,state,visited,depth+1,source);visited.remove(visitKey);return result.stream().distinct().sorted().toList();
   }
-  private static List<String> resolveMappingScreens(Mapping mapping,State state,Set<String> visited,int depth,SourceLocation source) {
+  private static List<String> resolveMappingScreens(Mapping mapping,State state,Set<String> visited,int depth,SourceLocation source) {return resolveMappingScreens(mapping,null,state,visited,depth,source);}
+  private static List<String> resolveMappingScreens(Mapping mapping,String command,State state,Set<String> visited,int depth,SourceLocation source) {
     if(depth>=5){diagnostic(state,"forward 鏈超過 5 層",source,"STRUTS_FORWARD_DEPTH");return List.of();}
     List<String> result=new ArrayList<>();
-    for(String value:mapping.localForwards().values())result.addAll(resolveForwardScreens(value,mapping.module(),state,visited,depth+1,source));
+    if(command!=null&&!mapping.family().isBlank())for(var value:sourceTargets(mapping,command,state))result.addAll(resolveForwardScreens(value.target(),mapping.module(),state,visited,depth+1,value.source()));
+    else for(String value:mapping.localForwards().values())result.addAll(resolveForwardScreens(value,mapping.module(),state,visited,depth+1,source));
     if(mapping.input()!=null&&!mapping.input().isBlank())result.addAll(resolveForwardScreens(mapping.input(),mapping.module(),state,visited,depth+1,source));
     List<String> screens=result.stream().distinct().sorted().toList();String alias=publicPath(mapping.route(),mapping.module(),state);
     for(String screen:screens)addScreenRouteAlias(screen,alias,state);
     return screens;
   }
 
+  private static void addSourceRequestPath(String screenId,String path,SourceLocation source,State state){
+    if(path==null||!path.startsWith("/")||path.startsWith("//")||path.contains("{")||path.contains(".."))return;var old=state.nodes.get(screenId);if(old==null)return;Set<String> paths=new TreeSet<>();String previous=old.attributes().get("sourceRequestPaths");if(previous!=null)paths.addAll(Arrays.asList(previous.split("\\u001f")));paths.add(path);var attrs=new TreeMap<>(old.attributes());attrs.put("sourceRequestPaths",String.join("\u001f",paths));var proof=new ArrayList<>(old.evidence());proof.add(new AnalysisEvidence(source,"StrutsRequestPath",ResolutionStatus.INFERRED,"來源 forward/redirect 的請求路徑="+path));state.nodes.put(old.id(),new GraphNode(old.id(),old.type(),old.name(),attrs,old.source(),old.confidence(),proof.stream().distinct().sorted().toList()));
+  }
   private static void addScreenRouteAlias(String screenId,String alias,State state) {
     GraphNode screen=state.nodes.get(screenId);if(screen==null||alias==null||alias.isBlank())return;
     Set<String> aliases=new TreeSet<>();String existing=screen.attributes().get("routeAliases");if(existing!=null&&!existing.isBlank())aliases.addAll(Arrays.asList(existing.split("\\u001f")));aliases.add(alias);
@@ -559,7 +604,7 @@ public final class StrutsProjectAnalyzer {
           if(kind==ComponentKind.FORM){String formAction=action;action=(name.equals("html:form")||name.equals("html-el:form")||name.equals("form:form"))?normalizeStrutsAction(action,moduleValue,state):action!=null&&!action.startsWith("/")&&!action.contains(":")?resolveRelativeJspUrl(path,action):action;if(action!=null){target=action;attrs.put("originalTarget",formAction);attrs.put("target",action);}}
           else if(target!=null){
             if(Set.of("html:link","html-el:link","html:rewrite","html-el:rewrite","logic:redirect","logic:forward").contains(name)&&tag.attribute("action")!=null)target=normalizeStrutsAction(target,moduleValue,state);
-            else if((name.equals("a")||name.equals("form"))&&!target.startsWith("/")&&!target.startsWith("#")&&!target.contains(":")&&tag.attribute("action")==null)target=resolveRelativeJspUrl(path,target);
+            else if(Set.of("a","form","html:link","html-el:link").contains(name)&&!target.startsWith("/")&&!target.startsWith("#")&&!target.matches("(?is)^[a-z][a-z0-9+.-]*:.*")&&tag.attribute("action")==null)target=resolveRelativeJspUrl(path,target);
             if(target!=null&&target.toLowerCase(Locale.ROOT).endsWith(".faces")){String facesTarget=normalizeFacesPath(target,state);if(facesTarget!=null&&!facesTarget.equals(target)){originalTarget=target;target=facesTarget;}}
             if(target!=null){attrs.put("target",target);if(!Objects.equals(originalTarget,target))attrs.put("originalTarget",originalTarget);}
           }
@@ -575,7 +620,7 @@ public final class StrutsProjectAnalyzer {
           if(target!=null){
             if(Set.of("html:link","html-el:link","html:rewrite","html-el:rewrite","logic:redirect","logic:forward").contains(name)&&tag.attribute("action")!=null)target=normalizeStrutsAction(tag.attribute("action"),moduleValue,state);
             else if((name.equals("html:submit")||name.equals("html:button")||name.equals("button")||name.equals("input"))&&tag.attribute("formaction")==null&&action!=null)target=action;
-            else if((name.equals("a")||name.equals("form"))&&!target.startsWith("/")&&!target.startsWith("#")&&!target.contains(":")&&tag.attribute("action")==null)target=resolveRelativeJspUrl(path,target);
+            else if(Set.of("a","form","html:link","html-el:link").contains(name)&&!target.startsWith("/")&&!target.startsWith("#")&&!target.matches("(?is)^[a-z][a-z0-9+.-]*:.*")&&tag.attribute("action")==null)target=resolveRelativeJspUrl(path,target);
             attrs.put("target",target);
           }
           if(kind==ComponentKind.FORM) formGroup=id;
@@ -661,7 +706,7 @@ public final class StrutsProjectAnalyzer {
     String resolvedTarget=moduleTarget(contextual,state),path=resolvedTarget.split("[?#]",2)[0];var mappings=state.routes.get(path);WildcardMatch wildcardMatch=null;
     String module=contextual.attributes().getOrDefault("module",moduleContext==null?moduleFor(contextual.source().file(),state):moduleContext);
     WildcardResolution wildcardResolution=null;
-    if(mappings==null) {String target=state.screens.get(path);if(target!=null) {edge(state,EdgeType.NAVIGATES_TO,control.id(),target,Confidence.CONFIRMED,control.source());return;}String logical=logicalPath(path,module,state);if(logical!=null)mappings=state.routes.get(logical);if(mappings==null){String concrete=logical==null?path:logical;wildcardResolution=resolveWildcard(concrete,module,state);if(wildcardResolution!=null&&wildcardResolution.ambiguous()){for(WildcardMatch candidate:wildcardResolution.candidates()){String candidateEndpoint=state.endpointIds.getOrDefault(candidate.mapping().route(),StableGraphIds.endpoint("ANY",publicPath(candidate.mapping().route(),candidate.mapping().module(),state)));recordWildcardMatch(candidateEndpoint,path,candidate,state,control.source());edge(state,EdgeType.TRIGGERS,control.id(),candidateEndpoint,Confidence.AMBIGUOUS,control.source(),"basis=STATIC_URL；"+wildcardAmbiguityDetail(wildcardResolution,state));}diagnostic(state,wildcardAmbiguityMessage(wildcardResolution,state),control.source(),"STRUTS_WILDCARD_VERSION_UNRESOLVED");unresolvedBehavior(contextual,state);return;}if(wildcardResolution!=null&&!wildcardResolution.candidates().isEmpty()){wildcardMatch=wildcardResolution.candidates().get(0);mappings=List.of(wildcardMatch.mapping());}}}
+    if(mappings==null) {String target=state.screens.get(path);if(target!=null) {addScreenRouteAlias(target,path,state);edge(state,EdgeType.NAVIGATES_TO,control.id(),target,Confidence.CONFIRMED,control.source());return;}String logical=logicalPath(path,module,state);if(logical!=null)mappings=state.routes.get(logical);if(mappings==null){String concrete=logical==null?path:logical;wildcardResolution=resolveWildcard(concrete,module,state);if(wildcardResolution!=null&&wildcardResolution.ambiguous()){for(WildcardMatch candidate:wildcardResolution.candidates()){String candidateEndpoint=state.endpointIds.getOrDefault(candidate.mapping().route(),StableGraphIds.endpoint("ANY",publicPath(candidate.mapping().route(),candidate.mapping().module(),state)));recordWildcardMatch(candidateEndpoint,path,candidate,state,control.source());edge(state,EdgeType.TRIGGERS,control.id(),candidateEndpoint,Confidence.AMBIGUOUS,control.source(),"basis=STATIC_URL；"+wildcardAmbiguityDetail(wildcardResolution,state));}diagnostic(state,wildcardAmbiguityMessage(wildcardResolution,state),control.source(),"STRUTS_WILDCARD_VERSION_UNRESOLVED");unresolvedBehavior(contextual,state);return;}if(wildcardResolution!=null&&!wildcardResolution.candidates().isEmpty()){wildcardMatch=wildcardResolution.candidates().get(0);mappings=List.of(wildcardMatch.mapping());}}}
     if(mappings==null) {
       if(path.endsWith(".do")||path.contains("/do/")){String endpoint=unmappedLiteralEndpoint(path,control,state);edge(state,EdgeType.TRIGGERS,control.id(),endpoint,Confidence.UNRESOLVED,control.source());unresolvedBehavior(control,state);return;}
       diagnostic(state,"元件路由未解析："+path,control.source(),"STRUTS_ROUTE_UNRESOLVED");unresolvedBehavior(control,state);return;
@@ -846,10 +891,20 @@ public final class StrutsProjectAnalyzer {
     String detail="轉址鏈："+nextChain.stream().map(mapping->{String id=state.endpointIds.get(mapping.route());GraphNode endpointNode=id==null?null:state.nodes.get(id);String url=endpointNode==null?publicPath(mapping.route(),mapping.module(),state):endpointNode.attributes().getOrDefault("path",endpointNode.name());return mapping.route()+"（公開網址="+url+"；處理器="+mapping.type()+"；來源="+mapping.source().file()+":"+mapping.source().line()+"）";}).collect(java.util.stream.Collectors.joining(" → "))+"；forward="+rawTarget+"（"+targetSource.file()+":"+targetSource.line()+"）";
     List<AnalysisEvidence> proof=new ArrayList<>();for(Mapping item:nextChain){proof.addAll(state.nodes.get(item.handlerId()).evidence());String mappedEndpoint=state.endpointIds.get(item.route());if(mappedEndpoint!=null&&state.nodes.containsKey(mappedEndpoint))proof.addAll(state.nodes.get(mappedEndpoint).evidence());}
     proof.add(new AnalysisEvidence(targetSource,"RedirectInheritance",ResolutionStatus.INFERRED,detail));
+    String dispatch=dispatchValue(rawTarget,destination.parameter());
+    if(dispatch!=null&&!destination.family().isBlank()){
+      var java=state.types.get(destination.type());var methods=java==null?List.<MethodDeclaration>of():java.declaration().getMethodsByName(dispatch).stream().filter(StrutsProjectAnalyzer::validDispatchSignature).toList();
+      if(methods.size()!=1)return;
+      String publicRoute=publicPath(destination.route(),destination.module(),state),specific=StableGraphIds.endpoint("ANY",publicRoute+"?"+destination.parameter()+"="+dispatch),handler=ApplicationGraph.id(NodeType.HANDLER,destination.type()+"#"+dispatch);
+      addNode(state,specific,NodeType.ENDPOINT,"ANY "+publicRoute+"?"+destination.parameter()+"="+dispatch,Map.of("path",publicRoute,"httpMethod","ANY","category","ACTION","parameter",destination.parameter(),"parameterValue",dispatch,"servletMappingStatus","PROVEN"),targetSource,Confidence.CONFIRMED);
+      addNode(state,handler,NodeType.HANDLER,destination.type()+"."+dispatch+"()",Map.of("class",destination.type(),"method",dispatch),new SourceLocation(java.source().file(),methods.get(0).getBegin().orElseThrow().line),Confidence.CONFIRMED);edge(state,EdgeType.HANDLED_BY,specific,handler,Confidence.INFERRED,targetSource);
+      for(var value:sourceTargets(destination,dispatch,state))forward(value.target(),handler,destination.module(),value.source(),state);
+      endpoint=specific;
+    }
     String relationId=ApplicationGraph.id(NodeType.HANDLER,"STRUTS_REDIRECT_INHERITANCE:"+sourceEndpoint+":"+origin.handlerId()+":"+endpoint+":"+targetSource.file()+":"+targetSource.line());
     state.edges.putIfAbsent(relationId,new Relationship(relationId,EdgeType.CALLS,origin.handlerId(),endpoint,Confidence.INFERRED,targetSource,proof.stream().distinct().sorted().toList()));
     Set<String> nextVisited=new LinkedHashSet<>(visited);nextVisited.add(destination.route());
-    for(InheritanceTarget child:inheritanceTargets(destination,state))walkActionForward(origin,sourceEndpoint,child.target(),child.source(),nextChain,nextVisited,depth+1,state);
+    for(InheritanceTarget child:dispatch!=null&&!destination.family().isBlank()?sourceTargets(destination,dispatch,state).stream().map(item->new InheritanceTarget(item.target(),item.source())).toList():inheritanceTargets(destination,state))walkActionForward(origin,sourceEndpoint,child.target(),child.source(),nextChain,nextVisited,depth+1,state);
   }
   private static List<ActionMatch> resolveActionMappings(String target,String module,State state) {
     String logical=logicalPath(target,module,state);String candidate=logical==null?target:logical;
@@ -878,7 +933,7 @@ public final class StrutsProjectAnalyzer {
   }
   private static String resolveRelativeJspUrl(String jspPath,String raw) {
     if(raw==null||!StrutsSources.literal(raw))return raw;String suffix="";int boundary=raw.length();int query=raw.indexOf('?'),fragment=raw.indexOf('#');if(query>=0)boundary=Math.min(boundary,query);if(fragment>=0)boundary=Math.min(boundary,fragment);suffix=raw.substring(boundary);String path=raw.substring(0,boundary);if(path.isBlank())return raw;
-    String normalized=Path.of(jspPath).getParent().resolve(path).normalize().toString().replace('\\','/');String webRoot="src/main/webapp/";if(normalized.startsWith(webRoot))normalized="/"+normalized.substring(webRoot.length());else if(!normalized.startsWith("/"))return raw;return normalized+suffix;
+    String normalized=Path.of(jspPath).getParent().resolve(path).normalize().toString().replace('\\','/');for(String webRoot:List.of("src/main/webapp/","WebContent/","web/"))if(normalized.startsWith(webRoot))return "/"+normalized.substring(webRoot.length())+suffix;return normalized.startsWith("/")?normalized+suffix:raw;
   }
   private static String switchActionTarget(String target) {String query=target.contains("?")?target.substring(target.indexOf('?')+1):"";Map<String,String> values=new TreeMap<>();for(String pair:query.split("&")){String[] parts=pair.split("=",2);if(parts.length==2)values.put(parts[0],parts[1]);}String prefix=values.get("prefix"),page=values.get("page");return prefix==null||page==null?null:(prefix.endsWith("/")?prefix.substring(0,prefix.length()-1):prefix)+(page.startsWith("/")?page:"/"+page);}
   private static String unmappedLiteralEndpoint(String path,Control control,State state) {
@@ -1326,7 +1381,7 @@ public final class StrutsProjectAnalyzer {
   }
   private static Map<String,String> identityAttributes(MarkupTag tag,String name) {var attrs=new TreeMap<>(tag.attributes());attrs.put("tag",name);return attrs;}
   private static String first(MarkupTag tag,String... names) {for(String name:names) if(tag.attribute(name)!=null) return tag.attribute(name);return null;}
-  private static void indexView(Map<String,String> index,String path,String id) {index.put(path,id);int marker=path.indexOf("/WEB-INF/");if(marker>=0) index.put(path.substring(marker),id);}
+  private static void indexView(Map<String,String> index,String path,String id) {index.put(path,id);for(String root:List.of("src/main/webapp/","WebContent/","web/"))if(path.startsWith(root))index.put("/"+path.substring(root.length()),id);int marker=path.indexOf("/WEB-INF/");if(marker>=0) index.put(path.substring(marker),id);}
   private static List<String> endpointPaths(String path) {return path.endsWith(".do")?List.of(path):List.of(path,path+".do");}
   private static String relative(State state,Path file) {return StrutsSources.relative(state.inventory.root(),file);}
   private static Document readXml(Path file,State state) throws Exception {return StrutsSources.xml(SafeProjectFiles.readUtf8Limited(state.inventory.root(),file,SafeProjectFiles.MAX_XML_FILE_BYTES));}
@@ -1368,6 +1423,8 @@ public final class StrutsProjectAnalyzer {
     final StrutsVersionEvidence strutsVersion;
     final Map<String,GraphNode> nodes=new TreeMap<>();final Map<String,Relationship> edges=new TreeMap<>();final List<Diagnostic> diagnostics=new ArrayList<>();
     final Map<String,Behavior> behaviors=new TreeMap<>();final Map<String,ValidationRule> rules=new TreeMap<>();
+    final Map<String,Set<Boolean>> forwardRedirects=new TreeMap<>();
+    final Set<String> ambiguousBeans=new TreeSet<>();final Map<String,SourceLocation> beanSources=new TreeMap<>();
     final Map<String,String> screens=new TreeMap<>(),viewIds=new TreeMap<>(),tileViewIds=new TreeMap<>(),beans=new TreeMap<>(),forms=new TreeMap<>();
     final Set<String> ambiguousTiles=new TreeSet<>();
     final Map<String,Tile> tiles=new TreeMap<>();final Map<String,Set<String>> tileFragmentOwners=new TreeMap<>();

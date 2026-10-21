@@ -1,0 +1,114 @@
+[
+  {
+    "cases": [
+      "S04",
+      "S07"
+    ],
+    "authoritativeSource": {
+      "file": "src/main/java/studentcurd/controller/MainController.java",
+      "line": 49,
+      "method": "handleStudent"
+    },
+    "note": "Exact JavaParser method location; raw historical handwritten ranges are preserved"
+  },
+  {
+    "cases": [
+      "S06"
+    ],
+    "authoritativeSource": {
+      "file": "src/main/java/studentcurd/controller/MainController.java",
+      "line": 92,
+      "method": "deleteStudent"
+    },
+    "note": "Exact JavaParser method location; raw historical handwritten ranges are preserved"
+  },
+  {
+    "cases": [
+      "S05"
+    ],
+    "authoritativeSource": {
+      "file": "src/main/java/studentcurd/controller/MainController.java",
+      "line": 101,
+      "method": "updateForm"
+    },
+    "note": "Exact JavaParser method location; raw historical handwritten ranges are preserved"
+  },
+  {
+    "cases": [
+      "E04",
+      "E12"
+    ],
+    "authoritativeSource": {
+      "file": "src/main/java/com/SpringBootMVC/ExpensesTracker/controller/MainController.java",
+      "line": 48,
+      "method": "submitAdd"
+    },
+    "note": "Exact JavaParser method location; raw historical handwritten ranges are preserved"
+  },
+  {
+    "cases": [
+      "E05"
+    ],
+    "authoritativeSource": {
+      "file": "src/main/java/com/SpringBootMVC/ExpensesTracker/controller/MainController.java",
+      "line": 71,
+      "method": "showUpdate"
+    },
+    "note": "Exact JavaParser method location; raw historical handwritten ranges are preserved"
+  },
+  {
+    "cases": [
+      "E06"
+    ],
+    "authoritativeSource": {
+      "file": "src/main/java/com/SpringBootMVC/ExpensesTracker/controller/MainController.java",
+      "line": 85,
+      "method": "update"
+    },
+    "note": "Exact JavaParser method location; raw historical handwritten ranges are preserved"
+  },
+  {
+    "cases": [
+      "E08"
+    ],
+    "authoritativeSource": {
+      "file": "src/main/java/com/SpringBootMVC/ExpensesTracker/controller/MainController.java",
+      "line": 94,
+      "method": "delete"
+    },
+    "note": "Exact JavaParser method location; raw historical handwritten ranges are preserved"
+  },
+  {
+    "cases": [
+      "E09"
+    ],
+    "authoritativeSource": {
+      "file": "src/main/java/com/SpringBootMVC/ExpensesTracker/controller/MainController.java",
+      "line": 101,
+      "method": "processFilter"
+    },
+    "note": "Exact JavaParser method location; raw historical handwritten ranges are preserved"
+  },
+  {
+    "cases": [
+      "E10"
+    ],
+    "authoritativeSource": {
+      "file": "src/main/java/com/SpringBootMVC/ExpensesTracker/controller/SignupController.java",
+      "line": 40,
+      "method": "processRegistration"
+    },
+    "note": "Exact JavaParser method location; raw historical handwritten ranges are preserved"
+  },
+  {
+    "cases": [
+      "E11"
+    ],
+    "authoritativeSource": {
+      "file": "src/main/java/com/SpringBootMVC/ExpensesTracker/controller/CustomeAuthenticationSuccessHandler.java",
+      "line": 37,
+      "needle": "response.sendRedirect"
+    },
+    "note": "Source custom authentication success redirects to /list; initial source review incorrectly wrote line 44; actual statement is line 37"
+  }
+]

@@ -2,7 +2,9 @@
 
 ## POC priority
 
-The executable POC supports server-rendered JSP applications using Struts 1, Struts + Spring, Spring MVC, or Spring Boot. Spring MVC support resolves annotation and XML Controller mappings, literal `ModelAndView` views, `InternalResourceViewResolver` JSP paths, Tiles definitions, literal Spring URL-tag variables, and literal JSP form/link/button targets. JSP reports expand supported local tag files, transform supported Spring/JSTL markup into standalone static HTML, fill dynamic JSP values with deterministic demonstration data, then use Playwright Chromium to capture rendered screenshots and component bounds. FreeMarker and Thymeleaf remain unsupported. ScreenTrace is standalone: it never joins the target Maven/Gradle build and does not execute or modify target source, apart from writing analysis data to the user-configured analysis results directory.
+The executable POC supports server-rendered JSP applications using Struts 1, Struts + Spring, Spring MVC, or Spring Boot. Spring MVC support resolves annotation and XML Controller mappings, literal `ModelAndView` views, `InternalResourceViewResolver` JSP paths, Tiles definitions, literal Spring URL-tag variables, and literal JSP form/link/button targets. JSP reports expand supported local tag files, transform supported Spring/JSTL markup into standalone static HTML, fill dynamic JSP values with deterministic demonstration data, then use Playwright Chromium to capture rendered screenshots and component bounds. FreeMarker remains unsupported. Bounded Thymeleaf HTML view, application-relative URL-template and literal JavaScript navigation projection is supported (ADR 0092); arbitrary template expressions and layout dialect execution remain unsupported. Source-proven Spring Data paths can drive session-local demonstration CRUD in the offline report; this never executes backend code or writes a real database. ScreenTrace is standalone: it never joins the target Maven/Gradle build and does not execute or modify target source, apart from writing analysis data to the user-configured analysis results directory.
+
+WP74 adds source-proven Java resolver defaults, relative redirects to public views, finite conditional form targets, native DOM/class/date/key filtering, local template styles, and direct submitted scalar-field demonstrations. Custom DAO and external HTTP collection results remain unsupported; source missing views are not invented. See [ADR 0094](adr/0094-public-batch4-workflow-repairs.md).
 
 ## Prototype and Edit Mode Contract
 
@@ -242,7 +244,7 @@ Future adapters may support:
 - Angular
 - React
 - Vue
-- Thymeleaf
+- Full Thymeleaf engine / SpEL / layout dialect execution (bounded source projection is supported; ADR 0092)
 - JSF
 - other server-side rendering technologies
 
@@ -388,3 +390,13 @@ ScreenTrace should generate graph data equivalent to:
 The exact JSON schema may change during domain-model design.
 
 The important acceptance criterion is trace correctness.
+
+## WP72 公開專案完整性修正（2026-10-19）
+
+新增有來源證據的 Ajax callback／DOM 效果、分支 ModelAndView 回傳、c:import 組合、modal/offcanvas、分支文字回饋與有限 Thymeleaf 表單／資料選項投影。未知條件讓使用者選擇示範分支；未知回傳與缺少後端處理器保持未解析。示範資料不執行服務、日期計算或真實交易，不代表後端功能等價。驗收範圍、原 B08 無效斷言與全部保留證據見 [WP72 修正報告](reports/WORKFLOW_BATCH3_FIXES_20261019.md)。
+
+### WP76 公開專案流程補強的範圍
+
+離線原型支援有來源證據的 JSP 宣告編碼、Spring-managed Struts Action、具名 Thymeleaf 片段、Security 處理入口，以及完整 AST 形狀的 class／display／confirm／必填與單筆選取操作。未知分支保留並可選，不會執行來源事件或認證。
+
+DTO 的直接 scalar 複製可在本機示範集合回放提交與清單顯示；category、client、session、日期轉換、SQL／JPQL 結果不視為已還原。未選列更新會明示未回放資料。學生自訂 Hibernate DAO 資料回顯仍屬缺口，不能以可操作旅程宣稱完整功能等價。見 [WP76 報告](reports/WORKFLOW_BATCH5_FIXES_20261020.md)。

@@ -1,0 +1,10 @@
+10月 18, 2026 11:21:28 下午 io.screentrace.cli.ScreenTraceCli logAnalysis
+INFO: 分析完成：
+  專案：contract-management-system
+  技術：JSP, Java, Struts 1
+  Endpoints：5
+  Screens：3
+  Components：11
+  輸出：/Users/machi/IntelliJ/screentrace/analyze/completeness-batch3-20261018/contract-management-system
+10月 18, 2026 11:21:28 下午 io.screentrace.cli.ScreenTraceCli printReportPath
+INFO: 單一 HTML 報表：file:///Users/machi/IntelliJ/screentrace/analyze/completeness-batch3-20261018/contract-management-system/report/screentrace-report.html

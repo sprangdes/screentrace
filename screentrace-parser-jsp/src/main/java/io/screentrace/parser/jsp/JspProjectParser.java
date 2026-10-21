@@ -67,6 +67,7 @@ public final class JspProjectParser {
                                List<JspAnalysis.Interaction> interactions, List<JspAnalysis.Include> includes,
                                List<Diagnostic> diagnostics, Map<String, MarkupAnalysis> markup,StaticMessageResolver messages) throws IOException {
     String text = SafeProjectFiles.readUtf8Limited(root, file, SafeProjectFiles.MAX_JSP_FILE_BYTES);
+    text = ThymeleafMarkup.normalize(text);
     String relative = relative(root, file);
     JspTagFileExpander.Result tagExpansion=new JspTagFileExpander().expand(root,relative,text);
     text=tagExpansion.text();
@@ -108,9 +109,17 @@ public final class JspProjectParser {
       UrlVariableResolver.Resolution resolution = null;
       switch (tagName) {
         case "spring:url", "c:url" -> { }
-        case "jsp:include", "@include", "tiles:insert", "tiles:put", "tiles:insertdefinition", "tiles:insertattribute" -> {
-          int before=includes.size();include(relative,target(tag,"page","file","definition","value","template"),source,includes,diagnostics);
-          if(includes.size()>before) {var item=includes.get(before);includes.set(before,new JspAnalysis.Include(item.sourceViewPath(),item.targetPath(),item.source(),item.confidence(),guards.get(tag.end()),repeats.getOrDefault(tag.end(),false)));}
+        case "c:import", "jsp:include", "@include", "tiles:insert", "tiles:put", "tiles:insertdefinition", "tiles:insertattribute" -> {
+          String includeTarget=target(tag,"page","file","definition","value","template","url");
+          boolean inferredImport=false;
+          if(tagName.equals("c:import")&&literal(includeTarget)&&!includeTarget.startsWith("/")&&resolveInclude(root,relative,includeTarget)==null){
+            List<Path> candidates=new ArrayList<>();Path parent=file.getParent().getParent();
+            while(parent!=null&&parent.startsWith(root)){Path candidate=parent.resolve(includeTarget).normalize();if(SafeProjectFiles.isSafeRegularFile(root,candidate))candidates.add(candidate);parent=parent.getParent();}
+            if(candidates.size()==1){includeTarget=file.getParent().relativize(candidates.get(0)).toString().replace('\\','/');inferredImport=true;
+              diagnostics.add(new Diagnostic("c:import 相對目標依唯一上層模板基準定位；原文="+tag.attribute("url")+"；目標="+includeTarget,Confidence.INFERRED,source,"JSP_IMPORT_BASE_INFERRED",List.of()));}
+          }
+          int before=includes.size();include(relative,includeTarget,source,includes,diagnostics);
+          if(includes.size()>before) {var item=includes.get(before);includes.set(before,new JspAnalysis.Include(item.sourceViewPath(),item.targetPath(),item.source(),inferredImport?Confidence.INFERRED:item.confidence(),guards.get(tag.end()),repeats.getOrDefault(tag.end(),false)));}
         }
         case "form", "html:form", "form:form" -> {
           activeFormResolution = urls.resolve(target(tag, "action"),tag);
@@ -122,6 +131,7 @@ public final class JspProjectParser {
               activeFormSubmitsCurrentView, interactions, diagnostics);
         }
         case "a", "html:link" -> {
+          if(java.util.Set.of("modal","offcanvas").contains(Objects.toString(target(tag,"data-bs-toggle","data-toggle"),""))&&"#".equals(tag.attribute("href")))break;
           resolution = urls.resolve(target(tag,"href","page","action"),tag);
           String resolved = resolution.value();
           interaction(relative, linkType(tag, resolved), interactionLabel(tag, text), resolved, "GET", source,
@@ -141,7 +151,11 @@ public final class JspProjectParser {
       }
       if(resolution != null) for(int i=interactionStart;i<interactions.size();i++) {
         var item=interactions.get(i);
-        interactions.set(i,new JspAnalysis.Interaction(item.viewPath(),item.type(),item.label(),item.target(),item.httpMethod(),item.source(),item.confidence(),item.submitsCurrentView(),resolution.originalExpression(),resolution.definitions(),componentId));
+        String template=tag.attribute("th:href");if(template==null)template=tag.attribute("th:action");
+        var confidence=(template!=null||resolution.definitions().stream().anyMatch(e->e.resolution()==io.screentrace.core.ApplicationGraph.ResolutionStatus.INFERRED))&&Objects.toString(item.target(),"").contains("{")&&item.confidence()!=Confidence.UNRESOLVED?Confidence.INFERRED:item.confidence();
+        var proof=new ArrayList<>(resolution.definitions());
+        if(template!=null)proof.add(new io.screentrace.core.ApplicationGraph.AnalysisEvidence(source,"ThymeleafMarkup",confidence.resolutionStatus(),"模板 URL="+template+"；路徑="+item.target()));
+        interactions.set(i,new JspAnalysis.Interaction(item.viewPath(),item.type(),item.label(),item.target(),item.httpMethod(),item.source(),confidence,item.submitsCurrentView(),template!=null?template:resolution.originalExpression(),proof,componentId));
       }
     }
     for(int i=0;i<interactions.size();i++) {
@@ -196,8 +210,14 @@ public final class JspProjectParser {
   static java.util.Set<String> includedWrites(Path root,String path,String text,java.util.Set<String> visited) {
     java.util.Set<String> result=new java.util.HashSet<>();
     if(!visited.add(path)||visited.size()>SafeProjectFiles.MAX_DIRECTORY_DEPTH) return java.util.Set.of("*");
-    for(MarkupTag tag:MarkupTag.scan(text)) if(!tag.closing() && java.util.Set.of("@include","jsp:include").contains(tag.name().toLowerCase(Locale.ROOT))) {
-      String target=target(tag,"file","page");String child=literal(target)?resolveInclude(root,path,target):null;
+    for(MarkupTag tag:MarkupTag.scan(text)) if(!tag.closing() && java.util.Set.of("@include","jsp:include","c:import").contains(tag.name().toLowerCase(Locale.ROOT))) {
+      boolean imported=tag.name().equalsIgnoreCase("c:import");
+      String target=imported?tag.attribute("url"):target(tag,"file","page");
+      // An absolute external import is a separate HTTP request and cannot write this request's variables.
+      if(imported&&literal(target)&&tag.attribute("context")==null&&target.matches("(?i)^(https?:)?//.*")) continue;
+      if(imported&&literal(target)&&tag.attribute("context")==null)target=target.split("[?#]",2)[0];
+      else if(imported)target=null;
+      String child=literal(target)?resolveInclude(root,path,target):null;
       if(child==null) {result.add("*");continue;}
       try {
         String included=SafeProjectFiles.readUtf8Limited(root,root.resolve(child),SafeProjectFiles.MAX_JSP_FILE_BYTES);
@@ -243,7 +263,7 @@ public final class JspProjectParser {
       else if(resolved!=null) included.computeIfAbsent(include.sourceViewPath(), ignored -> new ArrayList<>()).add(resolved);
     }
     List<JspAnalysis.Interaction> expanded = new ArrayList<>(interactions);
-    byView.keySet().stream().filter(path -> path.endsWith(".jsp")).forEach(view -> collectIncluded(view, view, included, byView,
+    java.util.stream.Stream.concat(byView.keySet().stream(),included.keySet().stream()).distinct().filter(path -> path.endsWith(".jsp")).forEach(view -> collectIncluded(view, view, included, byView,
         new java.util.HashSet<>(), expanded));
     return expanded;
   }

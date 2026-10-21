@@ -60,3 +60,5 @@ test('containment treats a sibling sharing the root name prefix as outside', asy
   await assert.rejects(assertOutputPathWithin(root, path.join(sibling, 'report.html')));
   await rm(parent, { recursive: true, force: true });
 });
+
+test('JSP declared encoding decodes original bounded bytes',async()=>{const root=await mkdtemp(path.join(os.tmpdir(),'st-encoding-'));try{const file=path.join(root,'legacy.jsp');await writeFile(file,Buffer.from('PCVAIHBhZ2UgcGFnZUVuY29kaW5nPSJHQjE4MDMwIiU+PHRpdGxlPs7vwc88L3RpdGxlPg==','base64'));assert.match(await readUtf8Limited(root,file),/物料/);}finally{await rm(root,{recursive:true,force:true});}});

@@ -1,0 +1,195 @@
+{
+  "cases": [
+    {
+      "id": "M01",
+      "project": "Materials-Program-Management",
+      "sourceView": "WebRoot/index.jsp",
+      "kind": "text",
+      "selector": "body",
+      "source": "WebRoot/index.jsp:15-20",
+      "expectedText": [
+        "用户",
+        "密码",
+        "登录",
+        "中文",
+        "英文"
+      ],
+      "result": "FAIL",
+      "before": {
+        "id": "screen:4e673396-7619-3523-9470-e55bc506a9e3",
+        "focused": "WebRoot/index.jsp",
+        "choices": [],
+        "status": "未取得重建預覽"
+      },
+      "actualText": "",
+      "missing": [
+        "用户",
+        "密码",
+        "登录",
+        "中文",
+        "英文"
+      ]
+    },
+    {
+      "id": "M02",
+      "project": "Materials-Program-Management",
+      "sourceView": "WebRoot/index.jsp",
+      "kind": "choices",
+      "selector": "input[type=submit]",
+      "source": "src/com/bjsxt/drp/web/itemmgr/actions/LoginAction.java:36-42",
+      "expectedViews": [
+        "WebRoot/index.jsp",
+        "WebRoot/WEB-INF/jsp/basedata/item_maint.jsp"
+      ],
+      "fill": {
+        "[name=username]": "admin",
+        "[name=password]": "admin"
+      },
+      "result": "FAIL",
+      "before": {
+        "id": "screen:4e673396-7619-3523-9470-e55bc506a9e3",
+        "focused": "WebRoot/index.jsp",
+        "choices": [],
+        "status": "未取得重建預覽"
+      },
+      "error": "TimeoutError: locator.fill: Timeout 3500ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('.focus-layer:not([hidden]):not(.is-leaving) iframe').contentFrame().locator('[name=username]')\u001b[22m\n"
+    },
+    {
+      "id": "M03",
+      "project": "Materials-Program-Management",
+      "sourceView": "WebRoot/WEB-INF/jsp/basedata/item_maint.jsp",
+      "kind": "navigate",
+      "selector": "#btnAdd",
+      "source": "WebRoot/WEB-INF/jsp/basedata/item_maint.jsp:12-14",
+      "expectedView": "WebRoot/WEB-INF/jsp/basedata/item_add.jsp",
+      "result": "FAIL",
+      "before": {
+        "id": "screen:3a7b0beb-6aa0-30b8-ab12-6e2730f35547",
+        "focused": "WebRoot/WEB-INF/jsp/basedata/item_maint.jsp",
+        "choices": [],
+        "status": "未取得重建預覽"
+      },
+      "effectiveSelector": "#btnAdd",
+      "error": "TimeoutError: locator.click: Timeout 3500ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('.focus-layer:not([hidden]):not(.is-leaving) iframe').contentFrame().locator('#btnAdd').first()\u001b[22m\n"
+    },
+    {
+      "id": "M04",
+      "project": "Materials-Program-Management",
+      "sourceView": "WebRoot/WEB-INF/jsp/basedata/item_maint.jsp",
+      "kind": "navigate",
+      "selector": "#btnModify",
+      "source": "WebRoot/WEB-INF/jsp/basedata/item_maint.jsp:16-38",
+      "expectedView": "WebRoot/WEB-INF/jsp/basedata/item_modify.jsp",
+      "check": [
+        "[name=selectFlag]"
+      ],
+      "result": "FAIL",
+      "before": {
+        "id": "screen:3a7b0beb-6aa0-30b8-ab12-6e2730f35547",
+        "focused": "WebRoot/WEB-INF/jsp/basedata/item_maint.jsp",
+        "choices": [],
+        "status": "未取得重建預覽"
+      },
+      "error": "TimeoutError: locator.check: Timeout 3500ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('.focus-layer:not([hidden]):not(.is-leaving) iframe').contentFrame().locator('[name=selectFlag]').first()\u001b[22m\n"
+    },
+    {
+      "id": "M05",
+      "project": "Materials-Program-Management",
+      "sourceView": "WebRoot/WEB-INF/jsp/basedata/item_maint.jsp",
+      "kind": "navigate",
+      "selector": "#btnUpload",
+      "source": "WebRoot/WEB-INF/jsp/basedata/item_maint.jsp:66-85",
+      "expectedView": "WebRoot/WEB-INF/jsp/basedata/item_upload.jsp",
+      "check": [
+        "[name=selectFlag]"
+      ],
+      "result": "FAIL",
+      "before": {
+        "id": "screen:3a7b0beb-6aa0-30b8-ab12-6e2730f35547",
+        "focused": "WebRoot/WEB-INF/jsp/basedata/item_maint.jsp",
+        "choices": [],
+        "status": "未取得重建預覽"
+      },
+      "error": "TimeoutError: locator.check: Timeout 3500ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('.focus-layer:not([hidden]):not(.is-leaving) iframe').contentFrame().locator('[name=selectFlag]').first()\u001b[22m\n"
+    },
+    {
+      "id": "M06",
+      "project": "Materials-Program-Management",
+      "sourceView": "WebRoot/WEB-INF/jsp/basedata/item_maint.jsp",
+      "kind": "dialog",
+      "selector": "#btnModify",
+      "source": "WebRoot/WEB-INF/jsp/basedata/item_maint.jsp:25-27",
+      "expectedMessage": "请选择需要修改的物料！",
+      "uncheck": [
+        "[name=selectFlag]"
+      ],
+      "result": "FAIL",
+      "before": {
+        "id": "screen:3a7b0beb-6aa0-30b8-ab12-6e2730f35547",
+        "focused": "WebRoot/WEB-INF/jsp/basedata/item_maint.jsp",
+        "choices": [],
+        "status": "未取得重建預覽"
+      },
+      "error": "Error: locator.uncheck: Target page, context or browser has been closed\nCall log:\n\u001b[2m  - waiting for locator('.focus-layer:not([hidden]):not(.is-leaving) iframe').contentFrame().locator('[name=selectFlag]').first()\u001b[22m\n"
+    },
+    {
+      "id": "M07",
+      "project": "Materials-Program-Management",
+      "sourceView": "WebRoot/WEB-INF/jsp/basedata/item_add.jsp",
+      "kind": "navigate",
+      "selector": "#btnBack",
+      "source": "WebRoot/WEB-INF/jsp/basedata/item_add.jsp:32-34",
+      "expectedView": "WebRoot/WEB-INF/jsp/basedata/item_maint.jsp",
+      "result": "FAIL",
+      "error": "Error: page.goto: Target page, context or browser has been closed"
+    },
+    {
+      "id": "M08",
+      "project": "Materials-Program-Management",
+      "sourceView": "WebRoot/WEB-INF/jsp/basedata/item_add.jsp",
+      "kind": "dialog",
+      "selector": "#btnAdd",
+      "source": "WebRoot/WEB-INF/jsp/basedata/item_add.jsp:13-23",
+      "expectedMessage": "物料代码不能为空!",
+      "fill": {
+        "[name=itemNo]": "",
+        "[name=itemName]": ""
+      },
+      "result": "FAIL",
+      "error": "Error: page.goto: Target page, context or browser has been closed"
+    },
+    {
+      "id": "M09",
+      "project": "Materials-Program-Management",
+      "sourceView": "WebRoot/WEB-INF/jsp/basedata/item_upload.jsp",
+      "kind": "navigate",
+      "selector": "[name=btnBack]",
+      "source": "WebRoot/WEB-INF/jsp/basedata/item_upload.jsp:18-20",
+      "expectedView": "WebRoot/WEB-INF/jsp/basedata/item_maint.jsp",
+      "result": "FAIL",
+      "error": "Error: page.goto: Target page, context or browser has been closed"
+    }
+  ],
+  "journeys": [
+    {
+      "id": "MJ1",
+      "project": "Materials-Program-Management",
+      "steps": [
+        "M03",
+        "M07"
+      ],
+      "result": "FAIL",
+      "executed": [],
+      "error": "Error: page.goto: Target page, context or browser has been closed"
+    }
+  ],
+  "infrastructure": [
+    {
+      "project": "Materials-Program-Management",
+      "pageErrors": [],
+      "externalRequests": [],
+      "graphSha256": "b7ae5068e26eaea2d3f1e60216bbcecaf902b9889c54f02f4a0d1f2b7fe10a95",
+      "reportSha256": "8667dd50b7b1a045ee78429b72021d176660b1dedee997ff70db60c89211142a"
+    }
+  ]
+}

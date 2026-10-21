@@ -27,6 +27,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Objects;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
@@ -57,6 +58,8 @@ public final class SpringMvcAnalyzer {
         addTilesDefinitions(jsp, state);
         discoverExceptionView(inventory, state);
         parseXmlControllers(inventory, state);
+        addPropertiesViewResolvers(inventory,state);
+        addJavaViewResolvers(inventory,state);
         for (Path java : inventory.javaFiles()) parseController(java, state);
         SpringControllerFlow.resolve(state.nodes,state.edges,state.diagnostics,state.returnTargets,
             io.screentrace.parser.jsp.UrlResolution.context(inventory,List.of()));
@@ -67,9 +70,13 @@ public final class SpringMvcAnalyzer {
                 state.nodes, state.edges, state.diagnostics, state.apiContracts, ApplicationGraph.BEHAVIOR_SCHEMA_VERSION, List.of(), List.of());
         graph=MarkupGraphContribution.enrich(graph,jsp);
         graph=SpringFormBindings.bind(graph,inventory);
-        var completed=SpringControllerFlow.project(SpringServerValidation.enrich(io.screentrace.parser.jsp.UrlGraphContribution.enrich(io.screentrace.parser.jsp.JavaScriptGraphContribution.enrich(MarkupGraphContribution.enrich(graph,jsp),inventory),inventory),inventory));
+        var completed=SpringControllerFlow.project(SpringServerValidation.enrich(io.screentrace.parser.jsp.UrlGraphContribution.enrich(io.screentrace.parser.jsp.JavaScriptGraphContribution.enrich(io.screentrace.parser.jsp.ThymeleafFragments.enrich(MarkupGraphContribution.enrich(graph,jsp),inventory),inventory),inventory),inventory));
         completed=io.screentrace.parser.jsp.RouteTemplateInference.enrich(completed,inventory);
-        return io.screentrace.core.GraphIntegrityValidator.requireAnalysis(SpringSecurityRedirects.enrich(completed,inventory));
+        completed=MarkupGraphContribution.inheritLinkActions(SpringWebFlowContribution.enrich(SpringSecurityRedirects.enrich(completed,inventory),inventory));
+        completed=io.screentrace.parser.jsp.UrlGraphContribution.enrich(SpringSecurityProcessors.enrich(completed,inventory),inventory);
+        completed=SpringDataSimulation.enrich(completed,inventory);
+        completed=SpringDtoSimulation.enrich(completed,inventory);
+        return io.screentrace.core.GraphIntegrityValidator.requireAnalysis(SpringSubmittedModel.enrich(completed,inventory));
     }
 
     private static void discoverExceptionView(ProjectInventory inventory, State state) {
@@ -92,14 +99,21 @@ public final class SpringMvcAnalyzer {
         String id = ApplicationGraph.id(NodeType.SCREEN, relative);
         Map<String, String> attributes = new TreeMap<>();
         attributes.put("view", relative);
+        if(relative.startsWith("src/main/webapp/")&&!relative.toUpperCase(java.util.Locale.ROOT).contains("/WEB-INF/"))attributes.put("routeAliases",relative.substring("src/main/webapp".length()));
         attributes.put("staticPreview", jspPreview(file, state));
         addNode(state, new GraphNode(id, NodeType.SCREEN, file.getFileName().toString().replaceFirst("\\.jsp$", ""),
                 attributes, source, Confidence.CONFIRMED));
         state.screensByView.put(relative, id);
         state.screensByView.put("/" + relative, id);
         webPath(relative).ifPresent(path -> state.screensByView.put(path, id));
-        for (String prefix : List.of("src/main/webapp/WEB-INF/jsp/", "src/main/webapp/WEB-INF/views/", "WEB-INF/jsp/", "WEB-INF/views/")) {
+        if(relative.startsWith("src/main/webapp/")&&!relative.contains("/WEB-INF/"))state.screensByView.put(relative.substring("src/main/webapp".length()),id);
+        for (String prefix : List.of("src/main/webapp/WEB-INF/jsp/", "src/main/webapp/WEB-INF/views/", "WEB-INF/jsp/", "WEB-INF/views/", "src/main/resources/templates/")) {
             if (relative.startsWith(prefix)) state.screensByView.put(relative.substring(prefix.length()).replaceFirst("\\.jsp$", ""), id);
+        }
+        String templateRoot="src/main/resources/templates/";
+        if(relative.startsWith(templateRoot)&&relative.endsWith(".html")) {
+            String logical=relative.substring(templateRoot.length(),relative.length()-5);
+            state.screensByView.put(logical,id);state.screensByView.put("/"+logical,id);
         }
     }
 
@@ -148,6 +162,11 @@ public final class SpringMvcAnalyzer {
         var returns=rest?List.<SpringControllerReturns.Target>of():SpringControllerReturns.extract(method,relative,type.getNameAsString(),constants);
         List<String> views = returns.stream().filter(t->t.kind()!=SpringControllerReturns.Kind.UNKNOWN)
             .map(t->t.kind()==SpringControllerReturns.Kind.VIEW?t.value():(t.kind()==SpringControllerReturns.Kind.FORWARD?"forward:":"redirect:")+t.value()).distinct().toList();
+        var unknownReturns=returns.stream().filter(t->t.kind()==SpringControllerReturns.Kind.UNKNOWN).toList();
+        if(!unknownReturns.isEmpty()){
+            var old=state.nodes.stream().filter(n->n.id().equals(handlerId)).findFirst().orElseThrow();var attrs=new TreeMap<>(old.attributes());attrs.put("unresolvedReturnCount",Integer.toString(unknownReturns.size()));
+            var proof=new ArrayList<>(old.evidence());unknownReturns.forEach(t->proof.addAll(t.evidence()));state.nodes.remove(old);state.nodes.add(new GraphNode(old.id(),old.type(),old.name(),attrs,old.source(),old.confidence(),proof));
+        }
         for(var target:returns) {
             if(target.kind()==SpringControllerReturns.Kind.UNKNOWN)SpringControllerFlow.unresolved(state.diagnostics,target,"無法證明常值或未改寫的回傳物件");
             else if(target.kind()!=SpringControllerReturns.Kind.VIEW)state.returnTargets.add(new SpringControllerFlow.Pending(handlerId,httpMethod(mapping),target));
@@ -164,9 +183,9 @@ public final class SpringMvcAnalyzer {
             state.apiContracts.add(state.contracts.contract(endpointId, method, mapping, source, views));
             for (var target : returns.stream().filter(t->t.kind()==SpringControllerReturns.Kind.VIEW).toList()) {
                 String view=target.value();String screenId = screenForView(view, target.source(), state);
-                Confidence confidence=resolvedScreenId(view, state) != null ? Confidence.CONFIRMED : Confidence.INFERRED;
-                String returnId=ApplicationGraph.id(NodeType.COMPONENT,"RENDERS:"+handlerId+":"+screenId+":"+target.source().line()+":"+target.expression());
-                if(state.edges.stream().noneMatch(e->e.id().equals(returnId)))state.edges.add(new Relationship(returnId,EdgeType.RENDERS,handlerId,screenId,confidence,target.source(),target.evidence()));
+                Confidence confidence=resolvedScreenId(view, state) != null&&!target.evidence().stream().anyMatch(e->e.parser().equals("SpringControllerReturns")&&e.resolution()==ApplicationGraph.ResolutionStatus.INFERRED) ? Confidence.CONFIRMED : Confidence.INFERRED;
+                String returnId=ApplicationGraph.id(NodeType.COMPONENT,"RENDERS:"+handlerId+":"+screenId+":"+target.source().line()+":"+target.expression()+SpringControllerReturns.branchKey(target));
+                if(state.edges.stream().noneMatch(e->e.id().equals(returnId)))state.edges.add(new Relationship(returnId,EdgeType.RENDERS,handlerId,screenId,confidence,target.source(),viewEvidence(target,view,screenId,state)));
                 state.endpointsByScreen.computeIfAbsent(screenId, ignored -> new ArrayList<>()).add(endpoint);
                 state.screensByEndpoint.computeIfAbsent(endpointId, ignored -> new ArrayList<>()).add(screenId);
             }
@@ -178,6 +197,12 @@ public final class SpringMvcAnalyzer {
             }
             if (!rest && views.isEmpty() && !throwsException(method)) state.diagnostics.add(new Diagnostic("Handler return view cannot be resolved statically: " + handlerName, Confidence.UNRESOLVED, source));
         }
+    }
+
+    private static List<ApplicationGraph.AnalysisEvidence> viewEvidence(SpringControllerReturns.Target target,String view,String screenId,State state) {
+        var proof=new ArrayList<>(target.evidence());
+        for(var resolver:state.viewResolvers)if(Objects.equals(state.screensByView.get(normalizeResolverPath(resolver.prefix(),view,resolver.suffix())),screenId))proof.addAll(resolver.evidence());
+        return proof;
     }
 
     private static boolean throwsException(MethodDeclaration method) {
@@ -230,6 +255,45 @@ public final class SpringMvcAnalyzer {
             beans.put(id.isBlank() ? "__anonymous_" + index : id, bean);
         }
         return beans;
+    }
+
+    private static void addJavaViewResolvers(ProjectInventory inventory,State state) throws IOException {
+        for(Path file:inventory.javaFiles()) try {
+            var unit=io.screentrace.parser.jsp.JavaSources.parse(SafeProjectFiles.readUtf8Limited(inventory.root(),file,SafeProjectFiles.MAX_SOURCE_FILE_BYTES));
+            for(var method:unit.findAll(MethodDeclaration.class)) {
+                if(annotation(method,"Bean")==null||method.getBody().isEmpty())continue;
+                var returns=method.findAll(com.github.javaparser.ast.stmt.ReturnStmt.class);
+                if(returns.size()!=1||returns.get(0).getExpression().filter(Expression::isNameExpr).isEmpty()||returns.get(0).getParentNode().orElse(null)!=method.getBody().get())continue;
+                String name=returns.get(0).getExpression().get().asNameExpr().getNameAsString();
+                var definitions=method.findAll(com.github.javaparser.ast.body.VariableDeclarator.class).stream().filter(v->v.getNameAsString().equals(name)).toList();
+                if(definitions.size()!=1)continue;var definition=definitions.get(0);
+                if(definition.getInitializer().filter(Expression::isObjectCreationExpr).isEmpty())continue;
+                var creation=definition.getInitializer().get().asObjectCreationExpr();
+                if(!creation.getType().getNameAsString().equals("InternalResourceViewResolver")||!creation.getArguments().isEmpty())continue;
+                String prefix="",suffix="";boolean safe=true;
+                Set<String> properties=new HashSet<>();
+                for(var ref:method.findAll(com.github.javaparser.ast.expr.NameExpr.class))if(ref.getNameAsString().equals(name)) {
+                    var parent=ref.getParentNode().orElse(null);
+                    if(parent==returns.get(0))continue;
+                    if(!(parent instanceof com.github.javaparser.ast.expr.MethodCallExpr call)||call.getScope().orElse(null)!=ref||!Set.of("setPrefix","setSuffix","setViewClass").contains(call.getNameAsString())||call.getArguments().size()!=1||call.findAncestor(com.github.javaparser.ast.stmt.ExpressionStmt.class).filter(e->e.getParentNode().orElse(null)==method.getBody().get()).isEmpty()||!call.getBegin().orElseThrow().isAfter(definition.getEnd().orElseThrow())||!call.getEnd().orElseThrow().isBefore(returns.get(0).getBegin().orElseThrow())){safe=false;break;}
+                    String property=call.getNameAsString();if(!properties.add(property)){safe=false;break;}
+                    if(property.equals("setViewClass")) {if(!call.getArgument(0).isClassExpr()||!Set.of("JstlView","InternalResourceView","org.springframework.web.servlet.view.JstlView","org.springframework.web.servlet.view.InternalResourceView").contains(call.getArgument(0).asClassExpr().getType().asString()))safe=false;continue;}
+                    if(!call.getArgument(0).isStringLiteralExpr()){safe=false;break;}
+                    if(property.equals("setPrefix"))prefix=call.getArgument(0).asStringLiteralExpr().asString();else suffix=call.getArgument(0).asStringLiteralExpr().asString();
+                }
+                if(safe)state.viewResolvers.add(new ViewResolver(prefix,suffix,List.of(new ApplicationGraph.AnalysisEvidence(new SourceLocation(inventory.root().relativize(file).toString(),method.getBegin().orElseThrow().line),"SpringViewResolver",ApplicationGraph.ResolutionStatus.INFERRED,"Java Bean InternalResourceViewResolver；prefix="+prefix+"；suffix="+suffix+"；未設定欄位採用空字串預設；未執行 Bean"))));
+            }
+        } catch(IOException|RuntimeException error) {
+            state.diagnostics.add(new Diagnostic("Java view resolver 設定無法證明",Confidence.UNRESOLVED,new SourceLocation(inventory.root().relativize(file).toString(),1),"SPRING_VIEW_RESOLVER_UNRESOLVED",List.of()));
+        }
+    }
+
+    private static void addPropertiesViewResolvers(ProjectInventory inventory,State state) {
+        for(Path file:inventory.files())if(file.getFileName().toString().equals("application.properties"))try {
+            var properties=new java.util.Properties();properties.load(new java.io.StringReader(SafeProjectFiles.readUtf8Limited(inventory.root(),file,SafeProjectFiles.MAX_SOURCE_FILE_BYTES)));
+            String prefix=properties.getProperty("spring.mvc.view.prefix"),suffix=properties.getProperty("spring.mvc.view.suffix");
+            if(prefix!=null&&suffix!=null&&!prefix.contains("${")&&!suffix.contains("${"))state.viewResolvers.add(new ViewResolver(prefix,suffix));
+        }catch(IOException error){state.diagnostics.add(new Diagnostic("View resolver 設定無法讀取",Confidence.UNRESOLVED,new SourceLocation(inventory.root().relativize(file).toString(),1)));}
     }
 
     private static void addViewResolvers(Map<String, Element> beans, State state) {
@@ -424,6 +488,9 @@ public final class SpringMvcAnalyzer {
                     Confidence.INFERRED, interaction.source());
             }
             String next = state.screensByView.get(interaction.target());
+            // A template's logical name is a view resolver key, never proof of a public URL.
+            String direct=next;
+            if(next!=null&&state.nodes.stream().anyMatch(n->n.id().equals(direct)&&n.attributes().getOrDefault("view","").startsWith("src/main/resources/templates/")))next=null;
             if (next != null) edge(state, EdgeType.NAVIGATES_TO, id, next, Confidence.CONFIRMED, interaction.source());
         }
     }
@@ -590,5 +657,7 @@ public final class SpringMvcAnalyzer {
     }
     private record EndpointReference(String id, String path, String httpMethod, String category) { }
     private record EndpointMatch(String endpointId, Confidence confidence) { }
-    private record ViewResolver(String prefix, String suffix) { }
+    private record ViewResolver(String prefix, String suffix,List<ApplicationGraph.AnalysisEvidence> evidence) {
+        ViewResolver(String prefix,String suffix){this(prefix,suffix,List.of());}
+    }
 }

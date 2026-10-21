@@ -1,0 +1,62 @@
+{
+  "results": [
+    {
+      "id": "X01",
+      "source": "src/main/resources/static/css/Home.css:1-24",
+      "expected": {
+        "background": "rgb(245, 247, 251)",
+        "fontIncludes": "system-ui"
+      },
+      "actual": {
+        "background": "rgb(245, 247, 251)",
+        "font": "system-ui, -apple-system, \"Segoe UI\", sans-serif"
+      },
+      "result": "PASS"
+    },
+    {
+      "id": "X02",
+      "source": "src/main/resources/templates/visitor/booking-form.html:116-120",
+      "expectedCheckoutMin": "2026-11-02",
+      "actualCheckoutMin": "2026-11-02",
+      "result": "PASS"
+    },
+    {
+      "id": "X03",
+      "actualFocusedView": "src/main/resources/templates/visitor/booking-success.html",
+      "expectedFocusedView": "src/main/resources/templates/visitor/booking-success.html",
+      "source": "src/main/resources/templates/visitor/booking-success.html:41-53",
+      "scope": "Successful binding/new booking demonstration; no claim that guest lookup, price, SQL or room availability executed",
+      "expected": [
+        "0700419419",
+        "01-11-2026",
+        "03-11-2026"
+      ],
+      "missing": [
+        "0700419419"
+      ],
+      "actual": "Hotel ALAKAMANDAWA\nHome\nAdmin Login\n✅\nBooking Confirmed!\n\nThank you for choosing Hotel ALAKAMANADAWA. Your booking has been successfully confirmed.\n\nBooking Details\nBooking ID:\n12345\nGuest Name:\nJohn Doe\nRoom Number:\n101\nRoom Type:\nDeluxe Suite\nCheck-in Date:\n01-11-2026\nCheck-out Date:\n03-11-2026\nNumber of Guests:\n2\nTotal Amount:\nLKR 60,000.00\n📝 Important Information:\nPlease save your Booking ID for future reference\nCheck-in time: 2:00 PM\nCheck-out time: 12:00 PM\nPlease bring a valid ID during check-in\nBook Another Room\nBack to Home\n\n© 2026 Hotel ALAKAMANADAWA",
+      "result": "FAIL"
+    },
+    {
+      "id": "X04",
+      "source": "src/main/resources/templates/visitor/booking-success.html:49-53",
+      "replacesInvalid": [
+        "H11",
+        "X03"
+      ],
+      "expectedFocusedView": "src/main/resources/templates/visitor/booking-success.html",
+      "actualFocusedView": "src/main/resources/templates/visitor/booking-success.html",
+      "expected": [
+        "01-11-2026",
+        "03-11-2026"
+      ],
+      "missing": [],
+      "scope": "Direct submitted ModelAttribute dates only; no guest lookup, telephone field, price or SQL claim",
+      "result": "PASS"
+    }
+  ],
+  "pageErrors": [],
+  "externalRequests": [],
+  "graphSha256": "12e4c99947bac8cba85888f3951d958f9e0357677215b16e4806ca419ed06b10",
+  "reportSha256": "e12891ddee8c697b7b954f95185252f56ee5e0a14b7f4d76eae8f4f9579f940c"
+}

@@ -55,8 +55,8 @@ export function selectorOf(node,code,resolve=null) {
 export function bindings(unit,dom=[],options={}) {
  const parsed=options.node?{ast:options.node,status:options.status??'CONFIRMED'}:parseSource(unit);const result=[];const code=unit.code;
  const add=(node,selector,event,handler,delegated=false,eventStatus='CONFIRMED')=>{
-  const triggerIds=select(selector,dom,options.thisId??unit.triggerId);result.push({selector,event,triggerIds,handler,delegated,screenId:unit.screenId,
-   status:eventStatus==='CONFIRMED'&&parsed.status==='CONFIRMED'&&triggerIds.length&&!dom.some(d=>triggerIds.includes(d.componentId)&&d.dynamic)?'CONFIRMED':'UNRESOLVED',source:{file:unit.file,line:(unit.line??1)+(node.loc?.start.line??1)-1},expression:text(node,code)});
+  const triggerIds=select(selector,dom,options.thisId??unit.triggerId);result.push({selector,event:typeof event==='string'&&event.trim()?event:'UNRESOLVED_EVENT',triggerIds,handler,delegated,screenId:unit.screenId,
+   status:eventStatus==='CONFIRMED'&&parsed.status==='CONFIRMED'&&triggerIds.length&&!dom.some(d=>triggerIds.includes(d.componentId)&&d.dynamic)?'CONFIRMED':'UNRESOLVED',source:{file:unit.file,line:(unit.line??1)+(node.loc?.start.line??1)-1},expression:text(node,code),callee:node.callee?text(node.callee,code):unit.event||"事件屬性"});
  };
  if(unit.event&&!options.node){add(parsed.ast,'this',unit.event,parsed.ast);return result;}
  function scan(node) {
@@ -65,7 +65,7 @@ export function bindings(unit,dom=[],options={}) {
   if(node.type==='CallExpression'&&node.callee.type==='MemberExpression'&&!node.callee.computed) {
    const method=node.callee.property.name,args=node.arguments;
    if(['on','click','change','submit','blur','focus','input','keydown','keyup','addEventListener'].includes(method) && args.length) {
-    let selector=selectorOf(node.callee.object,code,options.resolveSelector),event=['on','addEventListener'].includes(method)?args[0]?.value:method;const resolvedEvent=options.resolveSelector?.(args[0]);if(['on','addEventListener'].includes(method)&&resolvedEvent?.status==='CONFIRMED')event=resolvedEvent.value;
+    let selector=options.resolveReceiver?.(node.callee.object)??selectorOf(node.callee.object,code,options.resolveSelector),event=['on','addEventListener'].includes(method)?args[0]?.value:method;const resolvedEvent=options.resolveSelector?.(args[0]);if(['on','addEventListener'].includes(method)&&resolvedEvent?.status==='CONFIRMED')event=resolvedEvent.value;
     if(method==='on'&&args[0]?.type==='ObjectExpression'){for(const property of args[0].properties){if(property.type==='Property'){const mappedEvent=property.computed?text(property.key,code):property.key.name??property.key.value;const delegated=args[1]?.type==='Literal';add(node,delegated?selector+' '+args[1].value:selector,String(mappedEvent),property.value,delegated,property.computed?'UNRESOLVED':'CONFIRMED');}}return;}
     const delegated=method==='on'&&args.length>2&&args[1]?.type!=='ObjectExpression'&&!(args[1]?.type==='Literal'&&args[1].value===null);
     if(delegated){const child=options.resolveSelector?.(args[1]);selector=selector+' '+(child?.status==='CONFIRMED'?child.value:args[1]?.type==='Literal'?args[1].value:text(args[1],code));}

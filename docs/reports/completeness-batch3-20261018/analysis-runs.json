@@ -1,0 +1,66 @@
+[
+  {
+    "project": "contract-management-system",
+    "exitCode": 0,
+    "seconds": 2.28,
+    "command": [
+      "java",
+      "-Djava.awt.headless=true",
+      "-Duser.home=/private/tmp/screentrace-batch3-20261018/home-contract-management-system",
+      "-Dscreentrace.home=/Users/machi/IntelliJ/screentrace",
+      "-Dscreentrace.js.module=/Users/machi/IntelliJ/screentrace/screentrace-js/cli.mjs",
+      "-jar",
+      "/Users/machi/IntelliJ/screentrace/screentrace-cli/target/screentrace-cli-0.1.0-SNAPSHOT.jar",
+      "analyze",
+      "contract-management-system"
+    ]
+  },
+  {
+    "project": "Fintech-Finance-Banking-Application",
+    "exitCode": 0,
+    "seconds": 5.48,
+    "command": [
+      "java",
+      "-Djava.awt.headless=true",
+      "-Duser.home=/private/tmp/screentrace-batch3-20261018/home-Fintech-Finance-Banking-Application",
+      "-Dscreentrace.home=/Users/machi/IntelliJ/screentrace",
+      "-Dscreentrace.js.module=/Users/machi/IntelliJ/screentrace/screentrace-js/cli.mjs",
+      "-jar",
+      "/Users/machi/IntelliJ/screentrace/screentrace-cli/target/screentrace-cli-0.1.0-SNAPSHOT.jar",
+      "analyze",
+      "Fintech-Finance-Banking-Application"
+    ]
+  },
+  {
+    "project": "SpringMVC-IMS",
+    "exitCode": 0,
+    "seconds": 7.84,
+    "command": [
+      "java",
+      "-Djava.awt.headless=true",
+      "-Duser.home=/private/tmp/screentrace-batch3-20261018/home-SpringMVC-IMS",
+      "-Dscreentrace.home=/Users/machi/IntelliJ/screentrace",
+      "-Dscreentrace.js.module=/Users/machi/IntelliJ/screentrace/screentrace-js/cli.mjs",
+      "-jar",
+      "/Users/machi/IntelliJ/screentrace/screentrace-cli/target/screentrace-cli-0.1.0-SNAPSHOT.jar",
+      "analyze",
+      "SpringMVC-IMS"
+    ]
+  },
+  {
+    "project": "airline_system",
+    "exitCode": 0,
+    "seconds": 2.7,
+    "command": [
+      "java",
+      "-Djava.awt.headless=true",
+      "-Duser.home=/private/tmp/screentrace-batch3-20261018/home-airline_system",
+      "-Dscreentrace.home=/Users/machi/IntelliJ/screentrace",
+      "-Dscreentrace.js.module=/Users/machi/IntelliJ/screentrace/screentrace-js/cli.mjs",
+      "-jar",
+      "/Users/machi/IntelliJ/screentrace/screentrace-cli/target/screentrace-cli-0.1.0-SNAPSHOT.jar",
+      "analyze",
+      "airline_system"
+    ]
+  }
+]

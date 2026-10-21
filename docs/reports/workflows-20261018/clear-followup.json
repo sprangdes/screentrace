@@ -1,0 +1,39 @@
+{
+  "id": "O06",
+  "result": "FAIL",
+  "before": {
+    "ISBNNumber": "ScreenTrace test",
+    "title": "ScreenTrace test",
+    "author": "ScreenTrace test",
+    "publication": "ScreenTrace test",
+    "edition": "ScreenTrace test",
+    "category": "ScreenTrace test",
+    "price": "ScreenTrace test"
+  },
+  "after": {
+    "ISBNNumber": "ScreenTrace test",
+    "title": "ScreenTrace test",
+    "author": "ScreenTrace test",
+    "publication": "ScreenTrace test",
+    "edition": "ScreenTrace test",
+    "category": "ScreenTrace test",
+    "price": "ScreenTrace test"
+  },
+  "renderedButton": {
+    "tag": "button",
+    "text": "",
+    "value": "clear",
+    "type": "submit",
+    "html": "<button property=\"name\" value=\"clear\" data-st-source-file=\"web/AddBook.jsp\" data-st-source-line=\"76\" data-st-component-id=\"component:de049e60-2b09-353d-aa86-68a04b518ed5\" data-simulation-capable=\"true\"></button>"
+  },
+  "originalExpected": {
+    "buttonType": "button",
+    "visibleLabel": "clear",
+    "fieldsAfter": "all empty; no form submission"
+  },
+  "status": [
+    ""
+  ],
+  "choices": [],
+  "note": "Identify editable controls by retained original property when the renderer failed to emit name. No DOM or target code modifications."
+}

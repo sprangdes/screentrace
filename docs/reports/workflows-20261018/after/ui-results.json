@@ -1,0 +1,1677 @@
+{
+  "cases": [
+    {
+      "id": "O01",
+      "project": "MyStrutsApp",
+      "expectedViews": [
+        "web/Registration.jsp"
+      ],
+      "kind": "navigate",
+      "result": "PASS",
+      "controlCount": 1,
+      "controlLabel": "REGISTER YOURSELF",
+      "actual": {
+        "focusedId": "screen:60d84e22-4183-38c8-9126-a87023cef627",
+        "view": "web/Registration.jsp",
+        "choices": [],
+        "calls": [],
+        "status": [
+          ""
+        ]
+      },
+      "offeredViews": [
+        "web/Registration.jsp"
+      ]
+    },
+    {
+      "id": "O02",
+      "project": "MyStrutsApp",
+      "expectedViews": [
+        "web/ForgetPassword.jsp"
+      ],
+      "kind": "navigate",
+      "result": "PASS",
+      "controlCount": 1,
+      "controlLabel": "Forget Password",
+      "actual": {
+        "focusedId": "screen:7397c8dc-4674-3008-807f-cc333bf6691b",
+        "view": "web/ForgetPassword.jsp",
+        "choices": [],
+        "calls": [],
+        "status": [
+          ""
+        ]
+      },
+      "offeredViews": [
+        "web/ForgetPassword.jsp"
+      ]
+    },
+    {
+      "id": "O03",
+      "project": "MyStrutsApp",
+      "expectedViews": [
+        "web/WEB-INF/success.jsp",
+        "web/login.jsp"
+      ],
+      "kind": "navigate",
+      "result": "PASS",
+      "controlCount": 1,
+      "controlLabel": "Login",
+      "actual": {
+        "focusedId": "screen:ea2e2154-8c6b-3548-ac4c-506c4f247633",
+        "view": "web/login.jsp",
+        "choices": [
+          {
+            "target": "screen:8e025816-4099-3ba5-aa5d-b00c4e87451b",
+            "label": "success",
+            "view": "web/WEB-INF/success.jsp"
+          },
+          {
+            "target": "screen:ea2e2154-8c6b-3548-ac4c-506c4f247633",
+            "label": "login",
+            "view": "web/login.jsp"
+          }
+        ],
+        "calls": [],
+        "status": [
+          ""
+        ]
+      },
+      "offeredViews": [
+        "web/WEB-INF/success.jsp",
+        "web/login.jsp"
+      ],
+      "selected": {
+        "focusedId": "screen:8e025816-4099-3ba5-aa5d-b00c4e87451b",
+        "view": "web/WEB-INF/success.jsp",
+        "choices": [],
+        "calls": [],
+        "status": [
+          ""
+        ]
+      }
+    },
+    {
+      "id": "O04",
+      "project": "MyStrutsApp",
+      "expectedViews": [
+        "web/Registration.jsp"
+      ],
+      "kind": "navigate",
+      "result": "PASS",
+      "controlCount": 1,
+      "controlLabel": "Register",
+      "actual": {
+        "focusedId": "screen:60d84e22-4183-38c8-9126-a87023cef627",
+        "view": "web/Registration.jsp",
+        "choices": [],
+        "calls": [],
+        "status": [
+          ""
+        ]
+      },
+      "offeredViews": [
+        "web/Registration.jsp"
+      ]
+    },
+    {
+      "id": "O05",
+      "project": "MyStrutsApp",
+      "expectedViews": [
+        "web/AddBook.jsp"
+      ],
+      "kind": "navigate",
+      "result": "PASS",
+      "controlCount": 1,
+      "controlLabel": "save",
+      "actual": {
+        "focusedId": "screen:83ab4336-5f38-371e-a561-9b2c9a268aa4",
+        "view": "web/AddBook.jsp",
+        "choices": [],
+        "calls": [],
+        "status": [
+          ""
+        ]
+      },
+      "offeredViews": [
+        "web/AddBook.jsp"
+      ]
+    },
+    {
+      "id": "O06",
+      "project": "MyStrutsApp",
+      "expectedViews": [],
+      "kind": "clear",
+      "result": "PASS",
+      "controlCount": 1,
+      "controlLabel": "clear",
+      "beforeFields": {
+        "ISBNNumber": "ScreenTrace test",
+        "title": "ScreenTrace test",
+        "author": "ScreenTrace test",
+        "publication": "ScreenTrace test",
+        "edition": "ScreenTrace test",
+        "category": "ScreenTrace test",
+        "price": "ScreenTrace test"
+      },
+      "actual": {
+        "focusedId": "screen:83ab4336-5f38-371e-a561-9b2c9a268aa4",
+        "view": "web/AddBook.jsp",
+        "choices": [],
+        "calls": [],
+        "status": [
+          "已模擬可確認的操作；部分腳本結果無法確定"
+        ]
+      },
+      "afterFields": {
+        "ISBNNumber": "",
+        "title": "",
+        "author": "",
+        "publication": "",
+        "edition": "",
+        "category": "",
+        "price": ""
+      }
+    },
+    {
+      "id": "O07",
+      "project": "MyStrutsApp",
+      "expectedViews": [],
+      "kind": "calendar",
+      "result": "PASS",
+      "controlCount": 1,
+      "controlLabel": "Select Date",
+      "actual": {
+        "focusedId": "screen:ea2e2154-8c6b-3548-ac4c-506c4f247633",
+        "view": "web/login.jsp",
+        "choices": [],
+        "calls": [],
+        "status": [
+          "已模擬可確認的操作；部分腳本結果無法確定"
+        ]
+      },
+      "dialogVisible": true,
+      "selectedDate": "2026/10/18"
+    },
+    {
+      "id": "E01",
+      "project": "eBazaar",
+      "expectedViews": [
+        "src/main/webapp/WEB-INF/views/products.jsp"
+      ],
+      "kind": "navigate",
+      "result": "PASS",
+      "controlCount": 1,
+      "controlLabel": "Go to Products",
+      "actual": {
+        "focusedId": "screen:7db8ab08-f075-3079-9b2a-8667f0a045cc",
+        "view": "src/main/webapp/WEB-INF/views/products.jsp",
+        "choices": [],
+        "calls": [],
+        "status": [
+          ""
+        ]
+      },
+      "offeredViews": [
+        "src/main/webapp/WEB-INF/views/products.jsp"
+      ]
+    },
+    {
+      "id": "E02",
+      "project": "eBazaar",
+      "expectedViews": [
+        "src/main/webapp/WEB-INF/views/productForm.jsp"
+      ],
+      "kind": "navigate",
+      "result": "PASS",
+      "controlCount": 1,
+      "controlLabel": "Add Product",
+      "actual": {
+        "focusedId": "screen:7724c152-1e01-3758-be14-2f656bf5b4a5",
+        "view": "src/main/webapp/WEB-INF/views/productForm.jsp",
+        "choices": [],
+        "calls": [],
+        "status": [
+          ""
+        ]
+      },
+      "offeredViews": [
+        "src/main/webapp/WEB-INF/views/productForm.jsp"
+      ]
+    },
+    {
+      "id": "E03",
+      "project": "eBazaar",
+      "expectedViews": [
+        "src/main/webapp/WEB-INF/views/productDetails.jsp"
+      ],
+      "kind": "navigate",
+      "result": "PASS",
+      "controlCount": 1,
+      "controlLabel": "Details",
+      "actual": {
+        "focusedId": "screen:cfe5757c-94d3-304c-b855-09942ab6923a",
+        "view": "src/main/webapp/WEB-INF/views/productDetails.jsp",
+        "choices": [],
+        "calls": [],
+        "status": [
+          ""
+        ]
+      },
+      "offeredViews": [
+        "src/main/webapp/WEB-INF/views/productDetails.jsp"
+      ]
+    },
+    {
+      "id": "E04",
+      "project": "eBazaar",
+      "expectedViews": [
+        "src/main/webapp/WEB-INF/views/productForm.jsp",
+        "src/main/webapp/WEB-INF/views/products.jsp"
+      ],
+      "kind": "navigate",
+      "result": "PASS",
+      "controlCount": 1,
+      "controlLabel": "Add Product",
+      "actual": {
+        "focusedId": "screen:7724c152-1e01-3758-be14-2f656bf5b4a5",
+        "view": "src/main/webapp/WEB-INF/views/productForm.jsp",
+        "choices": [
+          {
+            "target": "screen:7724c152-1e01-3758-be14-2f656bf5b4a5",
+            "label": "productForm",
+            "view": "src/main/webapp/WEB-INF/views/productForm.jsp"
+          },
+          {
+            "target": "screen:7db8ab08-f075-3079-9b2a-8667f0a045cc",
+            "label": "products",
+            "view": "src/main/webapp/WEB-INF/views/products.jsp"
+          }
+        ],
+        "calls": [],
+        "status": [
+          ""
+        ]
+      },
+      "offeredViews": [
+        "src/main/webapp/WEB-INF/views/productForm.jsp",
+        "src/main/webapp/WEB-INF/views/products.jsp"
+      ],
+      "selected": {
+        "focusedId": "screen:7db8ab08-f075-3079-9b2a-8667f0a045cc",
+        "view": "src/main/webapp/WEB-INF/views/products.jsp",
+        "choices": [],
+        "calls": [],
+        "status": [
+          ""
+        ]
+      }
+    },
+    {
+      "id": "E05",
+      "project": "eBazaar",
+      "expectedViews": [
+        "src/main/webapp/WEB-INF/views/myCart.jsp"
+      ],
+      "kind": "navigate",
+      "result": "PASS",
+      "controlCount": 1,
+      "controlLabel": "Show Cart",
+      "actual": {
+        "focusedId": "screen:7de30ede-6a70-3655-852e-e978f90b308e",
+        "view": "src/main/webapp/WEB-INF/views/myCart.jsp",
+        "choices": [],
+        "calls": [],
+        "status": [
+          ""
+        ]
+      },
+      "offeredViews": [
+        "src/main/webapp/WEB-INF/views/myCart.jsp"
+      ]
+    },
+    {
+      "id": "E06",
+      "project": "eBazaar",
+      "expectedViews": [],
+      "kind": "reveal",
+      "result": "PASS",
+      "controlCount": 1,
+      "controlLabel": "Order Now",
+      "actual": {
+        "focusedId": "screen:cfe5757c-94d3-304c-b855-09942ab6923a",
+        "view": "src/main/webapp/WEB-INF/views/productDetails.jsp",
+        "choices": [],
+        "calls": [],
+        "status": [
+          "已模擬可確認的操作；部分腳本結果無法確定"
+        ]
+      },
+      "revealed": true
+    },
+    {
+      "id": "E07",
+      "project": "eBazaar",
+      "expectedViews": [],
+      "kind": "api",
+      "result": "PASS",
+      "prerequisite": {
+        "id": "E06",
+        "project": "eBazaar",
+        "expectedViews": [],
+        "kind": "reveal",
+        "result": "PASS",
+        "controlCount": 1,
+        "controlLabel": "Order Now",
+        "actual": {
+          "focusedId": "screen:cfe5757c-94d3-304c-b855-09942ab6923a",
+          "view": "src/main/webapp/WEB-INF/views/productDetails.jsp",
+          "choices": [],
+          "calls": [],
+          "status": [
+            "已模擬可確認的操作；部分腳本結果無法確定"
+          ]
+        },
+        "revealed": true
+      },
+      "controlCount": 1,
+      "controlLabel": "Add to Cart",
+      "actual": {
+        "focusedId": "screen:cfe5757c-94d3-304c-b855-09942ab6923a",
+        "view": "src/main/webapp/WEB-INF/views/productDetails.jsp",
+        "choices": [
+          {
+            "target": null,
+            "label": "失敗：Error!",
+            "view": null
+          },
+          {
+            "target": null,
+            "label": "成功：Product successfully added to the cart!",
+            "view": null
+          }
+        ],
+        "calls": [
+          "呼叫 API：POST /order/addToCart"
+        ],
+        "status": [
+          ""
+        ]
+      },
+      "apiTrace": true,
+      "feedbackRestored": true,
+      "successFeedback": "Product successfully added to the cart!\n\n關閉",
+      "failureFeedback": "Error!\n\n關閉"
+    },
+    {
+      "id": "E08",
+      "project": "eBazaar",
+      "expectedViews": [],
+      "kind": "api",
+      "result": "PASS",
+      "controlCount": 1,
+      "controlLabel": "Remove",
+      "actual": {
+        "focusedId": "screen:7de30ede-6a70-3655-852e-e978f90b308e",
+        "view": "src/main/webapp/WEB-INF/views/myCart.jsp",
+        "choices": [
+          {
+            "target": null,
+            "label": "成功：Product successfully removed from the cart!；重新顯示本頁",
+            "view": null
+          },
+          {
+            "target": null,
+            "label": "失敗：Remove operation is failed!",
+            "view": null
+          }
+        ],
+        "calls": [
+          "呼叫 API：GET /order/removeFromCart"
+        ],
+        "status": [
+          ""
+        ]
+      },
+      "apiTrace": true,
+      "feedbackRestored": true,
+      "successFeedback": "Product successfully removed from the cart!\n\n關閉",
+      "failureFeedback": "Remove operation is failed!\n\n關閉"
+    },
+    {
+      "id": "E09",
+      "project": "eBazaar",
+      "expectedViews": [
+        "src/main/webapp/WEB-INF/flow/jsp/shippingDetails.jsp"
+      ],
+      "kind": "navigate",
+      "result": "PASS",
+      "controlCount": 1,
+      "controlLabel": "Check out",
+      "actual": {
+        "focusedId": "screen:27478133-b20f-3149-87d3-01831e1ff2bc",
+        "view": "src/main/webapp/WEB-INF/flow/jsp/shippingDetails.jsp",
+        "choices": [],
+        "calls": [],
+        "status": [
+          ""
+        ]
+      },
+      "offeredViews": [
+        "src/main/webapp/WEB-INF/flow/jsp/shippingDetails.jsp"
+      ]
+    },
+    {
+      "id": "E10",
+      "project": "eBazaar",
+      "expectedViews": [
+        "src/main/webapp/WEB-INF/flow/jsp/paymentDetails.jsp"
+      ],
+      "kind": "navigate",
+      "result": "PASS",
+      "controlCount": 1,
+      "controlLabel": "Continue",
+      "actual": {
+        "focusedId": "screen:2efdaa7e-b751-35c6-8c27-7d09c04b587a",
+        "view": "src/main/webapp/WEB-INF/flow/jsp/paymentDetails.jsp",
+        "choices": [],
+        "calls": [],
+        "status": [
+          ""
+        ]
+      },
+      "offeredViews": [
+        "src/main/webapp/WEB-INF/flow/jsp/paymentDetails.jsp"
+      ]
+    },
+    {
+      "id": "E11",
+      "project": "eBazaar",
+      "expectedViews": [
+        "src/main/webapp/WEB-INF/flow/jsp/shippingDetails.jsp"
+      ],
+      "kind": "navigate",
+      "result": "PASS",
+      "controlCount": 1,
+      "controlLabel": "Back",
+      "actual": {
+        "focusedId": "screen:27478133-b20f-3149-87d3-01831e1ff2bc",
+        "view": "src/main/webapp/WEB-INF/flow/jsp/shippingDetails.jsp",
+        "choices": [],
+        "calls": [],
+        "status": [
+          ""
+        ]
+      },
+      "offeredViews": [
+        "src/main/webapp/WEB-INF/flow/jsp/shippingDetails.jsp"
+      ]
+    },
+    {
+      "id": "E12",
+      "project": "eBazaar",
+      "expectedViews": [
+        "src/main/webapp/WEB-INF/flow/jsp/orderConfirmation.jsp"
+      ],
+      "kind": "navigate",
+      "result": "PASS",
+      "controlCount": 1,
+      "controlLabel": "Continue",
+      "actual": {
+        "focusedId": "screen:6055dd72-9e57-325d-8c85-5681a816e7d5",
+        "view": "src/main/webapp/WEB-INF/flow/jsp/orderConfirmation.jsp",
+        "choices": [],
+        "calls": [],
+        "status": [
+          ""
+        ]
+      },
+      "offeredViews": [
+        "src/main/webapp/WEB-INF/flow/jsp/orderConfirmation.jsp"
+      ]
+    },
+    {
+      "id": "E13",
+      "project": "eBazaar",
+      "expectedViews": [
+        "src/main/webapp/WEB-INF/flow/jsp/thanks.jsp"
+      ],
+      "kind": "navigate",
+      "result": "PASS",
+      "controlCount": 1,
+      "controlLabel": "Confirm",
+      "actual": {
+        "focusedId": "screen:a377beef-58a8-381d-856d-44d3abdf9b1b",
+        "view": "src/main/webapp/WEB-INF/flow/jsp/thanks.jsp",
+        "choices": [],
+        "calls": [],
+        "status": [
+          ""
+        ]
+      },
+      "offeredViews": [
+        "src/main/webapp/WEB-INF/flow/jsp/thanks.jsp"
+      ]
+    },
+    {
+      "id": "E14",
+      "project": "eBazaar",
+      "expectedViews": [
+        "src/main/webapp/WEB-INF/flow/jsp/cancelOrder.jsp"
+      ],
+      "kind": "navigate",
+      "result": "PASS",
+      "controlCount": 1,
+      "controlLabel": "Cancel",
+      "actual": {
+        "focusedId": "screen:215f5286-e9d0-3abd-a149-fa55953e06c6",
+        "view": "src/main/webapp/WEB-INF/flow/jsp/cancelOrder.jsp",
+        "choices": [],
+        "calls": [],
+        "status": [
+          ""
+        ]
+      },
+      "offeredViews": [
+        "src/main/webapp/WEB-INF/flow/jsp/cancelOrder.jsp"
+      ]
+    },
+    {
+      "id": "H01",
+      "project": "Hospital-Bed-Availability-Management-System",
+      "expectedViews": [
+        "src/main/webapp/WEB-INF/views/hospital/login.jsp"
+      ],
+      "kind": "navigate",
+      "result": "PASS",
+      "controlCount": 1,
+      "controlLabel": "Hospital Admin Login",
+      "actual": {
+        "focusedId": "screen:8e5543b9-c937-391d-b940-e520eccd106b",
+        "view": "src/main/webapp/WEB-INF/views/hospital/login.jsp",
+        "choices": [],
+        "calls": [],
+        "status": [
+          ""
+        ]
+      },
+      "offeredViews": [
+        "src/main/webapp/WEB-INF/views/hospital/login.jsp"
+      ]
+    },
+    {
+      "id": "H02",
+      "project": "Hospital-Bed-Availability-Management-System",
+      "expectedViews": [
+        "src/main/webapp/WEB-INF/views/hospital/register.jsp"
+      ],
+      "kind": "navigate",
+      "result": "PASS",
+      "controlCount": 1,
+      "controlLabel": "Sign up now",
+      "actual": {
+        "focusedId": "screen:c117f0fc-3edd-378b-9ab7-95eddc0172fa",
+        "view": "src/main/webapp/WEB-INF/views/hospital/register.jsp",
+        "choices": [],
+        "calls": [],
+        "status": [
+          ""
+        ]
+      },
+      "offeredViews": [
+        "src/main/webapp/WEB-INF/views/hospital/register.jsp"
+      ]
+    },
+    {
+      "id": "H03",
+      "project": "Hospital-Bed-Availability-Management-System",
+      "expectedViews": [
+        "src/main/webapp/WEB-INF/views/hospital/register.jsp",
+        "src/main/webapp/WEB-INF/views/roomtype/form.jsp"
+      ],
+      "kind": "navigate",
+      "result": "PASS",
+      "controlCount": 1,
+      "controlLabel": "Proceed",
+      "actual": {
+        "focusedId": "screen:c117f0fc-3edd-378b-9ab7-95eddc0172fa",
+        "view": "src/main/webapp/WEB-INF/views/hospital/register.jsp",
+        "choices": [
+          {
+            "target": "screen:c117f0fc-3edd-378b-9ab7-95eddc0172fa",
+            "label": "register",
+            "view": "src/main/webapp/WEB-INF/views/hospital/register.jsp"
+          },
+          {
+            "target": "screen:fd9aed61-c65e-3bf0-8173-95c67ba8d3a9",
+            "label": "form",
+            "view": "src/main/webapp/WEB-INF/views/roomtype/form.jsp"
+          }
+        ],
+        "calls": [],
+        "status": [
+          ""
+        ]
+      },
+      "offeredViews": [
+        "src/main/webapp/WEB-INF/views/hospital/register.jsp",
+        "src/main/webapp/WEB-INF/views/roomtype/form.jsp"
+      ],
+      "selected": {
+        "focusedId": "screen:fd9aed61-c65e-3bf0-8173-95c67ba8d3a9",
+        "view": "src/main/webapp/WEB-INF/views/roomtype/form.jsp",
+        "choices": [],
+        "calls": [],
+        "status": [
+          ""
+        ]
+      }
+    },
+    {
+      "id": "H04",
+      "project": "Hospital-Bed-Availability-Management-System",
+      "expectedViews": [
+        "src/main/webapp/WEB-INF/views/roomtype/form.jsp",
+        "src/main/webapp/WEB-INF/views/hospital/login.jsp"
+      ],
+      "kind": "navigate",
+      "result": "PASS",
+      "controlCount": 1,
+      "controlLabel": "Register",
+      "actual": {
+        "focusedId": "screen:fd9aed61-c65e-3bf0-8173-95c67ba8d3a9",
+        "view": "src/main/webapp/WEB-INF/views/roomtype/form.jsp",
+        "choices": [
+          {
+            "target": "screen:8e5543b9-c937-391d-b940-e520eccd106b",
+            "label": "login",
+            "view": "src/main/webapp/WEB-INF/views/hospital/login.jsp"
+          },
+          {
+            "target": "screen:fd9aed61-c65e-3bf0-8173-95c67ba8d3a9",
+            "label": "form",
+            "view": "src/main/webapp/WEB-INF/views/roomtype/form.jsp"
+          }
+        ],
+        "calls": [],
+        "status": [
+          ""
+        ]
+      },
+      "offeredViews": [
+        "src/main/webapp/WEB-INF/views/hospital/login.jsp",
+        "src/main/webapp/WEB-INF/views/roomtype/form.jsp"
+      ],
+      "selected": {
+        "focusedId": "screen:8e5543b9-c937-391d-b940-e520eccd106b",
+        "view": "src/main/webapp/WEB-INF/views/hospital/login.jsp",
+        "choices": [],
+        "calls": [],
+        "status": [
+          ""
+        ]
+      }
+    },
+    {
+      "id": "H05",
+      "project": "Hospital-Bed-Availability-Management-System",
+      "expectedViews": [
+        "src/main/webapp/WEB-INF/views/hospital/login.jsp",
+        "src/main/webapp/WEB-INF/views/hospital/welcome.jsp"
+      ],
+      "kind": "navigate",
+      "result": "PASS",
+      "controlCount": 2,
+      "controlLabel": "Login",
+      "actual": {
+        "focusedId": "screen:8e5543b9-c937-391d-b940-e520eccd106b",
+        "view": "src/main/webapp/WEB-INF/views/hospital/login.jsp",
+        "choices": [
+          {
+            "target": "screen:2677e0c2-6d9e-328d-9352-2702f1212727",
+            "label": "welcome",
+            "view": "src/main/webapp/WEB-INF/views/hospital/welcome.jsp"
+          },
+          {
+            "target": "screen:8e5543b9-c937-391d-b940-e520eccd106b",
+            "label": "login",
+            "view": "src/main/webapp/WEB-INF/views/hospital/login.jsp"
+          }
+        ],
+        "calls": [],
+        "status": [
+          ""
+        ]
+      },
+      "offeredViews": [
+        "src/main/webapp/WEB-INF/views/hospital/welcome.jsp",
+        "src/main/webapp/WEB-INF/views/hospital/login.jsp"
+      ],
+      "selected": {
+        "focusedId": "screen:2677e0c2-6d9e-328d-9352-2702f1212727",
+        "view": "src/main/webapp/WEB-INF/views/hospital/welcome.jsp",
+        "choices": [],
+        "calls": [],
+        "status": [
+          ""
+        ]
+      }
+    },
+    {
+      "id": "H06",
+      "project": "Hospital-Bed-Availability-Management-System",
+      "expectedViews": [
+        "src/main/webapp/WEB-INF/views/patient/register.jsp"
+      ],
+      "kind": "navigate",
+      "result": "PASS",
+      "controlCount": 1,
+      "controlLabel": "Add a Patient",
+      "actual": {
+        "focusedId": "screen:9008078f-4991-3bb5-ae8b-6686b7852403",
+        "view": "src/main/webapp/WEB-INF/views/patient/register.jsp",
+        "choices": [],
+        "calls": [],
+        "status": [
+          ""
+        ]
+      },
+      "offeredViews": [
+        "src/main/webapp/WEB-INF/views/patient/register.jsp"
+      ]
+    },
+    {
+      "id": "H07",
+      "project": "Hospital-Bed-Availability-Management-System",
+      "expectedViews": [
+        "src/main/webapp/WEB-INF/views/patient/register.jsp",
+        "src/main/webapp/WEB-INF/views/room/allocate.jsp"
+      ],
+      "kind": "navigate",
+      "result": "PASS",
+      "controlCount": 1,
+      "controlLabel": "Proceed to allocate room",
+      "actual": {
+        "focusedId": "screen:9008078f-4991-3bb5-ae8b-6686b7852403",
+        "view": "src/main/webapp/WEB-INF/views/patient/register.jsp",
+        "choices": [
+          {
+            "target": "screen:9008078f-4991-3bb5-ae8b-6686b7852403",
+            "label": "register",
+            "view": "src/main/webapp/WEB-INF/views/patient/register.jsp"
+          },
+          {
+            "target": "screen:e5cbf53b-a561-38e6-b4cc-5eaef5861d02",
+            "label": "allocate",
+            "view": "src/main/webapp/WEB-INF/views/room/allocate.jsp"
+          }
+        ],
+        "calls": [],
+        "status": [
+          ""
+        ]
+      },
+      "offeredViews": [
+        "src/main/webapp/WEB-INF/views/patient/register.jsp",
+        "src/main/webapp/WEB-INF/views/room/allocate.jsp"
+      ],
+      "selected": {
+        "focusedId": "screen:e5cbf53b-a561-38e6-b4cc-5eaef5861d02",
+        "view": "src/main/webapp/WEB-INF/views/room/allocate.jsp",
+        "choices": [],
+        "calls": [],
+        "status": [
+          ""
+        ]
+      }
+    },
+    {
+      "id": "H08",
+      "project": "Hospital-Bed-Availability-Management-System",
+      "expectedViews": [
+        "src/main/webapp/WEB-INF/views/room/allocate.jsp",
+        "src/main/webapp/WEB-INF/views/hospital/welcome.jsp"
+      ],
+      "kind": "navigate",
+      "result": "PASS",
+      "controlCount": 1,
+      "controlLabel": "Allocate",
+      "actual": {
+        "focusedId": "screen:e5cbf53b-a561-38e6-b4cc-5eaef5861d02",
+        "view": "src/main/webapp/WEB-INF/views/room/allocate.jsp",
+        "choices": [
+          {
+            "target": "screen:2677e0c2-6d9e-328d-9352-2702f1212727",
+            "label": "welcome",
+            "view": "src/main/webapp/WEB-INF/views/hospital/welcome.jsp"
+          },
+          {
+            "target": "screen:2677e0c2-6d9e-328d-9352-2702f1212727",
+            "label": "welcome",
+            "view": "src/main/webapp/WEB-INF/views/hospital/welcome.jsp"
+          },
+          {
+            "target": "screen:2677e0c2-6d9e-328d-9352-2702f1212727",
+            "label": "welcome",
+            "view": "src/main/webapp/WEB-INF/views/hospital/welcome.jsp"
+          },
+          {
+            "target": "screen:e5cbf53b-a561-38e6-b4cc-5eaef5861d02",
+            "label": "allocate",
+            "view": "src/main/webapp/WEB-INF/views/room/allocate.jsp"
+          },
+          {
+            "target": "screen:e5cbf53b-a561-38e6-b4cc-5eaef5861d02",
+            "label": "allocate",
+            "view": "src/main/webapp/WEB-INF/views/room/allocate.jsp"
+          }
+        ],
+        "calls": [],
+        "status": [
+          ""
+        ]
+      },
+      "offeredViews": [
+        "src/main/webapp/WEB-INF/views/hospital/welcome.jsp",
+        "src/main/webapp/WEB-INF/views/hospital/welcome.jsp",
+        "src/main/webapp/WEB-INF/views/hospital/welcome.jsp",
+        "src/main/webapp/WEB-INF/views/room/allocate.jsp",
+        "src/main/webapp/WEB-INF/views/room/allocate.jsp"
+      ],
+      "selected": {
+        "focusedId": "screen:2677e0c2-6d9e-328d-9352-2702f1212727",
+        "view": "src/main/webapp/WEB-INF/views/hospital/welcome.jsp",
+        "choices": [],
+        "calls": [],
+        "status": [
+          ""
+        ]
+      }
+    },
+    {
+      "id": "H09",
+      "project": "Hospital-Bed-Availability-Management-System",
+      "expectedViews": [
+        "src/main/webapp/WEB-INF/views/user/enduserlist.jsp"
+      ],
+      "kind": "navigate",
+      "result": "PASS",
+      "controlCount": 1,
+      "controlLabel": "Search",
+      "actual": {
+        "focusedId": "screen:859ab8aa-188b-3c6d-9e0b-33ba524edf5c",
+        "view": "src/main/webapp/WEB-INF/views/user/enduserlist.jsp",
+        "choices": [
+          {
+            "target": "screen:859ab8aa-188b-3c6d-9e0b-33ba524edf5c",
+            "label": "enduserlist",
+            "view": "src/main/webapp/WEB-INF/views/user/enduserlist.jsp"
+          },
+          {
+            "target": "screen:859ab8aa-188b-3c6d-9e0b-33ba524edf5c",
+            "label": "enduserlist",
+            "view": "src/main/webapp/WEB-INF/views/user/enduserlist.jsp"
+          }
+        ],
+        "calls": [],
+        "status": [
+          ""
+        ]
+      },
+      "offeredViews": [
+        "src/main/webapp/WEB-INF/views/user/enduserlist.jsp",
+        "src/main/webapp/WEB-INF/views/user/enduserlist.jsp"
+      ],
+      "selected": {
+        "focusedId": "screen:859ab8aa-188b-3c6d-9e0b-33ba524edf5c",
+        "view": "src/main/webapp/WEB-INF/views/user/enduserlist.jsp",
+        "choices": [],
+        "calls": [],
+        "status": [
+          ""
+        ]
+      }
+    },
+    {
+      "id": "H10",
+      "project": "Hospital-Bed-Availability-Management-System",
+      "expectedViews": [
+        "src/main/webapp/WEB-INF/views/user/bedlist.jsp"
+      ],
+      "kind": "navigate",
+      "result": "PASS",
+      "controlCount": 1,
+      "controlLabel": "Show Beds at Buddy",
+      "actual": {
+        "focusedId": "screen:278f3e8a-c746-301e-b2dc-6edf61922b76",
+        "view": "src/main/webapp/WEB-INF/views/user/bedlist.jsp",
+        "choices": [],
+        "calls": [],
+        "status": [
+          ""
+        ]
+      },
+      "offeredViews": [
+        "src/main/webapp/WEB-INF/views/user/bedlist.jsp"
+      ]
+    },
+    {
+      "id": "H11",
+      "project": "Hospital-Bed-Availability-Management-System",
+      "expectedViews": [],
+      "kind": "print",
+      "result": "PASS",
+      "controlCount": 1,
+      "controlLabel": "Print the Bill",
+      "actual": {
+        "focusedId": "screen:b9489746-b87c-3a4c-b85c-31c0aebef470",
+        "view": "src/main/webapp/WEB-INF/views/bill/generatedbill.jsp",
+        "choices": [],
+        "calls": [],
+        "status": [
+          "已模擬可確認的操作；部分腳本結果無法確定"
+        ]
+      },
+      "printCalls": 1
+    }
+  ],
+  "chains": [
+    {
+      "id": "C01",
+      "project": "MyStrutsApp",
+      "steps": [
+        "O01",
+        "O04"
+      ],
+      "description": "登入頁→註冊頁→送出註冊回原頁",
+      "result": "PASS",
+      "stepsExecuted": [
+        {
+          "id": "O01",
+          "project": "MyStrutsApp",
+          "expectedViews": [
+            "web/Registration.jsp"
+          ],
+          "kind": "navigate",
+          "result": "PASS",
+          "controlCount": 1,
+          "controlLabel": "REGISTER YOURSELF",
+          "actual": {
+            "focusedId": "screen:60d84e22-4183-38c8-9126-a87023cef627",
+            "view": "web/Registration.jsp",
+            "choices": [],
+            "calls": [],
+            "status": [
+              ""
+            ]
+          },
+          "offeredViews": [
+            "web/Registration.jsp"
+          ]
+        },
+        {
+          "id": "O04",
+          "project": "MyStrutsApp",
+          "expectedViews": [
+            "web/Registration.jsp"
+          ],
+          "kind": "navigate",
+          "result": "PASS",
+          "controlCount": 1,
+          "controlLabel": "Register",
+          "actual": {
+            "focusedId": "screen:60d84e22-4183-38c8-9126-a87023cef627",
+            "view": "web/Registration.jsp",
+            "choices": [],
+            "calls": [],
+            "status": [
+              ""
+            ]
+          },
+          "offeredViews": [
+            "web/Registration.jsp"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "C02",
+      "project": "eBazaar",
+      "steps": [
+        "E01",
+        "E03",
+        "E06",
+        "E07",
+        "E05",
+        "E08",
+        "E09",
+        "E10",
+        "E12",
+        "E13"
+      ],
+      "description": "首頁→產品→詳情→購物車→寄送→付款→確認→完成",
+      "result": "PASS",
+      "stepsExecuted": [
+        {
+          "id": "E01",
+          "project": "eBazaar",
+          "expectedViews": [
+            "src/main/webapp/WEB-INF/views/products.jsp"
+          ],
+          "kind": "navigate",
+          "result": "PASS",
+          "controlCount": 1,
+          "controlLabel": "Go to Products",
+          "actual": {
+            "focusedId": "screen:7db8ab08-f075-3079-9b2a-8667f0a045cc",
+            "view": "src/main/webapp/WEB-INF/views/products.jsp",
+            "choices": [],
+            "calls": [],
+            "status": [
+              ""
+            ]
+          },
+          "offeredViews": [
+            "src/main/webapp/WEB-INF/views/products.jsp"
+          ]
+        },
+        {
+          "id": "E03",
+          "project": "eBazaar",
+          "expectedViews": [
+            "src/main/webapp/WEB-INF/views/productDetails.jsp"
+          ],
+          "kind": "navigate",
+          "result": "PASS",
+          "controlCount": 1,
+          "controlLabel": "Details",
+          "actual": {
+            "focusedId": "screen:cfe5757c-94d3-304c-b855-09942ab6923a",
+            "view": "src/main/webapp/WEB-INF/views/productDetails.jsp",
+            "choices": [],
+            "calls": [],
+            "status": [
+              ""
+            ]
+          },
+          "offeredViews": [
+            "src/main/webapp/WEB-INF/views/productDetails.jsp"
+          ]
+        },
+        {
+          "id": "E06",
+          "project": "eBazaar",
+          "expectedViews": [],
+          "kind": "reveal",
+          "result": "PASS",
+          "controlCount": 1,
+          "controlLabel": "Order Now",
+          "actual": {
+            "focusedId": "screen:cfe5757c-94d3-304c-b855-09942ab6923a",
+            "view": "src/main/webapp/WEB-INF/views/productDetails.jsp",
+            "choices": [],
+            "calls": [],
+            "status": [
+              "已模擬可確認的操作；部分腳本結果無法確定"
+            ]
+          },
+          "revealed": true
+        },
+        {
+          "id": "E07",
+          "project": "eBazaar",
+          "expectedViews": [],
+          "kind": "api",
+          "result": "PASS",
+          "prerequisite": {
+            "id": "E06",
+            "project": "eBazaar",
+            "expectedViews": [],
+            "kind": "reveal",
+            "result": "PASS",
+            "controlCount": 1,
+            "controlLabel": "Order Now",
+            "actual": {
+              "focusedId": "screen:cfe5757c-94d3-304c-b855-09942ab6923a",
+              "view": "src/main/webapp/WEB-INF/views/productDetails.jsp",
+              "choices": [],
+              "calls": [],
+              "status": [
+                "已模擬可確認的操作；部分腳本結果無法確定"
+              ]
+            },
+            "revealed": true
+          },
+          "controlCount": 1,
+          "controlLabel": "Add to Cart",
+          "actual": {
+            "focusedId": "screen:cfe5757c-94d3-304c-b855-09942ab6923a",
+            "view": "src/main/webapp/WEB-INF/views/productDetails.jsp",
+            "choices": [
+              {
+                "target": null,
+                "label": "失敗：Error!",
+                "view": null
+              },
+              {
+                "target": null,
+                "label": "成功：Product successfully added to the cart!",
+                "view": null
+              }
+            ],
+            "calls": [
+              "呼叫 API：POST /order/addToCart"
+            ],
+            "status": [
+              ""
+            ]
+          },
+          "apiTrace": true,
+          "feedbackRestored": true,
+          "successFeedback": "Product successfully added to the cart!\n\n關閉",
+          "failureFeedback": "Error!\n\n關閉"
+        },
+        {
+          "id": "E05",
+          "project": "eBazaar",
+          "expectedViews": [
+            "src/main/webapp/WEB-INF/views/myCart.jsp"
+          ],
+          "kind": "navigate",
+          "result": "PASS",
+          "controlCount": 1,
+          "controlLabel": "Show Cart",
+          "actual": {
+            "focusedId": "screen:7de30ede-6a70-3655-852e-e978f90b308e",
+            "view": "src/main/webapp/WEB-INF/views/myCart.jsp",
+            "choices": [],
+            "calls": [],
+            "status": [
+              ""
+            ]
+          },
+          "offeredViews": [
+            "src/main/webapp/WEB-INF/views/myCart.jsp"
+          ]
+        },
+        {
+          "id": "E08",
+          "project": "eBazaar",
+          "expectedViews": [],
+          "kind": "api",
+          "result": "PASS",
+          "controlCount": 1,
+          "controlLabel": "Remove",
+          "actual": {
+            "focusedId": "screen:7de30ede-6a70-3655-852e-e978f90b308e",
+            "view": "src/main/webapp/WEB-INF/views/myCart.jsp",
+            "choices": [
+              {
+                "target": null,
+                "label": "成功：Product successfully removed from the cart!；重新顯示本頁",
+                "view": null
+              },
+              {
+                "target": null,
+                "label": "失敗：Remove operation is failed!",
+                "view": null
+              }
+            ],
+            "calls": [
+              "呼叫 API：GET /order/removeFromCart"
+            ],
+            "status": [
+              ""
+            ]
+          },
+          "apiTrace": true,
+          "feedbackRestored": true,
+          "successFeedback": "Product successfully removed from the cart!\n\n關閉",
+          "failureFeedback": "Remove operation is failed!\n\n關閉"
+        },
+        {
+          "id": "E09",
+          "project": "eBazaar",
+          "expectedViews": [
+            "src/main/webapp/WEB-INF/flow/jsp/shippingDetails.jsp"
+          ],
+          "kind": "navigate",
+          "result": "PASS",
+          "controlCount": 1,
+          "controlLabel": "Check out",
+          "actual": {
+            "focusedId": "screen:27478133-b20f-3149-87d3-01831e1ff2bc",
+            "view": "src/main/webapp/WEB-INF/flow/jsp/shippingDetails.jsp",
+            "choices": [],
+            "calls": [],
+            "status": [
+              ""
+            ]
+          },
+          "offeredViews": [
+            "src/main/webapp/WEB-INF/flow/jsp/shippingDetails.jsp"
+          ]
+        },
+        {
+          "id": "E10",
+          "project": "eBazaar",
+          "expectedViews": [
+            "src/main/webapp/WEB-INF/flow/jsp/paymentDetails.jsp"
+          ],
+          "kind": "navigate",
+          "result": "PASS",
+          "controlCount": 1,
+          "controlLabel": "Continue",
+          "actual": {
+            "focusedId": "screen:2efdaa7e-b751-35c6-8c27-7d09c04b587a",
+            "view": "src/main/webapp/WEB-INF/flow/jsp/paymentDetails.jsp",
+            "choices": [],
+            "calls": [],
+            "status": [
+              ""
+            ]
+          },
+          "offeredViews": [
+            "src/main/webapp/WEB-INF/flow/jsp/paymentDetails.jsp"
+          ]
+        },
+        {
+          "id": "E12",
+          "project": "eBazaar",
+          "expectedViews": [
+            "src/main/webapp/WEB-INF/flow/jsp/orderConfirmation.jsp"
+          ],
+          "kind": "navigate",
+          "result": "PASS",
+          "controlCount": 1,
+          "controlLabel": "Continue",
+          "actual": {
+            "focusedId": "screen:6055dd72-9e57-325d-8c85-5681a816e7d5",
+            "view": "src/main/webapp/WEB-INF/flow/jsp/orderConfirmation.jsp",
+            "choices": [],
+            "calls": [],
+            "status": [
+              ""
+            ]
+          },
+          "offeredViews": [
+            "src/main/webapp/WEB-INF/flow/jsp/orderConfirmation.jsp"
+          ]
+        },
+        {
+          "id": "E13",
+          "project": "eBazaar",
+          "expectedViews": [
+            "src/main/webapp/WEB-INF/flow/jsp/thanks.jsp"
+          ],
+          "kind": "navigate",
+          "result": "PASS",
+          "controlCount": 1,
+          "controlLabel": "Confirm",
+          "actual": {
+            "focusedId": "screen:a377beef-58a8-381d-856d-44d3abdf9b1b",
+            "view": "src/main/webapp/WEB-INF/flow/jsp/thanks.jsp",
+            "choices": [],
+            "calls": [],
+            "status": [
+              ""
+            ]
+          },
+          "offeredViews": [
+            "src/main/webapp/WEB-INF/flow/jsp/thanks.jsp"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "C03",
+      "project": "Hospital-Bed-Availability-Management-System",
+      "steps": [
+        "H01",
+        "H02",
+        "H03",
+        "H04",
+        "H05",
+        "H06",
+        "H07",
+        "H08"
+      ],
+      "description": "首頁→醫院登入→註冊→房型→登入→新增病患→分配床位→工作台",
+      "result": "PASS",
+      "stepsExecuted": [
+        {
+          "id": "H01",
+          "project": "Hospital-Bed-Availability-Management-System",
+          "expectedViews": [
+            "src/main/webapp/WEB-INF/views/hospital/login.jsp"
+          ],
+          "kind": "navigate",
+          "result": "PASS",
+          "controlCount": 1,
+          "controlLabel": "Hospital Admin Login",
+          "actual": {
+            "focusedId": "screen:8e5543b9-c937-391d-b940-e520eccd106b",
+            "view": "src/main/webapp/WEB-INF/views/hospital/login.jsp",
+            "choices": [],
+            "calls": [],
+            "status": [
+              ""
+            ]
+          },
+          "offeredViews": [
+            "src/main/webapp/WEB-INF/views/hospital/login.jsp"
+          ]
+        },
+        {
+          "id": "H02",
+          "project": "Hospital-Bed-Availability-Management-System",
+          "expectedViews": [
+            "src/main/webapp/WEB-INF/views/hospital/register.jsp"
+          ],
+          "kind": "navigate",
+          "result": "PASS",
+          "controlCount": 1,
+          "controlLabel": "Sign up now",
+          "actual": {
+            "focusedId": "screen:c117f0fc-3edd-378b-9ab7-95eddc0172fa",
+            "view": "src/main/webapp/WEB-INF/views/hospital/register.jsp",
+            "choices": [],
+            "calls": [],
+            "status": [
+              ""
+            ]
+          },
+          "offeredViews": [
+            "src/main/webapp/WEB-INF/views/hospital/register.jsp"
+          ]
+        },
+        {
+          "id": "H03",
+          "project": "Hospital-Bed-Availability-Management-System",
+          "expectedViews": [
+            "src/main/webapp/WEB-INF/views/hospital/register.jsp",
+            "src/main/webapp/WEB-INF/views/roomtype/form.jsp"
+          ],
+          "kind": "navigate",
+          "result": "PASS",
+          "controlCount": 1,
+          "controlLabel": "Proceed",
+          "actual": {
+            "focusedId": "screen:c117f0fc-3edd-378b-9ab7-95eddc0172fa",
+            "view": "src/main/webapp/WEB-INF/views/hospital/register.jsp",
+            "choices": [
+              {
+                "target": "screen:c117f0fc-3edd-378b-9ab7-95eddc0172fa",
+                "label": "register",
+                "view": "src/main/webapp/WEB-INF/views/hospital/register.jsp"
+              },
+              {
+                "target": "screen:fd9aed61-c65e-3bf0-8173-95c67ba8d3a9",
+                "label": "form",
+                "view": "src/main/webapp/WEB-INF/views/roomtype/form.jsp"
+              }
+            ],
+            "calls": [],
+            "status": [
+              ""
+            ]
+          },
+          "offeredViews": [
+            "src/main/webapp/WEB-INF/views/hospital/register.jsp",
+            "src/main/webapp/WEB-INF/views/roomtype/form.jsp"
+          ],
+          "selected": {
+            "focusedId": "screen:fd9aed61-c65e-3bf0-8173-95c67ba8d3a9",
+            "view": "src/main/webapp/WEB-INF/views/roomtype/form.jsp",
+            "choices": [],
+            "calls": [],
+            "status": [
+              ""
+            ]
+          }
+        },
+        {
+          "id": "H04",
+          "project": "Hospital-Bed-Availability-Management-System",
+          "expectedViews": [
+            "src/main/webapp/WEB-INF/views/roomtype/form.jsp",
+            "src/main/webapp/WEB-INF/views/hospital/login.jsp"
+          ],
+          "kind": "navigate",
+          "result": "PASS",
+          "controlCount": 1,
+          "controlLabel": "Register",
+          "actual": {
+            "focusedId": "screen:fd9aed61-c65e-3bf0-8173-95c67ba8d3a9",
+            "view": "src/main/webapp/WEB-INF/views/roomtype/form.jsp",
+            "choices": [
+              {
+                "target": "screen:8e5543b9-c937-391d-b940-e520eccd106b",
+                "label": "login",
+                "view": "src/main/webapp/WEB-INF/views/hospital/login.jsp"
+              },
+              {
+                "target": "screen:fd9aed61-c65e-3bf0-8173-95c67ba8d3a9",
+                "label": "form",
+                "view": "src/main/webapp/WEB-INF/views/roomtype/form.jsp"
+              }
+            ],
+            "calls": [],
+            "status": [
+              ""
+            ]
+          },
+          "offeredViews": [
+            "src/main/webapp/WEB-INF/views/hospital/login.jsp",
+            "src/main/webapp/WEB-INF/views/roomtype/form.jsp"
+          ],
+          "selected": {
+            "focusedId": "screen:8e5543b9-c937-391d-b940-e520eccd106b",
+            "view": "src/main/webapp/WEB-INF/views/hospital/login.jsp",
+            "choices": [],
+            "calls": [],
+            "status": [
+              ""
+            ]
+          }
+        },
+        {
+          "id": "H05",
+          "project": "Hospital-Bed-Availability-Management-System",
+          "expectedViews": [
+            "src/main/webapp/WEB-INF/views/hospital/login.jsp",
+            "src/main/webapp/WEB-INF/views/hospital/welcome.jsp"
+          ],
+          "kind": "navigate",
+          "result": "PASS",
+          "controlCount": 2,
+          "controlLabel": "Login",
+          "actual": {
+            "focusedId": "screen:8e5543b9-c937-391d-b940-e520eccd106b",
+            "view": "src/main/webapp/WEB-INF/views/hospital/login.jsp",
+            "choices": [
+              {
+                "target": "screen:2677e0c2-6d9e-328d-9352-2702f1212727",
+                "label": "welcome",
+                "view": "src/main/webapp/WEB-INF/views/hospital/welcome.jsp"
+              },
+              {
+                "target": "screen:8e5543b9-c937-391d-b940-e520eccd106b",
+                "label": "login",
+                "view": "src/main/webapp/WEB-INF/views/hospital/login.jsp"
+              }
+            ],
+            "calls": [],
+            "status": [
+              ""
+            ]
+          },
+          "offeredViews": [
+            "src/main/webapp/WEB-INF/views/hospital/welcome.jsp",
+            "src/main/webapp/WEB-INF/views/hospital/login.jsp"
+          ],
+          "selected": {
+            "focusedId": "screen:2677e0c2-6d9e-328d-9352-2702f1212727",
+            "view": "src/main/webapp/WEB-INF/views/hospital/welcome.jsp",
+            "choices": [],
+            "calls": [],
+            "status": [
+              ""
+            ]
+          }
+        },
+        {
+          "id": "H06",
+          "project": "Hospital-Bed-Availability-Management-System",
+          "expectedViews": [
+            "src/main/webapp/WEB-INF/views/patient/register.jsp"
+          ],
+          "kind": "navigate",
+          "result": "PASS",
+          "controlCount": 1,
+          "controlLabel": "Add a Patient",
+          "actual": {
+            "focusedId": "screen:9008078f-4991-3bb5-ae8b-6686b7852403",
+            "view": "src/main/webapp/WEB-INF/views/patient/register.jsp",
+            "choices": [],
+            "calls": [],
+            "status": [
+              ""
+            ]
+          },
+          "offeredViews": [
+            "src/main/webapp/WEB-INF/views/patient/register.jsp"
+          ]
+        },
+        {
+          "id": "H07",
+          "project": "Hospital-Bed-Availability-Management-System",
+          "expectedViews": [
+            "src/main/webapp/WEB-INF/views/patient/register.jsp",
+            "src/main/webapp/WEB-INF/views/room/allocate.jsp"
+          ],
+          "kind": "navigate",
+          "result": "PASS",
+          "controlCount": 1,
+          "controlLabel": "Proceed to allocate room",
+          "actual": {
+            "focusedId": "screen:9008078f-4991-3bb5-ae8b-6686b7852403",
+            "view": "src/main/webapp/WEB-INF/views/patient/register.jsp",
+            "choices": [
+              {
+                "target": "screen:9008078f-4991-3bb5-ae8b-6686b7852403",
+                "label": "register",
+                "view": "src/main/webapp/WEB-INF/views/patient/register.jsp"
+              },
+              {
+                "target": "screen:e5cbf53b-a561-38e6-b4cc-5eaef5861d02",
+                "label": "allocate",
+                "view": "src/main/webapp/WEB-INF/views/room/allocate.jsp"
+              }
+            ],
+            "calls": [],
+            "status": [
+              ""
+            ]
+          },
+          "offeredViews": [
+            "src/main/webapp/WEB-INF/views/patient/register.jsp",
+            "src/main/webapp/WEB-INF/views/room/allocate.jsp"
+          ],
+          "selected": {
+            "focusedId": "screen:e5cbf53b-a561-38e6-b4cc-5eaef5861d02",
+            "view": "src/main/webapp/WEB-INF/views/room/allocate.jsp",
+            "choices": [],
+            "calls": [],
+            "status": [
+              ""
+            ]
+          }
+        },
+        {
+          "id": "H08",
+          "project": "Hospital-Bed-Availability-Management-System",
+          "expectedViews": [
+            "src/main/webapp/WEB-INF/views/room/allocate.jsp",
+            "src/main/webapp/WEB-INF/views/hospital/welcome.jsp"
+          ],
+          "kind": "navigate",
+          "result": "PASS",
+          "controlCount": 1,
+          "controlLabel": "Allocate",
+          "actual": {
+            "focusedId": "screen:e5cbf53b-a561-38e6-b4cc-5eaef5861d02",
+            "view": "src/main/webapp/WEB-INF/views/room/allocate.jsp",
+            "choices": [
+              {
+                "target": "screen:2677e0c2-6d9e-328d-9352-2702f1212727",
+                "label": "welcome",
+                "view": "src/main/webapp/WEB-INF/views/hospital/welcome.jsp"
+              },
+              {
+                "target": "screen:2677e0c2-6d9e-328d-9352-2702f1212727",
+                "label": "welcome",
+                "view": "src/main/webapp/WEB-INF/views/hospital/welcome.jsp"
+              },
+              {
+                "target": "screen:2677e0c2-6d9e-328d-9352-2702f1212727",
+                "label": "welcome",
+                "view": "src/main/webapp/WEB-INF/views/hospital/welcome.jsp"
+              },
+              {
+                "target": "screen:e5cbf53b-a561-38e6-b4cc-5eaef5861d02",
+                "label": "allocate",
+                "view": "src/main/webapp/WEB-INF/views/room/allocate.jsp"
+              },
+              {
+                "target": "screen:e5cbf53b-a561-38e6-b4cc-5eaef5861d02",
+                "label": "allocate",
+                "view": "src/main/webapp/WEB-INF/views/room/allocate.jsp"
+              }
+            ],
+            "calls": [],
+            "status": [
+              ""
+            ]
+          },
+          "offeredViews": [
+            "src/main/webapp/WEB-INF/views/hospital/welcome.jsp",
+            "src/main/webapp/WEB-INF/views/hospital/welcome.jsp",
+            "src/main/webapp/WEB-INF/views/hospital/welcome.jsp",
+            "src/main/webapp/WEB-INF/views/room/allocate.jsp",
+            "src/main/webapp/WEB-INF/views/room/allocate.jsp"
+          ],
+          "selected": {
+            "focusedId": "screen:2677e0c2-6d9e-328d-9352-2702f1212727",
+            "view": "src/main/webapp/WEB-INF/views/hospital/welcome.jsp",
+            "choices": [],
+            "calls": [],
+            "status": [
+              ""
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "infrastructure": [
+    {
+      "project": "MyStrutsApp",
+      "reportGenerated": true,
+      "pageErrors": [],
+      "externalRequests": []
+    },
+    {
+      "project": "eBazaar",
+      "reportGenerated": true,
+      "pageErrors": [],
+      "externalRequests": []
+    },
+    {
+      "project": "Hospital-Bed-Availability-Management-System",
+      "reportGenerated": true,
+      "pageErrors": [],
+      "externalRequests": []
+    }
+  ]
+}

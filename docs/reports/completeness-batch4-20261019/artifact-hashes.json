@@ -1,0 +1,413 @@
+{
+  "toolCommit": "f285bdc0deddfe801498ea436ed08f8ee5af9440",
+  "jar": {
+    "bytes": 7236694,
+    "sha256": "9132a2f637abb0ff2cc6e05b5279c2fbd4d5fa4e7dec7c4ca31d6b133e9fec3e"
+  },
+  "files": {
+    "demo-struts1/application-graph.json": {
+      "bytes": 523629,
+      "sha256": "6ce31315de1ece06a0aeac1e4730b80f7b75d25ce9d0b53dd0de35a95d352f6c"
+    },
+    "demo-struts1/preview-model.json": {
+      "bytes": 926257,
+      "sha256": "6154a0b51df5867703b600abe6fa225e3a1f379e650155949312dc3bbf08e4a7"
+    },
+    "demo-struts1/prototype-model.json": {
+      "bytes": 45944,
+      "sha256": "56bcd6a73e39e6ee1e50060a8ba1b022c498747da8fe84f2c96731c9f6165645"
+    },
+    "demo-struts1/report/screentrace-report.html": {
+      "bytes": 1580641,
+      "sha256": "c83e8f3dac06d6cc81a58880c04ee57a2c2118f2ec854f39850618cf71a93155"
+    },
+    "demo-struts1/report-size.json": {
+      "bytes": 120,
+      "sha256": "e6b4a8f8d4a049611a2d5d04c9ffd20648d167b39e2aea1bf0695f461d537fce"
+    },
+    "demo-struts1/screenshots/interactions.json": {
+      "bytes": 40731,
+      "sha256": "a51fff9d024c0dc652840296863b03ac299a00c716e9a9bfedddd17fc2be2fe2"
+    },
+    "demo-struts1/screenshots/manifest.json": {
+      "bytes": 1073,
+      "sha256": "cc8bbbd191dc1caa7a830adefe7add0d01e386f67c6d26a6bcac3f6ab7550ea3"
+    },
+    "demo-struts1/screenshots/static-screen_04d0fa0d-7486-3d26-bc36-2f05a1214e41.png": {
+      "bytes": 13131,
+      "sha256": "488d0b23c1156ae4c18fb3019051a80094c56d9f7223098f5731d73cf1cf7568"
+    },
+    "demo-struts1/screenshots/static-screen_0e8d95ea-94d0-3a24-b761-0893f85998ab.png": {
+      "bytes": 21518,
+      "sha256": "4223c516d983a25ac369bab50efa4f746ffaaf95130e4f37e9a5bb12e0b50f44"
+    },
+    "demo-struts1/screenshots/static-screen_19071acc-bf03-3638-9678-4bacf668fc82.png": {
+      "bytes": 92641,
+      "sha256": "a662de91fa5cc9c8b31fe5781ef08f7896c0ff050cd4e852082def34c0b14d96"
+    },
+    "demo-struts1/screenshots/static-screen_24a3e540-0059-31e7-91ff-946c024b6ff0.png": {
+      "bytes": 8818,
+      "sha256": "4ef695eec8dc44d76b5462991cc8d8068c4142637291e7cb2522973794b1a891"
+    },
+    "demo-struts1/screenshots/static-screen_2a9a3de7-5047-3a57-aff0-0870d79c8804.png": {
+      "bytes": 58962,
+      "sha256": "59c766ea67222fee72040ab8104ce56aead7e0f0a347eb8de0adedcb3d35d95e"
+    },
+    "demo-struts1/screenshots/static-screen_398aec38-b8ee-3dc8-9916-2d670b11bbb9.png": {
+      "bytes": 63884,
+      "sha256": "992ff71a00f30e38507a98d9fdb5ab2c340b67ab50959748e2a81416093a12ac"
+    },
+    "demo-struts1/screenshots/static-screen_4378b9cd-7d83-324d-8c2f-c09b9136d889.png": {
+      "bytes": 8413,
+      "sha256": "7076c2b9763927044012c3c30af54ea42e0b7cd91dd98038d0da4d9c1e724fec"
+    },
+    "demo-struts1/screenshots/static-screen_874022fd-e14f-3526-aba4-c9a90f342e85.png": {
+      "bytes": 44832,
+      "sha256": "4c2b924da4ea40367caf7544d61a47ba504bd81eca040c9b22c7764d2c5692e1"
+    },
+    "demo-struts1/screenshots/static-screen_a60f5afe-5c7d-33da-921e-e91f42307274.png": {
+      "bytes": 9849,
+      "sha256": "a65396c2d6a37da08bb9de9aeceaa66a531333df25b6a6babe72555e86c00e5f"
+    },
+    "demo-struts1/static-preview/diagnostics.json": {
+      "bytes": 2,
+      "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    "demo-struts1/static-preview/element-styles.json": {
+      "bytes": 950084,
+      "sha256": "5d54dc534fd1cf1c519dd8b566a5d7ea55ca269ebfef497a60dc2e3f336b0a1c"
+    },
+    "demo-struts1/static-preview/manifest.json": {
+      "bytes": 1046,
+      "sha256": "164257d272853f2a598fcc2659daab0652bf38de2fe3721871d10b21edbef93c"
+    },
+    "demo-struts1/static-preview/reconstruction.json": {
+      "bytes": 3758,
+      "sha256": "4033903b5b74f2e4b0cceada505d96468624bc1d3b07fa94eea6257358b82537"
+    },
+    "demo-struts1/static-preview/screen_04d0fa0d-7486-3d26-bc36-2f05a1214e41.html": {
+      "bytes": 4375,
+      "sha256": "06ae20ae017581c6892b572410982ba763596f4d6b86649ee4481b9401eedcaf"
+    },
+    "demo-struts1/static-preview/screen_0e8d95ea-94d0-3a24-b761-0893f85998ab.html": {
+      "bytes": 9613,
+      "sha256": "6026fb773b1fce1109693362bd10189f678a5c35180bcde3db661463dacf48d5"
+    },
+    "demo-struts1/static-preview/screen_19071acc-bf03-3638-9678-4bacf668fc82.html": {
+      "bytes": 16418,
+      "sha256": "c29e429a78236af49c59bd0a7d9b439f35fded67fe58a92eafafc5a9c9cf21aa"
+    },
+    "demo-struts1/static-preview/screen_24a3e540-0059-31e7-91ff-946c024b6ff0.html": {
+      "bytes": 1600,
+      "sha256": "241c114aa53688f0410ae30d2461d186b3367208d73ede0578b25ccac6e9d266"
+    },
+    "demo-struts1/static-preview/screen_2a9a3de7-5047-3a57-aff0-0870d79c8804.html": {
+      "bytes": 18456,
+      "sha256": "f4dd2af62dad85bc95558014edd0038f1a3663de848a6a3eff902d4e9c84757b"
+    },
+    "demo-struts1/static-preview/screen_398aec38-b8ee-3dc8-9916-2d670b11bbb9.html": {
+      "bytes": 25407,
+      "sha256": "dd870db90bd8be34a07fee942f0e58edd0d8a2873c292de5d21117bb13b13c96"
+    },
+    "demo-struts1/static-preview/screen_4378b9cd-7d83-324d-8c2f-c09b9136d889.html": {
+      "bytes": 1268,
+      "sha256": "2bae712ec8b683703768f3101dd41efb69eb05ac9f5ade1ca329e3dc8812ce60"
+    },
+    "demo-struts1/static-preview/screen_874022fd-e14f-3526-aba4-c9a90f342e85.html": {
+      "bytes": 25471,
+      "sha256": "d0c4e5280a4cfc1885310eeb0877309d8968c8cd76caf1c3656db60df2373676"
+    },
+    "demo-struts1/static-preview/screen_a60f5afe-5c7d-33da-921e-e91f42307274.html": {
+      "bytes": 1604,
+      "sha256": "1940409c04d068720cd3647be66db542cbd4943491cd658263e2bfe3ad38bf96"
+    },
+    "demo-struts1/viewer-documents.json": {
+      "bytes": 71740,
+      "sha256": "0774c1760f333a18f3d13af57ecf907cf119c75bf5f7d70e66914790b6c5c5ed"
+    },
+    "App1Assignment5/application-graph.json": {
+      "bytes": 206343,
+      "sha256": "5614ad4aeb4441eb64802ae7c2fbc293241eb712cc17e9e5ada7adfeaaf74624"
+    },
+    "App1Assignment5/preview-model.json": {
+      "bytes": 492377,
+      "sha256": "ca3c341c35f6df614653efa5711d91e955600ace18306588b2705c9a9b2868da"
+    },
+    "App1Assignment5/prototype-model.json": {
+      "bytes": 29044,
+      "sha256": "9f8ed40a1439790530049083da6f1d4a7e617e05a7c01864137959dcd7666f0e"
+    },
+    "App1Assignment5/report/screentrace-report.html": {
+      "bytes": 912397,
+      "sha256": "c9537715c56912fe5f15cf337979a04f6a74d0c632c6bf90d2ed89a7b1182512"
+    },
+    "App1Assignment5/report-size.json": {
+      "bytes": 119,
+      "sha256": "8fa51e6c675505f5376c4e2da3040191d95e3fa498ac859e38ba63ed9d1512ea"
+    },
+    "App1Assignment5/screenshots/interactions.json": {
+      "bytes": 24417,
+      "sha256": "fe353d780419fe75d7f458bc6fc6966a2171ac9670aebb5eccc083fe2796b4cf"
+    },
+    "App1Assignment5/screenshots/manifest.json": {
+      "bytes": 597,
+      "sha256": "2632f44dfcfe315121456c591682d21a6fb2ab4f6fb4be03bd5e1cc421fce794"
+    },
+    "App1Assignment5/screenshots/static-screen_0dabd232-1575-327d-a141-89ea05d553c4.png": {
+      "bytes": 16773,
+      "sha256": "8b97acbf5e6b0db32be3338ed54aa87570e1453e668bd9fe10dd39b2f827b1f5"
+    },
+    "App1Assignment5/screenshots/static-screen_53c3ffbe-8939-3e37-a91e-6c96b306190a.png": {
+      "bytes": 16731,
+      "sha256": "a9a9baccd7a47efa82ff9dc82da1d7c5b50625e7afc3780ea2b4572960a4695c"
+    },
+    "App1Assignment5/screenshots/static-screen_7e0222f2-352b-3b3e-b038-841fe557f563.png": {
+      "bytes": 25672,
+      "sha256": "0c4dfce35d505c7de81fc2ca4db6de3db6e66b0dbfa6c7e59435c43977e03519"
+    },
+    "App1Assignment5/screenshots/static-screen_d5e43178-929c-3a33-92be-7202a684a600.png": {
+      "bytes": 27199,
+      "sha256": "5412acbaa81e4075dc8bcb097d40c7f6628ad252df1c51a8071a9d1667d8bbbb"
+    },
+    "App1Assignment5/screenshots/static-screen_dca18921-a4fe-3317-b8b2-63c030c96eba.png": {
+      "bytes": 26154,
+      "sha256": "ff86923efb876c76ccada2b9e97e3bd6653510443bf299109ab6b11d1c91b3d8"
+    },
+    "App1Assignment5/static-preview/assets/resources/login.css": {
+      "bytes": 471,
+      "sha256": "5032212985323ac7cde65ccae7970555e634bea05d673e7e8415f9fc312d2c34"
+    },
+    "App1Assignment5/static-preview/diagnostics.json": {
+      "bytes": 2,
+      "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    "App1Assignment5/static-preview/element-styles.json": {
+      "bytes": 499084,
+      "sha256": "9fdd55345f3f22fd8a89d796adad690e23dfc5678fe163ae49dcc9ddf849ded0"
+    },
+    "App1Assignment5/static-preview/manifest.json": {
+      "bytes": 582,
+      "sha256": "01f2d8ea62f851f832bacdabedb98bad39292056c63998b592529b7e5ec7cb69"
+    },
+    "App1Assignment5/static-preview/reconstruction.json": {
+      "bytes": 2694,
+      "sha256": "69c2fc93c46bfbd30b35454ceeffd9431069af0880905ad6f0c3bd82d541e10c"
+    },
+    "App1Assignment5/static-preview/screen_0dabd232-1575-327d-a141-89ea05d553c4.html": {
+      "bytes": 5621,
+      "sha256": "78b6b3b5625a12ac79e05c98310d2270b158261e72a2ebce5765515742438e0f"
+    },
+    "App1Assignment5/static-preview/screen_53c3ffbe-8939-3e37-a91e-6c96b306190a.html": {
+      "bytes": 5578,
+      "sha256": "b45808a9f196a7d6f9f75660eb5ddddc5bc4ff208cafe74e549d6a2e089c0030"
+    },
+    "App1Assignment5/static-preview/screen_7e0222f2-352b-3b3e-b038-841fe557f563.html": {
+      "bytes": 9321,
+      "sha256": "08db516d983d33396db3a40af4c70095b5ae0f5c7e204e29c44d862e95012b55"
+    },
+    "App1Assignment5/static-preview/screen_d5e43178-929c-3a33-92be-7202a684a600.html": {
+      "bytes": 7558,
+      "sha256": "83962d51f9e250dc5389b2f73eb95195c0ad4085a74704aba025f7dfd2ff584c"
+    },
+    "App1Assignment5/static-preview/screen_dca18921-a4fe-3317-b8b2-63c030c96eba.html": {
+      "bytes": 7417,
+      "sha256": "c6b7aa7d960fb9aa1043c6d4a7fded1c68d8d840839c98a03c93083346b5af7c"
+    },
+    "App1Assignment5/viewer-documents.json": {
+      "bytes": 26051,
+      "sha256": "06ec072b707a820662f8a116af623408aa105c3e0d4d6cce1b9db1ee2dd2e4e4"
+    },
+    "Hotel-Management-System-Spring-Boot/application-graph.json": {
+      "bytes": 992564,
+      "sha256": "8bc1447bbee994d7789b33713c319ec70f96bbf8baee7a2e286ced2dd047e356"
+    },
+    "Hotel-Management-System-Spring-Boot/preview-model.json": {
+      "bytes": 1331138,
+      "sha256": "eb1e6fe74cece4751e93a626e7d6905616aabdc970ebbe47a66106526398a6a5"
+    },
+    "Hotel-Management-System-Spring-Boot/prototype-model.json": {
+      "bytes": 85781,
+      "sha256": "f6f57686e7d8e08fec282cf2f972119985d593157f0bd518f8f3423800a8b9ba"
+    },
+    "Hotel-Management-System-Spring-Boot/report/screentrace-report.html": {
+      "bytes": 2304099,
+      "sha256": "cf51bea4d9cf1322afe378fd6c9975853aab4a8e714d9daa191e32df93bc2350"
+    },
+    "Hotel-Management-System-Spring-Boot/report-size.json": {
+      "bytes": 120,
+      "sha256": "0ead95dc243d4b2165cfbaf72b112310e9cb2193660a7caf6ba41eee43995670"
+    },
+    "Hotel-Management-System-Spring-Boot/screenshots/interactions.json": {
+      "bytes": 86890,
+      "sha256": "da7cf94092d6178055f04abfea00e980c3a2cfa9da75b2215926c0ddd6be0963"
+    },
+    "Hotel-Management-System-Spring-Boot/screenshots/manifest.json": {
+      "bytes": 1311,
+      "sha256": "38903aad18af50ee7a7fe554620e93c8d50aa239894bb9ba62950761bd55bcda"
+    },
+    "Hotel-Management-System-Spring-Boot/screenshots/static-screen_01bdb5b7-be15-3af4-8a71-0adafd7cea5d.png": {
+      "bytes": 46724,
+      "sha256": "2ca3ac3a3f1e67a299df0765c88d56f4ca009dd32c4f8009bc0be53b0ff13e34"
+    },
+    "Hotel-Management-System-Spring-Boot/screenshots/static-screen_070a1790-a90a-3faf-aa8b-e1aed86b244b.png": {
+      "bytes": 39353,
+      "sha256": "07d321878661fac767db35e4ce79da8170406bf2983403626e1aa6865ef35467"
+    },
+    "Hotel-Management-System-Spring-Boot/screenshots/static-screen_11263f44-76ba-3941-9840-bdc6c8fbd9ce.png": {
+      "bytes": 58280,
+      "sha256": "8693bad7c08a9596f6e7656ed07bf234dd847d05d0eb8b7a7147062221ee4069"
+    },
+    "Hotel-Management-System-Spring-Boot/screenshots/static-screen_1d0421e9-2f0b-3448-8748-2800cbbaa990.png": {
+      "bytes": 79893,
+      "sha256": "8586dfb232566909ee037edb91d3dfa701eb77714c63f22b0f78b475888a075c"
+    },
+    "Hotel-Management-System-Spring-Boot/screenshots/static-screen_339adfd4-894c-3f49-b7df-32b5317c8308.png": {
+      "bytes": 33111,
+      "sha256": "d7381bbc9d554d6337af999ecf6404c31711e50261d9222ef01facaf9543265e"
+    },
+    "Hotel-Management-System-Spring-Boot/screenshots/static-screen_3a1b75e9-cff1-36f1-98e2-1fbfac753063.png": {
+      "bytes": 53725,
+      "sha256": "13f019fad08130685f675eda8bc62a943c38eb4d0ea4a4c83c204b86d9edc2e7"
+    },
+    "Hotel-Management-System-Spring-Boot/screenshots/static-screen_442d5f0e-13f1-3ab4-917b-68c9e1ea1e8b.png": {
+      "bytes": 41952,
+      "sha256": "e9f7280531db272afccc7a55d3505e3db7fd690ac036e0b733fbe12bf8ba95da"
+    },
+    "Hotel-Management-System-Spring-Boot/screenshots/static-screen_6b25390f-ec30-30ea-812f-85273915f88a.png": {
+      "bytes": 50506,
+      "sha256": "67f4c920b92f807dda814c8b12ec04afc83061630b875c0148e72cee142734d7"
+    },
+    "Hotel-Management-System-Spring-Boot/screenshots/static-screen_76ff02a4-870a-3bcb-b149-6cf728bb3168.png": {
+      "bytes": 53538,
+      "sha256": "0828459da99ccb22030dac65bf45483067b59cb16fa6c1c83a77399a5cde685d"
+    },
+    "Hotel-Management-System-Spring-Boot/screenshots/static-screen_a6fb3118-d388-305d-9637-0bac3e04338c.png": {
+      "bytes": 42110,
+      "sha256": "1201421c3743d489a9336e3d8983c6645a67221695dc1bd60e9ca5097c728568"
+    },
+    "Hotel-Management-System-Spring-Boot/screenshots/static-screen_bce85b51-4059-3503-9312-ea45ae7b47a9.png": {
+      "bytes": 61488,
+      "sha256": "f4de61870c33c1ab4d5ec004ff4fef9e9308e4478b8c763a6edc87790b23368f"
+    },
+    "Hotel-Management-System-Spring-Boot/static-preview/assets/css/Home.css": {
+      "bytes": 4342,
+      "sha256": "3a1ff1f27277eb3c39c92e050d4548b7c303c5c9dcb934d6add32f0e025a4bf5"
+    },
+    "Hotel-Management-System-Spring-Boot/static-preview/assets/css/admin-booking-edit.css": {
+      "bytes": 4166,
+      "sha256": "dbe38c2bcf0eb0a5c0c6ee1abe9058636eb50fdccfbfffee90e3d5079c18f74e"
+    },
+    "Hotel-Management-System-Spring-Boot/static-preview/assets/css/admin-bookings.css": {
+      "bytes": 3839,
+      "sha256": "e4a69302ec230fd518181b0dd5e976e08b51b469b7147710417b3e178ebd3fb2"
+    },
+    "Hotel-Management-System-Spring-Boot/static-preview/assets/css/admin-dashboard.css": {
+      "bytes": 4887,
+      "sha256": "135399b565a868a2984c011747bc16c89cf14c4b4804c5fadc3f9bf0ba269cc1"
+    },
+    "Hotel-Management-System-Spring-Boot/static-preview/assets/css/admin-guest-history.css": {
+      "bytes": 4215,
+      "sha256": "e8e33476ac2ab939e002d0c2c330082a2bf38b83c8178ee9744be2aa6931227c"
+    },
+    "Hotel-Management-System-Spring-Boot/static-preview/assets/css/admin-guests.css": {
+      "bytes": 3275,
+      "sha256": "8327643c4b972ae6d96be246fee5d93f8101c90179a1d5c47a1c0623ea97a9a1"
+    },
+    "Hotel-Management-System-Spring-Boot/static-preview/assets/css/admin-room-form.css": {
+      "bytes": 3734,
+      "sha256": "7c4758f728193a3fdcefc2daf71f8b9a7629434a907491612afcdf48f7988f34"
+    },
+    "Hotel-Management-System-Spring-Boot/static-preview/assets/css/admin-rooms.css": {
+      "bytes": 4047,
+      "sha256": "45b85dae0a7f7e0725b99b7a35ea1f28a0720a4d88f2f1e4295624824d28a6a2"
+    },
+    "Hotel-Management-System-Spring-Boot/static-preview/assets/css/booking-form.css": {
+      "bytes": 5944,
+      "sha256": "b692f6bee9add61ca985018b8144a47db8f8144d7fd5eeb8e6db3322d77edc3a"
+    },
+    "Hotel-Management-System-Spring-Boot/static-preview/assets/css/booking-success.css": {
+      "bytes": 3580,
+      "sha256": "484f7160fd8edeef4e70ab3bd823311eded9e2032cf4e55d30029121ef1f6a50"
+    },
+    "Hotel-Management-System-Spring-Boot/static-preview/assets/css/login.css": {
+      "bytes": 3044,
+      "sha256": "8ef63ad7832e94e00e40c465825913ffa05e04b3cad8c11a03801c3e32187c93"
+    },
+    "Hotel-Management-System-Spring-Boot/static-preview/assets/css/style.css": {
+      "bytes": 7733,
+      "sha256": "37b98d8b1a30fdee9e8907e74ecc194b22e587247c76b6fc19e0419300cc58fa"
+    },
+    "Hotel-Management-System-Spring-Boot/static-preview/diagnostics.json": {
+      "bytes": 2,
+      "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    "Hotel-Management-System-Spring-Boot/static-preview/element-styles.json": {
+      "bytes": 1374952,
+      "sha256": "d23ae7406e8c029d6e739637b4e2c4bc16dad87c0cdcfe1a820dc73cd43c9092"
+    },
+    "Hotel-Management-System-Spring-Boot/static-preview/manifest.json": {
+      "bytes": 1278,
+      "sha256": "6143012004ebd331197fd0bf2de494eea98caadd1da95b8ab126c2daa87758a9"
+    },
+    "Hotel-Management-System-Spring-Boot/static-preview/reconstruction.json": {
+      "bytes": 5411,
+      "sha256": "3640131d5db285cfbfb72b1b6f2f8cc4e8bbae1ffb31c74230927f6be4d960ca"
+    },
+    "Hotel-Management-System-Spring-Boot/static-preview/screen_01bdb5b7-be15-3af4-8a71-0adafd7cea5d.html": {
+      "bytes": 9939,
+      "sha256": "b34c714327b522221b47fde6eeb6eca51cdfaf0aa677a0bddc8bac1f1b972a26"
+    },
+    "Hotel-Management-System-Spring-Boot/static-preview/screen_070a1790-a90a-3faf-aa8b-e1aed86b244b.html": {
+      "bytes": 11990,
+      "sha256": "503f333afb30f3cde618505e718040a8d2cdefd7f0f2a8b6119044ad38adc33f"
+    },
+    "Hotel-Management-System-Spring-Boot/static-preview/screen_11263f44-76ba-3941-9840-bdc6c8fbd9ce.html": {
+      "bytes": 17586,
+      "sha256": "866f2c578c46a52d3873d740c6f9b3672e40ecc9beb8eecfffcdadc4ab9f4d1b"
+    },
+    "Hotel-Management-System-Spring-Boot/static-preview/screen_1d0421e9-2f0b-3448-8748-2800cbbaa990.html": {
+      "bytes": 16020,
+      "sha256": "ea35ba9d9e65733f7efe6f31f43945874c67e67813cecf81af8d0914d56d5fa3"
+    },
+    "Hotel-Management-System-Spring-Boot/static-preview/screen_339adfd4-894c-3f49-b7df-32b5317c8308.html": {
+      "bytes": 7637,
+      "sha256": "e1cce7800f2acea058ec7afbc737b64ec4a33818daed0658b2a25fe06dec1315"
+    },
+    "Hotel-Management-System-Spring-Boot/static-preview/screen_3a1b75e9-cff1-36f1-98e2-1fbfac753063.html": {
+      "bytes": 19952,
+      "sha256": "42dcdd059fabca1d02fce79dfad6cfa49045d3bd74dfdd5a1f97ea7ceb356343"
+    },
+    "Hotel-Management-System-Spring-Boot/static-preview/screen_442d5f0e-13f1-3ab4-917b-68c9e1ea1e8b.html": {
+      "bytes": 12717,
+      "sha256": "38343b591a21f903261c5d9a1d6be6df0e09c6875ab8348ce593b9a9358f470f"
+    },
+    "Hotel-Management-System-Spring-Boot/static-preview/screen_6b25390f-ec30-30ea-812f-85273915f88a.html": {
+      "bytes": 17037,
+      "sha256": "37f12f3223a13c298b3c7b6c85e42eec2362aa49ac0bdfec3ca453fb8234fb7c"
+    },
+    "Hotel-Management-System-Spring-Boot/static-preview/screen_76ff02a4-870a-3bcb-b149-6cf728bb3168.html": {
+      "bytes": 16890,
+      "sha256": "64f76fc76679e77656b1d3fa12d74bb1038cb279e2e11c8a90ea782000ecb9a5"
+    },
+    "Hotel-Management-System-Spring-Boot/static-preview/screen_a6fb3118-d388-305d-9637-0bac3e04338c.html": {
+      "bytes": 13760,
+      "sha256": "5a729b82b52a78cc2fe72ac40f08a8dac20100fba3d1bb87077606cfaf11ca2e"
+    },
+    "Hotel-Management-System-Spring-Boot/static-preview/screen_bce85b51-4059-3503-9312-ea45ae7b47a9.html": {
+      "bytes": 17982,
+      "sha256": "5518bf04e64b107f8ec9014c4edca12839243acb2ccd3bf0e5771f7dea796f2b"
+    },
+    "Hotel-Management-System-Spring-Boot/viewer-documents.json": {
+      "bytes": 107971,
+      "sha256": "bd1e8d98ab118d5f47f3d66b23472f20c0cedb79aae011c477e544b7a35ca571"
+    }
+  },
+  "frozenWorkflowBaseline": {
+    "bytes": 19547,
+    "sha256": "75956cc5fd9c3eebb607d0a1ee32635bb43c191aa96a5a403e165e4612fba8fa"
+  },
+  "sourceCensus": {
+    "bytes": 90469,
+    "sha256": "d82123ecf70b5edfcec03337da2dd18b3814f9a79704b1f30b0f1155b3be55da"
+  }
+}

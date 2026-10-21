@@ -1,0 +1,4 @@
+
+> build
+> tsc --noEmit && node build.mjs
+

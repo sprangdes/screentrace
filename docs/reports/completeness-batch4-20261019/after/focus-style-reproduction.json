@@ -1,0 +1,58 @@
+{
+  "source": "src/main/resources/templates/admin/login.html:31",
+  "autofocusElement": "username",
+  "focusedSha256": "ab66f032dff8b1e6dd69838420c8faa2c55dd5f4b7c9c38418051145dffa7e98",
+  "unfocusedSha256": "cf77e05d719b0de50cfb343042c0b5c9afb0316aac714375aeb653cff066d83b",
+  "historicalHashes": [
+    "cf77e05d719b0de50cfb343042c0b5c9afb0316aac714375aeb653cff066d83b",
+    "ab66f032dff8b1e6dd69838420c8faa2c55dd5f4b7c9c38418051145dffa7e98"
+  ],
+  "changes": [
+    {
+      "property": "border-block-end-color",
+      "focused": "rgb(31, 75, 255)",
+      "unfocused": "rgb(200, 210, 255)"
+    },
+    {
+      "property": "border-block-start-color",
+      "focused": "rgb(31, 75, 255)",
+      "unfocused": "rgb(200, 210, 255)"
+    },
+    {
+      "property": "border-bottom-color",
+      "focused": "rgb(31, 75, 255)",
+      "unfocused": "rgb(200, 210, 255)"
+    },
+    {
+      "property": "border-inline-end-color",
+      "focused": "rgb(31, 75, 255)",
+      "unfocused": "rgb(200, 210, 255)"
+    },
+    {
+      "property": "border-inline-start-color",
+      "focused": "rgb(31, 75, 255)",
+      "unfocused": "rgb(200, 210, 255)"
+    },
+    {
+      "property": "border-left-color",
+      "focused": "rgb(31, 75, 255)",
+      "unfocused": "rgb(200, 210, 255)"
+    },
+    {
+      "property": "border-right-color",
+      "focused": "rgb(31, 75, 255)",
+      "unfocused": "rgb(200, 210, 255)"
+    },
+    {
+      "property": "border-top-color",
+      "focused": "rgb(31, 75, 255)",
+      "unfocused": "rgb(200, 210, 255)"
+    },
+    {
+      "property": "box-shadow",
+      "focused": "rgba(31, 75, 255, 0.2) 0px 0px 10px 0px",
+      "unfocused": "none"
+    }
+  ],
+  "exactHistoricalReproduction": true
+}

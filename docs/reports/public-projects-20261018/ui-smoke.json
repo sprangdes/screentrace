@@ -1,0 +1,42 @@
+[
+  {
+    "project": "mailreader",
+    "cards": 11,
+    "apis": 7,
+    "pageErrors": [],
+    "externalRequests": [],
+    "result": "PASS"
+  },
+  {
+    "project": "cookbook",
+    "cards": 35,
+    "apis": 2,
+    "pageErrors": [],
+    "externalRequests": [],
+    "result": "PASS"
+  },
+  {
+    "project": "spring-mvc-jsp-petclinic",
+    "cards": 10,
+    "apis": 2,
+    "pageErrors": [],
+    "externalRequests": [],
+    "result": "PASS"
+  },
+  {
+    "project": "spring-boot-todo-jsp",
+    "cards": 20,
+    "apis": 2,
+    "pageErrors": [],
+    "externalRequests": [],
+    "result": "PASS"
+  },
+  {
+    "project": "spring-boot-realworld-example-app",
+    "cards": 0,
+    "apis": 19,
+    "pageErrors": [],
+    "externalRequests": [],
+    "result": "PASS"
+  }
+]

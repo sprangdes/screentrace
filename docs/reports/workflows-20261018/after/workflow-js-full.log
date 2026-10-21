@@ -1,0 +1,410 @@
+
+> test
+> node --test test/*.test.mjs
+
+TAP version 13
+# Subtest: all required static selectors and descendant relationship
+ok 1 - all required static selectors and descendant relationship
+  ---
+  duration_ms: 3.257625
+  type: 'test'
+  ...
+# Subtest: jQuery direct and delegated, native and inline binding keep raw selectors
+ok 2 - jQuery direct and delegated, native and inline binding keep raw selectors
+  ---
+  duration_ms: 15.633708
+  type: 'test'
+  ...
+# Subtest: dynamic access and dynamic selectors never bind
+ok 3 - dynamic access and dynamic selectors never bind
+  ---
+  duration_ms: 78.876708
+  type: 'test'
+  ...
+# Subtest: ES5 and modern module syntax retain source lines
+ok 4 - ES5 and modern module syntax retain source lines
+  ---
+  duration_ms: 148.624458
+  type: 'test'
+  ...
+# Subtest: syntax error diagnoses and recovers without aborting other source
+ok 5 - syntax error diagnoses and recovers without aborting other source
+  ---
+  duration_ms: 7.414084
+  type: 'test'
+  ...
+# Subtest: side effect probe is parsed but never executed
+ok 6 - side effect probe is parsed but never executed
+  ---
+  duration_ms: 7.336459
+  type: 'test'
+  ...
+# Subtest: unsafe, missing and oversized files yield diagnostics
+ok 7 - unsafe, missing and oversized files yield diagnostics
+  ---
+  duration_ms: 98.472
+  type: 'test'
+  ...
+# Subtest: nested literal API arguments are retained as separate static request sources
+ok 8 - nested literal API arguments are retained as separate static request sources
+  ---
+  duration_ms: 159.245125
+  type: 'test'
+  ...
+# Subtest: nested JSX routes join paths, render layouts through Outlet and name the page component
+ok 9 - nested JSX routes join paths, render layouts through Outlet and name the page component
+  ---
+  duration_ms: 182.117208
+  type: 'test'
+  ...
+# Subtest: router object arrays become screens
+ok 10 - router object arrays become screens
+  ---
+  duration_ms: 3.328042
+  type: 'test'
+  ...
+# Subtest: a duplicated route keeps the first declaration and reports the second
+ok 11 - a duplicated route keeps the first declaration and reports the second
+  ---
+  duration_ms: 1.808333
+  type: 'test'
+  ...
+# Subtest: handlers follow an imported API object through its request wrapper to fetch
+ok 12 - handlers follow an imported API object through its request wrapper to fetch
+  ---
+  duration_ms: 88.636708
+  type: 'test'
+  ...
+# Subtest: literal props prune conditional rendering so each route keeps only its own content
+ok 13 - literal props prune conditional rendering so each route keeps only its own content
+  ---
+  duration_ms: 7.37775
+  type: 'test'
+  ...
+# Subtest: links over a literal navigation array are unrolled and resolved to routes
+ok 14 - links over a literal navigation array are unrolled and resolved to routes
+  ---
+  duration_ms: 2.042334
+  type: 'test'
+  ...
+# Subtest: providers in the root render contribute page-load requests to every screen
+ok 15 - providers in the root render contribute page-load requests to every screen
+  ---
+  duration_ms: 2.608917
+  type: 'test'
+  ...
+# Subtest: full-page loads of server URLs are requests; client routes stay navigation
+ok 16 - full-page loads of server URLs are requests; client routes stay navigation
+  ---
+  duration_ms: 1.38
+  type: 'test'
+  ...
+# Subtest: unprovable requests and components stay unresolved with diagnostics
+ok 17 - unprovable requests and components stay unresolved with diagnostics
+  ---
+  duration_ms: 6.073792
+  type: 'test'
+  ...
+# Subtest: output is deterministic and independent of input order
+ok 18 - output is deterministic and independent of input order
+  ---
+  duration_ms: 7.286292
+  type: 'test'
+  ...
+# Subtest: filtered literal arrays keep only items the predicate cannot rule out
+ok 19 - filtered literal arrays keep only items the predicate cannot rule out
+  ---
+  duration_ms: 2.130833
+  type: 'test'
+  ...
+# Subtest: preview markup escapes text, drops handlers and prefers the resting branch
+ok 20 - preview markup escapes text, drops handlers and prefers the resting branch
+  ---
+  duration_ms: 7.277875
+  type: 'test'
+  ...
+# Subtest: a conditional dialog is closed together with its fixed layer and backdrop
+ok 21 - a conditional dialog is closed together with its fixed layer and backdrop
+  ---
+  duration_ms: 2.970084
+  type: 'test'
+  ...
+# Subtest: click behaviors carry only the handler conditions, not the conditions that show the element
+ok 22 - click behaviors carry only the handler conditions, not the conditions that show the element
+  ---
+  duration_ms: 1.887667
+  type: 'test'
+  ...
+# Subtest: a route that only redirects is marked as such and never named after a shell provider
+ok 23 - a route that only redirects is marked as such and never named after a shell provider
+  ---
+  duration_ms: 3.15375
+  type: 'test'
+  ...
+# Subtest: all navigation and form submission APIs
+ok 24 - all navigation and form submission APIs
+  ---
+  duration_ms: 111.905375
+  type: 'test'
+  ...
+# Subtest: all API syntaxes capture method URL and data field names
+ok 25 - all API syntaxes capture method URL and data field names
+  ---
+  duration_ms: 14.101291
+  type: 'test'
+  ...
+# Subtest: dialogs UI state and change-driven selection are classified
+ok 26 - dialogs UI state and change-driven selection are classified
+  ---
+  duration_ms: 35.3255
+  type: 'test'
+  ...
+# Subtest: jquery.validate and native validity produce CLIENT rules and original messages
+ok 27 - jquery.validate and native validity produce CLIENT rules and original messages
+  ---
+  duration_ms: 2.776917
+  type: 'test'
+  ...
+# Subtest: known libraries skipped, unknown calls preserved, API table covers required families
+ok 28 - known libraries skipped, unknown calls preserved, API table covers required families
+  ---
+  duration_ms: 0.907792
+  type: 'test'
+  ...
+# Subtest: eval computed access and input-built URL remain unresolved without execution
+ok 29 - eval computed access and input-built URL remain unresolved without execution
+  ---
+  duration_ms: 0.948
+  type: 'test'
+  ...
+# Subtest: load ready and failed binding API sources remain present
+ok 30 - load ready and failed binding API sources remain present
+  ---
+  duration_ms: 1.637125
+  type: 'test'
+  ...
+# Subtest: native Bootstrap and window.onload are source-only behaviors
+ok 31 - native Bootstrap and window.onload are source-only behaviors
+  ---
+  duration_ms: 1.047666
+  type: 'test'
+  ...
+# Subtest: AngularJS vendor runtime is identified and never treated as application behavior
+ok 32 - AngularJS vendor runtime is identified and never treated as application behavior
+  ---
+  duration_ms: 2.430209
+  type: 'test'
+  ...
+# Subtest: a present but dynamic HTTP method must not default to GET
+ok 33 - a present but dynamic HTTP method must not default to GET
+  ---
+  duration_ms: 5.804667
+  type: 'test'
+  ...
+# Subtest: declarations expressions and object methods trace arguments and guards
+ok 34 - declarations expressions and object methods trace arguments and guards
+  ---
+  duration_ms: 26.99525
+  type: 'test'
+  ...
+# Subtest: depth ten and configurable limit preserve unresolved call at boundary
+ok 35 - depth ten and configurable limit preserve unresolved call at boundary
+  ---
+  duration_ms: 3.841667
+  type: 'test'
+  ...
+# Subtest: recursive cycle terminates and retains unresolved evidence
+ok 36 - recursive cycle terminates and retains unresolved evidence
+  ---
+  duration_ms: 1.529042
+  type: 'test'
+  ...
+# Subtest: ajax success done and then callbacks have parent behaviors
+ok 37 - ajax success done and then callbacks have parent behaviors
+  ---
+  duration_ms: 11.735708
+  type: 'test'
+  ...
+# Subtest: single assignment constants objects concatenation templates and partial JSP values
+ok 38 - single assignment constants objects concatenation templates and partial JSP values
+  ---
+  duration_ms: 3.143833
+  type: 'test'
+  ...
+# Subtest: reassignment computed property and input taint cannot resolve values
+ok 39 - reassignment computed property and input taint cannot resolve values
+  ---
+  duration_ms: 1.762666
+  type: 'test'
+  ...
+# Subtest: IIFE ready named handler and standalone external functions preserve load sources
+ok 40 - IIFE ready named handler and standalone external functions preserve load sources
+  ---
+  duration_ms: 1.294209
+  type: 'test'
+  ...
+# Subtest: custom validation preserves condition field message and CLIENT layer
+ok 41 - custom validation preserves condition field message and CLIENT layer
+  ---
+  duration_ms: 8.719209
+  type: 'test'
+  ...
+# Subtest: serialize uses static form fields and IDs survive unrelated comments
+ok 42 - serialize uses static form fields and IDs survive unrelated comments
+  ---
+  duration_ms: 2.147417
+  type: 'test'
+  ...
+# Subtest: inline event units trace without recursively registering their own program
+ok 43 - inline event units trace without recursively registering their own program
+  ---
+  duration_ms: 117.164166
+  type: 'test'
+  ...
+# Subtest: nested computed access is tainted even when surrounded by a literal
+ok 44 - nested computed access is tainted even when surrounded by a literal
+  ---
+  duration_ms: 0.525666
+  type: 'test'
+  ...
+# Subtest: relative module imports are parsed as data and imported aliases are traced
+ok 45 - relative module imports are parsed as data and imported aliases are traced
+  ---
+  duration_ms: 1.645709
+  type: 'test'
+  ...
+# Subtest: known static modal selector resolves its component and lists ambiguous targets
+ok 46 - known static modal selector resolves its component and lists ambiguous targets
+  ---
+  duration_ms: 0.838459
+  type: 'test'
+  ...
+# Subtest: popup close commands are UI state changes and computed arguments stay unresolved
+ok 47 - popup close commands are UI state changes and computed arguments stay unresolved
+  ---
+  duration_ms: 0.843834
+  type: 'test'
+  ...
+# Subtest: constant selectors and bindings inside a traced initializer resolve statically
+ok 48 - constant selectors and bindings inside a traced initializer resolve statically
+  ---
+  duration_ms: 1.051708
+  type: 'test'
+  ...
+# Subtest: static request configuration objects resolve method URL callbacks and data fields
+ok 49 - static request configuration objects resolve method URL callbacks and data fields
+  ---
+  duration_ms: 1.851291
+  type: 'test'
+  ...
+# Subtest: dynamic delegated selector retains the callback API as an unresolved source
+ok 50 - dynamic delegated selector retains the callback API as an unresolved source
+  ---
+  duration_ms: 1.739958
+  type: 'test'
+  ...
+# Subtest: event map bindings retain every handler and event
+ok 51 - event map bindings retain every handler and event
+  ---
+  duration_ms: 1.048834
+  type: 'test'
+  ...
+# Subtest: module-private bindings cannot leak into a classic script scope
+ok 52 - module-private bindings cannot leak into a classic script scope
+  ---
+  duration_ms: 1.316
+  type: 'test'
+  ...
+# Subtest: reassigned functions do not resolve to their original implementation
+ok 53 - reassigned functions do not resolve to their original implementation
+  ---
+  duration_ms: 0.535292
+  type: 'test'
+  ...
+# Subtest: single initialization assignment and object argument properties resolve
+ok 54 - single initialization assignment and object argument properties resolve
+  ---
+  duration_ms: 0.275917
+  type: 'test'
+  ...
+# Subtest: local functions shadow native API names instead of becoming guessed API calls
+ok 55 - local functions shadow native API names instead of becoming guessed API calls
+  ---
+  duration_ms: 0.3365
+  type: 'test'
+  ...
+# Subtest: scriptlet URL values are unresolved and never evaluated
+ok 56 - scriptlet URL values are unresolved and never evaluated
+  ---
+  duration_ms: 0.254708
+  type: 'test'
+  ...
+# Subtest: XHR branch alternatives are not silently reduced to the last open call
+ok 57 - XHR branch alternatives are not silently reduced to the last open call
+  ---
+  duration_ms: 0.587208
+  type: 'test'
+  ...
+# Subtest: $http verb methods and configuration objects retain static route templates
+ok 58 - $http verb methods and configuration objects retain static route templates
+  ---
+  duration_ms: 0.937583
+  type: 'test'
+  ...
+# Subtest: unknown JSP argument does not prevent proving a constant DOM effect
+ok 59 - unknown JSP argument does not prevent proving a constant DOM effect
+  ---
+  duration_ms: 58.796792
+  type: 'test'
+  ...
+# Subtest: literal DOM value assignments keep field/index/value without evaluating scripts
+ok 60 - literal DOM value assignments keep field/index/value without evaluating scripts
+  ---
+  duration_ms: 17.247708
+  type: 'test'
+  ...
+# Subtest: context pathname prefix remains symbolic while API suffix and callbacks survive
+ok 61 - context pathname prefix remains symbolic while API suffix and callbacks survive
+  ---
+  duration_ms: 2.7555
+  type: 'test'
+  ...
+# Subtest: recognized legacy calendar declarations become inert date selection metadata
+ok 62 - recognized legacy calendar declarations become inert date selection metadata
+  ---
+  duration_ms: 1.659917
+  type: 'test'
+  ...
+# Subtest: JSP unknown arguments cannot capture a user-defined placeholder variable
+ok 63 - JSP unknown arguments cannot capture a user-defined placeholder variable
+  ---
+  duration_ms: 0.530292
+  type: 'test'
+  ...
+# Subtest: a shadowed location object cannot supply an inferred runtime URL prefix
+ok 64 - a shadowed location object cannot supply an inferred runtime URL prefix
+  ---
+  duration_ms: 1.490917
+  type: 'test'
+  ...
+# Subtest: WP44 A2 function parameters remain named route placeholders
+ok 65 - WP44 A2 function parameters remain named route placeholders
+  ---
+  duration_ms: 32.618459
+  type: 'test'
+  ...
+# Subtest: WP44 A2 non-computed scope properties use the final property name
+ok 66 - WP44 A2 non-computed scope properties use the final property name
+  ---
+  duration_ms: 2.536125
+  type: 'test'
+  ...
+1..66
+# tests 66
+# suites 0
+# pass 66
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 552.801875

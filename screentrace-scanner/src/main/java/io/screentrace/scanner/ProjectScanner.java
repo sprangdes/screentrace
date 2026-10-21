@@ -71,10 +71,24 @@ public final class ProjectScanner {
         return FileVisitResult.CONTINUE;
       }
     });
+    String configured=configuredWebRoot(root);
+    if(configured!=null)files.removeIf(file->{String relative=root.relativize(file).toString().replace('\\','/');
+      boolean other=List.of("WebRoot/","WebContent/","webapp/","web/","src/main/webapp/").stream().anyMatch(relative::startsWith)&&!relative.startsWith(configured+"/");
+      if(other)diagnostics.add("Inactive web source excluded by nbproject/project.properties: "+relative);return other;
+    });
     files.sort(Path::compareTo);
     return new ProjectInventory(root, files, technologies(root, files), diagnostics);
   }
 
+  private static String configuredWebRoot(Path root) {
+    Path file=root.resolve("nbproject/project.properties");
+    try{if(!SafeProjectFiles.isSafeRegularFile(root,file))return null;
+      var p=new java.util.Properties();p.load(new java.io.StringReader(SafeProjectFiles.readUtf8Limited(root,file,SafeProjectFiles.MAX_SOURCE_FILE_BYTES)));
+      String value=p.getProperty("web.docbase.dir");if(value==null||value.contains("${")||value.contains("\\")||value.startsWith("/")||java.util.Arrays.asList(value.split("/")).contains(".."))return null;
+      if(!Files.isDirectory(root.resolve(value))||Files.isSymbolicLink(root.resolve(value))||!root.resolve(value).toRealPath().startsWith(root))return null;
+      return value.replaceFirst("^\\./","").replaceFirst("/+$","");
+    }catch(Exception ignored){return null;}
+  }
   private static List<String> technologies(Path root, List<Path> files) {
     Set<String> technologies = new TreeSet<>();
     if (files.stream().anyMatch(path -> path.getFileName().toString().equals(POM_FILE))) technologies.add("Maven");
@@ -112,6 +126,10 @@ public final class ProjectScanner {
     public ProjectInventory withContextPaths(List<String> values,int line){return new ProjectInventory(root,files,technologies,diagnostics,values,"workspace:config.json",Math.max(1,line));}
     public ProjectInventory(Path root, List<Path> files, List<String> technologies) { this(root, files, technologies, List.of()); }
     public ProjectInventory { files = List.copyOf(files); technologies = List.copyOf(technologies); diagnostics = List.copyOf(diagnostics); contextPaths=List.copyOf(contextPaths); contextSettingsFile=contextPaths.isEmpty()?".":"workspace:config.json"; }
+    public List<String> webRoots() {
+      String configured=configuredWebRoot(root);if(configured!=null)return List.of(configured+"/");
+      return List.of("src/main/webapp/","WebContent/","WebRoot/","webapp/","web/");
+    }
     public List<Path> javaFiles() { return files.stream().filter(path -> hasExtension(path, ".java")).toList(); }
     public List<Path> reactFiles() { return files.stream().filter(path -> hasExtension(path, ".tsx") || hasExtension(path, ".jsx")).toList(); }
     public List<Path> jspFiles() { return files.stream().filter(path -> hasExtension(path, ".jsp")).toList(); }

@@ -1,0 +1,2556 @@
+{
+  "units": 23,
+  "rows": [
+    {
+      "project": "contract-management-system",
+      "file": "src/main/webapp/input.jsp",
+      "line": 146,
+      "kind": "uiCall",
+      "callee": "val",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#contractorNameField\").val()"
+    },
+    {
+      "project": "contract-management-system",
+      "file": "src/main/webapp/input.jsp",
+      "line": 150,
+      "kind": "uiCall",
+      "callee": "$messageArea.text",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$messageArea.text(\"⚠ 名前を入力してください\")"
+    },
+    {
+      "project": "contract-management-system",
+      "file": "src/main/webapp/input.jsp",
+      "line": 151,
+      "kind": "uiCall",
+      "callee": "$messageArea.css",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$messageArea.css(\"color\", \"#dc3545\")"
+    },
+    {
+      "project": "contract-management-system",
+      "file": "src/main/webapp/input.jsp",
+      "line": 155,
+      "kind": "uiCall",
+      "callee": "$messageArea.text",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$messageArea.text(\"⏳ チェック中...\")"
+    },
+    {
+      "project": "contract-management-system",
+      "file": "src/main/webapp/input.jsp",
+      "line": 156,
+      "kind": "uiCall",
+      "callee": "$messageArea.css",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$messageArea.css(\"color\", \"#6c757d\")"
+    },
+    {
+      "project": "contract-management-system",
+      "file": "src/main/webapp/input.jsp",
+      "line": 159,
+      "kind": "request",
+      "callee": "$.ajax",
+      "url": "checkName.do",
+      "httpMethod": "GET",
+      "expression": "$.ajax({\n            url: \"checkName.do\",                 // 送信先のURL\n            type: \"GET\",                        // HTTP通信の種類\n            data: { name: nameValue },          //"
+    },
+    {
+      "project": "contract-management-system",
+      "file": "src/main/webapp/input.jsp",
+      "line": 169,
+      "kind": "uiCall",
+      "callee": "$messageArea.text",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$messageArea.text(\"❌ この名前はすでに登録されています！\")"
+    },
+    {
+      "project": "contract-management-system",
+      "file": "src/main/webapp/input.jsp",
+      "line": 170,
+      "kind": "uiCall",
+      "callee": "$messageArea.css",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$messageArea.css(\"color\", \"#dc3545\")"
+    },
+    {
+      "project": "contract-management-system",
+      "file": "src/main/webapp/input.jsp",
+      "line": 172,
+      "kind": "uiCall",
+      "callee": "$messageArea.text",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$messageArea.text(\"⭕ 登録可能な名前です。\")"
+    },
+    {
+      "project": "contract-management-system",
+      "file": "src/main/webapp/input.jsp",
+      "line": 173,
+      "kind": "uiCall",
+      "callee": "$messageArea.css",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$messageArea.css(\"color\", \"#28a745\")"
+    },
+    {
+      "project": "contract-management-system",
+      "file": "src/main/webapp/input.jsp",
+      "line": 179,
+      "kind": "uiCall",
+      "callee": "$messageArea.text",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$messageArea.text(\"❌ 通信エラーが発生しました\")"
+    },
+    {
+      "project": "contract-management-system",
+      "file": "src/main/webapp/input.jsp",
+      "line": 180,
+      "kind": "uiCall",
+      "callee": "$messageArea.css",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$messageArea.css(\"color\", \"#dc3545\")"
+    },
+    {
+      "project": "Fintech-Finance-Banking-Application",
+      "file": "src/main/resources/static/js/main.js",
+      "line": 12,
+      "kind": "eventBinding",
+      "callee": "transactType.addEventListener",
+      "url": null,
+      "httpMethod": null,
+      "expression": "transactType.addEventListener(\"change\",() =>{\n\n    // Check For Transaction Type and Display Form:\n    switch(transactType.value){\n        case \"payment\":\n            paymentCard.s"
+    },
+    {
+      "project": "Fintech-Finance-Banking-Application",
+      "file": "src/main/webapp/WEB-INF/jsp/components/incl/header.jsp",
+      "line": 46,
+      "kind": "uiCall",
+      "callee": "val",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$('#email').val('')"
+    },
+    {
+      "project": "Fintech-Finance-Banking-Application",
+      "file": "src/main/webapp/WEB-INF/jsp/components/incl/header.jsp",
+      "line": 47,
+      "kind": "uiCall",
+      "callee": "val",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$('#password').val('')"
+    },
+    {
+      "project": "Fintech-Finance-Banking-Application",
+      "file": "src/main/webapp/WEB-INF/jsp/login.jsp",
+      "line": 29,
+      "kind": "uiCall",
+      "callee": "alert",
+      "url": null,
+      "httpMethod": null,
+      "expression": "alert(\"Logout\")"
+    },
+    {
+      "project": "Fintech-Finance-Banking-Application",
+      "file": "src/main/webapp/WEB-INF/jsp/login.jsp",
+      "line": 31,
+      "kind": "uiCall",
+      "callee": "val",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$('#email').val('')"
+    },
+    {
+      "project": "Fintech-Finance-Banking-Application",
+      "file": "src/main/webapp/WEB-INF/jsp/login.jsp",
+      "line": 32,
+      "kind": "uiCall",
+      "callee": "val",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$('#password').val('')"
+    },
+    {
+      "project": "Fintech-Finance-Banking-Application",
+      "file": "src/main/webapp/WEB-INF/jsp/login.jsp",
+      "line": 34,
+      "kind": "uiCall",
+      "callee": "alert",
+      "url": null,
+      "httpMethod": null,
+      "expression": "alert(\"You have been logged out.\")"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/brandEditValidation.js",
+      "line": 14,
+      "kind": "eventBinding",
+      "callee": "on",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#editBrandName input\").on(\"blur\",function(event){\n        //event.preventDefault();\n        var parentId = $(this).parent().attr(\"id\"), element = event.target.nodeName.toLowerCa"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/brandEditValidation.js",
+      "line": 19,
+      "kind": "eventBinding",
+      "callee": "on",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#editDescription textarea\").on(\"keyup\",function(event){\n        var parentId = $(this).parent().attr(\"id\"), element = event.target.nodeName.toLowerCase();\n        validationForm"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/brandEditValidation.js",
+      "line": 25,
+      "kind": "uiCall",
+      "callee": "val",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#\"+id+element).val()"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/brandEditValidation.js",
+      "line": 29,
+      "kind": "uiCall",
+      "callee": "remove",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#\"+id+\" span\").remove()"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/brandEditValidation.js",
+      "line": 38,
+      "kind": "uiCall",
+      "callee": "remove",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#\"+id+\" span\").remove()"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/brandEditValidation.js",
+      "line": 43,
+      "kind": "eventBinding",
+      "callee": "change",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#editBrand\").change(function(event){\n        event.preventDefault();\n        if(!flagArray.editBrandName || !flagArray.editDescription ){\n            $(\"#editBrandSubmit\").attr("
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/brandHandaler.js",
+      "line": 2,
+      "kind": "eventBinding",
+      "callee": "on",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$('.cancel').on('click', function(){\n        window.history.back();\n    })"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/brandHandaler.js",
+      "line": 6,
+      "kind": "eventBinding",
+      "callee": "on",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$('#editBrandPopUp').on('shown.bs.modal',function(event){\n        event.preventDefault();\n        var id=$(event.relatedTarget).data('id');\n        var request={\n            url: '"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/brandHandaler.js",
+      "line": 14,
+      "kind": "request",
+      "callee": "$.ajax",
+      "url": null,
+      "httpMethod": "GET",
+      "expression": "$.ajax(request)"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/brandHandaler.js",
+      "line": 18,
+      "kind": "uiCall",
+      "callee": "val",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#editBrandid input\").val(fullData.brandid)"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/brandHandaler.js",
+      "line": 19,
+      "kind": "uiCall",
+      "callee": "val",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#hiddenBrandID\").val(fullData.brandid)"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/brandHandaler.js",
+      "line": 20,
+      "kind": "uiCall",
+      "callee": "val",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#editBrandName input\").val(fullData.brandName)"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/brandHandaler.js",
+      "line": 21,
+      "kind": "uiCall",
+      "callee": "val",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#editDescription textarea\").val(fullData.description)"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/brandHandaler.js",
+      "line": 28,
+      "kind": "eventBinding",
+      "callee": "on",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$('#insertBrandModal').on('shown.bs.modal',function(event){\n        event.preventDefault();\n        var request={\n            url: 'newBrandID',\n            type: 'post',\n         "
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/brandHandaler.js",
+      "line": 35,
+      "kind": "request",
+      "callee": "$.ajax",
+      "url": null,
+      "httpMethod": "GET",
+      "expression": "$.ajax(request)"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/brandHandaler.js",
+      "line": 37,
+      "kind": "uiCall",
+      "callee": "val",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#brandid input\").val(response)"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/brandHandaler.js",
+      "line": 40,
+      "kind": "uiCall",
+      "callee": "val",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#brandid input\").val(\"\")"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/brandHandaler.js",
+      "line": 45,
+      "kind": "eventBinding",
+      "callee": "on",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$('#deleteBrandPopUp').on('shown.bs.modal',function(event){\n        event.preventDefault();\n        var id=$(event.relatedTarget).data('id');\n        var request={\n            url:"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/brandHandaler.js",
+      "line": 53,
+      "kind": "request",
+      "callee": "$.ajax",
+      "url": null,
+      "httpMethod": "GET",
+      "expression": "$.ajax(request)"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/brandHandaler.js",
+      "line": 57,
+      "kind": "uiCall",
+      "callee": "val",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#hiddenBndID\").val(fullData.brandid)"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/brandHandaler.js",
+      "line": 65,
+      "kind": "eventBinding",
+      "callee": "on",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$('#searchBrand').on(\"keyup\",function(event){\n        event.preventDefault();\n        var searchVal=$(this).val();\n        var request={\n            url: 'searchBrand',\n           "
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/brandHandaler.js",
+      "line": 67,
+      "kind": "uiCall",
+      "callee": "val",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(this).val()"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/brandHandaler.js",
+      "line": 73,
+      "kind": "request",
+      "callee": "$.ajax",
+      "url": null,
+      "httpMethod": "GET",
+      "expression": "$.ajax(request)"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/brandHandaler.js",
+      "line": 75,
+      "kind": "uiCall",
+      "callee": "html",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#brandData\").html(\"\")"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/brandHandaler.js",
+      "line": 91,
+      "kind": "uiCall",
+      "callee": "html",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#brandData\").html(searchInfo)"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/brandHandaler.js",
+      "line": 94,
+      "kind": "uiCall",
+      "callee": "html",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#brandData\").html('<h4><span class=\"text-info\">No Search Found</span></h4>')"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/brandValidation.js",
+      "line": 14,
+      "kind": "eventBinding",
+      "callee": "on",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#brandName input\").on(\"blur\",function(event){\n        //event.preventDefault();\n        var parentId = $(this).parent().attr(\"id\"), element = event.target.nodeName.toLowerCase()"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/brandValidation.js",
+      "line": 19,
+      "kind": "eventBinding",
+      "callee": "on",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#description textarea\").on(\"keyup\",function(event){\n        var parentId = $(this).parent().attr(\"id\"), element = event.target.nodeName.toLowerCase();\n        validationForm(par"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/brandValidation.js",
+      "line": 25,
+      "kind": "uiCall",
+      "callee": "val",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#\"+id+element).val()"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/brandValidation.js",
+      "line": 29,
+      "kind": "uiCall",
+      "callee": "remove",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#\"+id+\" span\").remove()"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/brandValidation.js",
+      "line": 38,
+      "kind": "uiCall",
+      "callee": "remove",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#\"+id+\" span\").remove()"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/brandValidation.js",
+      "line": 42,
+      "kind": "eventBinding",
+      "callee": "change",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#addBrand\").change(function(event){\n        event.preventDefault();\n        if(!flagArray.brandName || !flagArray.description ){\n            $(\"#submitBrand\").attr('disabled',tr"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/categoryEditValidation.js",
+      "line": 14,
+      "kind": "eventBinding",
+      "callee": "on",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#editCategoryName input\").on(\"blur\",function(event){\n        //event.preventDefault();\n        var parentId = $(this).parent().attr(\"id\"), element = event.target.nodeName.toLowe"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/categoryEditValidation.js",
+      "line": 19,
+      "kind": "eventBinding",
+      "callee": "on",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#editDescription textarea\").on(\"keyup\",function(event){\n        var parentId = $(this).parent().attr(\"id\"), element = event.target.nodeName.toLowerCase();\n        validationForm"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/categoryEditValidation.js",
+      "line": 25,
+      "kind": "uiCall",
+      "callee": "val",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#\"+id+element).val()"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/categoryEditValidation.js",
+      "line": 29,
+      "kind": "uiCall",
+      "callee": "remove",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#\"+id+\" span\").remove()"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/categoryEditValidation.js",
+      "line": 38,
+      "kind": "uiCall",
+      "callee": "remove",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#\"+id+\" span\").remove()"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/categoryEditValidation.js",
+      "line": 43,
+      "kind": "eventBinding",
+      "callee": "change",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#editCategory\").change(function(event){\n        event.preventDefault();\n        if(!flagArray.editCategoryName || !flagArray.editDescription ){\n            $(\"#editCategorySubmi"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/categoryHandaler.js",
+      "line": 2,
+      "kind": "eventBinding",
+      "callee": "on",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$('.cancel').on('click', function(){\n        window.history.back();\n    })"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/categoryHandaler.js",
+      "line": 6,
+      "kind": "eventBinding",
+      "callee": "on",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$('#editCategoryPopUp').on('shown.bs.modal',function(event){\n        event.preventDefault();\n        var id=$(event.relatedTarget).data('id');\n        var request={\n            url"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/categoryHandaler.js",
+      "line": 14,
+      "kind": "request",
+      "callee": "$.ajax",
+      "url": null,
+      "httpMethod": "GET",
+      "expression": "$.ajax(request)"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/categoryHandaler.js",
+      "line": 18,
+      "kind": "uiCall",
+      "callee": "val",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#editCategoryid input\").val(fullData.catid)"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/categoryHandaler.js",
+      "line": 19,
+      "kind": "uiCall",
+      "callee": "val",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#hiddenCategoryID\").val(fullData.catid)"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/categoryHandaler.js",
+      "line": 20,
+      "kind": "uiCall",
+      "callee": "val",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#editCategoryName input\").val(fullData.catName)"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/categoryHandaler.js",
+      "line": 21,
+      "kind": "uiCall",
+      "callee": "val",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#editDescription textarea\").val(fullData.description)"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/categoryHandaler.js",
+      "line": 28,
+      "kind": "eventBinding",
+      "callee": "on",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$('#insertCategoryModal').on('shown.bs.modal',function(event){\n        event.preventDefault();\n        var request={\n            url: 'newCategoryID',\n            type: 'post',\n   "
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/categoryHandaler.js",
+      "line": 35,
+      "kind": "request",
+      "callee": "$.ajax",
+      "url": null,
+      "httpMethod": "GET",
+      "expression": "$.ajax(request)"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/categoryHandaler.js",
+      "line": 37,
+      "kind": "uiCall",
+      "callee": "val",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#catid input\").val(response)"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/categoryHandaler.js",
+      "line": 40,
+      "kind": "uiCall",
+      "callee": "val",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#catid input\").val(\"\")"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/categoryHandaler.js",
+      "line": 45,
+      "kind": "eventBinding",
+      "callee": "on",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$('#deleteCategoryPopUp').on('shown.bs.modal',function(event){\n        event.preventDefault();\n        var id=$(event.relatedTarget).data('id');\n        var request={\n            u"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/categoryHandaler.js",
+      "line": 53,
+      "kind": "request",
+      "callee": "$.ajax",
+      "url": null,
+      "httpMethod": "GET",
+      "expression": "$.ajax(request)"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/categoryHandaler.js",
+      "line": 57,
+      "kind": "uiCall",
+      "callee": "val",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#hiddenCatID\").val(fullData.catid)"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/categoryHandaler.js",
+      "line": 65,
+      "kind": "eventBinding",
+      "callee": "on",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$('#searchCategory').on(\"keyup\",function(event){\n        event.preventDefault();\n        var searchVal=$(this).val();\n        var request={\n            url: 'searchCategory',\n     "
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/categoryHandaler.js",
+      "line": 67,
+      "kind": "uiCall",
+      "callee": "val",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(this).val()"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/categoryHandaler.js",
+      "line": 73,
+      "kind": "request",
+      "callee": "$.ajax",
+      "url": null,
+      "httpMethod": "GET",
+      "expression": "$.ajax(request)"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/categoryHandaler.js",
+      "line": 75,
+      "kind": "uiCall",
+      "callee": "html",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#catData\").html(\"\")"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/categoryHandaler.js",
+      "line": 91,
+      "kind": "uiCall",
+      "callee": "html",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#catData\").html(searchInfo)"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/categoryHandaler.js",
+      "line": 94,
+      "kind": "uiCall",
+      "callee": "html",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#catData\").html('<h4><span class=\"text-info\">No Search Found</span></h4>')"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/categoryValidation.js",
+      "line": 14,
+      "kind": "eventBinding",
+      "callee": "on",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#catName input\").on(\"blur\",function(event){\n        //event.preventDefault();\n        var parentId = $(this).parent().attr(\"id\"), element = event.target.nodeName.toLowerCase();\n"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/categoryValidation.js",
+      "line": 19,
+      "kind": "eventBinding",
+      "callee": "on",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#description textarea\").on(\"keyup\",function(event){\n        var parentId = $(this).parent().attr(\"id\"), element = event.target.nodeName.toLowerCase();\n        validationForm(par"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/categoryValidation.js",
+      "line": 25,
+      "kind": "uiCall",
+      "callee": "val",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#\"+id+element).val()"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/categoryValidation.js",
+      "line": 29,
+      "kind": "uiCall",
+      "callee": "remove",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#\"+id+\" span\").remove()"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/categoryValidation.js",
+      "line": 38,
+      "kind": "uiCall",
+      "callee": "remove",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#\"+id+\" span\").remove()"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/categoryValidation.js",
+      "line": 42,
+      "kind": "eventBinding",
+      "callee": "change",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#addCategory\").change(function(event){\n        event.preventDefault();\n        if(!flagArray.catName || !flagArray.description ){\n            $(\"#submitCategory\").attr('disabled"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/customerEditValidation.js",
+      "line": 18,
+      "kind": "eventBinding",
+      "callee": "on",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#editName input\").on(\"blur\",function(event){\n        //event.preventDefault();\n        var parentId = $(this).parent().attr(\"id\"), element = event.target.nodeName.toLowerCase();"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/customerEditValidation.js",
+      "line": 23,
+      "kind": "eventBinding",
+      "callee": "on",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#editEmail input\").on(\"blur\",function(event){\n        var parentId = $(this).parent().attr(\"id\"), element = event.target.nodeName.toLowerCase();\n        validationForm(parentId,"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/customerEditValidation.js",
+      "line": 27,
+      "kind": "eventBinding",
+      "callee": "on",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#editPhone input\").on(\"blur\",function(event){\n        var parentId = $(this).parent().attr(\"id\"), element = event.target.nodeName.toLowerCase();\n        validationForm(parentId,"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/customerEditValidation.js",
+      "line": 31,
+      "kind": "eventBinding",
+      "callee": "on",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#editAddress textarea\").on(\"keyup\",function(event){\n        var parentId = $(this).parent().attr(\"id\"), element = event.target.nodeName.toLowerCase();\n        validationForm(par"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/customerEditValidation.js",
+      "line": 37,
+      "kind": "uiCall",
+      "callee": "val",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#\"+id+element).val()"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/customerEditValidation.js",
+      "line": 41,
+      "kind": "uiCall",
+      "callee": "remove",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#\"+id+\" span\").remove()"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/customerEditValidation.js",
+      "line": 50,
+      "kind": "uiCall",
+      "callee": "remove",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#\"+id+\" span\").remove()"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/customerEditValidation.js",
+      "line": 55,
+      "kind": "eventBinding",
+      "callee": "change",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#editCustomer\").change(function(event){\n        event.preventDefault();\n        if(!flagArray.editName || !flagArray.editEmail ||  !flagArray.editPhone || !flagArray.editAddress"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/customerHandaler.js",
+      "line": 2,
+      "kind": "eventBinding",
+      "callee": "on",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$('.cancel').on('click', function(){\n        window.history.back();\n    })"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/customerHandaler.js",
+      "line": 6,
+      "kind": "eventBinding",
+      "callee": "on",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$('#editCustomerPopUp').on('shown.bs.modal',function(event){\n        event.preventDefault();\n        var id=$(event.relatedTarget).data('id');\n        var request={\n            url"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/customerHandaler.js",
+      "line": 14,
+      "kind": "request",
+      "callee": "$.ajax",
+      "url": null,
+      "httpMethod": "GET",
+      "expression": "$.ajax(request)"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/customerHandaler.js",
+      "line": 18,
+      "kind": "uiCall",
+      "callee": "val",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#editCustomerid input\").val(fullData.customerid)"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/customerHandaler.js",
+      "line": 19,
+      "kind": "uiCall",
+      "callee": "val",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#hiddenID\").val(fullData.customerid)"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/customerHandaler.js",
+      "line": 20,
+      "kind": "uiCall",
+      "callee": "val",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#editName input\").val(fullData.name)"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/customerHandaler.js",
+      "line": 21,
+      "kind": "uiCall",
+      "callee": "val",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#editPhone input\").val(fullData.phone)"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/customerHandaler.js",
+      "line": 22,
+      "kind": "uiCall",
+      "callee": "val",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#editEmail input\").val(fullData.email)"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/customerHandaler.js",
+      "line": 23,
+      "kind": "uiCall",
+      "callee": "val",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#editAddress textarea\").val(fullData.address)"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/customerHandaler.js",
+      "line": 30,
+      "kind": "eventBinding",
+      "callee": "on",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$('#insertCustomerModal').on('shown.bs.modal',function(event){\n        event.preventDefault();\n        var request={\n            url: 'newCustomerID',\n            type: 'post',\n   "
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/customerHandaler.js",
+      "line": 37,
+      "kind": "request",
+      "callee": "$.ajax",
+      "url": null,
+      "httpMethod": "GET",
+      "expression": "$.ajax(request)"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/customerHandaler.js",
+      "line": 39,
+      "kind": "uiCall",
+      "callee": "val",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#customerid input\").val(response)"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/customerHandaler.js",
+      "line": 45,
+      "kind": "eventBinding",
+      "callee": "on",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$('#deleteCustomerPopUp').on('shown.bs.modal',function(event){\n        event.preventDefault();\n        var id=$(event.relatedTarget).data('id');\n        var request={\n            u"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/customerHandaler.js",
+      "line": 53,
+      "kind": "request",
+      "callee": "$.ajax",
+      "url": null,
+      "httpMethod": "GET",
+      "expression": "$.ajax(request)"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/customerHandaler.js",
+      "line": 56,
+      "kind": "uiCall",
+      "callee": "val",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#hiddenCustomerID\").val(fullData.customerid)"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/customerHandaler.js",
+      "line": 64,
+      "kind": "eventBinding",
+      "callee": "on",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$('#searchCustomer').on(\"keyup\",function(event){\n        event.preventDefault();\n        var searchVal=$(this).val();\n        var request={\n            url: 'searchCustomer',\n     "
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/customerHandaler.js",
+      "line": 66,
+      "kind": "uiCall",
+      "callee": "val",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(this).val()"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/customerHandaler.js",
+      "line": 72,
+      "kind": "request",
+      "callee": "$.ajax",
+      "url": null,
+      "httpMethod": "GET",
+      "expression": "$.ajax(request)"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/customerHandaler.js",
+      "line": 74,
+      "kind": "uiCall",
+      "callee": "html",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#customerData\").html(\"\")"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/customerHandaler.js",
+      "line": 92,
+      "kind": "uiCall",
+      "callee": "html",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#customerData\").html(searchInfo)"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/customerHandaler.js",
+      "line": 95,
+      "kind": "uiCall",
+      "callee": "html",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#customerData\").html('<h4><span class=\"text-info\">No Search Found</span></h4>')"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/customerValidation.js",
+      "line": 18,
+      "kind": "eventBinding",
+      "callee": "on",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#name input\").on(\"blur\",function(event){\n        //event.preventDefault();\n        var parentId = $(this).parent().attr(\"id\"), element = event.target.nodeName.toLowerCase();\n   "
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/customerValidation.js",
+      "line": 23,
+      "kind": "eventBinding",
+      "callee": "on",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#email input\").on(\"blur\",function(event){\n        var parentId = $(this).parent().attr(\"id\"), element = event.target.nodeName.toLowerCase();\n        validationForm(parentId,errM"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/customerValidation.js",
+      "line": 27,
+      "kind": "eventBinding",
+      "callee": "on",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#phone input\").on(\"blur\",function(event){\n        var parentId = $(this).parent().attr(\"id\"), element = event.target.nodeName.toLowerCase();\n        validationForm(parentId,errM"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/customerValidation.js",
+      "line": 31,
+      "kind": "eventBinding",
+      "callee": "on",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#address textarea\").on(\"keyup\",function(event){\n        var parentId = $(this).parent().attr(\"id\"), element = event.target.nodeName.toLowerCase();\n        validationForm(parentI"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/customerValidation.js",
+      "line": 37,
+      "kind": "uiCall",
+      "callee": "val",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#\"+id+element).val()"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/customerValidation.js",
+      "line": 41,
+      "kind": "uiCall",
+      "callee": "remove",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#\"+id+\" span\").remove()"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/customerValidation.js",
+      "line": 50,
+      "kind": "uiCall",
+      "callee": "remove",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#\"+id+\" span\").remove()"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/customerValidation.js",
+      "line": 54,
+      "kind": "eventBinding",
+      "callee": "change",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#addCustomer\").change(function(event){\n        event.preventDefault();\n        if(!flagArray.name || !flagArray.email ||  !flagArray.phone || !flagArray.address ){\n            $"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/modelHandaler.js",
+      "line": 2,
+      "kind": "eventBinding",
+      "callee": "on",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$('.cancel').on('click', function(){\n        window.history.back();\n    })"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/modelHandaler.js",
+      "line": 6,
+      "kind": "eventBinding",
+      "callee": "on",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$('#editModelPopUp').on('shown.bs.modal',function(event){\n        event.preventDefault();\n        var id=$(event.relatedTarget).data('id');\n        \n        \n        // For Retrive"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/modelHandaler.js",
+      "line": 17,
+      "kind": "request",
+      "callee": "$.ajax",
+      "url": null,
+      "httpMethod": "GET",
+      "expression": "$.ajax(request)"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/modelHandaler.js",
+      "line": 26,
+      "kind": "uiCall",
+      "callee": "html",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#editBrandList\").html(brandOption)"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/modelHandaler.js",
+      "line": 37,
+      "kind": "request",
+      "callee": "$.ajax",
+      "url": null,
+      "httpMethod": "GET",
+      "expression": "$.ajax(request)"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/modelHandaler.js",
+      "line": 45,
+      "kind": "uiCall",
+      "callee": "html",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#editCatList\").html(catOption)"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/modelHandaler.js",
+      "line": 57,
+      "kind": "request",
+      "callee": "$.ajax",
+      "url": null,
+      "httpMethod": "GET",
+      "expression": "$.ajax(request)"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/modelHandaler.js",
+      "line": 62,
+      "kind": "uiCall",
+      "callee": "val",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#editModelid input\").val(fullData.modelid)"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/modelHandaler.js",
+      "line": 63,
+      "kind": "uiCall",
+      "callee": "val",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#hiddenID\").val(fullData.modelid)"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/modelHandaler.js",
+      "line": 64,
+      "kind": "eventBinding",
+      "callee": "change",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#editCatList\").val(fullData.catid).change()"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/modelHandaler.js",
+      "line": 64,
+      "kind": "uiCall",
+      "callee": "val",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#editCatList\").val(fullData.catid)"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/modelHandaler.js",
+      "line": 65,
+      "kind": "eventBinding",
+      "callee": "change",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#editBrandList\").val(fullData.brandid).change()"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/modelHandaler.js",
+      "line": 65,
+      "kind": "uiCall",
+      "callee": "val",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#editBrandList\").val(fullData.brandid)"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/modelHandaler.js",
+      "line": 66,
+      "kind": "uiCall",
+      "callee": "val",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#editDetails textarea\").val(fullData.details)"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/modelHandaler.js",
+      "line": 74,
+      "kind": "eventBinding",
+      "callee": "on",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$('#insertModelModal').on('shown.bs.modal',function(event){\n        event.preventDefault();\n        var request={\n            url: 'retriveBrandList',\n            type: 'post',\n   "
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/modelHandaler.js",
+      "line": 81,
+      "kind": "request",
+      "callee": "$.ajax",
+      "url": null,
+      "httpMethod": "GET",
+      "expression": "$.ajax(request)"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/modelHandaler.js",
+      "line": 90,
+      "kind": "uiCall",
+      "callee": "html",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#brandList\").html(brandOption)"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/modelHandaler.js",
+      "line": 100,
+      "kind": "request",
+      "callee": "$.ajax",
+      "url": null,
+      "httpMethod": "GET",
+      "expression": "$.ajax(request)"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/modelHandaler.js",
+      "line": 108,
+      "kind": "uiCall",
+      "callee": "html",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#catList\").html(catOption)"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/modelHandaler.js",
+      "line": 115,
+      "kind": "eventBinding",
+      "callee": "on",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$('#deleteModelPopUp').on('shown.bs.modal',function(event){\n        event.preventDefault();\n        var id=$(event.relatedTarget).data('id');\n        var request={\n            url:"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/modelHandaler.js",
+      "line": 123,
+      "kind": "request",
+      "callee": "$.ajax",
+      "url": null,
+      "httpMethod": "GET",
+      "expression": "$.ajax(request)"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/modelHandaler.js",
+      "line": 126,
+      "kind": "uiCall",
+      "callee": "val",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#hiddenModelID\").val(fullData.modelid)"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/modelHandaler.js",
+      "line": 134,
+      "kind": "eventBinding",
+      "callee": "on",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$('#searchModel').on(\"\",function(event){\n        event.preventDefault();\n        var searchVal=$(this).val();\n        console.log(searchVal);\n        var request={\n            url:"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/modelHandaler.js",
+      "line": 136,
+      "kind": "uiCall",
+      "callee": "val",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(this).val()"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/modelHandaler.js",
+      "line": 143,
+      "kind": "request",
+      "callee": "$.ajax",
+      "url": null,
+      "httpMethod": "GET",
+      "expression": "$.ajax(request)"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/modelHandaler.js",
+      "line": 146,
+      "kind": "uiCall",
+      "callee": "html",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#modelData\").html(\"\")"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/modelHandaler.js",
+      "line": 164,
+      "kind": "uiCall",
+      "callee": "html",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#modelData\").html(searchInfo)"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/modelHandaler.js",
+      "line": 167,
+      "kind": "uiCall",
+      "callee": "html",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#modelData\").html('<h4><span class=\"text-info\">No Search Found</span></h4>')"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/modelValidation.js",
+      "line": 16,
+      "kind": "eventBinding",
+      "callee": "on",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#modelid input\").on(\"blur\",function(event){\n        //event.preventDefault();\n        var parentId = $(this).parent().attr(\"id\"), element = event.target.nodeName.toLowerCase();\n"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/modelValidation.js",
+      "line": 21,
+      "kind": "eventBinding",
+      "callee": "on",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#brand select\").on(\"change\",function(event){\n        var parentId = $(this).parent().attr(\"id\"), element = event.target.nodeName.toLowerCase();\n        validationForm(parentId,e"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/modelValidation.js",
+      "line": 25,
+      "kind": "eventBinding",
+      "callee": "on",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#category select\").on(\"change\",function(event){\n        var parentId = $(this).parent().attr(\"id\"), element = event.target.nodeName.toLowerCase();\n        validationForm(parentI"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/modelValidation.js",
+      "line": 31,
+      "kind": "uiCall",
+      "callee": "val",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#\"+id+element).val()"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/modelValidation.js",
+      "line": 35,
+      "kind": "uiCall",
+      "callee": "remove",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#\"+id+\" span\").remove()"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/modelValidation.js",
+      "line": 44,
+      "kind": "uiCall",
+      "callee": "remove",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#\"+id+\" span\").remove()"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/modelValidation.js",
+      "line": 48,
+      "kind": "eventBinding",
+      "callee": "change",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#addModel\").change(function(event){\n        event.preventDefault();\n        if(!flagArray.modelid || !flagArray.brand ||  !flagArray.category ){\n            $(\"#submitModel\").at"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/productHandaler.js",
+      "line": 2,
+      "kind": "eventBinding",
+      "callee": "on",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$('.cancel').on('click', function(){\n        window.history.back();\n    })"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/productHandaler.js",
+      "line": 6,
+      "kind": "eventBinding",
+      "callee": "on",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$('#editProductPopUp').on('shown.bs.modal',function(event){\n        event.preventDefault();\n        var id=$(event.relatedTarget).data('id');\n        \n        \n        // For Retri"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/productHandaler.js",
+      "line": 17,
+      "kind": "request",
+      "callee": "$.ajax",
+      "url": null,
+      "httpMethod": "GET",
+      "expression": "$.ajax(request)"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/productHandaler.js",
+      "line": 26,
+      "kind": "uiCall",
+      "callee": "html",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#editBrandList\").html(brandOption)"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/productHandaler.js",
+      "line": 37,
+      "kind": "request",
+      "callee": "$.ajax",
+      "url": null,
+      "httpMethod": "GET",
+      "expression": "$.ajax(request)"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/productHandaler.js",
+      "line": 45,
+      "kind": "uiCall",
+      "callee": "html",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#editCatList\").html(catOption)"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/productHandaler.js",
+      "line": 57,
+      "kind": "request",
+      "callee": "$.ajax",
+      "url": null,
+      "httpMethod": "GET",
+      "expression": "$.ajax(request)"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/productHandaler.js",
+      "line": 62,
+      "kind": "uiCall",
+      "callee": "val",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#editProductid input\").val(fullData.modelid)"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/productHandaler.js",
+      "line": 63,
+      "kind": "uiCall",
+      "callee": "val",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#hiddenID\").val(fullData.modelid)"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/productHandaler.js",
+      "line": 64,
+      "kind": "eventBinding",
+      "callee": "change",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#editCatList\").val(fullData.catid).change()"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/productHandaler.js",
+      "line": 64,
+      "kind": "uiCall",
+      "callee": "val",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#editCatList\").val(fullData.catid)"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/productHandaler.js",
+      "line": 65,
+      "kind": "eventBinding",
+      "callee": "change",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#editBrandList\").val(fullData.brandid).change()"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/productHandaler.js",
+      "line": 65,
+      "kind": "uiCall",
+      "callee": "val",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#editBrandList\").val(fullData.brandid)"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/productHandaler.js",
+      "line": 66,
+      "kind": "uiCall",
+      "callee": "val",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#editDetails textarea\").val(fullData.details)"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/productHandaler.js",
+      "line": 75,
+      "kind": "eventBinding",
+      "callee": "on",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$('#insertProductModal').on('shown.bs.modal',function(event){\n        event.preventDefault();\n        \n        // Create New Stock Id\n         var request={\n            url: 'newSt"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/productHandaler.js",
+      "line": 84,
+      "kind": "request",
+      "callee": "$.ajax",
+      "url": null,
+      "httpMethod": "GET",
+      "expression": "$.ajax(request)"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/productHandaler.js",
+      "line": 86,
+      "kind": "uiCall",
+      "callee": "val",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#stockid input\").val(response)"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/productHandaler.js",
+      "line": 87,
+      "kind": "uiCall",
+      "callee": "val",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#hiddenStockId\").val(response)"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/productHandaler.js",
+      "line": 97,
+      "kind": "request",
+      "callee": "$.ajax",
+      "url": null,
+      "httpMethod": "GET",
+      "expression": "$.ajax(request)"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/productHandaler.js",
+      "line": 99,
+      "kind": "uiCall",
+      "callee": "val",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#entryid input\").val(response)"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/productHandaler.js",
+      "line": 100,
+      "kind": "uiCall",
+      "callee": "val",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#hiddenEntryId\").val(response)"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/productHandaler.js",
+      "line": 110,
+      "kind": "request",
+      "callee": "$.ajax",
+      "url": null,
+      "httpMethod": "GET",
+      "expression": "$.ajax(request)"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/productHandaler.js",
+      "line": 119,
+      "kind": "uiCall",
+      "callee": "html",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#supplierList\").html(supplierOption)"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/productHandaler.js",
+      "line": 130,
+      "kind": "request",
+      "callee": "$.ajax",
+      "url": null,
+      "httpMethod": "GET",
+      "expression": "$.ajax(request)"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/productHandaler.js",
+      "line": 139,
+      "kind": "uiCall",
+      "callee": "html",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#brandList\").html(brandOption)"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/productHandaler.js",
+      "line": 150,
+      "kind": "request",
+      "callee": "$.ajax",
+      "url": null,
+      "httpMethod": "GET",
+      "expression": "$.ajax(request)"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/productHandaler.js",
+      "line": 158,
+      "kind": "uiCall",
+      "callee": "html",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#catList\").html(catOption)"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/productHandaler.js",
+      "line": 168,
+      "kind": "eventBinding",
+      "callee": "on",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$('#catList').on(\"change\",function(event){\n        event.preventDefault();\n        var brand=$(\"#brandList\").val().trim();\n        var category=$(\"#catList\").val().trim();\n        "
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/productHandaler.js",
+      "line": 170,
+      "kind": "uiCall",
+      "callee": "val",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#brandList\").val()"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/productHandaler.js",
+      "line": 171,
+      "kind": "uiCall",
+      "callee": "val",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#catList\").val()"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/productHandaler.js",
+      "line": 178,
+      "kind": "request",
+      "callee": "$.ajax",
+      "url": null,
+      "httpMethod": "GET",
+      "expression": "$.ajax(request)"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/productHandaler.js",
+      "line": 180,
+      "kind": "uiCall",
+      "callee": "html",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#modelList\").html('<option value=\"\">Select Model?</option>')"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/productHandaler.js",
+      "line": 187,
+      "kind": "uiCall",
+      "callee": "html",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#modelList\").html(modelOption)"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/productHandaler.js",
+      "line": 193,
+      "kind": "uiCall",
+      "callee": "html",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#modelList\").html('<option value=\"\">Select Model?</option>')"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/productHandaler.js",
+      "line": 199,
+      "kind": "eventBinding",
+      "callee": "on",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$('#brandList').on(\"change\",function(event){\n        event.preventDefault();\n        var brand=$(\"#brandList\").val().trim();\n        var category=$(\"#catList\").val().trim();\n      "
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/productHandaler.js",
+      "line": 201,
+      "kind": "uiCall",
+      "callee": "val",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#brandList\").val()"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/productHandaler.js",
+      "line": 202,
+      "kind": "uiCall",
+      "callee": "val",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#catList\").val()"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/productHandaler.js",
+      "line": 209,
+      "kind": "request",
+      "callee": "$.ajax",
+      "url": null,
+      "httpMethod": "GET",
+      "expression": "$.ajax(request)"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/productHandaler.js",
+      "line": 211,
+      "kind": "uiCall",
+      "callee": "html",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#modelList\").html('<option value=\"\">Select Model?</option>')"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/productHandaler.js",
+      "line": 218,
+      "kind": "uiCall",
+      "callee": "html",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#modelList\").html(modelOption)"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/productHandaler.js",
+      "line": 224,
+      "kind": "uiCall",
+      "callee": "html",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#modelList\").html('<option value=\"\">Select Model?</option>')"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/productHandaler.js",
+      "line": 230,
+      "kind": "eventBinding",
+      "callee": "on",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$('#deleteProductPopUp').on('shown.bs.modal',function(event){\n        event.preventDefault();\n        var id=$(event.relatedTarget).data('id');\n        var request={\n            ur"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/productHandaler.js",
+      "line": 238,
+      "kind": "request",
+      "callee": "$.ajax",
+      "url": null,
+      "httpMethod": "GET",
+      "expression": "$.ajax(request)"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/productHandaler.js",
+      "line": 241,
+      "kind": "uiCall",
+      "callee": "val",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#hiddenProductID\").val(fullData.modelid)"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/productHandaler.js",
+      "line": 249,
+      "kind": "eventBinding",
+      "callee": "on",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$('#searchProduct').on(\"\",function(event){\n        event.preventDefault();\n        var searchVal=$(this).val();\n        console.log(searchVal);\n        var request={\n            ur"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/productHandaler.js",
+      "line": 251,
+      "kind": "uiCall",
+      "callee": "val",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(this).val()"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/productHandaler.js",
+      "line": 258,
+      "kind": "request",
+      "callee": "$.ajax",
+      "url": null,
+      "httpMethod": "GET",
+      "expression": "$.ajax(request)"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/productHandaler.js",
+      "line": 261,
+      "kind": "uiCall",
+      "callee": "html",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#modelData\").html(\"\")"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/productHandaler.js",
+      "line": 279,
+      "kind": "uiCall",
+      "callee": "html",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#modelData\").html(searchInfo)"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/productHandaler.js",
+      "line": 282,
+      "kind": "uiCall",
+      "callee": "html",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#modelData\").html('<h4><span class=\"text-info\">No Search Found</span></h4>')"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/productValidation.js",
+      "line": 30,
+      "kind": "eventBinding",
+      "callee": "on",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#modelid select\").on(\"change\",function(event){\n        //event.preventDefault();\n        var parentId = $(this).parent().attr(\"id\"), element = event.target.nodeName.toLowerCase("
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/productValidation.js",
+      "line": 35,
+      "kind": "eventBinding",
+      "callee": "on",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#supplier select\").on(\"change\",function(event){\n        var parentId = $(this).parent().attr(\"id\"), element = event.target.nodeName.toLowerCase();\n        validationForm(parentI"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/productValidation.js",
+      "line": 39,
+      "kind": "eventBinding",
+      "callee": "on",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#brand select\").on(\"change\",function(event){\n        //event.preventDefault();\n        var parentId = $(this).parent().attr(\"id\"), element = event.target.nodeName.toLowerCase();"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/productValidation.js",
+      "line": 44,
+      "kind": "eventBinding",
+      "callee": "on",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#category select\").on(\"change\",function(event){\n        var parentId = $(this).parent().attr(\"id\"), element = event.target.nodeName.toLowerCase();\n        validationForm(parentI"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/productValidation.js",
+      "line": 48,
+      "kind": "eventBinding",
+      "callee": "on",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#spi input\").on(\"blur\",function(event){\n        var parentId = $(this).parent().attr(\"id\"), element = event.target.nodeName.toLowerCase();\n        validationForm(parentId,errMsg"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/productValidation.js",
+      "line": 52,
+      "kind": "eventBinding",
+      "callee": "on",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#ppi input\").on(\"blur\",function(event){\n        var parentId = $(this).parent().attr(\"id\"), element = event.target.nodeName.toLowerCase();\n        validationForm(parentId,errMsg"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/productValidation.js",
+      "line": 56,
+      "kind": "eventBinding",
+      "callee": "on",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#reorderlevel input\").on(\"blur\",function(event){\n        //event.preventDefault();\n        var parentId = $(this).parent().attr(\"id\"), element = event.target.nodeName.toLowerCas"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/productValidation.js",
+      "line": 61,
+      "kind": "eventBinding",
+      "callee": "on",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#quantity input\").on(\"blur\",function(event){\n        var parentId = $(this).parent().attr(\"id\"), element = event.target.nodeName.toLowerCase();\n        validationForm(parentId,e"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/productValidation.js",
+      "line": 65,
+      "kind": "eventBinding",
+      "callee": "on",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#invoice input\").on(\"blur\",function(event){\n        var parentId = $(this).parent().attr(\"id\"), element = event.target.nodeName.toLowerCase();\n        validationForm(parentId,er"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/productValidation.js",
+      "line": 69,
+      "kind": "eventBinding",
+      "callee": "on",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#invoiceData input\").on(\"blur\",function(event){\n        var parentId = $(this).parent().attr(\"id\"), element = event.target.nodeName.toLowerCase();\n        validationForm(parentI"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/productValidation.js",
+      "line": 75,
+      "kind": "uiCall",
+      "callee": "val",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#\"+id+element).val()"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/productValidation.js",
+      "line": 92,
+      "kind": "eventBinding",
+      "callee": "change",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#addProduct\").change(function(event){\n        event.preventDefault();\n        if(!flagArray.supplier ||  !flagArray.modelid ||!flagArray.ppi || !flagArray.spi ||  !flagArray.bra"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/supplierEditValidation.js",
+      "line": 18,
+      "kind": "eventBinding",
+      "callee": "on",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#editName input\").on(\"blur\",function(event){\n        //event.preventDefault();\n        var parentId = $(this).parent().attr(\"id\"), element = event.target.nodeName.toLowerCase();"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/supplierEditValidation.js",
+      "line": 23,
+      "kind": "eventBinding",
+      "callee": "on",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#editEmail input\").on(\"blur\",function(event){\n        var parentId = $(this).parent().attr(\"id\"), element = event.target.nodeName.toLowerCase();\n        validationForm(parentId,"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/supplierEditValidation.js",
+      "line": 27,
+      "kind": "eventBinding",
+      "callee": "on",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#editPhone input\").on(\"blur\",function(event){\n        var parentId = $(this).parent().attr(\"id\"), element = event.target.nodeName.toLowerCase();\n        validationForm(parentId,"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/supplierEditValidation.js",
+      "line": 31,
+      "kind": "eventBinding",
+      "callee": "on",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#editAddress textarea\").on(\"keyup\",function(event){\n        var parentId = $(this).parent().attr(\"id\"), element = event.target.nodeName.toLowerCase();\n        validationForm(par"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/supplierEditValidation.js",
+      "line": 37,
+      "kind": "uiCall",
+      "callee": "val",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#\"+id+element).val()"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/supplierEditValidation.js",
+      "line": 41,
+      "kind": "uiCall",
+      "callee": "remove",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#\"+id+\" span\").remove()"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/supplierEditValidation.js",
+      "line": 50,
+      "kind": "uiCall",
+      "callee": "remove",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#\"+id+\" span\").remove()"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/supplierEditValidation.js",
+      "line": 55,
+      "kind": "eventBinding",
+      "callee": "change",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#editSupplier\").change(function(event){\n        event.preventDefault();\n        if(!flagArray.editName || !flagArray.editEmail ||  !flagArray.editPhone || !flagArray.editAddress"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/supplierHandaler.js",
+      "line": 2,
+      "kind": "eventBinding",
+      "callee": "on",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$('.cancel').on('click', function(){\n        window.history.back();\n    })"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/supplierHandaler.js",
+      "line": 6,
+      "kind": "eventBinding",
+      "callee": "on",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$('#editSupplierPopUp').on('shown.bs.modal',function(event){\n        event.preventDefault();\n        var id=$(event.relatedTarget).data('id');\n        var request={\n            url"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/supplierHandaler.js",
+      "line": 14,
+      "kind": "request",
+      "callee": "$.ajax",
+      "url": null,
+      "httpMethod": "GET",
+      "expression": "$.ajax(request)"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/supplierHandaler.js",
+      "line": 18,
+      "kind": "uiCall",
+      "callee": "val",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#editSupplierid input\").val(fullData.supplierid)"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/supplierHandaler.js",
+      "line": 19,
+      "kind": "uiCall",
+      "callee": "val",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#hiddenID\").val(fullData.supplierid)"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/supplierHandaler.js",
+      "line": 20,
+      "kind": "uiCall",
+      "callee": "val",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#editName input\").val(fullData.name)"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/supplierHandaler.js",
+      "line": 21,
+      "kind": "uiCall",
+      "callee": "val",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#editPhone input\").val(fullData.phone)"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/supplierHandaler.js",
+      "line": 22,
+      "kind": "uiCall",
+      "callee": "val",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#editEmail input\").val(fullData.email)"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/supplierHandaler.js",
+      "line": 23,
+      "kind": "uiCall",
+      "callee": "val",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#editAddress textarea\").val(fullData.address)"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/supplierHandaler.js",
+      "line": 30,
+      "kind": "eventBinding",
+      "callee": "on",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$('#insertSupplierModal').on('shown.bs.modal',function(event){\n        event.preventDefault();\n        var request={\n            url: 'newSupplierID',\n            type: 'post',\n   "
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/supplierHandaler.js",
+      "line": 37,
+      "kind": "request",
+      "callee": "$.ajax",
+      "url": null,
+      "httpMethod": "GET",
+      "expression": "$.ajax(request)"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/supplierHandaler.js",
+      "line": 39,
+      "kind": "uiCall",
+      "callee": "val",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#supplierid input\").val(response)"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/supplierHandaler.js",
+      "line": 42,
+      "kind": "uiCall",
+      "callee": "val",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#supplierid input\").val(\"\")"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/supplierHandaler.js",
+      "line": 47,
+      "kind": "eventBinding",
+      "callee": "on",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$('#deleteSupplierPopUp').on('shown.bs.modal',function(event){\n        event.preventDefault();\n        var id=$(event.relatedTarget).data('id');\n        var request={\n            u"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/supplierHandaler.js",
+      "line": 55,
+      "kind": "request",
+      "callee": "$.ajax",
+      "url": null,
+      "httpMethod": "GET",
+      "expression": "$.ajax(request)"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/supplierHandaler.js",
+      "line": 58,
+      "kind": "uiCall",
+      "callee": "val",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#hiddenSupplierID\").val(fullData.supplierid)"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/supplierHandaler.js",
+      "line": 66,
+      "kind": "eventBinding",
+      "callee": "on",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$('#searchSupplier').on(\"keyup\",function(event){\n        event.preventDefault();\n        var searchVal=$(this).val();\n        var request={\n            url: 'searchSupplier',\n     "
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/supplierHandaler.js",
+      "line": 68,
+      "kind": "uiCall",
+      "callee": "val",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(this).val()"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/supplierHandaler.js",
+      "line": 74,
+      "kind": "request",
+      "callee": "$.ajax",
+      "url": null,
+      "httpMethod": "GET",
+      "expression": "$.ajax(request)"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/supplierHandaler.js",
+      "line": 76,
+      "kind": "uiCall",
+      "callee": "html",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#supplierData\").html(\"\")"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/supplierHandaler.js",
+      "line": 94,
+      "kind": "uiCall",
+      "callee": "html",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#supplierData\").html(searchInfo)"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/supplierHandaler.js",
+      "line": 97,
+      "kind": "uiCall",
+      "callee": "html",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#supplierData\").html('<h4><span class=\"text-info\">No Search Found</span></h4>')"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/supplierValidation.js",
+      "line": 18,
+      "kind": "eventBinding",
+      "callee": "on",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#name input\").on(\"blur\",function(event){\n        //event.preventDefault();\n        var parentId = $(this).parent().attr(\"id\"), element = event.target.nodeName.toLowerCase();\n   "
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/supplierValidation.js",
+      "line": 23,
+      "kind": "eventBinding",
+      "callee": "on",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#email input\").on(\"blur\",function(event){\n        var parentId = $(this).parent().attr(\"id\"), element = event.target.nodeName.toLowerCase();\n        validationForm(parentId,errM"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/supplierValidation.js",
+      "line": 27,
+      "kind": "eventBinding",
+      "callee": "on",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#phone input\").on(\"blur\",function(event){\n        var parentId = $(this).parent().attr(\"id\"), element = event.target.nodeName.toLowerCase();\n        validationForm(parentId,errM"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/supplierValidation.js",
+      "line": 31,
+      "kind": "eventBinding",
+      "callee": "on",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#address textarea\").on(\"keyup\",function(event){\n        var parentId = $(this).parent().attr(\"id\"), element = event.target.nodeName.toLowerCase();\n        validationForm(parentI"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/supplierValidation.js",
+      "line": 37,
+      "kind": "uiCall",
+      "callee": "val",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#\"+id+element).val()"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/supplierValidation.js",
+      "line": 41,
+      "kind": "uiCall",
+      "callee": "remove",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#\"+id+\" span\").remove()"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/supplierValidation.js",
+      "line": 50,
+      "kind": "uiCall",
+      "callee": "remove",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#\"+id+\" span\").remove()"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/supplierValidation.js",
+      "line": 54,
+      "kind": "eventBinding",
+      "callee": "change",
+      "url": null,
+      "httpMethod": null,
+      "expression": "$(\"#addSupplier\").change(function(event){\n        event.preventDefault();\n        if(!flagArray.name || !flagArray.email ||  !flagArray.phone || !flagArray.address ){\n            $"
+    }
+  ],
+  "parseFailures": []
+}

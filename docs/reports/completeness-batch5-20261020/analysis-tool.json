@@ -1,0 +1,15 @@
+{
+  "toolCommit": "fbe78aa3729039dc221200b647b9dda13ce98f7f",
+  "branch": "fix/workflow-restoration",
+  "jar": {
+    "bytes": 7261704,
+    "sha256": "719d8738699633e603968cd6c2335d1305bd7c869037dffe16f02f1a9917c94d"
+  },
+  "sidecars": {
+    "screentrace-capture/capture-static-jsp.mjs": "c228af0d48ae82ca0de44b1297b8d7cf7216e40d07e2bc785d9e24cd11a8553e",
+    "screentrace-capture/template-preview.mjs": "23a91f4f1dcb54b5f1e4c72c9cbbc0aac4adcf7098e70930df793053d592729b",
+    "screentrace-js/analyzer.mjs": "838346b1800fae02954ff9cd3f85557a71db8a70d7cb90aeb8296638136b8c9b",
+    "screentrace-js/workflow-shapes.mjs": "a28b9a3199c2b7b644ef5c640cfc5bb8420ce9c2c40afce8df3fc81663c39d36"
+  },
+  "sourceCheckoutsNeverBuiltOrStarted": true
+}

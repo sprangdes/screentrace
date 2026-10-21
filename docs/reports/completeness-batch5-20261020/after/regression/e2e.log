@@ -1,0 +1,532 @@
+
+> e2e
+> node --test test/*.e2e.mjs
+
+TAP version 13
+# Subtest: API page lists APIs by controller beside one API's detail, and moves with the arrow keys
+ok 1 - API page lists APIs by controller beside one API's detail, and moves with the arrow keys
+  ---
+  duration_ms: 1024.396583
+  type: 'test'
+  ...
+# Subtest: graph-driven demonstration CRUD preserves row identity and confirmation cancellation, with reload isolation
+ok 2 - graph-driven demonstration CRUD preserves row identity and confirmation cancellation, with reload isolation
+  ---
+  duration_ms: 1420.084333
+  type: 'test'
+  ...
+# Subtest: modal moves its source once, preserves form values, restores position and never duplicates IDs
+ok 3 - modal moves its source once, preserves form values, restores position and never duplicates IDs
+  ---
+  duration_ms: 911.788833
+  type: 'test'
+  ...
+# Subtest: formal CSS data URI is deduplicated, inherits CSP and renders without external requests
+ok 4 - formal CSS data URI is deduplicated, inherits CSP and renders without external requests
+  ---
+  duration_ms: 829.522625
+  type: 'test'
+  ...
+# Subtest: guide screenshot readiness waits for delayed preview hydration, resets scroll state and waits for a quiescent document
+ok 5 - guide screenshot readiness waits for delayed preview hydration, resets scroll state and waits for a quiescent document
+  ---
+  duration_ms: 1976.5085
+  type: 'test'
+  ...
+# Subtest: a progress file from another analysis warns only when it holds decisions, and the warning can be dismissed
+ok 6 - a progress file from another analysis warns only when it holds decisions, and the warning can be dismissed
+  ---
+  duration_ms: 1426.691542
+  type: 'test'
+  ...
+# Subtest: canvas overview, file tree, actual URL matching and keyboard zoom
+ok 7 - canvas overview, file tree, actual URL matching and keyboard zoom
+  ---
+  duration_ms: 1145.26825
+  type: 'test'
+  ...
+# Subtest: chromium: review mark/export/clear/import/export is byte-identical except timestamp and has no requests
+ok 8 - chromium: review mark/export/clear/import/export is byte-identical except timestamp and has no requests
+  ---
+  duration_ms: 1627.965208
+  type: 'test'
+  ...
+# Subtest: chromium: malformed, modified and truncated imports preserve current decisions
+ok 9 - chromium: malformed, modified and truncated imports preserve current decisions
+  ---
+  duration_ms: 1382.781583
+  type: 'test'
+  ...
+# Subtest: chromium: changed analysis lists every orphan and preserves unknown composite IDs
+ok 10 - chromium: changed analysis lists every orphan and preserves unknown composite IDs
+  ---
+  duration_ms: 625.836708
+  type: 'test'
+  ...
+# Subtest: actual md over five MB warns and remains complete, including its final state block
+ok 11 - actual md over five MB warns and remains complete, including its final state block
+  ---
+  duration_ms: 2749.635459
+  type: 'test'
+  ...
+# Subtest: selected files above 64 MiB fail before reading and preserve current decisions
+ok 12 - selected files above 64 MiB fail before reading and preserve current decisions
+  ---
+  duration_ms: 786.531667
+  type: 'test'
+  ...
+# Subtest: single click shows a screen’s relations and frames them, double click opens it, an area click zooms into the area
+ok 13 - single click shows a screen’s relations and frames them, double click opens it, an area click zooms into the area
+  ---
+  duration_ms: 1037.884791
+  type: 'test'
+  ...
+# Subtest: going back to the canvas closes the preview even when an area lies under the back button
+ok 14 - going back to the canvas closes the preview even when an area lies under the back button
+  ---
+  duration_ms: 4100.981042
+  type: 'test'
+  ...
+# Subtest: packed srcdoc displays CSS/image data and makes zero external or relative file requests
+ok 15 - packed srcdoc displays CSS/image data and makes zero external or relative file requests
+  ---
+  duration_ms: 539.602333
+  type: 'test'
+  ...
+# {"screens":500,"components":5000,"navigationRelations":3000,"containsRelations":5000,"behaviors":3000,"firstRenderMs":334.30000001192093,"zoomMedianMs":39}
+# Subtest: 500 screens, 5000 components, 3000 navigations first render within 3 seconds and pan/zoom
+ok 16 - 500 screens, 5000 components, 3000 navigations first render within 3 seconds and pan/zoom
+  ---
+  duration_ms: 1599.683834
+  type: 'test'
+  ...
+# Subtest: presenting lays the preview over the whole window; Esc ends it before going back to the canvas
+ok 17 - presenting lays the preview over the whole window; Esc ends it before going back to the canvas
+  ---
+  duration_ms: 879.052208
+  type: 'test'
+  ...
+# Subtest: moving to another screen while presenting never shows the page underneath
+ok 18 - moving to another screen while presenting never shows the page underneath
+  ---
+  duration_ms: 2720.460042
+  type: 'test'
+  ...
+# Subtest: Focus lines are faded by default and come back when hovered or tabbed to
+ok 19 - Focus lines are faded by default and come back when hovered or tabbed to
+  ---
+  duration_ms: 787.407875
+  type: 'test'
+  ...
+# Subtest: Pointing at a button in the side panel or the preview brings back the lines it leads along
+ok 20 - Pointing at a button in the side panel or the preview brings back the lines it leads along
+  ---
+  duration_ms: 879.581625
+  type: 'test'
+  ...
+# Subtest: Header/footer link labels are not faded
+ok 21 - Header/footer link labels are not faded
+  ---
+  duration_ms: 553.7185
+  type: 'test'
+  ...
+# Subtest: choosing a button in the details scrolls only the preview, and only when the button is out of view
+ok 22 - choosing a button in the details scrolls only the preview, and only when the button is out of view
+  ---
+  duration_ms: 2582.529291
+  type: 'test'
+  ...
+# Subtest: R16 API search finds an endpoint by both public path and proven logical alias
+ok 23 - R16 API search finds an endpoint by both public path and proven logical alias
+  ---
+  duration_ms: 855.793333
+  type: 'test'
+  ...
+# Subtest: inherited-only action counts as in use on the API page and is excluded from unused APIs
+ok 24 - inherited-only action counts as in use on the API page and is excluded from unused APIs
+  ---
+  duration_ms: 784.849167
+  type: 'test'
+  ...
+# Subtest: JSF analysis limit appears on the affected screen and Markdown §7 only
+ok 25 - JSF analysis limit appears on the affected screen and Markdown §7 only
+  ---
+  duration_ms: 852.048958
+  type: 'test'
+  ...
+# Subtest: non-JSF projects do not show a JSF reminder
+ok 26 - non-JSF projects do not show a JSF reminder
+  ---
+  duration_ms: 405.48875
+  type: 'test'
+  ...
+# Subtest: R16 all eight Struts reports keep raw tag syntax and internal attributes out of visible copy
+ok 27 - R16 all eight Struts reports keep raw tag syntax and internal attributes out of visible copy
+  ---
+  duration_ms: 729.374167
+  type: 'test'
+  ...
+# Subtest: R16 Tiles page names stay body-derived in the screen list, canvas, details panel and Markdown
+ok 28 - R16 Tiles page names stay body-derived in the screen list, canvas, details panel and Markdown
+  ---
+  duration_ms: 584.276709
+  type: 'test'
+  ...
+# Subtest: R16 welcome-file entry is a screen URL, never listed as an unused API
+ok 29 - R16 welcome-file entry is a screen URL, never listed as an unused API
+  ---
+  duration_ms: 486.317167
+  type: 'test'
+  ...
+# Subtest: R17 WP65 the first decision asks for a progress file; every later decision is written to it
+ok 30 - R17 WP65 the first decision asks for a progress file; every later decision is written to it
+  ---
+  duration_ms: 1164.151208
+  type: 'test'
+  ...
+# Subtest: R17 WP65 reopening offers to continue the last progress file and the file wins over browser storage
+ok 31 - R17 WP65 reopening offers to continue the last progress file and the file wins over browser storage
+  ---
+  duration_ms: 802.943125
+  type: 'test'
+  ...
+# Subtest: R17 WP65 a failed write keeps decisions in the page and can be retried
+ok 32 - R17 WP65 a failed write keeps decisions in the page and can be retried
+  ---
+  duration_ms: 1236.513792
+  type: 'test'
+  ...
+# Subtest: R17 WP65 "later" stops the prompt, and opening an existing progress file makes it the save target
+ok 33 - R17 WP65 "later" stops the prompt, and opening an existing progress file makes it the save target
+  ---
+  duration_ms: 1471.312084
+  type: 'test'
+  ...
+# Subtest: R17 WP65 browsers without the file API fall back to browser storage, download and the file input
+ok 34 - R17 WP65 browsers without the file API fall back to browser storage, download and the file input
+  ---
+  duration_ms: 462.589583
+  type: 'test'
+  ...
+# Subtest: R17 WP62 clicking a card zooms the same canvas into it and keeps only its outgoing lines in their original directions
+ok 35 - R17 WP62 clicking a card zooms the same canvas into it and keeps only its outgoing lines in their original directions
+  ---
+  duration_ms: 449.625209
+  type: 'test'
+  ...
+# Subtest: R17 WP62 hovering a line shows the destination thumbnail and its trigger; clicking moves the focus; unresolved stubs do not navigate
+ok 36 - R17 WP62 hovering a line shows the destination thumbnail and its trigger; clicking moves the focus; unresolved stubs do not navigate
+  ---
+  duration_ms: 530.104083
+  type: 'test'
+  ...
+# Subtest: R17 WP62 n zooms to the next unconfirmed screen and the transition settles after the animation
+ok 37 - R17 WP62 n zooms to the next unconfirmed screen and the transition settles after the animation
+  ---
+  duration_ms: 973.105542
+  type: 'test'
+  ...
+# Subtest: R17 WP63 clicks act like the real page: links navigate, forms submit without validation, ambiguous results offer destinations
+ok 38 - R17 WP63 clicks act like the real page: links navigate, forms submit without validation, ambiguous results offer destinations
+  ---
+  duration_ms: 683.663875
+  type: 'test'
+  ...
+# Subtest: R17 WP62 zooming in folds the screen list into a rail; opening it there floats over the canvas and closes after use
+ok 39 - R17 WP62 zooming in folds the screen list into a rail; opening it there floats over the canvas and closes after use
+  ---
+  duration_ms: 814.473959
+  type: 'test'
+  ...
+# Subtest: R17 the screen details appear only while a screen is open, fold into a rail on their own edge and keep that choice across screens
+ok 40 - R17 the screen details appear only while a screen is open, fold into a rail on their own edge and keep that choice across screens
+  ---
+  duration_ms: 987.147459
+  type: 'test'
+  ...
+# Subtest: R17 report has only the screen and API pages and none of the retired features
+ok 41 - R17 report has only the screen and API pages and none of the retired features
+  ---
+  duration_ms: 331.62075
+  type: 'test'
+  ...
+# Subtest: R17 sidebar search matches an actual URL against route templates in the list and on the canvas
+ok 42 - R17 sidebar search matches an actual URL against route templates in the list and on the canvas
+  ---
+  duration_ms: 646.31875
+  type: 'test'
+  ...
+# Subtest: R17 screen decisions from the panel and keyboard update list, canvas, progress and browser storage
+ok 43 - R17 screen decisions from the panel and keyboard update list, canvas, progress and browser storage
+  ---
+  duration_ms: 662.577291
+  type: 'test'
+  ...
+# Subtest: R17 buttons are collapsed by default, follow the screen, and keep-to-removed conflicts are shown
+ok 44 - R17 buttons are collapsed by default, follow the screen, and keep-to-removed conflicts are shown
+  ---
+  duration_ms: 771.173
+  type: 'test'
+  ...
+# Subtest: R17 API page shows three statuses that follow decisions and callers open the screen at the button
+ok 45 - R17 API page shows three statuses that follow decisions and callers open the screen at the button
+  ---
+  duration_ms: 546.694916
+  type: 'test'
+  ...
+# Subtest: R17 downloaded md is format v1 from the shared generator and retired stored fields are ignored without losing decisions
+ok 46 - R17 downloaded md is format v1 from the shared generator and retired stored fields are ignored without losing decisions
+  ---
+  duration_ms: 441.289917
+  type: 'test'
+  ...
+# Subtest: R17 top bar and panels fit a 1024px window without horizontal overflow
+ok 47 - R17 top bar and panels fit a 1024px window without horizontal overflow
+  ---
+  duration_ms: 457.789041
+  type: 'test'
+  ...
+# Subtest: R18 pointing at an overview line highlights it and its two ends, and leaving always clears it
+ok 48 - R18 pointing at an overview line highlights it and its two ends, and leaving always clears it
+  ---
+  duration_ms: 613.212666
+  type: 'test'
+  ...
+# Subtest: R18 pointing at a card draws its outgoing lines blue and its incoming lines amber with matching arrowheads
+ok 49 - R18 pointing at a card draws its outgoing lines blue and its incoming lines amber with matching arrowheads
+  ---
+  duration_ms: 396.893042
+  type: 'test'
+  ...
+# Subtest: R18 a zoomed screen shows lines leaving (blue) and arriving (amber) in their overview directions; an arriving line leads to its source
+ok 50 - R18 a zoomed screen shows lines leaving (blue) and arriving (amber) in their overview directions; an arriving line leads to its source
+  ---
+  duration_ms: 568.216417
+  type: 'test'
+  ...
+# Subtest: R18 header/footer links: a badge on the overview, one dashed line each way when zoomed, and a grouped source list that agree
+ok 51 - R18 header/footer links: a badge on the overview, one dashed line each way when zoomed, and a grouped source list that agree
+  ---
+  duration_ms: 606.742917
+  type: 'test'
+  ...
+# Subtest: review composite selections, inherited state, conflicts, filtering and local restore
+ok 52 - review composite selections, inherited state, conflicts, filtering and local restore
+  ---
+  duration_ms: 1501.039333
+  type: 'test'
+  ...
+# Subtest: localStorage unavailable does not break review or viewer
+ok 53 - localStorage unavailable does not break review or viewer
+  ---
+  duration_ms: 709.587209
+  type: 'test'
+  ...
+# Subtest: links and image submits are markable buttons and component decisions show in the preview
+ok 54 - links and image submits are markable buttons and component decisions show in the preview
+  ---
+  duration_ms: 1310.869833
+  type: 'test'
+  ...
+# Subtest: chromium: file report preserves malicious text, blocks preview script, makes no external requests
+ok 55 - chromium: file report preserves malicious text, blocks preview script, makes no external requests
+  ---
+  duration_ms: 541.177375
+  type: 'test'
+  ...
+# Subtest: malicious API paths and behavior expressions remain text across detail views
+ok 56 - malicious API paths and behavior expressions remain text across detail views
+  ---
+  duration_ms: 948.943375
+  type: 'test'
+  ...
+# Subtest: the screen details are never cut off by a scrollbar, whether the screen opens from the list or the canvas
+ok 57 - the screen details are never cut off by a scrollbar, whether the screen opens from the list or the canvas
+  ---
+  duration_ms: 769.215959
+  type: 'test'
+  ...
+# Subtest: the folded list does not scroll; the open list does
+ok 58 - the folded list does not scroll; the open list does
+  ---
+  duration_ms: 1073.479167
+  type: 'test'
+  ...
+# Subtest: simulated clicks list API requests and only offer real destinations as choices
+ok 59 - simulated clicks list API requests and only offer real destinations as choices
+  ---
+  duration_ms: 771.727709
+  type: 'test'
+  ...
+# Subtest: real source fixtures produce identical graph, packed HTML and shared-module md on consecutive runs
+ok 60 - real source fixtures produce identical graph, packed HTML and shared-module md on consecutive runs
+  ---
+  duration_ms: 519.651959
+  type: 'test'
+  ...
+# Subtest: chromium: struts1 source→CLI→offline report→review→md→clear→restore
+ok 61 - chromium: struts1 source→CLI→offline report→review→md→clear→restore
+  ---
+  duration_ms: 1088.68425
+  type: 'test'
+  ...
+# Subtest: chromium: struts1-spring source→CLI→offline report→review→md→clear→restore
+ok 62 - chromium: struts1-spring source→CLI→offline report→review→md→clear→restore
+  ---
+  duration_ms: 1134.849833
+  type: 'test'
+  ...
+# Subtest: chromium: spring-mvc-jsp source→CLI→offline report→review→md→clear→restore
+ok 63 - chromium: spring-mvc-jsp source→CLI→offline report→review→md→clear→restore
+  ---
+  duration_ms: 1080.3125
+  type: 'test'
+  ...
+# Subtest: chromium: spring-boot-jsp source→CLI→offline report→review→md→clear→restore
+ok 64 - chromium: spring-boot-jsp source→CLI→offline report→review→md→clear→restore
+  ---
+  duration_ms: 814.323333
+  type: 'test'
+  ...
+# Subtest: two-finger scrolling moves the map, a pinch zooms into the point under the fingers
+ok 65 - two-finger scrolling moves the map, a pinch zooms into the point under the fingers
+  ---
+  duration_ms: 331.222291
+  type: 'test'
+  ...
+# Subtest: WP16 chromium full requester flow: struts1
+ok 66 - WP16 chromium full requester flow: struts1
+  ---
+  duration_ms: 1074.484792
+  type: 'test'
+  ...
+# Subtest: WP16 chromium full requester flow: struts1-spring
+ok 67 - WP16 chromium full requester flow: struts1-spring
+  ---
+  duration_ms: 1013.007292
+  type: 'test'
+  ...
+# Subtest: WP16 chromium full requester flow: spring-mvc-jsp
+ok 68 - WP16 chromium full requester flow: spring-mvc-jsp
+  ---
+  duration_ms: 773.287916
+  type: 'test'
+  ...
+# Subtest: WP16 chromium full requester flow: spring-boot-jsp
+ok 69 - WP16 chromium full requester flow: spring-boot-jsp
+  ---
+  duration_ms: 713.618209
+  type: 'test'
+  ...
+# WP16 measurements {"screens":150,"relations":600,"overviewMs":84,"focusMs":84,"searchMs":198}
+# Subtest: WP16 150-screen and 600-relation report records overview, focus and search timings
+ok 70 - WP16 150-screen and 600-relation report records overview, focus and search timings
+  ---
+  duration_ms: 486.211083
+  type: 'test'
+  ...
+# Subtest: WP18 source fixture offline map exposes submit success, validation return and all search branches
+ok 71 - WP18 source fixture offline map exposes submit success, validation return and all search branches
+  ---
+  duration_ms: 489.062917
+  type: 'test'
+  ...
+# Subtest: WP19 all same titles use unique readable names without source paths
+ok 72 - WP19 all same titles use unique readable names without source paths
+  ---
+  duration_ms: 548.961709
+  type: 'test'
+  ...
+# Subtest: WP19 partly repeated titles use unique readable names without source paths
+ok 73 - WP19 partly repeated titles use unique readable names without source paths
+  ---
+  duration_ms: 317.024583
+  type: 'test'
+  ...
+# Subtest: WP19 all unique titles use unique readable names without source paths
+ok 74 - WP19 all unique titles use unique readable names without source paths
+  ---
+  duration_ms: 341.321708
+  type: 'test'
+  ...
+# Subtest: WP24 thumbnail occupies eighty percent, missing previews are explicit and large maps decode lazily
+ok 75 - WP24 thumbnail occupies eighty percent, missing previews are explicit and large maps decode lazily
+  ---
+  duration_ms: 544.093292
+  type: 'test'
+  ...
+# Subtest: WP25 card opens the complete offline page, intercepts probes and retains the canvas transform
+ok 76 - WP25 card opens the complete offline page, intercepts probes and retains the canvas transform
+  ---
+  duration_ms: 1587.126792
+  type: 'test'
+  ...
+# Subtest: WP25 loading placeholder and keyboard history use a single frame and restore scroll
+ok 77 - WP25 loading placeholder and keyboard history use a single frame and restore scroll
+  ---
+  duration_ms: 980.540375
+  type: 'test'
+  ...
+# Subtest: WP25 review annotations exist before a delayed iframe load callback
+ok 78 - WP25 review annotations exist before a delayed iframe load callback
+  ---
+  duration_ms: 227.783542
+  type: 'test'
+  ...
+# Subtest: WP26 chromium: offline actions, all candidates without validation blocking, popup, API and reset preserve md
+ok 79 - WP26 chromium: offline actions, all candidates without validation blocking, popup, API and reset preserve md
+  ---
+  duration_ms: 1450.805
+  type: 'test'
+  ...
+# Subtest: WP26 a sole unresolved form destination is never followed automatically
+ok 80 - WP26 a sole unresolved form destination is never followed automatically
+  ---
+  duration_ms: 414.409916
+  type: 'test'
+  ...
+# Subtest: WP29 submit consistency: every operable element in synthetic-petclinic-style
+ok 81 - WP29 submit consistency: every operable element in synthetic-petclinic-style
+  ---
+  duration_ms: 397.472666
+  type: 'test'
+  ...
+# Subtest: WP29 submit consistency: every operable element in struts1
+ok 82 - WP29 submit consistency: every operable element in struts1
+  ---
+  duration_ms: 594.652
+  type: 'test'
+  ...
+# Subtest: WP29 submit consistency: every operable element in struts1-spring
+ok 83 - WP29 submit consistency: every operable element in struts1-spring
+  ---
+  duration_ms: 350.555125
+  type: 'test'
+  ...
+# Subtest: WP29 submit consistency: every operable element in spring-mvc-jsp
+ok 84 - WP29 submit consistency: every operable element in spring-mvc-jsp
+  ---
+  duration_ms: 338.918625
+  type: 'test'
+  ...
+# Subtest: WP29 submit consistency: every operable element in spring-boot-jsp
+ok 85 - WP29 submit consistency: every operable element in spring-boot-jsp
+  ---
+  duration_ms: 293.203417
+  type: 'test'
+  ...
+# Subtest: WP46 groups actions from included template fragments under a collapsible header and footer group
+ok 86 - WP46 groups actions from included template fragments under a collapsible header and footer group
+  ---
+  duration_ms: 743.318875
+  type: 'test'
+  ...
+1..86
+# tests 86
+# suites 0
+# pass 86
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 11624.474792

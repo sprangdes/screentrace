@@ -85,3 +85,57 @@
 - 第二階段（WP62、WP63）：畫布 zoom in 聚焦、關聯線縮圖與前往、點擊模擬不受檢核限制。完整驗證後停止等待需求方檢視，見 [R17 報告](reports/R17.md)、[ADR 0085](adr/0085-r17-canvas-zoom-focus-and-click-simulation.md)。
 - 第三階段（WP65、WP66）：進度檔自動存檔、md 一律 v1 並精簡正文。完整驗證後停止等待需求方驗收，見 [R17 報告](reports/R17.md)、[ADR 0086](adr/0086-r17-progress-file-autosave-and-md-v1.md)。
 - 第四階段（WP67、WP68）：`screentrace <專案路徑>` 一步分析、設定改為選用、指南與文件依新流程重寫。R17 全部完成，等待結案驗收，見 [R17 報告](reports/R17.md)。
+
+## WP69 公開業務應用流程修復
+
+- 分支 `fix/workflow-restoration`，處理 [實測問題 WF-001–009](reports/WORKFLOW_RESTORATION_20261018.md)：Struts legacy web roots／控制項、Spring view returns／resolver、JS 靜態效果與日期元件、Web Flow、inline 背景圖封裝。
+- 原始失敗證據保留，修正後以同一份三專案來源與完整操作旅程驗收；結果、限制與重現入口見 [修正報告](reports/WORKFLOW_FIXES_20261018.md)、[ADR 0091](adr/0091-public-workflow-restoration.md)。
+
+## 新增公開專案驗收第二批（2026-10-18）
+
+- 三個全新 JSP 業務專案及一個 Thymeleaf 負對照；25 個檢查 14 PASS／11 FAIL，5 個旅程 2 PASS／3 FAIL。
+- WF-010 預覽 selector、WF-011 刪除確認未修正；WF-012 資料狀態功能缺口、原專案問題及負對照分別記錄。詳見 [測試報告](reports/WORKFLOW_BATCH2_20261018.md)。本批只有驗證與證據，未將新失敗宣告修復。
+
+## WP70 第二批公開專案修正
+
+- 修正 WF-010 冒號標籤、WF-011 確認取消、WF-012 有來源證據的示範 CRUD，加入 NC-001 有限度 Thymeleaf URL／HTML view 投影；另修復視覺複核發現的 WF-013 透明淡入快照。
+- 原 25 案例／5 旅程全部通過，新增確認控制與完整示範 CRUD 測試；標準套件 730 項、729 PASS／既有 1 skip。未更動既有斷言、目標來源或 graph schema。見 [修正報告](reports/WORKFLOW_BATCH2_FIXES_20261018.md)、[ADR 0092](adr/0092-public-workflows-state-and-template-projection.md)。
+
+## 新增公開專案完整性驗收第三批（2026-10-18）
+
+- 四個不重複業務應用：Struts 契約、Boot/JSP 網銀、MVC 庫存、Thymeleaf 航空。獨立來源盤點 37 頁面／片段、73 路由、334 控制項均被發現，但 36 個 Ajax 呼叫未還原；48 個 Spring 非 REST handler 的可能目的頁集合只有 24 個完整。
+- 真實離線原型操作 41 案例 14 PASS／27 FAIL，5 旅程 3 PASS／2 FAIL；新增資料與回饋失敗保留，不以導覽成功宣稱功能等價。新增 WF-014–022、NC-002–003，只有測試記錄，未修改產品／宣稱修復。見 [完整性實測報告](reports/COMPLETENESS_BATCH3_20261018.md)。
+
+## WP72 第三批公開專案問題修正
+
+- 修正 WF-014–022、NC-002–003：Ajax、相對資源與請求、分支回傳、頁面組合、Struts 控制項、modal/offcanvas、回饋、有效 web root、Thymeleaf 表單及示範資料。新增 WF-023 的診斷排序已修正，頭像像素差異仍未解決。
+- 不放寬原斷言；原 B08 錯誤 selector 的 FAIL 保留，新增來源正確的開窗及四種表單切換案例。原專案缺少 API handler 與佔位功能另列，不能宣稱所有業務功能完整等價。見 [修正與驗收報告](reports/WORKFLOW_BATCH3_FIXES_20261019.md)、[ADR 0093](adr/0093-public-completeness-workflow-repairs.md)。
+
+## WP73 第四批不重複公開專案驗收（2026-10-19）
+
+- 三個新 repository：Struts 1／Tiles 音樂管理、MVC／JSP 圖書管理 App1、Boot／Thymeleaf 旅館。32 頁面／片段、52 路由、179 控制項都有發現；仍有路由／實體 view、事件、條件、樣式與資料支援缺口。
+- 有效檢查 33 項 10 PASS／23 FAIL，5 旅程 1 PASS／4 FAIL；原 H11 有格式／姓名預期限制，保留原結果並以來源正確的 X03 補驗。新增 WF-024–033、NC-004–005，外部依賴及原專案缺頁另列；未修改產品或宣稱修復。見 [測試報告](reports/COMPLETENESS_BATCH4_20261019.md)。
+
+## WP74 第四批公開專案問題修正（2026-10-19）
+
+- 修正 WF-024–033、NC-004–005 的有限分析／模擬路徑，補上離線圖示、新解鎖的動態查詢路徑 WF-034，以及 autofocus 擷取時序 WF-037、下拉選單初始可見狀態 WF-038。41／41 實體來源回傳、13／13 本地 CSS 通過；五次各 46 份產物一致，完整回歸 786 通過／1 略過。
+- 原操作 28 PASS／3 FAIL；來源更正後有效 33 項 31 PASS／2 FAIL。原 H11、X03 的錯誤預期與 FAIL 保留，以 X04 驗證來源日期欄位。前述 WP73 的「X03 來源正確」已由本次複核更正：來源沒有電話欄位。
+- 自訂 Hibernate DAO 與外部 HTTP 清單資料回顯仍未解決（WF-035／036），不宣稱功能完全等價。見 [修正報告](reports/WORKFLOW_BATCH4_FIXES_20261019.md)、[ADR 0094](adr/0094-public-batch4-workflow-repairs.md)。
+
+## WP75 第五批不重複公開專案驗收（2026-10-20）
+
+- 三個新 repository：Struts 1／Spring 物料、MVC／JSP 學生、Boot／Thymeleaf 支出；與既有 18 個 repository 無交集。21 頁面／片段、21 個 Controller／Struts 路由、153 控制項都有發現；另 2 個 Security 配置入口缺失。
+- 來源更正後有效 30 檢查為 6 PASS／24 FAIL，3 旅程 1 PASS／2 FAIL；新增 WF-039–049、NC-006。目的頁集合 17／21 正確，12 個本地 CSS 參照 7 PASS／5 FAIL；支出可跳頁但提交資料沒有回顯，學生資料旅程阻於提交回首頁。
+- 本批僅驗證及保留問題證據，沒有修改產品／既有斷言；前批 WF-035／036 未修復。來源 377 檔不變，兩次各 41 份產物一致。詳見 [測試報告](reports/COMPLETENESS_BATCH5_20261020.md)。
+
+## WP76 第五批公開專案問題修正（2026-10-20）
+
+- 修正 WF-039–049、NC-006 的來源可證明範圍，另修正新發現的 WF-050 巢狀候選選取。21／21 目的頁集合、12／12 本地 CSS、2／2 Security 入口通過；原始斷言與失敗保留。
+- 原 30 項操作 23 PASS／7 個錯誤 oracle 的 FAIL；來源修正及新增資料補驗合計有效 32 項 31 PASS／1 FAIL，3 條有效旅程全通過。學生新增後資料回顯 NC-007 仍未解決；支出已驗證本機 scalar 資料新增與修改，認證、SQL／JPQL、關聯及日期計算不宣稱等價。
+- 標準套件 809 PASS／既有 1 SKIP；兩次各 41 份產物一致，377 檔來源及原始 41 份產物未改。前批 WF-035／036 保留。見 [修正報告](reports/WORKFLOW_BATCH5_FIXES_20261020.md)、[ADR 0095](adr/0095-public-batch5-workflow-repairs.md)。
+
+## WP77 第六批不重複公開專案驗收（2026-10-20）
+
+- 三個新 repository：Struts 1／jQuery 使用者管理、MVC／JSP／CSV 庫存、Boot／Thymeleaf Todo，與既有 21 個 repository 無交集。22 頁面／片段、22 路由、186 控制項均有發現，22／22 可能目的頁集合通過；Ajax 0／1、現存本地 CSS 0／17。
+- 有效操作 42 項為 19 PASS／23 FAIL，6 條有效旅程 4 PASS／2 FAIL。原錯誤 selector 與同頁候選未選取的結果分別保留；補驗未放寬來源訊息／資料斷言。新增 WF-051–055、NC-008–009，全數 OPEN；不能以導覽成功宣稱資料功能等價。
+- 本批只有測試、證據及文件，未修改產品。217 檔來源不變，兩次各 41 份產物一致，前批 WF-035／036、NC-007 保留。詳見 [第六批報告](reports/COMPLETENESS_BATCH6_20261020.md)。

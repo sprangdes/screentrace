@@ -1,0 +1,8 @@
+package io.screentrace.parser.jsp;
+import org.junit.jupiter.api.Test;import org.junit.jupiter.api.io.TempDir;import java.nio.file.*;import java.util.*;import io.screentrace.core.*;import io.screentrace.core.ApplicationGraph.*;import io.screentrace.scanner.ProjectScanner;import static org.junit.jupiter.api.Assertions.*;
+class Batch5FragmentsTest {
+ @TempDir Path root;
+ @Test void namedFragmentRetainsLiteralArgumentsSourceAndOwner()throws Exception{
+  Path templates=root.resolve("src/main/resources/templates");Files.createDirectories(templates.resolve("parts"));Files.writeString(templates.resolve("page.html"),"<div th:replace=\"parts/menu :: nav('yes')\"></div>");Files.writeString(templates.resolve("parts/menu.html"),"<nav th:fragment=\"nav(show)\"><a href='/next'>Next</a></nav>");var loc=new SourceLocation("src/main/resources/templates/page.html",1);var proof=List.of(new AnalysisEvidence(loc,"Fixture",ResolutionStatus.CONFIRMED,"source"));var componentLoc=new SourceLocation("src/main/resources/templates/parts/menu.html",1);var graph=new ApplicationGraph(new ApplicationGraph.Application("test",".",List.of()),List.of(new GraphNode("screen",NodeType.SCREEN,"page",Map.of("view",loc.file()),loc,Confidence.CONFIRMED,proof),new GraphNode("link",NodeType.COMPONENT,"Next",Map.of("tag","a"),componentLoc,Confidence.CONFIRMED,proof)),List.of(),List.of(),List.of(),"2.2",List.of(),List.of());var result=ThymeleafFragments.enrich(graph,new ProjectScanner().scan(root));assertTrue(result.relationships().stream().anyMatch(e->e.type()==EdgeType.CONTAINS&&e.from().equals("screen")&&e.to().equals("link")));assertTrue(result.nodes().stream().filter(n->n.id().equals("screen")).findFirst().orElseThrow().attributes().get("templateFragments").contains("yes"));
+ }
+}

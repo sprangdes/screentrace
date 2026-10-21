@@ -1,0 +1,166 @@
+{
+  "java7-struts1-jquery-bootstrap3-web-project/application-graph.json": {
+    "bytes": 303806,
+    "sha256": "6f9e358f1a82e87a4b7b6252e5497852d46a028d189369354ac8233864baf331"
+  },
+  "java7-struts1-jquery-bootstrap3-web-project/preview-model.json": {
+    "bytes": 1401701,
+    "sha256": "f8309b1dc07d3ac02fd0272f18c9a051755ca3ca3444765c112847ca2a904dd2"
+  },
+  "java7-struts1-jquery-bootstrap3-web-project/prototype-model.json": {
+    "bytes": 72319,
+    "sha256": "9f5bcd3ba08ed7e4176f1410c3ae6265f6be18c4f00d9f40ab15372138676ee6"
+  },
+  "java7-struts1-jquery-bootstrap3-web-project/viewer-documents.json": {
+    "bytes": 138041,
+    "sha256": "89d4030728b9ad256999473e80f1f4d3d2d6bcd423ed457662f00f7ebf355e5b"
+  },
+  "java7-struts1-jquery-bootstrap3-web-project/report-size.json": {
+    "bytes": 120,
+    "sha256": "a6e8f848f2acf514c96e3cd20161271ecfecb3b94dc768443bbaf90276c5663c"
+  },
+  "java7-struts1-jquery-bootstrap3-web-project/report/screentrace-report.html": {
+    "bytes": 1926274,
+    "sha256": "7e897bff63781064ee1694eaf7e3ce317a01c8bb8c536fd636463209069c192e"
+  },
+  "java7-struts1-jquery-bootstrap3-web-project/static-preview/element-styles.json": {
+    "bytes": 1437505,
+    "sha256": "e47ef52ac5b3c84e21be174615b71facb56ed634a58189d108ac4b8fc4fab34b"
+  },
+  "java7-struts1-jquery-bootstrap3-web-project/screenshots/static-screen_0dabd232-1575-327d-a141-89ea05d553c4.png": {
+    "bytes": 100183,
+    "sha256": "dbe85cdf9c6b45b8cefd662b31c1f62c805ed94b8fc4713c75497318ac1ad642"
+  },
+  "java7-struts1-jquery-bootstrap3-web-project/screenshots/static-screen_166a2eb3-7da1-3aa3-ab38-bb368ff50e25.png": {
+    "bytes": 90618,
+    "sha256": "69b90c15e76e67427543d598fdaeb271416a01f42fce2dc45509c89a773eea45"
+  },
+  "java7-struts1-jquery-bootstrap3-web-project/screenshots/static-screen_3d83ec66-af18-39c5-a54b-3e2e544f7b5d.png": {
+    "bytes": 5850,
+    "sha256": "d5398960a510b55c800892e2fc1da886d043e35e2c5caeb71dc94d93d5b32a20"
+  },
+  "java7-struts1-jquery-bootstrap3-web-project/screenshots/static-screen_4378b9cd-7d83-324d-8c2f-c09b9136d889.png": {
+    "bytes": 7562,
+    "sha256": "334f0bd8309aef564761f75e9eff31e023e2c4f8ec33f826b3b30ab615a1a38f"
+  },
+  "java7-struts1-jquery-bootstrap3-web-project/screenshots/static-screen_720d306c-223d-348b-9b3a-8862bda07214.png": {
+    "bytes": 196932,
+    "sha256": "c6e9b09b60fab1e5f4fa7fe3370e335b7d4750da20aa037062723162639a0034"
+  },
+  "java7-struts1-jquery-bootstrap3-web-project/screenshots/static-screen_b43c12fd-abd3-3188-bb9f-65969be6d32f.png": {
+    "bytes": 196314,
+    "sha256": "9ba5df79264903deda119a9ca794df2eee30082cea4b32cb7250552da791d50c"
+  },
+  "java7-struts1-jquery-bootstrap3-web-project/screenshots/static-screen_d95ebd83-a9e9-3aaa-831b-746f4c5334b6.png": {
+    "bytes": 196932,
+    "sha256": "c6e9b09b60fab1e5f4fa7fe3370e335b7d4750da20aa037062723162639a0034"
+  },
+  "java7-struts1-jquery-bootstrap3-web-project/screenshots/static-screen_e27bb0db-fa76-3280-8f77-e131bdd2c817.png": {
+    "bytes": 78378,
+    "sha256": "093e2afbf670a150babac1062c9819d1eddb78a00dc415df5ffcf6cab30238ec"
+  },
+  "java7-struts1-jquery-bootstrap3-web-project/screenshots/static-screen_e5927827-c93b-3788-8338-6035f0d7b61c.png": {
+    "bytes": 22719,
+    "sha256": "1f4ccf71d6521cc4a07e7ef0c2a925525ee52d429f318da3ef8dbebb9d0e2680"
+  },
+  "InventoryMGRSpringMVCCRUD/application-graph.json": {
+    "bytes": 864838,
+    "sha256": "4dfd7f8cacd16ae1c5a9ad5f931899afd76488af8f806c0eee7e5d0b4c772737"
+  },
+  "InventoryMGRSpringMVCCRUD/preview-model.json": {
+    "bytes": 1029764,
+    "sha256": "585745af241a530028f3096a4e16cbf33bc1a253a271e9cbf383380878135e63"
+  },
+  "InventoryMGRSpringMVCCRUD/prototype-model.json": {
+    "bytes": 93073,
+    "sha256": "1dfefcfd2dd8c55fd7d93473de736a44028ceb3dd1d3387b46de35d4b685fb64"
+  },
+  "InventoryMGRSpringMVCCRUD/viewer-documents.json": {
+    "bytes": 84636,
+    "sha256": "a1ded64792bfb82a3531360590b409fd5873a90b6d4db5c300b7c79b183fd7c5"
+  },
+  "InventoryMGRSpringMVCCRUD/report-size.json": {
+    "bytes": 120,
+    "sha256": "2cfbe06bb71f4b4ebc75ce33559e0f2be99ababe480a5e1bdbd3fc617279ef58"
+  },
+  "InventoryMGRSpringMVCCRUD/report/screentrace-report.html": {
+    "bytes": 1913264,
+    "sha256": "c321baa05c1d752f542b33f33c30480d8358aa529906e8ad5f808919c2408940"
+  },
+  "InventoryMGRSpringMVCCRUD/static-preview/element-styles.json": {
+    "bytes": 1072767,
+    "sha256": "9104320c435f6567b6d7c53f315286084759bc4b190cd6bbb99029159624f939"
+  },
+  "InventoryMGRSpringMVCCRUD/screenshots/static-screen_095a7eab-9513-3869-866d-edf31cb6a2d6.png": {
+    "bytes": 46300,
+    "sha256": "54696bf87c2e004e971257dde552ecfa6efbd82df794f3d5e949a0f1053ef3e8"
+  },
+  "InventoryMGRSpringMVCCRUD/screenshots/static-screen_254378a8-19ef-391e-a57e-351bb2d1547a.png": {
+    "bytes": 40749,
+    "sha256": "5ddcdf0a54688f020d522e8a496531c34b60e028b5e8658a2be8894cec98a746"
+  },
+  "InventoryMGRSpringMVCCRUD/screenshots/static-screen_ae06d006-39cf-38ef-8f47-48ac9d6a24c6.png": {
+    "bytes": 59187,
+    "sha256": "8b352a92f9fce1aba73e543bfabbc9cc217d4ac717dad48517662619f1faf156"
+  },
+  "InventoryMGRSpringMVCCRUD/screenshots/static-screen_bb7dd084-209c-3f00-ae64-867d0e6a2e1d.png": {
+    "bytes": 44021,
+    "sha256": "1a350dd228f1d7a7c50ae9039283878d5d6e2cb6a8d7d9da4fa63406aa0cb519"
+  },
+  "InventoryMGRSpringMVCCRUD/screenshots/static-screen_c06ea220-18c6-3c71-a86a-1215a117ad3a.png": {
+    "bytes": 37308,
+    "sha256": "2c60795aeb795138eac04eddd7e44be826ca89ae987d23d4f356e949fcce4617"
+  },
+  "InventoryMGRSpringMVCCRUD/screenshots/static-screen_e781e206-829f-3b34-92db-20aadc105712.png": {
+    "bytes": 47519,
+    "sha256": "3f10e37298df76e0e841988b5ba6d4fc5f2301bb1fbaaefd9f652a51dfa305cf"
+  },
+  "InventoryMGRSpringMVCCRUD/screenshots/static-screen_eac593da-4e35-334b-9c7c-5469bb172c2d.png": {
+    "bytes": 48721,
+    "sha256": "098870389a4f6a43d842872e1cb773bcc6415768ada205bbea037ec9b2a6fbf9"
+  },
+  "springboot-todolist/application-graph.json": {
+    "bytes": 234583,
+    "sha256": "b0110efab1333c1d1cad4d41de594a520bb74857b5fc6633b5c9ab49a4c476fa"
+  },
+  "springboot-todolist/preview-model.json": {
+    "bytes": 395599,
+    "sha256": "6fd0c55ce6069b07e9f113ebcbbe62efd78f740c65b58926843aa117b471c680"
+  },
+  "springboot-todolist/prototype-model.json": {
+    "bytes": 13743,
+    "sha256": "1f8f63a0bb19d01d4730af040dfc943101bf8b32eded3965d43407742620d3ef"
+  },
+  "springboot-todolist/viewer-documents.json": {
+    "bytes": 14414,
+    "sha256": "ce721c51420d068e39f75fac5872f41f9362a1c28257c517adcbb7cb4b93617d"
+  },
+  "springboot-todolist/report-size.json": {
+    "bytes": 119,
+    "sha256": "8afcc8744082def33431e8a6d90a65339d1ac99f09f2310aa690256737525a1c"
+  },
+  "springboot-todolist/report/screentrace-report.html": {
+    "bytes": 851514,
+    "sha256": "0bb532b7dfd2f0c253fb0cc1b310acacb9a38daaecffe160ee21cb627362f85f"
+  },
+  "springboot-todolist/static-preview/element-styles.json": {
+    "bytes": 395664,
+    "sha256": "f9af8c115f714fb29f369db1df5ba221f7b565eb393482264803fead6383ec3d"
+  },
+  "springboot-todolist/screenshots/static-screen_08ae69e3-6e7d-36a0-90cc-93b3ebafa384.png": {
+    "bytes": 15923,
+    "sha256": "bc862f75f98925bf9bd39473e3ae901bf60aa9c71ff3378650263793e801e528"
+  },
+  "springboot-todolist/screenshots/static-screen_1536d1c5-55bb-38de-801a-56ee27e8d50c.png": {
+    "bytes": 21157,
+    "sha256": "7408bdf81d9e3df51a90ed781125cdb893a44f1eb084f09ab2e20dd83044d022"
+  },
+  "springboot-todolist/screenshots/static-screen_791a2167-ae04-3602-b4b2-5185d6904015.png": {
+    "bytes": 21146,
+    "sha256": "7f22344007903648bba83936e553ebc96af115e5f2b6787eadeae4a2e64af0c4"
+  },
+  "springboot-todolist/screenshots/static-screen_b4c05e32-4275-3993-bd3c-7310aafcff2d.png": {
+    "bytes": 15156,
+    "sha256": "d8cec557f6b475bdc7278e237d48e192d14273cab3fa6b88cb83a14837918fd1"
+  }
+}

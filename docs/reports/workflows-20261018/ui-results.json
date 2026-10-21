@@ -1,0 +1,766 @@
+{
+  "cases": [
+    {
+      "id": "O01",
+      "project": "MyStrutsApp",
+      "expectedViews": [
+        "web/Registration.jsp"
+      ],
+      "kind": "navigate",
+      "result": "FAIL",
+      "controlCount": 1,
+      "controlLabel": "REGISTER YOURSELF",
+      "actual": {
+        "focusedId": "screen:ea2e2154-8c6b-3548-ac4c-506c4f247633",
+        "view": "web/login.jsp",
+        "choices": [],
+        "status": [
+          "無法確定前往哪個畫面"
+        ]
+      },
+      "offeredViews": [
+        "web/login.jsp"
+      ]
+    },
+    {
+      "id": "O02",
+      "project": "MyStrutsApp",
+      "expectedViews": [
+        "web/ForgetPassword.jsp"
+      ],
+      "kind": "navigate",
+      "result": "FAIL",
+      "controlCount": 1,
+      "controlLabel": "Forget Password",
+      "actual": {
+        "focusedId": "screen:ea2e2154-8c6b-3548-ac4c-506c4f247633",
+        "view": "web/login.jsp",
+        "choices": [],
+        "status": [
+          "無法確定前往哪個畫面"
+        ]
+      },
+      "offeredViews": [
+        "web/login.jsp"
+      ]
+    },
+    {
+      "id": "O03",
+      "project": "MyStrutsApp",
+      "expectedViews": [
+        "web/WEB-INF/success.jsp",
+        "web/login.jsp"
+      ],
+      "kind": "navigate",
+      "result": "PASS",
+      "controlCount": 1,
+      "controlLabel": "Login",
+      "actual": {
+        "focusedId": "screen:ea2e2154-8c6b-3548-ac4c-506c4f247633",
+        "view": "web/login.jsp",
+        "choices": [
+          {
+            "target": "screen:8e025816-4099-3ba5-aa5d-b00c4e87451b",
+            "label": "success",
+            "view": "web/WEB-INF/success.jsp"
+          },
+          {
+            "target": "screen:ea2e2154-8c6b-3548-ac4c-506c4f247633",
+            "label": "login",
+            "view": "web/login.jsp"
+          }
+        ],
+        "status": [
+          ""
+        ]
+      },
+      "offeredViews": [
+        "web/WEB-INF/success.jsp",
+        "web/login.jsp"
+      ],
+      "selected": {
+        "focusedId": "screen:8e025816-4099-3ba5-aa5d-b00c4e87451b",
+        "view": "web/WEB-INF/success.jsp",
+        "choices": [],
+        "status": [
+          ""
+        ]
+      }
+    },
+    {
+      "id": "O04",
+      "project": "MyStrutsApp",
+      "expectedViews": [
+        "web/Registration.jsp"
+      ],
+      "kind": "navigate",
+      "result": "PASS",
+      "controlCount": 1,
+      "controlLabel": "Register",
+      "actual": {
+        "focusedId": "screen:60d84e22-4183-38c8-9126-a87023cef627",
+        "view": "web/Registration.jsp",
+        "choices": [],
+        "status": [
+          ""
+        ]
+      },
+      "offeredViews": [
+        "web/Registration.jsp"
+      ]
+    },
+    {
+      "id": "O05",
+      "project": "MyStrutsApp",
+      "expectedViews": [
+        "web/AddBook.jsp"
+      ],
+      "kind": "navigate",
+      "result": "PASS",
+      "controlCount": 1,
+      "controlLabel": "save",
+      "actual": {
+        "focusedId": "screen:83ab4336-5f38-371e-a561-9b2c9a268aa4",
+        "view": "web/AddBook.jsp",
+        "choices": [],
+        "status": [
+          ""
+        ]
+      },
+      "offeredViews": [
+        "web/AddBook.jsp"
+      ]
+    },
+    {
+      "id": "O06",
+      "project": "MyStrutsApp",
+      "result": "FAIL",
+      "reason": "CONTROL_OR_PREVIEW_UNUSABLE",
+      "error": "TimeoutError: locator.fill: Timeout 8000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('iframe.preview-frame,iframe').first().contentFrame().locator('[name=\"ISBNNumber\"]').first()\u001b[22m\n"
+    },
+    {
+      "id": "O07",
+      "project": "MyStrutsApp",
+      "expectedViews": [],
+      "kind": "calendar",
+      "result": "FAIL",
+      "controlCount": 1,
+      "controlLabel": "Select Date",
+      "actual": {
+        "focusedId": "screen:ea2e2154-8c6b-3548-ac4c-506c4f247633",
+        "view": "web/login.jsp",
+        "choices": [
+          {
+            "target": null,
+            "label": "無法確定前往哪個畫面",
+            "view": null
+          },
+          {
+            "target": null,
+            "label": "無法確定前往哪個畫面",
+            "view": null
+          }
+        ],
+        "status": [
+          ""
+        ]
+      },
+      "dialogVisible": false
+    },
+    {
+      "id": "E01",
+      "project": "eBazaar",
+      "expectedViews": [
+        "src/main/webapp/WEB-INF/views/products.jsp"
+      ],
+      "kind": "navigate",
+      "result": "FAIL",
+      "controlCount": 1,
+      "controlLabel": "Go to Products",
+      "actual": {
+        "focusedId": "screen:87634b37-f330-3bc2-8813-d14a5e91121b",
+        "view": "src/main/webapp/WEB-INF/views/welcome.jsp",
+        "choices": [
+          {
+            "target": null,
+            "label": "無法確定前往哪個畫面",
+            "view": null
+          },
+          {
+            "target": "endpoint:357ba522-4523-3593-b2c3-db2a4981d09f",
+            "label": "無法確定前往哪個畫面",
+            "view": null
+          }
+        ],
+        "status": [
+          ""
+        ]
+      },
+      "offeredViews": [
+        "src/main/webapp/WEB-INF/views/welcome.jsp"
+      ]
+    },
+    {
+      "id": "E02",
+      "project": "eBazaar",
+      "expectedViews": [
+        "src/main/webapp/WEB-INF/views/productForm.jsp"
+      ],
+      "kind": "navigate",
+      "result": "PASS",
+      "controlCount": 1,
+      "controlLabel": "Add Product",
+      "actual": {
+        "focusedId": "screen:7db8ab08-f075-3079-9b2a-8667f0a045cc",
+        "view": "src/main/webapp/WEB-INF/views/products.jsp",
+        "choices": [
+          {
+            "target": "screen:7724c152-1e01-3758-be14-2f656bf5b4a5",
+            "label": "productForm",
+            "view": "src/main/webapp/WEB-INF/views/productForm.jsp"
+          },
+          {
+            "target": null,
+            "label": "無法確定前往哪個畫面",
+            "view": null
+          }
+        ],
+        "status": [
+          ""
+        ]
+      },
+      "offeredViews": [
+        "src/main/webapp/WEB-INF/views/productForm.jsp"
+      ],
+      "selected": {
+        "focusedId": "screen:7724c152-1e01-3758-be14-2f656bf5b4a5",
+        "view": "src/main/webapp/WEB-INF/views/productForm.jsp",
+        "choices": [],
+        "status": [
+          ""
+        ]
+      }
+    },
+    {
+      "id": "E03",
+      "project": "eBazaar",
+      "expectedViews": [
+        "src/main/webapp/WEB-INF/views/productDetails.jsp"
+      ],
+      "kind": "navigate",
+      "result": "FAIL",
+      "controlCount": 1,
+      "controlLabel": "Details",
+      "actual": {
+        "focusedId": "screen:7db8ab08-f075-3079-9b2a-8667f0a045cc",
+        "view": "src/main/webapp/WEB-INF/views/products.jsp",
+        "choices": [],
+        "status": [
+          "無法確定前往哪個畫面"
+        ]
+      },
+      "offeredViews": [
+        "src/main/webapp/WEB-INF/views/products.jsp"
+      ]
+    },
+    {
+      "id": "E04",
+      "project": "eBazaar",
+      "expectedViews": [
+        "src/main/webapp/WEB-INF/views/productForm.jsp",
+        "src/main/webapp/WEB-INF/views/products.jsp"
+      ],
+      "kind": "navigate",
+      "result": "FAIL",
+      "controlCount": 1,
+      "controlLabel": "Add Product",
+      "actual": {
+        "focusedId": "screen:7724c152-1e01-3758-be14-2f656bf5b4a5",
+        "view": "src/main/webapp/WEB-INF/views/productForm.jsp",
+        "choices": [],
+        "status": [
+          ""
+        ]
+      },
+      "offeredViews": [
+        "src/main/webapp/WEB-INF/views/productForm.jsp"
+      ]
+    },
+    {
+      "id": "E05",
+      "project": "eBazaar",
+      "expectedViews": [
+        "src/main/webapp/WEB-INF/views/myCart.jsp"
+      ],
+      "kind": "navigate",
+      "result": "PASS",
+      "controlCount": 1,
+      "controlLabel": "Show Cart",
+      "actual": {
+        "focusedId": "screen:cfe5757c-94d3-304c-b855-09942ab6923a",
+        "view": "src/main/webapp/WEB-INF/views/productDetails.jsp",
+        "choices": [
+          {
+            "target": "screen:7de30ede-6a70-3655-852e-e978f90b308e",
+            "label": "myCart",
+            "view": "src/main/webapp/WEB-INF/views/myCart.jsp"
+          },
+          {
+            "target": null,
+            "label": "無法確定前往哪個畫面",
+            "view": null
+          }
+        ],
+        "status": [
+          ""
+        ]
+      },
+      "offeredViews": [
+        "src/main/webapp/WEB-INF/views/myCart.jsp"
+      ],
+      "selected": {
+        "focusedId": "screen:7de30ede-6a70-3655-852e-e978f90b308e",
+        "view": "src/main/webapp/WEB-INF/views/myCart.jsp",
+        "choices": [],
+        "status": [
+          ""
+        ]
+      }
+    },
+    {
+      "id": "E06",
+      "project": "eBazaar",
+      "expectedViews": [],
+      "kind": "reveal",
+      "result": "FAIL",
+      "controlCount": 1,
+      "controlLabel": "Order Now",
+      "actual": {
+        "focusedId": "screen:cfe5757c-94d3-304c-b855-09942ab6923a",
+        "view": "src/main/webapp/WEB-INF/views/productDetails.jsp",
+        "choices": [
+          {
+            "target": null,
+            "label": "無法確定前往哪個畫面",
+            "view": null
+          },
+          {
+            "target": null,
+            "label": "無法確定前往哪個畫面",
+            "view": null
+          }
+        ],
+        "status": [
+          ""
+        ]
+      },
+      "revealed": false
+    },
+    {
+      "id": "E07",
+      "project": "eBazaar",
+      "expectedViews": [],
+      "kind": "api",
+      "result": "BLOCKED_PREREQUISITE",
+      "prerequisite": {
+        "id": "E06",
+        "project": "eBazaar",
+        "expectedViews": [],
+        "kind": "reveal",
+        "result": "FAIL",
+        "controlCount": 1,
+        "controlLabel": "Order Now",
+        "actual": {
+          "focusedId": "screen:cfe5757c-94d3-304c-b855-09942ab6923a",
+          "view": "src/main/webapp/WEB-INF/views/productDetails.jsp",
+          "choices": [
+            {
+              "target": null,
+              "label": "無法確定前往哪個畫面",
+              "view": null
+            },
+            {
+              "target": null,
+              "label": "無法確定前往哪個畫面",
+              "view": null
+            }
+          ],
+          "status": [
+            ""
+          ]
+        },
+        "revealed": false
+      },
+      "reason": "E06 did not restore required UI"
+    },
+    {
+      "id": "E08",
+      "project": "eBazaar",
+      "expectedViews": [],
+      "kind": "api",
+      "result": "FAIL",
+      "controlCount": 1,
+      "controlLabel": "Remove",
+      "actual": {
+        "focusedId": "screen:7de30ede-6a70-3655-852e-e978f90b308e",
+        "view": "src/main/webapp/WEB-INF/views/myCart.jsp",
+        "choices": [
+          {
+            "target": null,
+            "label": "無法確定前往哪個畫面",
+            "view": null
+          },
+          {
+            "target": null,
+            "label": "無法確定前往哪個畫面",
+            "view": null
+          },
+          {
+            "target": null,
+            "label": "無法確定前往哪個畫面",
+            "view": null
+          }
+        ],
+        "status": [
+          ""
+        ]
+      },
+      "apiTrace": false,
+      "feedbackRestored": false
+    },
+    {
+      "id": "E09",
+      "project": "eBazaar",
+      "expectedViews": [
+        "src/main/webapp/WEB-INF/flow/jsp/shippingDetails.jsp"
+      ],
+      "kind": "navigate",
+      "result": "FAIL",
+      "controlCount": 1,
+      "controlLabel": "Check out",
+      "actual": {
+        "focusedId": "screen:7de30ede-6a70-3655-852e-e978f90b308e",
+        "view": "src/main/webapp/WEB-INF/views/myCart.jsp",
+        "choices": [
+          {
+            "target": null,
+            "label": "無法確定前往哪個畫面",
+            "view": null
+          },
+          {
+            "target": null,
+            "label": "無法確定前往哪個畫面",
+            "view": null
+          }
+        ],
+        "status": [
+          ""
+        ]
+      },
+      "offeredViews": [
+        "src/main/webapp/WEB-INF/views/myCart.jsp"
+      ]
+    },
+    {
+      "id": "E10",
+      "project": "eBazaar",
+      "expectedViews": [
+        "src/main/webapp/WEB-INF/flow/jsp/paymentDetails.jsp"
+      ],
+      "kind": "navigate",
+      "result": "FAIL",
+      "controlCount": 1,
+      "controlLabel": "Continue",
+      "actual": {
+        "focusedId": "screen:27478133-b20f-3149-87d3-01831e1ff2bc",
+        "view": "src/main/webapp/WEB-INF/flow/jsp/shippingDetails.jsp",
+        "choices": [],
+        "status": [
+          "無法確定前往哪個畫面"
+        ]
+      },
+      "offeredViews": [
+        "src/main/webapp/WEB-INF/flow/jsp/shippingDetails.jsp"
+      ]
+    },
+    {
+      "id": "E11",
+      "project": "eBazaar",
+      "expectedViews": [
+        "src/main/webapp/WEB-INF/flow/jsp/shippingDetails.jsp"
+      ],
+      "kind": "navigate",
+      "result": "FAIL",
+      "controlCount": 1,
+      "controlLabel": "Back",
+      "actual": {
+        "focusedId": "screen:2efdaa7e-b751-35c6-8c27-7d09c04b587a",
+        "view": "src/main/webapp/WEB-INF/flow/jsp/paymentDetails.jsp",
+        "choices": [],
+        "status": [
+          "無法確定前往哪個畫面"
+        ]
+      },
+      "offeredViews": [
+        "src/main/webapp/WEB-INF/flow/jsp/paymentDetails.jsp"
+      ]
+    },
+    {
+      "id": "E12",
+      "project": "eBazaar",
+      "expectedViews": [
+        "src/main/webapp/WEB-INF/flow/jsp/orderConfirmation.jsp"
+      ],
+      "kind": "navigate",
+      "result": "FAIL",
+      "controlCount": 1,
+      "controlLabel": "Continue",
+      "actual": {
+        "focusedId": "screen:2efdaa7e-b751-35c6-8c27-7d09c04b587a",
+        "view": "src/main/webapp/WEB-INF/flow/jsp/paymentDetails.jsp",
+        "choices": [],
+        "status": [
+          "無法確定前往哪個畫面"
+        ]
+      },
+      "offeredViews": [
+        "src/main/webapp/WEB-INF/flow/jsp/paymentDetails.jsp"
+      ]
+    },
+    {
+      "id": "E13",
+      "project": "eBazaar",
+      "expectedViews": [
+        "src/main/webapp/WEB-INF/flow/jsp/thanks.jsp"
+      ],
+      "kind": "navigate",
+      "result": "FAIL",
+      "controlCount": 1,
+      "controlLabel": "Confirm",
+      "actual": {
+        "focusedId": "screen:6055dd72-9e57-325d-8c85-5681a816e7d5",
+        "view": "src/main/webapp/WEB-INF/flow/jsp/orderConfirmation.jsp",
+        "choices": [],
+        "status": [
+          "無法確定前往哪個畫面"
+        ]
+      },
+      "offeredViews": [
+        "src/main/webapp/WEB-INF/flow/jsp/orderConfirmation.jsp"
+      ]
+    },
+    {
+      "id": "E14",
+      "project": "eBazaar",
+      "expectedViews": [
+        "src/main/webapp/WEB-INF/flow/jsp/cancelOrder.jsp"
+      ],
+      "kind": "navigate",
+      "result": "FAIL",
+      "controlCount": 1,
+      "controlLabel": "Cancel",
+      "actual": {
+        "focusedId": "screen:27478133-b20f-3149-87d3-01831e1ff2bc",
+        "view": "src/main/webapp/WEB-INF/flow/jsp/shippingDetails.jsp",
+        "choices": [],
+        "status": [
+          "無法確定前往哪個畫面"
+        ]
+      },
+      "offeredViews": [
+        "src/main/webapp/WEB-INF/flow/jsp/shippingDetails.jsp"
+      ]
+    },
+    {
+      "id": "H01",
+      "project": "Hospital-Bed-Availability-Management-System",
+      "result": "BLOCKED_REPORT_GENERATION",
+      "reason": "CLI did not produce a report"
+    },
+    {
+      "id": "H02",
+      "project": "Hospital-Bed-Availability-Management-System",
+      "result": "BLOCKED_REPORT_GENERATION",
+      "reason": "CLI did not produce a report"
+    },
+    {
+      "id": "H03",
+      "project": "Hospital-Bed-Availability-Management-System",
+      "result": "BLOCKED_REPORT_GENERATION",
+      "reason": "CLI did not produce a report"
+    },
+    {
+      "id": "H04",
+      "project": "Hospital-Bed-Availability-Management-System",
+      "result": "BLOCKED_REPORT_GENERATION",
+      "reason": "CLI did not produce a report"
+    },
+    {
+      "id": "H05",
+      "project": "Hospital-Bed-Availability-Management-System",
+      "result": "BLOCKED_REPORT_GENERATION",
+      "reason": "CLI did not produce a report"
+    },
+    {
+      "id": "H06",
+      "project": "Hospital-Bed-Availability-Management-System",
+      "result": "BLOCKED_REPORT_GENERATION",
+      "reason": "CLI did not produce a report"
+    },
+    {
+      "id": "H07",
+      "project": "Hospital-Bed-Availability-Management-System",
+      "result": "BLOCKED_REPORT_GENERATION",
+      "reason": "CLI did not produce a report"
+    },
+    {
+      "id": "H08",
+      "project": "Hospital-Bed-Availability-Management-System",
+      "result": "BLOCKED_REPORT_GENERATION",
+      "reason": "CLI did not produce a report"
+    },
+    {
+      "id": "H09",
+      "project": "Hospital-Bed-Availability-Management-System",
+      "result": "BLOCKED_REPORT_GENERATION",
+      "reason": "CLI did not produce a report"
+    },
+    {
+      "id": "H10",
+      "project": "Hospital-Bed-Availability-Management-System",
+      "result": "BLOCKED_REPORT_GENERATION",
+      "reason": "CLI did not produce a report"
+    },
+    {
+      "id": "H11",
+      "project": "Hospital-Bed-Availability-Management-System",
+      "result": "BLOCKED_REPORT_GENERATION",
+      "reason": "CLI did not produce a report"
+    }
+  ],
+  "chains": [
+    {
+      "id": "C01",
+      "project": "MyStrutsApp",
+      "steps": [
+        "O01",
+        "O04"
+      ],
+      "description": "登入頁→註冊頁→送出註冊回原頁",
+      "result": "FAIL",
+      "stepsExecuted": [
+        {
+          "id": "O01",
+          "project": "MyStrutsApp",
+          "expectedViews": [
+            "web/Registration.jsp"
+          ],
+          "kind": "navigate",
+          "result": "FAIL",
+          "controlCount": 1,
+          "controlLabel": "REGISTER YOURSELF",
+          "actual": {
+            "focusedId": "screen:ea2e2154-8c6b-3548-ac4c-506c4f247633",
+            "view": "web/login.jsp",
+            "choices": [],
+            "status": [
+              "無法確定前往哪個畫面"
+            ]
+          },
+          "offeredViews": [
+            "web/login.jsp"
+          ]
+        }
+      ],
+      "blockedAt": "O01",
+      "reason": "FAIL"
+    },
+    {
+      "id": "C02",
+      "project": "eBazaar",
+      "steps": [
+        "E01",
+        "E03",
+        "E05",
+        "E09",
+        "E10",
+        "E12",
+        "E13"
+      ],
+      "description": "首頁→產品→詳情→購物車→寄送→付款→確認→完成",
+      "result": "FAIL",
+      "stepsExecuted": [
+        {
+          "id": "E01",
+          "project": "eBazaar",
+          "expectedViews": [
+            "src/main/webapp/WEB-INF/views/products.jsp"
+          ],
+          "kind": "navigate",
+          "result": "FAIL",
+          "controlCount": 1,
+          "controlLabel": "Go to Products",
+          "actual": {
+            "focusedId": "screen:87634b37-f330-3bc2-8813-d14a5e91121b",
+            "view": "src/main/webapp/WEB-INF/views/welcome.jsp",
+            "choices": [
+              {
+                "target": null,
+                "label": "無法確定前往哪個畫面",
+                "view": null
+              },
+              {
+                "target": "endpoint:357ba522-4523-3593-b2c3-db2a4981d09f",
+                "label": "無法確定前往哪個畫面",
+                "view": null
+              }
+            ],
+            "status": [
+              ""
+            ]
+          },
+          "offeredViews": [
+            "src/main/webapp/WEB-INF/views/welcome.jsp"
+          ]
+        }
+      ],
+      "blockedAt": "E01",
+      "reason": "FAIL"
+    },
+    {
+      "id": "C03",
+      "project": "Hospital-Bed-Availability-Management-System",
+      "steps": [
+        "H01",
+        "H02",
+        "H03",
+        "H04",
+        "H05",
+        "H06",
+        "H07",
+        "H08"
+      ],
+      "description": "首頁→醫院登入→註冊→房型→登入→新增病患→分配床位→工作台",
+      "result": "BLOCKED_REPORT_GENERATION",
+      "stepsExecuted": []
+    }
+  ],
+  "infrastructure": [
+    {
+      "project": "MyStrutsApp",
+      "reportGenerated": true,
+      "pageErrors": [],
+      "externalRequests": []
+    },
+    {
+      "project": "eBazaar",
+      "reportGenerated": true,
+      "pageErrors": [],
+      "externalRequests": []
+    },
+    {
+      "project": "Hospital-Bed-Availability-Management-System",
+      "reportGenerated": false
+    }
+  ]
+}

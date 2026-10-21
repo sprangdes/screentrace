@@ -1,0 +1,514 @@
+[
+  {
+    "project": "java7-struts1-jquery-bootstrap3-web-project",
+    "file": "src/main/webapp/incl/styles.jsp",
+    "line": 2,
+    "original": "https://cdn.jsdelivr.net/npm/bootstrap@3.3.7/dist/css/bootstrap.min.css",
+    "result": "EXTERNAL_NOT_FETCHED"
+  },
+  {
+    "project": "java7-struts1-jquery-bootstrap3-web-project",
+    "file": "src/main/webapp/incl/styles.jsp",
+    "line": 3,
+    "original": "https://cdn.jsdelivr.net/npm/bootstrap@3.3.7/dist/css/bootstrap-theme.min.css",
+    "result": "EXTERNAL_NOT_FETCHED"
+  },
+  {
+    "project": "java7-struts1-jquery-bootstrap3-web-project",
+    "file": "src/main/webapp/incl/styles.jsp",
+    "line": 4,
+    "original": "${contextPath}/third-party/font-awesome-4.7.0/css/font-awesome.min.css",
+    "resource": "src/main/webapp/third-party/font-awesome-4.7.0/css/font-awesome.min.css",
+    "expectedConsumers": [
+      "src/main/webapp/home.jsp",
+      "src/main/webapp/login.jsp",
+      "src/main/webapp/user/list.jsp",
+      "src/main/webapp/user/save/form.jsp"
+    ],
+    "screens": [
+      "screen:0dabd232-1575-327d-a141-89ea05d553c4",
+      "screen:166a2eb3-7da1-3aa3-ab38-bb368ff50e25",
+      "screen:9e377e6f-b711-378f-9847-fee40359a1ec",
+      "screen:afb83df4-f0f7-334a-9c2c-a19da07c172c"
+    ],
+    "packedMatchingCssAssets": [],
+    "linkedScreens": [],
+    "prefixProof": "/*!\n *  Font Awesome 4.7.0 by @davegandy - http://fontawesome.io - @fontawesome\n *  License - http://fontawesome.io/license (Font: SIL OFL 1.1, CSS: MIT License)\n */@font-face{font-family:'FontAwesome';src:url('../fonts/fontawesome-webfont.eot?v=4.7.0');sr",
+    "result": "FAIL"
+  },
+  {
+    "project": "java7-struts1-jquery-bootstrap3-web-project",
+    "file": "src/main/webapp/incl/styles.jsp",
+    "line": 5,
+    "original": "${contextPath}/style/main.css",
+    "resource": "src/main/webapp/style/main.css",
+    "expectedConsumers": [
+      "src/main/webapp/home.jsp",
+      "src/main/webapp/login.jsp",
+      "src/main/webapp/user/list.jsp",
+      "src/main/webapp/user/save/form.jsp"
+    ],
+    "screens": [
+      "screen:0dabd232-1575-327d-a141-89ea05d553c4",
+      "screen:166a2eb3-7da1-3aa3-ab38-bb368ff50e25",
+      "screen:9e377e6f-b711-378f-9847-fee40359a1ec",
+      "screen:afb83df4-f0f7-334a-9c2c-a19da07c172c"
+    ],
+    "packedMatchingCssAssets": [],
+    "linkedScreens": [],
+    "prefixProof": "body {\n    padding-top: 70px;\n}\n\nfooter {\n    background-color: #333;\n    color: #fff;\n    margin-top: 20px;\n    padding: 20px 0;\n}\n\n.loading-splash {\n    width: 100%;\n    height: 100%;\n    position: fixed;\n    top: 0px;\n    left: 0px;\n    z-index: 9999;\n ",
+    "result": "FAIL"
+  },
+  {
+    "project": "java7-struts1-jquery-bootstrap3-web-project",
+    "file": "src/main/webapp/page-layout/default.jsp",
+    "line": 12,
+    "original": "https://cdn.jsdelivr.net/npm/bootstrap@3.3.7/dist/css/bootstrap.min.css",
+    "result": "EXTERNAL_NOT_FETCHED"
+  },
+  {
+    "project": "java7-struts1-jquery-bootstrap3-web-project",
+    "file": "src/main/webapp/page-layout/default.jsp",
+    "line": 13,
+    "original": "https://cdn.jsdelivr.net/npm/bootstrap@3.3.7/dist/css/bootstrap-theme.min.css",
+    "result": "EXTERNAL_NOT_FETCHED"
+  },
+  {
+    "project": "java7-struts1-jquery-bootstrap3-web-project",
+    "file": "src/main/webapp/page-layout/default.jsp",
+    "line": 14,
+    "original": "${contextPath}/style/main.css",
+    "resource": "src/main/webapp/style/main.css",
+    "expectedConsumers": [
+      "src/main/webapp/page-layout/default.jsp"
+    ],
+    "screens": [
+      "screen:b43c12fd-abd3-3188-bb9f-65969be6d32f"
+    ],
+    "packedMatchingCssAssets": [],
+    "linkedScreens": [],
+    "prefixProof": "body {\n    padding-top: 70px;\n}\n\nfooter {\n    background-color: #333;\n    color: #fff;\n    margin-top: 20px;\n    padding: 20px 0;\n}\n\n.loading-splash {\n    width: 100%;\n    height: 100%;\n    position: fixed;\n    top: 0px;\n    left: 0px;\n    z-index: 9999;\n ",
+    "result": "FAIL"
+  },
+  {
+    "project": "java7-struts1-jquery-bootstrap3-web-project",
+    "file": "src/main/webapp/page-layout/full-width-fluid.jsp",
+    "line": 12,
+    "original": "https://cdn.jsdelivr.net/npm/bootstrap@3.3.7/dist/css/bootstrap.min.css",
+    "result": "EXTERNAL_NOT_FETCHED"
+  },
+  {
+    "project": "java7-struts1-jquery-bootstrap3-web-project",
+    "file": "src/main/webapp/page-layout/full-width-fluid.jsp",
+    "line": 13,
+    "original": "https://cdn.jsdelivr.net/npm/bootstrap@3.3.7/dist/css/bootstrap-theme.min.css",
+    "result": "EXTERNAL_NOT_FETCHED"
+  },
+  {
+    "project": "java7-struts1-jquery-bootstrap3-web-project",
+    "file": "src/main/webapp/page-layout/full-width-fluid.jsp",
+    "line": 14,
+    "original": "${contextPath}/style/main.css",
+    "resource": "src/main/webapp/style/main.css",
+    "expectedConsumers": [
+      "src/main/webapp/page-layout/full-width-fluid.jsp"
+    ],
+    "screens": [
+      "screen:d95ebd83-a9e9-3aaa-831b-746f4c5334b6"
+    ],
+    "packedMatchingCssAssets": [],
+    "linkedScreens": [],
+    "prefixProof": "body {\n    padding-top: 70px;\n}\n\nfooter {\n    background-color: #333;\n    color: #fff;\n    margin-top: 20px;\n    padding: 20px 0;\n}\n\n.loading-splash {\n    width: 100%;\n    height: 100%;\n    position: fixed;\n    top: 0px;\n    left: 0px;\n    z-index: 9999;\n ",
+    "result": "FAIL"
+  },
+  {
+    "project": "java7-struts1-jquery-bootstrap3-web-project",
+    "file": "src/main/webapp/page-layout/with-sidebar.jsp",
+    "line": 12,
+    "original": "https://cdn.jsdelivr.net/npm/bootstrap@3.3.7/dist/css/bootstrap.min.css",
+    "result": "EXTERNAL_NOT_FETCHED"
+  },
+  {
+    "project": "java7-struts1-jquery-bootstrap3-web-project",
+    "file": "src/main/webapp/page-layout/with-sidebar.jsp",
+    "line": 13,
+    "original": "https://cdn.jsdelivr.net/npm/bootstrap@3.3.7/dist/css/bootstrap-theme.min.css",
+    "result": "EXTERNAL_NOT_FETCHED"
+  },
+  {
+    "project": "java7-struts1-jquery-bootstrap3-web-project",
+    "file": "src/main/webapp/page-layout/with-sidebar.jsp",
+    "line": 14,
+    "original": "${contextPath}/style/main.css",
+    "resource": "src/main/webapp/style/main.css",
+    "expectedConsumers": [
+      "src/main/webapp/page-layout/with-sidebar.jsp"
+    ],
+    "screens": [
+      "screen:720d306c-223d-348b-9b3a-8862bda07214"
+    ],
+    "packedMatchingCssAssets": [],
+    "linkedScreens": [],
+    "prefixProof": "body {\n    padding-top: 70px;\n}\n\nfooter {\n    background-color: #333;\n    color: #fff;\n    margin-top: 20px;\n    padding: 20px 0;\n}\n\n.loading-splash {\n    width: 100%;\n    height: 100%;\n    position: fixed;\n    top: 0px;\n    left: 0px;\n    z-index: 9999;\n ",
+    "result": "FAIL"
+  },
+  {
+    "project": "InventoryMGRSpringMVCCRUD",
+    "file": "WebContent/WEB-INF/addProduct.jsp",
+    "line": 17,
+    "original": "https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css",
+    "result": "EXTERNAL_NOT_FETCHED"
+  },
+  {
+    "project": "InventoryMGRSpringMVCCRUD",
+    "file": "WebContent/WEB-INF/addProduct.jsp",
+    "line": 19,
+    "original": "https://maxcdn.bootstrapcdn.com/font-awesome/4.5.0/css/font-awesome.min.css",
+    "result": "EXTERNAL_NOT_FETCHED"
+  },
+  {
+    "project": "InventoryMGRSpringMVCCRUD",
+    "file": "WebContent/WEB-INF/addProduct.jsp",
+    "line": 21,
+    "original": "https://fonts.googleapis.com/css?family=Raleway:500,900|Quicksand",
+    "result": "EXTERNAL_NOT_FETCHED"
+  },
+  {
+    "project": "InventoryMGRSpringMVCCRUD",
+    "file": "WebContent/WEB-INF/addProduct.jsp",
+    "line": 24,
+    "original": "styles/main.css",
+    "resource": "WebContent/styles/main.css",
+    "expectedConsumers": [
+      "WebContent/WEB-INF/addProduct.jsp"
+    ],
+    "screens": [
+      "screen:095a7eab-9513-3869-866d-edf31cb6a2d6"
+    ],
+    "packedMatchingCssAssets": [],
+    "linkedScreens": [],
+    "prefixProof": "* {\n    box-sizing: border-box;\n}\n\n* h1 {\n    font-family: 'Raleway', sans-serif;\n    font-weight: bold;\n}\n\n* h2, h3, h4, p, a, blockquote {\n    font-family: 'Quicksand', serif;\n}\n\nbody {\n    padding: 50px 0 0 0;\n}\n\nh4 a:hover {\n    text-decoration: none;\n",
+    "result": "FAIL"
+  },
+  {
+    "project": "InventoryMGRSpringMVCCRUD",
+    "file": "WebContent/WEB-INF/addProduct.jsp",
+    "line": 25,
+    "original": "styles/addStyles.css",
+    "resource": "WebContent/styles/addStyles.css",
+    "expectedConsumers": [
+      "WebContent/WEB-INF/addProduct.jsp"
+    ],
+    "screens": [
+      "screen:095a7eab-9513-3869-866d-edf31cb6a2d6"
+    ],
+    "packedMatchingCssAssets": [],
+    "linkedScreens": [],
+    "prefixProof": ".addForm {\n    padding-top: 50px;\n    margin:0 auto;\n    text-align: left;\n}\n\n.addField {\n\twidth: 30vw;\n}",
+    "result": "FAIL"
+  },
+  {
+    "project": "InventoryMGRSpringMVCCRUD",
+    "file": "WebContent/WEB-INF/deleteProduct.jsp",
+    "line": 17,
+    "original": "https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css",
+    "result": "EXTERNAL_NOT_FETCHED"
+  },
+  {
+    "project": "InventoryMGRSpringMVCCRUD",
+    "file": "WebContent/WEB-INF/deleteProduct.jsp",
+    "line": 19,
+    "original": "https://maxcdn.bootstrapcdn.com/font-awesome/4.5.0/css/font-awesome.min.css",
+    "result": "EXTERNAL_NOT_FETCHED"
+  },
+  {
+    "project": "InventoryMGRSpringMVCCRUD",
+    "file": "WebContent/WEB-INF/deleteProduct.jsp",
+    "line": 21,
+    "original": "https://fonts.googleapis.com/css?family=Raleway:500,900|Quicksand",
+    "result": "EXTERNAL_NOT_FETCHED"
+  },
+  {
+    "project": "InventoryMGRSpringMVCCRUD",
+    "file": "WebContent/WEB-INF/deleteProduct.jsp",
+    "line": 24,
+    "original": "styles/main.css",
+    "resource": "WebContent/styles/main.css",
+    "expectedConsumers": [
+      "WebContent/WEB-INF/deleteProduct.jsp"
+    ],
+    "screens": [
+      "screen:c06ea220-18c6-3c71-a86a-1215a117ad3a"
+    ],
+    "packedMatchingCssAssets": [],
+    "linkedScreens": [],
+    "prefixProof": "* {\n    box-sizing: border-box;\n}\n\n* h1 {\n    font-family: 'Raleway', sans-serif;\n    font-weight: bold;\n}\n\n* h2, h3, h4, p, a, blockquote {\n    font-family: 'Quicksand', serif;\n}\n\nbody {\n    padding: 50px 0 0 0;\n}\n\nh4 a:hover {\n    text-decoration: none;\n",
+    "result": "FAIL"
+  },
+  {
+    "project": "InventoryMGRSpringMVCCRUD",
+    "file": "WebContent/WEB-INF/deleteProduct.jsp",
+    "line": 25,
+    "original": "deleteStyles/main.css",
+    "resource": "WebContent/deleteStyles/main.css",
+    "result": "SOURCE_MISSING_STYLE"
+  },
+  {
+    "project": "InventoryMGRSpringMVCCRUD",
+    "file": "WebContent/WEB-INF/editProduct.jsp",
+    "line": 18,
+    "original": "https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css",
+    "result": "EXTERNAL_NOT_FETCHED"
+  },
+  {
+    "project": "InventoryMGRSpringMVCCRUD",
+    "file": "WebContent/WEB-INF/editProduct.jsp",
+    "line": 20,
+    "original": "https://maxcdn.bootstrapcdn.com/font-awesome/4.5.0/css/font-awesome.min.css",
+    "result": "EXTERNAL_NOT_FETCHED"
+  },
+  {
+    "project": "InventoryMGRSpringMVCCRUD",
+    "file": "WebContent/WEB-INF/editProduct.jsp",
+    "line": 22,
+    "original": "https://fonts.googleapis.com/css?family=Raleway:500,900|Quicksand",
+    "result": "EXTERNAL_NOT_FETCHED"
+  },
+  {
+    "project": "InventoryMGRSpringMVCCRUD",
+    "file": "WebContent/WEB-INF/editProduct.jsp",
+    "line": 25,
+    "original": "styles/main.css",
+    "resource": "WebContent/styles/main.css",
+    "expectedConsumers": [
+      "WebContent/WEB-INF/editProduct.jsp"
+    ],
+    "screens": [
+      "screen:254378a8-19ef-391e-a57e-351bb2d1547a"
+    ],
+    "packedMatchingCssAssets": [],
+    "linkedScreens": [],
+    "prefixProof": "* {\n    box-sizing: border-box;\n}\n\n* h1 {\n    font-family: 'Raleway', sans-serif;\n    font-weight: bold;\n}\n\n* h2, h3, h4, p, a, blockquote {\n    font-family: 'Quicksand', serif;\n}\n\nbody {\n    padding: 50px 0 0 0;\n}\n\nh4 a:hover {\n    text-decoration: none;\n",
+    "result": "FAIL"
+  },
+  {
+    "project": "InventoryMGRSpringMVCCRUD",
+    "file": "WebContent/WEB-INF/editProduct.jsp",
+    "line": 26,
+    "original": "styles/editStyles.css",
+    "resource": "WebContent/styles/editStyles.css",
+    "expectedConsumers": [
+      "WebContent/WEB-INF/editProduct.jsp"
+    ],
+    "screens": [
+      "screen:254378a8-19ef-391e-a57e-351bb2d1547a"
+    ],
+    "packedMatchingCssAssets": [],
+    "linkedScreens": [],
+    "prefixProof": ".editForm {\n    padding-top: 50px;\n    margin:0 auto;\n    text-align: left;\n}\n\n.editField {\n\twidth: 30vw;\n}",
+    "result": "FAIL"
+  },
+  {
+    "project": "InventoryMGRSpringMVCCRUD",
+    "file": "WebContent/WEB-INF/viewInventory.jsp",
+    "line": 16,
+    "original": "https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css",
+    "result": "EXTERNAL_NOT_FETCHED"
+  },
+  {
+    "project": "InventoryMGRSpringMVCCRUD",
+    "file": "WebContent/WEB-INF/viewInventory.jsp",
+    "line": 18,
+    "original": "https://maxcdn.bootstrapcdn.com/font-awesome/4.5.0/css/font-awesome.min.css",
+    "result": "EXTERNAL_NOT_FETCHED"
+  },
+  {
+    "project": "InventoryMGRSpringMVCCRUD",
+    "file": "WebContent/WEB-INF/viewInventory.jsp",
+    "line": 20,
+    "original": "https://fonts.googleapis.com/css?family=Raleway:500,900|Quicksand",
+    "result": "EXTERNAL_NOT_FETCHED"
+  },
+  {
+    "project": "InventoryMGRSpringMVCCRUD",
+    "file": "WebContent/WEB-INF/viewInventory.jsp",
+    "line": 23,
+    "original": "styles/main.css",
+    "resource": "WebContent/styles/main.css",
+    "expectedConsumers": [
+      "WebContent/WEB-INF/viewInventory.jsp"
+    ],
+    "screens": [
+      "screen:bb7dd084-209c-3f00-ae64-867d0e6a2e1d"
+    ],
+    "packedMatchingCssAssets": [],
+    "linkedScreens": [],
+    "prefixProof": "* {\n    box-sizing: border-box;\n}\n\n* h1 {\n    font-family: 'Raleway', sans-serif;\n    font-weight: bold;\n}\n\n* h2, h3, h4, p, a, blockquote {\n    font-family: 'Quicksand', serif;\n}\n\nbody {\n    padding: 50px 0 0 0;\n}\n\nh4 a:hover {\n    text-decoration: none;\n",
+    "result": "FAIL"
+  },
+  {
+    "project": "InventoryMGRSpringMVCCRUD",
+    "file": "WebContent/WEB-INF/viewInventory.jsp",
+    "line": 24,
+    "original": "styles/viewInventoryStyles.css",
+    "resource": "WebContent/styles/viewInventoryStyles.css",
+    "expectedConsumers": [
+      "WebContent/WEB-INF/viewInventory.jsp"
+    ],
+    "screens": [
+      "screen:bb7dd084-209c-3f00-ae64-867d0e6a2e1d"
+    ],
+    "packedMatchingCssAssets": [],
+    "linkedScreens": [],
+    "prefixProof": "#inventorylist {\n\tmargin 0 auto;\n\twidth: 100%;\n}\n\ntable {\n\tmargin-bottom: 50px;\n}\n\ntable tr {\n\twidth: 100%;\n\ttext-align: center;\n}\n\ntable th {\n    font-weight: bold;\n    padding-left: 50px;\n\n}\n\ntable td {\n\ttext-align:right;\n\tpadding-top: 10px;\n\tpadding-lef",
+    "result": "FAIL"
+  },
+  {
+    "project": "InventoryMGRSpringMVCCRUD",
+    "file": "WebContent/WEB-INF/viewProduct.jsp",
+    "line": 17,
+    "original": "https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css",
+    "result": "EXTERNAL_NOT_FETCHED"
+  },
+  {
+    "project": "InventoryMGRSpringMVCCRUD",
+    "file": "WebContent/WEB-INF/viewProduct.jsp",
+    "line": 19,
+    "original": "https://maxcdn.bootstrapcdn.com/font-awesome/4.5.0/css/font-awesome.min.css",
+    "result": "EXTERNAL_NOT_FETCHED"
+  },
+  {
+    "project": "InventoryMGRSpringMVCCRUD",
+    "file": "WebContent/WEB-INF/viewProduct.jsp",
+    "line": 21,
+    "original": "https://fonts.googleapis.com/css?family=Raleway:500,900|Quicksand",
+    "result": "EXTERNAL_NOT_FETCHED"
+  },
+  {
+    "project": "InventoryMGRSpringMVCCRUD",
+    "file": "WebContent/WEB-INF/viewProduct.jsp",
+    "line": 24,
+    "original": "styles/main.css",
+    "resource": "WebContent/styles/main.css",
+    "expectedConsumers": [
+      "WebContent/WEB-INF/viewProduct.jsp"
+    ],
+    "screens": [
+      "screen:eac593da-4e35-334b-9c7c-5469bb172c2d"
+    ],
+    "packedMatchingCssAssets": [],
+    "linkedScreens": [],
+    "prefixProof": "* {\n    box-sizing: border-box;\n}\n\n* h1 {\n    font-family: 'Raleway', sans-serif;\n    font-weight: bold;\n}\n\n* h2, h3, h4, p, a, blockquote {\n    font-family: 'Quicksand', serif;\n}\n\nbody {\n    padding: 50px 0 0 0;\n}\n\nh4 a:hover {\n    text-decoration: none;\n",
+    "result": "FAIL"
+  },
+  {
+    "project": "InventoryMGRSpringMVCCRUD",
+    "file": "WebContent/WEB-INF/viewProduct.jsp",
+    "line": 25,
+    "original": "styles/viewStyles.css",
+    "resource": "WebContent/styles/viewStyles.css",
+    "expectedConsumers": [
+      "WebContent/WEB-INF/viewProduct.jsp"
+    ],
+    "screens": [
+      "screen:eac593da-4e35-334b-9c7c-5469bb172c2d"
+    ],
+    "packedMatchingCssAssets": [],
+    "linkedScreens": [],
+    "prefixProof": "table tr {\n\twidth: 100%;\n\ttext-align: center;\n}\n\ntable th {\n    font-weight: bold;\n    padding-left: 50px;\n\n}\n\ntable td {\n\ttext-align:right;\n}",
+    "result": "FAIL"
+  },
+  {
+    "project": "InventoryMGRSpringMVCCRUD",
+    "file": "WebContent/contact.html",
+    "line": 12,
+    "original": "https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css",
+    "result": "EXTERNAL_NOT_FETCHED"
+  },
+  {
+    "project": "InventoryMGRSpringMVCCRUD",
+    "file": "WebContent/contact.html",
+    "line": 13,
+    "original": "https://maxcdn.bootstrapcdn.com/font-awesome/4.5.0/css/font-awesome.min.css",
+    "result": "EXTERNAL_NOT_FETCHED"
+  },
+  {
+    "project": "InventoryMGRSpringMVCCRUD",
+    "file": "WebContent/contact.html",
+    "line": 14,
+    "original": "https://fonts.googleapis.com/css?family=Raleway:500,900|Quicksand",
+    "result": "EXTERNAL_NOT_FETCHED"
+  },
+  {
+    "project": "InventoryMGRSpringMVCCRUD",
+    "file": "WebContent/contact.html",
+    "line": 15,
+    "original": "styles/main.css",
+    "resource": "WebContent/styles/main.css",
+    "expectedConsumers": [
+      "WebContent/contact.html"
+    ],
+    "screens": [
+      "screen:e781e206-829f-3b34-92db-20aadc105712"
+    ],
+    "packedMatchingCssAssets": [],
+    "linkedScreens": [],
+    "prefixProof": "* {\n    box-sizing: border-box;\n}\n\n* h1 {\n    font-family: 'Raleway', sans-serif;\n    font-weight: bold;\n}\n\n* h2, h3, h4, p, a, blockquote {\n    font-family: 'Quicksand', serif;\n}\n\nbody {\n    padding: 50px 0 0 0;\n}\n\nh4 a:hover {\n    text-decoration: none;\n",
+    "result": "FAIL"
+  },
+  {
+    "project": "InventoryMGRSpringMVCCRUD",
+    "file": "WebContent/contact.html",
+    "line": 16,
+    "original": "styles/contactStyles.css",
+    "resource": "WebContent/styles/contactStyles.css",
+    "expectedConsumers": [
+      "WebContent/contact.html"
+    ],
+    "screens": [
+      "screen:e781e206-829f-3b34-92db-20aadc105712"
+    ],
+    "packedMatchingCssAssets": [],
+    "linkedScreens": [],
+    "prefixProof": ".contact-content {\n    text-align: center;\n    padding: 100px 0;\n}\n\n.contact-content h1 {\n    font-size: 4vw;\n}\n\n.contact-content a {\n    color: #333333;\n}\n\n.contact-content p {\n    font-size: 20px;\n}\n\n\n.contact-content ul {\n    padding: 20px 0 40px 0;\n}\n\n",
+    "result": "FAIL"
+  },
+  {
+    "project": "InventoryMGRSpringMVCCRUD",
+    "file": "WebContent/index.html",
+    "line": 12,
+    "original": "https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css",
+    "result": "EXTERNAL_NOT_FETCHED"
+  },
+  {
+    "project": "InventoryMGRSpringMVCCRUD",
+    "file": "WebContent/index.html",
+    "line": 13,
+    "original": "https://maxcdn.bootstrapcdn.com/font-awesome/4.5.0/css/font-awesome.min.css",
+    "result": "EXTERNAL_NOT_FETCHED"
+  },
+  {
+    "project": "InventoryMGRSpringMVCCRUD",
+    "file": "WebContent/index.html",
+    "line": 14,
+    "original": "https://fonts.googleapis.com/css?family=Raleway:500,900|Quicksand",
+    "result": "EXTERNAL_NOT_FETCHED"
+  },
+  {
+    "project": "InventoryMGRSpringMVCCRUD",
+    "file": "WebContent/index.html",
+    "line": 15,
+    "original": "styles/main.css",
+    "resource": "WebContent/styles/main.css",
+    "expectedConsumers": [
+      "WebContent/index.html"
+    ],
+    "screens": [
+      "screen:ae06d006-39cf-38ef-8f47-48ac9d6a24c6"
+    ],
+    "packedMatchingCssAssets": [],
+    "linkedScreens": [],
+    "prefixProof": "* {\n    box-sizing: border-box;\n}\n\n* h1 {\n    font-family: 'Raleway', sans-serif;\n    font-weight: bold;\n}\n\n* h2, h3, h4, p, a, blockquote {\n    font-family: 'Quicksand', serif;\n}\n\nbody {\n    padding: 50px 0 0 0;\n}\n\nh4 a:hover {\n    text-decoration: none;\n",
+    "result": "FAIL"
+  }
+]

@@ -2,11 +2,13 @@
 
 R3 WP18 controller flows: `SpringControllerReturns` in `screentrace-adapter-spring` classifies annotation-handler returns with JavaParser, retaining each return line, class/method, original expression and enclosing branch conditions. Literal views use `RENDERS`; application-relative `redirect:`/`forward:` and constant RedirectView targets resolve through existing endpoints into `FORWARDS_TO`. A constant redirect prefix plus an unknown whole path segment becomes an `INFERRED` template, never a concrete runtime value. `SpringControllerFlow` projects only proven navigation/form `TRIGGERS → HANDLED_BY → RENDERS/FORWARDS_TO` chains into `NAVIGATES_TO`; AJAX responses do not imply page navigation. All endpoint candidates and return branches remain visible, including validation self returns. Mutable/aliased ModelAndView values, unsupported targets and unknown methods remain unresolved; redirect recursion has a cycle guard and depth 10. No graph schema change. Details: [ADR 0037](adr/0037-controller-return-flow.md).
 
+WP74 keeps resource references in graph `SOURCE_ARTIFACT` nodes (`STATIC_RESOURCE_REFERENCE`, `StaticResourceParser` evidence) and conditional request alternatives in source-proven component attributes. `SpringSubmittedModel` JSON v1 evidence on RENDERS carries direct scalar input bindings; capture emits inert markers and the viewer owns per-payload submitted strings. These are projections of the canonical graph, with no core framework dependency or schema version change. Details and limits: [ADR 0094](adr/0094-public-batch4-workflow-repairs.md).
+
 ## Current POC implementation
 
 The current implementation analyzes server-rendered JSP applications using Struts 1, Spring MVC, Spring Boot, or their supported combinations, and Spring Boot back ends with React single-page front ends (ADR 0088, ADR 0089).
 
-R3 WP17 parser behavior: `JspTagFileExpander` in `screentrace-parser-jsp` follows statically declared taglib `tagdir` mappings, substitutes only literal call-site attributes, expands nested tag files and `<jsp:doBody/>`, and guards recursion at depth 12 with cycle/depth diagnostics. Dynamic attributes remain unresolved. Components are projected from each consuming JSP, retaining both the page call-site and tag-file definition as evidence. `SpringMvcAnalyzer` resolves a relative JSP URL only when exactly one controller route is proven to render that JSP; it joins the relative value to that route's directory and records `INFERRED` evidence. Multiple routes remain `AMBIGUOUS`; no route remains `UNRESOLVED`. The legacy exception in ADR 0005 still excludes `c:set` from URL-variable resolution.
+R3 WP17 parser behavior: `JspTagFileExpander` in `screentrace-parser-jsp` follows statically declared taglib `tagdir` mappings, substitutes only literal call-site attributes, expands nested tag files and `<jsp:doBody/>`, and guards recursion at depth 12 with cycle/depth diagnostics. Dynamic attributes remain unresolved. Components are projected from each consuming JSP, retaining both the page call-site and tag-file definition as evidence. `SpringMvcAnalyzer` resolves a relative JSP URL only when exactly one controller route is proven to render that JSP; it joins the relative value to that route's directory and records `INFERRED` evidence. Multiple routes remain `AMBIGUOUS`; no route remains `UNRESOLVED`. ADR 0094 adds a bounded, complete same-source literal choose exception for `c:set`; arbitrary assignments and EL evaluation remain excluded.
 
 ```text
 Target source (read-only) -> scanner -> selected Spring and/or Struts adapter -> ApplicationGraph JSON -> embedded standalone HTML
@@ -616,3 +618,23 @@ PreviewElement.unmappedReason 是可選的五類字串：NO_GRAPH_COMPONENT、AM
 已對應但無法模擬的原因只由 viewer 推導，不寫入 unmappedReason。simulation.ts 的 assessSimulation 呼叫原 simulate／canSimulate，並共用 callback-root、事件適用、證據解析與 effect 判定；simulation-ui.ts 的 elementSimulationAssessment 統一 DOM 彈窗可用性與原生輸入條件；畫面／專案統計、右欄及點選提示使用同一 assessment。每個未知元素恰歸一類；原生可編輯欄位排除於未知分類，無行為與已記錄行為的歧義／目的未解析／類型或事件不支援用中文兩層呈現。見 ADR0055、reports/R7.md。
 
 R7 決定性補強：capture 在元素樣式／bounds 量測前，先觸發版面、於 Node 有界輪詢各 FontFace 是否仍 loading；目標 JavaScript 始終停用。字型完成或失敗的 fallback 才記錄，5 秒逾時維持 capture 失敗診斷。沒有改寫或正規化原始 computed-style 數值，詳 ADR0055。
+
+## WP69 公開應用流程修復
+
+Spring adapter 的 `SpringWebFlowContribution` 只讀取登錄的 flow XML，將 entry、view-state、transition 與 submitter 事件投射到既有 framework-neutral graph；缺少／循環來源保留診斷。Spring ViewResolver 增加 properties，ModelAndView 增加受限制的常值 setter 追蹤。Struts 相對路徑支援 conventional legacy web roots。
+
+JS AST 的來源 evidence 可攜帶固定操作 metadata（show/hide/toggle、setValue、message、reload、print、已識別日期元件）；viewer 以工具程式執行這些有界效果，不執行來源 JS。callback 分支維持人工選擇、未知值維持未知；pathname 前綴推導與已設定 context path 分開。預覽同一行的精確來源 ID 只在原候選集合內使用。schema 2.2、PreviewModel 2、資源邊界、review 與 API 規則不變。詳見 [ADR 0091](adr/0091-public-workflow-restoration.md)。
+
+## WP70 — public workflow state and template projection
+
+[ADR 0092](adr/0092-public-workflows-state-and-template-projection.md) adds bounded Thymeleaf URL normalization in the markup parser and physical HTML view correlation in the Spring adapter. Direct source-proven Spring Data paths emit INFERRED `simulationData` handler attributes and `simulationBindings` screen attributes. Capture emits graph-derived inert template bindings; the viewer stores demonstration CRUD state in a payload-scoped WeakMap, retaining preview records across cloned rows and refreshing same-screen returns. No target source, backend, database, review or graph is mutated. Graph 2.2 / Preview 2 and all existing assertions remain unchanged. Returned inline confirm gates continuation; common preview lookup narrows only within original anchor candidates. Snapshot CSS settles animations at a deterministic completed frame while ordinary hidden content stays hidden.
+
+## WP72 有限工作流程語意
+
+來源掃描以安全常值 web.docbase.dir 限定有效 web root。相對腳本／請求／預覽資源使用 canonical graph 的 GET 渲染鏈或直接公開頁 alias 目錄證據；多目錄與私有模板不猜測。JavaParser 保留有限 alias 賦值分支及 unresolvedReturnCount，Acorn 產生 callback、文字、樣式及選項條件效果。ModelFeedback、simulationData conditional 與多 readAll bindings 沿用既有 attributes／evidence 擴充點；Graph 2.2、Preview 2 不變。capture 僅投影有證據的模板標記，viewer 執行工具自己的狀態機，modal 移動原節點並還原，避免 duplicate ID。詳細邊界見 [ADR 0093](adr/0093-public-completeness-workflow-repairs.md)。
+
+### WP76 來源編碼、片段、Security processor 與 DTO 示範契約
+
+JSP 宣告編碼由 scanner 的受限位元組讀取處理，非 UTF-8 metadata 經 SourceEncoding evidence 進圖；capture 僅轉換產出，保留來源位元組。Thymeleaf 的具名片段、Struts 代理／具參數 action 鏈、Spring Security DSL 均在各 adapter／parser 貢獻既有圖節點與證據，不進 Core。
+
+有限 JavaScript workflowGate／display／class／confirm 操作與 DTO scalar 欄位契約由同一圖供 viewer 消費。DTO contract 的 scope 為 submitted-fields-only，認證、session、SQL、關聯、日期計算仍未知；未選列的更新只顯示來源正常目的且明示未回放資料。來源條件未知時保留所有候選，巢狀候選可直接選取。決定與邊界見 [ADR 0095](adr/0095-public-batch5-workflow-repairs.md)。

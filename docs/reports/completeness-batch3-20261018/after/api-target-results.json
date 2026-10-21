@@ -1,0 +1,1083 @@
+{
+  "expectations": [
+    {
+      "project": "contract-management-system",
+      "file": "src/main/webapp/input.jsp",
+      "line": 159,
+      "url": "checkName.do",
+      "method": "GET"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/brandHandaler.js",
+      "line": 14,
+      "url": "retriveBrandInfo",
+      "method": "POST"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/brandHandaler.js",
+      "line": 35,
+      "url": "newBrandID",
+      "method": "POST"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/brandHandaler.js",
+      "line": 53,
+      "url": "retriveBrandInfo",
+      "method": "POST"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/brandHandaler.js",
+      "line": 73,
+      "url": "searchBrand",
+      "method": "GET"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/categoryHandaler.js",
+      "line": 14,
+      "url": "retriveCategoryInfo",
+      "method": "POST"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/categoryHandaler.js",
+      "line": 35,
+      "url": "newCategoryID",
+      "method": "POST"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/categoryHandaler.js",
+      "line": 53,
+      "url": "retriveCategoryInfo",
+      "method": "POST"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/categoryHandaler.js",
+      "line": 73,
+      "url": "searchCategory",
+      "method": "GET"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/customerHandaler.js",
+      "line": 14,
+      "url": "retriveCustomerInfo",
+      "method": "POST"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/customerHandaler.js",
+      "line": 37,
+      "url": "newCustomerID",
+      "method": "POST"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/customerHandaler.js",
+      "line": 53,
+      "url": "retriveCustomerInfo",
+      "method": "POST"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/customerHandaler.js",
+      "line": 72,
+      "url": "searchCustomer",
+      "method": "GET"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/modelHandaler.js",
+      "line": 17,
+      "url": "retriveBrandList",
+      "method": "POST"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/modelHandaler.js",
+      "line": 37,
+      "url": "retriveCategoryList",
+      "method": "POST"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/modelHandaler.js",
+      "line": 57,
+      "url": "retriveModelInfo",
+      "method": "POST"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/modelHandaler.js",
+      "line": 81,
+      "url": "retriveBrandList",
+      "method": "POST"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/modelHandaler.js",
+      "line": 100,
+      "url": "retriveCategoryList",
+      "method": "POST"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/modelHandaler.js",
+      "line": 123,
+      "url": "retriveModelInfo",
+      "method": "POST"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/modelHandaler.js",
+      "line": 143,
+      "url": "searchModel",
+      "method": "GET"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/productHandaler.js",
+      "line": 17,
+      "url": "retriveBrandList",
+      "method": "POST"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/productHandaler.js",
+      "line": 37,
+      "url": "retriveCategoryList",
+      "method": "POST"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/productHandaler.js",
+      "line": 57,
+      "url": "retriveProductInfo",
+      "method": "POST"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/productHandaler.js",
+      "line": 84,
+      "url": "newStockID",
+      "method": "POST"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/productHandaler.js",
+      "line": 97,
+      "url": "newEntryID",
+      "method": "POST"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/productHandaler.js",
+      "line": 110,
+      "url": "retriveSupplierList",
+      "method": "POST"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/productHandaler.js",
+      "line": 130,
+      "url": "retriveBrandList",
+      "method": "POST"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/productHandaler.js",
+      "line": 150,
+      "url": "retriveCategoryList",
+      "method": "POST"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/productHandaler.js",
+      "line": 178,
+      "url": "retriveModelList",
+      "method": "POST"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/productHandaler.js",
+      "line": 209,
+      "url": "retriveModelList",
+      "method": "POST"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/productHandaler.js",
+      "line": 238,
+      "url": "retriveProductInfo",
+      "method": "POST"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/productHandaler.js",
+      "line": 258,
+      "url": "searchProduct",
+      "method": "GET"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/supplierHandaler.js",
+      "line": 14,
+      "url": "retriveSupplierInfo",
+      "method": "POST"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/supplierHandaler.js",
+      "line": 37,
+      "url": "newSupplierID",
+      "method": "POST"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/supplierHandaler.js",
+      "line": 55,
+      "url": "retriveSupplierInfo",
+      "method": "POST"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/supplierHandaler.js",
+      "line": 74,
+      "url": "searchSupplier",
+      "method": "GET"
+    }
+  ],
+  "results": [
+    {
+      "project": "contract-management-system",
+      "file": "src/main/webapp/input.jsp",
+      "line": 159,
+      "url": "checkName.do",
+      "method": "GET",
+      "expectedRoute": "/checkName.do",
+      "sourceHandlers": [
+        {
+          "kind": "strutsAction",
+          "file": "src/main/webapp/WEB-INF/struts-config.xml",
+          "line": 17,
+          "path": "/checkName",
+          "type": "sample.ContractCheckAction",
+          "forwards": []
+        }
+      ],
+      "behaviorCount": 1,
+      "resolvedBehaviorCount": 1,
+      "result": "PASS"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/brandHandaler.js",
+      "line": 14,
+      "url": "retriveBrandInfo",
+      "method": "POST",
+      "expectedRoute": "/retriveBrandInfo",
+      "sourceHandlers": [
+        {
+          "kind": "endpoint",
+          "file": "src/java/com/emp/controller/brandController.java",
+          "line": 90,
+          "class": "brandController",
+          "method": "retriveBrandInfo",
+          "httpMethod": "POST",
+          "path": "/retriveBrandInfo",
+          "params": "",
+          "rest": true
+        }
+      ],
+      "behaviorCount": 7,
+      "resolvedBehaviorCount": 7,
+      "result": "PASS"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/brandHandaler.js",
+      "line": 35,
+      "url": "newBrandID",
+      "method": "POST",
+      "expectedRoute": "/newBrandID",
+      "sourceHandlers": [
+        {
+          "kind": "endpoint",
+          "file": "src/java/com/emp/controller/brandController.java",
+          "line": 63,
+          "class": "brandController",
+          "method": "newBrandID",
+          "httpMethod": "POST",
+          "path": "/newBrandID",
+          "params": "",
+          "rest": true
+        }
+      ],
+      "behaviorCount": 7,
+      "resolvedBehaviorCount": 7,
+      "result": "PASS"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/brandHandaler.js",
+      "line": 53,
+      "url": "retriveBrandInfo",
+      "method": "POST",
+      "expectedRoute": "/retriveBrandInfo",
+      "sourceHandlers": [
+        {
+          "kind": "endpoint",
+          "file": "src/java/com/emp/controller/brandController.java",
+          "line": 90,
+          "class": "brandController",
+          "method": "retriveBrandInfo",
+          "httpMethod": "POST",
+          "path": "/retriveBrandInfo",
+          "params": "",
+          "rest": true
+        }
+      ],
+      "behaviorCount": 7,
+      "resolvedBehaviorCount": 7,
+      "result": "PASS"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/brandHandaler.js",
+      "line": 73,
+      "url": "searchBrand",
+      "method": "GET",
+      "expectedRoute": "/searchBrand",
+      "sourceHandlers": [
+        {
+          "kind": "endpoint",
+          "file": "src/java/com/emp/controller/brandController.java",
+          "line": 119,
+          "class": "brandController",
+          "method": "searchBrand",
+          "httpMethod": "GET",
+          "path": "/searchBrand",
+          "params": "",
+          "rest": true
+        }
+      ],
+      "behaviorCount": 7,
+      "resolvedBehaviorCount": 7,
+      "result": "PASS"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/categoryHandaler.js",
+      "line": 14,
+      "url": "retriveCategoryInfo",
+      "method": "POST",
+      "expectedRoute": "/retriveCategoryInfo",
+      "sourceHandlers": [
+        {
+          "kind": "endpoint",
+          "file": "src/java/com/emp/controller/categoryController.java",
+          "line": 88,
+          "class": "categoryController",
+          "method": "retriveCategoryInfo",
+          "httpMethod": "POST",
+          "path": "/retriveCategoryInfo",
+          "params": "",
+          "rest": true
+        }
+      ],
+      "behaviorCount": 7,
+      "resolvedBehaviorCount": 7,
+      "result": "PASS"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/categoryHandaler.js",
+      "line": 35,
+      "url": "newCategoryID",
+      "method": "POST",
+      "expectedRoute": "/newCategoryID",
+      "sourceHandlers": [
+        {
+          "kind": "endpoint",
+          "file": "src/java/com/emp/controller/categoryController.java",
+          "line": 63,
+          "class": "categoryController",
+          "method": "newCategoryID",
+          "httpMethod": "POST",
+          "path": "/newCategoryID",
+          "params": "",
+          "rest": true
+        }
+      ],
+      "behaviorCount": 7,
+      "resolvedBehaviorCount": 7,
+      "result": "PASS"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/categoryHandaler.js",
+      "line": 53,
+      "url": "retriveCategoryInfo",
+      "method": "POST",
+      "expectedRoute": "/retriveCategoryInfo",
+      "sourceHandlers": [
+        {
+          "kind": "endpoint",
+          "file": "src/java/com/emp/controller/categoryController.java",
+          "line": 88,
+          "class": "categoryController",
+          "method": "retriveCategoryInfo",
+          "httpMethod": "POST",
+          "path": "/retriveCategoryInfo",
+          "params": "",
+          "rest": true
+        }
+      ],
+      "behaviorCount": 7,
+      "resolvedBehaviorCount": 7,
+      "result": "PASS"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/categoryHandaler.js",
+      "line": 73,
+      "url": "searchCategory",
+      "method": "GET",
+      "expectedRoute": "/searchCategory",
+      "sourceHandlers": [
+        {
+          "kind": "endpoint",
+          "file": "src/java/com/emp/controller/categoryController.java",
+          "line": 116,
+          "class": "categoryController",
+          "method": "searchCategory",
+          "httpMethod": "GET",
+          "path": "/searchCategory",
+          "params": "",
+          "rest": true
+        }
+      ],
+      "behaviorCount": 7,
+      "resolvedBehaviorCount": 7,
+      "result": "PASS"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/customerHandaler.js",
+      "line": 14,
+      "url": "retriveCustomerInfo",
+      "method": "POST",
+      "expectedRoute": "/retriveCustomerInfo",
+      "sourceHandlers": [
+        {
+          "kind": "endpoint",
+          "file": "src/java/com/emp/controller/customerController.java",
+          "line": 94,
+          "class": "customerController",
+          "method": "retriveCustomerInfo",
+          "httpMethod": "POST",
+          "path": "/retriveCustomerInfo",
+          "params": "",
+          "rest": true
+        }
+      ],
+      "behaviorCount": 7,
+      "resolvedBehaviorCount": 7,
+      "result": "PASS"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/customerHandaler.js",
+      "line": 37,
+      "url": "newCustomerID",
+      "method": "POST",
+      "expectedRoute": "/newCustomerID",
+      "sourceHandlers": [
+        {
+          "kind": "endpoint",
+          "file": "src/java/com/emp/controller/customerController.java",
+          "line": 65,
+          "class": "customerController",
+          "method": "newCustomerID",
+          "httpMethod": "POST",
+          "path": "/newCustomerID",
+          "params": "",
+          "rest": true
+        }
+      ],
+      "behaviorCount": 7,
+      "resolvedBehaviorCount": 7,
+      "result": "PASS"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/customerHandaler.js",
+      "line": 53,
+      "url": "retriveCustomerInfo",
+      "method": "POST",
+      "expectedRoute": "/retriveCustomerInfo",
+      "sourceHandlers": [
+        {
+          "kind": "endpoint",
+          "file": "src/java/com/emp/controller/customerController.java",
+          "line": 94,
+          "class": "customerController",
+          "method": "retriveCustomerInfo",
+          "httpMethod": "POST",
+          "path": "/retriveCustomerInfo",
+          "params": "",
+          "rest": true
+        }
+      ],
+      "behaviorCount": 7,
+      "resolvedBehaviorCount": 7,
+      "result": "PASS"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/customerHandaler.js",
+      "line": 72,
+      "url": "searchCustomer",
+      "method": "GET",
+      "expectedRoute": "/searchCustomer",
+      "sourceHandlers": [
+        {
+          "kind": "endpoint",
+          "file": "src/java/com/emp/controller/customerController.java",
+          "line": 124,
+          "class": "customerController",
+          "method": "searchCustomer",
+          "httpMethod": "GET",
+          "path": "/searchCustomer",
+          "params": "",
+          "rest": true
+        }
+      ],
+      "behaviorCount": 7,
+      "resolvedBehaviorCount": 7,
+      "result": "PASS"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/modelHandaler.js",
+      "line": 17,
+      "url": "retriveBrandList",
+      "method": "POST",
+      "expectedRoute": "/retriveBrandList",
+      "sourceHandlers": [
+        {
+          "kind": "endpoint",
+          "file": "src/java/com/emp/controller/modelController.java",
+          "line": 65,
+          "class": "modelController",
+          "method": "retriveBrandList",
+          "httpMethod": "POST",
+          "path": "/retriveBrandList",
+          "params": "",
+          "rest": true
+        }
+      ],
+      "behaviorCount": 7,
+      "resolvedBehaviorCount": 7,
+      "result": "PASS"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/modelHandaler.js",
+      "line": 37,
+      "url": "retriveCategoryList",
+      "method": "POST",
+      "expectedRoute": "/retriveCategoryList",
+      "sourceHandlers": [
+        {
+          "kind": "endpoint",
+          "file": "src/java/com/emp/controller/modelController.java",
+          "line": 73,
+          "class": "modelController",
+          "method": "retriveCategoryList",
+          "httpMethod": "POST",
+          "path": "/retriveCategoryList",
+          "params": "",
+          "rest": true
+        }
+      ],
+      "behaviorCount": 7,
+      "resolvedBehaviorCount": 7,
+      "result": "PASS"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/modelHandaler.js",
+      "line": 57,
+      "url": "retriveModelInfo",
+      "method": "POST",
+      "expectedRoute": "/retriveModelInfo",
+      "sourceHandlers": [
+        {
+          "kind": "endpoint",
+          "file": "src/java/com/emp/controller/modelController.java",
+          "line": 101,
+          "class": "modelController",
+          "method": "retriveModelInfo",
+          "httpMethod": "POST",
+          "path": "/retriveModelInfo",
+          "params": "",
+          "rest": true
+        }
+      ],
+      "behaviorCount": 7,
+      "resolvedBehaviorCount": 7,
+      "result": "PASS"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/modelHandaler.js",
+      "line": 81,
+      "url": "retriveBrandList",
+      "method": "POST",
+      "expectedRoute": "/retriveBrandList",
+      "sourceHandlers": [
+        {
+          "kind": "endpoint",
+          "file": "src/java/com/emp/controller/modelController.java",
+          "line": 65,
+          "class": "modelController",
+          "method": "retriveBrandList",
+          "httpMethod": "POST",
+          "path": "/retriveBrandList",
+          "params": "",
+          "rest": true
+        }
+      ],
+      "behaviorCount": 7,
+      "resolvedBehaviorCount": 7,
+      "result": "PASS"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/modelHandaler.js",
+      "line": 100,
+      "url": "retriveCategoryList",
+      "method": "POST",
+      "expectedRoute": "/retriveCategoryList",
+      "sourceHandlers": [
+        {
+          "kind": "endpoint",
+          "file": "src/java/com/emp/controller/modelController.java",
+          "line": 73,
+          "class": "modelController",
+          "method": "retriveCategoryList",
+          "httpMethod": "POST",
+          "path": "/retriveCategoryList",
+          "params": "",
+          "rest": true
+        }
+      ],
+      "behaviorCount": 7,
+      "resolvedBehaviorCount": 7,
+      "result": "PASS"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/modelHandaler.js",
+      "line": 123,
+      "url": "retriveModelInfo",
+      "method": "POST",
+      "expectedRoute": "/retriveModelInfo",
+      "sourceHandlers": [
+        {
+          "kind": "endpoint",
+          "file": "src/java/com/emp/controller/modelController.java",
+          "line": 101,
+          "class": "modelController",
+          "method": "retriveModelInfo",
+          "httpMethod": "POST",
+          "path": "/retriveModelInfo",
+          "params": "",
+          "rest": true
+        }
+      ],
+      "behaviorCount": 7,
+      "resolvedBehaviorCount": 7,
+      "result": "PASS"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/modelHandaler.js",
+      "line": 143,
+      "url": "searchModel",
+      "method": "GET",
+      "expectedRoute": "/searchModel",
+      "sourceHandlers": [
+        {
+          "kind": "endpoint",
+          "file": "src/java/com/emp/controller/modelController.java",
+          "line": 129,
+          "class": "modelController",
+          "method": "searchModel",
+          "httpMethod": "GET",
+          "path": "/searchModel",
+          "params": "",
+          "rest": true
+        }
+      ],
+      "behaviorCount": 7,
+      "resolvedBehaviorCount": 7,
+      "result": "PASS"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/productHandaler.js",
+      "line": 17,
+      "url": "retriveBrandList",
+      "method": "POST",
+      "expectedRoute": "/retriveBrandList",
+      "sourceHandlers": [
+        {
+          "kind": "endpoint",
+          "file": "src/java/com/emp/controller/modelController.java",
+          "line": 65,
+          "class": "modelController",
+          "method": "retriveBrandList",
+          "httpMethod": "POST",
+          "path": "/retriveBrandList",
+          "params": "",
+          "rest": true
+        }
+      ],
+      "behaviorCount": 7,
+      "resolvedBehaviorCount": 7,
+      "result": "PASS"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/productHandaler.js",
+      "line": 37,
+      "url": "retriveCategoryList",
+      "method": "POST",
+      "expectedRoute": "/retriveCategoryList",
+      "sourceHandlers": [
+        {
+          "kind": "endpoint",
+          "file": "src/java/com/emp/controller/modelController.java",
+          "line": 73,
+          "class": "modelController",
+          "method": "retriveCategoryList",
+          "httpMethod": "POST",
+          "path": "/retriveCategoryList",
+          "params": "",
+          "rest": true
+        }
+      ],
+      "behaviorCount": 7,
+      "resolvedBehaviorCount": 7,
+      "result": "PASS"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/productHandaler.js",
+      "line": 57,
+      "url": "retriveProductInfo",
+      "method": "POST",
+      "expectedRoute": "/retriveProductInfo",
+      "sourceHandlers": [],
+      "behaviorCount": 7,
+      "resolvedBehaviorCount": 0,
+      "result": "SOURCE_NO_DECLARED_HANDLER"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/productHandaler.js",
+      "line": 84,
+      "url": "newStockID",
+      "method": "POST",
+      "expectedRoute": "/newStockID",
+      "sourceHandlers": [
+        {
+          "kind": "endpoint",
+          "file": "src/java/com/emp/controller/productController.java",
+          "line": 67,
+          "class": "productController",
+          "method": "newSupplierID",
+          "httpMethod": "POST",
+          "path": "/newStockID",
+          "params": "",
+          "rest": true
+        }
+      ],
+      "behaviorCount": 7,
+      "resolvedBehaviorCount": 7,
+      "result": "PASS"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/productHandaler.js",
+      "line": 97,
+      "url": "newEntryID",
+      "method": "POST",
+      "expectedRoute": "/newEntryID",
+      "sourceHandlers": [
+        {
+          "kind": "endpoint",
+          "file": "src/java/com/emp/controller/productController.java",
+          "line": 75,
+          "class": "productController",
+          "method": "newEntryID",
+          "httpMethod": "POST",
+          "path": "/newEntryID",
+          "params": "",
+          "rest": true
+        }
+      ],
+      "behaviorCount": 7,
+      "resolvedBehaviorCount": 7,
+      "result": "PASS"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/productHandaler.js",
+      "line": 110,
+      "url": "retriveSupplierList",
+      "method": "POST",
+      "expectedRoute": "/retriveSupplierList",
+      "sourceHandlers": [
+        {
+          "kind": "endpoint",
+          "file": "src/java/com/emp/controller/productController.java",
+          "line": 83,
+          "class": "productController",
+          "method": "retriveSupplierList",
+          "httpMethod": "POST",
+          "path": "/retriveSupplierList",
+          "params": "",
+          "rest": true
+        }
+      ],
+      "behaviorCount": 7,
+      "resolvedBehaviorCount": 7,
+      "result": "PASS"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/productHandaler.js",
+      "line": 130,
+      "url": "retriveBrandList",
+      "method": "POST",
+      "expectedRoute": "/retriveBrandList",
+      "sourceHandlers": [
+        {
+          "kind": "endpoint",
+          "file": "src/java/com/emp/controller/modelController.java",
+          "line": 65,
+          "class": "modelController",
+          "method": "retriveBrandList",
+          "httpMethod": "POST",
+          "path": "/retriveBrandList",
+          "params": "",
+          "rest": true
+        }
+      ],
+      "behaviorCount": 7,
+      "resolvedBehaviorCount": 7,
+      "result": "PASS"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/productHandaler.js",
+      "line": 150,
+      "url": "retriveCategoryList",
+      "method": "POST",
+      "expectedRoute": "/retriveCategoryList",
+      "sourceHandlers": [
+        {
+          "kind": "endpoint",
+          "file": "src/java/com/emp/controller/modelController.java",
+          "line": 73,
+          "class": "modelController",
+          "method": "retriveCategoryList",
+          "httpMethod": "POST",
+          "path": "/retriveCategoryList",
+          "params": "",
+          "rest": true
+        }
+      ],
+      "behaviorCount": 7,
+      "resolvedBehaviorCount": 7,
+      "result": "PASS"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/productHandaler.js",
+      "line": 178,
+      "url": "retriveModelList",
+      "method": "POST",
+      "expectedRoute": "/retriveModelList",
+      "sourceHandlers": [
+        {
+          "kind": "endpoint",
+          "file": "src/java/com/emp/controller/productController.java",
+          "line": 91,
+          "class": "productController",
+          "method": "retriveModelList",
+          "httpMethod": "POST",
+          "path": "/retriveModelList",
+          "params": "",
+          "rest": true
+        }
+      ],
+      "behaviorCount": 7,
+      "resolvedBehaviorCount": 7,
+      "result": "PASS"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/productHandaler.js",
+      "line": 209,
+      "url": "retriveModelList",
+      "method": "POST",
+      "expectedRoute": "/retriveModelList",
+      "sourceHandlers": [
+        {
+          "kind": "endpoint",
+          "file": "src/java/com/emp/controller/productController.java",
+          "line": 91,
+          "class": "productController",
+          "method": "retriveModelList",
+          "httpMethod": "POST",
+          "path": "/retriveModelList",
+          "params": "",
+          "rest": true
+        }
+      ],
+      "behaviorCount": 7,
+      "resolvedBehaviorCount": 7,
+      "result": "PASS"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/productHandaler.js",
+      "line": 238,
+      "url": "retriveProductInfo",
+      "method": "POST",
+      "expectedRoute": "/retriveProductInfo",
+      "sourceHandlers": [],
+      "behaviorCount": 7,
+      "resolvedBehaviorCount": 0,
+      "result": "SOURCE_NO_DECLARED_HANDLER"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/productHandaler.js",
+      "line": 258,
+      "url": "searchProduct",
+      "method": "GET",
+      "expectedRoute": "/searchProduct",
+      "sourceHandlers": [],
+      "behaviorCount": 7,
+      "resolvedBehaviorCount": 0,
+      "result": "SOURCE_NO_DECLARED_HANDLER"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/supplierHandaler.js",
+      "line": 14,
+      "url": "retriveSupplierInfo",
+      "method": "POST",
+      "expectedRoute": "/retriveSupplierInfo",
+      "sourceHandlers": [
+        {
+          "kind": "endpoint",
+          "file": "src/java/com/emp/controller/supplierController.java",
+          "line": 88,
+          "class": "supplierController",
+          "method": "retriveSupplierInfo",
+          "httpMethod": "POST",
+          "path": "/retriveSupplierInfo",
+          "params": "",
+          "rest": true
+        }
+      ],
+      "behaviorCount": 7,
+      "resolvedBehaviorCount": 7,
+      "result": "PASS"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/supplierHandaler.js",
+      "line": 37,
+      "url": "newSupplierID",
+      "method": "POST",
+      "expectedRoute": "/newSupplierID",
+      "sourceHandlers": [
+        {
+          "kind": "endpoint",
+          "file": "src/java/com/emp/controller/supplierController.java",
+          "line": 61,
+          "class": "supplierController",
+          "method": "newSupplierID",
+          "httpMethod": "POST",
+          "path": "/newSupplierID",
+          "params": "",
+          "rest": true
+        }
+      ],
+      "behaviorCount": 7,
+      "resolvedBehaviorCount": 7,
+      "result": "PASS"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/supplierHandaler.js",
+      "line": 55,
+      "url": "retriveSupplierInfo",
+      "method": "POST",
+      "expectedRoute": "/retriveSupplierInfo",
+      "sourceHandlers": [
+        {
+          "kind": "endpoint",
+          "file": "src/java/com/emp/controller/supplierController.java",
+          "line": 88,
+          "class": "supplierController",
+          "method": "retriveSupplierInfo",
+          "httpMethod": "POST",
+          "path": "/retriveSupplierInfo",
+          "params": "",
+          "rest": true
+        }
+      ],
+      "behaviorCount": 7,
+      "resolvedBehaviorCount": 7,
+      "result": "PASS"
+    },
+    {
+      "project": "SpringMVC-IMS",
+      "file": "web/resources/JS/supplierHandaler.js",
+      "line": 74,
+      "url": "searchSupplier",
+      "method": "GET",
+      "expectedRoute": "/searchSupplier",
+      "sourceHandlers": [
+        {
+          "kind": "endpoint",
+          "file": "src/java/com/emp/controller/supplierController.java",
+          "line": 117,
+          "class": "supplierController",
+          "method": "searchSupplier",
+          "httpMethod": "GET",
+          "path": "/searchSupplier",
+          "params": "",
+          "rest": true
+        }
+      ],
+      "behaviorCount": 7,
+      "resolvedBehaviorCount": 7,
+      "result": "PASS"
+    }
+  ]
+}

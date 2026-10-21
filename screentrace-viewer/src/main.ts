@@ -1,3 +1,4 @@
+import {projectSimulationData} from './simulation-data';
 import {attachSimulation} from './simulation-ui';
 import {inertDocument} from './inert-document';
 import {iconSprite,icon,iconButton} from './shell-ui';
@@ -350,9 +351,9 @@ try {
   own.setAttribute('sandbox','allow-same-origin');own.title=index.nodes.get(id)!.name;
   own.onload=()=>{
    const doc=own.contentDocument;if(!doc||!own.getAttribute('srcdoc'))return;
-   decorate(doc,id);selectFromPreview(doc,id);preview.setAttribute('aria-busy','false');shown();
+   projectSimulationData(payload,id,doc);decorate(doc,id);selectFromPreview(doc,id);preview.setAttribute('aria-busy','false');shown();
    doc.addEventListener('keydown',onKey);
-   simulation=attachSimulation(payload,id,own,viewer!,{focus:(target,notice)=>openScreen(target,{notice}),api:target=>showApi(target),thumbnail});
+   simulation=attachSimulation(payload,id,own,viewer!,{focus:(target,notice)=>openScreen(target,{notice,refresh:true}),api:target=>showApi(target),thumbnail});
    setTimeout(()=>{if(current===id)prepare(nextUndecidedId());},800);
    const spotlight=doc.querySelector('[data-spotlight]');if(spotlight)revealInPreview(spotlight,own,viewer?.querySelector('.prototype-scroll')??null);
   };
@@ -402,7 +403,8 @@ try {
  };
 
  let pendingNotice:string|undefined;
- const openScreen=(id:string,options:{component?:string;push?:boolean;notice?:string}={})=>{
+ const openScreen=(id:string,options:{component?:string;push?:boolean;notice?:string;refresh?:boolean}={})=>{
+  const refreshing=options.refresh&&current===id;
   pendingNotice=options.notice;
   if(pendingNotice&&current===id&&viewer){const status=viewer.querySelector('.prototype-status');if(status)status.textContent=pendingNotice;pendingNotice=undefined;}
   if(options.push!==false){if(!current||page!=='screens')history.start(id);else history.visit(id,viewerScroll());}
@@ -410,7 +412,7 @@ try {
   highlightComponent=options.component;if(options.component)buttonsOpen=true;
   if(current!==id){frame=undefined;viewer=undefined;simulation=undefined;}
   if(overlayOpen())listCollapsed=true;
-  page='screens';current=id;render();
+  page='screens';current=id;render();if(refreshing)view?.focus(id);
  };
  // Presenting lays the preview over the whole window, top bar and side panels included; the layout underneath stays.
  let presenting=false;

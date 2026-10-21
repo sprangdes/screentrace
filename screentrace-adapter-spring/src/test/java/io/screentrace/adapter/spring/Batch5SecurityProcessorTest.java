@@ -1,0 +1,16 @@
+package io.screentrace.adapter.spring;
+import org.junit.jupiter.api.Test;import org.junit.jupiter.api.io.TempDir;import java.nio.file.*;import java.util.*;import io.screentrace.core.ApplicationGraph;import io.screentrace.core.ApplicationGraph.*;import io.screentrace.scanner.ProjectScanner;import static org.junit.jupiter.api.Assertions.*;
+class Batch5SecurityProcessorTest {
+ @TempDir Path root;
+ @Test void explicitFilterEntrypointKeepsUnknownAuthenticationAndSourceSuccess()throws Exception{
+  Files.writeString(root.resolve("Config.java"),"import org.springframework.security.config.annotation.web.builders.HttpSecurity;class Config{@Bean Object security(HttpSecurity http,AuthenticationSuccessHandler handler){http.formLogin(form->form.loginProcessingUrl(\"/auth\").successHandler(handler));return http.build();}}");
+  Files.writeString(root.resolve("Success.java"),"import org.springframework.security.web.authentication.AuthenticationSuccessHandler;@Controller class Success implements AuthenticationSuccessHandler{public void onAuthenticationSuccess(HttpServletRequest request,HttpServletResponse response,Authentication auth){response.sendRedirect(request.getContextPath()+\"/list\");}}");
+  var loc=new SourceLocation("Page.java",1);var proof=List.of(new AnalysisEvidence(loc,"Fixture",ResolutionStatus.CONFIRMED,"source"));var nodes=List.of(new GraphNode("ep",NodeType.ENDPOINT,"list",Map.of("path","/list","httpMethod","GET"),loc,Confidence.CONFIRMED,proof),new GraphNode("h",NodeType.HANDLER,"list",Map.of(),loc,Confidence.CONFIRMED,proof),new GraphNode("s",NodeType.SCREEN,"list",Map.of("view","list.html"),loc,Confidence.CONFIRMED,proof));var edges=List.of(new Relationship("e1",EdgeType.HANDLED_BY,"ep","h",Confidence.CONFIRMED,loc,proof),new Relationship("e2",EdgeType.RENDERS,"h","s",Confidence.CONFIRMED,loc,proof));var g=new ApplicationGraph(new ApplicationGraph.Application("t",".",List.of()),nodes,edges,List.of(),List.of(),"2.2",List.of(),List.of());var result=SpringSecurityProcessors.enrich(g,new ProjectScanner().scan(root));assertTrue(result.nodes().stream().anyMatch(n->n.type()==NodeType.ENDPOINT&&"/auth".equals(n.attributes().get("path"))));assertTrue(result.nodes().stream().anyMatch(n->"1".equals(n.attributes().get("unresolvedReturnCount"))));assertTrue(result.relationships().stream().anyMatch(e->e.type()==EdgeType.FORWARDS_TO&&e.to().equals("s")));
+ }
+ @Test void conditionalReassignedAndDuplicateRegistrationsRemainUnknown()throws Exception{
+  for(String body:List.of("if(flag)http.formLogin(f->f.loginProcessingUrl(\"/auth\"));","http=other;http.formLogin(f->f.loginProcessingUrl(\"/auth\"));","http.formLogin(f->f.loginProcessingUrl(\"/auth\"));http.formLogin(f->f.loginProcessingUrl(\"/other\"));")){
+   Files.writeString(root.resolve("Config.java"),"import org.springframework.security.config.annotation.web.builders.HttpSecurity;class Config{@Bean Object security(HttpSecurity http){"+body+"return http.build();}}");
+   var g=new ApplicationGraph(new ApplicationGraph.Application("t",".",List.of()),List.of(),List.of(),List.of(),List.of(),"2.2",List.of(),List.of());assertTrue(SpringSecurityProcessors.enrich(g,new ProjectScanner().scan(root)).nodes().stream().noneMatch(n->n.type()==NodeType.ENDPOINT));
+  }
+ }
+}

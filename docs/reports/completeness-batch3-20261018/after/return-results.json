@@ -1,0 +1,2275 @@
+[
+  {
+    "project": "Fintech-Finance-Banking-Application",
+    "endpoint": {
+      "kind": "endpoint",
+      "file": "src/main/java/com/bank_springboot/controllers/AccountController.java",
+      "line": 22,
+      "class": "AccountController",
+      "method": "createAccount",
+      "httpMethod": "POST",
+      "path": "/account/create_account",
+      "params": "",
+      "rest": false
+    },
+    "expectedViews": [
+      "src/main/webapp/WEB-INF/jsp/dashboard.jsp"
+    ],
+    "actualViews": [
+      "src/main/webapp/WEB-INF/jsp/dashboard.jsp"
+    ],
+    "missing": [],
+    "extra": [],
+    "result": "PASS",
+    "basis": [
+      {
+        "kind": "return",
+        "file": "src/main/java/com/bank_springboot/controllers/AccountController.java",
+        "line": 31,
+        "class": "AccountController",
+        "method": "createAccount",
+        "expression": "\"redirect:/app/dashboard\"",
+        "guards": [
+          "accountName.isEmpty() || accountType.isEmpty()"
+        ]
+      },
+      {
+        "kind": "return",
+        "file": "src/main/java/com/bank_springboot/controllers/AccountController.java",
+        "line": 46,
+        "class": "AccountController",
+        "method": "createAccount",
+        "expression": "\"redirect:/app/dashboard\"",
+        "guards": []
+      }
+    ]
+  },
+  {
+    "project": "Fintech-Finance-Banking-Application",
+    "endpoint": {
+      "kind": "endpoint",
+      "file": "src/main/java/com/bank_springboot/controllers/AppController.java",
+      "line": 35,
+      "class": "AppController",
+      "method": "getDashboard",
+      "httpMethod": "GET",
+      "path": "/app/dashboard",
+      "params": "",
+      "rest": false
+    },
+    "expectedViews": [
+      "src/main/webapp/WEB-INF/jsp/dashboard.jsp"
+    ],
+    "actualViews": [
+      "src/main/webapp/WEB-INF/jsp/dashboard.jsp"
+    ],
+    "missing": [],
+    "extra": [],
+    "result": "PASS",
+    "basis": [
+      {
+        "kind": "return",
+        "file": "src/main/java/com/bank_springboot/controllers/AppController.java",
+        "line": 52,
+        "class": "AppController",
+        "method": "getDashboard",
+        "expression": "getDashboardPage",
+        "guards": []
+      },
+      {
+        "kind": "modelAndView",
+        "file": "src/main/java/com/bank_springboot/controllers/AppController.java",
+        "line": 37,
+        "method": "getDashboard",
+        "expression": "new ModelAndView(\"dashboard\")",
+        "literalView": "dashboard"
+      }
+    ]
+  },
+  {
+    "project": "Fintech-Finance-Banking-Application",
+    "endpoint": {
+      "kind": "endpoint",
+      "file": "src/main/java/com/bank_springboot/controllers/AppController.java",
+      "line": 55,
+      "class": "AppController",
+      "method": "getPaymentHistory",
+      "httpMethod": "GET",
+      "path": "/app/payment_history",
+      "params": "",
+      "rest": false
+    },
+    "expectedViews": [
+      "src/main/webapp/WEB-INF/jsp/paymentHistory.jsp"
+    ],
+    "actualViews": [
+      "src/main/webapp/WEB-INF/jsp/paymentHistory.jsp"
+    ],
+    "missing": [],
+    "extra": [],
+    "result": "PASS",
+    "basis": [
+      {
+        "kind": "return",
+        "file": "src/main/java/com/bank_springboot/controllers/AppController.java",
+        "line": 68,
+        "class": "AppController",
+        "method": "getPaymentHistory",
+        "expression": "getPaymentHistoryPage",
+        "guards": []
+      },
+      {
+        "kind": "modelAndView",
+        "file": "src/main/java/com/bank_springboot/controllers/AppController.java",
+        "line": 58,
+        "method": "getPaymentHistory",
+        "expression": "new ModelAndView(\"paymentHistory\")",
+        "literalView": "paymentHistory"
+      }
+    ]
+  },
+  {
+    "project": "Fintech-Finance-Banking-Application",
+    "endpoint": {
+      "kind": "endpoint",
+      "file": "src/main/java/com/bank_springboot/controllers/AppController.java",
+      "line": 73,
+      "class": "AppController",
+      "method": "getTransactHistory",
+      "httpMethod": "GET",
+      "path": "/app/transact_history",
+      "params": "",
+      "rest": false
+    },
+    "expectedViews": [
+      "src/main/webapp/WEB-INF/jsp/transactHistory.jsp"
+    ],
+    "actualViews": [
+      "src/main/webapp/WEB-INF/jsp/transactHistory.jsp"
+    ],
+    "missing": [],
+    "extra": [],
+    "result": "PASS",
+    "basis": [
+      {
+        "kind": "return",
+        "file": "src/main/java/com/bank_springboot/controllers/AppController.java",
+        "line": 86,
+        "class": "AppController",
+        "method": "getTransactHistory",
+        "expression": "getTransactHistoryPage",
+        "guards": []
+      },
+      {
+        "kind": "modelAndView",
+        "file": "src/main/java/com/bank_springboot/controllers/AppController.java",
+        "line": 76,
+        "method": "getTransactHistory",
+        "expression": "new ModelAndView(\"transactHistory\")",
+        "literalView": "transactHistory"
+      }
+    ]
+  },
+  {
+    "project": "Fintech-Finance-Banking-Application",
+    "endpoint": {
+      "kind": "endpoint",
+      "file": "src/main/java/com/bank_springboot/controllers/AuthController.java",
+      "line": 34,
+      "class": "AuthController",
+      "method": "getLogin",
+      "httpMethod": "GET",
+      "path": "/login",
+      "params": "",
+      "rest": false
+    },
+    "expectedViews": [
+      "src/main/webapp/WEB-INF/jsp/login.jsp"
+    ],
+    "actualViews": [
+      "src/main/webapp/WEB-INF/jsp/login.jsp"
+    ],
+    "missing": [],
+    "extra": [],
+    "result": "PASS",
+    "basis": [
+      {
+        "kind": "return",
+        "file": "src/main/java/com/bank_springboot/controllers/AuthController.java",
+        "line": 45,
+        "class": "AuthController",
+        "method": "getLogin",
+        "expression": "getLoginPage",
+        "guards": []
+      },
+      {
+        "kind": "modelAndView",
+        "file": "src/main/java/com/bank_springboot/controllers/AuthController.java",
+        "line": 37,
+        "method": "getLogin",
+        "expression": "new ModelAndView(\"login\")",
+        "literalView": "login"
+      }
+    ]
+  },
+  {
+    "project": "Fintech-Finance-Banking-Application",
+    "endpoint": {
+      "kind": "endpoint",
+      "file": "src/main/java/com/bank_springboot/controllers/AuthController.java",
+      "line": 48,
+      "class": "AuthController",
+      "method": "login",
+      "httpMethod": "POST",
+      "path": "/login",
+      "params": "",
+      "rest": false
+    },
+    "expectedViews": [
+      "src/main/webapp/WEB-INF/jsp/dashboard.jsp",
+      "src/main/webapp/WEB-INF/jsp/error.jsp",
+      "src/main/webapp/WEB-INF/jsp/login.jsp"
+    ],
+    "actualViews": [
+      "src/main/webapp/WEB-INF/jsp/dashboard.jsp",
+      "src/main/webapp/WEB-INF/jsp/error.jsp",
+      "src/main/webapp/WEB-INF/jsp/login.jsp"
+    ],
+    "missing": [],
+    "extra": [],
+    "result": "PASS",
+    "basis": [
+      {
+        "kind": "return",
+        "file": "src/main/java/com/bank_springboot/controllers/AuthController.java",
+        "line": 58,
+        "class": "AuthController",
+        "method": "login",
+        "expression": "\"login\"",
+        "guards": [
+          "email.isEmpty() || email == null || password.isEmpty() || password == null"
+        ]
+      },
+      {
+        "kind": "return",
+        "file": "src/main/java/com/bank_springboot/controllers/AuthController.java",
+        "line": 72,
+        "class": "AuthController",
+        "method": "login",
+        "expression": "\"login\"",
+        "guards": [
+          "!BCrypt.checkpw(password, getPasswordInDatabase)",
+          "getEmailInDatabase != null"
+        ]
+      },
+      {
+        "kind": "return",
+        "file": "src/main/java/com/bank_springboot/controllers/AuthController.java",
+        "line": 78,
+        "class": "AuthController",
+        "method": "login",
+        "expression": "\"error\"",
+        "guards": [
+          "getEmailInDatabase != null"
+        ]
+      },
+      {
+        "kind": "return",
+        "file": "src/main/java/com/bank_springboot/controllers/AuthController.java",
+        "line": 93,
+        "class": "AuthController",
+        "method": "login",
+        "expression": "\"login\"",
+        "guards": [
+          "verified != 1"
+        ]
+      },
+      {
+        "kind": "return",
+        "file": "src/main/java/com/bank_springboot/controllers/AuthController.java",
+        "line": 103,
+        "class": "AuthController",
+        "method": "login",
+        "expression": "\"redirect:/app/dashboard\"",
+        "guards": []
+      }
+    ]
+  },
+  {
+    "project": "Fintech-Finance-Banking-Application",
+    "endpoint": {
+      "kind": "endpoint",
+      "file": "src/main/java/com/bank_springboot/controllers/AuthController.java",
+      "line": 113,
+      "class": "AuthController",
+      "method": "logout",
+      "httpMethod": "GET",
+      "path": "/logout",
+      "params": "",
+      "rest": false
+    },
+    "expectedViews": [
+      "src/main/webapp/WEB-INF/jsp/login.jsp"
+    ],
+    "actualViews": [
+      "src/main/webapp/WEB-INF/jsp/login.jsp"
+    ],
+    "missing": [],
+    "extra": [],
+    "result": "PASS",
+    "basis": [
+      {
+        "kind": "return",
+        "file": "src/main/java/com/bank_springboot/controllers/AuthController.java",
+        "line": 122,
+        "class": "AuthController",
+        "method": "logout",
+        "expression": "\"redirect:/login?logout=true\"",
+        "guards": []
+      }
+    ]
+  },
+  {
+    "project": "Fintech-Finance-Banking-Application",
+    "endpoint": {
+      "kind": "endpoint",
+      "file": "src/main/java/com/bank_springboot/controllers/IndexController.java",
+      "line": 16,
+      "class": "IndexController",
+      "method": "getIndex",
+      "httpMethod": "GET",
+      "path": "/",
+      "params": "",
+      "rest": false
+    },
+    "expectedViews": [
+      "src/main/webapp/WEB-INF/jsp/index.jsp"
+    ],
+    "actualViews": [
+      "src/main/webapp/WEB-INF/jsp/index.jsp"
+    ],
+    "missing": [],
+    "extra": [],
+    "result": "PASS",
+    "basis": [
+      {
+        "kind": "return",
+        "file": "src/main/java/com/bank_springboot/controllers/IndexController.java",
+        "line": 21,
+        "class": "IndexController",
+        "method": "getIndex",
+        "expression": "getIndexPage",
+        "guards": []
+      },
+      {
+        "kind": "modelAndView",
+        "file": "src/main/java/com/bank_springboot/controllers/IndexController.java",
+        "line": 18,
+        "method": "getIndex",
+        "expression": "new ModelAndView(\"index\")",
+        "literalView": "index"
+      }
+    ]
+  },
+  {
+    "project": "Fintech-Finance-Banking-Application",
+    "endpoint": {
+      "kind": "endpoint",
+      "file": "src/main/java/com/bank_springboot/controllers/IndexController.java",
+      "line": 25,
+      "class": "IndexController",
+      "method": "getError",
+      "httpMethod": "GET",
+      "path": "/error",
+      "params": "",
+      "rest": false
+    },
+    "expectedViews": [
+      "src/main/webapp/WEB-INF/jsp/error.jsp"
+    ],
+    "actualViews": [
+      "src/main/webapp/WEB-INF/jsp/error.jsp"
+    ],
+    "missing": [],
+    "extra": [],
+    "result": "PASS",
+    "basis": [
+      {
+        "kind": "return",
+        "file": "src/main/java/com/bank_springboot/controllers/IndexController.java",
+        "line": 30,
+        "class": "IndexController",
+        "method": "getError",
+        "expression": "getErrorPage",
+        "guards": []
+      },
+      {
+        "kind": "modelAndView",
+        "file": "src/main/java/com/bank_springboot/controllers/IndexController.java",
+        "line": 27,
+        "method": "getError",
+        "expression": "new ModelAndView(\"error\")",
+        "literalView": "error"
+      }
+    ]
+  },
+  {
+    "project": "Fintech-Finance-Banking-Application",
+    "endpoint": {
+      "kind": "endpoint",
+      "file": "src/main/java/com/bank_springboot/controllers/IndexController.java",
+      "line": 33,
+      "class": "IndexController",
+      "method": "getVerify",
+      "httpMethod": "GET",
+      "path": "/verify",
+      "params": "",
+      "rest": false
+    },
+    "expectedViews": [
+      "src/main/webapp/WEB-INF/jsp/error.jsp",
+      "src/main/webapp/WEB-INF/jsp/login.jsp"
+    ],
+    "actualViews": [
+      "src/main/webapp/WEB-INF/jsp/error.jsp",
+      "src/main/webapp/WEB-INF/jsp/login.jsp"
+    ],
+    "missing": [],
+    "extra": [],
+    "result": "PASS",
+    "basis": [
+      {
+        "kind": "return",
+        "file": "src/main/java/com/bank_springboot/controllers/IndexController.java",
+        "line": 45,
+        "class": "IndexController",
+        "method": "getVerify",
+        "expression": "getVerifyPage",
+        "guards": [
+          "dbToken == null"
+        ]
+      },
+      {
+        "kind": "return",
+        "file": "src/main/java/com/bank_springboot/controllers/IndexController.java",
+        "line": 52,
+        "class": "IndexController",
+        "method": "getVerify",
+        "expression": "getVerifyPage",
+        "guards": [
+          "dbToken == null"
+        ]
+      },
+      {
+        "kind": "modelAndView",
+        "file": "src/main/java/com/bank_springboot/controllers/IndexController.java",
+        "line": 43,
+        "method": "getVerify",
+        "expression": "new ModelAndView(\"error\")",
+        "literalView": "error"
+      },
+      {
+        "kind": "modelAndView",
+        "file": "src/main/java/com/bank_springboot/controllers/IndexController.java",
+        "line": 49,
+        "method": "getVerify",
+        "expression": "new ModelAndView(\"login\")",
+        "literalView": "login"
+      }
+    ]
+  },
+  {
+    "project": "Fintech-Finance-Banking-Application",
+    "endpoint": {
+      "kind": "endpoint",
+      "file": "src/main/java/com/bank_springboot/controllers/RegisterController.java",
+      "line": 31,
+      "class": "RegisterController",
+      "method": "getRegister",
+      "httpMethod": "GET",
+      "path": "/register",
+      "params": "",
+      "rest": false
+    },
+    "expectedViews": [
+      "src/main/webapp/WEB-INF/jsp/register.jsp"
+    ],
+    "actualViews": [
+      "src/main/webapp/WEB-INF/jsp/register.jsp"
+    ],
+    "missing": [],
+    "extra": [],
+    "result": "PASS",
+    "basis": [
+      {
+        "kind": "return",
+        "file": "src/main/java/com/bank_springboot/controllers/RegisterController.java",
+        "line": 36,
+        "class": "RegisterController",
+        "method": "getRegister",
+        "expression": "getRegisterPage",
+        "guards": []
+      },
+      {
+        "kind": "modelAndView",
+        "file": "src/main/java/com/bank_springboot/controllers/RegisterController.java",
+        "line": 33,
+        "method": "getRegister",
+        "expression": "new ModelAndView(\"register\")",
+        "literalView": "register"
+      }
+    ]
+  },
+  {
+    "project": "Fintech-Finance-Banking-Application",
+    "endpoint": {
+      "kind": "endpoint",
+      "file": "src/main/java/com/bank_springboot/controllers/RegisterController.java",
+      "line": 39,
+      "class": "RegisterController",
+      "method": "register",
+      "httpMethod": "POST",
+      "path": "/register",
+      "params": "",
+      "rest": false
+    },
+    "expectedViews": [
+      "src/main/webapp/WEB-INF/jsp/register.jsp"
+    ],
+    "actualViews": [
+      "src/main/webapp/WEB-INF/jsp/register.jsp"
+    ],
+    "missing": [],
+    "extra": [],
+    "result": "PASS",
+    "basis": [
+      {
+        "kind": "return",
+        "file": "src/main/java/com/bank_springboot/controllers/RegisterController.java",
+        "line": 53,
+        "class": "RegisterController",
+        "method": "register",
+        "expression": "registrationPage",
+        "guards": [
+          "result.hasErrors() && confirm_password.isEmpty()"
+        ]
+      },
+      {
+        "kind": "return",
+        "file": "src/main/java/com/bank_springboot/controllers/RegisterController.java",
+        "line": 59,
+        "class": "RegisterController",
+        "method": "register",
+        "expression": "registrationPage",
+        "guards": [
+          "existingEmail != null"
+        ]
+      },
+      {
+        "kind": "return",
+        "file": "src/main/java/com/bank_springboot/controllers/RegisterController.java",
+        "line": 64,
+        "class": "RegisterController",
+        "method": "register",
+        "expression": "registrationPage",
+        "guards": [
+          "!password.equals(confirm_password)"
+        ]
+      },
+      {
+        "kind": "return",
+        "file": "src/main/java/com/bank_springboot/controllers/RegisterController.java",
+        "line": 91,
+        "class": "RegisterController",
+        "method": "register",
+        "expression": "registrationPage",
+        "guards": []
+      },
+      {
+        "kind": "modelAndView",
+        "file": "src/main/java/com/bank_springboot/controllers/RegisterController.java",
+        "line": 48,
+        "method": "register",
+        "expression": "new ModelAndView(\"register\")",
+        "literalView": "register"
+      }
+    ]
+  },
+  {
+    "project": "Fintech-Finance-Banking-Application",
+    "endpoint": {
+      "kind": "endpoint",
+      "file": "src/main/java/com/bank_springboot/controllers/TransactController.java",
+      "line": 35,
+      "class": "TransactController",
+      "method": "deposit",
+      "httpMethod": "POST",
+      "path": "/transact/deposit",
+      "params": "",
+      "rest": false
+    },
+    "expectedViews": [
+      "src/main/webapp/WEB-INF/jsp/dashboard.jsp"
+    ],
+    "actualViews": [
+      "src/main/webapp/WEB-INF/jsp/dashboard.jsp"
+    ],
+    "missing": [],
+    "extra": [],
+    "result": "PASS",
+    "basis": [
+      {
+        "kind": "return",
+        "file": "src/main/java/com/bank_springboot/controllers/TransactController.java",
+        "line": 44,
+        "class": "TransactController",
+        "method": "deposit",
+        "expression": "\"redirect:/app/dashboard\"",
+        "guards": [
+          "depositAmount.isEmpty() || accountID.isEmpty()"
+        ]
+      },
+      {
+        "kind": "return",
+        "file": "src/main/java/com/bank_springboot/controllers/TransactController.java",
+        "line": 57,
+        "class": "TransactController",
+        "method": "deposit",
+        "expression": "\"redirect:/app/dashboard\"",
+        "guards": [
+          "depositAmountValue == 0"
+        ]
+      },
+      {
+        "kind": "return",
+        "file": "src/main/java/com/bank_springboot/controllers/TransactController.java",
+        "line": 72,
+        "class": "TransactController",
+        "method": "deposit",
+        "expression": "\"redirect:/app/dashboard\"",
+        "guards": []
+      }
+    ]
+  },
+  {
+    "project": "Fintech-Finance-Banking-Application",
+    "endpoint": {
+      "kind": "endpoint",
+      "file": "src/main/java/com/bank_springboot/controllers/TransactController.java",
+      "line": 76,
+      "class": "TransactController",
+      "method": "transfer",
+      "httpMethod": "POST",
+      "path": "/transact/transfer",
+      "params": "",
+      "rest": false
+    },
+    "expectedViews": [
+      "src/main/webapp/WEB-INF/jsp/dashboard.jsp"
+    ],
+    "actualViews": [
+      "src/main/webapp/WEB-INF/jsp/dashboard.jsp"
+    ],
+    "missing": [],
+    "extra": [],
+    "result": "PASS",
+    "basis": [
+      {
+        "kind": "return",
+        "file": "src/main/java/com/bank_springboot/controllers/TransactController.java",
+        "line": 89,
+        "class": "TransactController",
+        "method": "transfer",
+        "expression": "\"redirect:/app/dashboard\"",
+        "guards": [
+          "transfer_from.isEmpty() || transfer_to.isEmpty() || transfer_amount.isEmpty()"
+        ]
+      },
+      {
+        "kind": "return",
+        "file": "src/main/java/com/bank_springboot/controllers/TransactController.java",
+        "line": 101,
+        "class": "TransactController",
+        "method": "transfer",
+        "expression": "\"redirect:/app/dashboard\"",
+        "guards": [
+          "transferFromId == transferToId"
+        ]
+      },
+      {
+        "kind": "return",
+        "file": "src/main/java/com/bank_springboot/controllers/TransactController.java",
+        "line": 108,
+        "class": "TransactController",
+        "method": "transfer",
+        "expression": "\"redirect:/app/dashboard\"",
+        "guards": [
+          "transferAmount == 0"
+        ]
+      },
+      {
+        "kind": "return",
+        "file": "src/main/java/com/bank_springboot/controllers/TransactController.java",
+        "line": 123,
+        "class": "TransactController",
+        "method": "transfer",
+        "expression": "\"redirect:/app/dashboard\"",
+        "guards": [
+          "currentBalanceOfAccountTransferringFrom < transferAmount"
+        ]
+      },
+      {
+        "kind": "return",
+        "file": "src/main/java/com/bank_springboot/controllers/TransactController.java",
+        "line": 144,
+        "class": "TransactController",
+        "method": "transfer",
+        "expression": "\"redirect:/app/dashboard\"",
+        "guards": []
+      }
+    ]
+  },
+  {
+    "project": "Fintech-Finance-Banking-Application",
+    "endpoint": {
+      "kind": "endpoint",
+      "file": "src/main/java/com/bank_springboot/controllers/TransactController.java",
+      "line": 148,
+      "class": "TransactController",
+      "method": "withdraw",
+      "httpMethod": "POST",
+      "path": "/transact/withdraw",
+      "params": "",
+      "rest": false
+    },
+    "expectedViews": [
+      "src/main/webapp/WEB-INF/jsp/dashboard.jsp"
+    ],
+    "actualViews": [
+      "src/main/webapp/WEB-INF/jsp/dashboard.jsp"
+    ],
+    "missing": [],
+    "extra": [],
+    "result": "PASS",
+    "basis": [
+      {
+        "kind": "return",
+        "file": "src/main/java/com/bank_springboot/controllers/TransactController.java",
+        "line": 161,
+        "class": "TransactController",
+        "method": "withdraw",
+        "expression": "\"redirect:/app/dashboard\"",
+        "guards": [
+          "withdrawalAmount.isEmpty() || accountID.isEmpty()"
+        ]
+      },
+      {
+        "kind": "return",
+        "file": "src/main/java/com/bank_springboot/controllers/TransactController.java",
+        "line": 171,
+        "class": "TransactController",
+        "method": "withdraw",
+        "expression": "\"redirect:/app/dashboard\"",
+        "guards": [
+          "withdrawal_amount == 0"
+        ]
+      },
+      {
+        "kind": "return",
+        "file": "src/main/java/com/bank_springboot/controllers/TransactController.java",
+        "line": 186,
+        "class": "TransactController",
+        "method": "withdraw",
+        "expression": "\"redirect:/app/dashboard\"",
+        "guards": [
+          "currentBalance < withdrawal_amount"
+        ]
+      },
+      {
+        "kind": "return",
+        "file": "src/main/java/com/bank_springboot/controllers/TransactController.java",
+        "line": 200,
+        "class": "TransactController",
+        "method": "withdraw",
+        "expression": "\"redirect:/app/dashboard\"",
+        "guards": []
+      }
+    ]
+  },
+  {
+    "project": "Fintech-Finance-Banking-Application",
+    "endpoint": {
+      "kind": "endpoint",
+      "file": "src/main/java/com/bank_springboot/controllers/TransactController.java",
+      "line": 210,
+      "class": "TransactController",
+      "method": "payment",
+      "httpMethod": "POST",
+      "path": "/transact/payment",
+      "params": "",
+      "rest": false
+    },
+    "expectedViews": [
+      "src/main/webapp/WEB-INF/jsp/dashboard.jsp"
+    ],
+    "actualViews": [
+      "src/main/webapp/WEB-INF/jsp/dashboard.jsp"
+    ],
+    "missing": [],
+    "extra": [],
+    "result": "PASS",
+    "basis": [
+      {
+        "kind": "return",
+        "file": "src/main/java/com/bank_springboot/controllers/TransactController.java",
+        "line": 226,
+        "class": "TransactController",
+        "method": "payment",
+        "expression": "\"redirect:/app/dashboard\"",
+        "guards": [
+          "beneficiary.isEmpty() || account_number.isEmpty() || account_id.isEmpty() || payment_amount.isEmpty()"
+        ]
+      },
+      {
+        "kind": "return",
+        "file": "src/main/java/com/bank_springboot/controllers/TransactController.java",
+        "line": 238,
+        "class": "TransactController",
+        "method": "payment",
+        "expression": "\"redirect:/app/dashboard\"",
+        "guards": [
+          "paymentAmount == 0"
+        ]
+      },
+      {
+        "kind": "return",
+        "file": "src/main/java/com/bank_springboot/controllers/TransactController.java",
+        "line": 246,
+        "class": "TransactController",
+        "method": "payment",
+        "expression": "\"redirect:/app/dashboard\"",
+        "guards": [
+          "!isBeneficiaryAccountNumberValid(account_number)"
+        ]
+      },
+      {
+        "kind": "return",
+        "file": "src/main/java/com/bank_springboot/controllers/TransactController.java",
+        "line": 269,
+        "class": "TransactController",
+        "method": "payment",
+        "expression": "\"redirect:/app/dashboard\"",
+        "guards": [
+          "currentBalance < paymentAmount"
+        ]
+      },
+      {
+        "kind": "return",
+        "file": "src/main/java/com/bank_springboot/controllers/TransactController.java",
+        "line": 299,
+        "class": "TransactController",
+        "method": "payment",
+        "expression": "\"redirect:/app/dashboard\"",
+        "guards": []
+      }
+    ]
+  },
+  {
+    "project": "SpringMVC-IMS",
+    "endpoint": {
+      "kind": "endpoint",
+      "file": "src/java/com/emp/controller/brandController.java",
+      "line": 44,
+      "class": "brandController",
+      "method": "brand",
+      "httpMethod": "GET",
+      "path": "/brand",
+      "params": "",
+      "rest": false
+    },
+    "expectedViews": [
+      "web/WEB-INF/jsp/brand.jsp",
+      "web/WEB-INF/jsp/loginform.jsp"
+    ],
+    "actualViews": [
+      "web/WEB-INF/jsp/brand.jsp",
+      "web/WEB-INF/jsp/loginform.jsp"
+    ],
+    "missing": [],
+    "extra": [],
+    "result": "PASS",
+    "basis": [
+      {
+        "kind": "return",
+        "file": "src/java/com/emp/controller/brandController.java",
+        "line": 60,
+        "class": "brandController",
+        "method": "brand",
+        "expression": "model",
+        "guards": []
+      },
+      {
+        "kind": "modelAndView",
+        "file": "src/java/com/emp/controller/brandController.java",
+        "line": 52,
+        "method": "brand",
+        "expression": "new ModelAndView(\"brand\")",
+        "literalView": "brand"
+      },
+      {
+        "kind": "modelAndView",
+        "file": "src/java/com/emp/controller/brandController.java",
+        "line": 58,
+        "method": "brand",
+        "expression": "new ModelAndView(\"redirect:/loginform\")",
+        "literalView": "redirect:/loginform"
+      }
+    ]
+  },
+  {
+    "project": "SpringMVC-IMS",
+    "endpoint": {
+      "kind": "endpoint",
+      "file": "src/java/com/emp/controller/brandController.java",
+      "line": 71,
+      "class": "brandController",
+      "method": "insertBrand",
+      "httpMethod": "POST",
+      "path": "/insertBrand",
+      "params": "",
+      "rest": false
+    },
+    "expectedViews": [
+      "web/WEB-INF/jsp/brand.jsp",
+      "web/WEB-INF/jsp/loginform.jsp"
+    ],
+    "actualViews": [
+      "web/WEB-INF/jsp/brand.jsp",
+      "web/WEB-INF/jsp/loginform.jsp"
+    ],
+    "missing": [],
+    "extra": [],
+    "result": "PASS",
+    "basis": [
+      {
+        "kind": "return",
+        "file": "src/java/com/emp/controller/brandController.java",
+        "line": 86,
+        "class": "brandController",
+        "method": "insertBrand",
+        "expression": "new ModelAndView(\"redirect:/brand\")",
+        "guards": []
+      },
+      {
+        "kind": "modelAndView",
+        "file": "src/java/com/emp/controller/brandController.java",
+        "line": 86,
+        "method": "insertBrand",
+        "expression": "new ModelAndView(\"redirect:/brand\")",
+        "literalView": "redirect:/brand"
+      }
+    ]
+  },
+  {
+    "project": "SpringMVC-IMS",
+    "endpoint": {
+      "kind": "endpoint",
+      "file": "src/java/com/emp/controller/brandController.java",
+      "line": 99,
+      "class": "brandController",
+      "method": "editBrand",
+      "httpMethod": "POST",
+      "path": "/editBrand",
+      "params": "",
+      "rest": false
+    },
+    "expectedViews": [
+      "web/WEB-INF/jsp/brand.jsp",
+      "web/WEB-INF/jsp/loginform.jsp"
+    ],
+    "actualViews": [
+      "web/WEB-INF/jsp/brand.jsp",
+      "web/WEB-INF/jsp/loginform.jsp"
+    ],
+    "missing": [],
+    "extra": [],
+    "result": "PASS",
+    "basis": [
+      {
+        "kind": "return",
+        "file": "src/java/com/emp/controller/brandController.java",
+        "line": 105,
+        "class": "brandController",
+        "method": "editBrand",
+        "expression": "new ModelAndView(\"redirect:/brand\")",
+        "guards": []
+      },
+      {
+        "kind": "modelAndView",
+        "file": "src/java/com/emp/controller/brandController.java",
+        "line": 105,
+        "method": "editBrand",
+        "expression": "new ModelAndView(\"redirect:/brand\")",
+        "literalView": "redirect:/brand"
+      }
+    ]
+  },
+  {
+    "project": "SpringMVC-IMS",
+    "endpoint": {
+      "kind": "endpoint",
+      "file": "src/java/com/emp/controller/brandController.java",
+      "line": 109,
+      "class": "brandController",
+      "method": "deleteBrand",
+      "httpMethod": "POST",
+      "path": "/deleteBrand",
+      "params": "",
+      "rest": false
+    },
+    "expectedViews": [
+      "web/WEB-INF/jsp/brand.jsp",
+      "web/WEB-INF/jsp/loginform.jsp"
+    ],
+    "actualViews": [
+      "web/WEB-INF/jsp/brand.jsp",
+      "web/WEB-INF/jsp/loginform.jsp"
+    ],
+    "missing": [],
+    "extra": [],
+    "result": "PASS",
+    "basis": [
+      {
+        "kind": "return",
+        "file": "src/java/com/emp/controller/brandController.java",
+        "line": 116,
+        "class": "brandController",
+        "method": "deleteBrand",
+        "expression": "new ModelAndView(\"redirect:/brand\")",
+        "guards": []
+      },
+      {
+        "kind": "modelAndView",
+        "file": "src/java/com/emp/controller/brandController.java",
+        "line": 116,
+        "method": "deleteBrand",
+        "expression": "new ModelAndView(\"redirect:/brand\")",
+        "literalView": "redirect:/brand"
+      }
+    ]
+  },
+  {
+    "project": "SpringMVC-IMS",
+    "endpoint": {
+      "kind": "endpoint",
+      "file": "src/java/com/emp/controller/categoryController.java",
+      "line": 44,
+      "class": "categoryController",
+      "method": "category",
+      "httpMethod": "GET",
+      "path": "/category",
+      "params": "",
+      "rest": false
+    },
+    "expectedViews": [
+      "web/WEB-INF/jsp/category.jsp",
+      "web/WEB-INF/jsp/loginform.jsp"
+    ],
+    "actualViews": [
+      "web/WEB-INF/jsp/category.jsp",
+      "web/WEB-INF/jsp/loginform.jsp"
+    ],
+    "missing": [],
+    "extra": [],
+    "result": "PASS",
+    "basis": [
+      {
+        "kind": "return",
+        "file": "src/java/com/emp/controller/categoryController.java",
+        "line": 60,
+        "class": "categoryController",
+        "method": "category",
+        "expression": "model",
+        "guards": []
+      },
+      {
+        "kind": "modelAndView",
+        "file": "src/java/com/emp/controller/categoryController.java",
+        "line": 52,
+        "method": "category",
+        "expression": "new ModelAndView(\"category\")",
+        "literalView": "category"
+      },
+      {
+        "kind": "modelAndView",
+        "file": "src/java/com/emp/controller/categoryController.java",
+        "line": 58,
+        "method": "category",
+        "expression": "new ModelAndView(\"redirect:/loginform\")",
+        "literalView": "redirect:/loginform"
+      }
+    ]
+  },
+  {
+    "project": "SpringMVC-IMS",
+    "endpoint": {
+      "kind": "endpoint",
+      "file": "src/java/com/emp/controller/categoryController.java",
+      "line": 71,
+      "class": "categoryController",
+      "method": "insertCategory",
+      "httpMethod": "POST",
+      "path": "/insertCategory",
+      "params": "",
+      "rest": false
+    },
+    "expectedViews": [
+      "web/WEB-INF/jsp/category.jsp",
+      "web/WEB-INF/jsp/loginform.jsp"
+    ],
+    "actualViews": [
+      "web/WEB-INF/jsp/category.jsp",
+      "web/WEB-INF/jsp/loginform.jsp"
+    ],
+    "missing": [],
+    "extra": [],
+    "result": "PASS",
+    "basis": [
+      {
+        "kind": "return",
+        "file": "src/java/com/emp/controller/categoryController.java",
+        "line": 85,
+        "class": "categoryController",
+        "method": "insertCategory",
+        "expression": "new ModelAndView(\"redirect:/category\")",
+        "guards": []
+      },
+      {
+        "kind": "modelAndView",
+        "file": "src/java/com/emp/controller/categoryController.java",
+        "line": 85,
+        "method": "insertCategory",
+        "expression": "new ModelAndView(\"redirect:/category\")",
+        "literalView": "redirect:/category"
+      }
+    ]
+  },
+  {
+    "project": "SpringMVC-IMS",
+    "endpoint": {
+      "kind": "endpoint",
+      "file": "src/java/com/emp/controller/categoryController.java",
+      "line": 97,
+      "class": "categoryController",
+      "method": "editCategory",
+      "httpMethod": "POST",
+      "path": "/editCategory",
+      "params": "",
+      "rest": false
+    },
+    "expectedViews": [
+      "web/WEB-INF/jsp/category.jsp",
+      "web/WEB-INF/jsp/loginform.jsp"
+    ],
+    "actualViews": [
+      "web/WEB-INF/jsp/category.jsp",
+      "web/WEB-INF/jsp/loginform.jsp"
+    ],
+    "missing": [],
+    "extra": [],
+    "result": "PASS",
+    "basis": [
+      {
+        "kind": "return",
+        "file": "src/java/com/emp/controller/categoryController.java",
+        "line": 103,
+        "class": "categoryController",
+        "method": "editCategory",
+        "expression": "new ModelAndView(\"redirect:/category\")",
+        "guards": []
+      },
+      {
+        "kind": "modelAndView",
+        "file": "src/java/com/emp/controller/categoryController.java",
+        "line": 103,
+        "method": "editCategory",
+        "expression": "new ModelAndView(\"redirect:/category\")",
+        "literalView": "redirect:/category"
+      }
+    ]
+  },
+  {
+    "project": "SpringMVC-IMS",
+    "endpoint": {
+      "kind": "endpoint",
+      "file": "src/java/com/emp/controller/categoryController.java",
+      "line": 106,
+      "class": "categoryController",
+      "method": "deleteCategory",
+      "httpMethod": "POST",
+      "path": "/deleteCategory",
+      "params": "",
+      "rest": false
+    },
+    "expectedViews": [
+      "web/WEB-INF/jsp/category.jsp",
+      "web/WEB-INF/jsp/loginform.jsp"
+    ],
+    "actualViews": [
+      "web/WEB-INF/jsp/category.jsp",
+      "web/WEB-INF/jsp/loginform.jsp"
+    ],
+    "missing": [],
+    "extra": [],
+    "result": "PASS",
+    "basis": [
+      {
+        "kind": "return",
+        "file": "src/java/com/emp/controller/categoryController.java",
+        "line": 113,
+        "class": "categoryController",
+        "method": "deleteCategory",
+        "expression": "new ModelAndView(\"redirect:/category\")",
+        "guards": []
+      },
+      {
+        "kind": "modelAndView",
+        "file": "src/java/com/emp/controller/categoryController.java",
+        "line": 113,
+        "method": "deleteCategory",
+        "expression": "new ModelAndView(\"redirect:/category\")",
+        "literalView": "redirect:/category"
+      }
+    ]
+  },
+  {
+    "project": "SpringMVC-IMS",
+    "endpoint": {
+      "kind": "endpoint",
+      "file": "src/java/com/emp/controller/customerController.java",
+      "line": 46,
+      "class": "customerController",
+      "method": "customers",
+      "httpMethod": "GET",
+      "path": "/customers",
+      "params": "",
+      "rest": false
+    },
+    "expectedViews": [
+      "web/WEB-INF/jsp/customers.jsp",
+      "web/WEB-INF/jsp/loginform.jsp"
+    ],
+    "actualViews": [
+      "web/WEB-INF/jsp/customers.jsp",
+      "web/WEB-INF/jsp/loginform.jsp"
+    ],
+    "missing": [],
+    "extra": [],
+    "result": "PASS",
+    "basis": [
+      {
+        "kind": "return",
+        "file": "src/java/com/emp/controller/customerController.java",
+        "line": 62,
+        "class": "customerController",
+        "method": "customers",
+        "expression": "model",
+        "guards": []
+      },
+      {
+        "kind": "modelAndView",
+        "file": "src/java/com/emp/controller/customerController.java",
+        "line": 54,
+        "method": "customers",
+        "expression": "new ModelAndView(\"customers\")",
+        "literalView": "customers"
+      },
+      {
+        "kind": "modelAndView",
+        "file": "src/java/com/emp/controller/customerController.java",
+        "line": 60,
+        "method": "customers",
+        "expression": "new ModelAndView(\"redirect:/loginform\")",
+        "literalView": "redirect:/loginform"
+      }
+    ]
+  },
+  {
+    "project": "SpringMVC-IMS",
+    "endpoint": {
+      "kind": "endpoint",
+      "file": "src/java/com/emp/controller/customerController.java",
+      "line": 73,
+      "class": "customerController",
+      "method": "insertCustomer",
+      "httpMethod": "POST",
+      "path": "/insertCustomer",
+      "params": "",
+      "rest": false
+    },
+    "expectedViews": [
+      "web/WEB-INF/jsp/customers.jsp",
+      "web/WEB-INF/jsp/loginform.jsp"
+    ],
+    "actualViews": [
+      "web/WEB-INF/jsp/customers.jsp",
+      "web/WEB-INF/jsp/loginform.jsp"
+    ],
+    "missing": [],
+    "extra": [],
+    "result": "PASS",
+    "basis": [
+      {
+        "kind": "return",
+        "file": "src/java/com/emp/controller/customerController.java",
+        "line": 90,
+        "class": "customerController",
+        "method": "insertCustomer",
+        "expression": "new ModelAndView(\"redirect:/customers\")",
+        "guards": []
+      },
+      {
+        "kind": "modelAndView",
+        "file": "src/java/com/emp/controller/customerController.java",
+        "line": 90,
+        "method": "insertCustomer",
+        "expression": "new ModelAndView(\"redirect:/customers\")",
+        "literalView": "redirect:/customers"
+      }
+    ]
+  },
+  {
+    "project": "SpringMVC-IMS",
+    "endpoint": {
+      "kind": "endpoint",
+      "file": "src/java/com/emp/controller/customerController.java",
+      "line": 104,
+      "class": "customerController",
+      "method": "editCustomer",
+      "httpMethod": "POST",
+      "path": "/editCustomer",
+      "params": "",
+      "rest": false
+    },
+    "expectedViews": [
+      "web/WEB-INF/jsp/customers.jsp",
+      "web/WEB-INF/jsp/loginform.jsp"
+    ],
+    "actualViews": [
+      "web/WEB-INF/jsp/customers.jsp",
+      "web/WEB-INF/jsp/loginform.jsp"
+    ],
+    "missing": [],
+    "extra": [],
+    "result": "PASS",
+    "basis": [
+      {
+        "kind": "return",
+        "file": "src/java/com/emp/controller/customerController.java",
+        "line": 111,
+        "class": "customerController",
+        "method": "editCustomer",
+        "expression": "new ModelAndView(\"redirect:/customers\")",
+        "guards": []
+      },
+      {
+        "kind": "modelAndView",
+        "file": "src/java/com/emp/controller/customerController.java",
+        "line": 111,
+        "method": "editCustomer",
+        "expression": "new ModelAndView(\"redirect:/customers\")",
+        "literalView": "redirect:/customers"
+      }
+    ]
+  },
+  {
+    "project": "SpringMVC-IMS",
+    "endpoint": {
+      "kind": "endpoint",
+      "file": "src/java/com/emp/controller/customerController.java",
+      "line": 114,
+      "class": "customerController",
+      "method": "deleteCustomer",
+      "httpMethod": "POST",
+      "path": "/deleteCustomer",
+      "params": "",
+      "rest": false
+    },
+    "expectedViews": [
+      "web/WEB-INF/jsp/customers.jsp",
+      "web/WEB-INF/jsp/loginform.jsp"
+    ],
+    "actualViews": [
+      "web/WEB-INF/jsp/customers.jsp",
+      "web/WEB-INF/jsp/loginform.jsp"
+    ],
+    "missing": [],
+    "extra": [],
+    "result": "PASS",
+    "basis": [
+      {
+        "kind": "return",
+        "file": "src/java/com/emp/controller/customerController.java",
+        "line": 121,
+        "class": "customerController",
+        "method": "deleteCustomer",
+        "expression": "new ModelAndView(\"redirect:/customers\")",
+        "guards": []
+      },
+      {
+        "kind": "modelAndView",
+        "file": "src/java/com/emp/controller/customerController.java",
+        "line": 121,
+        "method": "deleteCustomer",
+        "expression": "new ModelAndView(\"redirect:/customers\")",
+        "literalView": "redirect:/customers"
+      }
+    ]
+  },
+  {
+    "project": "SpringMVC-IMS",
+    "endpoint": {
+      "kind": "endpoint",
+      "file": "src/java/com/emp/controller/dashboardController.java",
+      "line": 24,
+      "class": "dashboardController",
+      "method": "dashboard",
+      "httpMethod": "GET",
+      "path": "/dashboard",
+      "params": "",
+      "rest": false
+    },
+    "expectedViews": [
+      "web/WEB-INF/jsp/dashboard.jsp",
+      "web/WEB-INF/jsp/loginform.jsp"
+    ],
+    "actualViews": [
+      "web/WEB-INF/jsp/dashboard.jsp",
+      "web/WEB-INF/jsp/loginform.jsp"
+    ],
+    "missing": [],
+    "extra": [],
+    "result": "PASS",
+    "basis": [
+      {
+        "kind": "return",
+        "file": "src/java/com/emp/controller/dashboardController.java",
+        "line": 38,
+        "class": "dashboardController",
+        "method": "dashboard",
+        "expression": "model",
+        "guards": []
+      },
+      {
+        "kind": "modelAndView",
+        "file": "src/java/com/emp/controller/dashboardController.java",
+        "line": 31,
+        "method": "dashboard",
+        "expression": "new ModelAndView(\"dashboard\")",
+        "literalView": "dashboard"
+      },
+      {
+        "kind": "modelAndView",
+        "file": "src/java/com/emp/controller/dashboardController.java",
+        "line": 36,
+        "method": "dashboard",
+        "expression": "new ModelAndView(\"redirect:/loginform\")",
+        "literalView": "redirect:/loginform"
+      }
+    ]
+  },
+  {
+    "project": "SpringMVC-IMS",
+    "endpoint": {
+      "kind": "endpoint",
+      "file": "src/java/com/emp/controller/loginController.java",
+      "line": 40,
+      "class": "loginController",
+      "method": "index",
+      "httpMethod": "GET",
+      "path": "/index",
+      "params": "",
+      "rest": false
+    },
+    "expectedViews": [
+      "web/WEB-INF/jsp/index.jsp"
+    ],
+    "actualViews": [
+      "web/WEB-INF/jsp/index.jsp"
+    ],
+    "missing": [],
+    "extra": [],
+    "result": "PASS",
+    "basis": [
+      {
+        "kind": "return",
+        "file": "src/java/com/emp/controller/loginController.java",
+        "line": 43,
+        "class": "loginController",
+        "method": "index",
+        "expression": "model",
+        "guards": []
+      },
+      {
+        "kind": "modelAndView",
+        "file": "src/java/com/emp/controller/loginController.java",
+        "line": 42,
+        "method": "index",
+        "expression": "new ModelAndView(\"index\")",
+        "literalView": "index"
+      }
+    ]
+  },
+  {
+    "project": "SpringMVC-IMS",
+    "endpoint": {
+      "kind": "endpoint",
+      "file": "src/java/com/emp/controller/loginController.java",
+      "line": 46,
+      "class": "loginController",
+      "method": "loginform",
+      "httpMethod": "GET",
+      "path": "/loginform",
+      "params": "",
+      "rest": false
+    },
+    "expectedViews": [
+      "web/WEB-INF/jsp/loginform.jsp"
+    ],
+    "actualViews": [
+      "web/WEB-INF/jsp/loginform.jsp"
+    ],
+    "missing": [],
+    "extra": [],
+    "result": "PASS",
+    "basis": [
+      {
+        "kind": "return",
+        "file": "src/java/com/emp/controller/loginController.java",
+        "line": 49,
+        "class": "loginController",
+        "method": "loginform",
+        "expression": "model",
+        "guards": []
+      },
+      {
+        "kind": "modelAndView",
+        "file": "src/java/com/emp/controller/loginController.java",
+        "line": 48,
+        "method": "loginform",
+        "expression": "new ModelAndView(\"loginform\")",
+        "literalView": "loginform"
+      }
+    ]
+  },
+  {
+    "project": "SpringMVC-IMS",
+    "endpoint": {
+      "kind": "endpoint",
+      "file": "src/java/com/emp/controller/loginController.java",
+      "line": 52,
+      "class": "loginController",
+      "method": "loginCheck",
+      "httpMethod": "POST",
+      "path": "/loginCheck",
+      "params": "",
+      "rest": false
+    },
+    "expectedViews": [
+      "web/WEB-INF/jsp/dashboard.jsp",
+      "web/WEB-INF/jsp/loginform.jsp"
+    ],
+    "actualViews": [
+      "web/WEB-INF/jsp/dashboard.jsp",
+      "web/WEB-INF/jsp/loginform.jsp"
+    ],
+    "missing": [],
+    "extra": [],
+    "result": "PASS",
+    "basis": [
+      {
+        "kind": "return",
+        "file": "src/java/com/emp/controller/loginController.java",
+        "line": 80,
+        "class": "loginController",
+        "method": "loginCheck",
+        "expression": "model",
+        "guards": []
+      },
+      {
+        "kind": "modelAndView",
+        "file": "src/java/com/emp/controller/loginController.java",
+        "line": 71,
+        "method": "loginCheck",
+        "expression": "new ModelAndView(\"redirect:/loginform\")",
+        "literalView": "redirect:/loginform"
+      },
+      {
+        "kind": "modelAndView",
+        "file": "src/java/com/emp/controller/loginController.java",
+        "line": 78,
+        "method": "loginCheck",
+        "expression": "new ModelAndView(\"redirect:/dashboard\")",
+        "literalView": "redirect:/dashboard"
+      }
+    ]
+  },
+  {
+    "project": "SpringMVC-IMS",
+    "endpoint": {
+      "kind": "endpoint",
+      "file": "src/java/com/emp/controller/modelController.java",
+      "line": 46,
+      "class": "modelController",
+      "method": "model",
+      "httpMethod": "GET",
+      "path": "/model",
+      "params": "",
+      "rest": false
+    },
+    "expectedViews": [
+      "web/WEB-INF/jsp/loginform.jsp",
+      "web/WEB-INF/jsp/model.jsp"
+    ],
+    "actualViews": [
+      "web/WEB-INF/jsp/loginform.jsp",
+      "web/WEB-INF/jsp/model.jsp"
+    ],
+    "missing": [],
+    "extra": [],
+    "result": "PASS",
+    "basis": [
+      {
+        "kind": "return",
+        "file": "src/java/com/emp/controller/modelController.java",
+        "line": 62,
+        "class": "modelController",
+        "method": "model",
+        "expression": "model",
+        "guards": []
+      },
+      {
+        "kind": "modelAndView",
+        "file": "src/java/com/emp/controller/modelController.java",
+        "line": 54,
+        "method": "model",
+        "expression": "new ModelAndView(\"model\")",
+        "literalView": "model"
+      },
+      {
+        "kind": "modelAndView",
+        "file": "src/java/com/emp/controller/modelController.java",
+        "line": 60,
+        "method": "model",
+        "expression": "new ModelAndView(\"redirect:/loginform\")",
+        "literalView": "redirect:/loginform"
+      }
+    ]
+  },
+  {
+    "project": "SpringMVC-IMS",
+    "endpoint": {
+      "kind": "endpoint",
+      "file": "src/java/com/emp/controller/modelController.java",
+      "line": 81,
+      "class": "modelController",
+      "method": "insertModel",
+      "httpMethod": "POST",
+      "path": "/insertModel",
+      "params": "",
+      "rest": false
+    },
+    "expectedViews": [
+      "web/WEB-INF/jsp/loginform.jsp",
+      "web/WEB-INF/jsp/model.jsp"
+    ],
+    "actualViews": [
+      "web/WEB-INF/jsp/loginform.jsp",
+      "web/WEB-INF/jsp/model.jsp"
+    ],
+    "missing": [],
+    "extra": [],
+    "result": "PASS",
+    "basis": [
+      {
+        "kind": "return",
+        "file": "src/java/com/emp/controller/modelController.java",
+        "line": 98,
+        "class": "modelController",
+        "method": "insertModel",
+        "expression": "model",
+        "guards": []
+      },
+      {
+        "kind": "modelAndView",
+        "file": "src/java/com/emp/controller/modelController.java",
+        "line": 97,
+        "method": "insertModel",
+        "expression": "new ModelAndView(\"redirect:/model\")",
+        "literalView": "redirect:/model"
+      }
+    ]
+  },
+  {
+    "project": "SpringMVC-IMS",
+    "endpoint": {
+      "kind": "endpoint",
+      "file": "src/java/com/emp/controller/modelController.java",
+      "line": 110,
+      "class": "modelController",
+      "method": "editModel",
+      "httpMethod": "POST",
+      "path": "/editModel",
+      "params": "",
+      "rest": false
+    },
+    "expectedViews": [
+      "web/WEB-INF/jsp/loginform.jsp",
+      "web/WEB-INF/jsp/model.jsp"
+    ],
+    "actualViews": [
+      "web/WEB-INF/jsp/loginform.jsp",
+      "web/WEB-INF/jsp/model.jsp"
+    ],
+    "missing": [],
+    "extra": [],
+    "result": "PASS",
+    "basis": [
+      {
+        "kind": "return",
+        "file": "src/java/com/emp/controller/modelController.java",
+        "line": 116,
+        "class": "modelController",
+        "method": "editModel",
+        "expression": "new ModelAndView(\"redirect:/model\")",
+        "guards": []
+      },
+      {
+        "kind": "modelAndView",
+        "file": "src/java/com/emp/controller/modelController.java",
+        "line": 116,
+        "method": "editModel",
+        "expression": "new ModelAndView(\"redirect:/model\")",
+        "literalView": "redirect:/model"
+      }
+    ]
+  },
+  {
+    "project": "SpringMVC-IMS",
+    "endpoint": {
+      "kind": "endpoint",
+      "file": "src/java/com/emp/controller/modelController.java",
+      "line": 119,
+      "class": "modelController",
+      "method": "deleteModel",
+      "httpMethod": "POST",
+      "path": "/deleteModel",
+      "params": "",
+      "rest": false
+    },
+    "expectedViews": [
+      "web/WEB-INF/jsp/loginform.jsp",
+      "web/WEB-INF/jsp/model.jsp"
+    ],
+    "actualViews": [
+      "web/WEB-INF/jsp/loginform.jsp",
+      "web/WEB-INF/jsp/model.jsp"
+    ],
+    "missing": [],
+    "extra": [],
+    "result": "PASS",
+    "basis": [
+      {
+        "kind": "return",
+        "file": "src/java/com/emp/controller/modelController.java",
+        "line": 126,
+        "class": "modelController",
+        "method": "deleteModel",
+        "expression": "new ModelAndView(\"redirect:/model\")",
+        "guards": []
+      },
+      {
+        "kind": "modelAndView",
+        "file": "src/java/com/emp/controller/modelController.java",
+        "line": 126,
+        "method": "deleteModel",
+        "expression": "new ModelAndView(\"redirect:/model\")",
+        "literalView": "redirect:/model"
+      }
+    ]
+  },
+  {
+    "project": "SpringMVC-IMS",
+    "endpoint": {
+      "kind": "endpoint",
+      "file": "src/java/com/emp/controller/productController.java",
+      "line": 48,
+      "class": "productController",
+      "method": "product",
+      "httpMethod": "GET",
+      "path": "/product",
+      "params": "",
+      "rest": false
+    },
+    "expectedViews": [
+      "web/WEB-INF/jsp/loginform.jsp",
+      "web/WEB-INF/jsp/product.jsp"
+    ],
+    "actualViews": [
+      "web/WEB-INF/jsp/loginform.jsp",
+      "web/WEB-INF/jsp/product.jsp"
+    ],
+    "missing": [],
+    "extra": [],
+    "result": "PASS",
+    "basis": [
+      {
+        "kind": "return",
+        "file": "src/java/com/emp/controller/productController.java",
+        "line": 64,
+        "class": "productController",
+        "method": "product",
+        "expression": "model",
+        "guards": []
+      },
+      {
+        "kind": "modelAndView",
+        "file": "src/java/com/emp/controller/productController.java",
+        "line": 56,
+        "method": "product",
+        "expression": "new ModelAndView(\"product\")",
+        "literalView": "product"
+      },
+      {
+        "kind": "modelAndView",
+        "file": "src/java/com/emp/controller/productController.java",
+        "line": 62,
+        "method": "product",
+        "expression": "new ModelAndView(\"redirect:/loginform\")",
+        "literalView": "redirect:/loginform"
+      }
+    ]
+  },
+  {
+    "project": "SpringMVC-IMS",
+    "endpoint": {
+      "kind": "endpoint",
+      "file": "src/java/com/emp/controller/supplierController.java",
+      "line": 41,
+      "class": "supplierController",
+      "method": "suppliers",
+      "httpMethod": "GET",
+      "path": "/suppliers",
+      "params": "",
+      "rest": false
+    },
+    "expectedViews": [
+      "web/WEB-INF/jsp/loginform.jsp",
+      "web/WEB-INF/jsp/suppliers.jsp"
+    ],
+    "actualViews": [
+      "web/WEB-INF/jsp/loginform.jsp",
+      "web/WEB-INF/jsp/suppliers.jsp"
+    ],
+    "missing": [],
+    "extra": [],
+    "result": "PASS",
+    "basis": [
+      {
+        "kind": "return",
+        "file": "src/java/com/emp/controller/supplierController.java",
+        "line": 57,
+        "class": "supplierController",
+        "method": "suppliers",
+        "expression": "model",
+        "guards": []
+      },
+      {
+        "kind": "modelAndView",
+        "file": "src/java/com/emp/controller/supplierController.java",
+        "line": 49,
+        "method": "suppliers",
+        "expression": "new ModelAndView(\"suppliers\")",
+        "literalView": "suppliers"
+      },
+      {
+        "kind": "modelAndView",
+        "file": "src/java/com/emp/controller/supplierController.java",
+        "line": 55,
+        "method": "suppliers",
+        "expression": "new ModelAndView(\"redirect:/loginform\")",
+        "literalView": "redirect:/loginform"
+      }
+    ]
+  },
+  {
+    "project": "SpringMVC-IMS",
+    "endpoint": {
+      "kind": "endpoint",
+      "file": "src/java/com/emp/controller/supplierController.java",
+      "line": 69,
+      "class": "supplierController",
+      "method": "insertSupplier",
+      "httpMethod": "POST",
+      "path": "/insertSupplier",
+      "params": "",
+      "rest": false
+    },
+    "expectedViews": [
+      "web/WEB-INF/jsp/loginform.jsp",
+      "web/WEB-INF/jsp/suppliers.jsp"
+    ],
+    "actualViews": [
+      "web/WEB-INF/jsp/loginform.jsp",
+      "web/WEB-INF/jsp/suppliers.jsp"
+    ],
+    "missing": [],
+    "extra": [],
+    "result": "PASS",
+    "basis": [
+      {
+        "kind": "return",
+        "file": "src/java/com/emp/controller/supplierController.java",
+        "line": 85,
+        "class": "supplierController",
+        "method": "insertSupplier",
+        "expression": "new ModelAndView(\"redirect:/suppliers\")",
+        "guards": []
+      },
+      {
+        "kind": "modelAndView",
+        "file": "src/java/com/emp/controller/supplierController.java",
+        "line": 85,
+        "method": "insertSupplier",
+        "expression": "new ModelAndView(\"redirect:/suppliers\")",
+        "literalView": "redirect:/suppliers"
+      }
+    ]
+  },
+  {
+    "project": "SpringMVC-IMS",
+    "endpoint": {
+      "kind": "endpoint",
+      "file": "src/java/com/emp/controller/supplierController.java",
+      "line": 98,
+      "class": "supplierController",
+      "method": "editSupplier",
+      "httpMethod": "POST",
+      "path": "/editSupplier",
+      "params": "",
+      "rest": false
+    },
+    "expectedViews": [
+      "web/WEB-INF/jsp/loginform.jsp",
+      "web/WEB-INF/jsp/suppliers.jsp"
+    ],
+    "actualViews": [
+      "web/WEB-INF/jsp/loginform.jsp",
+      "web/WEB-INF/jsp/suppliers.jsp"
+    ],
+    "missing": [],
+    "extra": [],
+    "result": "PASS",
+    "basis": [
+      {
+        "kind": "return",
+        "file": "src/java/com/emp/controller/supplierController.java",
+        "line": 104,
+        "class": "supplierController",
+        "method": "editSupplier",
+        "expression": "new ModelAndView(\"redirect:/suppliers\")",
+        "guards": []
+      },
+      {
+        "kind": "modelAndView",
+        "file": "src/java/com/emp/controller/supplierController.java",
+        "line": 104,
+        "method": "editSupplier",
+        "expression": "new ModelAndView(\"redirect:/suppliers\")",
+        "literalView": "redirect:/suppliers"
+      }
+    ]
+  },
+  {
+    "project": "SpringMVC-IMS",
+    "endpoint": {
+      "kind": "endpoint",
+      "file": "src/java/com/emp/controller/supplierController.java",
+      "line": 107,
+      "class": "supplierController",
+      "method": "deleteSupplier",
+      "httpMethod": "POST",
+      "path": "/deleteSupplier",
+      "params": "",
+      "rest": false
+    },
+    "expectedViews": [
+      "web/WEB-INF/jsp/loginform.jsp",
+      "web/WEB-INF/jsp/suppliers.jsp"
+    ],
+    "actualViews": [
+      "web/WEB-INF/jsp/loginform.jsp",
+      "web/WEB-INF/jsp/suppliers.jsp"
+    ],
+    "missing": [],
+    "extra": [],
+    "result": "PASS",
+    "basis": [
+      {
+        "kind": "return",
+        "file": "src/java/com/emp/controller/supplierController.java",
+        "line": 114,
+        "class": "supplierController",
+        "method": "deleteSupplier",
+        "expression": "new ModelAndView(\"redirect:/suppliers\")",
+        "guards": []
+      },
+      {
+        "kind": "modelAndView",
+        "file": "src/java/com/emp/controller/supplierController.java",
+        "line": 114,
+        "method": "deleteSupplier",
+        "expression": "new ModelAndView(\"redirect:/suppliers\")",
+        "literalView": "redirect:/suppliers"
+      }
+    ]
+  },
+  {
+    "project": "airline_system",
+    "endpoint": {
+      "kind": "endpoint",
+      "file": "src/main/java/com/airline/controller/WebController.java",
+      "line": 30,
+      "class": "WebController",
+      "method": "home",
+      "httpMethod": "GET",
+      "path": "/",
+      "params": "",
+      "rest": false
+    },
+    "expectedViews": [
+      "src/main/resources/templates/index.html"
+    ],
+    "actualViews": [
+      "src/main/resources/templates/index.html"
+    ],
+    "missing": [],
+    "extra": [],
+    "result": "PASS",
+    "basis": [
+      {
+        "kind": "return",
+        "file": "src/main/java/com/airline/controller/WebController.java",
+        "line": 39,
+        "class": "WebController",
+        "method": "home",
+        "expression": "\"index\"",
+        "guards": []
+      }
+    ]
+  },
+  {
+    "project": "airline_system",
+    "endpoint": {
+      "kind": "endpoint",
+      "file": "src/main/java/com/airline/controller/WebController.java",
+      "line": 42,
+      "class": "WebController",
+      "method": "flights",
+      "httpMethod": "GET",
+      "path": "/flights",
+      "params": "",
+      "rest": false
+    },
+    "expectedViews": [
+      "src/main/resources/templates/flights.html"
+    ],
+    "actualViews": [
+      "src/main/resources/templates/flights.html"
+    ],
+    "missing": [],
+    "extra": [],
+    "result": "PASS",
+    "basis": [
+      {
+        "kind": "return",
+        "file": "src/main/java/com/airline/controller/WebController.java",
+        "line": 47,
+        "class": "WebController",
+        "method": "flights",
+        "expression": "\"flights\"",
+        "guards": []
+      }
+    ]
+  },
+  {
+    "project": "airline_system",
+    "endpoint": {
+      "kind": "endpoint",
+      "file": "src/main/java/com/airline/controller/WebController.java",
+      "line": 50,
+      "class": "WebController",
+      "method": "addFlight",
+      "httpMethod": "POST",
+      "path": "/flights/add",
+      "params": "",
+      "rest": false
+    },
+    "expectedViews": [
+      "src/main/resources/templates/flights.html"
+    ],
+    "actualViews": [
+      "src/main/resources/templates/flights.html"
+    ],
+    "missing": [],
+    "extra": [],
+    "result": "PASS",
+    "basis": [
+      {
+        "kind": "return",
+        "file": "src/main/java/com/airline/controller/WebController.java",
+        "line": 61,
+        "class": "WebController",
+        "method": "addFlight",
+        "expression": "\"redirect:/flights\"",
+        "guards": []
+      }
+    ]
+  },
+  {
+    "project": "airline_system",
+    "endpoint": {
+      "kind": "endpoint",
+      "file": "src/main/java/com/airline/controller/WebController.java",
+      "line": 64,
+      "class": "WebController",
+      "method": "passengers",
+      "httpMethod": "GET",
+      "path": "/passengers",
+      "params": "",
+      "rest": false
+    },
+    "expectedViews": [
+      "src/main/resources/templates/passengers.html"
+    ],
+    "actualViews": [
+      "src/main/resources/templates/passengers.html"
+    ],
+    "missing": [],
+    "extra": [],
+    "result": "PASS",
+    "basis": [
+      {
+        "kind": "return",
+        "file": "src/main/java/com/airline/controller/WebController.java",
+        "line": 69,
+        "class": "WebController",
+        "method": "passengers",
+        "expression": "\"passengers\"",
+        "guards": []
+      }
+    ]
+  },
+  {
+    "project": "airline_system",
+    "endpoint": {
+      "kind": "endpoint",
+      "file": "src/main/java/com/airline/controller/WebController.java",
+      "line": 72,
+      "class": "WebController",
+      "method": "addPassenger",
+      "httpMethod": "POST",
+      "path": "/passengers/add",
+      "params": "",
+      "rest": false
+    },
+    "expectedViews": [
+      "src/main/resources/templates/passengers.html"
+    ],
+    "actualViews": [
+      "src/main/resources/templates/passengers.html"
+    ],
+    "missing": [],
+    "extra": [],
+    "result": "PASS",
+    "basis": [
+      {
+        "kind": "return",
+        "file": "src/main/java/com/airline/controller/WebController.java",
+        "line": 75,
+        "class": "WebController",
+        "method": "addPassenger",
+        "expression": "\"redirect:/passengers\"",
+        "guards": []
+      }
+    ]
+  },
+  {
+    "project": "airline_system",
+    "endpoint": {
+      "kind": "endpoint",
+      "file": "src/main/java/com/airline/controller/WebController.java",
+      "line": 78,
+      "class": "WebController",
+      "method": "reservations",
+      "httpMethod": "GET",
+      "path": "/reservations",
+      "params": "",
+      "rest": false
+    },
+    "expectedViews": [
+      "src/main/resources/templates/reservations.html"
+    ],
+    "actualViews": [
+      "src/main/resources/templates/reservations.html"
+    ],
+    "missing": [],
+    "extra": [],
+    "result": "PASS",
+    "basis": [
+      {
+        "kind": "return",
+        "file": "src/main/java/com/airline/controller/WebController.java",
+        "line": 87,
+        "class": "WebController",
+        "method": "reservations",
+        "expression": "\"reservations\"",
+        "guards": []
+      }
+    ]
+  },
+  {
+    "project": "airline_system",
+    "endpoint": {
+      "kind": "endpoint",
+      "file": "src/main/java/com/airline/controller/WebController.java",
+      "line": 90,
+      "class": "WebController",
+      "method": "addReservation",
+      "httpMethod": "POST",
+      "path": "/reservations/add",
+      "params": "",
+      "rest": false
+    },
+    "expectedViews": [
+      "src/main/resources/templates/reservations.html"
+    ],
+    "actualViews": [
+      "src/main/resources/templates/reservations.html"
+    ],
+    "missing": [],
+    "extra": [],
+    "result": "PASS",
+    "basis": [
+      {
+        "kind": "return",
+        "file": "src/main/java/com/airline/controller/WebController.java",
+        "line": 97,
+        "class": "WebController",
+        "method": "addReservation",
+        "expression": "\"redirect:/reservations\"",
+        "guards": []
+      }
+    ]
+  }
+]

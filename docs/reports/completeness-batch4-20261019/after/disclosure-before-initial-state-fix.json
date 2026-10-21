@@ -1,0 +1,24 @@
+{
+  "id": "X06",
+  "source": {
+    "file": "src/main/webapp/WEB-INF/view/common/loadScript.jsp",
+    "line": 70
+  },
+  "expected": {
+    "initialVisible": false,
+    "openVisible": true,
+    "closedVisible": false
+  },
+  "actual": {
+    "initialVisible": true,
+    "openVisible": true,
+    "closedVisible": false,
+    "initialAria": "false",
+    "openAria": "true",
+    "closedAria": "false"
+  },
+  "pageErrors": [],
+  "externalRequests": [],
+  "reportSha256": "88d312533af388a47022ae71f40e2320f69b17dd14fe593ed5a0d4827bd00b56",
+  "result": "FAIL"
+}

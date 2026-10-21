@@ -14,7 +14,7 @@ public final class JavaScriptGraphContribution {
   private static final ObjectMapper JSON=new ObjectMapper();
   private JavaScriptGraphContribution() { }
   public static ApplicationGraph enrich(ApplicationGraph graph,ProjectInventory inventory) {
-    var collected=ScriptSources.collect(inventory);List<Diagnostic> diagnostics=new ArrayList<>(graph.diagnostics());diagnostics.addAll(collected.diagnostics());
+    var collected=ScriptSources.collect(inventory);List<Diagnostic> diagnostics=new ArrayList<>(graph.diagnostics());
     Map<String,GraphNode> nodes=new TreeMap<>();graph.nodes().forEach(n->nodes.put(n.id(),n));
     Map<String,Relationship> edges=new TreeMap<>();graph.relationships().forEach(e->edges.put(e.id(),e));
     Map<String,Behavior> behaviors=new TreeMap<>();graph.behaviors().forEach(b->behaviors.put(b.id(),b));
@@ -31,6 +31,8 @@ public final class JavaScriptGraphContribution {
         String target=include.targetPath();List<String> matches=sourcePaths.stream().filter(p->p.equals(target)||(!target.contains("${")&&p.endsWith("/"+target.replaceFirst("^/","")))||Path.of(include.sourceViewPath()).getParent()!=null&&Path.of(include.sourceViewPath()).getParent().resolve(target).normalize().toString().replace('\\','/').equals(p)).toList();
         if(matches.size()==1)changed|=owners.computeIfAbsent(matches.get(0),k->new TreeSet<>()).addAll(parents);
       }}
+      Map<String,List<String>> requestDirectories=new TreeMap<>();for(var entry:owners.entrySet())requestDirectories.put(entry.getKey(),UrlGraphContribution.requestDirectories(graph,entry.getValue()));
+      collected=ScriptSources.collect(inventory,requestDirectories);diagnostics.addAll(collected.diagnostics());
       List<Map<String,Object>> units=new ArrayList<>(),dom=new ArrayList<>();
       for(var entry:collected.dom())for(String screen:owners.getOrDefault((String)entry.get("ownerFile"),Set.of())){var copy=new TreeMap<>(entry);copy.put("screenId",screen);dom.add(copy);}
       Map<String,List<AnalysisEvidence>> inclusionEvidence=new HashMap<>();

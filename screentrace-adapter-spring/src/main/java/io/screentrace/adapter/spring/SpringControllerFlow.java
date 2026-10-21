@@ -15,7 +15,7 @@ final class SpringControllerFlow {
     for(var item:pending) {
       List<String> failures=new ArrayList<>();var destinations=resolver.resolve(item,new LinkedHashSet<>(List.of(item.handlerId())),0,failures);
       for(var destination:destinations) {
-        String id=ApplicationGraph.id(NodeType.COMPONENT,"FORWARDS_TO:"+item.handlerId()+":"+destination.screen()+":"+item.target().source().line()+":"+item.target().expression());
+        String id=ApplicationGraph.id(NodeType.COMPONENT,"FORWARDS_TO:"+item.handlerId()+":"+destination.screen()+":"+item.target().source().line()+":"+item.target().expression()+SpringControllerReturns.branchKey(item.target()));
         edges.add(new Relationship(id,EdgeType.FORWARDS_TO,item.handlerId(),destination.screen(),destination.confidence(),item.target().source(),destination.evidence()));
       }
       if(destinations.stream().anyMatch(d->d.confidence()==Confidence.AMBIGUOUS)) {
@@ -34,7 +34,7 @@ final class SpringControllerFlow {
     Map<String,Set<String>> routeLinks=new TreeMap<>();
     for(Pending item:pending) {
       var target=item.target();if(!Set.of(SpringControllerReturns.Kind.REDIRECT,SpringControllerReturns.Kind.REDIRECT_VIEW,SpringControllerReturns.Kind.FORWARD).contains(target.kind()))continue;
-      String path=target.value();if(path==null||!path.startsWith("/")||path.startsWith("//")||path.contains("${")||path.contains("#{")) {
+      String path=requestPath(item,nodes,edges);if(path==null||!path.startsWith("/")||path.startsWith("//")||path.contains("${")||path.contains("#{")) {
         diagnostics.add(new Diagnostic("轉址目的地無法靜態證明，未繼承呼叫來源",Confidence.UNRESOLVED,target.source(),"API_REDIRECT_UNRESOLVED",target.evidence()));continue;
       }
       String method=target.kind()==SpringControllerReturns.Kind.FORWARD?item.requestMethod():"GET";
@@ -43,6 +43,7 @@ final class SpringControllerFlow {
       }
       boolean rawRedirectView=target.kind()==SpringControllerReturns.Kind.REDIRECT_VIEW;
       var match=UrlResolution.resolve(path,method,rawRedirectView?context:new UrlResolution.Context(List.of(),List.of()),endpoints,false);
+      if(match.candidates().isEmpty()&&!rawRedirectView&&!publicScreens(path,nodes).isEmpty())continue;
       if(match.candidates().size()!=1) {
         if(match.candidates().size()>1)diagnostics.add(new Diagnostic("轉址目的地有多個候選，未繼承呼叫來源",Confidence.AMBIGUOUS,target.source(),"API_REDIRECT_AMBIGUOUS",target.evidence()));
         else diagnostics.add(new Diagnostic("轉址目的地無法唯一解析，未繼承呼叫來源",Confidence.UNRESOLVED,target.source(),"API_REDIRECT_UNRESOLVED",target.evidence()));
@@ -92,7 +93,7 @@ final class SpringControllerFlow {
     }
     List<Destination> resolve(Pending item,Set<String> stack,int depth,List<String> failures) {
       if(depth>=10){failures.add("導向追蹤超過深度 10");return List.of();}
-      var target=item.target();String path=target.value();
+      var target=item.target();String path=requestPath(item,nodes,edges);
       if(path==null||!path.startsWith("/")||path.startsWith("//")||path.contains("${")||path.contains("#{")) {failures.add("非專案內可證明的絕對路徑");return List.of();}
       String method=target.kind()==SpringControllerReturns.Kind.FORWARD?item.requestMethod():"GET";
       if(method.equals("ANY")||method.contains(",")||method.contains("|")){failures.add("無法證明 forward 的請求方法");return List.of();}
@@ -100,6 +101,10 @@ final class SpringControllerFlow {
       // deployment prefix from that app-relative syntax. No context value is invented.
       boolean rawRedirectView=target.kind()==SpringControllerReturns.Kind.REDIRECT_VIEW;
       var result=UrlResolution.resolve(path,method,rawRedirectView?context:new UrlResolution.Context(List.of(),List.of()),endpoints,false);
+      if(result.candidates().isEmpty()&&method.equals("GET")&&!rawRedirectView) {
+        var publicViews=publicScreens(path,nodes);
+        if(!publicViews.isEmpty())return publicViews.stream().map(n->new Destination(n.id(),Confidence.INFERRED,java.util.stream.Stream.concat(target.evidence().stream(),java.util.stream.Stream.of(new AnalysisEvidence(n.source(),"SpringControllerFlow",ResolutionStatus.INFERRED,"公開檢視資源；請求路徑="+path+"；來源="+n.attributes().get("view")))).toList())).toList();
+      }
       if(result.candidates().isEmpty()){failures.add("目的端點無法唯一證明："+result.diagnostics());return List.of();}
       List<String> candidates=endpoints.stream().filter(e->result.candidates().contains(e.id())).map(e->e.method()+" "+e.path()+" ["+e.id()+"]").sorted().toList();
       List<AnalysisEvidence> routeProof=new ArrayList<>(target.evidence());
@@ -121,6 +126,22 @@ final class SpringControllerFlow {
       }
       return merge(destinations);
     }
+  }
+  private static List<GraphNode> publicScreens(String path,List<GraphNode> nodes) {
+    if(path==null||!path.startsWith("/")||path.startsWith("//")||path.contains("..")||path.contains("{")||path.contains("%")||path.toUpperCase(Locale.ROOT).contains("/WEB-INF/"))return List.of();
+    String clean=path.split("[?#]",2)[0];
+    return nodes.stream().filter(n->n.type()==NodeType.SCREEN&&("src/main/webapp"+clean).equals(n.attributes().get("view"))).toList();
+  }
+  private static String requestPath(Pending item,List<GraphNode> nodes,List<Relationship> edges) {
+    String path=item.target().value();if(path==null||path.startsWith("/"))return path;
+    if(item.target().kind()!=SpringControllerReturns.Kind.REDIRECT||path.contains(":")||path.contains("\\")||path.contains("%")||path.contains("{")||path.contains("${")||path.contains("#{"))return null;
+    Set<String> sources=new HashSet<>();for(var e:edges)if(e.type()==EdgeType.HANDLED_BY&&e.to().equals(item.handlerId()))sources.add(e.from());
+    Set<String> resolved=new TreeSet<>();
+    for(var n:nodes)if(sources.contains(n.id())&&n.type()==NodeType.ENDPOINT) {
+      String request=n.attributes().getOrDefault("path","");if(!request.startsWith("/")||request.contains("{"))return null;
+      try{var uri=java.net.URI.create(request).resolve(path).normalize();if(uri.getScheme()!=null||uri.getAuthority()!=null||uri.getPath()==null||!uri.getPath().startsWith("/"))return null;resolved.add(uri.toString());}catch(IllegalArgumentException error){return null;}
+    }
+    return resolved.size()==1?resolved.iterator().next():null;
   }
   private static List<Destination> merge(List<Destination> destinations) {
     Map<String,Destination> result=new TreeMap<>();

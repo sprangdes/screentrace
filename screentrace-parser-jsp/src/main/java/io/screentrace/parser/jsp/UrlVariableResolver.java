@@ -77,7 +77,22 @@ public final class UrlVariableResolver {
       List<MarkupTag> nested=MarkupTag.scan(raw);
       if(nested.size()==1 && nested.get(0).attribute("value")!=null&&!MarkupAnalysis.dynamic(nested.get(0).attribute("value")))
         return new Resolution(nested.get(0).attribute("value"),raw,List.of(new AnalysisEvidence(new SourceLocation(path,use.line()),"JspUrlVariableResolver",ResolutionStatus.CONFIRMED,"巢狀 URL 常值定義；param 不解析")));
+      if(nested.size()==1&&nested.get(0).attribute("value")!=null) {
+        String value=nested.get(0).attribute("value");int delimiter=value.indexOf('?');
+        if(delimiter>0&&value.substring(0,delimiter).matches("/[A-Za-z0-9_./-]*")&&value.substring(delimiter+1).matches("[A-Za-z0-9_=&.$(){} -]*")&&!value.substring(delimiter+1).contains("#{"))
+          return new Resolution(value.replaceAll("\\$\\{[^{}]*}","{queryValue}"),raw,List.of(new AnalysisEvidence(new SourceLocation(path,use.line()),"JspUrlVariableResolver",ResolutionStatus.INFERRED,"巢狀 URL 的路徑為字面常值；查詢參數運算式未求值；原文="+raw)));
+      }
       return new Resolution(raw,raw,List.of());
+    }
+    int query=raw.indexOf('?');
+    if(query>0&&!MarkupAnalysis.dynamic(raw.substring(0,query))&&raw.substring(query).contains("<bean:write")) {
+      StringBuilder value=new StringBuilder();int cursor=0;boolean supported=true;
+      for(var token:MarkupTag.scan(raw))if(token.start()>query){
+        String property=token.attribute("property"),name=token.attribute("name");
+        if(!token.name().equals("bean:write")||name==null||property==null||!name.matches("[A-Za-z_][A-Za-z0-9_]*")||!property.matches("[A-Za-z_][A-Za-z0-9_]*")){supported=false;break;}
+        value.append(raw,cursor,token.start()).append('{').append(property).append('}');cursor=token.end()+1;
+      }
+      if(supported&&cursor>0)return new Resolution(value.append(raw.substring(cursor)).toString(),raw,List.of(new AnalysisEvidence(new SourceLocation(path,use.line()),"JspUrlVariableResolver",ResolutionStatus.INFERRED,"查詢參數來自 bean:write；保留參數樣板，執行時值未知；原文="+raw)));
     }
     if(!raw.startsWith("${")||!raw.endsWith("}")) return new Resolution(raw,raw,List.of());
     String expression=raw.substring(2,raw.length()-1).trim();

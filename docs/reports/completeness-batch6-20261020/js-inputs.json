@@ -1,0 +1,88 @@
+[
+  {
+    "project": "java7-struts1-jquery-bootstrap3-web-project",
+    "file": "src/main/webapp/js/my-app.js",
+    "line": 1,
+    "code": "class MyApp {\n    #$loadingSlash = $('.loading-splash');\n\n    init() {\n        console.debug('MyApp initialized...');\n        this.applyLinkClickLoadingSplash();\n    }\n\n    applyLinkClickLoadingSplash() {\n        $('a[href!=\"#\"], button[type=\"submit\"]').click(() => {\n            this.loading(true);\n        });\n    }\n\n    loading(enable) {\n        this.#$loadingSlash.prop('hidden', !(enable | this.#$loadingSlash.is(':hidden')));\n    }\n}\n\nlet myApp = new MyApp();\n\nmyApp.init();",
+    "kind": "external"
+  },
+  {
+    "project": "java7-struts1-jquery-bootstrap3-web-project",
+    "file": "src/main/webapp/js/service/city-service.js",
+    "line": 1,
+    "code": "/**\n * \n */\nclass CityService {\n    findAllByCountryId(countryId) {\n        let $def = $.Deferred();\n\n        $.get('/MyApp/api/city/by-country.do', {\n            \"countryId\": countryId\n        }, (res) => {\n            $def.resolve(res.cities);\n        }).fail(() => {\n            $def.reject();\n        });\n\n        return $def.promise();\n    }\n}\n\nlet cityService = new CityService();\n\nconsole.debug('city-service.js initialized');",
+    "kind": "external"
+  },
+  {
+    "project": "java7-struts1-jquery-bootstrap3-web-project",
+    "file": "src/main/webapp/user/save/js/form.js",
+    "line": 1,
+    "code": "/**\n * \n */\n\nlet form = {\n    $form: $('form#user-save-fome'),\n    $action: $('input[name=\"action\"]'),\n\n    user: {\n        $id: $('input#user-id'),\n        $username: $('input#user-username'),\n        $password: $('input#user-password'),\n        $country: $('select#user-country'),\n        $city: $('select#user-city')\n    },\n\n    btn: {\n        $validate: $('button.btn-validate'),\n        $save: $('button.btn-save')\n    },\n\n}\n\n\nlet btnValidateClickHandler = (event) => {\n    event.preventDefault();\n    console.debug('btn validate clicked');\n    form.$action.val('validate');\n    form.$form.submit();\n}\n\nlet btnSaveClickHandler = (event) => {\n    event.preventDefault();\n    console.debug('btn save clicked');\n    form.$action.val('save');\n    form.$form.submit();\n}\n\nlet countryChangeHandler = () => {\n    let $country = form.user.$country;\n    let $city = form.user.$city;\n\n    $city.prop('disabled', true).val('').empty().append($(`<option value=\"\" hidden>Choose a city</option>`));\n\n    if ($country.val()) {\n        let countryId = Number($country.val());\n\n        cityService.findAllByCountryId(countryId).done((cities) => {\n            console.debug(cities);\n\n            if (cities != null && cities.length > 0) {\n                $city.prop('disabled', false);\n                cities.forEach((city) => {\n                    $city.append($(`<option value=\"${city.id}\">${city.name}</option>`));\n                });\n            }\n        })\n    }\n}\n\nlet main = () => {\n\n    form.btn.$validate.on('click', btnValidateClickHandler);\n    form.btn.$save.on('click', btnSaveClickHandler);\n\n    form.user.$country.on('change', countryChangeHandler)\n\n    console.debug('form.js initialized');\n}\n\n$(() => {\n    main();\n})",
+    "kind": "external"
+  },
+  {
+    "project": "InventoryMGRSpringMVCCRUD",
+    "file": "WebContent/WEB-INF/addProduct.jsp",
+    "line": 31,
+    "code": "\n\t// A $( document ).ready() block.\n\t$(document).ready(function() {\n\t\tconsole.log(\"ready!\");\n\t});\n",
+    "kind": "inline"
+  },
+  {
+    "project": "InventoryMGRSpringMVCCRUD",
+    "file": "WebContent/WEB-INF/deleteProduct.jsp",
+    "line": 31,
+    "code": "\n\t// A $( document ).ready() block.\n\t$(document).ready(function() {\n\t\tconsole.log(\"ready!\");\n\t});\n",
+    "kind": "inline"
+  },
+  {
+    "project": "InventoryMGRSpringMVCCRUD",
+    "file": "WebContent/WEB-INF/editProduct.jsp",
+    "line": 33,
+    "code": "\n\t// A $( document ).ready() block.\n\t$(document).ready(function() {\n\t\tconsole.log(\"ready!\");\n\t});\n",
+    "kind": "inline"
+  },
+  {
+    "project": "InventoryMGRSpringMVCCRUD",
+    "file": "WebContent/WEB-INF/viewInventory.jsp",
+    "line": 30,
+    "code": "\n\t// A $( document ).ready() block.\n\t$(document).ready(function() {\n\t\tconsole.log(\"ready!\");\n\t});\n",
+    "kind": "inline"
+  },
+  {
+    "project": "InventoryMGRSpringMVCCRUD",
+    "file": "WebContent/WEB-INF/viewProduct.jsp",
+    "line": 31,
+    "code": "\n\t// A $( document ).ready() block.\n\t$(document).ready(function() {\n\t\tconsole.log(\"ready!\");\n\t});\n",
+    "kind": "inline"
+  },
+  {
+    "project": "InventoryMGRSpringMVCCRUD",
+    "file": "WebContent/contact.html",
+    "line": 21,
+    "code": "\n        // A $( document ).ready() block.\n        $(document).ready(function() {\n            console.log(\"ready!\");\n        });\n    ",
+    "kind": "inline"
+  },
+  {
+    "project": "InventoryMGRSpringMVCCRUD",
+    "file": "WebContent/index.html",
+    "line": 20,
+    "code": "\n        // A $( document ).ready() block.\n        $(document).ready(function() {\n            console.log(\"ready!\");\n        });\n    ",
+    "kind": "inline"
+  },
+  {
+    "project": "springboot-todolist",
+    "file": "src/main/resources/templates/todo/detail.html",
+    "line": 21,
+    "code": "return confirm('削除しますか？');",
+    "kind": "event",
+    "attribute": "onclick"
+  },
+  {
+    "project": "springboot-todolist",
+    "file": "src/main/resources/templates/todo/index.html",
+    "line": 35,
+    "code": "return confirm('削除しますか？');",
+    "kind": "event",
+    "attribute": "onclick"
+  }
+]

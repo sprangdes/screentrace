@@ -1,0 +1,50 @@
+[
+  {
+    "project": "java7-struts1-jquery-bootstrap3-web-project",
+    "exitCode": 0,
+    "seconds": 5.03,
+    "command": [
+      "java",
+      "-Djava.awt.headless=true",
+      "-Duser.home=/private/tmp/screentrace-batch6-20261020/home-java7-struts1-jquery-bootstrap3-web-project",
+      "-Dscreentrace.home=/Users/machi/IntelliJ/screentrace",
+      "-Dscreentrace.js.module=/Users/machi/IntelliJ/screentrace/screentrace-js/cli.mjs",
+      "-jar",
+      "/Users/machi/IntelliJ/screentrace/screentrace-cli/target/screentrace-cli-0.1.0-SNAPSHOT.jar",
+      "analyze",
+      "java7-struts1-jquery-bootstrap3-web-project"
+    ]
+  },
+  {
+    "project": "InventoryMGRSpringMVCCRUD",
+    "exitCode": 0,
+    "seconds": 4.67,
+    "command": [
+      "java",
+      "-Djava.awt.headless=true",
+      "-Duser.home=/private/tmp/screentrace-batch6-20261020/home-InventoryMGRSpringMVCCRUD",
+      "-Dscreentrace.home=/Users/machi/IntelliJ/screentrace",
+      "-Dscreentrace.js.module=/Users/machi/IntelliJ/screentrace/screentrace-js/cli.mjs",
+      "-jar",
+      "/Users/machi/IntelliJ/screentrace/screentrace-cli/target/screentrace-cli-0.1.0-SNAPSHOT.jar",
+      "analyze",
+      "InventoryMGRSpringMVCCRUD"
+    ]
+  },
+  {
+    "project": "springboot-todolist",
+    "exitCode": 0,
+    "seconds": 2.92,
+    "command": [
+      "java",
+      "-Djava.awt.headless=true",
+      "-Duser.home=/private/tmp/screentrace-batch6-20261020/home-springboot-todolist",
+      "-Dscreentrace.home=/Users/machi/IntelliJ/screentrace",
+      "-Dscreentrace.js.module=/Users/machi/IntelliJ/screentrace/screentrace-js/cli.mjs",
+      "-jar",
+      "/Users/machi/IntelliJ/screentrace/screentrace-cli/target/screentrace-cli-0.1.0-SNAPSHOT.jar",
+      "analyze",
+      "springboot-todolist"
+    ]
+  }
+]

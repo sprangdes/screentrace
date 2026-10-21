@@ -1,0 +1,2061 @@
+{
+  "cases": [
+    {
+      "id": "S01",
+      "project": "demo-struts1",
+      "result": "PASS",
+      "sourceView": "tile:tiles.logon",
+      "expectedTargets": [
+        "tile:tiles.dashboard",
+        "tile:tiles.logon",
+        "file:src/main/webapp/WEB-INF/view/login.jsp"
+      ],
+      "source": {
+        "file": "src/main/webapp/WEB-INF/view/login.jsp",
+        "line": 11,
+        "excerpt": "<form action=\"<c:url value='/postLogin.do' />\" method=\"post\">"
+      },
+      "effectiveSelector": "form button[type=submit]",
+      "before": {
+        "focused": "tile:tiles.logon",
+        "id": "screen:0e8d95ea-94d0-3a24-b761-0893f85998ab",
+        "choices": [],
+        "status": ""
+      },
+      "afterClick": {
+        "focused": "tile:tiles.logon",
+        "id": "screen:0e8d95ea-94d0-3a24-b761-0893f85998ab",
+        "choices": [
+          {
+            "id": "screen:04d0fa0d-7486-3d26-bc36-2f05a1214e41",
+            "label": "login",
+            "key": "file:src/main/webapp/WEB-INF/view/login.jsp"
+          },
+          {
+            "id": "screen:0e8d95ea-94d0-3a24-b761-0893f85998ab",
+            "label": "Tiles Logon",
+            "key": "tile:tiles.logon"
+          },
+          {
+            "id": "screen:19071acc-bf03-3638-9678-4bacf668fc82",
+            "label": "Tiles Dashboard",
+            "key": "tile:tiles.dashboard"
+          }
+        ],
+        "status": ""
+      },
+      "actualTargets": [
+        "file:src/main/webapp/WEB-INF/view/login.jsp",
+        "tile:tiles.logon",
+        "tile:tiles.dashboard"
+      ],
+      "after": {
+        "focused": "tile:tiles.dashboard",
+        "id": "screen:19071acc-bf03-3638-9678-4bacf668fc82",
+        "choices": [],
+        "status": ""
+      }
+    },
+    {
+      "id": "S02",
+      "project": "demo-struts1",
+      "result": "PASS",
+      "sourceView": "tile:tiles.dashboard",
+      "expectedTargets": [
+        "tile:tiles.spotify.list.pagination",
+        "tile:tiles.logon"
+      ],
+      "source": {
+        "file": "src/main/webapp/WEB-INF/view/common/sideNav.jsp",
+        "line": 21,
+        "excerpt": "<a href=\"<c:url value='/spotify-pagination.do' />\" class=\"nav-link\">"
+      },
+      "effectiveSelector": "[data-st-component-id=\"component:cc45663b-2149-3c9e-ae31-2953c7b89491\"]",
+      "before": {
+        "focused": "tile:tiles.dashboard",
+        "id": "screen:19071acc-bf03-3638-9678-4bacf668fc82",
+        "choices": [],
+        "status": ""
+      },
+      "afterClick": {
+        "focused": "tile:tiles.dashboard",
+        "id": "screen:19071acc-bf03-3638-9678-4bacf668fc82",
+        "choices": [
+          {
+            "id": "screen:0e8d95ea-94d0-3a24-b761-0893f85998ab",
+            "label": "Tiles Logon",
+            "key": "tile:tiles.logon"
+          },
+          {
+            "id": "screen:398aec38-b8ee-3dc8-9916-2d670b11bbb9",
+            "label": "Custom Pagination DataTable",
+            "key": "tile:tiles.spotify.list.pagination"
+          }
+        ],
+        "status": ""
+      },
+      "actualTargets": [
+        "tile:tiles.logon",
+        "tile:tiles.spotify.list.pagination"
+      ],
+      "after": {
+        "focused": "tile:tiles.spotify.list.pagination",
+        "id": "screen:398aec38-b8ee-3dc8-9916-2d670b11bbb9",
+        "choices": [],
+        "status": ""
+      }
+    },
+    {
+      "id": "S03",
+      "project": "demo-struts1",
+      "result": "PASS",
+      "sourceView": "tile:tiles.spotify.list.pagination",
+      "expectedTargets": [
+        "tile:tiles.spotify.init",
+        "tile:tiles.logon"
+      ],
+      "source": {
+        "file": "src/main/webapp/WEB-INF/view/spotifyListPagination.jsp",
+        "line": 19,
+        "excerpt": "<a class=\"modal-effect btn btn-dark mx-2\" href=\"<c:url value='/spotify-init.do?action=create' />\">"
+      },
+      "effectiveSelector": "[data-st-component-id=\"component:17d6f371-9636-37b7-a67d-2d87785d07e5\"]",
+      "before": {
+        "focused": "tile:tiles.spotify.list.pagination",
+        "id": "screen:398aec38-b8ee-3dc8-9916-2d670b11bbb9",
+        "choices": [],
+        "status": ""
+      },
+      "afterClick": {
+        "focused": "tile:tiles.spotify.list.pagination",
+        "id": "screen:398aec38-b8ee-3dc8-9916-2d670b11bbb9",
+        "choices": [
+          {
+            "id": "screen:0e8d95ea-94d0-3a24-b761-0893f85998ab",
+            "label": "Tiles Logon",
+            "key": "tile:tiles.logon"
+          },
+          {
+            "id": "screen:874022fd-e14f-3526-aba4-c9a90f342e85",
+            "label": "Tiles Spotify Init",
+            "key": "tile:tiles.spotify.init"
+          }
+        ],
+        "status": ""
+      },
+      "actualTargets": [
+        "tile:tiles.logon",
+        "tile:tiles.spotify.init"
+      ],
+      "after": {
+        "focused": "tile:tiles.spotify.init",
+        "id": "screen:874022fd-e14f-3526-aba4-c9a90f342e85",
+        "choices": [],
+        "status": ""
+      }
+    },
+    {
+      "id": "S04",
+      "project": "demo-struts1",
+      "result": "PASS",
+      "sourceView": "tile:tiles.spotify.init",
+      "expectedTargets": [
+        "tile:tiles.spotify.list.pagination",
+        "tile:tiles.logon"
+      ],
+      "source": {
+        "file": "src/main/webapp/WEB-INF/view/spotifyInit.jsp",
+        "line": 92,
+        "excerpt": "<a href=\"<c:url value='/spotify-pagination.do' />\" class=\"btn btn-dark\">Cancel</a>"
+      },
+      "effectiveSelector": "[data-st-component-id=\"component:2ca73c94-b8ed-3d58-bedf-f006a46393d1\"]",
+      "before": {
+        "focused": "tile:tiles.spotify.init",
+        "id": "screen:874022fd-e14f-3526-aba4-c9a90f342e85",
+        "choices": [],
+        "status": ""
+      },
+      "afterClick": {
+        "focused": "tile:tiles.spotify.init",
+        "id": "screen:874022fd-e14f-3526-aba4-c9a90f342e85",
+        "choices": [
+          {
+            "id": "screen:0e8d95ea-94d0-3a24-b761-0893f85998ab",
+            "label": "Tiles Logon",
+            "key": "tile:tiles.logon"
+          },
+          {
+            "id": "screen:398aec38-b8ee-3dc8-9916-2d670b11bbb9",
+            "label": "Custom Pagination DataTable",
+            "key": "tile:tiles.spotify.list.pagination"
+          }
+        ],
+        "status": ""
+      },
+      "actualTargets": [
+        "tile:tiles.logon",
+        "tile:tiles.spotify.list.pagination"
+      ],
+      "after": {
+        "focused": "tile:tiles.spotify.list.pagination",
+        "id": "screen:398aec38-b8ee-3dc8-9916-2d670b11bbb9",
+        "choices": [],
+        "status": ""
+      }
+    },
+    {
+      "id": "S05",
+      "project": "demo-struts1",
+      "result": "PASS",
+      "sourceView": "tile:tiles.dashboard",
+      "expectedTargets": [],
+      "source": {
+        "file": "src/main/webapp/WEB-INF/view/common/loadScript.jsp",
+        "line": 12,
+        "excerpt": "//     document.body.classList.toggle('sb-sidenav-toggled');"
+      },
+      "effectiveSelector": "#sidebarToggle",
+      "before": {
+        "focused": "tile:tiles.dashboard",
+        "id": "screen:19071acc-bf03-3638-9678-4bacf668fc82",
+        "choices": [],
+        "status": ""
+      },
+      "classBefore": false,
+      "classAfter": true,
+      "after": {
+        "focused": "tile:tiles.dashboard",
+        "id": "screen:19071acc-bf03-3638-9678-4bacf668fc82",
+        "choices": [],
+        "status": "已模擬可確認的操作；部分腳本結果無法確定"
+      }
+    },
+    {
+      "id": "S06",
+      "project": "demo-struts1",
+      "result": "PASS",
+      "sourceView": "tile:tiles.dashboard",
+      "expectedTargets": [],
+      "source": {
+        "file": "src/main/webapp/WEB-INF/view/common/loadScript.jsp",
+        "line": 70,
+        "excerpt": "dropdownToggle.addEventListener('click', function(event) {"
+      },
+      "effectiveSelector": "#navbarDropdown",
+      "before": {
+        "focused": "tile:tiles.dashboard",
+        "id": "screen:19071acc-bf03-3638-9678-4bacf668fc82",
+        "choices": [],
+        "status": ""
+      },
+      "expanded": "true",
+      "menuShown": true,
+      "closed": true,
+      "after": {
+        "focused": "tile:tiles.dashboard",
+        "id": "screen:19071acc-bf03-3638-9678-4bacf668fc82",
+        "choices": [],
+        "status": "已模擬可確認的操作；部分腳本結果無法確定"
+      }
+    },
+    {
+      "id": "S07",
+      "project": "demo-struts1",
+      "result": "PASS",
+      "sourceView": "tile:tiles.spotify.init",
+      "expectedTargets": [],
+      "source": {
+        "file": "src/main/webapp/WEB-INF/view/spotifyInit.jsp",
+        "line": 21,
+        "excerpt": "<c:set var=\"actionUrl\" value=\"/spotify-create.do\" />"
+      },
+      "effectiveSelector": "form",
+      "before": {
+        "focused": "tile:tiles.spotify.init",
+        "id": "screen:874022fd-e14f-3526-aba4-c9a90f342e85",
+        "choices": [],
+        "status": ""
+      },
+      "actualRequests": [
+        "/spotify-create.do",
+        "/spotify-update.do",
+        "/spotify-delete.do"
+      ],
+      "after": {
+        "focused": "tile:tiles.spotify.init",
+        "id": "screen:874022fd-e14f-3526-aba4-c9a90f342e85",
+        "choices": [],
+        "status": ""
+      }
+    },
+    {
+      "id": "S08",
+      "project": "demo-struts1",
+      "result": "PASS",
+      "sourceView": "tile:tiles.spotify.list.pagination",
+      "expectedTargets": [
+        "tile:tiles.spotify.init",
+        "tile:tiles.logon"
+      ],
+      "source": {
+        "file": "src/main/webapp/WEB-INF/view/spotifyListPagination.jsp",
+        "line": 46,
+        "excerpt": "<a class=\"modal-effect btn btn-dark mx-2\" href=\"<c:url value='/spotify-init.do?action=edit&id=${entity.id.toString()}' />\">"
+      },
+      "effectiveSelector": "[data-st-component-id=\"component:1afea225-d473-362e-9921-c93db87d4d7c\"]",
+      "before": {
+        "focused": "tile:tiles.spotify.list.pagination",
+        "id": "screen:398aec38-b8ee-3dc8-9916-2d670b11bbb9",
+        "choices": [],
+        "status": ""
+      },
+      "afterClick": {
+        "focused": "tile:tiles.spotify.list.pagination",
+        "id": "screen:398aec38-b8ee-3dc8-9916-2d670b11bbb9",
+        "choices": [
+          {
+            "id": "screen:0e8d95ea-94d0-3a24-b761-0893f85998ab",
+            "label": "Tiles Logon",
+            "key": "tile:tiles.logon"
+          },
+          {
+            "id": "screen:874022fd-e14f-3526-aba4-c9a90f342e85",
+            "label": "Tiles Spotify Init",
+            "key": "tile:tiles.spotify.init"
+          }
+        ],
+        "status": ""
+      },
+      "actualTargets": [
+        "tile:tiles.logon",
+        "tile:tiles.spotify.init"
+      ],
+      "after": {
+        "focused": "tile:tiles.spotify.init",
+        "id": "screen:874022fd-e14f-3526-aba4-c9a90f342e85",
+        "choices": [],
+        "status": ""
+      }
+    },
+    {
+      "id": "S09",
+      "project": "demo-struts1",
+      "result": "FAIL",
+      "sourceView": "tile:tiles.spotify.init",
+      "expectedTargets": [
+        "tile:tiles.spotify.list.pagination",
+        "tile:tiles.spotify.init",
+        "tile:tiles.logon"
+      ],
+      "source": {
+        "file": "src/main/webapp/WEB-INF/view/spotifyInit.jsp",
+        "line": 36,
+        "excerpt": "<form action=\"<c:url value='${actionUrl}' />\" method=\"post\">"
+      },
+      "effectiveSelector": "form button[type=submit]",
+      "before": {
+        "focused": "tile:tiles.spotify.init",
+        "id": "screen:874022fd-e14f-3526-aba4-c9a90f342e85",
+        "choices": [],
+        "status": ""
+      },
+      "afterClick": {
+        "focused": "tile:tiles.spotify.init",
+        "id": "screen:874022fd-e14f-3526-aba4-c9a90f342e85",
+        "choices": [
+          {
+            "id": "screen:0e8d95ea-94d0-3a24-b761-0893f85998ab",
+            "label": "Tiles Logon · ANY /spotify-create.do",
+            "key": "tile:tiles.logon"
+          },
+          {
+            "id": "screen:398aec38-b8ee-3dc8-9916-2d670b11bbb9",
+            "label": "Custom Pagination DataTable · ANY /spotify-create.do",
+            "key": "tile:tiles.spotify.list.pagination"
+          },
+          {
+            "id": "screen:874022fd-e14f-3526-aba4-c9a90f342e85",
+            "label": "Tiles Spotify Init · ANY /spotify-create.do",
+            "key": "tile:tiles.spotify.init"
+          },
+          {
+            "id": "screen:0e8d95ea-94d0-3a24-b761-0893f85998ab",
+            "label": "Tiles Logon · ANY /spotify-update.do",
+            "key": "tile:tiles.logon"
+          },
+          {
+            "id": "screen:398aec38-b8ee-3dc8-9916-2d670b11bbb9",
+            "label": "Custom Pagination DataTable · ANY /spotify-update.do",
+            "key": "tile:tiles.spotify.list.pagination"
+          },
+          {
+            "id": "screen:874022fd-e14f-3526-aba4-c9a90f342e85",
+            "label": "Tiles Spotify Init · ANY /spotify-update.do",
+            "key": "tile:tiles.spotify.init"
+          },
+          {
+            "id": "screen:0e8d95ea-94d0-3a24-b761-0893f85998ab",
+            "label": "Tiles Logon · ANY /spotify-delete.do",
+            "key": "tile:tiles.logon"
+          },
+          {
+            "id": "screen:398aec38-b8ee-3dc8-9916-2d670b11bbb9",
+            "label": "Custom Pagination DataTable · ANY /spotify-delete.do",
+            "key": "tile:tiles.spotify.list.pagination"
+          },
+          {
+            "id": "screen:874022fd-e14f-3526-aba4-c9a90f342e85",
+            "label": "Tiles Spotify Init · ANY /spotify-delete.do",
+            "key": "tile:tiles.spotify.init"
+          }
+        ],
+        "status": ""
+      },
+      "actualTargets": [
+        "tile:tiles.logon",
+        "tile:tiles.spotify.list.pagination",
+        "tile:tiles.spotify.init",
+        "tile:tiles.logon",
+        "tile:tiles.spotify.list.pagination",
+        "tile:tiles.spotify.init",
+        "tile:tiles.logon",
+        "tile:tiles.spotify.list.pagination",
+        "tile:tiles.spotify.init"
+      ],
+      "renderedText": "No.\tTrack Name\tArtist Name\tGenre\tPopularity\tAction\nI\tEntity\tEntity\tEntity\tEntity\t\n◇ ◇",
+      "missingText": [
+        "ST Artist 419",
+        "ST Track 419"
+      ],
+      "after": {
+        "focused": "tile:tiles.spotify.list.pagination",
+        "id": "screen:398aec38-b8ee-3dc8-9916-2d670b11bbb9",
+        "choices": [],
+        "status": ""
+      },
+      "errors": [
+        "SUBMITTED_VALUES_NOT_RENDERED"
+      ]
+    },
+    {
+      "id": "L01",
+      "project": "App1Assignment5",
+      "result": "PASS",
+      "sourceView": "file:src/main/webapp/login.jsp",
+      "expectedTargets": [
+        "file:src/main/webapp/register.jsp"
+      ],
+      "source": {
+        "file": "src/main/webapp/login.jsp",
+        "line": 50,
+        "excerpt": "<a href=\"Register\">Register User </a>"
+      },
+      "effectiveSelector": "[data-st-component-id=\"component:20042f80-b119-3990-bb39-ddd854652964\"]",
+      "before": {
+        "focused": "file:src/main/webapp/login.jsp",
+        "id": "screen:0dabd232-1575-327d-a141-89ea05d553c4",
+        "choices": [],
+        "status": ""
+      },
+      "afterClick": {
+        "focused": "file:src/main/webapp/register.jsp",
+        "id": "screen:53c3ffbe-8939-3e37-a91e-6c96b306190a",
+        "choices": [],
+        "status": ""
+      },
+      "actualTargets": [
+        "file:src/main/webapp/register.jsp"
+      ],
+      "after": {
+        "focused": "file:src/main/webapp/register.jsp",
+        "id": "screen:53c3ffbe-8939-3e37-a91e-6c96b306190a",
+        "choices": [],
+        "status": ""
+      }
+    },
+    {
+      "id": "L02",
+      "project": "App1Assignment5",
+      "result": "PASS",
+      "sourceView": "file:src/main/webapp/register.jsp",
+      "expectedTargets": [
+        "file:src/main/webapp/login.jsp"
+      ],
+      "source": {
+        "file": "src/main/webapp/register.jsp",
+        "line": 32,
+        "excerpt": "<form action=\"Register\" method=\"post\">"
+      },
+      "effectiveSelector": "input[type=submit]",
+      "before": {
+        "focused": "file:src/main/webapp/register.jsp",
+        "id": "screen:53c3ffbe-8939-3e37-a91e-6c96b306190a",
+        "choices": [],
+        "status": ""
+      },
+      "afterClick": {
+        "focused": "file:src/main/webapp/login.jsp",
+        "id": "screen:0dabd232-1575-327d-a141-89ea05d553c4",
+        "choices": [],
+        "status": ""
+      },
+      "actualTargets": [
+        "file:src/main/webapp/login.jsp"
+      ],
+      "after": {
+        "focused": "file:src/main/webapp/login.jsp",
+        "id": "screen:0dabd232-1575-327d-a141-89ea05d553c4",
+        "choices": [],
+        "status": ""
+      }
+    },
+    {
+      "id": "L03",
+      "project": "App1Assignment5",
+      "result": "PASS",
+      "sourceView": "file:src/main/webapp/login.jsp",
+      "expectedTargets": [
+        "file:src/main/webapp/login.jsp",
+        "file:src/main/webapp/bookListing.jsp"
+      ],
+      "source": {
+        "file": "src/main/webapp/login.jsp",
+        "line": 32,
+        "excerpt": "<form action=\"Login\" method=\"post\">"
+      },
+      "effectiveSelector": "input[type=submit]",
+      "before": {
+        "focused": "file:src/main/webapp/login.jsp",
+        "id": "screen:0dabd232-1575-327d-a141-89ea05d553c4",
+        "choices": [],
+        "status": ""
+      },
+      "afterClick": {
+        "focused": "file:src/main/webapp/login.jsp",
+        "id": "screen:0dabd232-1575-327d-a141-89ea05d553c4",
+        "choices": [
+          {
+            "id": "screen:0dabd232-1575-327d-a141-89ea05d553c4",
+            "label": "login",
+            "key": "file:src/main/webapp/login.jsp"
+          },
+          {
+            "id": "screen:7e0222f2-352b-3b3e-b038-841fe557f563",
+            "label": "bookListing",
+            "key": "file:src/main/webapp/bookListing.jsp"
+          }
+        ],
+        "status": ""
+      },
+      "actualTargets": [
+        "file:src/main/webapp/login.jsp",
+        "file:src/main/webapp/bookListing.jsp"
+      ],
+      "after": {
+        "focused": "file:src/main/webapp/bookListing.jsp",
+        "id": "screen:7e0222f2-352b-3b3e-b038-841fe557f563",
+        "choices": [],
+        "status": ""
+      }
+    },
+    {
+      "id": "L04",
+      "project": "App1Assignment5",
+      "result": "PASS",
+      "sourceView": "file:src/main/webapp/bookListing.jsp",
+      "expectedTargets": [
+        "file:src/main/webapp/AddBook.jsp"
+      ],
+      "source": {
+        "file": "src/main/webapp/bookListing.jsp",
+        "line": 50,
+        "excerpt": "<form action=\"Add\" method=\"post\">"
+      },
+      "effectiveSelector": "[data-st-component-id=\"component:439ce50e-ff0c-32e3-a433-034d5e67956c\"] button",
+      "before": {
+        "focused": "file:src/main/webapp/bookListing.jsp",
+        "id": "screen:7e0222f2-352b-3b3e-b038-841fe557f563",
+        "choices": [],
+        "status": ""
+      },
+      "afterClick": {
+        "focused": "file:src/main/webapp/AddBook.jsp",
+        "id": "screen:dca18921-a4fe-3317-b8b2-63c030c96eba",
+        "choices": [],
+        "status": ""
+      },
+      "actualTargets": [
+        "file:src/main/webapp/AddBook.jsp"
+      ],
+      "after": {
+        "focused": "file:src/main/webapp/AddBook.jsp",
+        "id": "screen:dca18921-a4fe-3317-b8b2-63c030c96eba",
+        "choices": [],
+        "status": ""
+      }
+    },
+    {
+      "id": "L05",
+      "project": "App1Assignment5",
+      "result": "PASS",
+      "sourceView": "file:src/main/webapp/bookListing.jsp",
+      "expectedTargets": [
+        "file:src/main/webapp/EditBook.jsp"
+      ],
+      "source": {
+        "file": "src/main/webapp/bookListing.jsp",
+        "line": 77,
+        "excerpt": "<form action=\"Edit\" method=\"post\">"
+      },
+      "effectiveSelector": "[data-st-component-id=\"component:4dd42766-a072-3531-9b7b-de9c89407fb7\"] button",
+      "before": {
+        "focused": "file:src/main/webapp/bookListing.jsp",
+        "id": "screen:7e0222f2-352b-3b3e-b038-841fe557f563",
+        "choices": [],
+        "status": ""
+      },
+      "afterClick": {
+        "focused": "file:src/main/webapp/EditBook.jsp",
+        "id": "screen:d5e43178-929c-3a33-92be-7202a684a600",
+        "choices": [],
+        "status": ""
+      },
+      "actualTargets": [
+        "file:src/main/webapp/EditBook.jsp"
+      ],
+      "after": {
+        "focused": "file:src/main/webapp/EditBook.jsp",
+        "id": "screen:d5e43178-929c-3a33-92be-7202a684a600",
+        "choices": [],
+        "status": ""
+      }
+    },
+    {
+      "id": "L06",
+      "project": "App1Assignment5",
+      "result": "PASS",
+      "sourceView": "file:src/main/webapp/AddBook.jsp",
+      "expectedTargets": [
+        "file:src/main/webapp/bookListing.jsp"
+      ],
+      "source": {
+        "file": "src/main/webapp/AddBook.jsp",
+        "line": 41,
+        "excerpt": "<form action=\"Addbook\" method=\"post\">"
+      },
+      "effectiveSelector": "[data-st-component-id=\"component:51b74936-06df-3e6c-932d-2e4d6e44c79f\"] button",
+      "before": {
+        "focused": "file:src/main/webapp/AddBook.jsp",
+        "id": "screen:dca18921-a4fe-3317-b8b2-63c030c96eba",
+        "choices": [],
+        "status": ""
+      },
+      "afterClick": {
+        "focused": "file:src/main/webapp/bookListing.jsp",
+        "id": "screen:7e0222f2-352b-3b3e-b038-841fe557f563",
+        "choices": [],
+        "status": ""
+      },
+      "actualTargets": [
+        "file:src/main/webapp/bookListing.jsp"
+      ],
+      "after": {
+        "focused": "file:src/main/webapp/bookListing.jsp",
+        "id": "screen:7e0222f2-352b-3b3e-b038-841fe557f563",
+        "choices": [],
+        "status": ""
+      }
+    },
+    {
+      "id": "L07",
+      "project": "App1Assignment5",
+      "result": "PASS",
+      "sourceView": "file:src/main/webapp/AddBook.jsp",
+      "expectedTargets": [],
+      "source": {
+        "file": "src/main/webapp/AddBook.jsp",
+        "line": 45,
+        "excerpt": "name=\"bookCode\" onkeypress=\"return /[0-9]/i.test(event.key)\" required>"
+      },
+      "effectiveSelector": "#bookCode",
+      "before": {
+        "focused": "file:src/main/webapp/AddBook.jsp",
+        "id": "screen:dca18921-a4fe-3317-b8b2-63c030c96eba",
+        "choices": [],
+        "status": ""
+      },
+      "actualValue": "123",
+      "after": {
+        "focused": "file:src/main/webapp/AddBook.jsp",
+        "id": "screen:dca18921-a4fe-3317-b8b2-63c030c96eba",
+        "choices": [],
+        "status": ""
+      }
+    },
+    {
+      "id": "L08",
+      "project": "App1Assignment5",
+      "result": "FAIL",
+      "sourceView": "file:src/main/webapp/AddBook.jsp",
+      "expectedTargets": [
+        "file:src/main/webapp/bookListing.jsp"
+      ],
+      "source": {
+        "file": "src/main/java/com/controller/AddController.java",
+        "line": 60,
+        "excerpt": "@PostMapping(\"/Addbook\") // for post method mapping"
+      },
+      "effectiveSelector": "[data-st-component-id=\"component:51b74936-06df-3e6c-932d-2e4d6e44c79f\"] button",
+      "before": {
+        "focused": "file:src/main/webapp/AddBook.jsp",
+        "id": "screen:dca18921-a4fe-3317-b8b2-63c030c96eba",
+        "choices": [],
+        "status": ""
+      },
+      "afterClick": {
+        "focused": "file:src/main/webapp/bookListing.jsp",
+        "id": "screen:7e0222f2-352b-3b3e-b038-841fe557f563",
+        "choices": [],
+        "status": ""
+      },
+      "actualTargets": [
+        "file:src/main/webapp/bookListing.jsp"
+      ],
+      "renderedText": "Book Code\tBook Name\tAuthor\tData Added\tAction\nBook\tBook\tBook\tBook\t\nEdit\nDelete",
+      "missingText": [
+        "419",
+        "ScreenTrace 419"
+      ],
+      "after": {
+        "focused": "file:src/main/webapp/bookListing.jsp",
+        "id": "screen:7e0222f2-352b-3b3e-b038-841fe557f563",
+        "choices": [],
+        "status": ""
+      },
+      "errors": [
+        "SUBMITTED_VALUES_NOT_RENDERED"
+      ]
+    },
+    {
+      "id": "L09",
+      "project": "App1Assignment5",
+      "result": "PASS",
+      "sourceView": "file:src/main/webapp/bookListing.jsp",
+      "expectedTargets": [
+        "file:src/main/webapp/bookListing.jsp"
+      ],
+      "source": {
+        "file": "src/main/java/com/controller/DeleteController.java",
+        "line": 26,
+        "excerpt": "@PostMapping(\"/Delete\") // for post method mapping"
+      },
+      "effectiveSelector": "[data-st-component-id=\"component:8eaaf64a-676f-3e44-ad62-4ecdcfe8ee5e\"] button",
+      "before": {
+        "focused": "file:src/main/webapp/bookListing.jsp",
+        "id": "screen:7e0222f2-352b-3b3e-b038-841fe557f563",
+        "choices": [],
+        "status": ""
+      },
+      "afterClick": {
+        "focused": "file:src/main/webapp/bookListing.jsp",
+        "id": "screen:7e0222f2-352b-3b3e-b038-841fe557f563",
+        "choices": [],
+        "status": ""
+      },
+      "actualTargets": [
+        "file:src/main/webapp/bookListing.jsp"
+      ],
+      "after": {
+        "focused": "file:src/main/webapp/bookListing.jsp",
+        "id": "screen:7e0222f2-352b-3b3e-b038-841fe557f563",
+        "choices": [],
+        "status": ""
+      }
+    },
+    {
+      "id": "L10",
+      "project": "App1Assignment5",
+      "result": "PASS",
+      "sourceView": "file:src/main/webapp/bookListing.jsp",
+      "expectedTargets": [
+        "file:src/main/webapp/login.jsp"
+      ],
+      "source": {
+        "file": "src/main/java/com/controller/Logout.java",
+        "line": 14,
+        "excerpt": "@PostMapping(\"/Logout\")"
+      },
+      "effectiveSelector": "[data-st-component-id=\"component:fa1bdcd6-27ef-3aa7-bd46-1aaa8314e79a\"] input",
+      "before": {
+        "focused": "file:src/main/webapp/bookListing.jsp",
+        "id": "screen:7e0222f2-352b-3b3e-b038-841fe557f563",
+        "choices": [],
+        "status": ""
+      },
+      "afterClick": {
+        "focused": "file:src/main/webapp/login.jsp",
+        "id": "screen:0dabd232-1575-327d-a141-89ea05d553c4",
+        "choices": [],
+        "status": ""
+      },
+      "actualTargets": [
+        "file:src/main/webapp/login.jsp"
+      ],
+      "after": {
+        "focused": "file:src/main/webapp/login.jsp",
+        "id": "screen:0dabd232-1575-327d-a141-89ea05d553c4",
+        "choices": [],
+        "status": ""
+      }
+    },
+    {
+      "id": "H01",
+      "project": "Hotel-Management-System-Spring-Boot",
+      "result": "PASS",
+      "sourceView": "file:src/main/resources/templates/visitor/home.html",
+      "expectedTargets": [
+        "file:src/main/resources/templates/admin/login.html"
+      ],
+      "source": {
+        "file": "src/main/resources/templates/visitor/home.html",
+        "line": 16,
+        "excerpt": "<a href=\"/admin/login\" class=\"nav-btn\">Admin Login</a>"
+      },
+      "effectiveSelector": "[data-st-component-id=\"component:7d7c6dc9-2b44-3835-acb5-ee6d516d2125\"]",
+      "before": {
+        "focused": "file:src/main/resources/templates/visitor/home.html",
+        "id": "screen:01bdb5b7-be15-3af4-8a71-0adafd7cea5d",
+        "choices": [],
+        "status": ""
+      },
+      "afterClick": {
+        "focused": "file:src/main/resources/templates/admin/login.html",
+        "id": "screen:339adfd4-894c-3f49-b7df-32b5317c8308",
+        "choices": [],
+        "status": ""
+      },
+      "actualTargets": [
+        "file:src/main/resources/templates/admin/login.html"
+      ],
+      "after": {
+        "focused": "file:src/main/resources/templates/admin/login.html",
+        "id": "screen:339adfd4-894c-3f49-b7df-32b5317c8308",
+        "choices": [],
+        "status": ""
+      }
+    },
+    {
+      "id": "H02",
+      "project": "Hotel-Management-System-Spring-Boot",
+      "result": "PASS",
+      "sourceView": "file:src/main/resources/templates/admin/login.html",
+      "expectedTargets": [
+        "file:src/main/resources/templates/admin/login.html",
+        "file:src/main/resources/templates/admin/dashboard.html"
+      ],
+      "source": {
+        "file": "src/main/java/com/hotel/management/controller/AdminController.java",
+        "line": 22,
+        "excerpt": "public String login(@RequestParam String username,"
+      },
+      "effectiveSelector": "button[type=submit]",
+      "before": {
+        "focused": "file:src/main/resources/templates/admin/login.html",
+        "id": "screen:339adfd4-894c-3f49-b7df-32b5317c8308",
+        "choices": [],
+        "status": ""
+      },
+      "afterClick": {
+        "focused": "file:src/main/resources/templates/admin/login.html",
+        "id": "screen:339adfd4-894c-3f49-b7df-32b5317c8308",
+        "choices": [
+          {
+            "id": "screen:339adfd4-894c-3f49-b7df-32b5317c8308",
+            "label": "login.html · Invalid username or password",
+            "key": "file:src/main/resources/templates/admin/login.html"
+          },
+          {
+            "id": "screen:339adfd4-894c-3f49-b7df-32b5317c8308",
+            "label": "login.html",
+            "key": "file:src/main/resources/templates/admin/login.html"
+          },
+          {
+            "id": "screen:3a1b75e9-cff1-36f1-98e2-1fbfac753063",
+            "label": "dashboard.html",
+            "key": "file:src/main/resources/templates/admin/dashboard.html"
+          }
+        ],
+        "status": ""
+      },
+      "actualTargets": [
+        "file:src/main/resources/templates/admin/login.html",
+        "file:src/main/resources/templates/admin/login.html",
+        "file:src/main/resources/templates/admin/dashboard.html"
+      ],
+      "after": {
+        "focused": "file:src/main/resources/templates/admin/dashboard.html",
+        "id": "screen:3a1b75e9-cff1-36f1-98e2-1fbfac753063",
+        "choices": [],
+        "status": ""
+      }
+    },
+    {
+      "id": "H03",
+      "project": "Hotel-Management-System-Spring-Boot",
+      "result": "PASS",
+      "sourceView": "file:src/main/resources/templates/admin/login.html",
+      "expectedTargets": [],
+      "source": {
+        "file": "src/main/resources/templates/admin/login.html",
+        "line": 17,
+        "excerpt": "<div th:if=\"${error}\" class=\"alert alert-error\" th:text=\"${error}\">"
+      },
+      "effectiveSelector": ".alert-error",
+      "before": {
+        "focused": "file:src/main/resources/templates/admin/login.html",
+        "id": "screen:339adfd4-894c-3f49-b7df-32b5317c8308",
+        "choices": [],
+        "status": ""
+      },
+      "visible": false,
+      "after": {
+        "focused": "file:src/main/resources/templates/admin/login.html",
+        "id": "screen:339adfd4-894c-3f49-b7df-32b5317c8308",
+        "choices": [],
+        "status": ""
+      }
+    },
+    {
+      "id": "H04",
+      "project": "Hotel-Management-System-Spring-Boot",
+      "result": "PASS",
+      "sourceView": "file:src/main/resources/templates/admin/dashboard.html",
+      "expectedTargets": [
+        "file:src/main/resources/templates/admin/rooms.html",
+        "file:src/main/resources/templates/admin/login.html"
+      ],
+      "source": {
+        "file": "src/main/java/com/hotel/management/controller/RoomController.java",
+        "line": 20,
+        "excerpt": "public String getAllRooms(HttpSession session, Model model) {"
+      },
+      "effectiveSelector": "[data-st-component-id=\"component:6ada4243-d2b9-37a4-98e7-9c6392a305ee\"]",
+      "before": {
+        "focused": "file:src/main/resources/templates/admin/dashboard.html",
+        "id": "screen:3a1b75e9-cff1-36f1-98e2-1fbfac753063",
+        "choices": [],
+        "status": ""
+      },
+      "afterClick": {
+        "focused": "file:src/main/resources/templates/admin/dashboard.html",
+        "id": "screen:3a1b75e9-cff1-36f1-98e2-1fbfac753063",
+        "choices": [
+          {
+            "id": "screen:339adfd4-894c-3f49-b7df-32b5317c8308",
+            "label": "login.html",
+            "key": "file:src/main/resources/templates/admin/login.html"
+          },
+          {
+            "id": "screen:442d5f0e-13f1-3ab4-917b-68c9e1ea1e8b",
+            "label": "rooms.html",
+            "key": "file:src/main/resources/templates/admin/rooms.html"
+          }
+        ],
+        "status": ""
+      },
+      "actualTargets": [
+        "file:src/main/resources/templates/admin/login.html",
+        "file:src/main/resources/templates/admin/rooms.html"
+      ],
+      "after": {
+        "focused": "file:src/main/resources/templates/admin/rooms.html",
+        "id": "screen:442d5f0e-13f1-3ab4-917b-68c9e1ea1e8b",
+        "choices": [],
+        "status": ""
+      }
+    },
+    {
+      "id": "H05",
+      "project": "Hotel-Management-System-Spring-Boot",
+      "result": "PASS",
+      "sourceView": "file:src/main/resources/templates/admin/rooms.html",
+      "expectedTargets": [
+        "file:src/main/resources/templates/admin/room-form.html",
+        "file:src/main/resources/templates/admin/login.html"
+      ],
+      "source": {
+        "file": "src/main/java/com/hotel/management/controller/RoomController.java",
+        "line": 30,
+        "excerpt": "public String addRoomForm(HttpSession session, Model model) {"
+      },
+      "effectiveSelector": "[data-st-component-id=\"component:b590c787-2dd7-31d7-b94c-9acd44b0cc69\"]",
+      "before": {
+        "focused": "file:src/main/resources/templates/admin/rooms.html",
+        "id": "screen:442d5f0e-13f1-3ab4-917b-68c9e1ea1e8b",
+        "choices": [],
+        "status": ""
+      },
+      "afterClick": {
+        "focused": "file:src/main/resources/templates/admin/rooms.html",
+        "id": "screen:442d5f0e-13f1-3ab4-917b-68c9e1ea1e8b",
+        "choices": [
+          {
+            "id": "screen:339adfd4-894c-3f49-b7df-32b5317c8308",
+            "label": "login.html",
+            "key": "file:src/main/resources/templates/admin/login.html"
+          },
+          {
+            "id": "screen:6b25390f-ec30-30ea-812f-85273915f88a",
+            "label": "room-form.html",
+            "key": "file:src/main/resources/templates/admin/room-form.html"
+          }
+        ],
+        "status": ""
+      },
+      "actualTargets": [
+        "file:src/main/resources/templates/admin/login.html",
+        "file:src/main/resources/templates/admin/room-form.html"
+      ],
+      "after": {
+        "focused": "file:src/main/resources/templates/admin/room-form.html",
+        "id": "screen:6b25390f-ec30-30ea-812f-85273915f88a",
+        "choices": [],
+        "status": ""
+      }
+    },
+    {
+      "id": "H06",
+      "project": "Hotel-Management-System-Spring-Boot",
+      "result": "PASS",
+      "sourceView": "file:src/main/resources/templates/admin/room-form.html",
+      "expectedTargets": [],
+      "source": {
+        "file": "src/main/resources/templates/admin/room-form.html",
+        "line": 46,
+        "excerpt": "th:field=\"*{roomNumber}\""
+      },
+      "effectiveSelector": "#roomNumber",
+      "before": {
+        "focused": "file:src/main/resources/templates/admin/room-form.html",
+        "id": "screen:6b25390f-ec30-30ea-812f-85273915f88a",
+        "choices": [],
+        "status": ""
+      },
+      "actualValue": "roomNumber",
+      "after": {
+        "focused": "file:src/main/resources/templates/admin/room-form.html",
+        "id": "screen:6b25390f-ec30-30ea-812f-85273915f88a",
+        "choices": [],
+        "status": ""
+      }
+    },
+    {
+      "id": "H07",
+      "project": "Hotel-Management-System-Spring-Boot",
+      "result": "PASS",
+      "sourceView": "file:src/main/resources/templates/admin/room-form.html",
+      "expectedTargets": [],
+      "source": {
+        "file": "src/main/resources/templates/admin/room-form.html",
+        "line": 35,
+        "excerpt": "th:action=\"${isEdit} ? @{/admin/rooms/update/{id}(id=${room.id})} : @{/admin/rooms/add}\""
+      },
+      "effectiveSelector": "form",
+      "before": {
+        "focused": "file:src/main/resources/templates/admin/room-form.html",
+        "id": "screen:6b25390f-ec30-30ea-812f-85273915f88a",
+        "choices": [],
+        "status": ""
+      },
+      "actualRequests": [
+        "/admin/rooms/update/{id}",
+        "/admin/rooms/add"
+      ],
+      "after": {
+        "focused": "file:src/main/resources/templates/admin/room-form.html",
+        "id": "screen:6b25390f-ec30-30ea-812f-85273915f88a",
+        "choices": [],
+        "status": ""
+      }
+    },
+    {
+      "id": "H08",
+      "project": "Hotel-Management-System-Spring-Boot",
+      "result": "PASS",
+      "sourceView": "file:src/main/resources/templates/admin/rooms.html",
+      "expectedTargets": [],
+      "source": {
+        "file": "src/main/resources/templates/admin/rooms.html",
+        "line": 77,
+        "excerpt": "onclick=\"return confirm('Are you sure you want to delete this room?')\""
+      },
+      "effectiveSelector": "[data-st-component-id=\"component:2ce926cf-0943-3917-a510-f38947f26957\"]",
+      "before": {
+        "focused": "file:src/main/resources/templates/admin/rooms.html",
+        "id": "screen:442d5f0e-13f1-3ab4-917b-68c9e1ea1e8b",
+        "choices": [],
+        "status": ""
+      },
+      "confirmText": "Are you sure you want to delete this room?\n\n取消確認",
+      "after": {
+        "focused": "file:src/main/resources/templates/admin/rooms.html",
+        "id": "screen:442d5f0e-13f1-3ab4-917b-68c9e1ea1e8b",
+        "choices": [],
+        "status": ""
+      }
+    },
+    {
+      "id": "H09",
+      "project": "Hotel-Management-System-Spring-Boot",
+      "result": "PASS",
+      "sourceView": "file:src/main/resources/templates/visitor/home.html",
+      "expectedTargets": [
+        "file:src/main/resources/templates/visitor/booking-form.html"
+      ],
+      "source": {
+        "file": "src/main/resources/templates/visitor/home.html",
+        "line": 62,
+        "excerpt": "<a th:href=\"@{/book/{id}(id=${room.id})}\" class=\"book-btn\">"
+      },
+      "effectiveSelector": "a.book-btn",
+      "before": {
+        "focused": "file:src/main/resources/templates/visitor/home.html",
+        "id": "screen:01bdb5b7-be15-3af4-8a71-0adafd7cea5d",
+        "choices": [],
+        "status": ""
+      },
+      "afterClick": {
+        "focused": "file:src/main/resources/templates/visitor/booking-form.html",
+        "id": "screen:11263f44-76ba-3941-9840-bdc6c8fbd9ce",
+        "choices": [],
+        "status": ""
+      },
+      "actualTargets": [
+        "file:src/main/resources/templates/visitor/booking-form.html"
+      ],
+      "after": {
+        "focused": "file:src/main/resources/templates/visitor/booking-form.html",
+        "id": "screen:11263f44-76ba-3941-9840-bdc6c8fbd9ce",
+        "choices": [],
+        "status": ""
+      }
+    },
+    {
+      "id": "H10",
+      "project": "Hotel-Management-System-Spring-Boot",
+      "result": "PASS",
+      "sourceView": "file:src/main/resources/templates/visitor/booking-form.html",
+      "expectedTargets": [
+        "file:src/main/resources/templates/visitor/booking-success.html"
+      ],
+      "source": {
+        "file": "src/main/java/com/hotel/management/controller/VisitorController.java",
+        "line": 44,
+        "excerpt": "public String createBooking(@ModelAttribute Booking booking,"
+      },
+      "effectiveSelector": "button[type=submit]",
+      "before": {
+        "focused": "file:src/main/resources/templates/visitor/booking-form.html",
+        "id": "screen:11263f44-76ba-3941-9840-bdc6c8fbd9ce",
+        "choices": [],
+        "status": ""
+      },
+      "afterClick": {
+        "focused": "file:src/main/resources/templates/visitor/booking-success.html",
+        "id": "screen:1d0421e9-2f0b-3448-8748-2800cbbaa990",
+        "choices": [],
+        "status": "已回放提交欄位；其他資料為來源範例"
+      },
+      "actualTargets": [
+        "file:src/main/resources/templates/visitor/booking-success.html"
+      ],
+      "after": {
+        "focused": "file:src/main/resources/templates/visitor/booking-success.html",
+        "id": "screen:1d0421e9-2f0b-3448-8748-2800cbbaa990",
+        "choices": [],
+        "status": "已回放提交欄位；其他資料為來源範例"
+      }
+    },
+    {
+      "id": "H11",
+      "project": "Hotel-Management-System-Spring-Boot",
+      "result": "FAIL",
+      "sourceView": "file:src/main/resources/templates/visitor/booking-form.html",
+      "expectedTargets": [
+        "file:src/main/resources/templates/visitor/booking-success.html"
+      ],
+      "source": {
+        "file": "src/main/java/com/hotel/management/controller/VisitorController.java",
+        "line": 44,
+        "excerpt": "public String createBooking(@ModelAttribute Booking booking,"
+      },
+      "effectiveSelector": "button[type=submit]",
+      "before": {
+        "focused": "file:src/main/resources/templates/visitor/booking-form.html",
+        "id": "screen:11263f44-76ba-3941-9840-bdc6c8fbd9ce",
+        "choices": [],
+        "status": ""
+      },
+      "afterClick": {
+        "focused": "file:src/main/resources/templates/visitor/booking-success.html",
+        "id": "screen:1d0421e9-2f0b-3448-8748-2800cbbaa990",
+        "choices": [],
+        "status": "已回放提交欄位；其他資料為來源範例"
+      },
+      "actualTargets": [
+        "file:src/main/resources/templates/visitor/booking-success.html"
+      ],
+      "renderedText": "Hotel ALAKAMANDAWA\nHome\nAdmin Login\n✅\nBooking Confirmed!\n\nThank you for choosing Hotel ALAKAMANADAWA. Your booking has been successfully confirmed.\n\nBooking Details\nBooking ID:\n12345\nGuest Name:\nJohn Doe\nRoom Number:\n101\nRoom Type:\nDeluxe Suite\nCheck-in Date:\n01-11-2026\nCheck-out Date:\n03-11-2026\nNumber of Guests:\n2\nTotal Amount:\nLKR 60,000.00\n📝 Important Information:\nPlease save your Booking ID for future reference\nCheck-in time: 2:00 PM\nCheck-out time: 12:00 PM\nPlease bring a valid ID during check-in\nBook Another Room\nBack to Home\n\n© 2026 Hotel ALAKAMANADAWA",
+      "missingText": [
+        "Trace Guest 419",
+        "0700419419",
+        "2026-11-01",
+        "2026-11-03"
+      ],
+      "after": {
+        "focused": "file:src/main/resources/templates/visitor/booking-success.html",
+        "id": "screen:1d0421e9-2f0b-3448-8748-2800cbbaa990",
+        "choices": [],
+        "status": "已回放提交欄位；其他資料為來源範例"
+      },
+      "errors": [
+        "SUBMITTED_VALUES_NOT_RENDERED"
+      ]
+    },
+    {
+      "id": "H12",
+      "project": "Hotel-Management-System-Spring-Boot",
+      "result": "PASS",
+      "sourceView": "file:src/main/resources/templates/admin/dashboard.html",
+      "expectedTargets": [
+        "file:src/main/resources/templates/admin/login.html"
+      ],
+      "source": {
+        "file": "src/main/java/com/hotel/management/controller/AdminController.java",
+        "line": 43,
+        "excerpt": "public String logout(HttpSession session) {"
+      },
+      "effectiveSelector": "[data-st-component-id=\"component:2110eca1-315b-3fd7-8480-be5e8c9b023a\"]",
+      "before": {
+        "focused": "file:src/main/resources/templates/admin/dashboard.html",
+        "id": "screen:3a1b75e9-cff1-36f1-98e2-1fbfac753063",
+        "choices": [],
+        "status": ""
+      },
+      "afterClick": {
+        "focused": "file:src/main/resources/templates/admin/login.html",
+        "id": "screen:339adfd4-894c-3f49-b7df-32b5317c8308",
+        "choices": [],
+        "status": ""
+      },
+      "actualTargets": [
+        "file:src/main/resources/templates/admin/login.html"
+      ],
+      "after": {
+        "focused": "file:src/main/resources/templates/admin/login.html",
+        "id": "screen:339adfd4-894c-3f49-b7df-32b5317c8308",
+        "choices": [],
+        "status": ""
+      }
+    }
+  ],
+  "journeys": [
+    {
+      "id": "SJ1",
+      "project": "demo-struts1",
+      "steps": [
+        "S01",
+        "S02",
+        "S03",
+        "S04"
+      ],
+      "result": "PASS",
+      "stepsExecuted": [
+        {
+          "id": "S01",
+          "project": "demo-struts1",
+          "result": "PASS",
+          "sourceView": "tile:tiles.logon",
+          "expectedTargets": [
+            "tile:tiles.dashboard",
+            "tile:tiles.logon",
+            "file:src/main/webapp/WEB-INF/view/login.jsp"
+          ],
+          "source": {
+            "file": "src/main/webapp/WEB-INF/view/login.jsp",
+            "line": 11,
+            "excerpt": "<form action=\"<c:url value='/postLogin.do' />\" method=\"post\">"
+          },
+          "effectiveSelector": "form button[type=submit]",
+          "before": {
+            "focused": "tile:tiles.logon",
+            "id": "screen:0e8d95ea-94d0-3a24-b761-0893f85998ab",
+            "choices": [],
+            "status": ""
+          },
+          "afterClick": {
+            "focused": "tile:tiles.logon",
+            "id": "screen:0e8d95ea-94d0-3a24-b761-0893f85998ab",
+            "choices": [
+              {
+                "id": "screen:04d0fa0d-7486-3d26-bc36-2f05a1214e41",
+                "label": "login",
+                "key": "file:src/main/webapp/WEB-INF/view/login.jsp"
+              },
+              {
+                "id": "screen:0e8d95ea-94d0-3a24-b761-0893f85998ab",
+                "label": "Tiles Logon",
+                "key": "tile:tiles.logon"
+              },
+              {
+                "id": "screen:19071acc-bf03-3638-9678-4bacf668fc82",
+                "label": "Tiles Dashboard",
+                "key": "tile:tiles.dashboard"
+              }
+            ],
+            "status": ""
+          },
+          "actualTargets": [
+            "file:src/main/webapp/WEB-INF/view/login.jsp",
+            "tile:tiles.logon",
+            "tile:tiles.dashboard"
+          ],
+          "after": {
+            "focused": "tile:tiles.dashboard",
+            "id": "screen:19071acc-bf03-3638-9678-4bacf668fc82",
+            "choices": [],
+            "status": ""
+          }
+        },
+        {
+          "id": "S02",
+          "project": "demo-struts1",
+          "result": "PASS",
+          "sourceView": "tile:tiles.dashboard",
+          "expectedTargets": [
+            "tile:tiles.spotify.list.pagination",
+            "tile:tiles.logon"
+          ],
+          "source": {
+            "file": "src/main/webapp/WEB-INF/view/common/sideNav.jsp",
+            "line": 21,
+            "excerpt": "<a href=\"<c:url value='/spotify-pagination.do' />\" class=\"nav-link\">"
+          },
+          "effectiveSelector": "[data-st-component-id=\"component:cc45663b-2149-3c9e-ae31-2953c7b89491\"]",
+          "before": {
+            "focused": "tile:tiles.dashboard",
+            "id": "screen:19071acc-bf03-3638-9678-4bacf668fc82",
+            "choices": [],
+            "status": ""
+          },
+          "afterClick": {
+            "focused": "tile:tiles.dashboard",
+            "id": "screen:19071acc-bf03-3638-9678-4bacf668fc82",
+            "choices": [
+              {
+                "id": "screen:0e8d95ea-94d0-3a24-b761-0893f85998ab",
+                "label": "Tiles Logon",
+                "key": "tile:tiles.logon"
+              },
+              {
+                "id": "screen:398aec38-b8ee-3dc8-9916-2d670b11bbb9",
+                "label": "Custom Pagination DataTable",
+                "key": "tile:tiles.spotify.list.pagination"
+              }
+            ],
+            "status": ""
+          },
+          "actualTargets": [
+            "tile:tiles.logon",
+            "tile:tiles.spotify.list.pagination"
+          ],
+          "after": {
+            "focused": "tile:tiles.spotify.list.pagination",
+            "id": "screen:398aec38-b8ee-3dc8-9916-2d670b11bbb9",
+            "choices": [],
+            "status": ""
+          }
+        },
+        {
+          "id": "S03",
+          "project": "demo-struts1",
+          "result": "PASS",
+          "sourceView": "tile:tiles.spotify.list.pagination",
+          "expectedTargets": [
+            "tile:tiles.spotify.init",
+            "tile:tiles.logon"
+          ],
+          "source": {
+            "file": "src/main/webapp/WEB-INF/view/spotifyListPagination.jsp",
+            "line": 19,
+            "excerpt": "<a class=\"modal-effect btn btn-dark mx-2\" href=\"<c:url value='/spotify-init.do?action=create' />\">"
+          },
+          "effectiveSelector": "[data-st-component-id=\"component:17d6f371-9636-37b7-a67d-2d87785d07e5\"]",
+          "before": {
+            "focused": "tile:tiles.spotify.list.pagination",
+            "id": "screen:398aec38-b8ee-3dc8-9916-2d670b11bbb9",
+            "choices": [],
+            "status": ""
+          },
+          "afterClick": {
+            "focused": "tile:tiles.spotify.list.pagination",
+            "id": "screen:398aec38-b8ee-3dc8-9916-2d670b11bbb9",
+            "choices": [
+              {
+                "id": "screen:0e8d95ea-94d0-3a24-b761-0893f85998ab",
+                "label": "Tiles Logon",
+                "key": "tile:tiles.logon"
+              },
+              {
+                "id": "screen:874022fd-e14f-3526-aba4-c9a90f342e85",
+                "label": "Tiles Spotify Init",
+                "key": "tile:tiles.spotify.init"
+              }
+            ],
+            "status": ""
+          },
+          "actualTargets": [
+            "tile:tiles.logon",
+            "tile:tiles.spotify.init"
+          ],
+          "after": {
+            "focused": "tile:tiles.spotify.init",
+            "id": "screen:874022fd-e14f-3526-aba4-c9a90f342e85",
+            "choices": [],
+            "status": ""
+          }
+        },
+        {
+          "id": "S04",
+          "project": "demo-struts1",
+          "result": "PASS",
+          "sourceView": "tile:tiles.spotify.init",
+          "expectedTargets": [
+            "tile:tiles.spotify.list.pagination",
+            "tile:tiles.logon"
+          ],
+          "source": {
+            "file": "src/main/webapp/WEB-INF/view/spotifyInit.jsp",
+            "line": 92,
+            "excerpt": "<a href=\"<c:url value='/spotify-pagination.do' />\" class=\"btn btn-dark\">Cancel</a>"
+          },
+          "effectiveSelector": "[data-st-component-id=\"component:2ca73c94-b8ed-3d58-bedf-f006a46393d1\"]",
+          "before": {
+            "focused": "tile:tiles.spotify.init",
+            "id": "screen:874022fd-e14f-3526-aba4-c9a90f342e85",
+            "choices": [],
+            "status": ""
+          },
+          "afterClick": {
+            "focused": "tile:tiles.spotify.init",
+            "id": "screen:874022fd-e14f-3526-aba4-c9a90f342e85",
+            "choices": [
+              {
+                "id": "screen:0e8d95ea-94d0-3a24-b761-0893f85998ab",
+                "label": "Tiles Logon",
+                "key": "tile:tiles.logon"
+              },
+              {
+                "id": "screen:398aec38-b8ee-3dc8-9916-2d670b11bbb9",
+                "label": "Custom Pagination DataTable",
+                "key": "tile:tiles.spotify.list.pagination"
+              }
+            ],
+            "status": ""
+          },
+          "actualTargets": [
+            "tile:tiles.logon",
+            "tile:tiles.spotify.list.pagination"
+          ],
+          "after": {
+            "focused": "tile:tiles.spotify.list.pagination",
+            "id": "screen:398aec38-b8ee-3dc8-9916-2d670b11bbb9",
+            "choices": [],
+            "status": ""
+          }
+        }
+      ]
+    },
+    {
+      "id": "LJ1",
+      "project": "App1Assignment5",
+      "steps": [
+        "L01",
+        "L02",
+        "L03",
+        "L04"
+      ],
+      "result": "PASS",
+      "stepsExecuted": [
+        {
+          "id": "L01",
+          "project": "App1Assignment5",
+          "result": "PASS",
+          "sourceView": "file:src/main/webapp/login.jsp",
+          "expectedTargets": [
+            "file:src/main/webapp/register.jsp"
+          ],
+          "source": {
+            "file": "src/main/webapp/login.jsp",
+            "line": 50,
+            "excerpt": "<a href=\"Register\">Register User </a>"
+          },
+          "effectiveSelector": "[data-st-component-id=\"component:20042f80-b119-3990-bb39-ddd854652964\"]",
+          "before": {
+            "focused": "file:src/main/webapp/login.jsp",
+            "id": "screen:0dabd232-1575-327d-a141-89ea05d553c4",
+            "choices": [],
+            "status": ""
+          },
+          "afterClick": {
+            "focused": "file:src/main/webapp/register.jsp",
+            "id": "screen:53c3ffbe-8939-3e37-a91e-6c96b306190a",
+            "choices": [],
+            "status": ""
+          },
+          "actualTargets": [
+            "file:src/main/webapp/register.jsp"
+          ],
+          "after": {
+            "focused": "file:src/main/webapp/register.jsp",
+            "id": "screen:53c3ffbe-8939-3e37-a91e-6c96b306190a",
+            "choices": [],
+            "status": ""
+          }
+        },
+        {
+          "id": "L02",
+          "project": "App1Assignment5",
+          "result": "PASS",
+          "sourceView": "file:src/main/webapp/register.jsp",
+          "expectedTargets": [
+            "file:src/main/webapp/login.jsp"
+          ],
+          "source": {
+            "file": "src/main/webapp/register.jsp",
+            "line": 32,
+            "excerpt": "<form action=\"Register\" method=\"post\">"
+          },
+          "effectiveSelector": "input[type=submit]",
+          "before": {
+            "focused": "file:src/main/webapp/register.jsp",
+            "id": "screen:53c3ffbe-8939-3e37-a91e-6c96b306190a",
+            "choices": [],
+            "status": ""
+          },
+          "afterClick": {
+            "focused": "file:src/main/webapp/login.jsp",
+            "id": "screen:0dabd232-1575-327d-a141-89ea05d553c4",
+            "choices": [],
+            "status": ""
+          },
+          "actualTargets": [
+            "file:src/main/webapp/login.jsp"
+          ],
+          "after": {
+            "focused": "file:src/main/webapp/login.jsp",
+            "id": "screen:0dabd232-1575-327d-a141-89ea05d553c4",
+            "choices": [],
+            "status": ""
+          }
+        },
+        {
+          "id": "L03",
+          "project": "App1Assignment5",
+          "result": "PASS",
+          "sourceView": "file:src/main/webapp/login.jsp",
+          "expectedTargets": [
+            "file:src/main/webapp/login.jsp",
+            "file:src/main/webapp/bookListing.jsp"
+          ],
+          "source": {
+            "file": "src/main/webapp/login.jsp",
+            "line": 32,
+            "excerpt": "<form action=\"Login\" method=\"post\">"
+          },
+          "effectiveSelector": "input[type=submit]",
+          "before": {
+            "focused": "file:src/main/webapp/login.jsp",
+            "id": "screen:0dabd232-1575-327d-a141-89ea05d553c4",
+            "choices": [],
+            "status": ""
+          },
+          "afterClick": {
+            "focused": "file:src/main/webapp/login.jsp",
+            "id": "screen:0dabd232-1575-327d-a141-89ea05d553c4",
+            "choices": [
+              {
+                "id": "screen:0dabd232-1575-327d-a141-89ea05d553c4",
+                "label": "login",
+                "key": "file:src/main/webapp/login.jsp"
+              },
+              {
+                "id": "screen:7e0222f2-352b-3b3e-b038-841fe557f563",
+                "label": "bookListing",
+                "key": "file:src/main/webapp/bookListing.jsp"
+              }
+            ],
+            "status": ""
+          },
+          "actualTargets": [
+            "file:src/main/webapp/login.jsp",
+            "file:src/main/webapp/bookListing.jsp"
+          ],
+          "after": {
+            "focused": "file:src/main/webapp/bookListing.jsp",
+            "id": "screen:7e0222f2-352b-3b3e-b038-841fe557f563",
+            "choices": [],
+            "status": ""
+          }
+        },
+        {
+          "id": "L04",
+          "project": "App1Assignment5",
+          "result": "PASS",
+          "sourceView": "file:src/main/webapp/bookListing.jsp",
+          "expectedTargets": [
+            "file:src/main/webapp/AddBook.jsp"
+          ],
+          "source": {
+            "file": "src/main/webapp/bookListing.jsp",
+            "line": 50,
+            "excerpt": "<form action=\"Add\" method=\"post\">"
+          },
+          "effectiveSelector": "[data-st-component-id=\"component:439ce50e-ff0c-32e3-a433-034d5e67956c\"] button",
+          "before": {
+            "focused": "file:src/main/webapp/bookListing.jsp",
+            "id": "screen:7e0222f2-352b-3b3e-b038-841fe557f563",
+            "choices": [],
+            "status": ""
+          },
+          "afterClick": {
+            "focused": "file:src/main/webapp/AddBook.jsp",
+            "id": "screen:dca18921-a4fe-3317-b8b2-63c030c96eba",
+            "choices": [],
+            "status": ""
+          },
+          "actualTargets": [
+            "file:src/main/webapp/AddBook.jsp"
+          ],
+          "after": {
+            "focused": "file:src/main/webapp/AddBook.jsp",
+            "id": "screen:dca18921-a4fe-3317-b8b2-63c030c96eba",
+            "choices": [],
+            "status": ""
+          }
+        }
+      ]
+    },
+    {
+      "id": "LJ2",
+      "project": "App1Assignment5",
+      "steps": [
+        "L04",
+        "L08"
+      ],
+      "result": "FAIL",
+      "stepsExecuted": [
+        {
+          "id": "L04",
+          "project": "App1Assignment5",
+          "result": "PASS",
+          "sourceView": "file:src/main/webapp/bookListing.jsp",
+          "expectedTargets": [
+            "file:src/main/webapp/AddBook.jsp"
+          ],
+          "source": {
+            "file": "src/main/webapp/bookListing.jsp",
+            "line": 50,
+            "excerpt": "<form action=\"Add\" method=\"post\">"
+          },
+          "effectiveSelector": "[data-st-component-id=\"component:439ce50e-ff0c-32e3-a433-034d5e67956c\"] button",
+          "before": {
+            "focused": "file:src/main/webapp/bookListing.jsp",
+            "id": "screen:7e0222f2-352b-3b3e-b038-841fe557f563",
+            "choices": [],
+            "status": ""
+          },
+          "afterClick": {
+            "focused": "file:src/main/webapp/AddBook.jsp",
+            "id": "screen:dca18921-a4fe-3317-b8b2-63c030c96eba",
+            "choices": [],
+            "status": ""
+          },
+          "actualTargets": [
+            "file:src/main/webapp/AddBook.jsp"
+          ],
+          "after": {
+            "focused": "file:src/main/webapp/AddBook.jsp",
+            "id": "screen:dca18921-a4fe-3317-b8b2-63c030c96eba",
+            "choices": [],
+            "status": ""
+          }
+        },
+        {
+          "id": "L08",
+          "project": "App1Assignment5",
+          "result": "FAIL",
+          "sourceView": "file:src/main/webapp/AddBook.jsp",
+          "expectedTargets": [
+            "file:src/main/webapp/bookListing.jsp"
+          ],
+          "source": {
+            "file": "src/main/java/com/controller/AddController.java",
+            "line": 60,
+            "excerpt": "@PostMapping(\"/Addbook\") // for post method mapping"
+          },
+          "effectiveSelector": "[data-st-component-id=\"component:51b74936-06df-3e6c-932d-2e4d6e44c79f\"] button",
+          "before": {
+            "focused": "file:src/main/webapp/AddBook.jsp",
+            "id": "screen:dca18921-a4fe-3317-b8b2-63c030c96eba",
+            "choices": [],
+            "status": ""
+          },
+          "afterClick": {
+            "focused": "file:src/main/webapp/bookListing.jsp",
+            "id": "screen:7e0222f2-352b-3b3e-b038-841fe557f563",
+            "choices": [],
+            "status": ""
+          },
+          "actualTargets": [
+            "file:src/main/webapp/bookListing.jsp"
+          ],
+          "renderedText": "Book Code\tBook Name\tAuthor\tData Added\tAction\nBook\tBook\tBook\tBook\t\nEdit\nDelete",
+          "missingText": [
+            "419",
+            "ScreenTrace 419"
+          ],
+          "after": {
+            "focused": "file:src/main/webapp/bookListing.jsp",
+            "id": "screen:7e0222f2-352b-3b3e-b038-841fe557f563",
+            "choices": [],
+            "status": ""
+          },
+          "errors": [
+            "SUBMITTED_VALUES_NOT_RENDERED"
+          ]
+        }
+      ],
+      "blockedAt": "L08"
+    },
+    {
+      "id": "HJ1",
+      "project": "Hotel-Management-System-Spring-Boot",
+      "steps": [
+        "H01",
+        "H02",
+        "H04",
+        "H05"
+      ],
+      "result": "PASS",
+      "stepsExecuted": [
+        {
+          "id": "H01",
+          "project": "Hotel-Management-System-Spring-Boot",
+          "result": "PASS",
+          "sourceView": "file:src/main/resources/templates/visitor/home.html",
+          "expectedTargets": [
+            "file:src/main/resources/templates/admin/login.html"
+          ],
+          "source": {
+            "file": "src/main/resources/templates/visitor/home.html",
+            "line": 16,
+            "excerpt": "<a href=\"/admin/login\" class=\"nav-btn\">Admin Login</a>"
+          },
+          "effectiveSelector": "[data-st-component-id=\"component:7d7c6dc9-2b44-3835-acb5-ee6d516d2125\"]",
+          "before": {
+            "focused": "file:src/main/resources/templates/visitor/home.html",
+            "id": "screen:01bdb5b7-be15-3af4-8a71-0adafd7cea5d",
+            "choices": [],
+            "status": ""
+          },
+          "afterClick": {
+            "focused": "file:src/main/resources/templates/admin/login.html",
+            "id": "screen:339adfd4-894c-3f49-b7df-32b5317c8308",
+            "choices": [],
+            "status": ""
+          },
+          "actualTargets": [
+            "file:src/main/resources/templates/admin/login.html"
+          ],
+          "after": {
+            "focused": "file:src/main/resources/templates/admin/login.html",
+            "id": "screen:339adfd4-894c-3f49-b7df-32b5317c8308",
+            "choices": [],
+            "status": ""
+          }
+        },
+        {
+          "id": "H02",
+          "project": "Hotel-Management-System-Spring-Boot",
+          "result": "PASS",
+          "sourceView": "file:src/main/resources/templates/admin/login.html",
+          "expectedTargets": [
+            "file:src/main/resources/templates/admin/login.html",
+            "file:src/main/resources/templates/admin/dashboard.html"
+          ],
+          "source": {
+            "file": "src/main/java/com/hotel/management/controller/AdminController.java",
+            "line": 22,
+            "excerpt": "public String login(@RequestParam String username,"
+          },
+          "effectiveSelector": "button[type=submit]",
+          "before": {
+            "focused": "file:src/main/resources/templates/admin/login.html",
+            "id": "screen:339adfd4-894c-3f49-b7df-32b5317c8308",
+            "choices": [],
+            "status": ""
+          },
+          "afterClick": {
+            "focused": "file:src/main/resources/templates/admin/login.html",
+            "id": "screen:339adfd4-894c-3f49-b7df-32b5317c8308",
+            "choices": [
+              {
+                "id": "screen:339adfd4-894c-3f49-b7df-32b5317c8308",
+                "label": "login.html · Invalid username or password",
+                "key": "file:src/main/resources/templates/admin/login.html"
+              },
+              {
+                "id": "screen:339adfd4-894c-3f49-b7df-32b5317c8308",
+                "label": "login.html",
+                "key": "file:src/main/resources/templates/admin/login.html"
+              },
+              {
+                "id": "screen:3a1b75e9-cff1-36f1-98e2-1fbfac753063",
+                "label": "dashboard.html",
+                "key": "file:src/main/resources/templates/admin/dashboard.html"
+              }
+            ],
+            "status": ""
+          },
+          "actualTargets": [
+            "file:src/main/resources/templates/admin/login.html",
+            "file:src/main/resources/templates/admin/login.html",
+            "file:src/main/resources/templates/admin/dashboard.html"
+          ],
+          "after": {
+            "focused": "file:src/main/resources/templates/admin/dashboard.html",
+            "id": "screen:3a1b75e9-cff1-36f1-98e2-1fbfac753063",
+            "choices": [],
+            "status": ""
+          }
+        },
+        {
+          "id": "H04",
+          "project": "Hotel-Management-System-Spring-Boot",
+          "result": "PASS",
+          "sourceView": "file:src/main/resources/templates/admin/dashboard.html",
+          "expectedTargets": [
+            "file:src/main/resources/templates/admin/rooms.html",
+            "file:src/main/resources/templates/admin/login.html"
+          ],
+          "source": {
+            "file": "src/main/java/com/hotel/management/controller/RoomController.java",
+            "line": 20,
+            "excerpt": "public String getAllRooms(HttpSession session, Model model) {"
+          },
+          "effectiveSelector": "[data-st-component-id=\"component:6ada4243-d2b9-37a4-98e7-9c6392a305ee\"]",
+          "before": {
+            "focused": "file:src/main/resources/templates/admin/dashboard.html",
+            "id": "screen:3a1b75e9-cff1-36f1-98e2-1fbfac753063",
+            "choices": [],
+            "status": ""
+          },
+          "afterClick": {
+            "focused": "file:src/main/resources/templates/admin/dashboard.html",
+            "id": "screen:3a1b75e9-cff1-36f1-98e2-1fbfac753063",
+            "choices": [
+              {
+                "id": "screen:339adfd4-894c-3f49-b7df-32b5317c8308",
+                "label": "login.html",
+                "key": "file:src/main/resources/templates/admin/login.html"
+              },
+              {
+                "id": "screen:442d5f0e-13f1-3ab4-917b-68c9e1ea1e8b",
+                "label": "rooms.html",
+                "key": "file:src/main/resources/templates/admin/rooms.html"
+              }
+            ],
+            "status": ""
+          },
+          "actualTargets": [
+            "file:src/main/resources/templates/admin/login.html",
+            "file:src/main/resources/templates/admin/rooms.html"
+          ],
+          "after": {
+            "focused": "file:src/main/resources/templates/admin/rooms.html",
+            "id": "screen:442d5f0e-13f1-3ab4-917b-68c9e1ea1e8b",
+            "choices": [],
+            "status": ""
+          }
+        },
+        {
+          "id": "H05",
+          "project": "Hotel-Management-System-Spring-Boot",
+          "result": "PASS",
+          "sourceView": "file:src/main/resources/templates/admin/rooms.html",
+          "expectedTargets": [
+            "file:src/main/resources/templates/admin/room-form.html",
+            "file:src/main/resources/templates/admin/login.html"
+          ],
+          "source": {
+            "file": "src/main/java/com/hotel/management/controller/RoomController.java",
+            "line": 30,
+            "excerpt": "public String addRoomForm(HttpSession session, Model model) {"
+          },
+          "effectiveSelector": "[data-st-component-id=\"component:b590c787-2dd7-31d7-b94c-9acd44b0cc69\"]",
+          "before": {
+            "focused": "file:src/main/resources/templates/admin/rooms.html",
+            "id": "screen:442d5f0e-13f1-3ab4-917b-68c9e1ea1e8b",
+            "choices": [],
+            "status": ""
+          },
+          "afterClick": {
+            "focused": "file:src/main/resources/templates/admin/rooms.html",
+            "id": "screen:442d5f0e-13f1-3ab4-917b-68c9e1ea1e8b",
+            "choices": [
+              {
+                "id": "screen:339adfd4-894c-3f49-b7df-32b5317c8308",
+                "label": "login.html",
+                "key": "file:src/main/resources/templates/admin/login.html"
+              },
+              {
+                "id": "screen:6b25390f-ec30-30ea-812f-85273915f88a",
+                "label": "room-form.html",
+                "key": "file:src/main/resources/templates/admin/room-form.html"
+              }
+            ],
+            "status": ""
+          },
+          "actualTargets": [
+            "file:src/main/resources/templates/admin/login.html",
+            "file:src/main/resources/templates/admin/room-form.html"
+          ],
+          "after": {
+            "focused": "file:src/main/resources/templates/admin/room-form.html",
+            "id": "screen:6b25390f-ec30-30ea-812f-85273915f88a",
+            "choices": [],
+            "status": ""
+          }
+        }
+      ]
+    },
+    {
+      "id": "HJ2",
+      "project": "Hotel-Management-System-Spring-Boot",
+      "steps": [
+        "H09",
+        "H11"
+      ],
+      "result": "FAIL",
+      "stepsExecuted": [
+        {
+          "id": "H09",
+          "project": "Hotel-Management-System-Spring-Boot",
+          "result": "PASS",
+          "sourceView": "file:src/main/resources/templates/visitor/home.html",
+          "expectedTargets": [
+            "file:src/main/resources/templates/visitor/booking-form.html"
+          ],
+          "source": {
+            "file": "src/main/resources/templates/visitor/home.html",
+            "line": 62,
+            "excerpt": "<a th:href=\"@{/book/{id}(id=${room.id})}\" class=\"book-btn\">"
+          },
+          "effectiveSelector": "a.book-btn",
+          "before": {
+            "focused": "file:src/main/resources/templates/visitor/home.html",
+            "id": "screen:01bdb5b7-be15-3af4-8a71-0adafd7cea5d",
+            "choices": [],
+            "status": ""
+          },
+          "afterClick": {
+            "focused": "file:src/main/resources/templates/visitor/booking-form.html",
+            "id": "screen:11263f44-76ba-3941-9840-bdc6c8fbd9ce",
+            "choices": [],
+            "status": ""
+          },
+          "actualTargets": [
+            "file:src/main/resources/templates/visitor/booking-form.html"
+          ],
+          "after": {
+            "focused": "file:src/main/resources/templates/visitor/booking-form.html",
+            "id": "screen:11263f44-76ba-3941-9840-bdc6c8fbd9ce",
+            "choices": [],
+            "status": ""
+          }
+        },
+        {
+          "id": "H11",
+          "project": "Hotel-Management-System-Spring-Boot",
+          "result": "FAIL",
+          "sourceView": "file:src/main/resources/templates/visitor/booking-form.html",
+          "expectedTargets": [
+            "file:src/main/resources/templates/visitor/booking-success.html"
+          ],
+          "source": {
+            "file": "src/main/java/com/hotel/management/controller/VisitorController.java",
+            "line": 44,
+            "excerpt": "public String createBooking(@ModelAttribute Booking booking,"
+          },
+          "effectiveSelector": "button[type=submit]",
+          "before": {
+            "focused": "file:src/main/resources/templates/visitor/booking-form.html",
+            "id": "screen:11263f44-76ba-3941-9840-bdc6c8fbd9ce",
+            "choices": [],
+            "status": ""
+          },
+          "afterClick": {
+            "focused": "file:src/main/resources/templates/visitor/booking-success.html",
+            "id": "screen:1d0421e9-2f0b-3448-8748-2800cbbaa990",
+            "choices": [],
+            "status": "已回放提交欄位；其他資料為來源範例"
+          },
+          "actualTargets": [
+            "file:src/main/resources/templates/visitor/booking-success.html"
+          ],
+          "renderedText": "Hotel ALAKAMANDAWA\nHome\nAdmin Login\n✅\nBooking Confirmed!\n\nThank you for choosing Hotel ALAKAMANADAWA. Your booking has been successfully confirmed.\n\nBooking Details\nBooking ID:\n12345\nGuest Name:\nJohn Doe\nRoom Number:\n101\nRoom Type:\nDeluxe Suite\nCheck-in Date:\n01-11-2026\nCheck-out Date:\n03-11-2026\nNumber of Guests:\n2\nTotal Amount:\nLKR 60,000.00\n📝 Important Information:\nPlease save your Booking ID for future reference\nCheck-in time: 2:00 PM\nCheck-out time: 12:00 PM\nPlease bring a valid ID during check-in\nBook Another Room\nBack to Home\n\n© 2026 Hotel ALAKAMANADAWA",
+          "missingText": [
+            "Trace Guest 419",
+            "0700419419",
+            "2026-11-01",
+            "2026-11-03"
+          ],
+          "after": {
+            "focused": "file:src/main/resources/templates/visitor/booking-success.html",
+            "id": "screen:1d0421e9-2f0b-3448-8748-2800cbbaa990",
+            "choices": [],
+            "status": "已回放提交欄位；其他資料為來源範例"
+          },
+          "errors": [
+            "SUBMITTED_VALUES_NOT_RENDERED"
+          ]
+        }
+      ],
+      "blockedAt": "H11"
+    }
+  ],
+  "infrastructure": [
+    {
+      "project": "demo-struts1",
+      "pageErrors": [],
+      "externalRequests": [],
+      "graphSha256": "d2edcac6fa240f1ea1fa0435ffa74b3f8725237b5e5c834b5aee43cd978ccc0f",
+      "reportSha256": "4a5caba7c9f6ac414ef4e85adc7cd999d2732033c83c07b5fca512d0c54fec76"
+    },
+    {
+      "project": "App1Assignment5",
+      "pageErrors": [],
+      "externalRequests": [],
+      "graphSha256": "bcdce4936a10a2e6101f10dbe06816f491c83eb35a889b0b9f3311ffe0600111",
+      "reportSha256": "e1e8846204e1c855877dc94543021cf55653b457e5c193dfe5aba7cdd22a5ab9"
+    },
+    {
+      "project": "Hotel-Management-System-Spring-Boot",
+      "pageErrors": [],
+      "externalRequests": [],
+      "graphSha256": "12e4c99947bac8cba85888f3951d958f9e0357677215b16e4806ca419ed06b10",
+      "reportSha256": "e12891ddee8c697b7b954f95185252f56ee5e0a14b7f4d76eae8f4f9579f940c"
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "id": "X05",
+  "source": "src/main/webapp/AddBook.jsp:45",
+  "expected": {
+    "key": "Enter",
+    "defaultPrevented": true
+  },
+  "actual": {
+    "key": "Enter",
+    "defaultPrevented": true
+  },
+  "scope": "keypress default prevention only; no backend success or form validity assumption",
+  "pageErrors": [],
+  "externalRequests": [],
+  "reportSha256": "e1e8846204e1c855877dc94543021cf55653b457e5c193dfe5aba7cdd22a5ab9",
+  "result": "PASS"
+}

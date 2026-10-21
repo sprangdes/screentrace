@@ -1,0 +1,34 @@
+{
+  "stage": "Initial E10/E11 corrections occurred before the first UI execution. Later inventory corrections and the stronger same-page assertion are listed separately; historical results are preserved.",
+  "initialDraftPreserved": true,
+  "corrections": [
+    {
+      "id": "E10",
+      "reason": "Source registration submit is a button; no matchingPassword field exists",
+      "source": "src/main/resources/templates/registration-page.html:46-95"
+    },
+    {
+      "id": "E11",
+      "reason": "Source login submit is a button; explicit custom success handler redirects to /list, not landing page; assert reachable success only without claiming real authentication",
+      "source": "src/main/java/com/SpringBootMVC/ExpensesTracker/controller/CustomeAuthenticationSuccessHandler.java:44"
+    }
+  ],
+  "inventoryCorrections": [
+    "Struts multi-line action locations accept the source opening-tag range rather than only its first line; four routes exist with correct paths",
+    "Thymeleaf th:field deliberately replaces fallback name; source location/id and effective field identity are authoritative; five original fallback names are not missing controls"
+  ],
+  "strengthenedAssertions": [
+    {
+      "id": "S06",
+      "reason": "The first runner incorrectly counted staying on the original list as a successful delete redirect; final runner requires iframe document replacement for same-view navigation, without changing expected source behavior",
+      "firstRunPreserved": "ui-results-before-same-page-check.json"
+    }
+  ],
+  "invalidOriginalCasesPreserved": {
+    "S01": "Source base.jsp uses href=\"add-student\", not a URL ending /add-student; new X01 corrects the source selector",
+    "S02": "Source base.jsp uses href=\"studentlist\", not a URL ending /studentlist; new X02 corrects the source selector",
+    "S08": "Depends on invalid S01/S02; new X03 uses X01/S04/X02; neither failed prerequisite is evidence of missing data persistence",
+    "SJ1": "Original journey depends on invalid S01; supplementary SJ2 uses correct source selectors"
+  },
+  "markupCensusCorrection": "JSP self-closing c:url and bean:message tags nested in HTML attributes are escaped in test memory only; source bytes and line numbers remain unchanged. This exposes 17 previously missed inline handler units without changing view/route/control totals."
+}
