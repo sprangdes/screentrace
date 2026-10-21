@@ -60,6 +60,7 @@ jobs:
         id: cache-date
         run: echo "day=$(date -u +%Y-%m-%d)" >> "$GITHUB_OUTPUT"
       - name: Cache vulnerability database
+        id: vulnerability-cache
         uses: actions/cache@v4
         with:
           path: ${{ runner.temp }}/dependency-check-data
@@ -68,10 +69,44 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-dependency-check-12.2.2-
       - name: Audit Java dependencies
+        shell: bash
         env:
           DEPENDENCY_CHECK_DATA: ${{ runner.temp }}/dependency-check-data
+          CACHED_KEY: ${{ steps.vulnerability-cache.outputs.cache-matched-key }}
         # Package in the same invocation so the reactor modules resolve without a full test run.
-        run: mvn -B -DskipTests package org.owasp:dependency-check-maven:aggregate -DdataDirectory="$DEPENDENCY_CHECK_DATA"
+        # Only a failed NVD feed update is retried; a vulnerability above the threshold fails at once.
+        # If the NVD feed stays down, the audit runs once on the restored database when it is at most a week old.
+        run: |
+          log="$RUNNER_TEMP/dependency-audit.log"
+          audit() {
+            mvn -B -DskipTests package org.owasp:dependency-check-maven:aggregate -DdataDirectory="$DEPENDENCY_CHECK_DATA" "$@" 2>&1 | tee "$log"
+          }
+          feed_failed() {
+            ! grep -q 'CVSS score greater than or equal to' "$log" &&
+              grep -qE 'Error downloading NVD|DownloadFailedException|UpdateException|Unable to download & parse the data feed' "$log"
+          }
+          for attempt in 1 2 3; do
+            if audit; then
+              exit 0
+            fi
+            feed_failed || exit 1
+            if [ "$attempt" -lt 3 ]; then
+              echo "::warning::NVD feed update failed on attempt $attempt; retrying"
+              sleep $((attempt * 60))
+            fi
+          done
+          cached_day="${CACHED_KEY##*-dependency-check-12.2.2-}"
+          if [ -z "$CACHED_KEY" ] || ! cached_at=$(date -u -d "$cached_day" +%s 2>/dev/null); then
+            echo "::error::NVD feed update failed and no vulnerability database was restored"
+            exit 1
+          fi
+          age_days=$(( ($(date -u +%s) - cached_at) / 86400 ))
+          if [ "$age_days" -gt 7 ]; then
+            echo "::error::NVD feed update failed and the restored vulnerability database from $cached_day is older than a week"
+            exit 1
+          fi
+          echo "::warning::NVD feed update failed three times; auditing with the vulnerability database from $cached_day"
+          audit -DautoUpdate=false
       - name: Upload dependency audit reports
         if: always()
         uses: actions/upload-artifact@v4
