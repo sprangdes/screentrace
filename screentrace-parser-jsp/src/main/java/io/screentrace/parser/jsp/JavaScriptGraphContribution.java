@@ -31,7 +31,7 @@ public final class JavaScriptGraphContribution {
         String target=include.targetPath();List<String> matches=sourcePaths.stream().filter(p->p.equals(target)||(!target.contains("${")&&p.endsWith("/"+target.replaceFirst("^/","")))||Path.of(include.sourceViewPath()).getParent()!=null&&Path.of(include.sourceViewPath()).getParent().resolve(target).normalize().toString().replace('\\','/').equals(p)).toList();
         if(matches.size()==1)changed|=owners.computeIfAbsent(matches.get(0),k->new TreeSet<>()).addAll(parents);
       }}
-      Map<String,List<String>> requestDirectories=new TreeMap<>();for(var entry:owners.entrySet())requestDirectories.put(entry.getKey(),UrlGraphContribution.requestDirectories(graph,entry.getValue()));
+      Map<String,List<String>> requestDirectories=new TreeMap<>();var directories=new UrlGraphContribution.RequestDirectories(graph);for(var entry:owners.entrySet())requestDirectories.put(entry.getKey(),directories.of(entry.getValue()));
       collected=ScriptSources.collect(inventory,requestDirectories);diagnostics.addAll(collected.diagnostics());
       List<Map<String,Object>> units=new ArrayList<>(),dom=new ArrayList<>();
       for(var entry:collected.dom())for(String screen:owners.getOrDefault((String)entry.get("ownerFile"),Set.of())){var copy=new TreeMap<>(entry);copy.put("screenId",screen);dom.add(copy);}

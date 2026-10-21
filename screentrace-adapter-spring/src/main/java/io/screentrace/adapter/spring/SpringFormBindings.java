@@ -5,19 +5,19 @@ import com.github.javaparser.ast.expr.*;
 import io.screentrace.core.ApplicationGraph;
 import io.screentrace.core.ApplicationGraph.*;
 import io.screentrace.scanner.ProjectScanner.ProjectInventory;
-import io.screentrace.scanner.SafeProjectFiles;
 import java.util.*;
 
 /** Resolves model-attribute names only from source declarations; no target classes are loaded. */
 final class SpringFormBindings {
   private record Type(ClassOrInterfaceDeclaration node,String path) { }
   private record Model(String name,String type,SourceLocation source,String ownerClass,String method,int methodLine,boolean provider,boolean requestParameter) { }
-  static ApplicationGraph bind(ApplicationGraph graph,ProjectInventory inventory) {
+  static ApplicationGraph bind(ApplicationGraph graph,ProjectInventory inventory) {return bind(graph,inventory,new ParsedJavaUnits(inventory.root()));}
+  static ApplicationGraph bind(ApplicationGraph graph,ProjectInventory inventory,ParsedJavaUnits units) {
     Map<String,List<Type>> types=new TreeMap<>();List<Model> models=new ArrayList<>();List<Diagnostic> diagnostics=new ArrayList<>(graph.diagnostics());
     for(var file:inventory.javaFiles()) {
       String path=inventory.root().relativize(file).toString().replace('\\','/');
       try {
-        var unit=io.screentrace.parser.jsp.JavaSources.parse(SafeProjectFiles.readUtf8Limited(inventory.root(),file,SafeProjectFiles.MAX_SOURCE_FILE_BYTES));
+        var unit=units.parse(file);
         for(var type:unit.findAll(ClassOrInterfaceDeclaration.class)) types.computeIfAbsent(type.getFullyQualifiedName().orElse(type.getNameAsString()),k->new ArrayList<>()).add(new Type(type,path));
         for(var parameter:unit.findAll(Parameter.class)) for(var annotation:parameter.getAnnotations()) if(isModelAttribute(annotation,unit)) {
           String name=literalName(annotation);if(name!=null)models.add(model(name,qualifiedType(unit,parameter.getType().asString()),new SourceLocation(path,parameter.getBegin().map(p->p.line).orElse(1)),parameter));

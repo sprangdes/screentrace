@@ -48,6 +48,7 @@ public final class SpringMvcAnalyzer {
 
     public ApplicationGraph analyze(ProjectInventory inventory) throws IOException {
         State state = new State(inventory.root(), inventory.javaFiles());
+        ParsedJavaUnits units = new ParsedJavaUnits(inventory.root());
         for (String message : inventory.diagnostics()) state.diagnostics.add(new Diagnostic(message, Confidence.UNRESOLVED, new SourceLocation(".", 1), "SOURCE_LIMIT", List.of()));
         JspAnalysis jsp = new JspProjectParser().analyze(inventory.root(), inventory.files());
         Set<String> includedViews = includedViewPaths(inventory.root(), jsp);
@@ -59,8 +60,8 @@ public final class SpringMvcAnalyzer {
         discoverExceptionView(inventory, state);
         parseXmlControllers(inventory, state);
         addPropertiesViewResolvers(inventory,state);
-        addJavaViewResolvers(inventory,state);
-        for (Path java : inventory.javaFiles()) parseController(java, state);
+        addJavaViewResolvers(inventory,state,units);
+        for (Path java : inventory.javaFiles()) parseController(java, state, units);
         SpringControllerFlow.resolve(state.nodes,state.edges,state.diagnostics,state.returnTargets,
             io.screentrace.parser.jsp.UrlResolution.context(inventory,List.of()));
         addJspInteractions(jsp, state);
@@ -69,14 +70,14 @@ public final class SpringMvcAnalyzer {
         ApplicationGraph graph = new ApplicationGraph(new ApplicationGraph.Application(inventory.root().getFileName().toString(), inventory.root().toString(), inventory.technologies()),
                 state.nodes, state.edges, state.diagnostics, state.apiContracts, ApplicationGraph.BEHAVIOR_SCHEMA_VERSION, List.of(), List.of());
         graph=MarkupGraphContribution.enrich(graph,jsp);
-        graph=SpringFormBindings.bind(graph,inventory);
+        graph=SpringFormBindings.bind(graph,inventory,units);
         var completed=SpringControllerFlow.project(SpringServerValidation.enrich(io.screentrace.parser.jsp.UrlGraphContribution.enrich(io.screentrace.parser.jsp.JavaScriptGraphContribution.enrich(io.screentrace.parser.jsp.ThymeleafFragments.enrich(MarkupGraphContribution.enrich(graph,jsp),inventory),inventory),inventory),inventory));
         completed=io.screentrace.parser.jsp.RouteTemplateInference.enrich(completed,inventory);
         completed=MarkupGraphContribution.inheritLinkActions(SpringWebFlowContribution.enrich(SpringSecurityRedirects.enrich(completed,inventory),inventory));
-        completed=io.screentrace.parser.jsp.UrlGraphContribution.enrich(SpringSecurityProcessors.enrich(completed,inventory),inventory);
-        completed=SpringDataSimulation.enrich(completed,inventory);
-        completed=SpringDtoSimulation.enrich(completed,inventory);
-        return io.screentrace.core.GraphIntegrityValidator.requireAnalysis(SpringSubmittedModel.enrich(completed,inventory));
+        completed=io.screentrace.parser.jsp.UrlGraphContribution.enrich(SpringSecurityProcessors.enrich(completed,inventory,units),inventory);
+        completed=SpringDataSimulation.enrich(completed,inventory,units);
+        completed=SpringDtoSimulation.enrich(completed,inventory,units);
+        return io.screentrace.core.GraphIntegrityValidator.requireAnalysis(SpringSubmittedModel.enrich(completed,inventory,units));
     }
 
     private static void discoverExceptionView(ProjectInventory inventory, State state) {
@@ -131,10 +132,10 @@ public final class SpringMvcAnalyzer {
         }
     }
 
-    private static void parseController(Path file, State state) {
+    private static void parseController(Path file, State state, ParsedJavaUnits units) {
         String relative = state.root.relativize(file).toString();
         try {
-            for (ClassOrInterfaceDeclaration type : io.screentrace.parser.jsp.JavaSources.parse(SafeProjectFiles.readUtf8Limited(state.root, file, SafeProjectFiles.MAX_SOURCE_FILE_BYTES)).findAll(ClassOrInterfaceDeclaration.class)) {
+            for (ClassOrInterfaceDeclaration type : units.parse(file).findAll(ClassOrInterfaceDeclaration.class)) {
                 AnnotationExpr controller = annotation(type, "Controller");
                 boolean rest = annotation(type, "RestController") != null;
                 if (controller == null && !rest) continue;
@@ -257,9 +258,9 @@ public final class SpringMvcAnalyzer {
         return beans;
     }
 
-    private static void addJavaViewResolvers(ProjectInventory inventory,State state) throws IOException {
+    private static void addJavaViewResolvers(ProjectInventory inventory,State state,ParsedJavaUnits units) throws IOException {
         for(Path file:inventory.javaFiles()) try {
-            var unit=io.screentrace.parser.jsp.JavaSources.parse(SafeProjectFiles.readUtf8Limited(inventory.root(),file,SafeProjectFiles.MAX_SOURCE_FILE_BYTES));
+            var unit=units.parse(file);
             for(var method:unit.findAll(MethodDeclaration.class)) {
                 if(annotation(method,"Bean")==null||method.getBody().isEmpty())continue;
                 var returns=method.findAll(com.github.javaparser.ast.stmt.ReturnStmt.class);
