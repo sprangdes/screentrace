@@ -453,8 +453,9 @@ public final class SpringMvcAnalyzer {
         Set<String> fragments = new HashSet<>();
         for (JspAnalysis.TilesDefinition definition : jsp.tilesDefinitions()) {
             if (definition.parent() != null && !definition.parent().isBlank()) fragments.add(definition.parent());
+            // A value naming its own definition (e.g. current="login" read via useAttribute) is a string, never a nested insert.
             for (JspAnalysis.TilesAttribute attribute : definition.attributes())
-                if (names.contains(attribute.value())) fragments.add(attribute.value());
+                if (names.contains(attribute.value()) && !attribute.value().equals(definition.name())) fragments.add(attribute.value());
         }
         for (JspAnalysis.Include include : jsp.includes()) if (names.contains(include.targetPath())) fragments.add(include.targetPath());
         Map<String, JspAnalysis.TilesDefinition> byName = new TreeMap<>();
@@ -517,7 +518,7 @@ public final class SpringMvcAnalyzer {
         Map<String, Object> attributes = new TreeMap<>();
         for (JspAnalysis.TilesAttribute attribute : definition.attributes()) {
             String value = attribute.value() == null ? "" : attribute.value();
-            JspAnalysis.TilesDefinition nested = byName.get(value);
+            JspAnalysis.TilesDefinition nested = value.equals(definition.name()) ? null : byName.get(value);
             if (nested != null && !stack.contains(value)) attributes.put(attribute.name(), Map.of("definition", tilesContext(nested, byName, jsp, stack)));
             else if (nested != null) attributes.put(attribute.name(), Map.of("unresolved", value));
             else if (value.startsWith("/") || value.matches("(?i).*\\.(jspf?|html?)$")) {

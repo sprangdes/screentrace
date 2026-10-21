@@ -193,6 +193,46 @@ class SpringMvcAnalyzerTest {
     }
 
     @Test
+    void keepsTilesPagesWhoseAttributeValueNamesTheirOwnDefinition() throws Exception {
+        Path root = Files.createTempDirectory("st-mvc-tiles-self-value");
+        Path webInf = root.resolve("src/main/webapp/WEB-INF");
+        Files.createDirectories(webInf.resolve("jsp"));
+        Files.createDirectories(webInf.resolve("layout"));
+        Files.writeString(root.resolve("pom.xml"), "<project><dependency><artifactId>spring-webmvc</artifactId></dependency></project>");
+        Files.writeString(root.resolve("X.java"), "import org.springframework.stereotype.*; import org.springframework.web.bind.annotation.*; @Controller class X {"
+            + " @RequestMapping(\"/login\") String login(){ return \"login\"; }"
+            + " @RequestMapping(\"/account/upload\") String upload(){ return \"upload\"; } }");
+        Files.writeString(webInf.resolve("dispatcher-servlet.xml"), """
+            <beans><bean class="org.springframework.web.servlet.view.tiles3.TilesConfigurer"><property name="definitions"><list><value>/WEB-INF/defs/general.xml</value></list></property></bean>
+            <bean class="org.springframework.web.servlet.view.UrlBasedViewResolver"><property name="viewClass" value="org.springframework.web.servlet.view.tiles3.TilesView"/></bean></beans>
+            """);
+        Files.createDirectories(webInf.resolve("defs"));
+        // RawSanj/spring-tiles-sample-app: "current"/"upload" are read with tilesx:useAttribute as strings.
+        Files.writeString(webInf.resolve("defs/general.xml"), """
+            <tiles-definitions>
+              <definition name="page" template="/WEB-INF/layout/page.jsp"/>
+              <definition name="login" extends="page"><put-attribute name="body" value="/WEB-INF/jsp/login.jsp"/><put-attribute name="current" value="login"/></definition>
+              <definition name="upload" extends="page"><put-attribute name="body" value="/WEB-INF/jsp/upload.jsp"/><put-attribute name="upload" value="upload"/></definition>
+            </tiles-definitions>
+            """);
+        Files.writeString(webInf.resolve("layout/page.jsp"), "<tilesx:useAttribute name=\"current\"/><a href=\"<c:url value='/logout'/>\">Sign out</a><tiles:insertAttribute name=\"body\"/>");
+        Files.writeString(webInf.resolve("jsp/login.jsp"), "<form method=\"post\" action=\"<c:url value='/login'/>\"><input name=\"user\"><button>Sign In</button></form>");
+        Files.writeString(webInf.resolve("jsp/upload.jsp"), "<h1>Upload</h1>");
+
+        ApplicationGraph graph = new SpringMvcAnalyzer().analyze(new ProjectScanner().scan(root));
+        var screens = graph.nodes().stream().filter(node -> node.type() == ApplicationGraph.NodeType.SCREEN).toList();
+
+        assertTrue(screens.stream().map(ApplicationGraph.GraphNode::name).sorted().toList().equals(java.util.List.of("login", "upload")), screens.toString());
+        assertTrue(screens.stream().allMatch(screen -> "true".equals(screen.attributes().get("tilesDefinition"))
+            && screen.attributes().get("view").equals("src/main/webapp/WEB-INF/layout/page.jsp")), screens.toString());
+        var login = screens.stream().filter(node -> node.name().equals("login")).findFirst().orElseThrow();
+        var tiles = new com.fasterxml.jackson.databind.ObjectMapper().readTree(login.attributes().get("tilesAttributes"));
+        assertTrue(tiles.path("attributes").path("current").path("value").asText().equals("login"), tiles.toString());
+        assertTrue(tiles.path("attributes").path("body").path("path").asText().equals("src/main/webapp/WEB-INF/jsp/login.jsp"), tiles.toString());
+        assertTrue(graph.relationships().stream().anyMatch(edge -> edge.type() == ApplicationGraph.EdgeType.RENDERS && edge.to().equals(login.id())), "controller renders the Tiles page");
+    }
+
+    @Test
     void keepsATilesBodyAsItsOwnScreenWhenAControllerRendersItDirectly() throws Exception {
         Path root = Files.createTempDirectory("st-mvc-tiles-routed-body");
         Path webInf = root.resolve("src/main/webapp/WEB-INF");
