@@ -98,7 +98,7 @@ public final class ProjectScanner {
     if (files.stream().anyMatch(path -> path.getFileName().toString().equals(POM_FILE))) technologies.add("Maven");
     if (files.stream().anyMatch(path -> hasExtension(path, ".gradle") || hasExtension(path, ".gradle.kts"))) technologies.add("Gradle");
     if (files.stream().anyMatch(path -> hasExtension(path, ".java"))) technologies.add("Java");
-    if (files.stream().anyMatch(path -> hasExtension(path, ".tsx") || hasExtension(path, ".jsx"))) technologies.add("React");
+    if (files.stream().anyMatch(path -> hasExtension(path, ".tsx") || hasExtension(path, ".jsx")) || dependsOnReact(root, files)) technologies.add("React");
     if (files.stream().anyMatch(path -> hasExtension(path, ".html"))) technologies.add("HTML");
     boolean springBoot = files.stream().filter(path -> path.getFileName().toString().equals(POM_FILE)).anyMatch(path -> contains(root, path, "spring-boot"));
     boolean springMvc = files.stream().filter(path -> path.getFileName().toString().equals(POM_FILE)).anyMatch(path -> contains(root, path, "spring-webmvc"));
@@ -112,6 +112,21 @@ public final class ProjectScanner {
     if (files.stream().anyMatch(path -> hasExtension(path, ".jsp") || hasExtension(path, ".jspf"))) technologies.add("JSP");
     if (files.stream().filter(path -> hasExtension(path, ".xml")).anyMatch(path -> contains(root, path, "tiles-definitions"))) technologies.add("Tiles");
     return List.copyOf(technologies);
+  }
+
+  /** Create React App and similar setups write JSX in .js files; a package.json depending on react proves the frontend. */
+  private static boolean dependsOnReact(Path root, List<Path> files) {
+    for (Path path : files) {
+      if (!path.getFileName().toString().equals("package.json")) continue;
+      try {
+        var manifest = new com.fasterxml.jackson.databind.ObjectMapper().readTree(SafeProjectFiles.readUtf8Limited(root, path, SafeProjectFiles.MAX_SOURCE_FILE_BYTES));
+        for (String section : List.of("dependencies", "devDependencies", "peerDependencies"))
+          if (manifest != null && manifest.path(section).has("react")) return true;
+      } catch (IOException | SecurityException ignored) {
+        // A malformed or unreadable manifest proves nothing; extension signals still apply.
+      }
+    }
+    return false;
   }
 
   private static boolean ignored(Path path) {
