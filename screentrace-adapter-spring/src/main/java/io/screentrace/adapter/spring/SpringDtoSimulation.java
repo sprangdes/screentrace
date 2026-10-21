@@ -1,14 +1,15 @@
 package io.screentrace.adapter.spring;
-import com.github.javaparser.ast.*;import com.github.javaparser.ast.body.*;import com.github.javaparser.ast.expr.*;import com.github.javaparser.ast.stmt.*;import com.fasterxml.jackson.databind.ObjectMapper;import io.screentrace.core.ApplicationGraph;import io.screentrace.core.ApplicationGraph.*;import io.screentrace.parser.jsp.JavaSources;import io.screentrace.scanner.ProjectScanner.ProjectInventory;import io.screentrace.scanner.SafeProjectFiles;import java.util.*;
+import com.github.javaparser.ast.*;import com.github.javaparser.ast.body.*;import com.github.javaparser.ast.expr.*;import com.github.javaparser.ast.stmt.*;import com.fasterxml.jackson.databind.ObjectMapper;import io.screentrace.core.ApplicationGraph;import io.screentrace.core.ApplicationGraph.*;import io.screentrace.scanner.ProjectScanner.ProjectInventory;import java.util.*;
 /** Direct DTO scalar copies into a source-proven JPA entity. Session-local submitted fields only. */
 final class SpringDtoSimulation {
  private record Type(ClassOrInterfaceDeclaration node,String file){}
  private record Operation(Type repository,Type entity,Type dto,String kind,Map<String,String> fields,boolean update,List<SourceLocation> proof){}
  private final Map<String,List<Type>> types=new TreeMap<>();private final ObjectMapper json=new ObjectMapper();
  private Type unique(String name){if(name==null)return null;var matches=types.getOrDefault(name,List.of());return matches.size()==1?matches.get(0):null;}
- static ApplicationGraph enrich(ApplicationGraph graph,ProjectInventory inventory){return new SpringDtoSimulation().analyze(graph,inventory);}
- private ApplicationGraph analyze(ApplicationGraph graph,ProjectInventory inventory){
-  for(var file:inventory.javaFiles())try{var unit=JavaSources.parse(SafeProjectFiles.readUtf8Limited(inventory.root(),file,SafeProjectFiles.MAX_SOURCE_FILE_BYTES));String path=inventory.root().relativize(file).toString().replace('\\','/');for(var declaration:unit.getTypes())if(declaration instanceof ClassOrInterfaceDeclaration c)types.computeIfAbsent(c.getNameAsString(),k->new ArrayList<>()).add(new Type(c,path));}catch(Exception ignored){}
+ static ApplicationGraph enrich(ApplicationGraph graph,ProjectInventory inventory){return enrich(graph,inventory,new ParsedJavaUnits(inventory.root()));}
+ static ApplicationGraph enrich(ApplicationGraph graph,ProjectInventory inventory,ParsedJavaUnits units){return new SpringDtoSimulation().analyze(graph,inventory,units);}
+ private ApplicationGraph analyze(ApplicationGraph graph,ProjectInventory inventory,ParsedJavaUnits units){
+  for(var file:inventory.javaFiles())try{var unit=units.parse(file);String path=inventory.root().relativize(file).toString().replace('\\','/');for(var declaration:unit.getTypes())if(declaration instanceof ClassOrInterfaceDeclaration c)types.computeIfAbsent(c.getNameAsString(),k->new ArrayList<>()).add(new Type(c,path));}catch(Exception ignored){}
   Map<String,Operation> operations=new TreeMap<>();
   for(var entries:types.values())if(entries.size()==1){var type=entries.get(0);if(type.node.isInterface())continue;for(var method:type.node.getMethods()){var operation=writeOperation(type,method);if(operation!=null&&type.node.getMethodsByName(method.getNameAsString()).size()==1)operations.put(type.file+":"+method.getNameAsString(),operation);}}
   Map<String,List<String>> collections=new TreeMap<>();for(var op:operations.values())collections.computeIfAbsent(key(op),k->new ArrayList<>()).addAll(op.fields.keySet());

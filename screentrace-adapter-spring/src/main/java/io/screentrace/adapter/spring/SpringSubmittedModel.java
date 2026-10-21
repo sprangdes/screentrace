@@ -1,9 +1,7 @@
 package io.screentrace.adapter.spring;
 import io.screentrace.core.ApplicationGraph;
 import io.screentrace.core.ApplicationGraph.*;
-import io.screentrace.parser.jsp.JavaSources;
 import io.screentrace.scanner.ProjectScanner.ProjectInventory;
-import io.screentrace.scanner.SafeProjectFiles;
 import com.github.javaparser.ast.body.*;
 import com.github.javaparser.ast.expr.*;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -11,9 +9,10 @@ import java.util.*;
 /** Direct @ModelAttribute input binding, for inert submitted-value demonstrations only.
  * Service results, nested relations, generated identifiers and calculated values are excluded. */
 final class SpringSubmittedModel {
- static ApplicationGraph enrich(ApplicationGraph graph,ProjectInventory inventory){
+ static ApplicationGraph enrich(ApplicationGraph graph,ProjectInventory inventory){return enrich(graph,inventory,new ParsedJavaUnits(inventory.root()));}
+ static ApplicationGraph enrich(ApplicationGraph graph,ProjectInventory inventory,ParsedJavaUnits units){
   Map<String,List<ClassOrInterfaceDeclaration>> types=new HashMap<>();Map<ClassOrInterfaceDeclaration,String> files=new IdentityHashMap<>();
-  for(var file:inventory.javaFiles())try{for(var t:JavaSources.parse(SafeProjectFiles.readUtf8Limited(inventory.root(),file,SafeProjectFiles.MAX_SOURCE_FILE_BYTES)).findAll(ClassOrInterfaceDeclaration.class)){types.computeIfAbsent(t.getNameAsString(),k->new ArrayList<>()).add(t);files.put(t,inventory.root().relativize(file).toString().replace('\\','/'));}}catch(Exception ignored){}
+  for(var file:inventory.javaFiles())try{for(var t:units.parse(file).findAll(ClassOrInterfaceDeclaration.class)){types.computeIfAbsent(t.getNameAsString(),k->new ArrayList<>()).add(t);files.put(t,inventory.root().relativize(file).toString().replace('\\','/'));}}catch(Exception ignored){}
   Map<String,List<AnalysisEvidence>> contributions=new HashMap<>();
   for(var handler:graph.nodes())if(handler.type()==NodeType.HANDLER){var owners=types.getOrDefault(handler.attributes().get("class"),List.of());if(owners.size()!=1)continue;var owner=owners.get(0);if(!files.get(owner).equals(handler.source().file()))continue;
    var methods=owner.getMethodsByName(handler.attributes().getOrDefault("method",""));if(methods.size()!=1)continue;var method=methods.get(0);if(method.getParameters().stream().filter(p->p.getAnnotationByName("ModelAttribute").isPresent()).count()!=1)continue;if(method.getBody().isEmpty()||method.findAll(com.github.javaparser.ast.stmt.ReturnStmt.class).size()!=1||!method.getBody().get().getStatements().get(method.getBody().get().getStatements().size()-1).isReturnStmt())continue;

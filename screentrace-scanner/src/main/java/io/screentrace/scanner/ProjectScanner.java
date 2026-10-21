@@ -77,7 +77,7 @@ public final class ProjectScanner {
       if(other)diagnostics.add("Inactive web source excluded by nbproject/project.properties: "+relative);return other;
     });
     files.sort(Path::compareTo);
-    return new ProjectInventory(root, files, technologies(root, files), diagnostics);
+    return new ProjectInventory(root, files, technologies(root, files), diagnostics, List.of(), ".", 1, webRootsFor(configured));
   }
 
   private static String configuredWebRoot(Path root) {
@@ -88,6 +88,10 @@ public final class ProjectScanner {
       if(!Files.isDirectory(root.resolve(value))||Files.isSymbolicLink(root.resolve(value))||!root.resolve(value).toRealPath().startsWith(root))return null;
       return value.replaceFirst("^\\./","").replaceFirst("/+$","");
     }catch(Exception ignored){return null;}
+  }
+  private static List<String> webRootsFor(String configured) {
+    if(configured!=null)return List.of(configured+"/");
+    return List.of("src/main/webapp/","WebContent/","WebRoot/","webapp/","web/");
   }
   private static List<String> technologies(Path root, List<Path> files) {
     Set<String> technologies = new TreeSet<>();
@@ -120,16 +124,14 @@ public final class ProjectScanner {
     catch (IOException | SecurityException ignored) { return false; }
   }
 
-  public record ProjectInventory(Path root, List<Path> files, List<String> technologies, List<String> diagnostics,List<String> contextPaths,String contextSettingsFile,int contextSettingsLine) {
+  /** {@code webRoots} is resolved once from nbproject/project.properties when the inventory is built. */
+  public record ProjectInventory(Path root, List<Path> files, List<String> technologies, List<String> diagnostics,List<String> contextPaths,String contextSettingsFile,int contextSettingsLine,List<String> webRoots) {
     public ProjectInventory(Path root,List<Path> files,List<String> technologies,List<String> diagnostics){this(root,files,technologies,diagnostics,List.of(),".",1);}
+    public ProjectInventory(Path root,List<Path> files,List<String> technologies,List<String> diagnostics,List<String> contextPaths,String contextSettingsFile,int contextSettingsLine){this(root,files,technologies,diagnostics,contextPaths,contextSettingsFile,contextSettingsLine,webRootsFor(configuredWebRoot(root)));}
     public ProjectInventory withContextPaths(List<String> values,String source){return withContextPaths(values,1);}
-    public ProjectInventory withContextPaths(List<String> values,int line){return new ProjectInventory(root,files,technologies,diagnostics,values,"workspace:config.json",Math.max(1,line));}
+    public ProjectInventory withContextPaths(List<String> values,int line){return new ProjectInventory(root,files,technologies,diagnostics,values,"workspace:config.json",Math.max(1,line),webRoots);}
     public ProjectInventory(Path root, List<Path> files, List<String> technologies) { this(root, files, technologies, List.of()); }
-    public ProjectInventory { files = List.copyOf(files); technologies = List.copyOf(technologies); diagnostics = List.copyOf(diagnostics); contextPaths=List.copyOf(contextPaths); contextSettingsFile=contextPaths.isEmpty()?".":"workspace:config.json"; }
-    public List<String> webRoots() {
-      String configured=configuredWebRoot(root);if(configured!=null)return List.of(configured+"/");
-      return List.of("src/main/webapp/","WebContent/","WebRoot/","webapp/","web/");
-    }
+    public ProjectInventory { files = List.copyOf(files); technologies = List.copyOf(technologies); diagnostics = List.copyOf(diagnostics); contextPaths=List.copyOf(contextPaths); contextSettingsFile=contextPaths.isEmpty()?".":"workspace:config.json"; webRoots=List.copyOf(webRoots); }
     public List<Path> javaFiles() { return files.stream().filter(path -> hasExtension(path, ".java")).toList(); }
     public List<Path> reactFiles() { return files.stream().filter(path -> hasExtension(path, ".tsx") || hasExtension(path, ".jsx")).toList(); }
     public List<Path> jspFiles() { return files.stream().filter(path -> hasExtension(path, ".jsp")).toList(); }

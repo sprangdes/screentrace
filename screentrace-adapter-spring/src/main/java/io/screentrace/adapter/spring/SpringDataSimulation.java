@@ -7,9 +7,7 @@ import com.github.javaparser.ast.expr.*;
 import com.github.javaparser.ast.stmt.*;
 import io.screentrace.core.ApplicationGraph;
 import io.screentrace.core.ApplicationGraph.*;
-import io.screentrace.parser.jsp.JavaSources;
 import io.screentrace.scanner.ProjectScanner.ProjectInventory;
-import io.screentrace.scanner.SafeProjectFiles;
 import java.util.*;
 
 /** Source-proven repository paths describe inert, session-local demonstration data.
@@ -20,10 +18,11 @@ final class SpringDataSimulation {
  private record Action(Type repository,Type entity,String operation,String argument,List<SourceLocation> proof){}
  private final Map<String,List<Type>> types=new TreeMap<>();
  private Type unique(String name){var matches=types.getOrDefault(name.replaceAll("<.*>",""),List.of());return matches.size()==1?matches.get(0):null;}
- static ApplicationGraph enrich(ApplicationGraph graph,ProjectInventory inventory){return new SpringDataSimulation().analyze(graph,inventory);}
- private ApplicationGraph analyze(ApplicationGraph graph,ProjectInventory inventory) {
+ static ApplicationGraph enrich(ApplicationGraph graph,ProjectInventory inventory){return enrich(graph,inventory,new ParsedJavaUnits(inventory.root()));}
+ static ApplicationGraph enrich(ApplicationGraph graph,ProjectInventory inventory,ParsedJavaUnits units){return new SpringDataSimulation().analyze(graph,inventory,units);}
+ private ApplicationGraph analyze(ApplicationGraph graph,ProjectInventory inventory,ParsedJavaUnits units) {
   for(var file:inventory.javaFiles())try{
-   var unit=JavaSources.parse(SafeProjectFiles.readUtf8Limited(inventory.root(),file,SafeProjectFiles.MAX_SOURCE_FILE_BYTES));
+   var unit=units.parse(file);
    String path=inventory.root().relativize(file).toString().replace('\\','/');
    for(var declaration:unit.getTypes())if(declaration instanceof ClassOrInterfaceDeclaration c){var t=new Type(c,path);types.computeIfAbsent(c.getNameAsString(),k->new ArrayList<>()).add(t);}
   }catch(Exception ignored){/* A missing or ambiguous source yields no simulation contract. */}

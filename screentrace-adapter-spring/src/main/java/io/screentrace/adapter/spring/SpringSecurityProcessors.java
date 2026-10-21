@@ -1,11 +1,12 @@
 package io.screentrace.adapter.spring;
-import com.github.javaparser.ast.*;import com.github.javaparser.ast.body.*;import com.github.javaparser.ast.expr.*;import io.screentrace.core.*;import io.screentrace.core.ApplicationGraph.*;import io.screentrace.parser.jsp.JavaSources;import io.screentrace.scanner.ProjectScanner.ProjectInventory;import io.screentrace.scanner.SafeProjectFiles;import java.util.*;
+import com.github.javaparser.ast.*;import com.github.javaparser.ast.body.*;import com.github.javaparser.ast.expr.*;import io.screentrace.core.*;import io.screentrace.core.ApplicationGraph.*;import io.screentrace.scanner.ProjectScanner.ProjectInventory;import java.util.*;
 /** Source-configured filter entry points, not an authentication implementation. */
 final class SpringSecurityProcessors {
  private record Type(ClassOrInterfaceDeclaration node,String file){}
  private record Destination(String path,SourceLocation source){}
- static ApplicationGraph enrich(ApplicationGraph graph,ProjectInventory inventory){List<Type> types=new ArrayList<>();
-  for(var file:inventory.javaFiles())try{var unit=JavaSources.parse(SafeProjectFiles.readUtf8Limited(inventory.root(),file,SafeProjectFiles.MAX_SOURCE_FILE_BYTES));String path=inventory.root().relativize(file).toString().replace('\\','/');for(var t:unit.getTypes())if(t instanceof ClassOrInterfaceDeclaration c)types.add(new Type(c,path));}catch(Exception ignored){}
+ static ApplicationGraph enrich(ApplicationGraph graph,ProjectInventory inventory){return enrich(graph,inventory,new ParsedJavaUnits(inventory.root()));}
+ static ApplicationGraph enrich(ApplicationGraph graph,ProjectInventory inventory,ParsedJavaUnits units){List<Type> types=new ArrayList<>();
+  for(var file:inventory.javaFiles())try{var unit=units.parse(file);String path=inventory.root().relativize(file).toString().replace('\\','/');for(var t:unit.getTypes())if(t instanceof ClassOrInterfaceDeclaration c)types.add(new Type(c,path));}catch(Exception ignored){}
   Map<String,GraphNode> nodes=new TreeMap<>();graph.nodes().forEach(n->nodes.put(n.id(),n));Map<String,Relationship> edges=new TreeMap<>();graph.relationships().forEach(e->edges.put(e.id(),e));List<Diagnostic> diagnostics=new ArrayList<>(graph.diagnostics());
   for(var type:types)for(var method:type.node.getMethods()){
    var request=method.getParameters().stream().filter(p->p.getType().asString().equals("HttpSecurity")).toList();if(request.size()!=1||method.getAnnotationByName("Bean").isEmpty()||!imports(type.node,"org.springframework.security.config.annotation.web.builders.HttpSecurity"))continue;
