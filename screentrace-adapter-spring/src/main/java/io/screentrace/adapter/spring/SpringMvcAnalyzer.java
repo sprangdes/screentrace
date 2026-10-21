@@ -553,8 +553,8 @@ public final class SpringMvcAnalyzer {
     private static void addJspInteractions(JspAnalysis jsp, State state) {
         for (JspAnalysis.Interaction rawInteraction : jsp.interactions()) {
             JspAnalysis.Interaction interaction=resolveRelativeJspTarget(rawInteraction,state);
-            List<String> screenIds = interactionScreens(interaction.viewPath(), state);
-            if (screenIds.isEmpty()) continue;
+            String screenId = state.screensByView.get(interaction.viewPath());
+            if (screenId == null) continue;
             String id = interaction.componentId()!=null?interaction.componentId():ApplicationGraph.id(NodeType.COMPONENT, interaction.viewPath() + ":" + interaction.source().line() + ":" + interaction.target());
             Map<String, String> attributes = new TreeMap<>();
             attributes.put("componentType", interaction.type().name());
@@ -564,9 +564,9 @@ public final class SpringMvcAnalyzer {
             if (!interaction.viewPath().equals(interaction.source().file())) attributes.put("includedBy", interaction.viewPath());
             if (interaction.httpMethod() != null) attributes.put("httpMethod", interaction.httpMethod());
             addNode(state, new GraphNode(id, NodeType.COMPONENT, interaction.label(), attributes, interaction.source(), interaction.confidence(), interactionEvidence(interaction)));
-            for (String screenId : screenIds) edge(state, EdgeType.CONTAINS, screenId, id, Confidence.CONFIRMED, interaction.source());
+            edge(state, EdgeType.CONTAINS, screenId, id, Confidence.CONFIRMED, interaction.source());
             if (interaction.confidence() == Confidence.UNRESOLVED || !canTriggerEndpoint(interaction.type())) continue;
-            for (String screenId : screenIds) for (EndpointMatch match : endpointsFor(interaction, screenId, state)) {
+            for (EndpointMatch match : endpointsFor(interaction, screenId, state)) {
                 edge(state, EdgeType.TRIGGERS, id, match.endpointId(), match.confidence(), interaction.source());
                 List<String> targetScreens = state.screensByEndpoint.getOrDefault(match.endpointId(), List.of()).stream()
                     .distinct().toList();
@@ -579,14 +579,6 @@ public final class SpringMvcAnalyzer {
             if(next!=null&&state.nodes.stream().anyMatch(n->n.id().equals(direct)&&n.attributes().getOrDefault("view","").startsWith("src/main/resources/templates/")))next=null;
             if (next != null) edge(state, EdgeType.NAVIGATES_TO, id, next, Confidence.CONFIRMED, interaction.source());
         }
-    }
-
-    /** A Tiles template or body belongs to every page definition that inserts it; any other JSP to its own screen. */
-    private static List<String> interactionScreens(String viewPath, State state) {
-        String screenId = state.screensByView.get(viewPath);
-        Set<String> owners = state.tileOwnersByView.get(viewPath);
-        if (owners != null && (screenId == null || owners.contains(screenId))) return List.copyOf(owners);
-        return screenId == null ? List.of() : List.of(screenId);
     }
 
     private static JspAnalysis.Interaction resolveRelativeJspTarget(JspAnalysis.Interaction interaction,State state) {

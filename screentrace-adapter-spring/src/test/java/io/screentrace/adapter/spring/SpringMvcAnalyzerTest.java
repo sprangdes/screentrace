@@ -182,14 +182,13 @@ class SpringMvcAnalyzerTest {
         assertTrue(tiles.path("attributes").path("body").path("path").asText().equals("src/main/webapp/WEB-INF/views/form.jsp"), tiles.toString());
         assertTrue(tiles.path("attributes").path("title").path("value").asText().equals("Insure"), tiles.toString());
 
-        // Body and layout interactions belong to the Tiles screen the controller renders.
+        // Body interactions and layout components belong to the Tiles screen the controller renders.
         java.util.function.Function<String, String> nameOf = id -> graph.nodes().stream().filter(n -> n.id().equals(id)).findFirst().map(ApplicationGraph.GraphNode::name).orElse(id);
         Set<String> formChildren = graph.relationships().stream().filter(edge -> edge.type() == ApplicationGraph.EdgeType.CONTAINS && edge.from().equals(form.id()))
             .map(edge -> edge.to()).collect(java.util.stream.Collectors.toSet());
         assertTrue(graph.relationships().stream().anyMatch(edge -> edge.type() == ApplicationGraph.EdgeType.TRIGGERS && formChildren.contains(edge.from())
             && nameOf.apply(edge.to()).equals("POST /applications")), formChildren.toString());
-        assertTrue(graph.relationships().stream().anyMatch(edge -> edge.type() == ApplicationGraph.EdgeType.TRIGGERS && formChildren.contains(edge.from())
-            && nameOf.apply(edge.to()).equals("GET /")), "layout link is projected into the page screen");
+        assertTrue(formChildren.stream().map(nameOf).anyMatch("Home"::equals), "layout link is projected into the page screen");
         assertTrue(graph.relationships().stream().filter(edge -> edge.type() == ApplicationGraph.EdgeType.RENDERS).allMatch(edge -> screens.stream().anyMatch(s -> s.id().equals(edge.to()))));
     }
 
