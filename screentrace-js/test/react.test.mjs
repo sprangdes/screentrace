@@ -264,3 +264,26 @@ test('a method ternary that also chooses the URL splits into one request per bra
   const requests = effects(screen(result, '/groups/:id')).filter(e => e.type === 'CALL_API').map(e => [e.method, e.urls, e.guard, e.status]);
   assert.deepEqual(requests.sort(), [['POST', ['/api/group'], '!(group.id)', 'CONFIRMED'], ['PUT', ['/api/group/{id}'], 'group.id', 'INFERRED']]);
 });
+
+test('UI library components rendered as router links navigate like Link', () => {
+  // oktadev/okta-spring-boot-react-crud-example: reactstrap <Button tag={Link} to=…> (Edit, Add Group, Cancel) and
+  // <NavbarBrand tag={Link} to="/"> had no handler, so they were dropped with their navigation.
+  const result = run({
+    'src/App.jsx': `${ROUTER} import List from './List'; import Edit from './Edit';
+      export default function App(){ return <Routes><Route path="/groups" element={<List/>}/><Route path="/groups/:id" element={<Edit/>}/></Routes>; }`,
+    'src/List.jsx': `import { Link } from 'react-router-dom'; import { Button, NavbarBrand } from 'reactstrap'; import { Nav } from 'react-bootstrap';
+      export default function List(){ return <div><NavbarBrand tag={Link} to="/groups">Home</NavbarBrand>
+        <Button color="success" tag={Link} to="/groups/new">Add Group</Button>
+        <Button size="sm" tag={Link} to={"/groups/" + 7}>Edit</Button>
+        <Nav.Link as={Link} to="/groups/3">Bootstrap</Nav.Link>
+        <Button color="secondary">Plain</Button></div>; }`,
+    'src/Edit.jsx': `export default function Edit(){ return <h1>Edit</h1>; }`
+  });
+  const list = screen(result, '/groups');
+  for (const [label, url] of [['Home', '/groups'], ['Add Group', '/groups/new'], ['Edit', '/groups/7'], ['Bootstrap', '/groups/3']]) {
+    const link = component(list, label);
+    assert.equal(link.kind, 'LINK', label);
+    assert.deepEqual(link.behaviors.map(e => [e.type, e.targetRoutes]), [['NAVIGATE', [url === '/groups' ? '/groups' : '/groups/:id']]], label);
+  }
+  assert.ok(!list.components.some(c => c.label === 'Plain'), 'a library component without a router tag or handler is still not a control');
+});

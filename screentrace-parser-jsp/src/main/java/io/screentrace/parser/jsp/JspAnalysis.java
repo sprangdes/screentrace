@@ -68,5 +68,9 @@ public record JspAnalysis(List<View> views, List<Interaction> interactions, List
     }
   }
 
-  public record TilesAttribute(String name, String value) { }
+  /** A put attribute; {@code list} holds the values of a put-list-attribute / putList, otherwise null. */
+  public record TilesAttribute(String name, String value, List<String> list) {
+    public TilesAttribute { list = list == null ? null : List.copyOf(list); }
+    public TilesAttribute(String name, String value) { this(name, value, null); }
+  }
 }

@@ -3,7 +3,7 @@ import { mkdtemp, mkdir, symlink, writeFile, rm, realpath } from 'node:fs/promis
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
-import { assertOutputPathWithin, readUtf8Limited, resolveExistingFileWithin } from './safe-files.mjs';
+import { assertOutputPathWithin, readBufferLimited, readUtf8Limited, resolveExistingFileWithin } from './safe-files.mjs';
 import { createDirectoryWithin } from './safe-files.mjs';
 
 test('bounded reads allow a project file and reject oversized inputs', async () => {
@@ -62,3 +62,17 @@ test('containment treats a sibling sharing the root name prefix as outside', asy
 });
 
 test('JSP declared encoding decodes original bounded bytes',async()=>{const root=await mkdtemp(path.join(os.tmpdir(),'st-encoding-'));try{const file=path.join(root,'legacy.jsp');await writeFile(file,Buffer.from('PCVAIHBhZ2UgcGFnZUVuY29kaW5nPSJHQjE4MDMwIiU+PHRpdGxlPs7vwc88L3RpdGxlPg==','base64'));assert.match(await readUtf8Limited(root,file),/物料/);}finally{await rm(root,{recursive:true,force:true});}});
+
+test('multi-chunk reads are exact and oversized reads always report the limit and close the file', async () => {
+  // Linux CI intermittently got "EBADF: bad file descriptor, close" instead of the limit error when a read stream and
+  // the FileHandle both owned the descriptor.
+  const root = await mkdtemp(path.join(os.tmpdir(), 'screentrace-safe-chunks-'));
+  try {
+    const file = path.join(root, 'big.json');
+    const content = Buffer.alloc(1024 * 1024 + 17, 'a');
+    await writeFile(file, content);
+    assert.ok((await readBufferLimited(root, file, content.length)).equals(content));
+    for (let i = 0; i < 100; i++) await assert.rejects(readBufferLimited(root, file, 100 * 1024), /byte limit/);
+    assert.ok(!process.getActiveResourcesInfo().includes('FileHandle'), process.getActiveResourcesInfo().join(','));
+  } finally { await rm(root, { recursive: true, force: true }); }
+});

@@ -1,0 +1,201 @@
+Counter({'COMPONENT': 151, 'SOURCE_ARTIFACT': 19, 'ENDPOINT': 12, 'HANDLER': 10, 'SCREEN': 10, 'TEMPLATE_FRAGMENT': 1})
+Counter({'CONTAINS': 337, 'DECLARED_BY': 22, 'TRIGGERS': 17, 'NAVIGATES_TO': 15, 'HANDLED_BY': 10, 'RENDERS': 8, 'CALLS': 5, 'FORWARDS_TO': 3})
+SCREEN | register | {'staticPreview': 'FIELD:name|FIELD:password|ACTION:Register', 'view': 'src/main/webapp/WEB-INF/jsp/register.jsp'}
+SCREEN | error500 | {'template': '/WEB-INF/layout/common.jsp', 'tilesDefinition': 'true', 'tilesDefinitionName': 'error500', 'view': 'src/main/webapp/WEB-INF/layout/common.jsp'}
+SCREEN | error404 | {'template': '/WEB-INF/layout/common.jsp', 'tilesDefinition': 'true', 'tilesDefinitionName': 'error404', 'view': 'src/main/webapp/WEB-INF/layout/common.jsp'}
+SCREEN | upload | {'staticPreview': 'FIELD:imageFile|ACTION:Submit', 'view': 'src/main/webapp/WEB-INF/jsp/upload.jsp'}
+SCREEN | home | {'template': '/WEB-INF/layout/common.jsp', 'tilesDefinition': 'true', 'tilesDefinitionName': 'home', 'view': 'src/main/webapp/WEB-INF/layout/common.jsp'}
+SCREEN | account | {'staticPreview': 'FIELD:file|ACTION:Upload|ACTION:Get Student', 'view': 'src/main/webapp/WEB-INF/jsp/account.jsp'}
+SCREEN | index.html | {'routeAliases': '/index.html', 'staticPreview': '', 'view': 'src/main/webapp/index.html'}
+SCREEN | page_404 | {'routeAliases': '/resources/errorpages/page_404.jsp', 'staticPreview': '', 'view': 'src/main/webapp/resources/errorpages/page_404.jsp'}
+SCREEN | login | {'autoRedirect': 'LOGIN_PAGE', 'staticPreview': 'FIELD:j_username|FIELD:j_password|ACTION:Sign In', 'view': 'src/main/webapp/WEB-INF/jsp/login.jsp'}
+SCREEN | page_500 | {'routeAliases': '/resources/errorpages/page_500.jsp', 'staticPreview': '', 'view': 'src/main/webapp/resources/errorpages/page_500.jsp'}
+ENDPOINT | ANY /account/upload | {'category': 'MVC_SCREEN', 'httpMethod': 'ANY', 'path': '/account/upload'}
+ENDPOINT | ANY /error404 | {'category': 'MVC_SCREEN', 'httpMethod': 'ANY', 'path': '/error404'}
+ENDPOINT | POST /account/upload/ | {'backendStatus': 'UNRESOLVED', 'dataFields': '[]', 'httpMethod': 'POST', 'origin': 'javascript-request', 'path': '/account/upload/'}
+ENDPOINT | ANY /account | {'category': 'MVC_SCREEN', 'httpMethod': 'ANY', 'path': '/account'}
+ENDPOINT | ANY /login | {'category': 'MVC_SCREEN', 'httpMethod': 'ANY', 'path': '/login'}
+ENDPOINT | ANY /error500 | {'category': 'MVC_SCREEN', 'httpMethod': 'ANY', 'path': '/error500'}
+ENDPOINT | ANY / | {'category': 'MVC_SCREEN', 'httpMethod': 'ANY', 'path': '/'}
+ENDPOINT | ANY /register | {'category': 'MVC_SCREEN', 'httpMethod': 'ANY', 'path': '/register'}
+ENDPOINT | POST /account/upload | {'category': 'REDIRECT', 'httpMethod': 'POST', 'path': '/account/upload'}
+ENDPOINT | POST /account/ajaxreturn | {'category': 'REST_API', 'httpMethod': 'POST', 'path': '/account/ajaxreturn'}
+ENDPOINT | POST /register | {'category': 'MVC_SCREEN', 'httpMethod': 'POST', 'path': '/register'}
+ENDPOINT | POST /account/ajaxreturn/ | {'backendStatus': 'UNRESOLVED', 'dataFields': '[]', 'httpMethod': 'POST', 'origin': 'javascript-request', 'path': '/account/ajaxreturn/'}
+HANDLER | RegisterController.register() | {'class': 'RegisterController', 'method': 'register'}
+HANDLER | LoginController.show404() | {'class': 'LoginController', 'method': 'show404'}
+HANDLER | LoginController.home() | {'class': 'LoginController', 'method': 'home'}
+HANDLER | UserController.test() | {'class': 'UserController', 'method': 'test'}
+HANDLER | UserController.handleFormUpload() | {'class': 'UserController', 'method': 'handleFormUpload'}
+HANDLER | UserController.register() | {'class': 'UserController', 'method': 'register'}
+HANDLER | UserController.getStudentJson() | {'class': 'UserController', 'method': 'getStudentJson'}
+HANDLER | RegisterController.doRegister() | {'class': 'RegisterController', 'method': 'doRegister'}
+HANDLER | LoginController.show500() | {'class': 'LoginController', 'method': 'show500'}
+HANDLER | LoginController.login() | {'class': 'LoginController', 'method': 'login'}
+--- relationships (non-contains)
+RENDERS | LoginController.login() -> login | CONFIRMED | {}
+TRIGGERS | I already have a membership -> ANY /login | CONFIRMED | {}
+RENDERS | LoginController.show500() -> error500 | CONFIRMED | {}
+NAVIGATES_TO | General Settings Report panel usage Some… -> error500 | AMBIGUOUS | {}
+HANDLED_BY | ANY /register -> RegisterController.register() | CONFIRMED | {}
+FORWARDS_TO | UserController.handleFormUpload() -> upload | INFERRED | {}
+NAVIGATES_TO | Submit -> upload | AMBIGUOUS | {}
+TRIGGERS | Register -> POST /register | AMBIGUOUS | {}
+HANDLED_BY | ANY /error404 -> LoginController.show404() | CONFIRMED | {}
+FORWARDS_TO | UserController.handleFormUpload() -> upload | INFERRED | {}
+TRIGGERS | General Settings Report panel usage Some… -> ANY /error404 | AMBIGUOUS | {}
+HANDLED_BY | POST /account/ajaxreturn -> UserController.getStudentJson() | CONFIRMED | {}
+NAVIGATES_TO | 表單 1 -> error404 | INFERRED | {}
+TRIGGERS | 表單 1 -> POST /register | AMBIGUOUS | {}
+CALLS | account -> POST /account/upload/ | UNRESOLVED | {}
+NAVIGATES_TO | General Settings Report panel usage Some… -> error404 | AMBIGUOUS | {}
+NAVIGATES_TO | General Settings Report panel usage Some… -> home | AMBIGUOUS | {}
+TRIGGERS | General Settings Report panel usage Some… -> ANY / | AMBIGUOUS | {}
+FORWARDS_TO | RegisterController.doRegister() -> account | INFERRED | {}
+TRIGGERS | submit -> ANY /error404 | INFERRED | {}
+NAVIGATES_TO | Upload Profile Image Submit -> upload | AMBIGUOUS | {}
+TRIGGERS | General Settings Report panel usage Some… -> ANY /error500 | AMBIGUOUS | {}
+TRIGGERS | submit -> ANY /error500 | INFERRED | {}
+HANDLED_BY | ANY /error500 -> LoginController.show500() | CONFIRMED | {}
+NAVIGATES_TO | Register -> register | AMBIGUOUS | {}
+RENDERS | RegisterController.doRegister() -> register | CONFIRMED | {}
+RENDERS | LoginController.home() -> home | CONFIRMED | {}
+NAVIGATES_TO | I already have a membership -> login | INFERRED | {}
+NAVIGATES_TO | Register -> account | AMBIGUOUS | {}
+RENDERS | RegisterController.register() -> register | CONFIRMED | {}
+RENDERS | UserController.test() -> account | CONFIRMED | {}
+NAVIGATES_TO | submit -> error404 | INFERRED | {}
+HANDLED_BY | POST /account/upload -> UserController.handleFormUpload() | CONFIRMED | {}
+NAVIGATES_TO | 表單 1 -> account | AMBIGUOUS | {}
+HANDLED_BY | ANY /account -> UserController.test() | CONFIRMED | {}
+TRIGGERS | Register -> ANY /register | AMBIGUOUS | {}
+TRIGGERS | Submit -> ANY /account/upload | AMBIGUOUS | {}
+HANDLED_BY | POST /register -> RegisterController.doRegister() | CONFIRMED | {}
+CALLS | account -> POST /account/ajaxreturn/ | UNRESOLVED | {}
+RENDERS | UserController.register() -> upload | CONFIRMED | {}
+RENDERS | LoginController.show404() -> error404 | CONFIRMED | {}
+NAVIGATES_TO | 表單 1 -> register | AMBIGUOUS | {}
+NAVIGATES_TO | submit -> error500 | INFERRED | {}
+TRIGGERS | 表單 1 -> ANY /register | AMBIGUOUS | {}
+NAVIGATES_TO | Register a new membership -> register | INFERRED | {}
+NAVIGATES_TO | 表單 1 -> error500 | INFERRED | {}
+TRIGGERS | 表單 1 -> ANY /error404 | INFERRED | {}
+HANDLED_BY | ANY / -> LoginController.home() | CONFIRMED | {}
+HANDLED_BY | ANY /account/upload -> UserController.register() | CONFIRMED | {}
+HANDLED_BY | ANY /login -> LoginController.login() | CONFIRMED | {}
+TRIGGERS | 表單 1 -> ANY /error500 | INFERRED | {}
+TRIGGERS | Upload Profile Image Submit -> ANY /account/upload | AMBIGUOUS | {}
+TRIGGERS | Register a new membership -> ANY /register | CONFIRMED | {}
+TRIGGERS | Submit -> POST /account/upload | AMBIGUOUS | {}
+TRIGGERS | Upload Profile Image Submit -> POST /account/upload | AMBIGUOUS | {}
+CALLS | UserController.handleFormUpload() -> ANY /account/upload | INFERRED | {}
+CALLS | RegisterController.doRegister() -> ANY /account | INFERRED | {}
+CALLS | UserController.handleFormUpload() -> ANY /account/upload | INFERRED | {}
+DECLARED_BY | error404 -> https://maxcdn.bootstrapcdn.com/font-awesome/4.4.0/css/font-awesome.min.css | INFERRED | {}
+DECLARED_BY | error500 -> <c:url value="${css}"/> | UNRESOLVED | {}
+DECLARED_BY | error500 -> https://code.ionicframework.com/ionicons/2.0.1/css/ionicons.min.css | INFERRED | {}
+DECLARED_BY | error404 -> https://code.ionicframework.com/ionicons/2.0.1/css/ionicons.min.css | INFERRED | {}
+DECLARED_BY | page_404 -> <c:url value='/resources/css/animate.min.css'/> | INFERRED | {}
+DECLARED_BY | page_404 -> <c:url value='/resources/css/bootstrap.min.css'/> | INFERRED | {}
+DECLARED_BY | home -> https://maxcdn.bootstrapcdn.com/font-awesome/4.4.0/css/font-awesome.min.css | INFERRED | {}
+DECLARED_BY | page_404 -> <c:url value='/resources/css/icheck/flat/green.css'/> | INFERRED | {}
+DECLARED_BY | error500 -> https://maxcdn.bootstrapcdn.com/font-awesome/4.4.0/css/font-awesome.min.css | INFERRED | {}
+DECLARED_BY | error500 -> https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css | INFERRED | {}
+DECLARED_BY | home -> https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css | INFERRED | {}
+DECLARED_BY | error404 -> <c:url value="${css}"/> | UNRESOLVED | {}
+DECLARED_BY | page_500 -> <c:url value='/resources/fonts/css/font-awesome.min.css'/> | INFERRED | {}
+DECLARED_BY | home -> <c:url value="${css}"/> | UNRESOLVED | {}
+DECLARED_BY | page_404 -> <c:url value='/resources/fonts/css/font-awesome.min.css'/> | INFERRED | {}
+DECLARED_BY | page_500 -> <c:url value='/resources/css/custom.css'/> | INFERRED | {}
+DECLARED_BY | page_404 -> <c:url value='/resources/css/custom.css'/> | INFERRED | {}
+DECLARED_BY | page_500 -> <c:url value='/resources/css/icheck/flat/green.css'/> | INFERRED | {}
+DECLARED_BY | page_500 -> <c:url value='/resources/css/bootstrap.min.css'/> | INFERRED | {}
+DECLARED_BY | error404 -> https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css | INFERRED | {}
+DECLARED_BY | home -> https://code.ionicframework.com/ionicons/2.0.1/css/ionicons.min.css | INFERRED | {}
+DECLARED_BY | page_500 -> <c:url value='/resources/css/animate.min.css'/> | INFERRED | {}
+--- diagnostics
+JS_SCREEN_OWNER | JS 來源沒有可證明的畫面所有者：src/main/webapp/WEB-INF/layout/page.jsp
+JSP_ROUTE_UNRESOLVED | JSP 相對 URL 無法以唯一 controller 路由解析：../../documentation/index.html
+JSP_ROUTE_UNRESOLVED | JSP 相對 URL 無法以唯一 controller 路由解析：../../index.html
+JSP_ROUTE_UNRESOLVED | JSP 相對 URL 無法以唯一 controller 路由解析：../../index2.html
+JSP_ROUTE_UNRESOLVED | JSP 相對 URL 無法以唯一 controller 路由解析：../../index2.html
+JSP_ROUTE_UNRESOLVED | JSP 相對 URL 無法以唯一 controller 路由解析：../UI/buttons.html
+JSP_ROUTE_UNRESOLVED | JSP 相對 URL 無法以唯一 controller 路由解析：../UI/general.html
+JSP_ROUTE_UNRESOLVED | JSP 相對 URL 無法以唯一 controller 路由解析：../UI/icons.html
+JSP_ROUTE_UNRESOLVED | JSP 相對 URL 無法以唯一 controller 路由解析：../UI/modals.html
+JSP_ROUTE_UNRESOLVED | JSP 相對 URL 無法以唯一 controller 路由解析：../UI/sliders.html
+JSP_ROUTE_UNRESOLVED | JSP 相對 URL 無法以唯一 controller 路由解析：../UI/timeline.html
+JSP_ROUTE_UNRESOLVED | JSP 相對 URL 無法以唯一 controller 路由解析：../calendar.html
+JSP_ROUTE_UNRESOLVED | JSP 相對 URL 無法以唯一 controller 路由解析：../charts/chartjs.html
+JSP_ROUTE_UNRESOLVED | JSP 相對 URL 無法以唯一 controller 路由解析：../charts/flot.html
+JSP_ROUTE_UNRESOLVED | JSP 相對 URL 無法以唯一 controller 路由解析：../charts/inline.html
+JSP_ROUTE_UNRESOLVED | JSP 相對 URL 無法以唯一 controller 路由解析：../charts/morris.html
+JSP_ROUTE_UNRESOLVED | JSP 相對 URL 無法以唯一 controller 路由解析：../forms/advanced.html
+JSP_ROUTE_UNRESOLVED | JSP 相對 URL 無法以唯一 controller 路由解析：../forms/editors.html
+JSP_ROUTE_UNRESOLVED | JSP 相對 URL 無法以唯一 controller 路由解析：../forms/general.html
+JSP_ROUTE_UNRESOLVED | JSP 相對 URL 無法以唯一 controller 路由解析：../layout/boxed.html
+JSP_ROUTE_UNRESOLVED | JSP 相對 URL 無法以唯一 controller 路由解析：../layout/collapsed-sidebar.html
+JSP_ROUTE_UNRESOLVED | JSP 相對 URL 無法以唯一 controller 路由解析：../layout/fixed.html
+JSP_ROUTE_UNRESOLVED | JSP 相對 URL 無法以唯一 controller 路由解析：../layout/top-nav.html
+JSP_ROUTE_UNRESOLVED | JSP 相對 URL 無法以唯一 controller 路由解析：../mailbox/mailbox.html
+JSP_ROUTE_UNRESOLVED | JSP 相對 URL 無法以唯一 controller 路由解析：../tables/data.html
+JSP_ROUTE_UNRESOLVED | JSP 相對 URL 無法以唯一 controller 路由解析：../tables/simple.html
+JSP_ROUTE_UNRESOLVED | JSP 相對 URL 無法以唯一 controller 路由解析：../widgets.html
+JSP_ROUTE_UNRESOLVED | JSP 相對 URL 無法以唯一 controller 路由解析：404.html
+JSP_ROUTE_UNRESOLVED | JSP 相對 URL 無法以唯一 controller 路由解析：500.html
+JSP_ROUTE_UNRESOLVED | JSP 相對 URL 無法以唯一 controller 路由解析：blank.html
+JSP_ROUTE_UNRESOLVED | JSP 相對 URL 無法以唯一 controller 路由解析：invoice.html
+JSP_ROUTE_UNRESOLVED | JSP 相對 URL 無法以唯一 controller 路由解析：lockscreen.html
+JSP_ROUTE_UNRESOLVED | JSP 相對 URL 無法以唯一 controller 路由解析：login.html
+JSP_ROUTE_UNRESOLVED | JSP 相對 URL 無法以唯一 controller 路由解析：pace.html
+JSP_ROUTE_UNRESOLVED | JSP 相對 URL 無法以唯一 controller 路由解析：profile.html
+JSP_ROUTE_UNRESOLVED | JSP 相對 URL 無法以唯一 controller 路由解析：register.html
+JS_SCRIPT_REFERENCE | JavaScript 來源：script src 無法唯一解析；原文：<c:url value="${script}"/>；候選：[]
+JS_SCRIPT_REFERENCE | JavaScript 來源：script src 無法唯一解析；原文：<c:url value="${script}"/>；候選：[]
+JS_SCRIPT_REFERENCE | JavaScript 來源：script src 無法唯一解析；原文：http://ajax.aspnetcdn.com/ajax/jquery.validate/1.11.1/jquery.validate.min.js；候選：[]
+JS_SCRIPT_REFERENCE | JavaScript 來源：script src 無法唯一解析；原文：https://cdnjs.cloudflare.com/ajax/libs/fastclick/1.0.6/fastclick.min.js；候選：[]
+JS_SCRIPT_REFERENCE | JavaScript 來源：script src 無法唯一解析；原文：https://cdnjs.cloudflare.com/ajax/libs/iCheck/1.0.1/icheck.min.js；候選：[]
+JS_SCRIPT_REFERENCE | JavaScript 來源：script src 無法唯一解析；原文：https://cdnjs.cloudflare.com/ajax/libs/jQuery-slimScroll/1.3.6/jquery.slimscroll.min.js；候選：[]
+JS_SCRIPT_REFERENCE | JavaScript 來源：script src 無法唯一解析；原文：https://cdnjs.cloudflare.com/ajax/libs/jquery/2.1.2/jquery.min.js；候選：[]
+JS_SCRIPT_REFERENCE | JavaScript 來源：script src 無法唯一解析；原文：https://cdnjs.cloudflare.com/ajax/libs/jquery/2.1.2/jquery.min.js；候選：[]
+JS_SCRIPT_REFERENCE | JavaScript 來源：script src 無法唯一解析；原文：https://cdnjs.cloudflare.com/ajax/libs/jquery/2.1.4/jquery.min.js；候選：[]
+JS_SCRIPT_REFERENCE | JavaScript 來源：script src 無法唯一解析；原文：https://cdnjs.cloudflare.com/ajax/libs/jquery/2.1.4/jquery.min.js；候選：[]
+JS_SCRIPT_REFERENCE | JavaScript 來源：script src 無法唯一解析；原文：https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/js/bootstrap.min.js；候選：[]
+JS_SCRIPT_REFERENCE | JavaScript 來源：script src 無法唯一解析；原文：https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/js/bootstrap.min.js；候選：[]
+JS_SCRIPT_REFERENCE | JavaScript 來源：script src 無法唯一解析；原文：js/bootstrap.min.js；候選：[]
+JS_SCRIPT_REFERENCE | JavaScript 來源：script src 無法唯一解析；原文：js/bootstrap.min.js；候選：[]
+JS_SCRIPT_REFERENCE | JavaScript 來源：script src 無法唯一解析；原文：js/chartjs/chart.min.js；候選：[]
+JS_SCRIPT_REFERENCE | JavaScript 來源：script src 無法唯一解析；原文：js/chartjs/chart.min.js；候選：[]
+JS_SCRIPT_REFERENCE | JavaScript 來源：script src 無法唯一解析；原文：js/custom.js；候選：[]
+JS_SCRIPT_REFERENCE | JavaScript 來源：script src 無法唯一解析；原文：js/custom.js；候選：[]
+JS_SCRIPT_REFERENCE | JavaScript 來源：script src 無法唯一解析；原文：js/icheck/icheck.min.js；候選：[]
+JS_SCRIPT_REFERENCE | JavaScript 來源：script src 無法唯一解析；原文：js/icheck/icheck.min.js；候選：[]
+JS_SCRIPT_REFERENCE | JavaScript 來源：script src 無法唯一解析；原文：js/nicescroll/jquery.nicescroll.min.js；候選：[]
+JS_SCRIPT_REFERENCE | JavaScript 來源：script src 無法唯一解析；原文：js/nicescroll/jquery.nicescroll.min.js；候選：[]
+JS_SCRIPT_REFERENCE | JavaScript 來源：script src 無法唯一解析；原文：js/progressbar/bootstrap-progressbar.min.js；候選：[]
+JS_SCRIPT_REFERENCE | JavaScript 來源：script src 無法唯一解析；原文：js/progressbar/bootstrap-progressbar.min.js；候選：[]
+JS_SYNTAX_ERROR | JavaScript 語法錯誤：Unexpected token (1:0)
+JS_SYNTAX_ERROR | JavaScript 語法錯誤：Unexpected token (1:0)
+JS_SYNTAX_ERROR | JavaScript 語法錯誤：Unexpected token (1:0)
+JS_SYNTAX_ERROR | JavaScript 語法錯誤：Unexpected token (1:0)
+JS_SYNTAX_ERROR | JavaScript 語法錯誤：Unexpected token (1:0)
+JS_SYNTAX_ERROR | JavaScript 語法錯誤：Unexpected token (1:0)
+JS_SYNTAX_ERROR | JavaScript 語法錯誤：Unexpected token (1:0)
+JS_SYNTAX_ERROR | JavaScript 語法錯誤：Unexpected token (1:0)
+JS_SYNTAX_ERROR | JavaScript 語法錯誤：Unexpected token (1:0)
+SOURCE_LIMIT | Source file exceeds 8 MiB and was skipped: src/main/webapp/resources/profile-pictures/ProfileImageadmin.jpg
+CONTEXT_PATH_UNSPECIFIED | URL 靜態對應：CONTEXT_PATH_UNSPECIFIED
+CONTEXT_PATH_UNSPECIFIED | URL 靜態對應：CONTEXT_PATH_UNSPECIFIED
+CONTEXT_PATH_UNSPECIFIED | URL 靜態對應：CONTEXT_PATH_UNSPECIFIED
+CONTEXT_PATH_UNSPECIFIED | URL 靜態對應：CONTEXT_PATH_UNSPECIFIED
+CONTEXT_PATH_UNSPECIFIED | URL 靜態對應：CONTEXT_PATH_UNSPECIFIED
+CONTEXT_PATH_UNSPECIFIED | URL 靜態對應：CONTEXT_PATH_UNSPECIFIED
+CONTEXT_PATH_UNSPECIFIED | URL 靜態對應：CONTEXT_PATH_UNSPECIFIED
+URL_UNRESOLVED | URL 靜態對應：URL_UNRESOLVED
+URL_UNRESOLVED | URL 靜態對應：URL_UNRESOLVED
+URL_UNRESOLVED | URL 靜態對應：URL_UNRESOLVED
+URL_UNRESOLVED | URL 靜態對應：URL_UNRESOLVED
+UNKNOWN_CALL | 未知函式呼叫：$("#twitter").width(width).height
+UNKNOWN_CALL | 未知函式呼叫：$("body").height
+UNKNOWN_CALL | 未知函式呼叫：$("body").width
+UNKNOWN_CALL | 未知函式呼叫：fd.append
