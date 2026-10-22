@@ -1,0 +1,73 @@
+Counter({'COMPONENT': 16, 'VIEW': 10, 'ENDPOINT': 4, 'HANDLER': 4, 'SCREEN': 3, 'FORM_MODEL': 2, 'SOURCE_ARTIFACT': 2})
+Counter({'INCLUDES': 26, 'CONTAINS': 24, 'FORWARDS_TO': 5, 'TRIGGERS': 4, 'HANDLED_BY': 4, 'BINDS_TO': 4, 'DECLARED_BY': 2, 'NAVIGATES_TO': 2, 'CALLS': 2})
+SCREEN | List of customers | {'originalView': '/pages/tiles/mainLayout.jsp', 'routeAliases': '/ListCustomer.do\x1f/ListCustomerPDF.do', 'screenNameSource': 'Tiles title put', 'screenNameSourcePath': 'StrutsSpringExample/src/main/webapp/WEB-INF/tiles-defs.xml', 'sourceRequestPaths': '/ListCustomer.do\x1f/ListCustomerPDF.do', 'tilesDefinition': 'true', 'tilesDefinitionName': '.page.listCustomer', 'view': 'StrutsSpringExample/src/main/webapp/pages/tiles/mainLayout.jsp'}
+SCREEN | Add a new customer | {'originalView': '/pages/tiles/mainLayout.jsp', 'routeAliases': '/AddCustomerPage.do', 'screenNameSource': 'Tiles title put', 'screenNameSourcePath': 'StrutsSpringExample/src/main/webapp/WEB-INF/tiles-defs.xml', 'sourceRequestPaths': '/AddCustomer.do\x1f/AddCustomerPage.do', 'tilesDefinition': 'true', 'tilesDefinitionName': '.page.addCustomer', 'view': 'StrutsSpringExample/src/main/webapp/pages/tiles/mainLayout.jsp'}
+SCREEN | includes | {'view': 'StrutsSpringExample/src/main/webapp/pages/tiles/includes.jsp'}
+ENDPOINT | ANY /ListCustomer.do | {'aliases': '/ListCustomer', 'category': 'ACTION', 'httpMethod': 'ANY', 'logicalPath': '/ListCustomer', 'path': '/ListCustomer.do', 'servletMappingStatus': 'PROVEN'}
+ENDPOINT | ANY /AddCustomerPage.do | {'aliases': '/AddCustomerPage', 'category': 'ACTION', 'httpMethod': 'ANY', 'logicalPath': '/AddCustomerPage', 'path': '/AddCustomerPage.do', 'servletMappingStatus': 'PROVEN'}
+ENDPOINT | ANY /AddCustomer.do | {'aliases': '/AddCustomer', 'category': 'ACTION', 'httpMethod': 'ANY', 'logicalPath': '/AddCustomer', 'path': '/AddCustomer.do', 'servletMappingStatus': 'PROVEN'}
+ENDPOINT | ANY /ListCustomerPDF.do | {'aliases': '/ListCustomerPDF', 'category': 'ACTION', 'httpMethod': 'ANY', 'logicalPath': '/ListCustomerPDF', 'path': '/ListCustomerPDF.do', 'servletMappingStatus': 'PROVEN'}
+HANDLER | com.tunisiana.tutorials.action.ListCustomerAction.<dispatch>() | {'actionType': 'com.tunisiana.tutorials.action.ListCustomerAction', 'dispatchFamily': 'DispatchAction', 'module': '', 'name': 'dynaCustomerListForm', 'path': '/ListCustomer', 'type': 'org.springframework.web.struts.DelegatingActionProxy'}
+HANDLER | com.tunisiana.tutorials.action.AddCustomerAction.<dispatch>() | {'actionType': 'com.tunisiana.tutorials.action.AddCustomerAction', 'dispatchFamily': 'DispatchAction', 'input': '.page.addCustomer', 'module': '', 'name': 'customerForm', 'path': '/AddCustomer', 'type': 'org.springframework.web.struts.DelegatingActionProxy', 'validate': 'true'}
+HANDLER | com.tunisiana.tutorials.action.JasperListCustomerAction.<dispatch>() | {'actionType': 'com.tunisiana.tutorials.action.JasperListCustomerAction', 'dispatchFamily': 'DispatchAction', 'module': '', 'path': '/ListCustomerPDF', 'type': 'org.springframework.web.struts.DelegatingActionProxy'}
+HANDLER | org.apache.struts.actions.ForwardAction.execute() | {'actionType': 'org.apache.struts.actions.ForwardAction', 'module': '', 'parameter': '.page.addCustomer', 'path': '/AddCustomerPage', 'type': 'org.apache.struts.actions.ForwardAction'}
+--- relationships (non-contains)
+DECLARED_BY | com.tunisiana.tutorials.action.ListCustomerAction.<dispatch>() -> dynaCustomerListForm | CONFIRMED | {}
+INCLUDES | List of customers -> StrutsSpringExample/src/main/webapp/pages/tiles/menu.jsp | CONFIRMED | {}
+INCLUDES | .page.addCustomer -> StrutsSpringExample/src/main/webapp/pages/tiles/footer.jsp | CONFIRMED | {}
+INCLUDES | .page.addCustomer -> base.definition | CONFIRMED | {}
+TRIGGERS | Add Customer -> ANY /AddCustomerPage.do | CONFIRMED | {}
+HANDLED_BY | ANY /AddCustomer.do -> com.tunisiana.tutorials.action.AddCustomerAction.<dispatch>() | UNRESOLVED | {}
+NAVIGATES_TO | Add Customer -> Add a new customer | CONFIRMED | {}
+INCLUDES | List of customers -> StrutsSpringExample/src/main/webapp/pages/customer/list_customer.jsp | CONFIRMED | {}
+BINDS_TO | Submit -> customerForm | CONFIRMED | {}
+INCLUDES | Add a new customer -> StrutsSpringExample/src/main/webapp/pages/customer/add_customer.jsp | CONFIRMED | {}
+INCLUDES | base.definition -> StrutsSpringExample/src/main/webapp/pages/tiles/menu.jsp | CONFIRMED | {}
+INCLUDES | base.definition -> StrutsSpringExample/src/main/webapp/pages/tiles/mainLayout.jsp | CONFIRMED | {}
+INCLUDES | Add a new customer -> StrutsSpringExample/src/main/webapp/pages/tiles/header.jsp | CONFIRMED | {}
+TRIGGERS | Submit -> ANY /AddCustomer.do | CONFIRMED | {}
+INCLUDES | .page.listCustomer -> StrutsSpringExample/src/main/webapp/pages/tiles/mainLayout.jsp | CONFIRMED | {}
+INCLUDES | .page.addCustomer -> StrutsSpringExample/src/main/webapp/pages/tiles/header.jsp | CONFIRMED | {}
+INCLUDES | List of customers -> StrutsSpringExample/src/main/webapp/pages/tiles/header.jsp | CONFIRMED | {}
+TRIGGERS | 表單 1 -> ANY /AddCustomer.do | CONFIRMED | {}
+DECLARED_BY | com.tunisiana.tutorials.action.AddCustomerAction.<dispatch>() -> customerForm | CONFIRMED | {}
+BINDS_TO | 文字欄位 1 -> customerForm | CONFIRMED | {}
+HANDLED_BY | ANY /ListCustomerPDF.do -> com.tunisiana.tutorials.action.JasperListCustomerAction.<dispatch>() | UNRESOLVED | {}
+BINDS_TO | 表單 1 -> customerForm | CONFIRMED | {}
+FORWARDS_TO | com.tunisiana.tutorials.action.AddCustomerAction.<dispatch>() -> Add a new customer | CONFIRMED | {}
+FORWARDS_TO | com.tunisiana.tutorials.action.AddCustomerAction.<dispatch>() -> List of customers | CONFIRMED | {}
+INCLUDES | .page.listCustomer -> StrutsSpringExample/src/main/webapp/pages/customer/list_customer.jsp | CONFIRMED | {}
+INCLUDES | base.definition -> StrutsSpringExample/src/main/webapp/pages/tiles/footer.jsp | CONFIRMED | {}
+INCLUDES | .page.addCustomer -> StrutsSpringExample/src/main/webapp/pages/tiles/menu.jsp | CONFIRMED | {}
+FORWARDS_TO | org.apache.struts.actions.ForwardAction.execute() -> Add a new customer | CONFIRMED | {}
+INCLUDES | Add a new customer -> StrutsSpringExample/src/main/webapp/pages/tiles/menu.jsp | CONFIRMED | {}
+BINDS_TO | 文字區域 1 -> customerForm | CONFIRMED | {}
+INCLUDES | .page.addCustomer -> StrutsSpringExample/src/main/webapp/pages/customer/add_customer.jsp | CONFIRMED | {}
+FORWARDS_TO | com.tunisiana.tutorials.action.JasperListCustomerAction.<dispatch>() -> List of customers | CONFIRMED | {}
+INCLUDES | .page.listCustomer -> StrutsSpringExample/src/main/webapp/pages/tiles/footer.jsp | CONFIRMED | {}
+INCLUDES | List of customers -> StrutsSpringExample/src/main/webapp/pages/tiles/footer.jsp | CONFIRMED | {}
+HANDLED_BY | ANY /ListCustomer.do -> com.tunisiana.tutorials.action.ListCustomerAction.<dispatch>() | UNRESOLVED | {}
+NAVIGATES_TO | Generate PDF -> List of customers | UNRESOLVED | {}
+INCLUDES | base.definition -> StrutsSpringExample/src/main/webapp/pages/tiles/header.jsp | CONFIRMED | {}
+INCLUDES | .page.listCustomer -> StrutsSpringExample/src/main/webapp/pages/tiles/menu.jsp | CONFIRMED | {}
+HANDLED_BY | ANY /AddCustomerPage.do -> org.apache.struts.actions.ForwardAction.execute() | CONFIRMED | {}
+INCLUDES | Add a new customer -> StrutsSpringExample/src/main/webapp/pages/tiles/footer.jsp | CONFIRMED | {}
+INCLUDES | List of customers -> StrutsSpringExample/src/main/webapp/pages/tiles/mainLayout.jsp | CONFIRMED | {}
+FORWARDS_TO | com.tunisiana.tutorials.action.ListCustomerAction.<dispatch>() -> List of customers | CONFIRMED | {}
+INCLUDES | .page.listCustomer -> base.definition | CONFIRMED | {}
+TRIGGERS | Generate PDF -> ANY /ListCustomerPDF.do | CONFIRMED | {}
+INCLUDES | .page.addCustomer -> StrutsSpringExample/src/main/webapp/pages/tiles/mainLayout.jsp | CONFIRMED | {}
+INCLUDES | Add a new customer -> StrutsSpringExample/src/main/webapp/pages/tiles/mainLayout.jsp | CONFIRMED | {}
+INCLUDES | .page.listCustomer -> StrutsSpringExample/src/main/webapp/pages/tiles/header.jsp | CONFIRMED | {}
+CALLS | com.tunisiana.tutorials.action.AddCustomerAction.<dispatch>() -> ANY /ListCustomer.do | INFERRED | {}
+CALLS | com.tunisiana.tutorials.action.AddCustomerAction.<dispatch>() -> ANY /ListCustomer.do | INFERRED | {}
+--- diagnostics
+ACTION_FORM_CONDITION_UNRESOLVED | ActionForm 檢核條件無法靜態確定：errors.add("common.address.err", new ActionMessage("customer.err.address.required"))
+ACTION_FORM_CONDITION_UNRESOLVED | ActionForm 檢核條件無法靜態確定：errors.add("customer.err.name", new ActionMessage("customer.err.name.required"))
+STRUTS_DISPATCH_UNRESOLVED | Dispatch 方法未解析；parameter=，值=—
+STRUTS_DISPATCH_UNRESOLVED | Dispatch 方法未解析；parameter=，值=—
+STRUTS_DISPATCH_UNRESOLVED | Dispatch 方法未解析；parameter=，值=—
+URL_MAPPING_UNRESOLVED | Servlet 映射無法安全解析
+STRUTS_FORWARD_UNRESOLVED | forward 名稱沒有來源設定："error"
+STRUTS_ROUTE_UNRESOLVED | 元件路由未解析：/
+STRUTS_ROUTE_UNRESOLVED | 元件路由未解析：/j_spring_security_logout
