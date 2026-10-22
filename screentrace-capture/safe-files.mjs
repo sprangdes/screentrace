@@ -1,4 +1,3 @@
-import { createReadStream } from 'node:fs';
 import { constants } from 'node:fs';
 import { lstat, mkdir, open, realpath } from 'node:fs/promises';
 import path from 'node:path';
@@ -83,6 +82,23 @@ export async function createDirectoryWithin(root, candidate) {
   return realpath(absolute);
 }
 
+/**
+ * application-graph.json is ScreenTrace's own output, so its budget only guards memory. Large legacy apps exceed
+ * tens of MB (chrisekelley/zeprs: ~40 MB); V8 cannot hold a string much over 512 MiB.
+ */
+export const MAX_ANALYSIS_GRAPH_BYTES = 256 * 1024 * 1024;
+
+export async function readAnalysisGraph(output, maxBytes = MAX_ANALYSIS_GRAPH_BYTES) {
+  let text;
+  try {
+    text = await readUtf8Limited(output, path.join(output, 'application-graph.json'), maxBytes);
+  } catch (error) {
+    if (/byte limit/.test(error.message)) throw new Error(`application-graph.json exceeds the ${maxBytes}-byte preview budget; static previews were not rendered`);
+    throw error;
+  }
+  return JSON.parse(text);
+}
+
 export async function readUtf8Limited(root, file, maxBytes = 8 * 1024 * 1024) {
   const bytes=await readBufferLimited(root,file,maxBytes);
   const encoding=declaredSourceEncoding(file,bytes);
@@ -101,12 +117,17 @@ export async function readBufferLimited(root, file, maxBytes = 8 * 1024 * 1024) 
   const safe = await resolveExistingFileWithin(root, file);
   const chunks = [];
   let total = 0;
+  // The FileHandle is the descriptor's only owner. A read stream over handle.fd could close it while being torn down
+  // by the size error, and handle.close() then failed with EBADF instead of reporting the limit (Linux CI).
   const handle = await open(safe, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
   try {
-    for await (const chunk of createReadStream(safe, { fd: handle.fd, autoClose: false })) {
-      total += chunk.byteLength;
+    const buffer = Buffer.allocUnsafe(64 * 1024);
+    for (;;) {
+      const { bytesRead } = await handle.read(buffer, 0, buffer.length, null);
+      if (bytesRead === 0) break;
+      total += bytesRead;
       if (total > maxBytes) throw new Error(`File exceeds ${maxBytes} byte limit: ${file}`);
-      chunks.push(chunk);
+      chunks.push(Buffer.from(buffer.subarray(0, bytesRead)));
     }
   } finally {
     await handle.close();

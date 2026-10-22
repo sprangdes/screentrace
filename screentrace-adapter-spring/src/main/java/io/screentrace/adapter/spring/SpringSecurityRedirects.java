@@ -5,12 +5,8 @@ import io.screentrace.core.ApplicationGraph;
 import io.screentrace.core.ApplicationGraph.*;
 import io.screentrace.scanner.ProjectScanner.ProjectInventory;
 import io.screentrace.scanner.SafeProjectFiles;
-import java.io.StringReader;
 import java.nio.file.Path;
 import java.util.*;
-import javax.xml.XMLConstants;
-import javax.xml.parsers.DocumentBuilderFactory;
-import org.xml.sax.InputSource;
 
 /** Extracts literal Spring Security automatic page redirects without loading application code. */
 final class SpringSecurityRedirects {
@@ -36,7 +32,7 @@ final class SpringSecurityRedirects {
   return new ApplicationGraph(graph.application(),List.copyOf(nodes.values()),graph.relationships(),diagnostics.stream().distinct().toList(),graph.apiContracts(),graph.schemaVersion(),graph.behaviors(),graph.validationRules());
  }
  private static void parseXml(String text,String file,List<Redirect> out,List<Diagnostic> diagnostics)throws Exception {
-  var factory=DocumentBuilderFactory.newInstance();factory.setNamespaceAware(true);factory.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING,true);factory.setFeature("http://apache.org/xml/features/disallow-doctype-decl",true);factory.setAttribute(XMLConstants.ACCESS_EXTERNAL_DTD,"");factory.setAttribute(XMLConstants.ACCESS_EXTERNAL_SCHEMA,"");factory.setExpandEntityReferences(false);var doc=factory.newDocumentBuilder().parse(new InputSource(new StringReader(text)));
+  var doc=io.screentrace.scanner.SafeProjectFiles.parseXml(text,true);
   List<String> protectedPaths=new ArrayList<>();var all=doc.getElementsByTagName("*");for(int i=0;i<all.getLength();i++){var element=(org.w3c.dom.Element)all.item(i);String name=element.getLocalName()==null?element.getTagName().replaceFirst("^.*:",""):element.getLocalName();if(name.equals("intercept-url")&&element.hasAttribute("pattern"))protectedPaths.add(element.getAttribute("pattern"));}
   for(int i=0;i<all.getLength();i++){var element=(org.w3c.dom.Element)all.item(i);String name=element.getLocalName()==null?element.getTagName().replaceFirst("^.*:",""):element.getLocalName();if(name.equals("form-login"))addXml(text,file,element,"login-page","LOGIN_PAGE",protectedPaths,out,diagnostics);if(name.equals("access-denied-handler"))addXml(text,file,element,"error-page","ACCESS_DENIED",protectedPaths,out,diagnostics);if(name.equals("http"))addXml(text,file,element,"access-denied-page","ACCESS_DENIED",protectedPaths,out,diagnostics);}
  }

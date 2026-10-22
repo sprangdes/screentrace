@@ -1,0 +1,32 @@
+{
+  "screentraceCommit": "ba7a0117e00c5c447eab56804591271e8379b0ec",
+  "projects": [
+    {
+      "repository": "https://github.com/oussamazoghlami/SpringStrutsHibernate",
+      "commit": "4bc925b0dd9171fe1cbd9dc0e1ff6c5791caa84b",
+      "fork": false
+    },
+    {
+      "repository": "https://github.com/RawSanj/spring-tiles-sample-app",
+      "commit": "7cb7c610006b639c9595dbd1eb365d48548e0a5e",
+      "fork": false
+    },
+    {
+      "repository": "https://github.com/oktadev/okta-spring-boot-react-crud-example",
+      "commit": "6d75759b13d0a32ee66314e1770ab24601be4e82",
+      "fork": false
+    },
+    {
+      "repository": "https://github.com/chrisekelley/zeprs",
+      "commit": "6ea42325332aab8a331b7683df042b7360b87991",
+      "fork": false
+    }
+  ],
+  "derivedVariants": [
+    {
+      "name": "okta-jsx-variant",
+      "from": "oktadev/okta-spring-boot-react-crud-example",
+      "change": "app/src/{App,Home,AppNavbar,GroupList,GroupEdit,index}.js renamed to .jsx; contents unchanged"
+    }
+  ]
+}

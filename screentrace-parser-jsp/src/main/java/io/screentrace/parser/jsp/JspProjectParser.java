@@ -5,7 +5,6 @@ import io.screentrace.core.ApplicationGraph.Diagnostic;
 import io.screentrace.core.ApplicationGraph.SourceLocation;
 import io.screentrace.scanner.SafeProjectFiles;
 import java.io.IOException;
-import java.io.StringReader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -16,13 +15,9 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import javax.xml.XMLConstants;
-import javax.xml.parsers.DocumentBuilderFactory;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
-import org.xml.sax.InputSource;
-import org.xml.sax.SAXParseException;
 
 /**
  * Parses JSP, JSPF, and Tiles metadata without applying Struts or Spring routing rules.
@@ -45,11 +40,12 @@ public final class JspProjectParser {
     List<JspAnalysis.TilesDefinition> tilesDefinitions = new ArrayList<>();
     List<Diagnostic> diagnostics = new ArrayList<>();
     Map<String, MarkupAnalysis> markup = new java.util.TreeMap<>();
+    StrutsMenus menus = StrutsMenus.load(root, files);
     for (Path file : files.stream().sorted(java.util.Comparator.comparing(p->relative(root,p))).toList()) {
       String name = file.getFileName().toString();
       try {
         if (name.endsWith(".jsp") || name.endsWith(".jspf") || name.endsWith(".html") || name.endsWith(".htm")) {
-          parseJsp(root, file, views, interactions, includes, diagnostics, markup,messages);
+          parseJsp(root, file, views, interactions, includes, diagnostics, markup,messages,menus);
         } else if (name.endsWith(".xml") && SafeProjectFiles.readUtf8Limited(root, file, SafeProjectFiles.MAX_XML_FILE_BYTES).contains("tiles-definitions")) {
           parseTiles(root, file, tilesDefinitions, diagnostics);
         }
@@ -69,9 +65,10 @@ public final class JspProjectParser {
 
   private static void parseJsp(Path root, Path file, List<JspAnalysis.View> views,
                                List<JspAnalysis.Interaction> interactions, List<JspAnalysis.Include> includes,
-                               List<Diagnostic> diagnostics, Map<String, MarkupAnalysis> markup,StaticMessageResolver messages) throws IOException {
-    String text = SafeProjectFiles.readUtf8Limited(root, file, SafeProjectFiles.MAX_JSP_FILE_BYTES);
-    boolean directivesOnly = directivesOnly(text);
+                               List<Diagnostic> diagnostics, Map<String, MarkupAnalysis> markup,StaticMessageResolver messages,StrutsMenus menus) throws IOException {
+    String raw = SafeProjectFiles.readUtf8Limited(root, file, SafeProjectFiles.MAX_JSP_FILE_BYTES);
+    boolean directivesOnly = directivesOnly(raw);
+    String text = menus.expand(raw);
     text = ThymeleafMarkup.normalize(text);
     String relative = relative(root, file);
     JspTagFileExpander.Result tagExpansion=new JspTagFileExpander().expand(root,relative,text);
@@ -367,7 +364,7 @@ public final class JspProjectParser {
     String relative = relative(root, file);
     try {
       String text=SafeProjectFiles.readUtf8Limited(root,file,SafeProjectFiles.MAX_XML_FILE_BYTES);
-      Document document = secureDocument(SafeProjectFiles.xmlWithoutExternalDoctype(text));
+      Document document = SafeProjectFiles.parseXml(text, false);
       List<MarkupTag> sourceTags=MarkupTag.scan(text).stream().filter(t->!t.closing()&&t.name().equals("definition")).toList();
       NodeList nodes = document.getElementsByTagName("definition");
       for (int index = 0; index < nodes.getLength(); index++) {
@@ -378,6 +375,18 @@ public final class JspProjectParser {
           for (int attributeIndex = 0; attributeIndex < attributeNodes.getLength(); attributeIndex++) {
             Element attribute = (Element) attributeNodes.item(attributeIndex);
             attributes.add(new JspAnalysis.TilesAttribute(attribute.getAttribute("name"), attribute.getAttribute("value")));
+          }
+        }
+        // Tiles 2/3 <put-list-attribute><add-attribute value/>, Tiles 1 <putList><add value/>: e.g. a layout's stylesheets.
+        for (String[] listTags : List.of(new String[] {"put-list-attribute", "add-attribute"}, new String[] {"putList", "add"})) {
+          NodeList lists = definition.getElementsByTagName(listTags[0]);
+          for (int listIndex = 0; listIndex < lists.getLength(); listIndex++) {
+            Element list = (Element) lists.item(listIndex);
+            List<String> values = new ArrayList<>();
+            for (org.w3c.dom.Node child = list.getFirstChild(); child != null; child = child.getNextSibling())
+              if (child instanceof Element item && item.getTagName().equals(listTags[1]))
+                values.add(item.hasAttribute("value") ? item.getAttribute("value") : item.getTextContent().trim());
+            attributes.add(new JspAnalysis.TilesAttribute(list.getAttribute("name"), "", values));
           }
         }
         String template = definition.getAttribute("template");
@@ -409,27 +418,6 @@ public final class JspProjectParser {
     }
     current.attributes().forEach(a->attrs.put(a.name(),a));
     var result=new JspAnalysis.TilesDefinition(current.name(),template,List.copyOf(attrs.values()),current.source(),current.parent());resolved.put(name,result);stack.remove(name);return result;
-  }
-
-  private static Document secureDocument(String xml) throws Exception {
-    DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
-    factory.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
-    factory.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
-    factory.setFeature("http://xml.org/sax/features/external-general-entities", false);
-    factory.setFeature("http://xml.org/sax/features/external-parameter-entities", false);
-    factory.setFeature("http://apache.org/xml/features/nonvalidating/load-external-dtd", false);
-    factory.setXIncludeAware(false);
-    factory.setAttribute(XMLConstants.ACCESS_EXTERNAL_DTD, "");
-    factory.setAttribute(XMLConstants.ACCESS_EXTERNAL_SCHEMA, "");
-    factory.setExpandEntityReferences(false);
-    var builder = factory.newDocumentBuilder();
-    builder.setEntityResolver((publicId, systemId) -> new InputSource(new StringReader("")));
-    builder.setErrorHandler(new org.xml.sax.ErrorHandler() {
-      @Override public void warning(SAXParseException exception) { }
-      @Override public void error(SAXParseException exception) throws SAXParseException { throw exception; }
-      @Override public void fatalError(SAXParseException exception) throws SAXParseException { throw exception; }
-    });
-    return builder.parse(new InputSource(new StringReader(xml)));
   }
 
   private static Diagnostic unresolved(String message, SourceLocation source) {

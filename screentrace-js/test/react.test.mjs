@@ -237,3 +237,53 @@ test('a route that only redirects is marked as such and never named after a shel
   assert.equal(screen(result, '/home').redirectOnly, false);
   assert.equal(screen(result, '/').view, 'Route');
 });
+
+test('relative fetch URLs resolve against the screen route like the browser does', () => {
+  // oktadev/okta-spring-boot-react-crud-example: fetch('api/user') on "/" and fetch('api/groups') on "/groups".
+  const result = run({
+    'src/App.jsx': `${ROUTER} import Home from './Home'; import List from './List'; import Edit from './Edit';
+      export default function App(){ return <Routes><Route path="/" element={<Home/>}/><Route path="/groups" element={<List/>}/><Route path="/groups/:id" element={<Edit/>}/></Routes>; }`,
+    'src/Home.jsx': `import { useEffect } from 'react'; export default function Home(){ useEffect(() => { fetch('api/user', { credentials: 'include' }); }, []); return <h1>Home</h1>; }`,
+    'src/List.jsx': `import { useEffect } from 'react'; export default function List(){ useEffect(() => { fetch('api/groups'); fetch('./sibling'); fetch(\`\${base}/x\`); }, []); return <h1>List</h1>; }`,
+    'src/Edit.jsx': `import { useEffect } from 'react'; export default function Edit(){ useEffect(() => { fetch('api/detail'); }, []); return <h1>Edit</h1>; }`
+  });
+  const calls = route => screen(result, route).load.filter(e => e.type === 'CALL_API').map(e => [e.urls, e.status, e.relativeUrls ?? null]);
+  assert.deepEqual(calls('/'), [[['/api/user'], 'INFERRED', ['api/user']]]);
+  assert.deepEqual(calls('/groups'), [[['/api/groups'], 'INFERRED', ['api/groups']], [['/sibling'], 'INFERRED', ['./sibling']], [[], 'UNRESOLVED', null]]);
+  assert.deepEqual(calls('/groups/:id'), [[['/groups/api/detail'], 'INFERRED', ['api/detail']]]);
+});
+
+test('a method ternary that also chooses the URL splits into one request per branch', () => {
+  // okta GroupEdit: fetch(`/api/group${group.id ? `/${group.id}` : ''}`, {method: (group.id) ? 'PUT' : 'POST'})
+  const result = run({
+    'src/App.jsx': `${ROUTER} import Edit from './Edit'; export default function App(){ return <Routes><Route path="/groups/:id" element={<Edit/>}/></Routes>; }`,
+    'src/Edit.jsx': `export default function Edit({group}){
+      const save = async (event) => { event.preventDefault(); await fetch(\`/api/group\${group.id ? \`/\${group.id}\` : ''}\`, { method: (group.id) ? 'PUT' : 'POST', body: JSON.stringify(group) }); };
+      return <form onSubmit={save}><button type="submit">Save</button></form>; }`
+  });
+  const requests = effects(screen(result, '/groups/:id')).filter(e => e.type === 'CALL_API').map(e => [e.method, e.urls, e.guard, e.status]);
+  assert.deepEqual(requests.sort(), [['POST', ['/api/group'], '!(group.id)', 'CONFIRMED'], ['PUT', ['/api/group/{id}'], 'group.id', 'INFERRED']]);
+});
+
+test('UI library components rendered as router links navigate like Link', () => {
+  // oktadev/okta-spring-boot-react-crud-example: reactstrap <Button tag={Link} to=…> (Edit, Add Group, Cancel) and
+  // <NavbarBrand tag={Link} to="/"> had no handler, so they were dropped with their navigation.
+  const result = run({
+    'src/App.jsx': `${ROUTER} import List from './List'; import Edit from './Edit';
+      export default function App(){ return <Routes><Route path="/groups" element={<List/>}/><Route path="/groups/:id" element={<Edit/>}/></Routes>; }`,
+    'src/List.jsx': `import { Link } from 'react-router-dom'; import { Button, NavbarBrand } from 'reactstrap'; import { Nav } from 'react-bootstrap';
+      export default function List(){ return <div><NavbarBrand tag={Link} to="/groups">Home</NavbarBrand>
+        <Button color="success" tag={Link} to="/groups/new">Add Group</Button>
+        <Button size="sm" tag={Link} to={"/groups/" + 7}>Edit</Button>
+        <Nav.Link as={Link} to="/groups/3">Bootstrap</Nav.Link>
+        <Button color="secondary">Plain</Button></div>; }`,
+    'src/Edit.jsx': `export default function Edit(){ return <h1>Edit</h1>; }`
+  });
+  const list = screen(result, '/groups');
+  for (const [label, url] of [['Home', '/groups'], ['Add Group', '/groups/new'], ['Edit', '/groups/7'], ['Bootstrap', '/groups/3']]) {
+    const link = component(list, label);
+    assert.equal(link.kind, 'LINK', label);
+    assert.deepEqual(link.behaviors.map(e => [e.type, e.targetRoutes]), [['NAVIGATE', [url === '/groups' ? '/groups' : '/groups/:id']]], label);
+  }
+  assert.ok(!list.components.some(c => c.label === 'Plain'), 'a library component without a router tag or handler is still not a control');
+});
