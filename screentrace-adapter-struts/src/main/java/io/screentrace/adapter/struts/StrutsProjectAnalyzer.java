@@ -685,6 +685,26 @@ public final class StrutsProjectAnalyzer {
     }
     if(!actionIncludes.isEmpty())state.diagnostics.removeIf(diagnostic->diagnostic.code().equals("JSP_UNRESOLVED")&&diagnostic.message().startsWith("JSP include cannot be found")&&actionIncludes.contains(diagnostic.source()));
   }
+  /**
+   * The action URLs that forward to a screen. Route aliases are not used: link resolution adds aliases too, and a JSP
+   * requested directly (no action) is already read against its own folder, which is its request directory.
+   */
+  private static Set<String> requestPaths(GraphNode screen) {
+    Set<String> paths=new TreeSet<>();if(screen==null)return paths;
+    for(String path:screen.attributes().getOrDefault("sourceRequestPaths","").split("\u001f"))
+      if(path.startsWith("/")&&!path.startsWith("//"))paths.add(path.split("[?#]",2)[0]);
+    return paths;
+  }
+  /** A relative link target resolved against the one request directory its screen is served from; null when there is not exactly one. */
+  private static String requestRelativeTarget(String screen,String raw,State state) {
+    if(raw==null||raw.isBlank()||raw.startsWith("/")||raw.startsWith("#")||raw.matches("(?is)^[a-z][a-z0-9+.-]*:.*")||!StrutsSources.literal(raw))return null;
+    Set<String> directories=new TreeSet<>();for(String path:requestPaths(state.nodes.get(screen)))directories.add(path.substring(0,path.lastIndexOf('/')+1));
+    if(directories.size()!=1)return null;
+    try {
+      String resolved=java.net.URI.create("http://request.invalid"+directories.iterator().next()).resolve(raw).toString().substring("http://request.invalid".length());
+      return resolved.startsWith("/")&&!resolved.startsWith("/..")?resolved:null;
+    } catch(IllegalArgumentException invalid) {return null;}
+  }
   private static boolean isViewOrAssetPath(String path) {
     return path!=null&&path.toLowerCase(Locale.ROOT).matches(".*\\.(?:jsp|jspx|jspf|html?|png|gif|jpe?g|svg|css|js|woff2?|ico|pdf)$");
   }
@@ -698,8 +718,16 @@ public final class StrutsProjectAnalyzer {
   private static void addControl(String screen,Control control,List<Control> peers,String moduleContext,State state) {
     Map<String,String> controlAttributes=new TreeMap<>(control.attributes());if((controlAttributes.get("module")==null||controlAttributes.get("module").isBlank())&&moduleContext!=null&&!moduleContext.isBlank())controlAttributes.put("module",moduleContext);
     Control contextual=new Control(control.id(),control.label(),controlAttributes,control.target(),control.source(),control.field(),control.value(),control.formGroup());
+    // A relative link resolves against the request URL: for a Tiles layout or a forwarded page that is the action that
+    // rendered it (struts-menu location="AddCustomer.do" in a layout served at /ListCustomer.do), not the JSP's own folder.
+    // Only browser-resolved URLs: plain a/area/form, or a Struts link's href. A Struts action/page/forward is module-relative.
+    String tagName=controlAttributes.getOrDefault("tag","");
+    boolean browserUrl=Set.of("a","area","form").contains(tagName)||Set.of("html:link","html-el:link").contains(tagName)&&controlAttributes.containsKey("href")&&!controlAttributes.containsKey("action")&&!controlAttributes.containsKey("page")&&!controlAttributes.containsKey("forward");
+    String relative=controlAttributes.getOrDefault("originalTarget",control.target()),requested=browserUrl?requestRelativeTarget(screen,relative,state):null;
+    if(requested!=null){controlAttributes.put("originalTarget",relative);controlAttributes.put("target",requested);controlAttributes.put("requestRelative","true");contextual=new Control(control.id(),control.label(),controlAttributes,requested,control.source(),control.field(),control.value(),control.formGroup());}
     addNode(state,control.id(),NodeType.COMPONENT,control.label(),controlAttributes,control.source(),Confidence.CONFIRMED);
     String originalTarget=controlAttributes.get("originalTarget");if(originalTarget!=null&&!originalTarget.isBlank()){GraphNode old=state.nodes.get(control.id());List<AnalysisEvidence> proof=new ArrayList<>(old.evidence());proof.add(new AnalysisEvidence(control.source(),PARSER,ResolutionStatus.CONFIRMED,"原始網址="+originalTarget+"；正規化網址="+Objects.toString(control.target(),"")));state.nodes.put(old.id(),new GraphNode(old.id(),old.type(),old.name(),old.attributes(),old.source(),old.confidence(),proof.stream().distinct().toList()));}
+    if(requested!=null){GraphNode old=state.nodes.get(control.id());List<AnalysisEvidence> proof=new ArrayList<>(old.evidence());proof.add(new AnalysisEvidence(control.source(),PARSER,ResolutionStatus.INFERRED,"相對網址 "+relative+" 依畫面的請求目錄解析為 "+requested+"；請求路徑="+requestPaths(state.nodes.get(screen))));state.nodes.put(old.id(),new GraphNode(old.id(),old.type(),old.name(),old.attributes(),old.source(),old.confidence(),proof.stream().distinct().toList()));}
     edge(state,EdgeType.CONTAINS,screen,control.id(),Confidence.CONFIRMED,control.source());
     if("SUBMIT".equals(control.attributes().get("kind"))&&control.attributes().get("formaction")==null&&control.formGroup()!=null&&!dispatchSubmit(control,state))return;
     if(contextual.target()==null) return;
@@ -759,7 +787,7 @@ public final class StrutsProjectAnalyzer {
         Set<String> destinations=new TreeSet<>();
         if("SwitchAction".equals(mapping.type().substring(mapping.type().lastIndexOf('.')+1))){String switchRoute=switchActionTarget(resolvedTarget);if(switchRoute!=null)for(Mapping candidate:state.routes.getOrDefault(switchRoute,List.of()))destinations.addAll(resolveMappingScreens(candidate,state,new LinkedHashSet<>(),0,control.source()));}
         else destinations.addAll(resolveMappingScreens(mapping,state,new LinkedHashSet<>(),0,control.source()));
-        for(String destination:destinations){if(status==Confidence.CONFIRMED)addScreenRouteAlias(destination,control.attributes().get("target"),state);edge(state,EdgeType.NAVIGATES_TO,control.id(),destination,status,control.source());}
+        for(String destination:destinations){if(status==Confidence.CONFIRMED)addScreenRouteAlias(destination,contextual.attributes().get("target"),state);edge(state,EdgeType.NAVIGATES_TO,control.id(),destination,status,control.source());}
       }
     }
     String callDetail="basis=STATIC_URL"+(module.isBlank()?"":"；module="+module);edge(state,EdgeType.TRIGGERS,control.id(),endpoint,status,control.source(),callDetail);
