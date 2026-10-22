@@ -37,7 +37,8 @@ final class ProjectCatalog {
 
   Project named(List<Project> projects, String name) {
     return projects.stream().filter(project -> project.name().equals(name)).findFirst()
-        .orElseThrow(() -> new IllegalArgumentException("Project not found: " + name));
+        .orElseThrow(() -> new IllegalArgumentException("找不到專案：" + name + "。可用的專案："
+            + projects.stream().map(Project::name).toList() + "；要分析其他資料夾，請改用 `screentrace analyze <專案路徑>`。"));
   }
 
   private Project project(Path source, Path outputRoot) {

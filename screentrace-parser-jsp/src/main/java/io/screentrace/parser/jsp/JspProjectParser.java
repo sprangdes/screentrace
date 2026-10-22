@@ -61,12 +61,17 @@ public final class JspProjectParser {
     return new JspAnalysis(views, expandIncludedInteractions(root, interactions, includes, diagnostics), includes, tilesDefinitions, diagnostics, markup);
   }
 
+  static boolean directivesOnly(String text) {
+    return text.replaceAll("(?s)<%--.*?--%>", "").replaceAll("(?s)<%@.*?%>", "").isBlank();
+  }
+
   @FunctionalInterface public interface StaticMessageResolver { String resolve(String bundle,String key); }
 
   private static void parseJsp(Path root, Path file, List<JspAnalysis.View> views,
                                List<JspAnalysis.Interaction> interactions, List<JspAnalysis.Include> includes,
                                List<Diagnostic> diagnostics, Map<String, MarkupAnalysis> markup,StaticMessageResolver messages) throws IOException {
     String text = SafeProjectFiles.readUtf8Limited(root, file, SafeProjectFiles.MAX_JSP_FILE_BYTES);
+    boolean directivesOnly = directivesOnly(text);
     text = ThymeleafMarkup.normalize(text);
     String relative = relative(root, file);
     JspTagFileExpander.Result tagExpansion=new JspTagFileExpander().expand(root,relative,text);
@@ -76,7 +81,9 @@ public final class JspProjectParser {
       diagnostics.add(new Diagnostic("JSP 標籤檔展開受限："+diagnostic,Confidence.UNRESOLVED,new SourceLocation(relative,1),code,List.of()));
     }
     markup.put(relative, withAnchors(StaticComponentNames.annotate(MarkupAnalysis.parse(relative, text),text,messages),text,tagExpansion.anchors()));
-    JspAnalysis.ViewKind kind = relative.endsWith(".jspf") ? JspAnalysis.ViewKind.JSPF : relative.endsWith(".jsp") ? JspAnalysis.ViewKind.JSP : JspAnalysis.ViewKind.HTML;
+    // A .jsp holding only directives (oussamazoghlami/SpringStrutsHibernate pages/tiles/includes.jsp: five taglib lines)
+    // renders nothing; like a .jspf it is included for its declarations, never a screen of its own.
+    JspAnalysis.ViewKind kind = relative.endsWith(".jspf") || relative.endsWith(".jsp") && directivesOnly ? JspAnalysis.ViewKind.JSPF : relative.endsWith(".jsp") ? JspAnalysis.ViewKind.JSP : JspAnalysis.ViewKind.HTML;
     views.add(new JspAnalysis.View(relative, kind, new SourceLocation(relative, 1),messageTitle(text,messages)));
     UrlVariableResolver urls = new UrlVariableResolver(relative,text,includedWrites(root,relative,text,new java.util.HashSet<>()));
     UrlVariableResolver.Resolution activeFormResolution = null;

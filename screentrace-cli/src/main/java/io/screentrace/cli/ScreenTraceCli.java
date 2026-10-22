@@ -48,7 +48,9 @@ public final class ScreenTraceCli {
   static int run(String[] args) throws IOException, InterruptedException {
     if(args.length>0&&args[0].equals("library")){System.out.println(LibraryCommands.run(args,WorkspaceSettings.defaultFile().getParent()));return 0;}
     Command command = Command.parse(args);
-    if(command.action()==Action.PATH)return analyzePath(command.projectName());
+    if(command.action()==Action.PATH)return analyzePath(command.projectName(),true);
+    // `analyze <path>` analyzes that folder like `screentrace <path>`, but only prints the report path.
+    if(command.action()==Action.ANALYZE&&command.projectName()!=null&&looksLikePath(command.projectName()))return analyzePath(command.projectName(),false);
     if(command.action()==Action.INTERACTIVE||command.action()==Action.CONFIG){
       if(!interactiveTerminalAvailable())return command.action()==Action.CONFIG?failConfigWithoutTerminal():failForMissingTerminal();
       try(InteractiveConsole console=new InteractiveConsole()){
@@ -66,10 +68,9 @@ public final class ScreenTraceCli {
     }
     if(needsPrompt){
       try(InteractiveConsole console=new InteractiveConsole()){
-        runCommand(console,loadOrConfigure(console),command);
+        return runCommand(console,loadOrConfigure(console),command);
       }
-    }else runCommand(null,WorkspaceSettings.load(WorkspaceSettings.defaultFile()),command);
-    return 0;
+    }else return runCommand(null,WorkspaceSettings.load(WorkspaceSettings.defaultFile()),command);
   }
 
   private static int failForMissingTerminal(){
@@ -78,7 +79,12 @@ public final class ScreenTraceCli {
   }
 
   /** `screentrace <project path>`: analyze one folder directly, without requiring a configured project root. */
-  private static int analyzePath(String argument) throws IOException, InterruptedException {
+  /** A project argument with a separator, or starting with ~ or ., names a folder rather than a project in the workspace. */
+  static boolean looksLikePath(String argument){
+    return argument.contains("/")||argument.contains("\\")||argument.startsWith("~")||argument.startsWith(".");
+  }
+
+  private static int analyzePath(String argument,boolean openReport) throws IOException, InterruptedException {
     Path source=projectPath(argument);
     if(!Files.isDirectory(source)){
       System.err.println("找不到專案資料夾："+argument);
@@ -86,7 +92,8 @@ public final class ScreenTraceCli {
     }
     WorkspaceSettings settings=settingsFor(source);
     AnalysisResult result=analyze(projectAt(source,settings),settings);
-    logAnalysis(result);reportOpener.open(result.report());
+    logAnalysis(result);
+    if(openReport)reportOpener.open(result.report());else printReportPath(result.report());
     return 0;
   }
 
@@ -145,14 +152,18 @@ public final class ScreenTraceCli {
     }
   }
 
-  private static void runCommand(InteractiveConsole console,WorkspaceSettings settings,Command command) throws IOException,InterruptedException {
+  private static int runCommand(InteractiveConsole console,WorkspaceSettings settings,Command command) throws IOException,InterruptedException {
     ProjectCatalog catalog=new ProjectCatalog();
     List<ProjectCatalog.Project> projects=command.action()==Action.ANALYZE?catalog.allProjects(settings):catalog.analyzedProjects(settings);
     ProjectCatalog.Project project;
     try{project=selectProject(console,catalog,projects,command.projectName());}
-    catch(InteractiveConsole.SelectionCancelledException ignored){return;}
+    catch(InteractiveConsole.SelectionCancelledException ignored){return 0;}
+    // An unknown project name is the user's to fix; print why instead of a stack trace.
+    catch(IllegalArgumentException unknown){System.err.println(unknown.getMessage());return 2;}
     if(command.action()==Action.ANALYZE){AnalysisResult result=analyze(project,settings);logAnalysis(result);printReportPath(result.report());}
     else if(command.action()==Action.REPORT)reportOpener.open(new SingleHtmlAnalysisWriter().generate(project.analysisDirectory(),new LibraryStore(WorkspaceSettings.defaultFile().getParent()).selected(project.name())).path());
+
+    return 0;
   }
 
   private static void runInteractive(InteractiveConsole console, ProjectCatalog catalog)
