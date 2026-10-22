@@ -93,3 +93,31 @@ test('a Tiles list attribute looped by the layout links every listed stylesheet'
     assert.equal(capture.styles[heading.styleId].color, 'rgb(1, 2, 3)', 'the listed stylesheet is applied');
   } finally { await rm(root, { recursive: true, force: true }); }
 });
+
+test('unmapped root-absolute style URLs never become file URLs outside the analysis output', async () => {
+  // chrisekelley/zeprs hard-codes its context path: <td background="/zeprs/images/banner_bkgd.gif">. Chromium computed
+  // it as file:///zeprs/…, and the preview reader correctly refused the whole analysis.
+  const root = await mkdtemp(path.join(os.tmpdir(), 'screentrace-capture-ctx-'));
+  const output = path.join(root, 'analysis');
+  const jsp = path.join(root, 'src/main/webapp/WEB-INF/jsp/page.jsp');
+  await mkdir(path.dirname(jsp), { recursive: true });
+  await mkdir(output, { recursive: true });
+  await writeFile(output + '/application-graph.json', JSON.stringify({ schemaVersion: '2.2',
+    nodes: [{ id: 'screen:ctx', type: 'SCREEN', attributes: { view: 'src/main/webapp/WEB-INF/jsp/page.jsp' } }], relationships: [] }));
+  await writeFile(jsp, '<html><body><table><tr><td background="/zeprs/images/banner_bkgd.gif">Banner</td></tr></table>'
+    + '<div style="background-image:url(/AppName/images/tile.gif)">Tile</div></body></html>');
+
+  const child = spawn(process.execPath, [path.resolve('screentrace-capture/capture-static-jsp.mjs'), root, output, '--preview-v2'], { stdio: ['ignore', 'pipe', 'pipe'] });
+  let stdout = '', stderr = '';
+  child.stdout.on('data', data => { stdout += data; });
+  child.stderr.on('data', data => { stderr += data; });
+  const status = await new Promise(resolve => child.on('close', resolve));
+  try {
+    assert.equal(status, 0, stdout + stderr);
+    const rendered = await readFile(path.join(output, 'static-preview/screen_ctx.html'), 'utf8');
+    assert.doesNotMatch(rendered, /\/zeprs\/images|\/AppName\/images/);
+    assert.match(rendered, /Banner/);
+    const styles = await readFile(path.join(output, 'static-preview/element-styles.json'), 'utf8');
+    assert.doesNotMatch(styles, /file:\/\/\/(zeprs|AppName)/);
+  } finally { await rm(root, { recursive: true, force: true }); }
+});

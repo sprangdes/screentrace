@@ -3,7 +3,7 @@ import { mkdtemp, mkdir, symlink, writeFile, rm, realpath } from 'node:fs/promis
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
-import { assertOutputPathWithin, readBufferLimited, readUtf8Limited, resolveExistingFileWithin } from './safe-files.mjs';
+import { assertOutputPathWithin, MAX_ANALYSIS_GRAPH_BYTES, readAnalysisGraph, readBufferLimited, readUtf8Limited, resolveExistingFileWithin } from './safe-files.mjs';
 import { createDirectoryWithin } from './safe-files.mjs';
 
 test('bounded reads allow a project file and reject oversized inputs', async () => {
@@ -75,4 +75,17 @@ test('multi-chunk reads are exact and oversized reads always report the limit an
     for (let i = 0; i < 100; i++) await assert.rejects(readBufferLimited(root, file, 100 * 1024), /byte limit/);
     assert.ok(!process.getActiveResourcesInfo().includes('FileHandle'), process.getActiveResourcesInfo().join(','));
   } finally { await rm(root, { recursive: true, force: true }); }
+});
+
+test('analysis graphs above the old 16 MiB cap load, and an over-budget graph fails clearly', async () => {
+  const output = await mkdtemp(path.join(os.tmpdir(), 'screentrace-graph-'));
+  try {
+    // chrisekelley/zeprs produced a ~40 MB graph; the old 16 MiB read cap left all 198 screens without previews.
+    const padding = 'x'.repeat(20 * 1024 * 1024);
+    await writeFile(path.join(output, 'application-graph.json'), JSON.stringify({ schemaVersion: '2.2', nodes: [], relationships: [], diagnostics: [{ message: padding }] }));
+    const graph = await readAnalysisGraph(output);
+    assert.equal(graph.schemaVersion, '2.2');
+    assert.ok(MAX_ANALYSIS_GRAPH_BYTES >= 256 * 1024 * 1024);
+    await assert.rejects(readAnalysisGraph(output, 1024), /exceeds the 1024-byte preview budget/);
+  } finally { await rm(output, { recursive: true, force: true }); }
 });

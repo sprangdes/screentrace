@@ -11,7 +11,13 @@ import { deduplicateMappings, discoverSpringResourceMappings } from './spring-re
 import {loadStrutsMessageCatalog,renderStrutsMessages} from './struts-messages.mjs';
 import {renderUnsupportedJsfTags} from './unsupported-components.mjs';
 import {prepareReactPreview} from './react-preview.mjs';
-import { assertOutputPathWithin, createDirectoryWithin, readBufferLimited, readUtf8Limited, resolveExistingDirectoryWithin, resolveExistingFileWithin, writeBufferWithin } from './safe-files.mjs';
+import { assertOutputPathWithin, createDirectoryWithin, readAnalysisGraph, readBufferLimited, readUtf8Limited, resolveExistingDirectoryWithin, resolveExistingFileWithin, writeBufferWithin } from './safe-files.mjs';
+/**
+ * A root-absolute style URL with no local asset (a hard-coded context path such as /zeprs/images/x.gif) would be
+ * computed as file:///zeprs/… outside the analysis output, which the preview reader must refuse. Its request is
+ * already blocked, so it becomes an inert URL instead.
+ */
+const UNRESOLVED_ASSET = 'about:blank';
 
 const [targetArg, outputArg, ...extraArgs] = process.argv.slice(2);
 const previewV2=extraArgs.includes('--preview-v2');
@@ -21,7 +27,7 @@ const target = path.resolve(targetArg);
 const output = path.resolve(outputArg || path.join(target, '.screentrace'));
 await resolveExistingDirectoryWithin(target, target);
 const projectRoot = target;
-const graph = JSON.parse(await readUtf8Limited(output, path.join(output, 'application-graph.json'), 16 * 1024 * 1024));
+const graph = await readAnalysisGraph(output);
 if(previewV2&&graph.schemaVersion!=='2.2')throw new Error(`新預覽只接受 schema 2.2，收到 ${graph.schemaVersion??'未設定'}`);
 const styleCapture={version:'2',schemaVersion:'2.2',screens:{},styles:{},defaults:{},diagnostics:[]};
 const endpointByPath = new Map(graph.nodes.filter(node => node.type === 'ENDPOINT').map(node => [node.attributes?.path, node]));
@@ -97,7 +103,7 @@ async function rewriteCssUrls(directory) {
     else if (entry.isFile() && entry.name.endsWith('.css')) await writeOutput(file,
       (await readUtf8Limited(output, file, 8 * 1024 * 1024)).replace(/url\(\s*(["']?)(\/[^)'"\s]+)(\1)\s*\)/g, (_, quote, url, closingQuote) => {
         const mapping = mappingFor(url);
-        if (!mapping) return _;
+        if (!mapping) return `url(${quote}${UNRESOLVED_ASSET}${closingQuote})`;
         const destination = path.join(htmlRoot, 'assets', mapping.assetKey, url.substring(mapping.urlPrefix.length));
         return `url(${quote}${path.relative(path.dirname(file), destination).replaceAll(path.sep, '/')}${closingQuote})`;
       }));
@@ -254,9 +260,10 @@ async function projectRequestAssets(source,screen){
  }return result;
 }
 function rewriteAssetUrls(source) {
-  return source.replace(/url\(\s*(['"]?)(\/[^)'"\s]+)\1\s*\)/g,(original,quote,url)=>{const mapping=mappingFor(url);return mapping?`url(${quote}assets/${mapping.assetKey}${url.substring(mapping.urlPrefix.length-1)}${quote})`:original;}).replace(/\b(href|src)=(['"])(\/[^'"]*)/gi, (_, attribute, quote, url) => {
+  return source.replace(/url\(\s*(['"]?)(\/[^)'"\s]+)\1\s*\)/g,(original,quote,url)=>{const mapping=mappingFor(url);return mapping?`url(${quote}assets/${mapping.assetKey}${url.substring(mapping.urlPrefix.length-1)}${quote})`:`url(${quote}${UNRESOLVED_ASSET}${quote})`;}).replace(/\b(href|src|background)=(['"])(\/[^'"]*)/gi, (_, attribute, quote, url) => {
     const mapping = mappingFor(url);
-    return mapping ? `${attribute}=${quote}assets/${mapping.assetKey}${url.substring(mapping.urlPrefix.length - 1)}` : _;
+    if (mapping) return `${attribute}=${quote}assets/${mapping.assetKey}${url.substring(mapping.urlPrefix.length - 1)}`;
+    return attribute.toLowerCase() === 'background' ? `${attribute}=${quote}${UNRESOLVED_ASSET}` : _;
   });
 }
 function htmlControls(source) {
