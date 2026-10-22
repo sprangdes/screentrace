@@ -9,6 +9,7 @@ import {collectElementStyles,thumbnailDataUri,captureOptions} from './element-st
 import {annotateConditions,annotateSource,convertControls,expressionList,markupTokens,markupAttributes,replaceMarkupAttribute,stripMarkupAttributes,replaceDynamicExpressions} from './preview-markup.mjs';
 import { deduplicateMappings, discoverSpringResourceMappings } from './spring-resource-mappings.mjs';
 import {loadStrutsMessageCatalog,renderStrutsMessages} from './struts-messages.mjs';
+import {loadStrutsMenus,expandStrutsMenus} from './struts-menu.mjs';
 import {renderUnsupportedJsfTags} from './unsupported-components.mjs';
 import {prepareReactPreview} from './react-preview.mjs';
 import { assertOutputPathWithin, createDirectoryWithin, readBufferLimited, readUtf8Limited, resolveExistingDirectoryWithin, resolveExistingFileWithin, writeBufferWithin } from './safe-files.mjs';
@@ -27,10 +28,21 @@ const styleCapture={version:'2',schemaVersion:'2.2',screens:{},styles:{},default
 const endpointByPath = new Map(graph.nodes.filter(node => node.type === 'ENDPOINT').map(node => [node.attributes?.path, node]));
 const handlerByEndpoint = new Map(graph.relationships.filter(edge => edge.type === 'HANDLED_BY').map(edge => [edge.from, edge.to]));
 const screenByHandler = new Map(graph.relationships.filter(edge => edge.type === 'RENDERS').map(edge => [edge.from, edge.to]));
+const WEB_ROOT_NAMES=['src/main/webapp','WebContent','WebRoot','webapp','web'];
+function nestedWebRoot(graph){
+ const roots=new Set();
+ for(const node of graph.nodes){const view=node.type==='SCREEN'?node.attributes?.view?.replaceAll('\\','/'):null;if(!view)continue;
+  const match=view.match(new RegExp(`^(.+?/(?:${WEB_ROOT_NAMES.map(name=>name.replaceAll('/','\\/')).join('|')}))/`));if(match)roots.add(match[1]);}
+ return roots.size===1?[...roots][0]:null;
+}
 let webRoot = path.join(target, 'src/main/webapp');
-if(previewV2){for(const candidate of ['src/main/webapp','WebContent','WebRoot','webapp','web']){try{await resolveExistingDirectoryWithin(target,path.join(target,candidate));webRoot=path.join(target,candidate);break;}catch{}}}
+if(previewV2){let found=false;for(const candidate of WEB_ROOT_NAMES){try{await resolveExistingDirectoryWithin(target,path.join(target,candidate));webRoot=path.join(target,candidate);found=true;break;}catch{}}
+ // A Maven submodule (oussamazoghlami/SpringStrutsHibernate: StrutsSpringExample/src/main/webapp) has no top-level web root;
+ // when every screen view lies under one nested web root, that is the application's.
+ if(!found){const nested=nestedWebRoot(graph);if(nested)try{await resolveExistingDirectoryWithin(target,path.join(target,nested));webRoot=path.join(target,nested);}catch{}}}
 const tagRoot = path.join(webRoot, 'WEB-INF/tags');
 const strutsMessages=await loadStrutsMessageCatalog(target,webRoot);
+const strutsMenus=await loadStrutsMenus(target,webRoot);
 const htmlRoot = path.join(output, 'static-preview');
 const screenshotRoot = path.join(output, 'screenshots');
 const htmlRootReal = await createDirectoryWithin(output, htmlRoot);
@@ -293,6 +305,7 @@ async function renderJsp(screen) {
   if(previewV2)source=await expandTiles(source,tilesContext(screen),jsp,new Set([jsp]),0);
   if(previewV2)source=await expandGraphFragments(source,view,screen,graph,file=>readUtf8Limited(projectRoot,path.join(target,file)));
   if(previewV2)declaredTagDirs(source);
+  source = expandStrutsMenus(source,strutsMenus);
   source = removeDirectives(source);
   if(screen.attributes?.sourceEncoding)source=markupTokens(source).map(t=>{
    if(t.name!=='meta'||t.closing)return t.text;const a=markupAttributes(t.text);

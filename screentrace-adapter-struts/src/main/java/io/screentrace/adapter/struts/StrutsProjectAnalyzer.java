@@ -564,10 +564,11 @@ public final class StrutsProjectAnalyzer {
 
   private static void addInteractions(JspAnalysis jsp,State state) throws IOException {
     Map<String,List<Control>> byView=new TreeMap<>();Map<String,List<ScreenLoadCall>> loadCallsByView=new TreeMap<>();
+    var menus=io.screentrace.parser.jsp.StrutsMenus.load(state.inventory.root(),state.inventory.files());
     for(Path file:state.inventory.files()) if(file.toString().endsWith(".jsp")||file.toString().endsWith(".jspf")||file.toString().endsWith(".html")||file.toString().endsWith(".htm")) {
       String path=relative(state,file);List<Control> controls=new ArrayList<>();
       try {
-        String text=SafeProjectFiles.readUtf8Limited(state.inventory.root(),file,SafeProjectFiles.MAX_JSP_FILE_BYTES);
+        String text=menus.expand(SafeProjectFiles.readUtf8Limited(state.inventory.root(),file,SafeProjectFiles.MAX_JSP_FILE_BYTES));
         String action=null,formGroup=null,activeModule=null;Map<String,Integer> occurrences=new HashMap<>();
         for(MarkupTag tag:MarkupTag.scan(text)) {
           String name=tag.name().toLowerCase(Locale.ROOT);

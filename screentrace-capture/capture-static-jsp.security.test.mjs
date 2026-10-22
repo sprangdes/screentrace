@@ -59,3 +59,36 @@ test('preexisting output symlink is rejected before writing outside the output r
   await rm(root, { recursive: true, force: true });
   await rm(outside, { recursive: true, force: true });
 });
+
+test('a Maven submodule web root supplies its message bundle and struts-menu items', async () => {
+  // oussamazoghlami/SpringStrutsHibernate: everything lives under StrutsSpringExample/, so the preview showed
+  // "（訊息 key：customer.label.name）" and an empty menu column.
+  const root = await mkdtemp(path.join(os.tmpdir(), 'screentrace-capture-module-'));
+  const output = path.join(root, 'analysis');
+  const module = path.join(root, 'StrutsSpringExample');
+  await mkdir(path.join(module, 'src/main/webapp/WEB-INF'), { recursive: true });
+  await mkdir(path.join(module, 'src/main/resources'), { recursive: true });
+  await mkdir(output, { recursive: true });
+  await writeFile(path.join(module, 'src/main/webapp/WEB-INF/struts-config.xml'), '<struts-config><message-resources parameter="Customer"/>'
+    + '<plug-in className="net.sf.navigator.menu.MenuPlugIn"><set-property property="menuConfig" value="/WEB-INF/menu-config.xml"/></plug-in></struts-config>');
+  await writeFile(path.join(module, 'src/main/webapp/WEB-INF/menu-config.xml'), '<MenuConfig><Menus><Menu name="adminCustomer"><Item title="Add a new customer" location="AddCustomer.do"/></Menu></Menus></MenuConfig>');
+  await writeFile(path.join(module, 'src/main/resources/Customer.properties'), 'customer.label.name = Name\n');
+  await writeFile(path.join(module, 'src/main/webapp/add.jsp'), '<%@ taglib uri="http://struts.apache.org/tags-bean" prefix="bean"%><%@ taglib uri="http://struts-menu.sf.net/tag" prefix="menu" %>'
+    + '<html><body><nav><menu:displayMenu name="adminCustomer"/></nav><label><bean:message key="customer.label.name"/></label></body></html>');
+  await writeFile(output + '/application-graph.json', JSON.stringify({ schemaVersion: '2.2',
+    nodes: [{ id: 'screen:add', type: 'SCREEN', attributes: { view: 'StrutsSpringExample/src/main/webapp/add.jsp' } }], relationships: [] }));
+
+  const child = spawn(process.execPath, [path.resolve('screentrace-capture/capture-static-jsp.mjs'), root, output, '--preview-v2'], { stdio: ['ignore', 'pipe', 'pipe'] });
+  let stdout = '', stderr = '';
+  child.stdout.on('data', data => { stdout += data; });
+  child.stderr.on('data', data => { stderr += data; });
+  const status = await new Promise(resolve => child.on('close', resolve));
+  try {
+    assert.equal(status, 0, stdout + stderr);
+    const rendered = await readFile(path.join(output, 'static-preview/screen_add.html'), 'utf8');
+    assert.match(rendered, /<label[^>]*>Name<\/label>/);
+    assert.doesNotMatch(rendered, /訊息 key/);
+    assert.match(rendered, />Add a new customer<\/a>/);
+    assert.doesNotMatch(rendered, /displayMenu/i);
+  } finally { await rm(root, { recursive: true, force: true }); }
+});
