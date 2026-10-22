@@ -1,5 +1,10 @@
 import {declared, patternNames, resolveExport, resolveModuleName, resolveSpecifier, FUNCTIONS} from './modules.mjs';
 
+/** A condition's source text with whitespace removed, so the same test written twice compares equal. */
+export function conditionText(module, node) {
+  return node ? module.code.slice(node.start, node.end).replace(/\s+/g, '') : '';
+}
+
 /**
  * Static evaluation over Babel ASTs. Nothing from the target project is executed: values are literals,
  * references to AST nodes with the scope they close over, or UNKNOWN with a name hint for placeholders.
@@ -21,6 +26,8 @@ export class Evaluator {
     this.maxDepth = maxDepth;
     this.moduleScopes = new Map();
     this.active = new Set();
+    /** Condition text → assumed outcome, set while one branch of a request is enumerated. */
+    this.assumptions = null;
   }
 
   moduleScope(file) {
@@ -319,6 +326,8 @@ export class Evaluator {
       }
       case 'BinaryExpression': return node.operator === '+' ? cross(this.strings(node.left, scope, depth + 1), this.strings(node.right, scope, depth + 1)) : [placeholder(node)];
       case 'ConditionalExpression': {
+        const assumed = this.assumptions && scope?.module ? this.assumptions.get(conditionText(scope.module, node.test)) : undefined;
+        if (assumed !== undefined) return this.strings(assumed ? node.consequent : node.alternate, scope, depth + 1);
         const truth = truthy(this.evaluate(node.test, scope, depth));
         if (truth !== null) return this.strings(truth ? node.consequent : node.alternate, scope, depth + 1);
         return union(this.strings(node.consequent, scope, depth + 1), this.strings(node.alternate, scope, depth + 1));

@@ -9,10 +9,6 @@ import java.nio.file.*;
 import java.io.IOException;
 import java.util.*;
 import java.util.regex.Pattern;
-import javax.xml.XMLConstants;
-import javax.xml.parsers.DocumentBuilderFactory;
-import org.xml.sax.InputSource;
-import java.io.StringReader;
 
 /** Source collection only. Never loads target classes or JavaScript modules. */
 public final class ScriptSources {
@@ -27,6 +23,7 @@ public final class ScriptSources {
   public static Result collect(ProjectScanner.ProjectInventory inventory,Map<String,List<String>> requestDirectories) {
     Map<String,String> markup=new TreeMap<>();Map<String,List<Definition>> defs=new TreeMap<>();List<Diagnostic> diagnostics=new ArrayList<>();boolean unknownDefinitions=false;
     List<Path> files=inventory.files().stream().sorted().toList();
+    List<ResourceHandler> handlers=resourceHandlers(inventory);
     for(var file:files) {
       String path=inventory.root().relativize(file).toString().replace('\\','/');
       if(!(path.endsWith(".jsp")||path.endsWith(".jspf")||path.endsWith(".html")||path.endsWith(".htm")||path.endsWith(".xml")||path.endsWith(".java")))continue;
@@ -80,11 +77,11 @@ public final class ScriptSources {
         if(guard!=null)element.put("guard",guard);if(stack.stream().anyMatch(d->Set.of("c:foreach","logic:iterate").contains(d.get("sourceTag"))))element.put("dynamic",true);dom.add(element);
         if(name.equals("script")) {
           if(tag.attribute("src")!=null) {
-            String raw=tag.attribute("src"),target=raw,status="CONFIRMED";List<AnalysisEvidence> evidence=new ArrayList<>();boolean eligible=true;
-            for(var mapping:resourceMappings(inventory,raw))evidence.add(proof(mapping.source(),"CONFIRMED","靜態資源映射；路徑="+mapping.file()+"；設定="+mapping.mapping()+" → "+mapping.location()));
-            var resolution=resolver.resolve(raw,tag);if(!resolution.definitions().isEmpty()){target=resolution.value();evidence.addAll(resolution.definitions());}
-            else if(MarkupAnalysis.dynamic(raw)) {
-              var prefix=PREFIX.matcher(raw);
+            String raw=tag.attribute("src"),target=withoutPathParameters(raw),status="CONFIRMED";List<AnalysisEvidence> evidence=new ArrayList<>();boolean eligible=true;
+            for(var mapping:resourceMappings(inventory,handlers,raw))evidence.add(proof(mapping.source(),"CONFIRMED","靜態資源映射；路徑="+mapping.file()+"；設定="+mapping.mapping()+" → "+mapping.location()));
+            var resolution=resolver.resolve(target,tag);if(!resolution.definitions().isEmpty()){target=withoutPathParameters(resolution.value());evidence.addAll(resolution.definitions());}
+            else if(MarkupAnalysis.dynamic(target)) {
+              var prefix=PREFIX.matcher(target);
               if(prefix.matches()) {
                 String variable=prefix.group(1);var definitions=defs.getOrDefault(variable,List.of());
                 if(definitions.isEmpty()&&!unknownDefinitions){target=prefix.group(2);status="INFERRED";}
@@ -97,13 +94,16 @@ public final class ScriptSources {
               } else eligible=false;
             }
             if(target.startsWith("http:")||target.startsWith("https:")||target.startsWith("//")||MarkupAnalysis.dynamic(target))eligible=false;
-            List<String> candidates=eligible?candidates(inventory,path,target,requestDirectories.getOrDefault(path,List.of())):List.of();
+            List<String> candidates=eligible?candidates(inventory,handlers,path,target,requestDirectories.getOrDefault(path,List.of())):List.of();
             if(candidates.size()==1&&!target.startsWith("/")&&Path.of(path).getParent()!=null&&!Path.of(path).getParent().resolve(target).normalize().toString().replace('\\','/').equals(candidates.get(0))){status="INFERRED";evidence.add(proof(new SourceLocation(path,tag.line()),"INFERRED","相對 script 資源依有效 web root 唯一定位；未假設執行時 context path"));}
             if(!requestDirectories.getOrDefault(path,List.of()).isEmpty()&&!target.startsWith("/"))evidence.add(proof(new SourceLocation(path,tag.line()),"INFERRED","相對資源的來源畫面 GET 路由目錄="+requestDirectories.get(path)));
             if(candidates.size()>1)status="AMBIGUOUS";else if(candidates.isEmpty())status="UNRESOLVED";
             var location=new SourceLocation(path,tag.attributeLine("src"));evidence.add(proof(location,status,"原始 script src："+raw+"；候選："+candidates));
             references.add(new Reference(location,raw,status,candidates,List.copyOf(evidence)));
-            if(candidates.size()==1) {
+            if(candidates.size()==1&&candidates.get(0).matches("(?i).*\\.jspf?$"))
+              // A JSP's text is a server template; the JavaScript it emits cannot be read statically, so it is not analyzed as one.
+              diagnostics.add(diag(path,tag.line(),"JS_TEMPLATE_SOURCE","script src 指向 JSP 樣板，伺服器輸出的 JavaScript 無法靜態取得，未分析；原文："+raw+"；檔案："+candidates.get(0)));
+            else if(candidates.size()==1) {
               String file=candidates.get(0);try{scripts.add(new Script(file,1,SafeProjectFiles.readUtf8Limited(inventory.root(),inventory.root().resolve(file),SafeProjectFiles.MAX_SOURCE_FILE_BYTES),"module".equals(tag.attribute("type")),"",null,path,status,raw,List.copyOf(evidence),Map.of(),guard,null));}
               catch(IOException|SecurityException error){diagnostics.add(diag(path,tag.line(),"JS_SOURCE_READ",error.getMessage()));}
             } else diagnostics.add(diag(path,tag.line(),"JS_SCRIPT_REFERENCE","script src 無法唯一解析；原文："+raw+"；候選："+candidates));
@@ -125,7 +125,7 @@ public final class ScriptSources {
     }
     return new Result(List.copyOf(scripts),List.copyOf(references),List.copyOf(diagnostics),List.copyOf(dom),Collections.unmodifiableMap(moduleFiles));
   }
-  private static List<String> candidates(ProjectScanner.ProjectInventory inventory,String owner,String target,List<String> requestDirectories) {
+  private static List<String> candidates(ProjectScanner.ProjectInventory inventory,List<ResourceHandler> handlers,String owner,String target,List<String> requestDirectories) {
     Set<String> candidates=new TreeSet<>(),targets=new TreeSet<>();String raw=target.split("[?#]",2)[0];
     if(raw.startsWith("//")||raw.contains(":"))return List.of();
     if(!Arrays.asList(raw.split("/")).contains(".."))targets.add(raw);
@@ -141,18 +141,34 @@ public final class ScriptSources {
         }else if(Path.of(owner).getParent()!=null&&Path.of(owner).getParent().resolve(clean).normalize().toString().replace('\\','/').equals(relative))candidates.add(relative);
       }
       if(!clean.startsWith("/"))for(String root:inventory.webRoots())for(var file:inventory.files())if(inventory.root().relativize(file).toString().replace('\\','/').equals(root+clean))candidates.add(root+clean);
-      resourceMappings(inventory,clean).forEach(mapping->candidates.add(mapping.file()));
+      resourceMappings(inventory,handlers,clean).forEach(mapping->candidates.add(mapping.file()));
     }
     return List.copyOf(candidates);
   }
   private record ResourceMapping(String file,String mapping,String location,SourceLocation source) { }
-  private static List<ResourceMapping> resourceMappings(ProjectScanner.ProjectInventory inventory,String target) {
-    if(target==null||target.startsWith("//")||target.contains(":")||Arrays.asList(target.split("/")).contains(".."))return List.of();String clean=target.split("[?#]",2)[0];List<ResourceMapping> result=new ArrayList<>();
+  /** Servlet path parameters such as ;jsessionid=… are URL rewriting, never part of the resource path. */
+  static String withoutPathParameters(String url) {
+    if(url==null)return null;int semicolon=url.indexOf(';');if(semicolon<0)return url;
+    int end=url.length();for(char delimiter:new char[]{'?','#'}){int index=url.indexOf(delimiter,semicolon);if(index>=0)end=Math.min(end,index);}
+    return url.substring(0,semicolon)+url.substring(end);
+  }
+  private record ResourceHandler(String mapping,String location,SourceLocation source) { }
+  /** Every mvc:resources declaration in the project, parsed once per collection. */
+  private static List<ResourceHandler> resourceHandlers(ProjectScanner.ProjectInventory inventory) {
+    List<ResourceHandler> result=new ArrayList<>();
     for(Path config:inventory.files())if(config.toString().endsWith(".xml"))try {
       String xml=SafeProjectFiles.readUtf8Limited(inventory.root(),config,SafeProjectFiles.MAX_XML_FILE_BYTES);if(!xml.contains("resources"))continue;
-      var factory=DocumentBuilderFactory.newInstance();factory.setNamespaceAware(true);factory.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING,true);factory.setFeature("http://apache.org/xml/features/disallow-doctype-decl",true);factory.setAttribute(XMLConstants.ACCESS_EXTERNAL_DTD,"");factory.setAttribute(XMLConstants.ACCESS_EXTERNAL_SCHEMA,"");factory.setExpandEntityReferences(false);var doc=factory.newDocumentBuilder().parse(new InputSource(new StringReader(xml)));var all=doc.getElementsByTagName("*");
-      for(int i=0;i<all.getLength();i++){var element=(org.w3c.dom.Element)all.item(i);String name=element.getLocalName()==null?element.getTagName().replaceFirst("^.*:",""):element.getLocalName();if(!name.equals("resources")||!element.hasAttribute("mapping")||!element.hasAttribute("location"))continue;String mapping=element.getAttribute("mapping"),location=element.getAttribute("location");String prefix=mapping.endsWith("**")?mapping.substring(0,mapping.length()-2):null;if(prefix==null||!clean.startsWith(prefix))continue;String suffix=clean.substring(prefix.length()),base=location.split(",",2)[0].strip();if(!base.startsWith("/"))continue;for(String webRoot:inventory.webRoots()){String relative=webRoot.replaceFirst("/$","")+base+suffix;if(inventory.files().stream().anyMatch(f->inventory.root().relativize(f).toString().replace('\\','/').equals(relative))){int offset=xml.indexOf("mapping");int line=offset<0?1:1+(int)xml.substring(0,offset).chars().filter(c->c=='\n').count();result.add(new ResourceMapping(relative,mapping,location,new SourceLocation(inventory.root().relativize(config).toString().replace('\\','/'),line)));}}}
+      var all=SafeProjectFiles.parseXml(xml,true).getElementsByTagName("*");
+      for(int i=0;i<all.getLength();i++){var element=(org.w3c.dom.Element)all.item(i);String name=element.getLocalName()==null?element.getTagName().replaceFirst("^.*:",""):element.getLocalName();if(!name.equals("resources")||!element.hasAttribute("mapping")||!element.hasAttribute("location"))continue;
+        int offset=xml.indexOf("mapping");int line=offset<0?1:1+(int)xml.substring(0,offset).chars().filter(c->c=='\n').count();
+        result.add(new ResourceHandler(element.getAttribute("mapping"),element.getAttribute("location"),new SourceLocation(inventory.root().relativize(config).toString().replace('\\','/'),line)));}
     }catch(Exception ignored){/* Unsafe or malformed XML never authorizes a resource mapping. */}
+    return List.copyOf(result);
+  }
+  private static List<ResourceMapping> resourceMappings(ProjectScanner.ProjectInventory inventory,List<ResourceHandler> handlers,String target) {
+    if(target==null||target.startsWith("//")||target.contains(":")||Arrays.asList(target.split("/")).contains(".."))return List.of();String clean=target.split("[?#]",2)[0];List<ResourceMapping> result=new ArrayList<>();
+    for(ResourceHandler handler:handlers){String mapping=handler.mapping(),location=handler.location();String prefix=mapping.endsWith("**")?mapping.substring(0,mapping.length()-2):null;if(prefix==null||!clean.startsWith(prefix))continue;String suffix=clean.substring(prefix.length()),base=location.split(",",2)[0].strip();if(!base.startsWith("/"))continue;
+      for(String webRoot:inventory.webRoots()){String relative=webRoot.replaceFirst("/$","")+base+suffix;if(inventory.files().stream().anyMatch(f->inventory.root().relativize(f).toString().replace('\\','/').equals(relative)))result.add(new ResourceMapping(relative,mapping,location,handler.source()));}}
     return result.stream().distinct().sorted(Comparator.comparing(ResourceMapping::file).thenComparing(m->m.source().file())).toList();
   }
   private static List<AnalysisEvidence> withProof(List<AnalysisEvidence> values,AnalysisEvidence source){var result=new ArrayList<>(values);result.add(source);return List.copyOf(result);}

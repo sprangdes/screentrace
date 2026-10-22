@@ -59,7 +59,9 @@ export async function collectElementStyles(page,context,graph,screenId,options=c
  const tags=[...new Map(raw.map(e=>[`${e.namespace}:${e.tag}`,{tag:e.tag,namespace:e.namespace}])).values()].sort((a,b)=>a.tag.localeCompare(b.tag,'en')||a.namespace.localeCompare(b.namespace,'en'));
  const baseline=await context.newPage();let defaults;
  try{await baseline.setContent('<!doctype html><html><head></head><body></body></html>');defaults=await baseline.evaluate(tags=>{
-  const result={};for(const {tag,namespace} of tags){let element=tag==='html'?document.documentElement:tag==='body'?document.body:document.createElementNS(namespace,tag);if(!['html','body'].includes(tag))document.body.append(element);const css=getComputedStyle(element);result[`${namespace}:${tag}`]=Object.fromEntries([...css].sort().map(k=>[k,css.getPropertyValue(k)]));if(!['html','body'].includes(tag))element.remove();}return result;
+  const result={};for(const {tag,namespace} of tags){let element;if(tag==='html')element=document.documentElement;else if(tag==='body')element=document.body;else{
+   // The HTML parser accepts names createElementNS rejects (JavaScript parsed as markup yields <s.length;>); such an element is an unknown element, so a valid unknown stand-in has its defaults.
+   try{element=document.createElementNS(namespace,tag);}catch{element=document.createElementNS(namespace,'st-unparseable-name');}}if(!['html','body'].includes(tag))document.body.append(element);const css=getComputedStyle(element);result[`${namespace}:${tag}`]=Object.fromEntries([...css].sort().map(k=>[k,css.getPropertyValue(k)]));if(!['html','body'].includes(tag))element.remove();}return result;
  },tags);}finally{await baseline.close();}
  const styles={};const elements=raw.map(({css,namespace,...element})=>{
   const defaultId=`${namespace}:${element.tag}`,base=defaults[defaultId],delta=sorted(Object.fromEntries(Object.entries(css).filter(([key,value])=>base[key]!==value)));

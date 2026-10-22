@@ -7,11 +7,7 @@ import io.screentrace.scanner.SafeProjectFiles;
 import io.screentrace.parser.jsp.MarkupTag;
 import java.nio.file.Path;
 import java.util.*;
-import javax.xml.XMLConstants;
-import javax.xml.parsers.DocumentBuilderFactory;
 import org.w3c.dom.*;
-import org.xml.sax.InputSource;
-import java.io.StringReader;
 
 /** Reads registered flow state transitions; never evaluates actions, guards or flow expressions. */
 final class SpringWebFlowContribution {
@@ -75,7 +71,7 @@ final class SpringWebFlowContribution {
   for(Element transition:children(node))if(transition.getTagName().equals("transition")&&transition.hasAttribute("to"))result.addAll(destinations(transition.getAttribute("to"),states,screens,seen,depth+1));return result;
  }
  private static List<Element> children(Element node){List<Element> result=new ArrayList<>();for(Node child=node.getFirstChild();child!=null;child=child.getNextSibling())if(child instanceof Element e)result.add(e);return result;}
- private static Document parse(String xml)throws Exception{var f=DocumentBuilderFactory.newInstance();f.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING,true);f.setFeature("http://apache.org/xml/features/disallow-doctype-decl",true);f.setAttribute(XMLConstants.ACCESS_EXTERNAL_DTD,"");f.setAttribute(XMLConstants.ACCESS_EXTERNAL_SCHEMA,"");f.setExpandEntityReferences(false);return f.newDocumentBuilder().parse(new InputSource(new StringReader(xml)));}
+ private static Document parse(String xml)throws Exception{return io.screentrace.scanner.SafeProjectFiles.parseXml(xml,false);}
  private static List<AnalysisEvidence> proof(SourceLocation source,String detail){return List.of(new AnalysisEvidence(source,"SpringWebFlowParser",ResolutionStatus.CONFIRMED,detail));}
  private static void edge(Map<String,Relationship> edges,EdgeType type,String from,String to,SourceLocation source,String detail){String id=ApplicationGraph.id(NodeType.COMPONENT,type+":"+from+":"+to);edges.put(id,new Relationship(id,type,from,to,Confidence.CONFIRMED,source,proof(source,detail)));}
 }

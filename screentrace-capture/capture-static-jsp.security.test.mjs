@@ -60,6 +60,96 @@ test('preexisting output symlink is rejected before writing outside the output r
   await rm(outside, { recursive: true, force: true });
 });
 
+test('a Tiles list attribute looped by the layout links every listed stylesheet', async () => {
+  // RawSanj/spring-tiles-sample-app: <put-list-attribute name="stylesheets"> + tilesx:useAttribute + c:forEach left
+  // <c:url value="${css}"/> unresolved, so the AdminLTE pages rendered without styles.
+  const root = await mkdtemp(path.join(os.tmpdir(), 'screentrace-capture-tiles-list-'));
+  const output = path.join(root, 'analysis');
+  const web = path.join(root, 'src/main/webapp');
+  await mkdir(path.join(web, 'WEB-INF/layout'), { recursive: true });
+  await mkdir(path.join(web, 'resources/css'), { recursive: true });
+  await mkdir(output, { recursive: true });
+  await writeFile(path.join(web, 'resources/css/app.css'), 'h1{color:rgb(1, 2, 3)}');
+  await writeFile(path.join(web, 'WEB-INF/layout/common.jsp'), '<%@ taglib uri="http://tiles.apache.org/tags-tiles-extras" prefix="tilesx" %>'
+    + '<html><head><tilesx:useAttribute id="stylesheets" name="stylesheets" classname="java.util.List" />'
+    + '<c:forEach var="css" items="${stylesheets}"><link rel="stylesheet" type="text/css" href="<c:url value="${css}"/>"></c:forEach></head>'
+    + '<body><h1>Tracker</h1></body></html>');
+  await writeFile(output + '/application-graph.json', JSON.stringify({ schemaVersion: '2.2', nodes: [{ id: 'screen:home', type: 'SCREEN', attributes: {
+    view: 'src/main/webapp/WEB-INF/layout/common.jsp', tilesDefinition: 'true', tilesDefinitionName: 'home',
+    tilesAttributes: JSON.stringify({ template: 'src/main/webapp/WEB-INF/layout/common.jsp', attributes: { stylesheets: { list: ['/resources/css/app.css'] } } }) } }], relationships: [] }));
+
+  const child = spawn(process.execPath, [path.resolve('screentrace-capture/capture-static-jsp.mjs'), root, output, '--preview-v2'], { stdio: ['ignore', 'pipe', 'pipe'] });
+  let stdout = '', stderr = '';
+  child.stdout.on('data', data => { stdout += data; });
+  child.stderr.on('data', data => { stderr += data; });
+  const status = await new Promise(resolve => child.on('close', resolve));
+  try {
+    assert.equal(status, 0, stdout + stderr);
+    const rendered = await readFile(path.join(output, 'static-preview/screen_home.html'), 'utf8');
+    assert.doesNotMatch(rendered, /\$\{css\}|c:forEach/);
+    assert.match(rendered, /<link[^>]+href="[^"]*resources\/css\/app\.css"/);
+    const capture = JSON.parse(await readFile(path.join(output, 'static-preview/element-styles.json'), 'utf8'));
+    const heading = capture.screens['screen:home'].elements.find(element => element.tag === 'h1');
+    assert.equal(capture.styles[heading.styleId].color, 'rgb(1, 2, 3)', 'the listed stylesheet is applied');
+  } finally { await rm(root, { recursive: true, force: true }); }
+});
+
+test('unmapped root-absolute style URLs never become file URLs outside the analysis output', async () => {
+  // chrisekelley/zeprs hard-codes its context path: <td background="/zeprs/images/banner_bkgd.gif">. Chromium computed
+  // it as file:///zeprs/…, and the preview reader correctly refused the whole analysis.
+  const root = await mkdtemp(path.join(os.tmpdir(), 'screentrace-capture-ctx-'));
+  const output = path.join(root, 'analysis');
+  const jsp = path.join(root, 'src/main/webapp/WEB-INF/jsp/page.jsp');
+  await mkdir(path.dirname(jsp), { recursive: true });
+  await mkdir(output, { recursive: true });
+  await writeFile(output + '/application-graph.json', JSON.stringify({ schemaVersion: '2.2',
+    nodes: [{ id: 'screen:ctx', type: 'SCREEN', attributes: { view: 'src/main/webapp/WEB-INF/jsp/page.jsp' } }], relationships: [] }));
+  await writeFile(jsp, '<html><body><table><tr><td background="/zeprs/images/banner_bkgd.gif">Banner</td></tr></table>'
+    + '<div style="background-image:url(/AppName/images/tile.gif)">Tile</div></body></html>');
+
+  const child = spawn(process.execPath, [path.resolve('screentrace-capture/capture-static-jsp.mjs'), root, output, '--preview-v2'], { stdio: ['ignore', 'pipe', 'pipe'] });
+  let stdout = '', stderr = '';
+  child.stdout.on('data', data => { stdout += data; });
+  child.stderr.on('data', data => { stderr += data; });
+  const status = await new Promise(resolve => child.on('close', resolve));
+  try {
+    assert.equal(status, 0, stdout + stderr);
+    const rendered = await readFile(path.join(output, 'static-preview/screen_ctx.html'), 'utf8');
+    assert.doesNotMatch(rendered, /\/zeprs\/images|\/AppName\/images/);
+    assert.match(rendered, /Banner/);
+    const styles = await readFile(path.join(output, 'static-preview/element-styles.json'), 'utf8');
+    assert.doesNotMatch(styles, /file:\/\/\/(zeprs|AppName)/);
+  } finally { await rm(root, { recursive: true, force: true }); }
+});
+
+test('guarded bean:write tags and script text parsed as markup still render', async () => {
+  // chrisekelley/zeprs: 26 screens failed JSON.parse on a double-encoded guard, and engine2.jsp's JavaScript produced
+  // an element named "s.length;" that createElementNS rejects.
+  const root = await mkdtemp(path.join(os.tmpdir(), 'screentrace-capture-skips-'));
+  const output = path.join(root, 'analysis');
+  const jsp = path.join(root, 'src/main/webapp/WEB-INF/jsp/page.jsp');
+  await mkdir(path.dirname(jsp), { recursive: true });
+  await mkdir(output, { recursive: true });
+  await writeFile(output + '/application-graph.json', JSON.stringify({ schemaVersion: '2.2',
+    nodes: [{ id: 'screen:skips', type: 'SCREEN', attributes: { view: 'src/main/webapp/WEB-INF/jsp/page.jsp' } }], relationships: [] }));
+  await writeFile(jsp, '<html><body><c:if test="${! empty oxytocin}"><div>Dose <bean:write name="oxytocin" property="oxytocin${pos}"/></div></c:if>'
+    + '<p>function encode(s) { for (i = 0; i <s.length; i++) { enc += s.charAt(i); } }</p></body></html>');
+
+  const child = spawn(process.execPath, [path.resolve('screentrace-capture/capture-static-jsp.mjs'), root, output, '--preview-v2'], { stdio: ['ignore', 'pipe', 'pipe'] });
+  let stdout = '', stderr = '';
+  child.stdout.on('data', data => { stdout += data; });
+  child.stderr.on('data', data => { stderr += data; });
+  const status = await new Promise(resolve => child.on('close', resolve));
+  try {
+    assert.equal(status, 0, stdout + stderr);
+    const capture = JSON.parse(await readFile(path.join(output, 'static-preview/element-styles.json'), 'utf8'));
+    const screen = capture.screens['screen:skips'];
+    assert.equal(screen.rendering.mode, 'reconstructed', JSON.stringify(screen.rendering));
+    assert.ok(screen.elements.some(element => JSON.stringify(element.conditions) === JSON.stringify(['${! empty oxytocin}'])));
+    assert.ok(screen.elements.some(element => element.tag === 's.length;'));
+  } finally { await rm(root, { recursive: true, force: true }); }
+});
+
 test('a Maven submodule web root supplies its message bundle and struts-menu items', async () => {
   // oussamazoghlami/SpringStrutsHibernate: everything lives under StrutsSpringExample/, so the preview showed
   // "（訊息 key：customer.label.name）" and an empty menu column.

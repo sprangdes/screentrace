@@ -29,7 +29,52 @@ final class SpringSecurityProcessors {
     if(destinations.isEmpty())diagnostics.add(new Diagnostic("來源處理入口已找到；執行結果無法確認",Confidence.UNRESOLVED,source,"SECURITY_PROCESSOR_RESULT_UNRESOLVED",proof));
    }
   }
+  xmlNamespace(graph,inventory,nodes,edges,diagnostics);
   return new ApplicationGraph(graph.application(),List.copyOf(nodes.values()),List.copyOf(edges.values()),diagnostics,graph.apiContracts(),graph.schemaVersion(),graph.behaviors(),graph.validationRules());
+ }
+ /**
+  * Spring Security XML namespace: <form-login> and <logout> inside <http>. An explicit login-processing-url / logout-url
+  * is CONFIRMED; otherwise the declared Spring Security generation's default is INFERRED (3.x: POST /j_spring_security_check
+  * and /j_spring_security_logout for any method; 4.0+: POST /login and POST /logout). Without a declared version nothing is guessed.
+  */
+ private static void xmlNamespace(ApplicationGraph graph,ProjectInventory inventory,Map<String,GraphNode> nodes,Map<String,Relationship> edges,List<Diagnostic> diagnostics){
+  var version=io.screentrace.scanner.BuildVersions.of(inventory,"spring-security-config").or(()->io.screentrace.scanner.BuildVersions.of(inventory,"spring-security-web"));
+  for(var file:inventory.files()){
+   if(!file.getFileName().toString().endsWith(".xml"))continue;String relative=inventory.root().relativize(file).toString().replace('\\','/');String text;
+   try{text=io.screentrace.scanner.SafeProjectFiles.readUtf8Limited(inventory.root(),file,io.screentrace.scanner.SafeProjectFiles.MAX_XML_FILE_BYTES);}catch(Exception unreadable){continue;}
+   if(!text.contains("www.springframework.org/schema/security"))continue;
+   for(var tag:io.screentrace.parser.jsp.MarkupTag.scan(text)){
+    if(tag.closing())continue;String local=tag.name().replaceFirst("^.*:","");
+    if(local.equals("form-login"))xmlProcessor(graph,true,tag.attribute("login-processing-url"),tag.attribute("default-target-url"),new SourceLocation(relative,tag.line()),version,nodes,edges,diagnostics);
+    else if(local.equals("logout"))xmlProcessor(graph,false,tag.attribute("logout-url"),tag.attribute("logout-success-url"),new SourceLocation(relative,tag.line()),version,nodes,edges,diagnostics);
+   }
+  }
+ }
+ private static void xmlProcessor(ApplicationGraph graph,boolean login,String explicit,String target,SourceLocation source,Optional<io.screentrace.scanner.BuildVersions.Declared> version,Map<String,GraphNode> nodes,Map<String,Relationship> edges,List<Diagnostic> diagnostics){
+  String key=login?"login-processing-url":"logout-url",element=login?"<form-login>":"<logout>";String path;ResolutionStatus status;String detail;
+  if(explicit!=null){
+   path=explicit.trim();
+   if(!path.startsWith("/")||path.startsWith("//")||path.contains("${")||path.contains("#{")){diagnostics.add(new Diagnostic("Spring Security "+element+" "+key+" 不是可證明的字面路徑："+path,Confidence.UNRESOLVED,source,"SECURITY_PROCESSOR_DYNAMIC",List.of(new AnalysisEvidence(source,"SpringSecurityProcessors",ResolutionStatus.UNRESOLVED,key+"="+path))));return;}
+   status=ResolutionStatus.CONFIRMED;detail="XML "+element+" "+key+"="+path;
+  }else if(version.isPresent()){
+   boolean legacy=version.get().majorVersion()<4;path=login?(legacy?"/j_spring_security_check":"/login"):(legacy?"/j_spring_security_logout":"/logout");
+   status=ResolutionStatus.INFERRED;detail="Spring Security "+version.get().version()+"（"+version.get().file()+"）的 "+element+" 預設 "+key+"="+path;
+  }else{diagnostics.add(new Diagnostic("Spring Security 版本未宣告，無法確定 "+element+" 的預設處理網址",Confidence.UNRESOLVED,source,"SECURITY_PROCESSOR_DEFAULT_UNRESOLVED",List.of(new AnalysisEvidence(source,"SpringSecurityProcessors",ResolutionStatus.UNRESOLVED,element+" 未設定 "+key))));return;}
+  // UsernamePasswordAuthenticationFilter only accepts POST; a 3.x LogoutFilter matches any method, 4.0+ (CSRF on by default) POST.
+  String method=login||version.map(v->v.majorVersion()>=4).orElse(false)?"POST":"ANY";
+  String endpoint=StableGraphIds.endpoint(method,path),handler=ApplicationGraph.id(NodeType.HANDLER,source.file()+":xml:"+(login?"form-login":"logout"));if(nodes.containsKey(endpoint))return;
+  List<AnalysisEvidence> proof=List.of(new AnalysisEvidence(source,"SpringSecurityProcessors",status,detail+"；未執行 filter、認證、授權或 session"));
+  Confidence confidence=status==ResolutionStatus.CONFIRMED?Confidence.CONFIRMED:Confidence.INFERRED;
+  nodes.put(endpoint,new GraphNode(endpoint,NodeType.ENDPOINT,method+" "+path,Map.of("path",path,"httpMethod",method,"category","SECURITY_PROCESSOR"),source,confidence,proof));
+  var attrs=new TreeMap<String,String>();attrs.put("processor",login?"authentication":"logout");if(login)attrs.put("unresolvedReturnCount","1");
+  nodes.put(handler,new GraphNode(handler,NodeType.HANDLER,login?"來源設定的登入處理":"來源設定的登出處理",attrs,source,Confidence.INFERRED,proof));edge(edges,EdgeType.HANDLED_BY,endpoint,handler,source,proof);
+  // Requests to exactly this path were matched before the processor existed; the next URL pass re-checks them and re-reports real misses.
+  diagnostics.removeIf(d->Set.of("URL_UNRESOLVED","URL_METHOD_MISMATCH").contains(d.code())&&d.evidence().stream().anyMatch(e->("原始 URL="+path).equals(e.detail())));
+  String destination=target==null?null:target.trim();
+  if(destination!=null&&destination.startsWith("/")&&!destination.startsWith("//")&&!destination.contains("${")){
+   var destinationProof=new ArrayList<>(proof);destinationProof.add(new AnalysisEvidence(source,"SpringSecurityProcessors",ResolutionStatus.INFERRED,"來源正常分支目標="+destination+"；真實服務結果未執行"));
+   for(String screen:screens(graph,destination.split("[?#]",2)[0]))edge(edges,EdgeType.FORWARDS_TO,handler,screen,source,destinationProof);
+  }else diagnostics.add(new Diagnostic("來源處理入口已找到；執行結果無法確認",Confidence.UNRESOLVED,source,"SECURITY_PROCESSOR_RESULT_UNRESOLVED",proof));
  }
  private static boolean imports(ClassOrInterfaceDeclaration t,String name){return t.findCompilationUnit().orElseThrow().getImports().stream().anyMatch(i->!i.isAsterisk()&&i.getNameAsString().equals(name));}
  private static String root(Expression e){if(e instanceof NameExpr n)return n.getNameAsString();if(e instanceof MethodCallExpr c&&c.getScope().isPresent())return root(c.getScope().get());return "";}
