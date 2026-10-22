@@ -22,7 +22,7 @@ export function identifyLibrary(file,header='') {
  }return null;
 }
 export function analyze(request) {
- const behaviors=[],rules=[],diagnostics=[],libraries=[],dom=request.dom??[];let occurrences=new Map();
+ const behaviors=[],rules=[],diagnostics=[],libraries=[],dom=request.dom??[];let occurrences=new Map();const emitted=new Map(),guardPaths=new Map();
  const globalFunctions=new Map(),globalValues=new Map(),angularFunctions=new Map(),runners=[];const maxDepth=Number.isInteger(request.maxDepth)&&request.maxDepth>=0?request.maxDepth:10;
  const stable=(kind,...parts)=>{const key=JSON.stringify(parts),count=occurrences.get(kind+key)??0;occurrences.set(kind+key,count+1);return kind+':js:'+createHash('sha256').update(JSON.stringify([...parts,count])).digest('hex').slice(0,24);};
  const expanded=expandModules(request.sources??[],request.moduleFiles??{});diagnostics.push(...expanded.diagnostics);
@@ -76,10 +76,26 @@ export function analyze(request) {
    }return [];
   };
   const root={triggerId:unit.triggerId??unit.screenId??null,event:unit.event??'load',selector:unit.event&&unit.event!=='load'?'this':null,status:unit.event&&!unit.triggerId&&unit.event!=='load'?'UNRESOLVED':'CONFIRMED',guard:unit.guard??unitDom.find(d=>d.componentId===unit.triggerId)?.guard??null,parentId:null,env:rootEnv,depth:0,stack:[],trace:[],controllerName:unit.controllerName??null};
+  // One behavior per effect: the same node reached again for the same trigger through another call path (zeprs apgar.js:
+  // ~2,400 paths per control) merges into it. The effect happens when any path's guard holds, so the guards are OR-ed,
+  // and a path without a guard makes it unconditional. The trace keeps every distinct call-site step (bounded by the code,
+  // unlike the paths through it); pathCount counts the paths.
   const emit=(type,node,ctx,extra={},resolution='CONFIRMED')=>{
-   const expression=text(node,code),id=stable('behavior',unit.file,ctx.triggerId,ctx.event,type,expression,ctx.parentId);
+   const expression=text(node,code);
    let dynamic=false;function inspect(n){if(!n?.type||functionTypes.has(n.type))return;if(n.type==='MemberExpression'&&n.computed)dynamic=true;for(const c of children(n))inspect(c);}inspect(node);
-   const b={id,type,triggerId:ctx.triggerId,event:ctx.event,selector:ctx.selector,guard:ctx.guard,parentId:ctx.parentId,expression,ownerFile:unit.ownerFile,entryFile:unit.entryFile??unit.file,source:source(node),parser:'AcornStaticAnalyzer',status:status(parsed.status,unit.status,ctx.status,resolution,dynamic&&!extra.operation?'UNRESOLVED':null),trace:ctx.trace??[],...(extra.operation?{order:node.start}:{}),...extra};behaviors.push(b);return b;
+   const effectStatus=status(parsed.status,unit.status,ctx.status,resolution,dynamic&&!extra.operation?'UNRESOLVED':null);
+   // The AST node itself identifies the effect, so ids stay independent of source positions.
+   const key=JSON.stringify([unit.file,ctx.triggerId,ctx.event,ctx.selector,type,expression,ctx.parentId,effectStatus,extra]);
+   if(!emitted.has(node))emitted.set(node,new Map());const existing=emitted.get(node).get(key);
+   if(existing){
+    const paths=guardPaths.get(existing.id);if(ctx.guard==null)paths.unconditional=true;else paths.guards.add(ctx.guard);
+    existing.guard=paths.unconditional?null:paths.guards.size===1?[...paths.guards][0]:[...paths.guards].sort().map(g=>`(${g})`).join(' || ');
+    const steps=new Set(existing.trace.map(step=>JSON.stringify(step)));for(const step of ctx.trace??[])if(!steps.has(JSON.stringify(step))){steps.add(JSON.stringify(step));existing.trace.push(step);}
+    existing.pathCount=(existing.pathCount??1)+1;return existing;
+   }
+   const id=stable('behavior',unit.file,ctx.triggerId,ctx.event,type,expression,ctx.parentId);
+   guardPaths.set(id,{unconditional:ctx.guard==null,guards:new Set(ctx.guard==null?[]:[ctx.guard])});
+   const b={id,type,triggerId:ctx.triggerId,event:ctx.event,selector:ctx.selector,guard:ctx.guard,parentId:ctx.parentId,expression,ownerFile:unit.ownerFile,entryFile:unit.entryFile??unit.file,source:source(node),parser:'AcornStaticAnalyzer',status:effectStatus,trace:[...(ctx.trace??[])],...(extra.operation?{order:node.start}:{}),...extra};emitted.get(node).set(key,b);behaviors.push(b);return b;
   };
   const rule=(kind,node,ctx,field,message,parameters={},resolution='CONFIRMED')=>{
    const id=stable('validation',unit.file,field,kind,text(node,code));const r={id,kind,fields:[field],message,parameters,layer:'CLIENT',source:source(node),parser:'AcornStaticAnalyzer',status:status(parsed.status,unit.status,ctx.status,resolution)};rules.push(r);emit('VALIDATE',node,ctx,{targetId:id},resolution);return r;
@@ -150,7 +166,7 @@ export function analyze(request) {
     const call=node.test.argument,statements=node.consequent.type==='BlockStatement'?node.consequent.body:[node.consequent];
     if(call.type==='CallExpression'&&['confirm','window.confirm'].includes(calleeName(call.callee))&&call.arguments.length===1&&statements.length===1&&statements[0].type==='ReturnStatement'&&statements[0].argument?.value===false&&!lookup(ctx.env,calleeName(call.callee))&&!lookup(ctx.env,calleeName(call.callee),'functions')&&!lookup(ctx.env,calleeName(call.callee).split('.')[0])){const message=value(call.arguments[0]);if(message.status==='CONFIRMED'){emit('OPEN_DIALOG',call,ctx,{operation:'confirm',cancelsDefault:true,message:message.value});return;}}
    }
-   if(node.type==='IfStatement') {const exists=n=>{if(n?.type==='LogicalExpression'&&n.operator==='&&')return exists(n.left)&&exists(n.right);const ref=domReference(n);if(!ref)return false;const matched=selectNodes(ref.selector,unitDom,ctx.triggerId);return matched.length===1&&!matched[0].dynamic;};if(exists(node.test)){visit(node.consequent,ctx);return;}visit(node.test,ctx);visit(node.consequent,{...ctx,guard:ctx.guard?ctx.guard+' && '+text(node.test,code):text(node.test,code)});if(node.alternate)visit(node.alternate,{...ctx,guard:'!('+text(node.test,code)+')'});return;}
+   if(node.type==='IfStatement') {const exists=n=>{if(n?.type==='LogicalExpression'&&n.operator==='&&')return exists(n.left)&&exists(n.right);const ref=domReference(n);if(!ref)return false;const matched=selectNodes(ref.selector,unitDom,ctx.triggerId);return matched.length===1&&!matched[0].dynamic;};if(exists(node.test)){visit(node.consequent,ctx);return;}visit(node.test,ctx);visit(node.consequent,{...ctx,guard:ctx.guard?ctx.guard+' && '+text(node.test,code):text(node.test,code)});if(node.alternate){const negated='!('+text(node.test,code)+')';visit(node.alternate,{...ctx,guard:ctx.guard?ctx.guard+' && '+negated:negated});}return;}
    if(node.type==='AssignmentExpression') {
     const name=calleeName(node.left);
     if(node.left?.type==='MemberExpression'&&node.left.property?.name==='display'&&node.left.object?.property?.name==='style'){

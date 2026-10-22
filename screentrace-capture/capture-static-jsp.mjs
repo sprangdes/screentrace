@@ -12,7 +12,13 @@ import {loadStrutsMessageCatalog,renderStrutsMessages} from './struts-messages.m
 import {loadStrutsMenus,expandStrutsMenus} from './struts-menu.mjs';
 import {renderUnsupportedJsfTags} from './unsupported-components.mjs';
 import {prepareReactPreview} from './react-preview.mjs';
-import { assertOutputPathWithin, createDirectoryWithin, readBufferLimited, readUtf8Limited, resolveExistingDirectoryWithin, resolveExistingFileWithin, writeBufferWithin } from './safe-files.mjs';
+import { assertOutputPathWithin, createDirectoryWithin, readAnalysisGraph, readBufferLimited, readUtf8Limited, resolveExistingDirectoryWithin, resolveExistingFileWithin, writeBufferWithin } from './safe-files.mjs';
+/**
+ * A root-absolute style URL with no local asset (a hard-coded context path such as /zeprs/images/x.gif) would be
+ * computed as file:///zeprs/… outside the analysis output, which the preview reader must refuse. Its request is
+ * already blocked, so it becomes an inert URL instead.
+ */
+const UNRESOLVED_ASSET = 'about:blank';
 
 const [targetArg, outputArg, ...extraArgs] = process.argv.slice(2);
 const previewV2=extraArgs.includes('--preview-v2');
@@ -22,7 +28,7 @@ const target = path.resolve(targetArg);
 const output = path.resolve(outputArg || path.join(target, '.screentrace'));
 await resolveExistingDirectoryWithin(target, target);
 const projectRoot = target;
-const graph = JSON.parse(await readUtf8Limited(output, path.join(output, 'application-graph.json'), 16 * 1024 * 1024));
+const graph = await readAnalysisGraph(output);
 if(previewV2&&graph.schemaVersion!=='2.2')throw new Error(`新預覽只接受 schema 2.2，收到 ${graph.schemaVersion??'未設定'}`);
 const styleCapture={version:'2',schemaVersion:'2.2',screens:{},styles:{},defaults:{},diagnostics:[]};
 const endpointByPath = new Map(graph.nodes.filter(node => node.type === 'ENDPOINT').map(node => [node.attributes?.path, node]));
@@ -109,7 +115,7 @@ async function rewriteCssUrls(directory) {
     else if (entry.isFile() && entry.name.endsWith('.css')) await writeOutput(file,
       (await readUtf8Limited(output, file, 8 * 1024 * 1024)).replace(/url\(\s*(["']?)(\/[^)'"\s]+)(\1)\s*\)/g, (_, quote, url, closingQuote) => {
         const mapping = mappingFor(url);
-        if (!mapping) return _;
+        if (!mapping) return `url(${quote}${UNRESOLVED_ASSET}${closingQuote})`;
         const destination = path.join(htmlRoot, 'assets', mapping.assetKey, url.substring(mapping.urlPrefix.length));
         return `url(${quote}${path.relative(path.dirname(file), destination).replaceAll(path.sep, '/')}${closingQuote})`;
       }));
@@ -153,9 +159,25 @@ async function tilesEntry(entry,name,stack,depth){
   if(entry&&'value' in entry)return escapeHtml(entry.value);
   captureDiagnostics.push(`Tiles attribute not rendered: ${name}`);return '';
 }
+/**
+ * A layout's list attributes (put-list-attribute stylesheets/javascripts) are read with tilesx:useAttribute or
+ * tiles:importAttribute and looped with c:forEach; each loop over one becomes its body once per listed value.
+ */
+function expandTilesLists(source,attributes){
+  const lists=new Map(Object.entries(attributes).filter(([,entry])=>Array.isArray(entry?.list)).map(([name,entry])=>[name,entry.list]));
+  if(!lists.size)return source;
+  for(const match of source.matchAll(/<tiles(?:x)?:(?:useAttribute|importAttribute)\b([^>]*?)\/?>/gi)){const a=attrs(match[1]);if(a.name&&lists.has(a.name)){if(a.id)lists.set(a.id,lists.get(a.name));if(a.toName)lists.set(a.toName,lists.get(a.name));}}
+  return source.replace(/<c:forEach\b([^>]*?)>([\s\S]*?)<\/c:forEach\s*>/gi,(loop,attributeText,body)=>{
+    const a=attrs(attributeText),items=/^\$\{\s*([A-Za-z_][\w]*)\s*\}$/.exec(a.items??'')?.[1];
+    if(!items||!a.var||!lists.has(items))return loop;
+    const variable=new RegExp(`\\$\\{\\s*${a.var}\\s*\\}`,'g');
+    return lists.get(items).map(value=>body.replace(variable,value.replaceAll('$','$$$$'))).join('');
+  });
+}
 async function expandTiles(source,context,currentFile,stack,depth){
   if(depth>=16){captureDiagnostics.push('Tiles depth limit reached; remaining insert not rendered.');return source;}
   const attributes=context?.attributes??{};
+  source=expandTilesLists(source,attributes);
   const strings=source.replace(/<tiles:getAsString\b((?:[^>"']|"[^"]*"|'[^']*')*?)\/?>/gi,(_,attributeText)=>{const name=attrs(attributeText).name,entry=attributes[name];if(entry&&'value' in entry)return escapeHtml(entry.value);captureDiagnostics.push(`Tiles string attribute not rendered: ${name}`);return '';});
   return replaceAsync(strings,TILES_INSERT,async match=>{
     const tag=match[1].toLowerCase(),a=attrs(match[2]);
@@ -250,9 +272,10 @@ async function projectRequestAssets(source,screen){
  }return result;
 }
 function rewriteAssetUrls(source) {
-  return source.replace(/url\(\s*(['"]?)(\/[^)'"\s]+)\1\s*\)/g,(original,quote,url)=>{const mapping=mappingFor(url);return mapping?`url(${quote}assets/${mapping.assetKey}${url.substring(mapping.urlPrefix.length-1)}${quote})`:original;}).replace(/\b(href|src)=(['"])(\/[^'"]*)/gi, (_, attribute, quote, url) => {
+  return source.replace(/url\(\s*(['"]?)(\/[^)'"\s]+)\1\s*\)/g,(original,quote,url)=>{const mapping=mappingFor(url);return mapping?`url(${quote}assets/${mapping.assetKey}${url.substring(mapping.urlPrefix.length-1)}${quote})`:`url(${quote}${UNRESOLVED_ASSET}${quote})`;}).replace(/\b(href|src|background)=(['"])(\/[^'"]*)/gi, (_, attribute, quote, url) => {
     const mapping = mappingFor(url);
-    return mapping ? `${attribute}=${quote}assets/${mapping.assetKey}${url.substring(mapping.urlPrefix.length - 1)}` : _;
+    if (mapping) return `${attribute}=${quote}assets/${mapping.assetKey}${url.substring(mapping.urlPrefix.length - 1)}`;
+    return attribute.toLowerCase() === 'background' ? `${attribute}=${quote}${UNRESOLVED_ASSET}` : _;
   });
 }
 function htmlControls(source) {

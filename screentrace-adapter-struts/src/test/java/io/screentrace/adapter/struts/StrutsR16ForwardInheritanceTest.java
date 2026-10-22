@@ -46,6 +46,15 @@ class StrutsR16ForwardInheritanceTest {
     });
   }
 
+  @Test void eachForwardCycleIsReportedOnceWhateverPathReachesIt()throws Exception{
+    // chrisekelley/zeprs: every path into a cycle used to add its own message (73,970 diagnostics, 34 MB of graph).
+    base("<action path='/entry1' type='E1'><forward name='n' path='/b.do'/></action><action path='/entry2' type='E2'><forward name='n' path='/c.do'/></action>"
+        +"<action path='/a' type='A'><forward name='n' path='/b.do'/></action><action path='/b' type='B'><forward name='n' path='/c.do'/></action><action path='/c' type='C'><forward name='n' path='/a.do'/></action>");
+    file("src/main/webapp/index.jsp","<html:link action='/entry1.do'>One</html:link><html:link action='/entry2.do'>Two</html:link><html:link action='/a.do'>A</html:link>");
+    var cycles=analyze().diagnostics().stream().filter(d->d.code().equals("STRUTS_REDIRECT_CYCLE")).map(Diagnostic::message).toList();
+    assertEquals(List.of("Struts forward 繼承鏈偵測到循環：/a → /b → /c → /a"),cycles);
+  }
+
   @Test void actionReferencedOnlyByExtendsIsMarkedAsInheritedTemplate(){
     assertDoesNotThrow(()->{
       base("<action path='/BaseAction' type='sample.BaseAction'/><action path='/ChildAction' type='sample.ChildAction' extends='/BaseAction'/>");

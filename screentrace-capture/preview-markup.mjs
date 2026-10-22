@@ -71,11 +71,13 @@ export function replaceDynamicExpressions(source,resolver){let result='',cursor=
 export function convertControls(source) {
  const controls={form:'form',input:'input',text:'input',password:'input',hidden:'input',textarea:'textarea',select:'select',option:'option',options:'option',checkbox:'input',radio:'input',submit:'input',reset:'input',button:'button',link:'a',img:'img'};
  return markupTokens(source).map(t=>{
-  if(t.name&&!t.closing&&t.text.includes('<bean:write')){
+  // Only a host tag whose attribute value nests <bean:write> is rewritten; the bean:write tag itself is left alone.
+  if(t.name&&!t.closing&&Object.values(attributes(t.text)).some(value=>value.includes('<bean:write'))){
    const a=attributes(t.text);let opening='<'+t.originalName;
    for(const [key,raw]of Object.entries(a)){
     const value=markupTokens(raw).map(n=>{if(n.name==='bean:write'){const b=attributes(n.text);if(/^[A-Za-z_][\w]*$/.test(b.name||'')&&/^[A-Za-z_][\w]*$/.test(b.property||''))return '${'+b.name+'.'+b.property+'}';return '示例值';}return n.text;}).join('');
-    opening+=' '+key+'="'+escape(value).replaceAll('&#36;','$')+'"';
+    // Raw attribute text is already entity-encoded; re-encoding & would turn &quot; into &amp;quot;.
+    opening+=' '+key+'="'+value.replaceAll('"','&quot;').replaceAll('<','&lt;').replaceAll('>','&gt;')+'"';
    }
    return opening+(t.selfClosing?'/':'')+'>';
   }

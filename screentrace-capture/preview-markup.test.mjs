@@ -12,3 +12,14 @@ test('Struts controls retain spaced bindings and button/reset semantics',async()
  const html=convertControls('<html:form><html:text property = "code"/><html:button property = "go" value = "clear" onclick="clearForm()"/></html:form>');
  assert.match(html,/name\s*=\s*"code"/);assert.match(html,/type="button"/);assert.match(html,/>clear<\/button>/);assert.match(html,/<form[^>]*method="post"/);
 });
+test('bean:write keeps its already-encoded attributes; only hosts nesting bean:write are rewritten', async () => {
+ // chrisekelley/zeprs: <c:when test="${! empty oxytocin}"> around <bean:write property="oxytocin${pos}"/> came out as
+ // data-st-condition="[&amp;quot;…", and the in-page JSON.parse skipped 26 screens.
+ const {annotateConditions,convertControls}=await import('./preview-markup.mjs');
+ const guarded=annotateConditions('<c:if test="${! empty oxytocin}"><bean:write name="oxytocin" property="oxytocin${pos}"/></c:if>');
+ const converted=convertControls(guarded);
+ assert.equal(converted,guarded);
+ assert.match(converted,/data-st-condition="\[&quot;&#36;\{! empty oxytocin\}&quot;\]"/);
+ const host=convertControls('<input title="a &amp; b" value="<bean:write name=\'user\' property=\'name\'/>">');
+ assert.equal(host,'<input title="a &amp; b" value="${user.name}">');
+});

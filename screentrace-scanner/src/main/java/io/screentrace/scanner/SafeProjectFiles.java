@@ -111,10 +111,51 @@ public final class SafeProjectFiles {
     }
   }
 
-  /** Preserve legacy external Tiles declarations without giving the XML provider any DTD to resolve. */
+  /**
+   * Preserve legacy external DOCTYPE declarations (struts-config, tiles, Servlet 2.3 web.xml) without giving the XML
+   * provider any DTD to resolve. The declaration is blanked rather than removed so line numbers stay true.
+   */
   public static String xmlWithoutExternalDoctype(String xml) throws IOException {
     if (xml.matches("(?is).*<!DOCTYPE[^>]*\\[.*")) throw new IOException("XML internal DOCTYPE is not supported");
-    return xml.replaceAll("(?is)<!DOCTYPE\\s+[^>]+>", "");
+    var doctype = java.util.regex.Pattern.compile("(?is)<!DOCTYPE\\s+[^>]+>").matcher(xml);
+    StringBuilder clean = new StringBuilder();
+    int offset = 0;
+    while (doctype.find()) {
+      clean.append(xml, offset, doctype.start()).append(doctype.group().replaceAll("[^\\r\\n]", " "));
+      offset = doctype.end();
+    }
+    return clean.append(xml.substring(offset)).toString();
+  }
+
+  /**
+   * Parses project XML with no DTD, external entity or XInclude resolution. An external DOCTYPE is accepted and
+   * ignored, an internal subset is rejected, and malformed input throws instead of printing to stderr.
+   */
+  public static org.w3c.dom.Document parseXml(String xml, boolean namespaceAware) throws IOException {
+    String clean = xmlWithoutExternalDoctype(xml);
+    try {
+      var factory = javax.xml.parsers.DocumentBuilderFactory.newInstance();
+      factory.setNamespaceAware(namespaceAware);
+      factory.setFeature(javax.xml.XMLConstants.FEATURE_SECURE_PROCESSING, true);
+      factory.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
+      factory.setFeature("http://xml.org/sax/features/external-general-entities", false);
+      factory.setFeature("http://xml.org/sax/features/external-parameter-entities", false);
+      factory.setFeature("http://apache.org/xml/features/nonvalidating/load-external-dtd", false);
+      factory.setXIncludeAware(false);
+      factory.setAttribute(javax.xml.XMLConstants.ACCESS_EXTERNAL_DTD, "");
+      factory.setAttribute(javax.xml.XMLConstants.ACCESS_EXTERNAL_SCHEMA, "");
+      factory.setExpandEntityReferences(false);
+      var builder = factory.newDocumentBuilder();
+      builder.setEntityResolver((publicId, systemId) -> new org.xml.sax.InputSource(new java.io.StringReader("")));
+      builder.setErrorHandler(new org.xml.sax.ErrorHandler() {
+        @Override public void warning(org.xml.sax.SAXParseException exception) { }
+        @Override public void error(org.xml.sax.SAXParseException exception) throws org.xml.sax.SAXParseException { throw exception; }
+        @Override public void fatalError(org.xml.sax.SAXParseException exception) throws org.xml.sax.SAXParseException { throw exception; }
+      });
+      return builder.parse(new org.xml.sax.InputSource(new java.io.StringReader(clean)));
+    } catch (javax.xml.parsers.ParserConfigurationException | org.xml.sax.SAXException error) {
+      throw new IOException("XML could not be parsed safely: " + error.getMessage(), error);
+    }
   }
 
   public static Path requireWritePathWithin(Path outputRoot, Path target) throws IOException {

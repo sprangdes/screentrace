@@ -394,7 +394,11 @@ public final class StrutsProjectAnalyzer {
   }
 
   private static void resolveConfiguredForwards(State state) {
-    for(PendingForward pending:state.pendingForwards)forward(pending.target(),pending.ownerId(),pending.module(),pending.source(),state);
+    for(PendingForward pending:state.pendingForwards){
+      String unused=unusedDeclaredForward(pending,state);
+      if(unused!=null){state.diagnostics.add(new Diagnostic("forward 已宣告但 Action 程式從未使用，不列為目的頁："+unused+" → "+pending.target(),Confidence.INFERRED,pending.source(),"STRUTS_FORWARD_UNUSED",evidence(pending.source(),Confidence.INFERRED,"Action 程式只以字面名稱呼叫 findForward，且 ActionMapping 未傳出")));continue;}
+      forward(pending.target(),pending.ownerId(),pending.module(),pending.source(),state);
+    }
     for(Mapping mapping:state.actionMappings)analyzeForwards(mapping,state);
   }
 
@@ -471,8 +475,47 @@ public final class StrutsProjectAnalyzer {
     if(Set.of("DispatchAction","LookupDispatchAction","MappingDispatchAction","EventDispatchAction").contains(shortName)) return shortName;
     if(!seen.add(type)) return "";
     var java=state.types.get(type);if(java==null) return "";
+    // An execute(mapping, form, request, response) that never calls super.execute, in a class with no other dispatch
+    // methods, bypasses the dispatch machinery (SpringStrutsHibernate's actions). With dispatch methods present it stays dispatch.
+    if(overridesExecuteWithoutDispatch(java))return "";
     String parent=java.parent();String direct=dispatchFamily(parent,state,seen);if(!direct.isBlank()) return direct;
     String prefix=type.contains(".")?type.substring(0,type.lastIndexOf('.')+1):"";return dispatchFamily(prefix+parent,state,seen);
+  }
+  /**
+   * The name of an action's own <forward> that its Action code can never return: the class and every project
+   * ancestor are parsed, every findForward uses a string literal, the ActionMapping is never handed to other code, and
+   * no string literal in those classes names the forward. Null whenever that cannot be shown.
+   */
+  private static String unusedDeclaredForward(PendingForward pending,State state) {
+    Mapping mapping=state.actionMappings.stream().filter(m->m.handlerId().equals(pending.ownerId())).findFirst().orElse(null);
+    if(mapping==null||!mapping.family().isBlank())return null;
+    String name=mapping.forwardSources().entrySet().stream().filter(e->!e.getKey().equals(DIRECT_FORWARD)&&e.getValue().equals(pending.source())).map(Map.Entry::getKey).findFirst().orElse(null);
+    if(name==null||!mapping.localForwards().containsKey(name))return null;
+    Set<String> literals=new HashSet<>();Set<String> seen=new HashSet<>();String type=mapping.type();boolean parsed=false;
+    while(type!=null&&!type.isBlank()&&seen.add(type)){
+      var java=state.types.get(type);
+      if(java==null){String simple=type.substring(type.lastIndexOf('.')+1);if(type.startsWith("org.apache.struts.")||Set.of("Action","DispatchAction","LookupDispatchAction","MappingDispatchAction","EventDispatchAction").contains(simple))break;return null;}
+      parsed=true;
+      for(var method:java.declaration().getMethods()){
+        Set<String> mappings=new HashSet<>();method.getParameters().forEach(p->{if(p.getType().asString().endsWith("ActionMapping"))mappings.add(p.getNameAsString());});
+        for(var call:method.findAll(MethodCallExpr.class)){
+          if(call.getNameAsString().equals("findForward")&&(call.getArguments().size()!=1||!call.getArgument(0).isStringLiteralExpr()))return null;
+          boolean handedOn=call.getArguments().stream().anyMatch(a->a.isNameExpr()&&mappings.contains(a.asNameExpr().getNameAsString()));
+          if(handedOn&&!(call.getNameAsString().equals("execute")&&call.getScope().filter(Expression::isSuperExpr).isPresent()))return null;
+        }
+      }
+      java.declaration().findAll(com.github.javaparser.ast.expr.StringLiteralExpr.class).forEach(s->literals.add(s.asString()));
+      String parent=java.parent();if(parent!=null&&!parent.contains(".")){String prefix=type.contains(".")?type.substring(0,type.lastIndexOf('.')+1):"";if(state.types.containsKey(prefix+parent))parent=prefix+parent;}
+      type=parent;
+    }
+    return parsed&&!literals.contains(name)?name:null;
+  }
+  private static boolean overridesExecuteWithoutDispatch(StrutsSources.JavaType java) {
+    if(java.declaration().getMethods().stream().anyMatch(m->!m.getNameAsString().equals("execute")&&validDispatchSignature(m)))return false;
+    for(var method:java.declaration().getMethodsByName("execute"))
+      if(method.getParameters().size()==4&&method.getType().asString().endsWith("ActionForward")&&method.getBody().isPresent()
+          &&method.findAll(MethodCallExpr.class).stream().noneMatch(call->call.getNameAsString().equals("execute")&&call.getScope().filter(Expression::isSuperExpr).isPresent()))return true;
+    return false;
   }
   /** Key of the target an action mapping forwards to by itself, without running an Action class. */
   private static final String DIRECT_FORWARD="(action forward)";
@@ -885,7 +928,7 @@ public final class StrutsProjectAnalyzer {
       if(potential)diagnostic(state,"Struts forward 目的 action 無法唯一解析，未繼承呼叫來源："+rawTarget,targetSource,"STRUTS_REDIRECT_UNRESOLVED");
       return;
     }
-    if(visited.contains(destination.route())){diagnostic(state,"Struts forward 繼承鏈偵測到循環："+String.join(" → ",chain.stream().map(Mapping::route).toList())+" → "+destination.route(),targetSource,"STRUTS_REDIRECT_CYCLE");return;}
+    if(visited.contains(destination.route())){reportForwardCycle(chain,destination,targetSource,state);return;}
     String endpoint=state.endpointIds.get(destination.route());if(endpoint==null)return;
     if(actionMatch.wildcard()!=null){recordWildcardMatch(endpoint,target,actionMatch.wildcard(),state,targetSource);destination=wildcardMappingForCaller(destination,actionMatch.wildcard(),endpoint,state);}
     List<Mapping> nextChain=new ArrayList<>(chain);nextChain.add(destination);
@@ -906,6 +949,19 @@ public final class StrutsProjectAnalyzer {
     state.edges.putIfAbsent(relationId,new Relationship(relationId,EdgeType.CALLS,origin.handlerId(),endpoint,Confidence.INFERRED,targetSource,proof.stream().distinct().sorted().toList()));
     Set<String> nextVisited=new LinkedHashSet<>(visited);nextVisited.add(destination.route());
     for(InheritanceTarget child:dispatch!=null&&!destination.family().isBlank()?sourceTargets(destination,dispatch,state).stream().map(item->new InheritanceTarget(item.target(),item.source())).toList():inheritanceTargets(destination,state))walkActionForward(origin,sourceEndpoint,child.target(),child.source(),nextChain,nextVisited,depth+1,state);
+  }
+  /**
+   * Each cycle is reported once, as the loop itself in a canonical rotation. Every path that walks into it would
+   * otherwise add its own message: 73,970 of them on chrisekelley/zeprs.
+   */
+  private static void reportForwardCycle(List<Mapping> chain,Mapping destination,SourceLocation source,State state) {
+    List<String> routes=chain.stream().map(Mapping::route).toList();
+    int entry=routes.indexOf(destination.route());
+    List<String> loop=new ArrayList<>(routes.subList(Math.max(entry,0),routes.size()));
+    int first=loop.indexOf(loop.stream().min(Comparator.naturalOrder()).orElseThrow());
+    List<String> canonical=new ArrayList<>(loop.subList(first,loop.size()));canonical.addAll(loop.subList(0,first));
+    String cycle=String.join(" → ",canonical)+" → "+canonical.get(0);
+    if(state.reportedForwardCycles.add(cycle))diagnostic(state,"Struts forward 繼承鏈偵測到循環："+cycle,source,"STRUTS_REDIRECT_CYCLE");
   }
   private static List<ActionMatch> resolveActionMappings(String target,String module,State state) {
     String logical=logicalPath(target,module,state);String candidate=logical==null?target:logical;
@@ -1424,7 +1480,7 @@ public final class StrutsProjectAnalyzer {
     final StrutsVersionEvidence strutsVersion;
     final Map<String,GraphNode> nodes=new TreeMap<>();final Map<String,Relationship> edges=new TreeMap<>();final List<Diagnostic> diagnostics=new ArrayList<>();
     final Map<String,Behavior> behaviors=new TreeMap<>();final Map<String,ValidationRule> rules=new TreeMap<>();
-    final Map<String,Set<Boolean>> forwardRedirects=new TreeMap<>();
+    final Map<String,Set<Boolean>> forwardRedirects=new TreeMap<>();final Set<String> reportedForwardCycles=new HashSet<>();
     final Set<String> ambiguousBeans=new TreeSet<>();final Map<String,SourceLocation> beanSources=new TreeMap<>();
     final Map<String,String> screens=new TreeMap<>(),viewIds=new TreeMap<>(),tileViewIds=new TreeMap<>(),beans=new TreeMap<>(),forms=new TreeMap<>();
     final Set<String> ambiguousTiles=new TreeSet<>();

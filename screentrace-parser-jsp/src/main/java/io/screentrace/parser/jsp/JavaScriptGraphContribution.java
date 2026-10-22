@@ -13,6 +13,26 @@ import java.util.concurrent.*;
 public final class JavaScriptGraphContribution {
   private static final ObjectMapper JSON=new ObjectMapper();
   private JavaScriptGraphContribution() { }
+  /**
+   * A JSP that a script src uniquely resolves to serves JavaScript (chrisekelley/zeprs: js/engine2.jsp); when nothing
+   * renders, forwards to, links to or contains anything on its screen, it is a script resource, not a screen.
+   */
+  private static void demoteScriptResourceScreens(List<ScriptSources.Reference> references,Map<String,GraphNode> nodes,Map<String,Relationship> edges,Map<String,Behavior> behaviors,List<Diagnostic> diagnostics) {
+    Map<String,List<ScriptSources.Reference>> byFile=new TreeMap<>();
+    for(var reference:references)if(reference.candidates().size()==1&&reference.candidates().get(0).endsWith(".jsp"))byFile.computeIfAbsent(reference.candidates().get(0),k->new ArrayList<>()).add(reference);
+    for(var entry:byFile.entrySet())for(var screen:List.copyOf(nodes.values())) {
+      if(screen.type()!=NodeType.SCREEN||!entry.getKey().equals(screen.attributes().get("view"))||"true".equals(screen.attributes().get("tilesDefinition")))continue;
+      String id=screen.id();
+      if(edges.values().stream().anyMatch(e->e.from().equals(id)||e.to().equals(id)))continue;
+      if(behaviors.values().stream().anyMatch(b->id.equals(b.triggerId())||id.equals(b.targetId())))continue;
+      nodes.remove(id);
+      List<AnalysisEvidence> proof=new ArrayList<>();
+      for(var reference:entry.getValue())proof.add(new AnalysisEvidence(reference.source(),"ScriptSourceCollector",ResolutionStatus.INFERRED,"script src="+reference.expression()));
+      var source=new SourceLocation(entry.getKey(),1);
+      diagnostics.add(new Diagnostic("JSP 僅作為 script 來源載入，不列為畫面："+entry.getKey(),Confidence.INFERRED,source,"JSP_SCRIPT_RESOURCE",proof.stream().distinct().sorted().toList()));
+    }
+  }
+
   public static ApplicationGraph enrich(ApplicationGraph graph,ProjectInventory inventory) {
     var collected=ScriptSources.collect(inventory);List<Diagnostic> diagnostics=new ArrayList<>(graph.diagnostics());
     Map<String,GraphNode> nodes=new TreeMap<>();graph.nodes().forEach(n->nodes.put(n.id(),n));
@@ -71,6 +91,7 @@ public final class JavaScriptGraphContribution {
         for(var item:result.path("diagnostics"))diagnostics.add(new Diagnostic(item.path("message").asText(),Confidence.UNRESOLVED,source(item),item.path("code").asText(),proof(source(item),Confidence.UNRESOLVED,item.path("message").asText())));
       }
     } catch(Exception error){diagnostics.add(diagnostic(new SourceLocation(".",1),"JS_ANALYZER_FAILURE","JavaScript 靜態分析失敗："+error.getMessage()));if(error instanceof InterruptedException)Thread.currentThread().interrupt();}
+    demoteScriptResourceScreens(collected.references(),nodes,edges,behaviors,diagnostics);
     return new ApplicationGraph(graph.application(),List.copyOf(nodes.values()),List.copyOf(edges.values()),diagnostics,graph.apiContracts(),graph.schemaVersion(),List.copyOf(behaviors.values()),List.copyOf(rules.values()));
   }
   static JsonNode run(Map<String,Object> request) throws Exception {
