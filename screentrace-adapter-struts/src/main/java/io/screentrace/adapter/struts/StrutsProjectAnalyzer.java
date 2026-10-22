@@ -884,7 +884,7 @@ public final class StrutsProjectAnalyzer {
       if(potential)diagnostic(state,"Struts forward 目的 action 無法唯一解析，未繼承呼叫來源："+rawTarget,targetSource,"STRUTS_REDIRECT_UNRESOLVED");
       return;
     }
-    if(visited.contains(destination.route())){diagnostic(state,"Struts forward 繼承鏈偵測到循環："+String.join(" → ",chain.stream().map(Mapping::route).toList())+" → "+destination.route(),targetSource,"STRUTS_REDIRECT_CYCLE");return;}
+    if(visited.contains(destination.route())){reportForwardCycle(chain,destination,targetSource,state);return;}
     String endpoint=state.endpointIds.get(destination.route());if(endpoint==null)return;
     if(actionMatch.wildcard()!=null){recordWildcardMatch(endpoint,target,actionMatch.wildcard(),state,targetSource);destination=wildcardMappingForCaller(destination,actionMatch.wildcard(),endpoint,state);}
     List<Mapping> nextChain=new ArrayList<>(chain);nextChain.add(destination);
@@ -905,6 +905,19 @@ public final class StrutsProjectAnalyzer {
     state.edges.putIfAbsent(relationId,new Relationship(relationId,EdgeType.CALLS,origin.handlerId(),endpoint,Confidence.INFERRED,targetSource,proof.stream().distinct().sorted().toList()));
     Set<String> nextVisited=new LinkedHashSet<>(visited);nextVisited.add(destination.route());
     for(InheritanceTarget child:dispatch!=null&&!destination.family().isBlank()?sourceTargets(destination,dispatch,state).stream().map(item->new InheritanceTarget(item.target(),item.source())).toList():inheritanceTargets(destination,state))walkActionForward(origin,sourceEndpoint,child.target(),child.source(),nextChain,nextVisited,depth+1,state);
+  }
+  /**
+   * Each cycle is reported once, as the loop itself in a canonical rotation. Every path that walks into it would
+   * otherwise add its own message: 73,970 of them on chrisekelley/zeprs.
+   */
+  private static void reportForwardCycle(List<Mapping> chain,Mapping destination,SourceLocation source,State state) {
+    List<String> routes=chain.stream().map(Mapping::route).toList();
+    int entry=routes.indexOf(destination.route());
+    List<String> loop=new ArrayList<>(routes.subList(Math.max(entry,0),routes.size()));
+    int first=loop.indexOf(loop.stream().min(Comparator.naturalOrder()).orElseThrow());
+    List<String> canonical=new ArrayList<>(loop.subList(first,loop.size()));canonical.addAll(loop.subList(0,first));
+    String cycle=String.join(" → ",canonical)+" → "+canonical.get(0);
+    if(state.reportedForwardCycles.add(cycle))diagnostic(state,"Struts forward 繼承鏈偵測到循環："+cycle,source,"STRUTS_REDIRECT_CYCLE");
   }
   private static List<ActionMatch> resolveActionMappings(String target,String module,State state) {
     String logical=logicalPath(target,module,state);String candidate=logical==null?target:logical;
@@ -1423,7 +1436,7 @@ public final class StrutsProjectAnalyzer {
     final StrutsVersionEvidence strutsVersion;
     final Map<String,GraphNode> nodes=new TreeMap<>();final Map<String,Relationship> edges=new TreeMap<>();final List<Diagnostic> diagnostics=new ArrayList<>();
     final Map<String,Behavior> behaviors=new TreeMap<>();final Map<String,ValidationRule> rules=new TreeMap<>();
-    final Map<String,Set<Boolean>> forwardRedirects=new TreeMap<>();
+    final Map<String,Set<Boolean>> forwardRedirects=new TreeMap<>();final Set<String> reportedForwardCycles=new HashSet<>();
     final Set<String> ambiguousBeans=new TreeSet<>();final Map<String,SourceLocation> beanSources=new TreeMap<>();
     final Map<String,String> screens=new TreeMap<>(),viewIds=new TreeMap<>(),tileViewIds=new TreeMap<>(),beans=new TreeMap<>(),forms=new TreeMap<>();
     final Set<String> ambiguousTiles=new TreeSet<>();

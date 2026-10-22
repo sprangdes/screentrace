@@ -83,6 +83,23 @@ export async function createDirectoryWithin(root, candidate) {
   return realpath(absolute);
 }
 
+/**
+ * application-graph.json is ScreenTrace's own output, so its budget only guards memory. Large legacy apps exceed
+ * tens of MB (chrisekelley/zeprs: ~40 MB); V8 cannot hold a string much over 512 MiB.
+ */
+export const MAX_ANALYSIS_GRAPH_BYTES = 256 * 1024 * 1024;
+
+export async function readAnalysisGraph(output, maxBytes = MAX_ANALYSIS_GRAPH_BYTES) {
+  let text;
+  try {
+    text = await readUtf8Limited(output, path.join(output, 'application-graph.json'), maxBytes);
+  } catch (error) {
+    if (/byte limit/.test(error.message)) throw new Error(`application-graph.json exceeds the ${maxBytes}-byte preview budget; static previews were not rendered`);
+    throw error;
+  }
+  return JSON.parse(text);
+}
+
 export async function readUtf8Limited(root, file, maxBytes = 8 * 1024 * 1024) {
   const bytes=await readBufferLimited(root,file,maxBytes);
   const encoding=declaredSourceEncoding(file,bytes);

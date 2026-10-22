@@ -3,7 +3,7 @@ import { mkdtemp, mkdir, symlink, writeFile, rm, realpath } from 'node:fs/promis
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
-import { assertOutputPathWithin, readUtf8Limited, resolveExistingFileWithin } from './safe-files.mjs';
+import { assertOutputPathWithin, MAX_ANALYSIS_GRAPH_BYTES, readAnalysisGraph, readUtf8Limited, resolveExistingFileWithin } from './safe-files.mjs';
 import { createDirectoryWithin } from './safe-files.mjs';
 
 test('bounded reads allow a project file and reject oversized inputs', async () => {
@@ -62,3 +62,16 @@ test('containment treats a sibling sharing the root name prefix as outside', asy
 });
 
 test('JSP declared encoding decodes original bounded bytes',async()=>{const root=await mkdtemp(path.join(os.tmpdir(),'st-encoding-'));try{const file=path.join(root,'legacy.jsp');await writeFile(file,Buffer.from('PCVAIHBhZ2UgcGFnZUVuY29kaW5nPSJHQjE4MDMwIiU+PHRpdGxlPs7vwc88L3RpdGxlPg==','base64'));assert.match(await readUtf8Limited(root,file),/物料/);}finally{await rm(root,{recursive:true,force:true});}});
+
+test('analysis graphs above the old 16 MiB cap load, and an over-budget graph fails clearly', async () => {
+  const output = await mkdtemp(path.join(os.tmpdir(), 'screentrace-graph-'));
+  try {
+    // chrisekelley/zeprs produced a ~40 MB graph; the old 16 MiB read cap left all 198 screens without previews.
+    const padding = 'x'.repeat(20 * 1024 * 1024);
+    await writeFile(path.join(output, 'application-graph.json'), JSON.stringify({ schemaVersion: '2.2', nodes: [], relationships: [], diagnostics: [{ message: padding }] }));
+    const graph = await readAnalysisGraph(output);
+    assert.equal(graph.schemaVersion, '2.2');
+    assert.ok(MAX_ANALYSIS_GRAPH_BYTES >= 256 * 1024 * 1024);
+    await assert.rejects(readAnalysisGraph(output, 1024), /exceeds the 1024-byte preview budget/);
+  } finally { await rm(output, { recursive: true, force: true }); }
+});
