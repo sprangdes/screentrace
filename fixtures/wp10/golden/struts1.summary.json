@@ -18,9 +18,9 @@
     "TEXT_INPUT": 8
   },
   "behaviors_by_type": {
-    "CALL_API": 49,
+    "CALL_API": 47,
     "NAVIGATE": 12,
-    "OPEN_DIALOG": 28,
+    "OPEN_DIALOG": 26,
     "SELECT_CHANGE": 2,
     "SUBMIT_FORM": 11,
     "UI_STATE_CHANGE": 20,

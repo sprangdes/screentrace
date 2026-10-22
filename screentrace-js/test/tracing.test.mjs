@@ -96,3 +96,21 @@ test('$http verb methods and configuration objects retain static route templates
  const a=run(`$http.get('/rest/cart/'+cartId);$http({method:'DELETE',url:'/rest/cart/'+cartId});$http.put('/rest/cart/add/'+productId);`),calls=a.behaviors.filter(b=>b.type==='CALL_API');
  assert.deepEqual(calls.map(b=>b.method),['GET','DELETE','PUT']);assert.deepEqual(calls.map(b=>b.url),['/rest/cart/{cartId}','/rest/cart/{cartId}','/rest/cart/add/{productId}']);assert.ok(calls.every(b=>b.status==='INFERRED'));
 });
+test('an else branch keeps the enclosing guard',()=>{
+ const a=run(`$('#save').click(function(){ if(x){ if(a){fetch('/then');} else {fetch('/else');} } });`);
+ assert.equal(a.behaviors.find(b=>b.url==='/then').guard,'x && a');
+ assert.equal(a.behaviors.find(b=>b.url==='/else').guard,'x && !(a)');
+});
+test('one effect reached through many call paths is one behavior with the guards OR-ed',()=>{
+ // chrisekelley/zeprs apgar.js: helpers called from several call sites produced ~2,400 behaviors per control.
+ const a=run(`function paint(el){ el.style.backgroundColor=""; }
+  function column(el){ if(a){paint(el);} else {paint(el);} }
+  $('#save').click(function(){ if(x){column(this);} if(y){column(this);} });`);
+ const painted=a.behaviors.filter(b=>b.expression==='el.style.backgroundColor=""'&&b.triggerId==='save');
+ assert.equal(painted.length,1,JSON.stringify(painted.map(b=>b.guard)));
+ assert.equal(painted[0].pathCount,4);
+ for(const guard of ['x && a','x && !(a)','y && a','y && !(a)'])assert.ok(painted[0].guard.includes(`(${guard})`),painted[0].guard);
+ const unconditional=run(`function paint(el){ el.style.color="red"; } $('#save').click(function(){ if(x){paint(this);} paint(this); });`);
+ const colored=unconditional.behaviors.filter(b=>b.expression==='el.style.color="red"');
+ assert.equal(colored.length,1);assert.equal(colored[0].guard,null);assert.equal(colored[0].pathCount,2);
+});
