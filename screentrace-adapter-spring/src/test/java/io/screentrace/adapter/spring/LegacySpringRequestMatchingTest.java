@@ -55,4 +55,22 @@ class LegacySpringRequestMatchingTest {
     assertTrue(graph.relationships().stream().anyMatch(edge -> edge.type() == ApplicationGraph.EdgeType.FORWARDS_TO
         && nodes.get(edge.from()).name().equals("來源設定的登入處理") && nodes.get(edge.to()).name().equals("account")), "default-target-url");
   }
+
+  @Test void aLinkTheAdapterAlreadyMatchedKeepsItsExactEndpoint() throws Exception {
+    // /applications/new beside /applications/{id}: the adapter proves the exact path; the generic URL matcher would keep both.
+    Path root = Files.createTempDirectory("st-exact-link");
+    Path jsp = root.resolve("src/main/webapp/WEB-INF/views/landing.jsp");
+    Files.createDirectories(jsp.getParent());
+    Files.writeString(root.resolve("pom.xml"), "<project><dependency><artifactId>spring-webmvc</artifactId></dependency></project>");
+    Files.writeString(root.resolve("X.java"), "import org.springframework.stereotype.*; import org.springframework.web.bind.annotation.*; @Controller class X {"
+        + " @GetMapping(\"/\") String landing(){ return \"landing\"; } @GetMapping(\"/applications/new\") String create(){ return \"landing\"; }"
+        + " @GetMapping(\"/applications/{id}\") String detail(){ return \"landing\"; } }");
+    Files.writeString(jsp, "<a href=\"<c:url value='/applications/new'/>\">Apply</a>");
+    ApplicationGraph graph = new SpringMvcAnalyzer().analyze(new ProjectScanner().scan(root));
+    Map<String, ApplicationGraph.GraphNode> nodes = graph.nodes().stream().collect(Collectors.toMap(ApplicationGraph.GraphNode::id, n -> n));
+    var triggers = graph.relationships().stream().filter(e -> e.type() == ApplicationGraph.EdgeType.TRIGGERS && "Apply".equals(nodes.get(e.from()).name())).toList();
+    assertEquals(1, triggers.size(), triggers.toString());
+    assertEquals("GET /applications/new", nodes.get(triggers.get(0).to()).name());
+    assertEquals(ApplicationGraph.Confidence.CONFIRMED, triggers.get(0).confidence());
+  }
 }
