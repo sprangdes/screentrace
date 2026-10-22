@@ -139,7 +139,156 @@ class SpringMvcAnalyzerTest {
         assertTrue(screens.containsAll(Set.of("home.page", "child", "orphan.page")), screens.toString());
         assertTrue(java.util.Collections.disjoint(screens, Set.of("base", "fragment")), screens.toString());
         assertTrue(graph.nodes().stream().noneMatch(node -> node.type() == ApplicationGraph.NodeType.SCREEN
+            && !"true".equals(node.attributes().get("tilesDefinition"))
             && node.attributes().getOrDefault("view", "").endsWith("layout.jsp")), screens.toString());
+    }
+
+    @Test
+    void foldsTilesBodiesIntoCompletePageDefinitionScreens() throws Exception {
+        Path root = Files.createTempDirectory("st-mvc-tiles-pages");
+        Path webInf = root.resolve("src/main/webapp/WEB-INF");
+        Files.createDirectories(webInf.resolve("views"));
+        Files.createDirectories(webInf.resolve("tiles"));
+        Files.createDirectories(root.resolve("src/main/java"));
+        Files.writeString(root.resolve("pom.xml"), "<project><dependency><artifactId>spring-webmvc</artifactId></dependency></project>");
+        Files.writeString(root.resolve("src/main/java/PolicyController.java"), "import org.springframework.stereotype.*; import org.springframework.web.bind.annotation.*; @Controller class PolicyController {"
+            + " @RequestMapping(value=\"/\",method=RequestMethod.GET) String landing(){ return \"landing\"; }"
+            + " @RequestMapping(value=\"/applications/new\",method=RequestMethod.GET) String create(){ return \"form\"; }"
+            + " @RequestMapping(value=\"/applications\",method=RequestMethod.POST) String submit(){ return \"form\"; } }");
+        Files.writeString(webInf.resolve("spring.xml"), """
+            <beans><bean class="org.springframework.web.servlet.view.tiles2.TilesConfigurer"><property name="definitions"><list><value>/WEB-INF/tiles/definitions.xml</value></list></property></bean>
+            <bean class="org.springframework.web.servlet.view.UrlBasedViewResolver"><property name="viewClass" value="org.springframework.web.servlet.view.tiles2.TilesView"/></bean></beans>
+            """);
+        Files.writeString(webInf.resolve("tiles/definitions.xml"), """
+            <tiles-definitions>
+              <definition name="base" template="/WEB-INF/tiles/layout.jsp"><put-attribute name="title" value="Insure"/><put-attribute name="body" value=""/></definition>
+              <definition name="landing" extends="base"><put-attribute name="body" value="/WEB-INF/views/landing.jsp"/></definition>
+              <definition name="form" extends="base"><put-attribute name="body" value="/WEB-INF/views/form.jsp"/></definition>
+            </tiles-definitions>
+            """);
+        Files.writeString(webInf.resolve("tiles/layout.jsp"), "<title><tiles:getAsString name=\"title\"/></title><a href=\"<c:url value='/'/>\">Home</a><main><tiles:insertAttribute name=\"body\"/></main>");
+        Files.writeString(webInf.resolve("views/landing.jsp"), "<a href=\"<c:url value='/applications/new'/>\">Apply</a>");
+        Files.writeString(webInf.resolve("views/form.jsp"), "<form method=\"post\" action=\"<c:url value='/applications'/>\"><input name=\"plate\"><button>Submit</button></form>");
+
+        ApplicationGraph graph = new SpringMvcAnalyzer().analyze(new ProjectScanner().scan(root));
+        var screens = graph.nodes().stream().filter(node -> node.type() == ApplicationGraph.NodeType.SCREEN).toList();
+
+        assertTrue(screens.stream().map(ApplicationGraph.GraphNode::name).sorted().toList().equals(java.util.List.of("form", "landing")), screens.toString());
+        var form = screens.stream().filter(node -> node.name().equals("form")).findFirst().orElseThrow();
+        assertTrue(form.attributes().get("view").equals("src/main/webapp/WEB-INF/tiles/layout.jsp"), form.attributes().toString());
+        assertTrue(form.attributes().get("tilesDefinitionName").equals("form"), form.attributes().toString());
+        var tiles = new com.fasterxml.jackson.databind.ObjectMapper().readTree(form.attributes().get("tilesAttributes"));
+        assertTrue(tiles.path("template").asText().equals("src/main/webapp/WEB-INF/tiles/layout.jsp"), tiles.toString());
+        assertTrue(tiles.path("attributes").path("body").path("path").asText().equals("src/main/webapp/WEB-INF/views/form.jsp"), tiles.toString());
+        assertTrue(tiles.path("attributes").path("title").path("value").asText().equals("Insure"), tiles.toString());
+
+        // Body interactions and layout components belong to the Tiles screen the controller renders.
+        java.util.function.Function<String, String> nameOf = id -> graph.nodes().stream().filter(n -> n.id().equals(id)).findFirst().map(ApplicationGraph.GraphNode::name).orElse(id);
+        Set<String> formChildren = graph.relationships().stream().filter(edge -> edge.type() == ApplicationGraph.EdgeType.CONTAINS && edge.from().equals(form.id()))
+            .map(edge -> edge.to()).collect(java.util.stream.Collectors.toSet());
+        assertTrue(graph.relationships().stream().anyMatch(edge -> edge.type() == ApplicationGraph.EdgeType.TRIGGERS && formChildren.contains(edge.from())
+            && nameOf.apply(edge.to()).equals("POST /applications")), formChildren.toString());
+        assertTrue(formChildren.stream().map(nameOf).anyMatch("Home"::equals), "layout link is projected into the page screen");
+        assertTrue(graph.relationships().stream().filter(edge -> edge.type() == ApplicationGraph.EdgeType.RENDERS).allMatch(edge -> screens.stream().anyMatch(s -> s.id().equals(edge.to()))));
+    }
+
+    @Test
+    void tilesListAttributesReachThePreviewContext() throws Exception {
+        // RawSanj/spring-tiles-sample-app: <put-list-attribute name="stylesheets"> feeds a c:forEach in common.jsp.
+        Path root = Files.createTempDirectory("st-mvc-tiles-lists");
+        Path webInf = root.resolve("src/main/webapp/WEB-INF");
+        Files.createDirectories(webInf.resolve("layout"));
+        Files.createDirectories(webInf.resolve("jsp"));
+        Files.writeString(root.resolve("pom.xml"), "<project><dependency><artifactId>spring-webmvc</artifactId></dependency></project>");
+        Files.writeString(root.resolve("X.java"), "import org.springframework.stereotype.*; import org.springframework.web.bind.annotation.*; @Controller class X { @RequestMapping(\"/\") String home(){ return \"home\"; } }");
+        Files.writeString(webInf.resolve("dispatcher-servlet.xml"), "<beans><bean class=\"org.springframework.web.servlet.view.UrlBasedViewResolver\"><property name=\"viewClass\" value=\"org.springframework.web.servlet.view.tiles3.TilesView\"/></bean></beans>");
+        Files.writeString(webInf.resolve("tiles.xml"), "<tiles-definitions><definition name=\"common\" template=\"/WEB-INF/layout/common.jsp\"><put-list-attribute name=\"stylesheets\"><add-attribute value=\"/resources/css/app.css\"/></put-list-attribute></definition>"
+            + "<definition name=\"home\" extends=\"common\"><put-attribute name=\"body\" value=\"/WEB-INF/jsp/home.jsp\"/></definition></tiles-definitions>");
+        Files.writeString(webInf.resolve("layout/common.jsp"), "<tiles:insertAttribute name=\"body\"/>");
+        Files.writeString(webInf.resolve("jsp/home.jsp"), "<h1>Home</h1>");
+        ApplicationGraph graph = new SpringMvcAnalyzer().analyze(new ProjectScanner().scan(root));
+        var home = graph.nodes().stream().filter(n -> n.type() == ApplicationGraph.NodeType.SCREEN && n.name().equals("home")).findFirst().orElseThrow();
+        var tiles = new com.fasterxml.jackson.databind.ObjectMapper().readTree(home.attributes().get("tilesAttributes"));
+        assertTrue(tiles.path("attributes").path("stylesheets").path("list").get(0).asText().equals("/resources/css/app.css"), tiles.toString());
+    }
+
+    @Test
+    void keepsTilesPagesWhoseAttributeValueNamesTheirOwnDefinition() throws Exception {
+        Path root = Files.createTempDirectory("st-mvc-tiles-self-value");
+        Path webInf = root.resolve("src/main/webapp/WEB-INF");
+        Files.createDirectories(webInf.resolve("jsp"));
+        Files.createDirectories(webInf.resolve("layout"));
+        Files.writeString(root.resolve("pom.xml"), "<project><dependency><artifactId>spring-webmvc</artifactId></dependency></project>");
+        Files.writeString(root.resolve("X.java"), "import org.springframework.stereotype.*; import org.springframework.web.bind.annotation.*; @Controller class X {"
+            + " @RequestMapping(\"/login\") String login(){ return \"login\"; }"
+            + " @RequestMapping(\"/account/upload\") String upload(){ return \"upload\"; } }");
+        Files.writeString(webInf.resolve("dispatcher-servlet.xml"), """
+            <beans><bean class="org.springframework.web.servlet.view.tiles3.TilesConfigurer"><property name="definitions"><list><value>/WEB-INF/defs/general.xml</value></list></property></bean>
+            <bean class="org.springframework.web.servlet.view.UrlBasedViewResolver"><property name="viewClass" value="org.springframework.web.servlet.view.tiles3.TilesView"/></bean></beans>
+            """);
+        Files.createDirectories(webInf.resolve("defs"));
+        // RawSanj/spring-tiles-sample-app: "current"/"upload" are read with tilesx:useAttribute as strings.
+        Files.writeString(webInf.resolve("defs/general.xml"), """
+            <tiles-definitions>
+              <definition name="page" template="/WEB-INF/layout/page.jsp"/>
+              <definition name="login" extends="page"><put-attribute name="body" value="/WEB-INF/jsp/login.jsp"/><put-attribute name="current" value="login"/></definition>
+              <definition name="upload" extends="page"><put-attribute name="body" value="/WEB-INF/jsp/upload.jsp"/><put-attribute name="upload" value="upload"/></definition>
+            </tiles-definitions>
+            """);
+        Files.writeString(webInf.resolve("layout/page.jsp"), "<tilesx:useAttribute name=\"current\"/><a href=\"<c:url value='/logout'/>\">Sign out</a><tiles:insertAttribute name=\"body\"/>");
+        Files.writeString(webInf.resolve("jsp/login.jsp"), "<form method=\"post\" action=\"<c:url value='/login'/>\"><input name=\"user\"><button>Sign In</button></form>");
+        Files.writeString(webInf.resolve("jsp/upload.jsp"), "<h1>Upload</h1>");
+
+        ApplicationGraph graph = new SpringMvcAnalyzer().analyze(new ProjectScanner().scan(root));
+        var screens = graph.nodes().stream().filter(node -> node.type() == ApplicationGraph.NodeType.SCREEN).toList();
+
+        assertTrue(screens.stream().map(ApplicationGraph.GraphNode::name).sorted().toList().equals(java.util.List.of("login", "upload")), screens.toString());
+        assertTrue(screens.stream().allMatch(screen -> "true".equals(screen.attributes().get("tilesDefinition"))
+            && screen.attributes().get("view").equals("src/main/webapp/WEB-INF/layout/page.jsp")), screens.toString());
+        var login = screens.stream().filter(node -> node.name().equals("login")).findFirst().orElseThrow();
+        var tiles = new com.fasterxml.jackson.databind.ObjectMapper().readTree(login.attributes().get("tilesAttributes"));
+        assertTrue(tiles.path("attributes").path("current").path("value").asText().equals("login"), tiles.toString());
+        assertTrue(tiles.path("attributes").path("body").path("path").asText().equals("src/main/webapp/WEB-INF/jsp/login.jsp"), tiles.toString());
+        assertTrue(graph.relationships().stream().anyMatch(edge -> edge.type() == ApplicationGraph.EdgeType.RENDERS && edge.to().equals(login.id())), "controller renders the Tiles page");
+    }
+
+    @Test
+    void keepsATilesBodyAsItsOwnScreenWhenAControllerRendersItDirectly() throws Exception {
+        Path root = Files.createTempDirectory("st-mvc-tiles-routed-body");
+        Path webInf = root.resolve("src/main/webapp/WEB-INF");
+        Files.createDirectories(webInf.resolve("views"));
+        Files.writeString(root.resolve("pom.xml"), "<project><dependency><artifactId>spring-webmvc</artifactId></dependency></project>");
+        Files.writeString(root.resolve("X.java"), "import org.springframework.stereotype.*; import org.springframework.web.bind.annotation.*; @Controller class X { @GetMapping(\"/raw\") String raw(){ return \"home\"; } @GetMapping(\"/page\") String page(){ return \"home.page\"; } }");
+        Files.writeString(webInf.resolve("tiles.xml"), "<tiles-definitions><definition name=\"home.page\" template=\"/WEB-INF/layout.jsp\"><put-attribute name=\"body\" value=\"/WEB-INF/views/home.jsp\"/></definition></tiles-definitions>");
+        Files.writeString(webInf.resolve("layout.jsp"), "<tiles:insertAttribute name=\"body\"/>");
+        Files.writeString(webInf.resolve("views/home.jsp"), "<h1>Home</h1>");
+
+        ApplicationGraph graph = new SpringMvcAnalyzer().analyze(new ProjectScanner().scan(root));
+
+        assertTrue(graph.nodes().stream().anyMatch(node -> node.type() == ApplicationGraph.NodeType.SCREEN && node.attributes().getOrDefault("view", "").endsWith("views/home.jsp")));
+        assertTrue(graph.nodes().stream().anyMatch(node -> node.type() == ApplicationGraph.NodeType.SCREEN && node.name().equals("home.page")));
+    }
+
+    @Test
+    void ignoresQueryStringsWhenMatchingLinksToEndpoints() throws Exception {
+        Path root = Files.createTempDirectory("st-mvc-query");
+        Path jsp = root.resolve("src/main/webapp/WEB-INF/views/landing.jsp");
+        Files.createDirectories(jsp.getParent());
+        Files.writeString(root.resolve("pom.xml"), "<project><dependency><artifactId>spring-webmvc</artifactId></dependency></project>");
+        Files.writeString(root.resolve("X.java"), "import org.springframework.stereotype.*; import org.springframework.web.bind.annotation.*; @Controller class X {"
+            + " @GetMapping(\"/\") String landing(){ return \"landing\"; }"
+            + " @GetMapping(\"/applications/new\") String create(){ return \"landing\"; }"
+            + " @GetMapping(\"/applications/{id}\") String detail(){ return \"landing\"; } }");
+        Files.writeString(jsp, "<a href=\"<c:url value='/applications/new?type=CAR'/>\">Car</a><a href=\"<c:url value='/applications/new#top'/>\">Top</a>");
+
+        ApplicationGraph graph = new SpringMvcAnalyzer().analyze(new ProjectScanner().scan(root));
+        java.util.Map<String, String> names = graph.nodes().stream().collect(java.util.stream.Collectors.toMap(ApplicationGraph.GraphNode::id, ApplicationGraph.GraphNode::name));
+        var triggers = graph.relationships().stream().filter(edge -> edge.type() == ApplicationGraph.EdgeType.TRIGGERS)
+            .filter(edge -> Set.of("Car", "Top").contains(names.get(edge.from()))).toList();
+
+        assertTrue(triggers.size() == 2, triggers.toString());
+        assertTrue(triggers.stream().allMatch(edge -> names.get(edge.to()).equals("GET /applications/new")
+            && edge.confidence() == ApplicationGraph.Confidence.CONFIRMED), triggers.toString());
     }
 
     @Test
