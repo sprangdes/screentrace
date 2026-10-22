@@ -368,6 +368,18 @@ public final class JspProjectParser {
             attributes.add(new JspAnalysis.TilesAttribute(attribute.getAttribute("name"), attribute.getAttribute("value")));
           }
         }
+        // Tiles 2/3 <put-list-attribute><add-attribute value/>, Tiles 1 <putList><add value/>: e.g. a layout's stylesheets.
+        for (String[] listTags : List.of(new String[] {"put-list-attribute", "add-attribute"}, new String[] {"putList", "add"})) {
+          NodeList lists = definition.getElementsByTagName(listTags[0]);
+          for (int listIndex = 0; listIndex < lists.getLength(); listIndex++) {
+            Element list = (Element) lists.item(listIndex);
+            List<String> values = new ArrayList<>();
+            for (org.w3c.dom.Node child = list.getFirstChild(); child != null; child = child.getNextSibling())
+              if (child instanceof Element item && item.getTagName().equals(listTags[1]))
+                values.add(item.hasAttribute("value") ? item.getAttribute("value") : item.getTextContent().trim());
+            attributes.add(new JspAnalysis.TilesAttribute(list.getAttribute("name"), "", values));
+          }
+        }
         String template = definition.getAttribute("template");
         if (template.isBlank()) template = definition.getAttribute("path");
         definitions.add(new JspAnalysis.TilesDefinition(definition.getAttribute("name"), template,

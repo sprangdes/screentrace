@@ -1,4 +1,3 @@
-import { createReadStream } from 'node:fs';
 import { constants } from 'node:fs';
 import { lstat, mkdir, open, realpath } from 'node:fs/promises';
 import path from 'node:path';
@@ -118,12 +117,17 @@ export async function readBufferLimited(root, file, maxBytes = 8 * 1024 * 1024) 
   const safe = await resolveExistingFileWithin(root, file);
   const chunks = [];
   let total = 0;
+  // The FileHandle is the descriptor's only owner. A read stream over handle.fd could close it while being torn down
+  // by the size error, and handle.close() then failed with EBADF instead of reporting the limit (Linux CI).
   const handle = await open(safe, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
   try {
-    for await (const chunk of createReadStream(safe, { fd: handle.fd, autoClose: false })) {
-      total += chunk.byteLength;
+    const buffer = Buffer.allocUnsafe(64 * 1024);
+    for (;;) {
+      const { bytesRead } = await handle.read(buffer, 0, buffer.length, null);
+      if (bytesRead === 0) break;
+      total += bytesRead;
       if (total > maxBytes) throw new Error(`File exceeds ${maxBytes} byte limit: ${file}`);
-      chunks.push(chunk);
+      chunks.push(Buffer.from(buffer.subarray(0, bytesRead)));
     }
   } finally {
     await handle.close();

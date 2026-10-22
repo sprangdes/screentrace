@@ -60,6 +60,40 @@ test('preexisting output symlink is rejected before writing outside the output r
   await rm(outside, { recursive: true, force: true });
 });
 
+test('a Tiles list attribute looped by the layout links every listed stylesheet', async () => {
+  // RawSanj/spring-tiles-sample-app: <put-list-attribute name="stylesheets"> + tilesx:useAttribute + c:forEach left
+  // <c:url value="${css}"/> unresolved, so the AdminLTE pages rendered without styles.
+  const root = await mkdtemp(path.join(os.tmpdir(), 'screentrace-capture-tiles-list-'));
+  const output = path.join(root, 'analysis');
+  const web = path.join(root, 'src/main/webapp');
+  await mkdir(path.join(web, 'WEB-INF/layout'), { recursive: true });
+  await mkdir(path.join(web, 'resources/css'), { recursive: true });
+  await mkdir(output, { recursive: true });
+  await writeFile(path.join(web, 'resources/css/app.css'), 'h1{color:rgb(1, 2, 3)}');
+  await writeFile(path.join(web, 'WEB-INF/layout/common.jsp'), '<%@ taglib uri="http://tiles.apache.org/tags-tiles-extras" prefix="tilesx" %>'
+    + '<html><head><tilesx:useAttribute id="stylesheets" name="stylesheets" classname="java.util.List" />'
+    + '<c:forEach var="css" items="${stylesheets}"><link rel="stylesheet" type="text/css" href="<c:url value="${css}"/>"></c:forEach></head>'
+    + '<body><h1>Tracker</h1></body></html>');
+  await writeFile(output + '/application-graph.json', JSON.stringify({ schemaVersion: '2.2', nodes: [{ id: 'screen:home', type: 'SCREEN', attributes: {
+    view: 'src/main/webapp/WEB-INF/layout/common.jsp', tilesDefinition: 'true', tilesDefinitionName: 'home',
+    tilesAttributes: JSON.stringify({ template: 'src/main/webapp/WEB-INF/layout/common.jsp', attributes: { stylesheets: { list: ['/resources/css/app.css'] } } }) } }], relationships: [] }));
+
+  const child = spawn(process.execPath, [path.resolve('screentrace-capture/capture-static-jsp.mjs'), root, output, '--preview-v2'], { stdio: ['ignore', 'pipe', 'pipe'] });
+  let stdout = '', stderr = '';
+  child.stdout.on('data', data => { stdout += data; });
+  child.stderr.on('data', data => { stderr += data; });
+  const status = await new Promise(resolve => child.on('close', resolve));
+  try {
+    assert.equal(status, 0, stdout + stderr);
+    const rendered = await readFile(path.join(output, 'static-preview/screen_home.html'), 'utf8');
+    assert.doesNotMatch(rendered, /\$\{css\}|c:forEach/);
+    assert.match(rendered, /<link[^>]+href="[^"]*resources\/css\/app\.css"/);
+    const capture = JSON.parse(await readFile(path.join(output, 'static-preview/element-styles.json'), 'utf8'));
+    const heading = capture.screens['screen:home'].elements.find(element => element.tag === 'h1');
+    assert.equal(capture.styles[heading.styleId].color, 'rgb(1, 2, 3)', 'the listed stylesheet is applied');
+  } finally { await rm(root, { recursive: true, force: true }); }
+});
+
 test('unmapped root-absolute style URLs never become file URLs outside the analysis output', async () => {
   // chrisekelley/zeprs hard-codes its context path: <td background="/zeprs/images/banner_bkgd.gif">. Chromium computed
   // it as file:///zeprs/…, and the preview reader correctly refused the whole analysis.

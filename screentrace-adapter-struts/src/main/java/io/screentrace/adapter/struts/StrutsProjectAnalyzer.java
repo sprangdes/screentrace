@@ -394,7 +394,11 @@ public final class StrutsProjectAnalyzer {
   }
 
   private static void resolveConfiguredForwards(State state) {
-    for(PendingForward pending:state.pendingForwards)forward(pending.target(),pending.ownerId(),pending.module(),pending.source(),state);
+    for(PendingForward pending:state.pendingForwards){
+      String unused=unusedDeclaredForward(pending,state);
+      if(unused!=null){state.diagnostics.add(new Diagnostic("forward 已宣告但 Action 程式從未使用，不列為目的頁："+unused+" → "+pending.target(),Confidence.INFERRED,pending.source(),"STRUTS_FORWARD_UNUSED",evidence(pending.source(),Confidence.INFERRED,"Action 程式只以字面名稱呼叫 findForward，且 ActionMapping 未傳出")));continue;}
+      forward(pending.target(),pending.ownerId(),pending.module(),pending.source(),state);
+    }
     for(Mapping mapping:state.actionMappings)analyzeForwards(mapping,state);
   }
 
@@ -471,8 +475,47 @@ public final class StrutsProjectAnalyzer {
     if(Set.of("DispatchAction","LookupDispatchAction","MappingDispatchAction","EventDispatchAction").contains(shortName)) return shortName;
     if(!seen.add(type)) return "";
     var java=state.types.get(type);if(java==null) return "";
+    // An execute(mapping, form, request, response) that never calls super.execute, in a class with no other dispatch
+    // methods, bypasses the dispatch machinery (SpringStrutsHibernate's actions). With dispatch methods present it stays dispatch.
+    if(overridesExecuteWithoutDispatch(java))return "";
     String parent=java.parent();String direct=dispatchFamily(parent,state,seen);if(!direct.isBlank()) return direct;
     String prefix=type.contains(".")?type.substring(0,type.lastIndexOf('.')+1):"";return dispatchFamily(prefix+parent,state,seen);
+  }
+  /**
+   * The name of an action's own <forward> that its Action code can never return: the class and every project
+   * ancestor are parsed, every findForward uses a string literal, the ActionMapping is never handed to other code, and
+   * no string literal in those classes names the forward. Null whenever that cannot be shown.
+   */
+  private static String unusedDeclaredForward(PendingForward pending,State state) {
+    Mapping mapping=state.actionMappings.stream().filter(m->m.handlerId().equals(pending.ownerId())).findFirst().orElse(null);
+    if(mapping==null||!mapping.family().isBlank())return null;
+    String name=mapping.forwardSources().entrySet().stream().filter(e->!e.getKey().equals(DIRECT_FORWARD)&&e.getValue().equals(pending.source())).map(Map.Entry::getKey).findFirst().orElse(null);
+    if(name==null||!mapping.localForwards().containsKey(name))return null;
+    Set<String> literals=new HashSet<>();Set<String> seen=new HashSet<>();String type=mapping.type();boolean parsed=false;
+    while(type!=null&&!type.isBlank()&&seen.add(type)){
+      var java=state.types.get(type);
+      if(java==null){String simple=type.substring(type.lastIndexOf('.')+1);if(type.startsWith("org.apache.struts.")||Set.of("Action","DispatchAction","LookupDispatchAction","MappingDispatchAction","EventDispatchAction").contains(simple))break;return null;}
+      parsed=true;
+      for(var method:java.declaration().getMethods()){
+        Set<String> mappings=new HashSet<>();method.getParameters().forEach(p->{if(p.getType().asString().endsWith("ActionMapping"))mappings.add(p.getNameAsString());});
+        for(var call:method.findAll(MethodCallExpr.class)){
+          if(call.getNameAsString().equals("findForward")&&(call.getArguments().size()!=1||!call.getArgument(0).isStringLiteralExpr()))return null;
+          boolean handedOn=call.getArguments().stream().anyMatch(a->a.isNameExpr()&&mappings.contains(a.asNameExpr().getNameAsString()));
+          if(handedOn&&!(call.getNameAsString().equals("execute")&&call.getScope().filter(Expression::isSuperExpr).isPresent()))return null;
+        }
+      }
+      java.declaration().findAll(com.github.javaparser.ast.expr.StringLiteralExpr.class).forEach(s->literals.add(s.asString()));
+      String parent=java.parent();if(parent!=null&&!parent.contains(".")){String prefix=type.contains(".")?type.substring(0,type.lastIndexOf('.')+1):"";if(state.types.containsKey(prefix+parent))parent=prefix+parent;}
+      type=parent;
+    }
+    return parsed&&!literals.contains(name)?name:null;
+  }
+  private static boolean overridesExecuteWithoutDispatch(StrutsSources.JavaType java) {
+    if(java.declaration().getMethods().stream().anyMatch(m->!m.getNameAsString().equals("execute")&&validDispatchSignature(m)))return false;
+    for(var method:java.declaration().getMethodsByName("execute"))
+      if(method.getParameters().size()==4&&method.getType().asString().endsWith("ActionForward")&&method.getBody().isPresent()
+          &&method.findAll(MethodCallExpr.class).stream().noneMatch(call->call.getNameAsString().equals("execute")&&call.getScope().filter(Expression::isSuperExpr).isPresent()))return true;
+    return false;
   }
   /** Key of the target an action mapping forwards to by itself, without running an Action class. */
   private static final String DIRECT_FORWARD="(action forward)";

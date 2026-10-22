@@ -147,9 +147,25 @@ async function tilesEntry(entry,name,stack,depth){
   if(entry&&'value' in entry)return escapeHtml(entry.value);
   captureDiagnostics.push(`Tiles attribute not rendered: ${name}`);return '';
 }
+/**
+ * A layout's list attributes (put-list-attribute stylesheets/javascripts) are read with tilesx:useAttribute or
+ * tiles:importAttribute and looped with c:forEach; each loop over one becomes its body once per listed value.
+ */
+function expandTilesLists(source,attributes){
+  const lists=new Map(Object.entries(attributes).filter(([,entry])=>Array.isArray(entry?.list)).map(([name,entry])=>[name,entry.list]));
+  if(!lists.size)return source;
+  for(const match of source.matchAll(/<tiles(?:x)?:(?:useAttribute|importAttribute)\b([^>]*?)\/?>/gi)){const a=attrs(match[1]);if(a.name&&lists.has(a.name)){if(a.id)lists.set(a.id,lists.get(a.name));if(a.toName)lists.set(a.toName,lists.get(a.name));}}
+  return source.replace(/<c:forEach\b([^>]*?)>([\s\S]*?)<\/c:forEach\s*>/gi,(loop,attributeText,body)=>{
+    const a=attrs(attributeText),items=/^\$\{\s*([A-Za-z_][\w]*)\s*\}$/.exec(a.items??'')?.[1];
+    if(!items||!a.var||!lists.has(items))return loop;
+    const variable=new RegExp(`\\$\\{\\s*${a.var}\\s*\\}`,'g');
+    return lists.get(items).map(value=>body.replace(variable,value.replaceAll('$','$$$$'))).join('');
+  });
+}
 async function expandTiles(source,context,currentFile,stack,depth){
   if(depth>=16){captureDiagnostics.push('Tiles depth limit reached; remaining insert not rendered.');return source;}
   const attributes=context?.attributes??{};
+  source=expandTilesLists(source,attributes);
   const strings=source.replace(/<tiles:getAsString\b((?:[^>"']|"[^"]*"|'[^']*')*?)\/?>/gi,(_,attributeText)=>{const name=attrs(attributeText).name,entry=attributes[name];if(entry&&'value' in entry)return escapeHtml(entry.value);captureDiagnostics.push(`Tiles string attribute not rendered: ${name}`);return '';});
   return replaceAsync(strings,TILES_INSERT,async match=>{
     const tag=match[1].toLowerCase(),a=attrs(match[2]);

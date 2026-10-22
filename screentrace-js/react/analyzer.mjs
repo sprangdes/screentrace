@@ -1,5 +1,5 @@
 import {parseModules, diagnostic, children, line, text, FUNCTIONS, PARSER} from './modules.mjs';
-import {Evaluator, unwrap, truthy, externalName, returnedExpressions} from './values.mjs';
+import {Evaluator, unwrap, truthy, externalName, returnedExpressions, conditionText} from './values.mjs';
 import {element as htmlElement, htmlAttribute, isAllowedTag, jsxText, serialize, styleText, SAMPLE_TEXT} from './markup.mjs';
 import {stylesheets} from './styles.mjs';
 
@@ -292,6 +292,7 @@ class ScreenRenderer {
   render(route, shell = null) {
     this.routesElement = route.routesElement ?? null;
     this.reachedRoutes = false;
+    this.routePath = route.path;
     this.routeElements = [...route.layouts, route.element].map(entry => entry.expr ?? entry.component);
     const outlets = [...route.layouts, route.element];
     const root = outlets.shift();
@@ -451,6 +452,10 @@ class ScreenRenderer {
       return;
     }
     if (value.t === 'external') {
+      // A UI library component rendered as a router link (reactstrap tag={Link}, react-bootstrap as={Link},
+      // MUI component={Link}) navigates exactly like <Link to=…>.
+      const routerLink = this.polymorphicRouterLink(node, scope);
+      if (routerLink) { this.routerElement(node, routerLink, scope, state, key); return; }
       const handlers = this.handlers(node, scope, state);
       if (handlers.length) this.record(node, scope, state, key, {kind: 'OTHER', tag: jsxName(node.openingElement.name), handlers});
       this.childNodes(node.children, scope, state);
@@ -616,6 +621,16 @@ class ScreenRenderer {
       return;
     }
     this.childNodes(node.children, scope, state);
+  }
+
+  polymorphicRouterLink(node, scope) {
+    for (const name of ['tag', 'as', 'component']) {
+      const expr = attributeExpression(attribute(node, name));
+      if (!expr) continue;
+      const value = this.evaluator.evaluate(expr, scope);
+      if (value.t === 'external' && ROUTER.has(value.specifier) && ['Link', 'NavLink'].includes(externalName(value))) return externalName(value);
+    }
+    return null;
   }
 
   urlsOf(expr, scope) {
@@ -855,7 +870,8 @@ class EffectRunner {
     const where = {...this.state, guards: [...this.state.guards, ...guards]};
     const extra = {trace};
     if (callee.type === 'Identifier' && callee.name === 'fetch' && !this.evaluator.lookup('fetch', scope)) {
-      this.request(node, node.arguments[0], this.methodOf(node.arguments[1], scope), scope, where, extra);
+      if (!this.pairedRequest(node, node.arguments[0], node.arguments[1], scope, where, extra))
+        this.request(node, node.arguments[0], this.methodOf(node.arguments[1], scope), scope, where, extra);
     } else if (value.t === 'external' && value.specifier === 'axios') {
       const name = value.path.at(-1);
       if (value.path.length === 0 || name === 'request') {
@@ -895,9 +911,35 @@ class EffectRunner {
   }
 
   request(node, urlExpr, method, scope, where, extra) {
-    const urls = urlExpr ? cleanUrls(this.evaluator.strings(urlExpr, scope)) : [];
-    const status = urls.length === 0 || method === null ? 'UNRESOLVED' : urls.some(url => url.includes('{')) ? 'INFERRED' : 'CONFIRMED';
-    this.effects.push(this.renderer.effect('CALL_API', this.event, node, scope, where, {...extra, urls, method, status, expression: text(scope.module, node).slice(0, 400)}));
+    const candidates = urlExpr ? this.evaluator.strings(urlExpr, scope) : [];
+    // A relative URL resolves against the page, which for a routed screen is its route: api/x from /groups is /api/x.
+    const relative = candidates.filter(isRelativeUrl);
+    const urls = cleanUrls(candidates.map(candidate => isRelativeUrl(candidate) ? resolveAgainstRoute(candidate, this.renderer.routePath) ?? candidate : candidate));
+    const status = urls.length === 0 || method === null ? 'UNRESOLVED' : relative.length || urls.some(url => url.includes('{')) ? 'INFERRED' : 'CONFIRMED';
+    this.effects.push(this.renderer.effect('CALL_API', this.event, node, scope, where, {...extra, urls, method, status, ...(relative.length ? {relativeUrls: relative} : {}), expression: text(scope.module, node).slice(0, 400)}));
+  }
+
+  /**
+   * fetch(`/api/group${group.id ? `/${group.id}` : ''}`, {method: group.id ? 'PUT' : 'POST'}): when the method is a
+   * ternary whose test also chooses part of the URL, each branch is one request under that branch's guard.
+   */
+  pairedRequest(node, urlExpr, options, scope, where, extra) {
+    if (!urlExpr || !options) return false;
+    const config = this.evaluator.evaluate(options, scope);
+    const property = config.t === 'object' ? config.node.properties.find(p => p.type === 'ObjectProperty' && (p.key.name ?? p.key.value) === 'method') : null;
+    const choice = property ? unwrap(property.value) : null;
+    if (choice?.type !== 'ConditionalExpression') return false;
+    const test = conditionText(config.scope.module, choice.test);
+    if (!conditionsIn(urlExpr).some(item => conditionText(scope.module, item.test) === test)) return false;
+    const testText = text(config.scope.module, choice.test);
+    for (const [outcome, branch, guard] of [[true, choice.consequent, testText], [false, choice.alternate, `!(${testText})`]]) {
+      const value = this.evaluator.evaluate(branch, config.scope);
+      const method = value.t === 'lit' && value.v !== undefined && value.v !== null ? String(value.v).toUpperCase() : null;
+      this.evaluator.assumptions = new Map([[test, outcome]]);
+      try { this.request(node, urlExpr, method, scope, {...where, guards: [...where.guards, guard]}, extra); }
+      finally { this.evaluator.assumptions = null; }
+    }
+    return true;
   }
 }
 
@@ -964,6 +1006,30 @@ function guarded(state, guard) {
 }
 
 /** Keeps only URLs a request or navigation could use: absolute paths or http(s) URLs, without query or fragment. */
+function isRelativeUrl(candidate) {
+  const value = candidate.split(/[?#]/)[0];
+  return value !== '' && !value.startsWith('/') && !value.startsWith('{') && !/^[a-z][a-z0-9+.-]*:/i.test(value);
+}
+
+/** Resolves a relative request URL the way the browser does from the route's page; null for a non-literal route. */
+function resolveAgainstRoute(candidate, route) {
+  if (typeof route !== 'string' || !route.startsWith('/') || route.includes('*')) return null;
+  try {
+    const resolved = new URL(candidate, 'http://screentrace.invalid' + route);
+    return resolved.origin === 'http://screentrace.invalid' ? decodeURI(resolved.pathname) + resolved.search : null;
+  } catch { return null; }
+}
+
+/** Every ConditionalExpression inside a URL expression (template literal parts and + operands). */
+function conditionsIn(expr) {
+  const node = unwrap(expr);
+  if (!node) return [];
+  if (node.type === 'ConditionalExpression') return [node, ...conditionsIn(node.consequent), ...conditionsIn(node.alternate)];
+  if (node.type === 'TemplateLiteral') return node.expressions.flatMap(conditionsIn);
+  if (node.type === 'BinaryExpression' && node.operator === '+') return [...conditionsIn(node.left), ...conditionsIn(node.right)];
+  return [];
+}
+
 function cleanUrls(candidates) {
   const urls = new Set();
   for (const candidate of candidates) {

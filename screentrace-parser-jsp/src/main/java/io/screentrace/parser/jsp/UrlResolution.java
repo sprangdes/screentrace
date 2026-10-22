@@ -15,7 +15,10 @@ public final class UrlResolution {
  private UrlResolution() { }
  public record Endpoint(String id,String path,String method,List<AnalysisEvidence> evidence) { }
  public record ContextValue(String value,SourceLocation source) { }
- public record Context(List<ContextValue> values,List<String> diagnostics) {
+ /** Whether /path/ also matches a /path mapping, and the setting or Spring version that says so. */
+ public record TrailingSlash(boolean match,AnalysisEvidence evidence) { }
+ public record Context(List<ContextValue> values,List<String> diagnostics,TrailingSlash trailingSlash) {
+  public Context(List<ContextValue> values,List<String> diagnostics){this(values,diagnostics,null);}
   public Context {values=values.stream().distinct().sorted(Comparator.comparing(ContextValue::value).thenComparing(v->v.source().file()).thenComparingInt(v->v.source().line())).toList();diagnostics=diagnostics.stream().distinct().sorted().toList();}
  }
  public record Result(Confidence confidence,List<String> candidates,List<String> paths,List<String> diagnostics,List<AnalysisEvidence> evidence) { }
@@ -30,7 +33,7 @@ public final class UrlResolution {
     else {LoaderOptions options=new LoaderOptions();options.setAllowDuplicateKeys(false);options.setMaxAliasesForCollections(20);options.setNestingDepthLimit(40);options.setCodePointLimit((int)SafeProjectFiles.MAX_SOURCE_FILE_BYTES);Yaml yaml=new Yaml(new SafeConstructor(options));for(Object document:yaml.loadAll(text)){Object value=at(document,"server","servlet","context-path");if(value==null&&document instanceof Map<?,?> map)value=map.get("server.servlet.context-path");if(value!=null)add(values,diagnostics,value,relative,line(text,"context-path"));}}
    }catch(Exception error){diagnostics.add("CONTEXT_CONFIG_UNRESOLVED:"+relative);}
   }
-  return new Context(values,diagnostics);
+  return new Context(values,diagnostics,trailingSlash(inventory));
  }
  private static Object at(Object object,String... keys){for(String key:keys){if(!(object instanceof Map<?,?> map))return null;object=map.get(key);}return object;}
  private static int line(String text,String key){int offset=text.indexOf(key);return offset<0?1:1+(int)text.substring(0,offset).chars().filter(c->c=='\n').count();}
@@ -49,10 +52,55 @@ public final class UrlResolution {
   else {if(contexts.isEmpty())paths.add(path);for(var value:context.values()){String prefix=value.value();paths.add(!prefix.isEmpty()&&(path.equals(prefix)||path.startsWith(prefix+"/"))?path.substring(prefix.length()):path);}}
   if(paths.stream().anyMatch(p->!p.startsWith("/")||Arrays.asList(p.split("/")).contains("..")||p.contains("\\")))return result(Confidence.UNRESOLVED,new TreeSet<>(),paths,diagnostics,evidence);
   boolean inferred=false,pathMatched=false;
-  for(String normalized:paths)for(Endpoint endpoint:endpoints){int match=match(normalized.isEmpty()?"/":normalized,endpoint.path(),extensionMappings);if(match==0)continue;pathMatched=true;if(!compatible(method==null?"GET":method,endpoint.method()))continue;candidates.add(endpoint.id());inferred|=match==1;for(var proof:endpoint.evidence())evidence.add(proof.detail()==null?new AnalysisEvidence(proof.source(),proof.parser(),proof.resolution(),"對應端點="+endpoint.id()):proof);}
+  for(int pass=0;pass<2&&candidates.isEmpty()&&!pathMatched;pass++){
+  // Spring MVC before 6 also maps /path/ to /path (useTrailingSlashMatch); only tried when nothing matched exactly.
+  Set<String> attempt=pass==0?paths:withoutTrailingSlash(paths,context);if(attempt.isEmpty())break;
+  for(String normalized:attempt)for(Endpoint endpoint:endpoints){int match=match(normalized.isEmpty()?"/":normalized,endpoint.path(),extensionMappings);if(match==0)continue;pathMatched=true;if(!compatible(method==null?"GET":method,endpoint.method()))continue;candidates.add(endpoint.id());inferred|=match==1;for(var proof:endpoint.evidence())evidence.add(proof.detail()==null?new AnalysisEvidence(proof.source(),proof.parser(),proof.resolution(),"對應端點="+endpoint.id()):proof);}
+  if(pass==1&&!candidates.isEmpty()){inferred=true;evidence.add(context.trailingSlash().evidence());}
+  }
   if(candidates.isEmpty())diagnostics.add(pathMatched?"URL_METHOD_MISMATCH":"URL_UNRESOLVED");
   Confidence confidence=candidates.isEmpty()?Confidence.UNRESOLVED:candidates.size()>1||contexts.size()>1?Confidence.AMBIGUOUS:inferred?Confidence.INFERRED:Confidence.CONFIRMED;
   return result(confidence,candidates,paths,diagnostics,evidence);
+ }
+ private static Set<String> withoutTrailingSlash(Set<String> paths,Context context) {
+  if(context.trailingSlash()==null||!context.trailingSlash().match())return Set.of();
+  Set<String> result=new TreeSet<>();for(String path:paths)if(path.length()>1&&path.endsWith("/"))result.add(path.replaceAll("/+$",""));return result;
+ }
+ /** An explicit setUseTrailingSlashMatch / mvc:path-matching setting wins; otherwise the declared Spring generation's default. */
+ static TrailingSlash trailingSlash(ProjectInventory inventory) {
+  Set<Boolean> explicit=new TreeSet<>();AnalysisEvidence explicitProof=null;
+  for(var file:inventory.files()) {
+   String name=file.getFileName().toString(),relative=inventory.root().relativize(file).toString().replace('\\','/');
+   if(!name.endsWith(".java")&&!name.endsWith(".xml"))continue;
+   try {
+    String text=SafeProjectFiles.readUtf8Limited(inventory.root(),file,SafeProjectFiles.MAX_SOURCE_FILE_BYTES);
+    if(name.endsWith(".java")&&text.contains("setUseTrailingSlashMatch")) {
+     for(var call:JavaSources.parse(text).findAll(com.github.javaparser.ast.expr.MethodCallExpr.class))
+      if(call.getNameAsString().equals("setUseTrailingSlashMatch")&&call.getArguments().size()==1&&call.getArgument(0).isBooleanLiteralExpr()) {
+       boolean value=call.getArgument(0).asBooleanLiteralExpr().getValue();explicit.add(value);
+       explicitProof=new AnalysisEvidence(new SourceLocation(relative,call.getBegin().map(p->p.line).orElse(1)),"UrlResolution",ResolutionStatus.CONFIRMED,"setUseTrailingSlashMatch("+value+")");
+      }
+    } else if(name.endsWith(".xml")&&text.contains("path-matching")) {
+     for(MarkupTag tag:MarkupTag.scan(text))if(!tag.closing()&&tag.name().replaceFirst("^.*:","").equals("path-matching")&&tag.attribute("trailing-slash")!=null) {
+      boolean value=Boolean.parseBoolean(tag.attribute("trailing-slash").trim());explicit.add(value);
+      explicitProof=new AnalysisEvidence(new SourceLocation(relative,tag.line()),"UrlResolution",ResolutionStatus.CONFIRMED,"mvc:path-matching trailing-slash="+value);
+     }
+    }
+   }catch(Exception ignored){/* Unreadable or unparsable sources set nothing. */}
+  }
+  if(explicit.size()==1)return new TrailingSlash(explicit.iterator().next(),explicitProof);
+  if(explicit.size()>1)return null;
+  var mvc=io.screentrace.scanner.BuildVersions.of(inventory,"spring-webmvc");
+  if(mvc.isPresent())return generation(mvc.get(),mvc.get().majorVersion()<6,"Spring MVC");
+  for(String boot:List.of("spring-boot-starter-parent","spring-boot-dependencies","spring-boot-starter-web")) {
+   var declared=io.screentrace.scanner.BuildVersions.of(inventory,boot);
+   if(declared.isPresent())return generation(declared.get(),declared.get().majorVersion()<3,"Spring Boot");
+  }
+  return null;
+ }
+ private static TrailingSlash generation(io.screentrace.scanner.BuildVersions.Declared declared,boolean match,String framework) {
+  return new TrailingSlash(match,new AnalysisEvidence(new SourceLocation(declared.file(),1),"UrlResolution",ResolutionStatus.INFERRED,
+   framework+" "+declared.version()+" 預設 useTrailingSlashMatch="+match+"（Spring Framework 6 起預設 false）"));
  }
  private static Result result(Confidence confidence,Set<String> candidates,Set<String> paths,Set<String> diagnostics,List<AnalysisEvidence> evidence){return new Result(confidence,List.copyOf(candidates),List.copyOf(paths),List.copyOf(diagnostics),evidence.stream().distinct().sorted().toList());}
  private static boolean compatible(String requested,String actual){return !"UNKNOWN".equals(requested)&&("ANY".equals(actual)||Objects.equals(requested,actual)||Arrays.asList(Objects.toString(actual,"").split("[,| ]+")).contains(requested));}
