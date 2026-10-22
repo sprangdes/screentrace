@@ -193,6 +193,26 @@ class SpringMvcAnalyzerTest {
     }
 
     @Test
+    void tilesListAttributesReachThePreviewContext() throws Exception {
+        // RawSanj/spring-tiles-sample-app: <put-list-attribute name="stylesheets"> feeds a c:forEach in common.jsp.
+        Path root = Files.createTempDirectory("st-mvc-tiles-lists");
+        Path webInf = root.resolve("src/main/webapp/WEB-INF");
+        Files.createDirectories(webInf.resolve("layout"));
+        Files.createDirectories(webInf.resolve("jsp"));
+        Files.writeString(root.resolve("pom.xml"), "<project><dependency><artifactId>spring-webmvc</artifactId></dependency></project>");
+        Files.writeString(root.resolve("X.java"), "import org.springframework.stereotype.*; import org.springframework.web.bind.annotation.*; @Controller class X { @RequestMapping(\"/\") String home(){ return \"home\"; } }");
+        Files.writeString(webInf.resolve("dispatcher-servlet.xml"), "<beans><bean class=\"org.springframework.web.servlet.view.UrlBasedViewResolver\"><property name=\"viewClass\" value=\"org.springframework.web.servlet.view.tiles3.TilesView\"/></bean></beans>");
+        Files.writeString(webInf.resolve("tiles.xml"), "<tiles-definitions><definition name=\"common\" template=\"/WEB-INF/layout/common.jsp\"><put-list-attribute name=\"stylesheets\"><add-attribute value=\"/resources/css/app.css\"/></put-list-attribute></definition>"
+            + "<definition name=\"home\" extends=\"common\"><put-attribute name=\"body\" value=\"/WEB-INF/jsp/home.jsp\"/></definition></tiles-definitions>");
+        Files.writeString(webInf.resolve("layout/common.jsp"), "<tiles:insertAttribute name=\"body\"/>");
+        Files.writeString(webInf.resolve("jsp/home.jsp"), "<h1>Home</h1>");
+        ApplicationGraph graph = new SpringMvcAnalyzer().analyze(new ProjectScanner().scan(root));
+        var home = graph.nodes().stream().filter(n -> n.type() == ApplicationGraph.NodeType.SCREEN && n.name().equals("home")).findFirst().orElseThrow();
+        var tiles = new com.fasterxml.jackson.databind.ObjectMapper().readTree(home.attributes().get("tilesAttributes"));
+        assertTrue(tiles.path("attributes").path("stylesheets").path("list").get(0).asText().equals("/resources/css/app.css"), tiles.toString());
+    }
+
+    @Test
     void keepsTilesPagesWhoseAttributeValueNamesTheirOwnDefinition() throws Exception {
         Path root = Files.createTempDirectory("st-mvc-tiles-self-value");
         Path webInf = root.resolve("src/main/webapp/WEB-INF");
