@@ -451,6 +451,10 @@ class ScreenRenderer {
       return;
     }
     if (value.t === 'external') {
+      // A UI library component rendered as a router link (reactstrap tag={Link}, react-bootstrap as={Link},
+      // MUI component={Link}) navigates exactly like <Link to=…>.
+      const routerLink = this.polymorphicRouterLink(node, scope);
+      if (routerLink) { this.routerElement(node, routerLink, scope, state, key); return; }
       const handlers = this.handlers(node, scope, state);
       if (handlers.length) this.record(node, scope, state, key, {kind: 'OTHER', tag: jsxName(node.openingElement.name), handlers});
       this.childNodes(node.children, scope, state);
@@ -616,6 +620,16 @@ class ScreenRenderer {
       return;
     }
     this.childNodes(node.children, scope, state);
+  }
+
+  polymorphicRouterLink(node, scope) {
+    for (const name of ['tag', 'as', 'component']) {
+      const expr = attributeExpression(attribute(node, name));
+      if (!expr) continue;
+      const value = this.evaluator.evaluate(expr, scope);
+      if (value.t === 'external' && ROUTER.has(value.specifier) && ['Link', 'NavLink'].includes(externalName(value))) return externalName(value);
+    }
+    return null;
   }
 
   urlsOf(expr, scope) {
