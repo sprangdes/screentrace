@@ -17,7 +17,7 @@ concurrency:
 
 jobs:
   build-and-test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04  # Playwright 1.55.1 cannot install browsers on ubuntu-26.04 (the new ubuntu-latest)
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
@@ -47,7 +47,7 @@ jobs:
         run: node --test screentrace-viewer/test/*.e2e.mjs
 
   dependency-audit:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04  # Playwright 1.55.1 cannot install browsers on ubuntu-26.04 (the new ubuntu-latest)
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
@@ -137,7 +137,7 @@ jobs:
           if-no-files-found: warn
 
   node-dependency-audit:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04  # Playwright 1.55.1 cannot install browsers on ubuntu-26.04 (the new ubuntu-latest)
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
