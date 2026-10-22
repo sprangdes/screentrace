@@ -517,6 +517,7 @@ public final class SpringMvcAnalyzer {
         stack.add(definition.name());
         Map<String, Object> attributes = new TreeMap<>();
         for (JspAnalysis.TilesAttribute attribute : definition.attributes()) {
+            if (attribute.list() != null) { attributes.put(attribute.name(), Map.of("list", attribute.list())); continue; }
             String value = attribute.value() == null ? "" : attribute.value();
             JspAnalysis.TilesDefinition nested = value.equals(definition.name()) ? null : byName.get(value);
             if (nested != null && !stack.contains(value)) attributes.put(attribute.name(), Map.of("definition", tilesContext(nested, byName, jsp, stack)));
