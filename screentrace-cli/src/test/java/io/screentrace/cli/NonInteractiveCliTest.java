@@ -117,6 +117,26 @@ class NonInteractiveCliTest {
     assertTrue(Files.isRegularFile(output.resolve("spring-mvc-jsp/report/screentrace-report.html")),result.output());
   }
 
+  @Test void analyzeAcceptsAProjectPathAndAnUnknownNameFailsWithoutAStackTrace() throws Exception {
+    // `analyze /abs/path` used to throw IllegalArgumentException("Project not found: …") with a Java stack trace.
+    Path workspace=Files.createTempDirectory("screentrace-analyze-path-"),home=workspace.resolve("home"),output=Files.createDirectory(workspace.resolve("output"));
+    Path projects=Files.createDirectory(workspace.resolve("projects")),elsewhere=Files.createDirectory(workspace.resolve("elsewhere"));
+    Path project=copyFixture(elsewhere,"spring-mvc-jsp");
+    Files.createDirectories(home.resolve(".screentrace"));
+    Files.writeString(home.resolve(".screentrace/config.json"),"{\"projectRoot\":\""+json(projects.toString())+"\",\"outputRoot\":\""+json(output.toString())+"\"}");
+    Path screenTrace=Files.createDirectory(workspace.resolve("screentrace"));
+    Result byPath=runPath(home,screenTrace,workspace,"analyze",project.toString());
+    assertEquals(0,byPath.exitCode(),byPath.output());
+    assertTrue(byPath.output().contains("分析完成"),byPath.output());
+    assertTrue(byPath.output().contains("單一 HTML 報表：file:"),byPath.output());
+    assertTrue(Files.isRegularFile(output.resolve("spring-mvc-jsp/report/screentrace-report.html")),byPath.output());
+    Result unknown=runPath(home,screenTrace,workspace,"analyze","no-such-project");
+    assertEquals(2,unknown.exitCode(),unknown.output());
+    assertTrue(unknown.output().contains("找不到專案：no-such-project"),unknown.output());
+    assertFalse(unknown.output().contains("Exception"),unknown.output());
+    assertTrue(ScreenTraceCli.looksLikePath("./demo")&&ScreenTraceCli.looksLikePath("~/demo")&&ScreenTraceCli.looksLikePath("C:\\demo")&&!ScreenTraceCli.looksLikePath("demo"));
+  }
+
   @Test void interactiveMenuHasOneAnalyseEntryWithOrWithoutAProjectRoot() {
     assertEquals(java.util.List.of("分析專案","設定","結束 ScreenTrace"),ScreenTraceCli.menu(false,false).stream().map(a->a.label()).toList());
     assertEquals(java.util.List.of("分析專案","開啟報表","設定","結束 ScreenTrace"),ScreenTraceCli.menu(false,true).stream().map(a->a.label()).toList());
@@ -133,12 +153,13 @@ class NonInteractiveCliTest {
   }
 
   /** Runs `screentrace <path>` from a working directory with the launcher's screentrace.home; preview tools come from the checkout. */
-  private static Result runPath(Path home,Path screenTrace,Path workingDirectory,String argument) throws Exception {
+  private static Result runPath(Path home,Path screenTrace,Path workingDirectory,String... arguments) throws Exception {
+    String argument=String.join(" ",arguments);
     String classpath=System.getProperty("surefire.test.class.path",System.getProperty("java.class.path"));
     var args=new java.util.ArrayList<String>();args.add(Path.of(System.getProperty("java.home"),"bin","java").toString());
     args.add("-Duser.home="+home);args.add("-Dscreentrace.home="+screenTrace);args.add("-Djava.awt.headless=true");
     String jsModule=System.getProperty("screentrace.js.module");if(jsModule!=null)args.add("-Dscreentrace.js.module="+jsModule);
-    args.add("-cp");args.add(classpath);args.add(ScreenTraceCli.class.getName());args.add(argument);
+    args.add("-cp");args.add(classpath);args.add(ScreenTraceCli.class.getName());args.addAll(java.util.List.of(arguments));
     Process process=new ProcessBuilder(args).directory(workingDirectory.toFile()).redirectErrorStream(true).redirectInput(new File("/dev/null")).start();
     var output=CompletableFuture.supplyAsync(()->{try{return new String(process.getInputStream().readAllBytes(),java.nio.charset.StandardCharsets.UTF_8);}catch(java.io.IOException error){throw new java.io.UncheckedIOException(error);}});
     assertTrue(process.waitFor(Duration.ofSeconds(120).toMillis(),TimeUnit.MILLISECONDS),argument+" timed out");
