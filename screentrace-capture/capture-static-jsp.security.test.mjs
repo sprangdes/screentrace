@@ -87,3 +87,31 @@ test('unmapped root-absolute style URLs never become file URLs outside the analy
     assert.doesNotMatch(styles, /file:\/\/\/(zeprs|AppName)/);
   } finally { await rm(root, { recursive: true, force: true }); }
 });
+
+test('guarded bean:write tags and script text parsed as markup still render', async () => {
+  // chrisekelley/zeprs: 26 screens failed JSON.parse on a double-encoded guard, and engine2.jsp's JavaScript produced
+  // an element named "s.length;" that createElementNS rejects.
+  const root = await mkdtemp(path.join(os.tmpdir(), 'screentrace-capture-skips-'));
+  const output = path.join(root, 'analysis');
+  const jsp = path.join(root, 'src/main/webapp/WEB-INF/jsp/page.jsp');
+  await mkdir(path.dirname(jsp), { recursive: true });
+  await mkdir(output, { recursive: true });
+  await writeFile(output + '/application-graph.json', JSON.stringify({ schemaVersion: '2.2',
+    nodes: [{ id: 'screen:skips', type: 'SCREEN', attributes: { view: 'src/main/webapp/WEB-INF/jsp/page.jsp' } }], relationships: [] }));
+  await writeFile(jsp, '<html><body><c:if test="${! empty oxytocin}"><div>Dose <bean:write name="oxytocin" property="oxytocin${pos}"/></div></c:if>'
+    + '<p>function encode(s) { for (i = 0; i <s.length; i++) { enc += s.charAt(i); } }</p></body></html>');
+
+  const child = spawn(process.execPath, [path.resolve('screentrace-capture/capture-static-jsp.mjs'), root, output, '--preview-v2'], { stdio: ['ignore', 'pipe', 'pipe'] });
+  let stdout = '', stderr = '';
+  child.stdout.on('data', data => { stdout += data; });
+  child.stderr.on('data', data => { stderr += data; });
+  const status = await new Promise(resolve => child.on('close', resolve));
+  try {
+    assert.equal(status, 0, stdout + stderr);
+    const capture = JSON.parse(await readFile(path.join(output, 'static-preview/element-styles.json'), 'utf8'));
+    const screen = capture.screens['screen:skips'];
+    assert.equal(screen.rendering.mode, 'reconstructed', JSON.stringify(screen.rendering));
+    assert.ok(screen.elements.some(element => JSON.stringify(element.conditions) === JSON.stringify(['${! empty oxytocin}'])));
+    assert.ok(screen.elements.some(element => element.tag === 's.length;'));
+  } finally { await rm(root, { recursive: true, force: true }); }
+});
