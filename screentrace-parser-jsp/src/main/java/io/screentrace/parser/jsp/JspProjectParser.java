@@ -40,11 +40,12 @@ public final class JspProjectParser {
     List<JspAnalysis.TilesDefinition> tilesDefinitions = new ArrayList<>();
     List<Diagnostic> diagnostics = new ArrayList<>();
     Map<String, MarkupAnalysis> markup = new java.util.TreeMap<>();
+    StrutsMenus menus = StrutsMenus.load(root, files);
     for (Path file : files.stream().sorted(java.util.Comparator.comparing(p->relative(root,p))).toList()) {
       String name = file.getFileName().toString();
       try {
         if (name.endsWith(".jsp") || name.endsWith(".jspf") || name.endsWith(".html") || name.endsWith(".htm")) {
-          parseJsp(root, file, views, interactions, includes, diagnostics, markup,messages);
+          parseJsp(root, file, views, interactions, includes, diagnostics, markup,messages,menus);
         } else if (name.endsWith(".xml") && SafeProjectFiles.readUtf8Limited(root, file, SafeProjectFiles.MAX_XML_FILE_BYTES).contains("tiles-definitions")) {
           parseTiles(root, file, tilesDefinitions, diagnostics);
         }
@@ -60,8 +61,8 @@ public final class JspProjectParser {
 
   private static void parseJsp(Path root, Path file, List<JspAnalysis.View> views,
                                List<JspAnalysis.Interaction> interactions, List<JspAnalysis.Include> includes,
-                               List<Diagnostic> diagnostics, Map<String, MarkupAnalysis> markup,StaticMessageResolver messages) throws IOException {
-    String text = SafeProjectFiles.readUtf8Limited(root, file, SafeProjectFiles.MAX_JSP_FILE_BYTES);
+                               List<Diagnostic> diagnostics, Map<String, MarkupAnalysis> markup,StaticMessageResolver messages,StrutsMenus menus) throws IOException {
+    String text = menus.expand(SafeProjectFiles.readUtf8Limited(root, file, SafeProjectFiles.MAX_JSP_FILE_BYTES));
     text = ThymeleafMarkup.normalize(text);
     String relative = relative(root, file);
     JspTagFileExpander.Result tagExpansion=new JspTagFileExpander().expand(root,relative,text);

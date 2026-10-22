@@ -6,11 +6,18 @@ const attrs = source => Object.fromEntries([...source.matchAll(/([\w:-]+)\s*=\s*
 const decode = value => value.replace(/&amp;/g,'&').replace(/&quot;/g,'"').replace(/&apos;/g,"'").replace(/&lt;/g,'<').replace(/&gt;/g,'>');
 function propertyMap(source){const result=new Map();for(const line of source.split(/\r?\n/)){if(!line.trim()||/^\s*[#!]/.test(line))continue;const match=line.match(/^\s*((?:\\.|[^:=\s])+)[\s:=]+(.*)$/);if(match)result.set(match[1].replace(/\\([ :=])/g,'$1'),match[2].replace(/\\n/g,'\n').replace(/\\([ :=])/g,'$1'));}return result;}
 
+/** The project root, and for a Maven web root <module>/src/main/webapp also <module>, whose src/main/resources is the classpath. */
+function moduleRoots(projectRoot,webRoot){
+ const roots=[projectRoot];const relative=path.relative(projectRoot,webRoot).split(path.sep).join('/');
+ if(relative.endsWith('src/main/webapp')&&relative!=='src/main/webapp')roots.unshift(path.join(projectRoot,relative.slice(0,-'src/main/webapp'.length)));
+ return roots;
+}
+
 export async function loadStrutsMessageCatalog(projectRoot,webRoot){
  const resources=[];let webXml='';try{webXml=await readUtf8Limited(projectRoot,path.join(webRoot,'WEB-INF/web.xml'),4*1024*1024);}catch{}
  const configs=new Set([path.join(webRoot,'WEB-INF/struts-config.xml')]);for(const match of webXml.matchAll(/<param-name>\s*config(?:\/[^<]*)?\s*<\/param-name>\s*<param-value>\s*([^<]+)\s*<\/param-value>/gi)){const value=decode(match[1]).trim();if(value.startsWith('/')&&!value.includes('..'))configs.add(path.join(webRoot,value));}
  for(const file of [...configs].sort())try{const source=await readUtf8Limited(projectRoot,await resolveExistingFileWithin(projectRoot,file),4*1024*1024);for(const match of source.matchAll(/<message-resources\b([^>]*?)\/?\s*>/gi)){const item=attrs(match[1]),parameter=(item.parameter||'').replaceAll('.','/');if(parameter)resources.push({key:item.key||'',parameter});}}catch{}
- const bundles=new Map();for(const resource of resources){if(bundles.has(resource.parameter))continue;const candidates=[path.join(webRoot,'WEB-INF/classes',`${resource.parameter}.properties`),path.join(projectRoot,'src/main/resources',`${resource.parameter}.properties`),path.join(projectRoot,'src/main/java',`${resource.parameter}.properties`),path.join(projectRoot,'src/main/webapp/WEB-INF/classes',`${resource.parameter}.properties`)];let values=new Map();for(const candidate of candidates)try{values=propertyMap(await readUtf8Limited(projectRoot,await resolveExistingFileWithin(projectRoot,candidate),4*1024*1024));break;}catch{}bundles.set(resource.parameter,values);}
+ const bundles=new Map();for(const resource of resources){if(bundles.has(resource.parameter))continue;const candidates=[path.join(webRoot,'WEB-INF/classes',`${resource.parameter}.properties`),...moduleRoots(projectRoot,webRoot).flatMap(root=>['src/main/resources','src/main/java'].map(dir=>path.join(root,dir,`${resource.parameter}.properties`))),path.join(projectRoot,'src/main/webapp/WEB-INF/classes',`${resource.parameter}.properties`)];let values=new Map();for(const candidate of candidates)try{values=propertyMap(await readUtf8Limited(projectRoot,await resolveExistingFileWithin(projectRoot,candidate),4*1024*1024));break;}catch{}bundles.set(resource.parameter,values);}
  return{resources,bundles,defaultBundle:resources.find(resource=>!resource.key)?.parameter||null};
 }
 
