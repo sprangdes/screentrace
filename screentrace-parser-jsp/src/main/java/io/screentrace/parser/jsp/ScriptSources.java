@@ -77,11 +77,11 @@ public final class ScriptSources {
         if(guard!=null)element.put("guard",guard);if(stack.stream().anyMatch(d->Set.of("c:foreach","logic:iterate").contains(d.get("sourceTag"))))element.put("dynamic",true);dom.add(element);
         if(name.equals("script")) {
           if(tag.attribute("src")!=null) {
-            String raw=tag.attribute("src"),target=raw,status="CONFIRMED";List<AnalysisEvidence> evidence=new ArrayList<>();boolean eligible=true;
+            String raw=tag.attribute("src"),target=withoutPathParameters(raw),status="CONFIRMED";List<AnalysisEvidence> evidence=new ArrayList<>();boolean eligible=true;
             for(var mapping:resourceMappings(inventory,handlers,raw))evidence.add(proof(mapping.source(),"CONFIRMED","靜態資源映射；路徑="+mapping.file()+"；設定="+mapping.mapping()+" → "+mapping.location()));
-            var resolution=resolver.resolve(raw,tag);if(!resolution.definitions().isEmpty()){target=resolution.value();evidence.addAll(resolution.definitions());}
-            else if(MarkupAnalysis.dynamic(raw)) {
-              var prefix=PREFIX.matcher(raw);
+            var resolution=resolver.resolve(target,tag);if(!resolution.definitions().isEmpty()){target=withoutPathParameters(resolution.value());evidence.addAll(resolution.definitions());}
+            else if(MarkupAnalysis.dynamic(target)) {
+              var prefix=PREFIX.matcher(target);
               if(prefix.matches()) {
                 String variable=prefix.group(1);var definitions=defs.getOrDefault(variable,List.of());
                 if(definitions.isEmpty()&&!unknownDefinitions){target=prefix.group(2);status="INFERRED";}
@@ -100,7 +100,10 @@ public final class ScriptSources {
             if(candidates.size()>1)status="AMBIGUOUS";else if(candidates.isEmpty())status="UNRESOLVED";
             var location=new SourceLocation(path,tag.attributeLine("src"));evidence.add(proof(location,status,"原始 script src："+raw+"；候選："+candidates));
             references.add(new Reference(location,raw,status,candidates,List.copyOf(evidence)));
-            if(candidates.size()==1) {
+            if(candidates.size()==1&&candidates.get(0).matches("(?i).*\\.jspf?$"))
+              // A JSP's text is a server template; the JavaScript it emits cannot be read statically, so it is not analyzed as one.
+              diagnostics.add(diag(path,tag.line(),"JS_TEMPLATE_SOURCE","script src 指向 JSP 樣板，伺服器輸出的 JavaScript 無法靜態取得，未分析；原文："+raw+"；檔案："+candidates.get(0)));
+            else if(candidates.size()==1) {
               String file=candidates.get(0);try{scripts.add(new Script(file,1,SafeProjectFiles.readUtf8Limited(inventory.root(),inventory.root().resolve(file),SafeProjectFiles.MAX_SOURCE_FILE_BYTES),"module".equals(tag.attribute("type")),"",null,path,status,raw,List.copyOf(evidence),Map.of(),guard,null));}
               catch(IOException|SecurityException error){diagnostics.add(diag(path,tag.line(),"JS_SOURCE_READ",error.getMessage()));}
             } else diagnostics.add(diag(path,tag.line(),"JS_SCRIPT_REFERENCE","script src 無法唯一解析；原文："+raw+"；候選："+candidates));
@@ -143,6 +146,12 @@ public final class ScriptSources {
     return List.copyOf(candidates);
   }
   private record ResourceMapping(String file,String mapping,String location,SourceLocation source) { }
+  /** Servlet path parameters such as ;jsessionid=… are URL rewriting, never part of the resource path. */
+  static String withoutPathParameters(String url) {
+    if(url==null)return null;int semicolon=url.indexOf(';');if(semicolon<0)return url;
+    int end=url.length();for(char delimiter:new char[]{'?','#'}){int index=url.indexOf(delimiter,semicolon);if(index>=0)end=Math.min(end,index);}
+    return url.substring(0,semicolon)+url.substring(end);
+  }
   private record ResourceHandler(String mapping,String location,SourceLocation source) { }
   /** Every mvc:resources declaration in the project, parsed once per collection. */
   private static List<ResourceHandler> resourceHandlers(ProjectScanner.ProjectInventory inventory) {
