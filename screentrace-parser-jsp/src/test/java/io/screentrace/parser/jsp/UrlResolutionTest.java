@@ -20,4 +20,32 @@ class UrlResolutionTest {
  @Test void externalAndTraversalPathsRemainUnresolved(){for(String url:List.of("https://host/api","//host/api","/../api","{unknown}/api")){var r=UrlResolution.resolve(url,"GET",context(""),List.of(endpoint("a","/api","GET")),false);assertEquals(Confidence.UNRESOLVED,r.confidence());assertTrue(r.candidates().isEmpty());}}
  @Test void readsPropertiesYamlWorkspaceValuesAndRetainsConflicts() throws Exception {var dir=root.resolve("src/main/resources");Files.createDirectories(dir);Files.writeString(dir.resolve("application.properties"),"server.servlet.context-path=/prop\n");Files.writeString(dir.resolve("application.yml"),"server:\n  servlet:\n    context-path: /yaml\n");var c=UrlResolution.context(new ProjectScanner().scan(root),context("/workspace").values());assertEquals(List.of("/prop","/workspace","/yaml"),c.values().stream().map(UrlResolution.ContextValue::value).toList());assertEquals(3,c.values().stream().map(v->v.source().file()).distinct().count());}
  @Test void unsafeYamlAndUnresolvedConfigurationProduceDiagnostics() throws Exception {Files.writeString(root.resolve("application.yml"),"!!java.net.URL ['https://example.invalid']");Files.writeString(root.resolve("application.properties"),"server.servlet.context-path=${DEPLOY_CONTEXT}\n");var c=UrlResolution.context(new ProjectScanner().scan(root),List.of());assertTrue(c.values().isEmpty());assertFalse(c.diagnostics().isEmpty());}
+
+ UrlResolution.Context trailing(boolean match){return new UrlResolution.Context(List.of(),List.of(),new UrlResolution.TrailingSlash(match,new AnalysisEvidence(new SourceLocation("pom.xml",1),"UrlResolution",ResolutionStatus.INFERRED,"policy")));}
+ @Test void trailingSlashMatchesOnlyUnderTheSpringPolicyAndOnlyAfterExactMisses(){
+  // RawSanj/spring-tiles-sample-app (Spring 4.0): $.ajax({url:'/account/upload/', type:'POST'}) reaches @PostMapping("/account/upload").
+  var endpoints=List.of(endpoint("upload","/account/upload","POST"));
+  var matched=UrlResolution.resolve("/account/upload/","POST",trailing(true),endpoints,false);
+  assertEquals(List.of("upload"),matched.candidates());assertEquals(Confidence.INFERRED,matched.confidence());
+  assertTrue(matched.evidence().stream().anyMatch(e->"policy".equals(e.detail())));
+  assertTrue(UrlResolution.resolve("/account/upload/","POST",trailing(false),endpoints,false).candidates().isEmpty());
+  assertTrue(UrlResolution.resolve("/account/upload/","POST",context(""),endpoints,false).candidates().isEmpty(),"no policy, no match");
+  var exact=UrlResolution.resolve("/a/","GET",trailing(true),List.of(endpoint("slash","/a/","GET"),endpoint("bare","/a","GET")),false);
+  assertEquals(List.of("slash"),exact.candidates());assertEquals(Confidence.CONFIRMED,exact.confidence());
+ }
+ @Test void trailingSlashPolicyComesFromExplicitSettingOrSpringGeneration() throws Exception {
+  Files.writeString(root.resolve("pom.xml"),"<project><properties><v>4.0.2.RELEASE</v></properties><dependencies><dependency><artifactId>spring-webmvc</artifactId><version>${v}</version></dependency></dependencies></project>");
+  var policy=UrlResolution.context(new ProjectScanner().scan(root),List.of()).trailingSlash();
+  assertTrue(policy.match());assertEquals(ResolutionStatus.INFERRED,policy.evidence().resolution());
+  Files.writeString(root.resolve("pom.xml"),"<project><parent><artifactId>spring-boot-starter-parent</artifactId><version>3.2.0</version></parent></project>");
+  assertFalse(UrlResolution.context(new ProjectScanner().scan(root),List.of()).trailingSlash().match());
+  Files.writeString(root.resolve("WebConfig.java"),"class WebConfig { void configurePathMatch(PathMatchConfigurer c){ c.setUseTrailingSlashMatch(true); } }");
+  var explicit=UrlResolution.context(new ProjectScanner().scan(root),List.of()).trailingSlash();
+  assertTrue(explicit.match());assertEquals(ResolutionStatus.CONFIRMED,explicit.evidence().resolution());
+  Files.delete(root.resolve("WebConfig.java"));Files.delete(root.resolve("pom.xml"));
+  Files.writeString(root.resolve("mvc.xml"),"<beans xmlns:mvc=\"http://www.springframework.org/schema/mvc\"><mvc:annotation-driven><mvc:path-matching trailing-slash=\"false\"/></mvc:annotation-driven></beans>");
+  assertFalse(UrlResolution.context(new ProjectScanner().scan(root),List.of()).trailingSlash().match());
+  Files.delete(root.resolve("mvc.xml"));
+  assertNull(UrlResolution.context(new ProjectScanner().scan(root),List.of()).trailingSlash(),"no Spring version, no policy");
+ }
 }
