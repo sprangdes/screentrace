@@ -2,7 +2,7 @@
 
 受測 ScreenTrace：分支 `fix/spring-tiles-screens`，commit `ba7a011`（`mvn -DskipTests package` 重新建置的 CLI jar）。本批只測試與記錄，沒有修改產品程式碼或目標專案。
 
-**結論：4 個專案中只有 Struts + Spring 混合專案的主要流程大致正確；Spring MVC Tiles 專案有 4／7 個 Tiles 頁面被丟掉版型、Spring Boot + React 專案完全沒有畫面（0 screens）、大型 Struts 1 專案讀錯設定檔、把 Javadoc HTML 當成頁面導致 198 個畫面全部沒有預覽，且分析耗時約 1 小時 46 分。** 共記錄 20 個問題（P1 × 6、P2 × 9、P3 × 5），RP7-02 已修復，其餘 OPEN。
+**結論：4 個專案中只有 Struts + Spring 混合專案的主要流程大致正確；Spring MVC Tiles 專案有 4／7 個 Tiles 頁面被丟掉版型、Spring Boot + React 專案完全沒有畫面（0 screens）、大型 Struts 1 專案讀錯設定檔、把 Javadoc HTML 當成頁面導致 198 個畫面全部沒有預覽，且分析耗時約 1 小時 46 分。** 共記錄 20 個問題（P1 × 6、P2 × 9、P3 × 5）。**2026-10-23 更新：19 個已修復並合併到 `main`（sprangdes/screentrace#25–#41；其中 RP7-11 只修了 Spring MVC 一側），RP7-14 部分修復**；逐項狀態、修復時另外發現的問題與後續待辦見[修復狀態](#修復狀態2026-10-23)。下方問題清單保留原始實測紀錄。
 
 ## 專案與版本
 
@@ -26,6 +26,69 @@ java -Duser.home=<scratch-home> -Dscreentrace.home=<repo> \
 ```
 
 `<scratch-home>/.screentrace/config.json` 指向暫存的 projects／out 目錄，避免改動使用者設定與自動開啟瀏覽器。之後以 [summarize-graph.py](real-projects-batch7-20261022/summarize-graph.py) 列出 Screen／Endpoint／Handler／關係／診斷，逐項對照原始 XML、Controller、JSP 與 React 原始碼。
+
+## 修復狀態（2026-10-23）
+
+全部修正以 merge commit 合併到 `main`，最後一個合併 commit 為 `bc4c22e`，其 CI（`build-and-test`、`dependency-audit`、`node-dependency-audit`）全部通過。合併前先在本機依序整合 17 個 PR 並跑完 Maven、JS 分析器、capture、viewer e2e 與四個專案實測，確認整合結果與 `main` 內容一致。
+
+### 逐項狀態
+
+| 編號 | 狀態 | PR | 修正後效果 |
+| --- | --- | --- | --- |
+| RP7-01 | 已修復 | [#26](https://github.com/sprangdes/screentrace/pull/26) | `package.json` 依賴 `react` 即偵測為 React；原始 okta 專案（`.js`）產生 3 個畫面 |
+| RP7-02 | 已修復 | [#25](https://github.com/sprangdes/screentrace/pull/25) | 屬性值等於自身定義名稱時視為字串；7 個 Tiles 頁面皆以版型組成 |
+| RP7-03 | 已修復 | [#28](https://github.com/sprangdes/screentrace/pull/28) | 依 web.xml `config`／`config/<module>` 載入設定；zeprs 550 個 endpoint 來自 `foo.xml`，舊樣板 0 個 |
+| RP7-04 | 已修復 | [#27](https://github.com/sprangdes/screentrace/pull/27) | 共用 `SafeProjectFiles.parseXml` 接受外部 DOCTYPE（仍拒絕內部宣告）；`URL_MAPPING_UNRESOLVED` 消失 |
+| RP7-05 | 已修復 | [#33](https://github.com/sprangdes/screentrace/pull/33) | `tag`／`as`／`component` 指向 router `Link` 的元件視為連結；okta 元件 14 → 20 |
+| RP7-06 | 已修復 | [#36](https://github.com/sprangdes/screentrace/pull/36) | 只覆寫 `execute()` 的 `DispatchAction` 子類視為一般 Action；`STRUTS_DISPATCH_UNRESOLVED` 3 → 0 |
+| RP7-07 | 已修復 | [#36](https://github.com/sprangdes/screentrace/pull/36) | 可證明程式從未回傳的 forward 改為 `STRUTS_FORWARD_UNUSED`，不再列為目的頁 |
+| RP7-08 | 已修復 | [#37](https://github.com/sprangdes/screentrace/pull/37) | capture 由畫面推得巢狀 web root，並在子模組找 message bundle；Name／Address 等標籤正確 |
+| RP7-09 | 已修復 | [#37](https://github.com/sprangdes/screentrace/pull/37)、[#38](https://github.com/sprangdes/screentrace/pull/38) | struts-menu 項目展開為連結；#38 讓版型內的相對連結到達 `/AddCustomer.do`、`/ListCustomer.do` |
+| RP7-10 | 已修復 | [#35](https://github.com/sprangdes/screentrace/pull/35) | 依專案設定或宣告的 Spring 版本決定結尾斜線配對（INFERRED）；兩個假端點消失 |
+| RP7-11 | 已修復（spring-tiles） | [#35](https://github.com/sprangdes/screentrace/pull/35) | Spring MVC 讀取 XML namespace 的 `<form-login>`／`<logout>`；spring-tiles 的登入表單與登出連結都有端點。SpringStrutsHibernate 走 Struts 分析流程，仍未處理（見後續待辦） |
+| RP7-12 | 已修復 | [#34](https://github.com/sprangdes/screentrace/pull/34) | 相對 `fetch` 網址依畫面路由解析（INFERRED）；`GET /api/groups`、`GET /api/user` 有呼叫者 |
+| RP7-13 | 已修復 | [#34](https://github.com/sprangdes/screentrace/pull/34) | 同一條件決定 URL 與 method 時拆成兩個請求；`URL_METHOD_MISMATCH` 2 → 0 |
+| RP7-14 | 部分修復 | [#28](https://github.com/sprangdes/screentrace/pull/28) | 耗時主要來自 Javadoc 頁面，略過後 zeprs 6,357 s → 約 330 s；`JspTagFileExpander` 每個標籤重掃整頁、沒有進度輸出兩點仍待處理 |
+| RP7-15 | 已修復 | [#27](https://github.com/sprangdes/screentrace/pull/27) | 解析錯誤不再印到 stderr，`mvc:resources` 每次分析只解析一次；zeprs `[Fatal Error]` 1,529 → 0 |
+| RP7-16 | 已修復 | [#41](https://github.com/sprangdes/screentrace/pull/41) | 解析 Tiles 清單屬性並展開版型的 `c:forEach`；AdminLTE 樣式表正確載入 |
+| RP7-17 | 已修復 | [#40](https://github.com/sprangdes/screentrace/pull/40) | 只有指令的 JSP 視為片段；`includes` 空白畫面消失 |
+| RP7-18 | 已修復 | [#40](https://github.com/sprangdes/screentrace/pull/40) | `analyze <路徑>` 可用；未知名稱給出可讀錯誤與 exit 2，不再有 stack trace |
+| RP7-19 | 已修復 | [#28](https://github.com/sprangdes/screentrace/pull/28) | 略過帶 javadoc 標記的 HTML，並以一則計數診斷回報 |
+| RP7-20 | 已修復 | [#29](https://github.com/sprangdes/screentrace/pull/29) | 每個 forward 循環只回報一次；zeprs `STRUTS_REDIRECT_CYCLE` 73,970 → 17 |
+
+### 合併後實測（`main` `bc4c22e`）
+
+| 專案 | 修正前 Screens／Endpoints／Components | 修正後 Screens／Endpoints／Components | 預覽 |
+| --- | --- | --- | --- |
+| SpringStrutsHibernate | 3／4／16 | 2／4／20 | 2／2 |
+| spring-tiles-sample-app | 10／12／151 | 10／12／151 | 10／10，AdminLTE 樣式載入 |
+| okta-spring-boot-react-crud-example（原始 `.js`） | 0／7／0 | 3／9／20 | 3／3 |
+| zeprs | 198／266／148,598（6,357 s，預覽 0） | 197／563／2,042（329 s） | 197／197 |
+
+spring-tiles 的畫面數相同，但其中 4 個 Tiles 頁面由單獨的 body JSP 改為完整版型，並有登入、登出與 Ajax 端點。
+
+### 修復時另外發現並修復的問題
+
+- **預覽讀取上限與 context path（[#29](https://github.com/sprangdes/screentrace/pull/29)）**：capture 讀 graph 的上限 16 MiB 改為 256 MiB；JSP 寫死 context path 的樣式網址（`<td background="/zeprs/images/…">`）在預覽中會變成輸出目錄外的 `file:///zeprs/…`，造成整個分析中止，改為無害的 `about:blank`。
+- **27 個畫面被跳過（[#30](https://github.com/sprangdes/screentrace/pull/30)）**：`convertControls` 把 `<bean:write>` 本身的屬性再跳脫一次；`createElementNS` 拒絕由 JavaScript 文字產生的元素名稱。
+- **只以 `<script src>` 載入的 JSP 被當成畫面（[#31](https://github.com/sprangdes/screentrace/pull/31)）**：zeprs 的 `engine2.jsp`；同時移除 script `src` 的 `;jsessionid` 路徑參數，JSP 不再當成 JavaScript 分析。
+- **JavaScript 行為依呼叫路徑爆量（[#32](https://github.com/sprangdes/screentrace/pull/32)）**：同一效果改為一筆行為，條件以 OR 合併；zeprs 行為 42,555 → 9,488、報表 150 MB → 81 MB。同時修正 `else` 分支遺失外層條件，並更新 WP10 golden 計數。
+- **Tiles 版型與轉送 JSP 的相對連結（[#38](https://github.com/sprangdes/screentrace/pull/38)）**：改依畫面被請求的 action 網址目錄解析，不再依 JSP 檔案所在資料夾。
+- **JSP 連結的 `NAVIGATE` 使用原始 href 樣板（[#35](https://github.com/sprangdes/screentrace/pull/35)）**：改用已解析的目標；並避免覆蓋 adapter 已證明的精確端點（整合 #25 與 #35 時發現）。
+- **`safe-files` 在 Linux CI 偶發 `EBADF`（[#39](https://github.com/sprangdes/screentrace/pull/39)）**：讀檔改由 FileHandle 單一擁有描述符。
+
+### 後續待辦
+
+- RP7-14 剩餘部分：`JspTagFileExpander` 每個標籤重新掃描整頁；大型分析沒有進度輸出。
+- `.properties` 以 UTF-8 讀取，Latin-1 的 `©` 顯示為 `�`。
+- Struts + Spring 混合專案不執行 `SpringSecurityProcessors`，SpringStrutsHibernate 的 `/j_spring_security_logout` 仍未解析。
+- React：`window.location.href = //host:port/api/private` 仍產生協定相對的假端點；axios 的 URL／method 三元式未成對展開。
+- Struts：一般 `<form action="x.do">` 內送出按鈕的相對網址仍依 JSP 資料夾解析；`return null` 後直接寫出 PDF 的下載沒有表示。
+- Tiles：Tiles 3 `inherit="true"` 的清單合併未支援；Struts adapter 尚未輸出 Tiles 清單屬性。
+- Gradle 專案沒有版本來源，不會套用結尾斜線規則。
+- 依離線政策，Bootstrap 與圖示字型等 CDN 資源不封裝，預覽中部分元件仍不完整；struts-menu 的 displayer 樣式未重現。
+- `NonInteractiveCliTest` 的 symlink 報表逐位元組比對曾在 CI 失敗一次（重跑通過，原因未查明）。
+- zeprs 合併後最長的 OR 條件達 1,877 字元，內容正確但可讀性差。
 
 ## 問題清單
 
