@@ -139,3 +139,7 @@
 - 三個新 repository：Struts 1／jQuery 使用者管理、MVC／JSP／CSV 庫存、Boot／Thymeleaf Todo，與既有 21 個 repository 無交集。22 頁面／片段、22 路由、186 控制項均有發現，22／22 可能目的頁集合通過；Ajax 0／1、現存本地 CSS 0／17。
 - 有效操作 42 項為 19 PASS／23 FAIL，6 條有效旅程 4 PASS／2 FAIL。原錯誤 selector 與同頁候選未選取的結果分別保留；補驗未放寬來源訊息／資料斷言。新增 WF-051–055、NC-008–009，全數 OPEN；不能以導覽成功宣稱資料功能等價。
 - 本批只有測試、證據及文件，未修改產品。217 檔來源不變，兩次各 41 份產物一致，前批 WF-035／036、NC-007 保留。詳見 [第六批報告](reports/COMPLETENESS_BATCH6_20261020.md)。
+
+## R18
+
+- 以 `sprangdes/reservio`（Spring Boot＋React）對照原始碼實測：路由與 API 大致正確，但依身分渲染的畫面被合成一張、共用外框未依身分過濾、登入後導向未解析，另有分派表呼叫、處理器 prop 分支、字面路徑優先、外部呼叫端點等缺口。指示見 [ADJUSTMENT_R18_ROLES.md](ADJUSTMENT_R18_ROLES.md)（WP78–WP85，三個停止點；R18-A／B／C 待需求方決定）。
