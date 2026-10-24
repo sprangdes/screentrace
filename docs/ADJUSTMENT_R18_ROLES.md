@@ -26,7 +26,7 @@
 | RV-08 | P2 | 字面路徑與樣板路徑同時符合時標 AMBIGUOUS | 前端呼叫 `GET /api/businesses/category`；後端同時有 `/api/businesses/category` 與 `/api/businesses/{category}` | `/business/settings/profile`、`/register-business`、`/business/setup` 多出 `GET /api/businesses/{category}`（AMBIGUOUS）。Spring 以路徑樣式特定性決定，字面路徑優先 |
 | RV-09 | P2 | 由外部系統呼叫的端點被列為「未被使用」 | `POST /api/integrations/line/webhook/{webhookKey}`；`config/SecurityConfig.java` 對此路徑 `permitAll` 且 CSRF 例外 | 與確實沒在用的 4 個 API 並列「未被使用」，需求方可能據此標記移除 |
 | RV-10 | P3 | 預覽同時顯示互斥狀態 | 各頁以 `loading && …`、`error && …`、`items.length === 0 && …` 分別渲染 | `/login` 同時有「帳號已建立」提示與錯誤訊息；`/notifications` 同時有錯誤、「載入通知中」、資料列與「目前沒有通知」；`/` 有兩個錯誤橫幅 |
-| RV-11 | P3 | 畫面名稱只有網址，畫面元件為外層包裝 | 頁面有明確標題（`<h1>營運概覽</h1>`、`通知中心`、`登入 Reservio`）；`ReservationCenterRoute preset="today|all|pending"` | `prototype-model.json` 畫面名稱為 `business/settings` 等；`view` 為 `SettingsRoute`、`BusinessAwareHome`、`RoleAwareNotificationsRoute`、`ReservationCenterRoute`；預約中心三頁無法區分 |
+| RV-11 | P3 | 畫面名稱只有網址，畫面元件為外層包裝 | 頁面有明確標題（`<h1>營運概覽</h1>`、`通知中心`、`登入 Reservio`）；`ReservationCenterRoute preset="today|all|pending"` | `prototype-model.json` 畫面名稱為 `business/settings` 等；`view` 為 `SettingsRoute`、`BusinessAwareHome`、`RoleAwareNotificationsRoute`、`ReservationCenterRoute`；預約中心三頁無法區分 （2026-10-25 更正：報表實際已用預覽的 `<h1>` 命名多數畫面；真正的缺口是 `view` 指向外層包裝元件，導致同網址的變體同名，以及 JSX spread props 未解析，見 WP83 第 2 點。）|
 | RV-12 | P3 | Spring Boot 未設定 context path 仍逐筆報診斷 | `src/main/resources/application*.yml` 有 `server.servlet` 區段但沒有 `context-path` | 59 則 `CONTEXT_PATH_UNSPECIFIED`，全部是雜訊 |
 | RV-13 | P3 | 樣式表來自未安裝的套件時沒有診斷 | `frontend/src/main.tsx`：`import 'bootstrap/dist/css/bootstrap.min.css'`；分析對象沒有 `node_modules` | `/business/setup` 的 Navbar 預覽無樣式，報表沒有任何提示 |
 
@@ -152,15 +152,24 @@
 
 **WP81、WP82 完成後停止**，等需求方驗收。
 
-### WP83　預覽狀態、畫面名稱（RV-10、RV-11）
+### WP83　預覽狀態、畫面元件與名稱（RV-10、RV-11）
 
-1. **預覽預設狀態**：靜態預覽以「資料已載入」為預設狀態。同一容器內以 `&&` 或三元運算渲染、條件彼此無法同時成立或分別引用同一狀態變數的兄弟區塊（載入中、錯誤、空資料、有資料），只畫一個：優先畫依賴示範資料存在的分支；其次畫 fall-through。判斷只用條件結構與 WP78 矛盾規則，不依變數名稱（`loading`、`error`）。其餘狀態保留在 preview model 的狀態清單中，畫面詳情可切換檢視（沿用既有側欄，不新增頁面）。graph 中的元件與行為不受預覽選擇影響。
-2. **畫面名稱**：依序採用畫面變體內第一個可見的 `<h1>` 文字（常值）、`document.title` 常值、最內層畫面元件名稱（略過只做 Guard 或包裝外框的元件），最後才用網址。預約中心這類同元件以不同常值 prop 渲染的路由，名稱附上該 prop 值（例如「預約中心（preset: today）」）。`view` 欄位改為最內層畫面元件，原包裝元件記在 `viewSources`。
-3. 規則與 R12 WP42 的畫面名稱規則合併說明，JSP 專案行為不變。
-
-合成 fixture：載入中／錯誤／空資料／有資料四態頁；有與沒有 `<h1>` 的頁；Guard 包裝＋外框＋頁面三層元件；同元件不同 prop 的三個路由。
-
-驗收（reservio 實測）：`/login` 預覽不同時出現成功提示與錯誤；`/notifications` 只顯示通知列表；`/` 商家變體不顯示錯誤橫幅；畫面名稱為頁面標題（例如「營運概覽」「通知中心」「登入 Reservio」），預約中心三頁可區分；報告列出全部畫面名稱修正前後對照。
+1. **載入成功後的預覽狀態**（只影響靜態預覽，不影響 graph）：
+   - 對畫面中每個被渲染的元件，收集其 `useState` 宣告的 `[值, setter]`。
+   - 「載入函式」是指掛載時執行的 `useEffect` 回呼，以及它直接或間接呼叫的專案內函式（含 `useCallback` 定義者），深度沿用分析器既有上限。
+   - 每個載入函式依原始碼順序模擬一次「成功路徑」：`try` 區塊執行到結束；`catch` 區塊略過；`finally` 在 `try` 之後執行。分析器已辨識為 API 請求的 `await` 呼叫，回傳示範回應：其任何屬性存取都是示範值，示範陣列的 `length` 為 1，`a || b` 取 `a`，`a?.b` 取示範值。條件無法求值的 `if (…) return` 或其他提前離開，視為沒有離開，繼續往下執行；條件無法求值、而且兩個分支都不會離開的 `if`／`else`，兩個分支內的 setter 都不套用。
+   - `setX(運算式)` 把 X 設為該運算式的值（常值或示範值）；以函式形式更新的 `setX(prev => …)` 把 X 設為未知。
+   - 模擬結束後：有被設定的狀態取最後一次設定的值；其餘狀態取 `useState` 的初始常值；初始值不是常值時為未知。
+   - 預覽渲染時，以這些狀態值與畫面 audience 求值條件。可求值者只畫成立的分支；無法求值者沿用既有規則（三元運算保留 fall-through；`&&` 照畫）。
+   - 不依變數或函式名稱判斷。
+   - preview-model 每個 React 畫面新增 `previewState`：列出參與求值的每個狀態變數、模擬後的值，以及設定該值的來源（檔案:行號）。本輪不做狀態切換介面。
+   - JSP、Struts、Spring MVC 畫面的預覽不變。
+2. **畫面元件與名稱**：
+   - React SCREEN 的 `view`、`viewSource` 改為「頁面元件」：從路由元素開始（變體則從該變體分支回傳的元素開始），依序略過以下三種元件：Guard（WP78 定義）、外框（輸出中把 `children` prop 或 `<Outlet/>` 原樣放入的元件）、純組合（輸出中沒有任何小寫 HTML 元素，而且略過 Guard 與外框後只剩唯一一個元件的元件）。第一個不屬於這三種的元件就是頁面元件。被略過的元件仍列在 `viewSources`。
+   - JSX spread 屬性 `{...expr}`：`expr` 可求值為物件字面值時，其屬性視為 props；寫在 spread 之前的同名屬性被覆蓋，寫在之後的會覆蓋 spread 的值。
+   - 畫面顯示名稱沿用 viewer 既有的 `screenNames` 規則，不修改；同名時由既有的消歧規則，依新的 `view` 加註區分。
+   - SCREEN 節點的 ID 與 `name` 不得改變。
+3. 合成 fixture 與驗收條件，見本階段的執行指令。
 
 ### WP84　樣式缺件診斷（RV-13）
 
