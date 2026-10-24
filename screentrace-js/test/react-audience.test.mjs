@@ -1,0 +1,42 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {analyzeReact} from '../react/analyzer.mjs';
+import {atoms, contradicts, combinations} from '../react/audience.mjs';
+const router = `import {Routes,Route,Navigate} from 'react-router-dom';`;
+const run = code => analyzeReact({files:[{file:'src/App.tsx',code:router+code}],markup:true});
+
+test('WP78 nested and global guards carry source-proven facts, not component guard prefixes',()=>{
+ const result=run(`
+ function Paused({children}){if(working)return null;return children;}
+ function Signed({children}){if(!account)return <Navigate to="/enter"/>;return children;}
+ function Staff({children}){return account?.tier !== 'EDITOR' ? <Navigate to="/else"/> : children;}
+ function Page(){return <button>Save</button>;}
+ export function App(){return <Paused><Routes><Route path="/edit" element={<Signed><Staff><Page/></Staff></Signed>}/></Routes></Paused>;}`);
+ const page=result.screens[0];
+ assert.ok(page.audience.some(a=>a.text==='account' && a.truth));
+ assert.ok(page.audience.some(a=>a.text===`account.tier === "EDITOR"` && a.truth));
+ assert.ok(page.audience.some(a=>a.text==='working' && !a.truth));
+ assert.ok(page.audience.every(a=>a.source.file==='src/App.tsx' && a.source.line>1));
+ assert.equal(page.components[0].guard,null);
+});
+
+test('WP78 only specified contradictions prune; optional access, equality and De Morgan normalize',()=>{
+ const a=expression=>atoms(expression,{file:'a.tsx',line:2});
+ assert.ok(contradicts([...a('!actor'),...a(`actor?.rank === 'EDITOR'`)]));
+ assert.ok(contradicts([...a('!actor'),...a('actor.rank')]));
+ assert.ok(contradicts([...a(`actor.rank === 'EDITOR'`),...a(`actor?.rank === 'READER'`)]));
+ assert.ok(contradicts([...a('flag'),...a('!flag')]));
+ assert.ok(!contradicts([...a('featureFlag'),...a(`actor.rank === 'READER'`)]));
+ assert.deepEqual(a('!(a || b)').map(x=>[x.text,x.truth]),[['a',false],['b',false]]);
+ assert.ok(!contradicts(a('!(a && b)')));
+});
+
+test('WP78 renamed guard and identity fields, free conditions and bounded audience combinations',()=>{
+ const result=run(`function Admission({children}){if(!visitor)return null;return children;}
+ function Page(){return <>{featureFlag && <button>Optional</button>}<button>Always</button></>;}
+ export function App(){return <Routes><Route path="/one" element={<Admission><Page/></Admission>}/></Routes>;}`);
+ assert.deepEqual(result.screens[0].audience.map(a=>[a.text,a.truth]),[['visitor',true]]);
+ assert.equal(result.screens[0].components.length,2);
+ assert.ok(result.audiences.length>0);
+ assert.equal(combinations(Array.from({length:5},(_,i)=>atoms(`flag${i}`,{file:'a',line:1}))).overflow,true);
+});
