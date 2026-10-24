@@ -58,3 +58,6 @@ test('R18 display removes implied disjunctions and duplicate atoms while retaini
 test('R18 display retains ordinary atoms even when another atom implies them',async()=>{
  const {simplify}=await import('../react/audience.mjs');const source={file:'src/Test.tsx',line:1};const raw=[...atoms('account',source),...atoms('account.tier === "CURATOR"',source)];assert.equal(simplify(raw).length,2);
 });
+test('R18 disjunction display exposes the shared atom implied by the conjunction',async()=>{
+ const {simplify}=await import('../react/audience.mjs');const source={file:'src/Test.tsx',line:1};const facts=[...atoms('accepted || office',source),...atoms('accepted || !office',source)];assert.deepEqual(simplify(facts).map(a=>[a.text,a.truth]),[['accepted',true]]);
+});
