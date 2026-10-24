@@ -28,6 +28,7 @@ test('WP78 only specified contradictions prune; optional access, equality and De
  assert.ok(contradicts([...a(`actor.rank === 'EDITOR'`),...a(`actor?.rank === 'READER'`)]));
  assert.ok(contradicts([...a('flag'),...a('!flag')]));
  assert.ok(!contradicts([...a('featureFlag'),...a(`actor.rank === 'READER'`)]));
+ assert.ok(!contradicts([...a(`one().rank === 'CURATOR'`),...a(`two().rank === 'READER'`)]));
  assert.deepEqual(a('!(a || b)').map(x=>[x.text,x.truth]),[['a',false],['b',false]]);
  assert.ok(!contradicts(a('!(a && b)')));
 });
@@ -40,4 +41,11 @@ test('WP78 renamed guard and identity fields, free conditions and bounded audien
  assert.equal(result.screens[0].components.length,2);
  assert.ok(result.audiences.length>0);
  assert.equal(combinations(Array.from({length:5},(_,i)=>atoms(`flag${i}`,{file:'a',line:1}))).overflow,true);
+});
+
+test('WP78 audience overflow reaches diagnostics instead of disappearing during deduplication',()=>{
+ const gates=Array.from({length:5},(_,i)=>`function Gate${i}({children}){if(!flag${i})return null;return children;}`).join('\n');
+ const routes=Array.from({length:5},(_,i)=>`<Route path="/flag${i}" element={<Gate${i}><button>Go</button></Gate${i}>}/>`).join('');
+ const result=run(`${gates} function App(){return <Routes>${routes}</Routes>;}`);
+ assert.ok(result.diagnostics.some(d=>d.code==='REACT_AUDIENCE_TOO_MANY'));assert.equal(result.audiences.length,0);
 });
