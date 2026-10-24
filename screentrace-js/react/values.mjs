@@ -178,6 +178,9 @@ export class Evaluator {
       }
       case 'external': return {...value, path: [...value.path, key]};
       case 'array': return typeof key === 'number' || /^\d+$/.test(String(key)) ? this.element(value, Number(key)) : unknown(String(key));
+      case 'demo-response': return key === 'length' ? lit(1) : {t:'demo-value'};
+      case 'demo-value': return key === 'length' ? lit(1) : {t:'demo-value'};
+      case 'demo-array': return key === 'length' ? lit(1) : unknown(String(key));
       default: return unknown(String(key));
     }
   }
@@ -377,7 +380,7 @@ function printable(value) {
 
 export function truthy(value) {
   if (value.t === 'lit') return Boolean(value.v);
-  if (['object', 'array', 'fn', 'jsx', 'navigate'].includes(value.t)) return true;
+  if (['object', 'array', 'demo-response', 'demo-value', 'demo-array', 'fn', 'jsx', 'navigate'].includes(value.t)) return true;
   return null;
 }
 

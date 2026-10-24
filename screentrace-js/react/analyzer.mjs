@@ -339,6 +339,7 @@ class ScreenRenderer {
     this.inRoute = 0;
     this.routeContent = 0;
     this.emitted = new Set();
+    this.previewStates = new Map();
   }
 
   render(route, shell = null) {
@@ -380,6 +381,7 @@ class ScreenRenderer {
       // Redirects written in the screen's own component come first; a guard's "not signed in" redirect after.
       redirects: this.load.filter(effect => effect.routeRedirect).map(effect => ({effect, own: !!this.view && effect.source.file === this.view.file && effect.source.line >= this.view.from && effect.source.line <= this.view.to})),
       sources: [...this.sources].sort(), components: components.sort((a, b) => a.key.localeCompare(b.key)), load: dedupe(this.load),
+      ...(this.markup ? {previewState: [...this.previewStates.values()].map(item=>({name:item.name,value:this.previewValue(item.value),source:`${item.file}:${item.line}`})).sort((a,b)=>a.name.localeCompare(b.name))} : {}),
       ...(this.markup ? {markup: serialize(closeConditionalDialogs(this.document))} : {})
     };
   }
@@ -584,7 +586,10 @@ class ScreenRenderer {
       if (new Set(pages.map(b => b.identity)).size > 1) this.variantDecision = pages.map(b => ({facts: this.evaluator.transferContext.remember(b.path.flatMap(item => atoms(item.expression, {file:scope.module.file,line:line(item.node)})),scope)}));
     }
     if (isComponent) this.audience = unique([...this.audience, ...this.evaluator.transferContext.remember(wrapperFacts(fn.node.body, scope, this.evaluator),scope)]);
-    if (isComponent) this.loadEffects(fn.node.body, scope, state, new Set([fn.node]));
+    if (isComponent) {
+      this.loadEffects(fn.node.body, scope, state, new Set([fn.node]));
+      if(this.markup)this.preparePreviewState(fn.node.body,scope);
+    }
     if (fn.node.body.type !== 'BlockStatement') { this.expr(fn.node.body, scope, state); return; }
     this.statements(fn.node.body.body, scope, state);
   }
@@ -602,6 +607,92 @@ class ScreenRenderer {
       if (this.statement(statement, scope, state)) return true;
     }
     return false;
+  }
+
+  previewValue(value){
+    if(value?.t==='lit')return value.v??null;
+    if(value?.t==='array')return value.node.elements.filter(Boolean).map(item=>this.previewValue(this.evaluator.evaluate(item,value.scope)));
+    if(value?.t==='demo-array')return [{}];
+    if(value?.t==='demo-response'||value?.t==='demo-value'||value?.t==='object')return {};
+    return null;
+  }
+
+  preparePreviewState(body,componentScope){
+    const states=new Map(),setters=new Map(),hooks=[];
+    const visit=(node,insideFunction=false)=>{
+      if(!node?.type)return;
+      if(node!==body&&FUNCTIONS.has(node.type))return;
+      if(node.type==='VariableDeclarator'&&node.id.type==='ArrayPattern'&&node.init?.type==='CallExpression'){
+        const callee=this.evaluator.evaluate(node.init.callee,componentScope);
+        if(callee.t==='external'&&REACT.has(callee.specifier)&&externalName(callee)==='useState'){
+          const name=node.id.elements[0]?.name,setter=node.id.elements[1]?.name;if(!name||!setter)return;
+          const initial=node.init.arguments[0]?this.evaluator.evaluate(node.init.arguments[0],componentScope):{t:'lit',v:undefined};
+          const stateValue=initial.t==='lit'||initial.t==='array'||initial.t==='object'?initial:{t:'unknown'};
+          const record={name,value:stateValue,file:componentScope.module.file,line:line(node),ownerScope:componentScope};states.set(name,record);setters.set(setter,record);
+          componentScope.bindings.set(name,{value:stateValue});componentScope.bindings.set(setter,{value:{t:'preview-setter',record}});
+        }
+      }
+      if(node.type==='CallExpression'){
+        const callee=this.evaluator.evaluate(node.callee,componentScope);
+        if(callee.t==='external'&&REACT.has(callee.specifier)&&EFFECT_HOOKS.has(externalName(callee))){
+          const callback=node.arguments[0]&&this.evaluator.evaluate(node.arguments[0],componentScope);if(callback.t==='fn')hooks.push(callback);
+        }
+      }
+      for(const child of children(node))visit(child,insideFunction);
+    };
+    visit(body);
+    const active=new Set();
+    for(const callback of hooks)this.simulatePreviewFunction(callback,[],active,0);
+    for(const record of states.values())this.previewStates.set(`${componentScope.module.file}:${componentScope.fn?.start}:${record.name}`,record);
+  }
+
+  simulatePreviewFunction(fn,args,active,depth){
+    if(depth>=this.maxDepth||active.has(fn.node))return false;
+    const scope=this.evaluator.functionScope(fn.node,fn.scope,args,depth+1),next=new Set([...active,fn.node]);
+    return this.simulatePreviewNode(fn.node.body,scope,next,depth+1);
+  }
+
+  simulatePreviewNode(node,scope,active,depth){
+    if(!node?.type||FUNCTIONS.has(node.type))return false;
+    if(node.type==='BlockStatement'){for(const statement of node.body)if(this.simulatePreviewNode(statement,scope,active,depth))return true;return false;}
+    if(node.type==='TryStatement'){this.simulatePreviewNode(node.block,scope,active,depth);if(node.finalizer)this.simulatePreviewNode(node.finalizer,scope,active,depth);return false;}
+    if(node.type==='IfStatement'){
+      const known=truthy(this.evaluator.evaluate(node.test,scope));
+      if(known!==null)return this.simulatePreviewNode(known?node.consequent:node.alternate,scope,active,depth);
+      // Unknown early exits are treated as not taken; unknown two-way effects are not applied.
+      return false;
+    }
+    if(node.type==='ReturnStatement'||node.type==='ThrowStatement')return true;
+    if(node.type==='VariableDeclaration'){
+      for(const declaration of node.declarations){if(declaration.id.type!=='Identifier'||!declaration.init)continue;const value=this.previewExpression(declaration.init,scope);if(value)scope.bindings.set(declaration.id.name,{value});}
+      return false;
+    }
+    if(node.type==='ExpressionStatement'){
+      let expression=unwrap(node.expression);if(expression?.type==='UnaryExpression')expression=unwrap(expression.argument);
+      if(expression?.type==='CallExpression'||expression?.type==='OptionalCallExpression'){
+        const callee=this.evaluator.evaluate(expression.callee,scope);
+        if(callee.t==='preview-setter'){
+          const record=callee.record,arg=expression.arguments[0];let value;
+          if(arg?.type==='ArrowFunctionExpression'||arg?.type==='FunctionExpression')value={t:'unknown'};
+          else value=this.previewExpression(arg,scope)??{t:'unknown'};
+          record.value=value;record.file=scope.module.file;record.line=line(expression);record.ownerScope.bindings.set(record.name,{value});return false;
+        }
+        if(callee.t==='fn')return this.simulatePreviewFunction(callee,expression.arguments.map(expr=>({expr,scope})),active,depth+1);
+      }
+      return false;
+    }
+    for(const child of children(node))if(this.simulatePreviewNode(child,scope,active,depth))return true;
+    return false;
+  }
+
+  previewExpression(expression,scope){
+    const node=unwrap(expression);if(!node)return null;
+    if(node.type==='AwaitExpression'){
+      const call=unwrap(node.argument),lineNo=line(call);
+      return this.load.some(effect=>effect.type==='CALL_API'&&effect.source?.file===scope.module.file&&effect.source?.line===lineNo)?{t:'demo-response'}:this.evaluator.evaluate(node.argument,scope);
+    }
+    if(node.type==='ArrayExpression')return {t:'array',node,scope};
+    return this.evaluator.evaluate(node,scope);
   }
 
   /**

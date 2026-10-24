@@ -79,10 +79,17 @@ public final class ReactGraphContribution {
             throw new IOException("React 靜態預覽重建失敗：" + error.getMessage(), error);
         }
         Map<String, Object> screens = new TreeMap<>();
-        for (JsonNode screen : result.path("screens")) screens.put(screenId(screen), screen.path("markup").asText(""));
+        Map<String, Object> previewStates = new TreeMap<>();
+        for (JsonNode screen : result.path("screens")) {
+            String id = screenId(screen);
+            screens.put(id, screen.path("markup").asText(""));
+            if (screen.path("previewState").isArray() && !screen.path("previewState").isEmpty())
+                previewStates.put(id, JSON.convertValue(screen.path("previewState"), Object.class));
+        }
         Map<String, Object> preview = new LinkedHashMap<>();
         preview.put("stylesheets", result.path("stylesheets"));
         preview.put("screens", screens);
+        if (!previewStates.isEmpty()) preview.put("previewState", previewStates);
         Path target = SafeProjectFiles.requireWritePathWithin(output, output.resolve("static-preview").resolve("react-preview.json"));
         java.nio.file.Files.createDirectories(target.getParent());
         java.nio.file.Files.write(target, JSON.writeValueAsBytes(preview));

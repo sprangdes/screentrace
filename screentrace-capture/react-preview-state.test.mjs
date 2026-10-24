@@ -22,6 +22,6 @@ test('R18 WP83 successful-load reconstruction captures only the loaded React sta
     const child=spawn(process.execPath,[path.resolve('screentrace-capture/capture-static-jsp.mjs'),root,output,'--preview-v2']);let error='';child.stderr.on('data',chunk=>error+=chunk);child.stdout.resume();
     const status=await new Promise(resolve=>child.on('close',resolve));assert.equal(status,0,error);
     const html=await readFile(path.join(output,'static-preview',`${screenId.replace(/[^a-z0-9-]/gi,'_')}.html`),'utf8');
-    assert.match(html,/<li>/);assert.doesNotMatch(html,/Loading records|Error records|No records/);
+    assert.match(html,/<li\b/);assert.doesNotMatch(html,/Loading records|Error records|No records/);
   } finally {await rm(root,{recursive:true,force:true});}
 });

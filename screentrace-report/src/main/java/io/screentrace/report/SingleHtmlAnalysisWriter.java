@@ -36,13 +36,15 @@ public final class SingleHtmlAnalysisWriter {
     var screens = new ArrayList<PreviewScreen>();
     Map<String,String> documents = new TreeMap<>();
     Map<String,Object> manifest = new TreeMap<>();
+    var reactPreview = Files.exists(output.resolve("static-preview/react-preview.json"),LinkOption.NOFOLLOW_LINKS)
+        ? read(output,"static-preview/react-preview.json") : json.createObjectNode();
     if (Files.exists(output.resolve("static-preview/manifest.json"), LinkOption.NOFOLLOW_LINKS)) {
       var paths = read(output, "static-preview/manifest.json");
       for (var node : graph.nodes()) if (node.type() == ApplicationGraph.NodeType.SCREEN)
         screens.add(new PreviewScreen(node.id(), paths.path(node.id()).isTextual() ? paths.path(node.id()).asText() : null,
-            null, 1440, 900, new Rendering("skipped", "未取得完整預覽資料"), List.of(), null, List.of()));
+            null, 1440, 900, new Rendering("skipped", "未取得完整預覽資料"), List.of(), null, List.of(),previewState(reactPreview,node.id())));
     } else for (var node : graph.nodes()) if (node.type() == ApplicationGraph.NodeType.SCREEN)
-      screens.add(new PreviewScreen(node.id(), null, null, 1440, 900, new Rendering("skipped", "未取得重建預覽"), List.of(), null, List.of()));
+      screens.add(new PreviewScreen(node.id(), null, null, 1440, 900, new Rendering("skipped", "未取得重建預覽"), List.of(), null, List.of(),previewState(reactPreview,node.id())));
     PreviewModel preview = new PreviewModel("2", screens, List.of());
     if (Files.exists(output.resolve("static-preview/element-styles.json"), LinkOption.NOFOLLOW_LINKS))
       preview = new PreviewCaptureReader().read(graph, preview, output);
@@ -59,6 +61,11 @@ public final class SingleHtmlAnalysisWriter {
   }
   private com.fasterxml.jackson.databind.JsonNode read(Path root, String file) throws IOException {
     return json.readTree(SafeProjectFiles.readUtf8Limited(root, root.resolve(file), SafeProjectFiles.MAX_PROJECT_TOTAL_BYTES));
+  }
+  @SuppressWarnings("unchecked")
+  private List<Map<String,Object>> previewState(com.fasterxml.jackson.databind.JsonNode data,String screenId) {
+    var value=data.path("previewState").path(screenId);if(!value.isArray())return List.of();
+    var result=new ArrayList<Map<String,Object>>();for(var item:value)result.add(json.convertValue(item,Map.class));return List.copyOf(result);
   }
   private void write(Path root, String file, Object value) throws IOException {
     json.writeValue(SafeProjectFiles.requireWritePathWithin(root, root.resolve(file)).toFile(), value);

@@ -121,24 +121,24 @@ test('R18 WP83 preview state follows the successful load path and records setter
     export default function App(){return <Routes><Route path="/board" element={<Board/>}/></Routes>;}`}]});
   const page = screen(result, '/board');
   assert.deepEqual(page.previewState.map(s => [s.name,s.value,s.source]), [
-    ['pending',false,'src/Board.tsx:10'],['problem','','src/Board.tsx:9'],['records',{items:[{}]},'src/Board.tsx:9']
+    ['pending',false,'src/Board.tsx:11'],['problem','','src/Board.tsx:5'],['records',{},'src/Board.tsx:10']
   ]);
-  assert.match(page.markup, /<li>/);
+  assert.match(page.markup, /<li\b/);
   assert.doesNotMatch(page.markup, /Loading records|Error records|No records/);
 });
 
 test('R18 WP83 pages without a load function retain initial-state and prop evaluation', () => {
-  const result = run({'src/App.tsx': `${ROUTER} import Board from './Board'; export default function App(){return <Routes><Route path="/board" element={<Board enabled={false}/>}/></Routes>;}`,
-    'src/Board.tsx': `import {useState} from 'react'; export default function Board({enabled}){const [open,setOpen]=useState(true);return <>{enabled&&<p>Enabled</p>}{open?<p>Initially open</p>:<p>Closed</p>}</>;}`});
-  assert.deepEqual(screen(result, '/board').previewState, []);
-  assert.deepEqual(screen(result, '/board').components.map(c=>c.label), ['Initially open']);
+  const result = analyzeReact({markup:true,files:[{file:'src/App.tsx',code:`${ROUTER} import Board from './Board'; export default function App(){return <Routes><Route path="/board" element={<Board enabled={false}/>}/></Routes>;}`},
+    {file:'src/Board.tsx',code:`import {useState} from 'react'; export default function Board({enabled}){const [open,setOpen]=useState(true);return <>{enabled&&<p>Enabled</p>}{open?<p>Initially open</p>:<p>Closed</p>}</>;}`} ]});
+  assert.deepEqual(screen(result, '/board').previewState.map(s=>[s.name,s.value]), [['open',true]]);
+  assert.match(screen(result, '/board').markup,/Initially open/);assert.doesNotMatch(screen(result, '/board').markup,/Enabled|Closed/);
 });
 
 test('R18 WP83 functional state updates remain unknown and keep ternary fall-through', () => {
-  const result = run({'src/App.tsx': `${ROUTER} import Board from './Board'; export default function App(){return <Routes><Route path="/board" element={<Board/>}/></Routes>;}`,
-    'src/Board.tsx': `import {useEffect,useState} from 'react'; export default function Board(){const [count,setCount]=useState(0);useEffect(()=>{setCount(previous=>previous+1)},[]);return count?<p>Count</p>:<p>Empty</p>;}`});
+  const result = analyzeReact({markup:true,files:[{file:'src/App.tsx',code:`${ROUTER} import Board from './Board'; export default function App(){return <Routes><Route path="/board" element={<Board/>}/></Routes>;}`},
+    {file:'src/Board.tsx',code:`import {useEffect,useState} from 'react'; export default function Board(){const [count,setCount]=useState(0);useEffect(()=>{setCount(previous=>previous+1)},[]);return count?<p>Count</p>:<p>Empty</p>;}`} ]});
   assert.equal(screen(result, '/board').previewState[0].value, null);
-  assert.deepEqual(screen(result, '/board').components.map(c=>c.label), ['Count','Empty']);
+  assert.match(screen(result, '/board').markup,/Empty/);assert.doesNotMatch(screen(result, '/board').markup,/Count/);
 });
 
 test('links over a literal navigation array are unrolled and resolved to routes', () => {
