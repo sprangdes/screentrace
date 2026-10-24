@@ -340,6 +340,8 @@ class ScreenRenderer {
     this.routeContent = 0;
     this.emitted = new Set();
     this.previewStates = new Map();
+    this.routeComponentRoots=[];
+    this.componentFrames=[];
   }
 
   render(route, shell = null) {
@@ -351,15 +353,18 @@ class ScreenRenderer {
     this.routeElements = [...route.layouts, route.element].map(entry => entry.expr ?? entry.component);
     const outlets = [...route.layouts, route.element];
     const root = outlets.shift();
-    const state = {guards: [], anchors: [], keys: [], stack: [], depth: 0, repeated: false, form: null, outlets, out: this.document};
+    const state = {guards: [], anchors: [], keys: [], stack: [], depth: 0, repeated: false, form: null, outlets, out: this.document, routeOrigin:true};
     this.sources.add(route.file);
     this.routeFile = route.file;
     if (shell && this.routesElement) {
       this.sources.add(shell.file);
       this.pendingRoute = {root, state};
-      this.expr(shell.expr, shell.scope, {...state, outlets: []});
+      this.expr(shell.expr, shell.scope, {...state, outlets: [], routeOrigin:false});
     }
     if (!this.reachedRoutes) this.renderRoute(root, state);
+    const redirectOnly=this.routeContent===0&&this.load.some(effect=>effect.routeRedirect);
+    const pageFrame=redirectOnly?null:this.pageComponent(this.routeComponentRoots[0]);
+    if(!redirectOnly&&pageFrame)this.view={name:pageFrame.name??'Route',file:pageFrame.file,from:pageFrame.fn.node.loc?.start.line??0,to:pageFrame.fn.node.loc?.end.line??0};
     const components = [...this.components.values()];
     const excludedBehaviors = [];
     const visible = effect => {
@@ -375,9 +380,9 @@ class ScreenRenderer {
       audience: resolveRouteFacts(this.audience,this.evaluator),
       audienceOriginal: unique(this.audience),
       route: route.path, file: route.file, line: route.line, layoutOnly: Boolean(route.layoutOnly),
-      view: this.view?.name ?? 'Route', viewSource: this.view?.file ?? route.file,
+      view: redirectOnly?'Route':this.view?.name ?? 'Route', viewSource: this.view?.file ?? route.file,
       // A route that renders nothing of its own and only redirects is a forwarding address, not a page.
-      redirectOnly: this.routeContent === 0 && this.load.some(effect => effect.routeRedirect),
+      redirectOnly,
       // Redirects written in the screen's own component come first; a guard's "not signed in" redirect after.
       redirects: this.load.filter(effect => effect.routeRedirect).map(effect => ({effect, own: !!this.view && effect.source.file === this.view.file && effect.source.line >= this.view.from && effect.source.line <= this.view.to})),
       sources: [...this.sources].sort(), components: components.sort((a, b) => a.key.localeCompare(b.key)), load: dedupe(this.load),
@@ -551,13 +556,27 @@ class ScreenRenderer {
     const attrs = new Map();
     let spread = false;
     for (const item of node.openingElement.attributes) {
-      if (item.type === 'JSXSpreadAttribute') { spread = true; continue; }
+      if (item.type === 'JSXSpreadAttribute') {
+        const value=this.evaluator.evaluate(item.argument,scope);
+        if(value.t==='object')this.copySpreadProps(value,attrs,new Set());else spread=true;
+        continue;
+      }
       const expr = attributeExpression(item);
       if (expr) attrs.set(jsxName(item.name), {expr, scope});
     }
     const content = node.children.filter(child => child.type !== 'JSXText' || child.value.trim());
     const children = content.length ? {nodes: content, scope, anchors: state.anchors, keys: state.keys, form: state.form} : attrs.has('children') ? null : null;
     return {t: 'props', attrs, children, spread};
+  }
+
+  copySpreadProps(value,attrs,seen){
+    if(value.t!=='object'||seen.has(value.node))return;seen.add(value.node);
+    for(const property of value.node.properties){
+      if(property.type==='SpreadElement'){this.copySpreadProps(this.evaluator.evaluate(property.argument,value.scope),attrs,seen);continue;}
+      if(property.type!=='ObjectProperty')continue;
+      let key;if(!property.computed)key=property.key.name??property.key.value;else{const resolved=this.evaluator.evaluate(property.key,value.scope);if(resolved.t==='lit')key=resolved.v;}
+      if(key!==undefined&&key!==null)attrs.set(String(key),{expr:property.value,scope:value.scope});
+    }
   }
 
   component(fn, props, node, state, file, key = null) {
@@ -574,12 +593,35 @@ class ScreenRenderer {
       this.view = {name: fn.name ?? 'Route', file: fn.scope.module.file, from: fn.node.loc?.start.line ?? 0, to: fn.node.loc?.end.line ?? 0};
     this.sources.add(fn.scope.module.file);
     const next = {...state, depth: state.depth + 1, stack: [...state.stack, fn.node], anchors: [...state.anchors, this.anchor(node, file)], keys: key ? [...state.keys, key] : state.keys};
-    this.body(fn, [{value: props}], next, true);
+    let frame=null;
+    if(state.routeOrigin){
+      frame={fn,name:fn.name,file:fn.scope.module.file,scope:null,selfHasHtml:false,children:[],props};
+      const parent=this.componentFrames.at(-1);if(parent)parent.children.push(frame);else this.routeComponentRoots.push(frame);
+      this.componentFrames.push(frame);
+    }
+    try{this.body(fn, [{value: props}], next, true);}finally{if(frame)this.componentFrames.pop();}
+  }
+
+  pageComponent(frame){
+    if(!frame)return null;
+    const scope=frame.scope;
+    const guard=wrapperFacts(frame.fn.node.body,scope,this.evaluator).length>0;
+    const passesChildren=this.componentPassesChildren(frame.fn.node.body,scope);
+    const skip=guard||(passesChildren&&frame.children.length>0)||(!frame.selfHasHtml&&frame.children.length===1);
+    return skip?this.pageComponent(frame.children[0]):frame;
+  }
+
+  componentPassesChildren(body,scope){
+    let found=false;const visit=node=>{if(!node?.type||found)return;if(FUNCTIONS.has(node.type))return;
+      if(['Identifier','MemberExpression','OptionalMemberExpression'].includes(node.type)&&this.evaluator.evaluate(node,scope).t==='children'){found=true;return;}
+      if(['JSXIdentifier','JSXMemberExpression'].includes(node.type)&&jsxName(node)==='Outlet'){found=true;return;}
+      for(const child of children(node))visit(child);};visit(body);return found;
   }
 
   /** Renders what a function returns; component bodies also contribute their page-load effects. */
   body(fn, args, state, isComponent) {
     const scope = this.evaluator.functionScope(fn.node, fn.scope, args, state.depth);
+    if(isComponent&&state.routeOrigin){const frame=this.componentFrames.at(-1);if(frame?.fn.node===fn.node)frame.scope=scope;}
     if (isComponent && this.inRoute && state.routeCandidate !== false && !this.variantDecision) {
       const branches = returnBranches(fn.node.body, scope, this.evaluator);
       const pages = branches.map(b => ({...b, identity: branchIdentity(b.expr, scope, this.evaluator)})).filter(b => b.identity);
@@ -823,6 +865,7 @@ class ScreenRenderer {
   }
 
   intrinsic(node, tag, scope, state, key) {
+    if(state.routeOrigin&&this.componentFrames.length)this.componentFrames.at(-1).selfHasHtml=true;
     if (this.inRoute) this.routeContent++;
     const attrs = this.staticAttributes(node, scope);
     const handlers = this.handlers(node, scope, state);
