@@ -28,9 +28,13 @@ test('WP80 Navigate guard and direct string-returning function retain branch con
 });
 test('R18 correction: conditional URL and parameter path obey the source audience',()=>{
  const r=run(`function choose(level){if(level==='CURATOR')return '/desk';return '/browse';}
- function Reader(){const go=useNavigate();if(person?.level==='CURATOR')return null;return <><button onClick={()=>go(person?.level==='CURATOR'?'/desk':'/browse')}>Ternary</button><button onClick={()=>go(choose(person?.level))}>Function</button><button onClick={()=>go(choose(unknownLevel()))}>Unknown</button></>;}
- function App(){return <Routes><Route path="/reader" element={<Reader/>}/>${routes}</Routes>;}`);
+ function Access({children}){if(person?.level==='CURATOR')return null;return children;} function Reader(){const go=useNavigate();return <><button onClick={()=>go(person?.level==='CURATOR'?'/desk':'/browse')}>Ternary</button><button onClick={()=>go(choose(person?.level))}>Function</button><button onClick={()=>go(choose(unknownLevel()))}>Unknown</button></>;}
+ function App(){return <Routes><Route path="/reader" element={<Access><Reader/></Access>}/>${routes}</Routes>;}`);
  const buttons=r.screens.find(s=>s.route==='/reader').components;
  for(const label of ['Ternary','Function'])assert.deepEqual(buttons.find(c=>c.label===label).behaviors.flatMap(b=>b.urls).sort(),['/browse']);
  assert.deepEqual(buttons.find(c=>c.label==='Unknown').behaviors.flatMap(b=>b.urls).sort(),['/browse','/desk']);
+});
+test('R18 correction: router Link resolves a local path function with the actual identity argument',()=>{
+ const r=run(`import {Link} from 'react-router-dom';function choose(tier){return tier==='CURATOR'?'/desk':'/browse';}function Access({children}){if(person?.level==='CURATOR')return null;return children;}function Reader(){const next=choose(person?.level);return <Link to={next}>Settings</Link>;}function App(){return <Routes><Route path='/reader' element={<Access><Reader/></Access>}/>${routes}</Routes>;}`);
+ assert.deepEqual(effects(r.screens.find(s=>s.route==='/reader')).flatMap(b=>b.urls),['/browse']);
 });
