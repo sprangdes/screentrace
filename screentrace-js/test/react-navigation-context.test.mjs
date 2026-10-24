@@ -5,7 +5,7 @@ import {createContext,useContext,useState} from 'react';import {createRoot} from
 const Session=createContext(null);const Other=createContext(null);
 function SessionProvider({children}){const [account,store]=useState(null);function signOut(){store(null);}return <Session.Provider value={{account,store,signOut}}>{children}</Session.Provider>;}
 function useSession(){return useContext(Session);}function useOther(){return useContext(Other);}function useAnotherHook(){return useContext(Session);}
-function kind(tier,hasDesk){return tier==='CURATOR'&&hasDesk?'desk':'reader';}function landing(value){return '/';}function Home(){const {account}=useSession();if(!account)return <Guest/>;if(${helper?`kind(account.tier,Boolean(account.office))==='desk'`:`account.tier==='CURATOR'`})return <Desk/>;return <Navigate to='/reader'/>;}
+function kind(tier,hasDesk){return tier==='CURATOR'&&hasDesk?'desk':'reader';}function landing(value){return '/';}function Home(){const {account}=useSession();if(!account)return <Guest/>;if(${helper?`kind(account.tier,Boolean(account.office))==='desk'`:`account.tier==='CURATOR'`})return <Desk/>;${helper?`return <ReaderPanel/>;`:`return <Navigate to='/reader'/>;`}}function ReaderPanel(){return <p>Reader</p>;}
 function Guest(){return <p>Guest</p>;}function Desk(){return <p>Desk</p>;}
 function Curator({children}){const {account}=${context};if(!account||account.tier!=='CURATOR'${helper?'||!account.office':''})return null;return children;}
 function Visitor({children}){const {account}=useSession();${callback?`if(handoff==='done')return children;`:''}if(account)return null;return children;}
