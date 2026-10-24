@@ -237,6 +237,7 @@ export function apiPage(index:Index,state:ReviewState,options:ApiPageOptions):HT
   const record=selected?byId.get(selected):undefined;
   if(!record){detail.append(element('p','選一個 API 查看詳情','empty-list'));return;}
   const inner=element('div',undefined,'api-detail-inner');inner.dataset.apiDetail=record.node.id;
+  if(record.node.attributes.externalLogin==='true')inner.append(element('p',`外部登入：${record.node.attributes.externalLoginReturns?`完成後回到 ${record.node.attributes.externalLoginReturns.split('\u001f').join('、')}`:'完成後的導回路徑無法確定'}`,'notice'));
   const title=element('div',undefined,'api-detail-title');title.append(methodBadge(record.method),element('code',record.path,'api-detail-path'),statusTag(record.status));
   const why=element('p',reason(record),record.note?'api-reason api-note':'api-reason');why.dataset.apiStatus=record.status;
   inner.append(title,why);

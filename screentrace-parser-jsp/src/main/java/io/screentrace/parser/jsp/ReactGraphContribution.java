@@ -51,6 +51,7 @@ public final class ReactGraphContribution {
             List<String> unreadable = new ArrayList<>();
             JsonNode result = analyze(inventory, false, unreadable);
             unreadable.forEach(file -> builder.diagnostic(new SourceLocation(file, 1), "REACT_SOURCE_READ", "前端來源無法安全讀取"));
+            builder.audienceGroups(result.path("audiences"));
             builder.indexComponentShapes(result.path("screens"));
             for (JsonNode screen : result.path("screens")) builder.screen(screen);
             for (JsonNode redirect : result.path("routeRedirects")) builder.routeRedirect(redirect);
@@ -139,6 +140,7 @@ public final class ReactGraphContribution {
         private final Map<String, List<String>> screensByRoute = new HashMap<>();
         private final Map<String, Integer> occurrences = new HashMap<>();
         private final Map<String, Set<String>> componentShapes = new HashMap<>();
+        private final List<List<ApplicationGraph.AudienceAtom>> audienceGroups = new ArrayList<>();
         private final List<PendingNavigation> navigations = new ArrayList<>();
         private final Map<String, List<String>> redirects = new LinkedHashMap<>();
 
@@ -200,6 +202,14 @@ public final class ReactGraphContribution {
                 }
             }
             for (JsonNode effect : screen.path("load")) behavior(id, effect);
+        }
+
+        private void audienceGroups(JsonNode groups) {
+            for (JsonNode group : groups) {
+                List<ApplicationGraph.AudienceAtom> atoms = new ArrayList<>();
+                for (JsonNode atom : group) atoms.add(new ApplicationGraph.AudienceAtom(atom.path("text").asText(),atom.path("truth").asBoolean(),source(atom)));
+                if (!atoms.isEmpty()) audienceGroups.add(atoms);
+            }
         }
 
         private void indexComponentShapes(JsonNode screens) {
@@ -288,6 +298,7 @@ public final class ReactGraphContribution {
                     detail.put("url", url);
                     detail.put("method", method);
                     detail.put("expression", expression);
+                    if (effect.path("fullPage").asBoolean()) detail.put("fullPage", true);
                     String target = url == null || method == null ? null : requestEndpoint(method, url, source, confidence);
                     add(triggerId, event, type, target, guard, expression, method + " " + url, source, confidence, json(detail), evidence);
                 }
@@ -296,7 +307,9 @@ public final class ReactGraphContribution {
             if (type == BehaviorType.NAVIGATE) {
                 List<String> targets = new ArrayList<>();
                 effect.path("targetRoutes").forEach(item -> targets.add(item.asText()));
-                var navigation = new PendingNavigation(triggerId, event, guard, expression, source, confidence, urls, targets, evidence);
+                List<String> candidateIds = null;
+                if (effect.has("targetScreens")) { candidateIds = new ArrayList<>(); for (JsonNode candidate : effect.path("targetScreens")) candidateIds.add(screenId(candidate)); }
+                var navigation = new PendingNavigation(triggerId, event, guard, expression, source, confidence, urls, targets, candidateIds, evidence);
                 navigations.add(navigation);
                 return;
             }
@@ -313,7 +326,7 @@ public final class ReactGraphContribution {
                 nodes.put(id, new GraphNode(id, node.type(), node.name(), attributes, node.source(), node.confidence(), node.evidence(), node.audience()));
             });
             for (var item : navigations) {
-                List<String> screens = item.targets().stream().flatMap(route -> screensByRoute.getOrDefault(route, List.of()).stream()).sorted().toList();
+                List<String> screens = item.candidates() != null ? item.candidates().stream().filter(nodes::containsKey).distinct().sorted().toList() : item.targets().stream().flatMap(route -> screensByRoute.getOrDefault(route, List.of()).stream()).sorted().toList();
                 String target = screens.size() == 1 ? screens.get(0) : null;
                 var confidence = screens.isEmpty() ? Confidence.UNRESOLVED : screens.size() > 1 ? Confidence.AMBIGUOUS : item.confidence();
                 String detail = "目標網址=" + item.urls() + "；候選路由=" + item.targets();
@@ -359,7 +372,7 @@ public final class ReactGraphContribution {
         }
 
         ApplicationGraph build() {
-            return new ApplicationGraph(graph.application(), List.copyOf(nodes.values()), List.copyOf(edges.values()), diagnostics.stream().distinct().toList(),
+            return new ApplicationGraph(new ApplicationGraph.Application(graph.application().name(), graph.application().path(), graph.application().technologies(), audienceGroups), List.copyOf(nodes.values()), List.copyOf(edges.values()), diagnostics.stream().distinct().toList(),
                     graph.apiContracts(), screensByRoute.isEmpty() ? graph.schemaVersion() : ApplicationGraph.AUDIENCE_SCHEMA_VERSION, List.copyOf(behaviors.values()), graph.validationRules());
         }
     }
@@ -383,5 +396,5 @@ public final class ReactGraphContribution {
     }
 
     private record PendingNavigation(String triggerId, String event, String guard, String expression, SourceLocation source, Confidence confidence,
-                                     List<String> urls, List<String> targets, List<AnalysisEvidence> evidence) { }
+                                     List<String> urls, List<String> targets, List<String> candidates, List<AnalysisEvidence> evidence) { }
 }

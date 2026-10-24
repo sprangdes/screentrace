@@ -7,12 +7,12 @@ const unwrap = node => node?.type==='ParenthesizedExpression' ? unwrap(node.expr
 function code(node) {
  node=unwrap(node);
  if(node.type==='Identifier')return node.name;
- if(['MemberExpression','OptionalMemberExpression'].includes(node.type))return code(node.object)+(node.computed?(node.optional?'?.':'')+'['+code(node.property)+']':(node.optional?'?.':'.')+code(node.property));
+ if(['MemberExpression','OptionalMemberExpression'].includes(node.type)){const owner=code(node.object),property=code(node.property);if(owner===null||property===null)return null;return owner+(node.computed?(node.optional?'?.':'')+'['+property+']':(node.optional?'?.':'.')+property);}
  if(node.type==='StringLiteral')return JSON.stringify(node.value);
  if(['NumericLiteral','BooleanLiteral'].includes(node.type))return String(node.value);
  if(node.type==='NullLiteral')return 'null';
- if(node.type==='UnaryExpression')return node.operator+'('+code(node.argument)+')';
- if(['BinaryExpression','LogicalExpression'].includes(node.type))return '('+code(node.left)+' '+node.operator+' '+code(node.right)+')';
+ if(node.type==='UnaryExpression'){const argument=code(node.argument);return argument===null?null:node.operator+'('+argument+')';}
+ if(['BinaryExpression','LogicalExpression'].includes(node.type)){const left=code(node.left),right=code(node.right);return left===null||right===null?null:'('+left+' '+node.operator+' '+right+')';}
  return null;
 }
 function formula(node,truth,original) {
@@ -49,7 +49,7 @@ function clash(items){
   if(n.type==='BooleanLiteral' && n.value!==item.truth)return true;
   if(n.type==='Identifier' && !item.truth)falseObjects.push(n.name);
   if(n.type==='BinaryExpression' && n.operator==='===' && item.truth && ['StringLiteral','NumericLiteral','BooleanLiteral','NullLiteral'].includes(n.right.type)){
-   const left=code(n.left),right=code(n.right);
+   const left=code(n.left)??item.text.slice(n.left.start,n.left.end),right=code(n.right);
    if(equals.has(left)&&equals.get(left)!==right)return true;
    equals.set(left,right);
   }
@@ -89,11 +89,9 @@ export function implied(facts,expression,source={file:'.',line:1}){
 export function combinations(audiences){
  const names=[...new Set(audiences.flat().map(a=>a.text))].sort(),result=[];
  // Stop as soon as 17 satisfiable combinations are found; never enumerate an exponential full product.
- let visits=0;
- function visit(i,current){if(++visits>2048||result.length>16)return;if(i===names.length){if(audiences.some(a=>!contradicts([...current,...a]))&&!contradicts(current))result.push(current);return;}
-  for(const truth of [false,true]){const next=[...current,{text:names[i],truth}];if(!contradicts(next))visit(i+1,next);}}
- if(names.length>24)return {overflow:true,values:[]};
- visit(0,[]);return {overflow:visits>2048||result.length>16,values:visits>2048||result.length>16?[]:result};
+ function visit(i,current){if(result.length>16)return;if(i===names.length){if(audiences.some(a=>!contradicts([...current,...a]))&&!contradicts(current))result.push(current);return;}
+  for(const truth of [false,true]){const next=[...current,{text:names[i],truth,source:audiences.flat().find(a=>a.text===names[i])?.source}];if(!contradicts(next)&&audiences.some(a=>!contradicts([...next,...a])))visit(i+1,next);}}
+ visit(0,[]);return {overflow:result.length>16,values:result.length>16?[]:result};
 }
 
 export function residualGuard(guard,facts){

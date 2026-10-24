@@ -79,3 +79,8 @@ manifest 文字同正文隔離（code span、300、控制／隱形可見化）�
 - 匯出一律為 `format_version` 1，機器區只含 `analysis_fingerprint`、`screen_decisions`、`component_decisions`、`state_sha256`；同樣決策的附錄 A 位元組與 R17 前相同。
 - 正文移除：YAML 檔頭的 `migration_target.component_library`、固定指示原第 6、7 條（原第 8 條改為第 6 條，見 CODEX_INSTRUCTIONS §8.2）、元件表的「建議元件」「styleId」欄、原因／備註欄、API 表的「信心」欄、§6 元件庫對應、§9 樣式表。§7 衝突與警告、§8 分析限制依序改為 §6、§7；分析限制與證據表保留（供 AI 不自行猜測）。
 - `format_version` 2、3 改為**僅匯入相容**：驗證、摘要與欄位檢查不變；匯入後的元件庫覆寫、原因與備註由報表略過並提示，再匯出即為 v1。
+
+
+## R18 第一階段
+
+輸入分析圖支援 2.2／2.3，md 一律維持 format_version 1，既有 golden 位元組不變。變體仍按原 screenId／(screenId, componentId) 複合鍵記錄；R18-A 特別匯入政策停於 OQ-035，未把舊畫面決策靜默套到變體。既有未知 ID 的保留與 orphan 檢查照舊。

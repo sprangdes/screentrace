@@ -169,7 +169,7 @@ Schema 2.1 adds `apiContracts`, keyed by `ENDPOINT` ID. A contract records the s
 
 ### R18：畫面適用條件（schema 2.3）
 
-React 分析輸出 2.3，SCREEN 可帶 `audience: [{text, truth, source}]`，表示 Guard 實際轉交 children 的來源條件。不同可達路徑以析取保留；只有可證明的相同原子真假、嚴格相等常值互斥、物件與屬性存取矛盾可用於後續過濾。元件 guard 不重複畫面已成立的條件。消費端保持嚴格證據驗證並接受 2.2／2.3；非 React 圖仍輸出 2.2，歷史圖不升版。review 狀態容器與存檔鍵不改。同網址多畫面透過 ENTRY_POINT（path）以 RENDERS 指向變體；入口可帶條件導向行為。不同投影的共用元件以穩定投影鍵分開，隱藏元素與原因仍保留於畫面資料。詳見 [ADR 0096](adr/0096-r18-audience-facts.md)、[ADR 0097](adr/0097-r18-audience-variants.md)。
+React 分析輸出 2.3，application.audiences 保存最多 16 個可渲染條件組合，超過時診斷並只保留畫面條件；SCREEN 可帶 `audience: [{text, truth, source}]`，表示 Guard 實際轉交 children 的來源條件。不同可達路徑以析取保留；只有可證明的相同原子真假、嚴格相等常值互斥、物件與屬性存取矛盾可用於後續過濾。元件 guard 不重複畫面已成立的條件。消費端保持嚴格證據驗證並接受 2.2／2.3；非 React 圖仍輸出 2.2，歷史圖不升版。review 狀態容器與存檔鍵不改。同網址多畫面透過 ENTRY_POINT（path）以 RENDERS 指向變體；入口可帶條件導向行為。不同投影的共用元件以穩定投影鍵分開，隱藏元素與原因仍保留於畫面資料。詳見 [ADR 0096](adr/0096-r18-audience-facts.md)、[ADR 0097](adr/0097-r18-audience-variants.md)。
 
 ### 4.2 WP1 行為與檢核 schema 2.2
 

@@ -44,3 +44,8 @@ md 雙格式契約見 REVIEW_MD_CONTRACT；有效／orphan ID 同時可逆還原
 ## R17：退場欄位
 
 報表不再建立 `decisionNotes`、`component_overrides`、`orphan_component_overrides`、`manifest_sha256`。瀏覽器暫存或匯入的狀態若含這些欄位，載入時略過並提示一次；保留／移除決策與儲存鍵不變。`batchSetComponents` 隨批次標記退場移除。確認進度另可自動寫入使用者選擇的 md 進度檔（見 ADR 0086）；瀏覽器暫存仍同時寫入作為備援。
+
+
+## R18 第一階段
+
+正式消費端另接受分析圖 schema 2.3；既有 review v1 容器的 schemaVersion 2.2、暫存鍵與複合決策鍵不變。單一身分畫面沿用原 screenId。多身分拆分後舊決策的特別匯入政策尚未授權（OQ-035／R18-A），未實作遷移、提示或決策複製；既有未知 ID 保留規則不改。

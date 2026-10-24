@@ -15,7 +15,7 @@ React 的路由 Guard 與全站 Guard 已被分析為元件 guard 前綴，卻�
 - SCREEN 的 `audience` 為 `{text, truth, source}` 陣列。條件由 Guard 實際轉交 children 的分支取得，保留檔案與行號；多個可達分支以析取保留，不任選一支。
 - optional chaining 與嚴格比較／否定正規化。只能使用 R18 WP78 的矛盾規則；未知呼叫與無法拆解的條件保留原子。推導不改原有證據信心。
 - 元件／load guard 僅移除 audience 已蘊含的合取部分，原本自身條件保留。
-- 組合超過 16 或有界枚舉無法安全完成時停止細分並輸出 `REACT_AUDIENCE_TOO_MANY`；保留每個畫面的完整 audience。
+- 組合實際找到第 17 種時停止細分並輸出 `REACT_AUDIENCE_TOO_MANY`；保留每個畫面的完整 audience。最多 16 種的條件組合保存在 application.audiences，報表適用條件內列出；組合各原子同樣保留來源。
 - core 與正式消費端接受嚴格 2.2／2.3，歷史版本維持原讀取規則。review 狀態容器及暫存鍵維持 v1／schema 2.2；其 schema 欄位是既有容器契約，分析圖的版本由 fingerprint 辨識。md v1 的 golden 位元組、D4／D5 不變。
 - capture 樣式／packed preview 的獨立格式仍為 version 2／schema 2.2；新增的 audience 只存在 canonical graph。
 

@@ -76,8 +76,10 @@ public record ApplicationGraph(Application application, List<GraphNode> nodes, L
     return type.name().toLowerCase(Locale.ROOT) + ":" + UUID.nameUUIDFromBytes(key.getBytes(StandardCharsets.UTF_8)).toString();
   }
 
-  public record Application(String name, String path, List<String> technologies) {
+  public record Application(String name, String path, List<String> technologies, @JsonInclude(JsonInclude.Include.NON_EMPTY) List<List<AudienceAtom>> audiences) {
+    public Application(String name, String path, List<String> technologies) { this(name,path,technologies,List.of()); }
     public Application {
+      audiences = audiences == null ? List.of() : audiences.stream().map(List::copyOf).toList();
       technologies = (technologies == null ? List.<String>of() : technologies).stream().sorted().toList();
     }
   }

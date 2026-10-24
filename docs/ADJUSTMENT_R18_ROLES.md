@@ -105,7 +105,7 @@
 
 ### WP80　登入後導向與外部登入往返（RV-04、RV-05）
 
-1. **回傳路徑的函式**：`navigate(f(…).path)`、`navigate(f(…))`、`<Navigate to={f(…).path}>` 中，`f` 為專案內可解析的函式，且其每個 `return` 都是常值字串或以常值字串為 `path` 屬性的物件字面值時，目的地為所有常值的聯集（INFERRED）；每個目的地附上該 `return` 所在分支的條件（同 WP78 原子化）。有任一 `return` 無法解析（例如回傳外部傳入的 `returnTo`）時，該分支記為 UNRESOLVED 候選並在 evidence 說明，其餘常值照常列出。遞迴深度沿用分析器既有上限。
+1. **回傳路徑的函式**：`navigate(f(...).path)`、`navigate(f(...))`、`<Navigate to={f(...).path}>` 中，`f` 為專案內可解析的函式，且其每個 `return` 都是常值字串或以常值字串為 `path` 屬性的物件字面值時，目的地為所有常值的聯集（INFERRED）；每個目的地附上該 `return` 所在分支的條件（同 WP78 原子化）。有任一 `return` 無法解析（例如回傳外部傳入的 `returnTo`）時，該分支記為 UNRESOLVED 候選並在 evidence 說明，其餘常值照常列出。遞迴深度沿用分析器既有上限。
 2. **依身分過濾目的地**：目的地條件與來源畫面或 Guard 的 `audience` 可證明矛盾者移除；其餘保留為多目的地，模擬操作時依 R17-5 讓使用者選擇。
 3. **外部登入往返**：整頁導向（`window.location` 指派或 `<a href>`）到後端端點，且該端點的處理程式以 `sendRedirect`／`redirect:` 指向第三方登入，並由 Spring Security `successHandler` 導回前端路由時，建立「外部登入」流程：來源畫面 → 端點 → 回到的前端路由（含常值查詢參數）。後端導回路徑來自設定屬性且無法解析時，維持 UNRESOLVED 並記診斷，不猜測。
 

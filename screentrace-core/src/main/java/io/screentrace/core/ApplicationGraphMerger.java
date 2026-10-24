@@ -36,7 +36,7 @@ public final class ApplicationGraphMerger {
     second.apiContracts().forEach(contract -> apiContracts.putIfAbsent(contract.endpointId(), contract));
     Set<String> technologies = new TreeSet<>(first.application().technologies());
     technologies.addAll(second.application().technologies());
-    ApplicationGraph merged = new ApplicationGraph(new ApplicationGraph.Application(first.application().name(), first.application().path(), List.copyOf(technologies)),
+    ApplicationGraph merged = new ApplicationGraph(new ApplicationGraph.Application(first.application().name(), first.application().path(), List.copyOf(technologies), java.util.stream.Stream.concat(first.application().audiences().stream(), second.application().audiences().stream()).distinct().sorted(java.util.Comparator.comparing(Object::toString)).toList()),
         List.copyOf(nodes.values()), List.copyOf(relationships.values()), List.copyOf(diagnostics.values()),
         List.copyOf(apiContracts.values()),
         historical ? "2.1" : ("2.3".equals(first.schemaVersion()) || "2.3".equals(second.schemaVersion()) ? ApplicationGraph.AUDIENCE_SCHEMA_VERSION : ApplicationGraph.BEHAVIOR_SCHEMA_VERSION),

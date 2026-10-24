@@ -51,7 +51,10 @@ export function analyzeReact({files = [], maxDepth = 24, markup = false} = {}) {
   for (const screen of [...screens, {load:routeRedirects.map(r=>r.effect),components:[]}]) {
     for (const effect of [...screen.load, ...screen.components.flatMap(component => component.behaviors)])
       if (effect.type === 'NAVIGATE') {
+        const before = effect.status;
         Object.assign(effect, matchRoute(effect.urls, effect.fullPage ? patterns.filter(item => !item.route.includes('*')) : patterns));
+        if (before === 'INFERRED' && effect.status === 'CONFIRMED') effect.status = 'INFERRED';
+        if (effect.destinationFacts) effect.targetScreens = screens.filter(s => (effect.targetRoutes??[]).includes(s.route) && !contradicts([...effect.destinationFacts,...s.audience])).map(s => ({file:s.file,route:s.route,...(s.variantKey?{variantKey:s.variantKey}:{})}));
         // A full-page load of a server URL that is not a client route reaches the backend: treat it as a GET request.
         if (effect.fullPage && effect.status === 'UNRESOLVED' && effect.urls.length && effect.urls.every(url => url.startsWith('/'))) {
           Object.assign(effect, {type: 'CALL_API', method: 'GET', status: effect.urls.some(url => url.includes('{')) ? 'INFERRED' : 'CONFIRMED'});
@@ -65,10 +68,10 @@ export function analyzeReact({files = [], maxDepth = 24, markup = false} = {}) {
     screen.redirectTo = [...new Set(ordered.flatMap(item => [...(item.effect.targetRoutes ?? [])].sort()))];
   }
   for (const screen of screens) delete screen.redirects;
-  const uniqueDiagnostics = new Map();
-  for (const item of diagnostics) uniqueDiagnostics.set(JSON.stringify(item), item);
   const groups = combinations(screens.map(s => s.audience));
   if (groups.overflow && screens.length) diagnostics.push(diagnostic(screens[0].file, screens[0].line, 'REACT_AUDIENCE_TOO_MANY', '身分組合超過 16，僅保留各畫面的條件'));
+  const uniqueDiagnostics = new Map();
+  for (const item of diagnostics) uniqueDiagnostics.set(JSON.stringify(item), item);
   const result = {screens, routeRedirects, audiences: groups.values, diagnostics: [...uniqueDiagnostics.values()].sort((a, b) => a.source.file.localeCompare(b.source.file) || a.source.line - b.source.line || a.code.localeCompare(b.code))};
   if (markup) result.stylesheets = stylesheets(modules, shell ? [shell.file] : [...new Set(routes.map(route => route.file))].sort());
   return result;
@@ -645,7 +648,9 @@ class ScreenRenderer {
     }
     if (name === 'Navigate') {
       const to = attributeExpression(attribute(node, 'to'));
-      this.addLoad(this.effect('NAVIGATE', 'load', node, scope, state, {urls: to ? this.urlsOf(to, scope) : [], expression: text(scope.module, node), redirect: true, routeRedirect: this.inRoute > 0}));
+      const destinations = to ? this.destinationChoices(to, scope, state) : null;
+      for (const candidate of destinations ?? [{urls:to?this.urlsOf(to,scope):[],conditions:[],trace:[]}])
+        this.addLoad(this.effect('NAVIGATE','load',node,scope,{...state,guards:[...state.guards,...candidate.conditions]}, {...candidate,source:{file:scope.module.file,line:line(node)},expression:text(scope.module,node),redirect:true,routeRedirect:this.inRoute>0}));
       return;
     }
     if (name === 'Routes' && node === this.routesElement && this.pendingRoute && !this.reachedRoutes) {
@@ -672,6 +677,13 @@ class ScreenRenderer {
     return null;
   }
 
+  destinationChoices(expr,scope,state) {
+    const result = destinationCandidates(expr,scope,this.evaluator,this.maxDepth);
+    if (!result.handled) return null;
+    if (result.limited) this.diagnostics.push(diagnostic(scope.module.file,line(expr),'REACT_DESTINATION_LIMIT','目的地分支超過安全展開限制，保留未解析候選'));
+    return result.items.filter(item=>!contradicts([...this.facts,...state.guards.flatMap(g=>atoms(g,{file:scope.module.file,line:line(expr)})),...item.conditions.flatMap(g=>atoms(g,item.source))])).map(item=>({...item,urls:cleanUrls(item.urls),destinationFacts:item.conditions.flatMap(g=>atoms(g,item.source))}));
+  }
+
   urlsOf(expr, scope) {
     const value = this.evaluator.evaluate(expr, scope);
     if (value.t === 'object') {
@@ -692,7 +704,7 @@ class ScreenRenderer {
     if (kind) {
       const component = this.record(node, scope, state, key, {kind, tag, attrs, handlers, target: tag === 'a' ? attrs.href ?? null : null});
       if (out.tag) out.attributes['data-st-expansion-anchor'] = component.anchor;
-      if (tag === 'a' && attrs.href && !attrs.href.startsWith('#')) component.behaviors.push(this.effect('NAVIGATE', 'click', node, scope, unguarded(state), {urls: cleanUrls([attrs.href]), expression: attrs.href}));
+      if (tag === 'a' && attrs.href && !attrs.href.startsWith('#')) component.behaviors.push(this.effect('NAVIGATE', 'click', node, scope, unguarded(state), {urls: cleanUrls([attrs.href]), expression: attrs.href, fullPage:true}));
       if (kind === 'FORM') next = {...next, form: component};
       if (kind === 'SUBMIT' && state.form) {
         component.form = state.form.key;
@@ -808,7 +820,7 @@ class ScreenRenderer {
   }
 
   addLoad(effect) {
-    const key = JSON.stringify([effect.type, effect.urls, effect.method, effect.source]);
+    const key = JSON.stringify([effect.type, effect.urls, effect.method, effect.source, ...(effect.type === 'NAVIGATE' ? [effect.guard] : [])]);
     if (this.loaded.has(key)) return;
     this.loaded.add(key);
     this.load.push(effect);
@@ -922,9 +934,11 @@ class EffectRunner {
       if (node.arguments[0]) this.fullPage(node, node.arguments[0], scope, guards, trace);
     } else if (value.t === 'navigate') {
       const target = node.arguments[0];
-      const urls = target ? this.renderer.urlsOf(target, scope) : [];
-      if (target && !(this.evaluator.evaluate(target, scope).t === 'lit' && typeof this.evaluator.evaluate(target, scope).v === 'number'))
-        this.effects.push(this.renderer.effect('NAVIGATE', this.event, node, scope, where, {...extra, urls, expression: text(scope.module, node)}));
+      const candidates = target ? this.renderer.destinationChoices(target,scope,where) : null;
+      if (candidates) {
+        for (const candidate of candidates) this.effects.push(this.renderer.effect('NAVIGATE',this.event,node,scope,{...where,guards:[...where.guards,...candidate.conditions]}, {...candidate,source:{file:scope.module.file,line:line(node)},trace:[...trace,...candidate.trace],expression:text(scope.module,node)}));
+      } else if (target && !(this.evaluator.evaluate(target, scope).t === 'lit' && typeof this.evaluator.evaluate(target, scope).v === 'number'))
+        this.effects.push(this.renderer.effect('NAVIGATE', this.event, node, scope, where, {...extra, urls:this.renderer.urlsOf(target,scope), expression: text(scope.module, node)}));
     } else if (value.t === 'fn' && !active.has(value.node)) {
       const step = {callee: text(scope.module, callee).slice(0, 120), source: {file: scope.module.file, line: line(node)}};
       this.run(value, node.arguments.map(expr => ({expr, scope})), active, [...trace, step], guards);
@@ -1234,4 +1248,58 @@ function branchIdentity(input,scope,evaluator) {
   if(value.t!=='fn')return null;
   const nested=node.children.filter(c=>c.type==='JSXElement').map(c=>branchIdentity(c,scope,evaluator)).filter(Boolean);
   return value.scope.module.file+':'+value.node.start+':'+nested.join(',');
+}
+
+/** Substitute parameter bindings through AST source ranges; local state remains symbolic. */
+function boundText(node,scope,evaluator,seen=new Set()) {
+ const source=text(scope.module,node),edits=[];
+ function visit(n,parent,key) {
+  if(n.type==='Identifier' && !(parent && ((['MemberExpression','OptionalMemberExpression'].includes(parent.type)&&key==='property'&&!parent.computed)||(parent.type==='ObjectProperty'&&key==='key'&&!parent.computed)))) {
+    const found=evaluator.lookup(n.name,scope),binding=found?.binding;
+    if(binding?.expr && !seen.has(binding)) {const next=new Set([...seen,binding]);edits.push({from:n.start-node.start,to:n.end-node.start,value:boundText(binding.expr,binding.scope,evaluator,next)});return;}
+  }
+  for(const [name,value]of Object.entries(n)) {
+    if(!value||typeof value!=='object')continue;
+    if(Array.isArray(value)){for(const child of value)if(child?.type)visit(child,n,name);}
+    else if(value.type)visit(value,n,name);
+  }
+ }
+ visit(node,null,null);let result=source;for(const edit of edits.sort((a,b)=>b.from-a.from))result=result.slice(0,edit.from)+edit.value+result.slice(edit.to);return result;
+}
+function destinationCandidates(input,scope,evaluator,maxDepth) {
+ let handled=false,visits=0;
+ function resolve(expr,current,conditions=[],trace=[],depth=0,active=new Set()) {
+  const node=unwrap(expr),source={file:current.module.file,line:line(node)};
+  const unknown=()=>[{urls:[],conditions,trace,source,status:'UNRESOLVED'}];
+  if(!node||depth>=maxDepth||++visits>4096)return unknown();
+  if(node.type==='MemberExpression'&&!node.computed&&node.property.name==='path')return resolve(node.object,current,conditions,trace,depth+1,active);
+  if(node.type==='Identifier') {
+    const found=evaluator.lookup(node.name,current);
+    if(found?.binding?.expr)return resolve(found.binding.expr,found.binding.scope,conditions,trace,depth+1,active);
+    if(found?.entry?.kind==='variable'&&found.entry.node.init&&!(found.entry.steps??[]).length)return resolve(found.entry.node.init,found.scope,conditions,trace,depth+1,active);
+  }
+  if(node.type==='CallExpression'||node.type==='OptionalCallExpression') {
+    const fn=evaluator.evaluate(node.callee,current);
+    if(fn.t!=='fn')return unknown();handled=true;
+    if(active.has(fn.node))return unknown();
+    const inner=evaluator.functionScope(fn.node,fn.scope,node.arguments.map(expr=>({expr,scope:current})),depth+1),next=new Set([...active,fn.node]);
+    const branches=returnBranches(fn.node.body,inner,evaluator);
+    return branches.flatMap(branch=>{
+      const path=branch.path.map(item=>{const value=boundText(item.node,inner,evaluator);return item.expression===text(inner.module,item.node)?value:`!(${value})`;});
+      const step={callee:text(current.module,node.callee),source:{file:inner.module.file,line:line(branch.expr)}};
+      return resolve(branch.expr,inner,[...conditions,...path],[...trace,step],depth+1,next);
+    });
+  }
+  if(node.type==='ConditionalExpression') {
+    const condition=boundText(node.test,current,evaluator),known=truthy(evaluator.evaluate(node.test,current));
+    return [...(known!==false?resolve(node.consequent,current,known===true?conditions:[...conditions,condition],trace,depth+1,active):[]),...(known!==true?resolve(node.alternate,current,known===false?conditions:[...conditions,`!(${condition})`],trace,depth+1,active):[])];
+  }
+  if(node.type==='ObjectExpression') {
+    const path=node.properties.find(p=>p.type==='ObjectProperty'&&!p.computed&&(p.key.name??p.key.value)==='path');
+    return path?resolve(path.value,current,conditions,trace,depth+1,active):unknown();
+  }
+  const value=evaluator.evaluate(node,current);
+  return value.t==='lit'&&typeof value.v==='string'?[{urls:[value.v],conditions,trace,source,status:'INFERRED'}]:unknown();
+ }
+ const items=resolve(input,scope);return {handled,items,limited:visits>4096};
 }

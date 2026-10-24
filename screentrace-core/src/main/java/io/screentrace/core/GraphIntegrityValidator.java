@@ -21,6 +21,9 @@ public final class GraphIntegrityValidator {
   public static void validate(ApplicationGraph graph) {
     List<String> errors = new ArrayList<>();
     validateSchema(graph, errors);
+    if(graph.application().audiences().size()>16)errors.add("Too many application audiences");
+    for(var group:graph.application().audiences())for(var atom:group)
+      if(!"2.3".equals(graph.schemaVersion())||atom.text()==null||atom.text().isBlank()||atom.source()==null||atom.source().line()<1||!validSource(atom.source().file()))errors.add("Invalid application audience");
     Map<String, GraphNode> nodes = validateNodes(graph.nodes(), errors);
     validateRelationships(graph.relationships(), nodes, errors);
     validateApiContracts(graph.apiContracts(), nodes, errors);
