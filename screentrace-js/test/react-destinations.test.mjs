@@ -38,3 +38,7 @@ test('R18 correction: router Link resolves a local path function with the actual
  const r=run(`import {Link} from 'react-router-dom';function choose(tier){return tier==='CURATOR'?'/desk':'/browse';}function Access({children}){if(person?.level==='CURATOR')return null;return children;}function Reader(){const next=choose(person?.level);return <Link to={next}>Settings</Link>;}function App(){return <Routes><Route path='/reader' element={<Access><Reader/></Access>}/>${routes}</Routes>;}`);
  assert.deepEqual(effects(r.screens.find(s=>s.route==='/reader')).flatMap(b=>b.urls),['/browse']);
 });
+test('R18 unknown argument expressions do not acquire identity from equal source text',()=>{
+ const r=run(`function choose(level){return level==='CURATOR'?'/desk':'/browse';}function Access({children}){if(readTier()==='CURATOR')return null;return children;}function Reader(){const go=useNavigate();return <button onClick={()=>go(choose(readTier()))}>Unknown</button>;}function App(){return <Routes><Route path='/reader' element={<Access><Reader/></Access>}/>${routes}</Routes>;}`);
+ assert.deepEqual(effects(r.screens.find(s=>s.route==='/reader')).flatMap(b=>b.urls).sort(),['/browse','/desk']);
+});
