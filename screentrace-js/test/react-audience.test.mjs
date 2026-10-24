@@ -61,3 +61,6 @@ test('R18 display retains ordinary atoms even when another atom implies them',as
 test('R18 disjunction display exposes the shared atom implied by the conjunction',async()=>{
  const {simplify}=await import('../react/audience.mjs');const source={file:'src/Test.tsx',line:1};const facts=[...atoms('accepted || office',source),...atoms('accepted || !office',source)];assert.deepEqual(simplify(facts).map(a=>[a.text,a.truth]),[['accepted',true]]);
 });
+test('R18 display never materializes an unsafe member hidden behind an optional short circuit',async()=>{
+ const {simplify}=await import('../react/audience.mjs');const source={file:'src/Test.tsx',line:1};const facts=['!actor','!actor?.rotate','busy || !(actor?.tier === "CURATOR") || actor.office','!busy'].flatMap(x=>atoms(x,source));assert.equal(contradicts(facts),false);const shown=simplify(facts);assert.equal(contradicts(shown),false);assert.ok(!shown.some(a=>a.text==='false'));
+});
