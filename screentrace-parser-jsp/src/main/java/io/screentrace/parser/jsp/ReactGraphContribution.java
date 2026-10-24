@@ -155,8 +155,10 @@ public final class ReactGraphContribution {
             screen.path("sources").forEach(item -> sources.add(item.asText()));
             attributes.put("viewSources", String.join("|", sources));
             attributes.put("rendering", "static-reconstruction");
+            List<ApplicationGraph.AudienceAtom> audience = new ArrayList<>();
+            for (JsonNode atom : screen.path("audience")) audience.add(new ApplicationGraph.AudienceAtom(atom.path("text").asText(), atom.path("truth").asBoolean(), source(atom)));
             nodes.put(id, new GraphNode(id, NodeType.SCREEN, route.equals("/") ? "Home" : route.substring(1), attributes, source, Confidence.CONFIRMED,
-                    proof(source, Confidence.CONFIRMED, "路由宣告；畫面元件 " + screen.path("view").asText())));
+                    proof(source, Confidence.CONFIRMED, "路由宣告；畫面元件 " + screen.path("view").asText()), audience));
             screensByRoute.put(route, id);
             if (screen.path("redirectOnly").asBoolean()) {
                 List<String> targets = new ArrayList<>();
@@ -313,7 +315,7 @@ public final class ReactGraphContribution {
 
         ApplicationGraph build() {
             return new ApplicationGraph(graph.application(), List.copyOf(nodes.values()), List.copyOf(edges.values()), diagnostics.stream().distinct().toList(),
-                    graph.apiContracts(), graph.schemaVersion(), List.copyOf(behaviors.values()), graph.validationRules());
+                    graph.apiContracts(), screensByRoute.isEmpty() ? graph.schemaVersion() : ApplicationGraph.AUDIENCE_SCHEMA_VERSION, List.copyOf(behaviors.values()), graph.validationRules());
         }
     }
 

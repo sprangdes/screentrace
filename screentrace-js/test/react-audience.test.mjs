@@ -24,6 +24,7 @@ test('WP78 only specified contradictions prune; optional access, equality and De
  const a=expression=>atoms(expression,{file:'a.tsx',line:2});
  assert.ok(contradicts([...a('!actor'),...a(`actor?.rank === 'EDITOR'`)]));
  assert.ok(contradicts([...a('!actor'),...a('actor.rank')]));
+ assert.ok(!contradicts([...a('!actor'),...a('!actor?.rank')]));
  assert.ok(contradicts([...a(`actor.rank === 'EDITOR'`),...a(`actor?.rank === 'READER'`)]));
  assert.ok(contradicts([...a('flag'),...a('!flag')]));
  assert.ok(!contradicts([...a('featureFlag'),...a(`actor.rank === 'READER'`)]));

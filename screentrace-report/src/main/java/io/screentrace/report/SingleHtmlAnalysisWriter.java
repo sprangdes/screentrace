@@ -25,7 +25,7 @@ public final class SingleHtmlAnalysisWriter {
     var data = json.readTree(SafeProjectFiles.readUtf8Limited(output, output.resolve("application-graph.json"),
         SafeProjectFiles.MAX_PROJECT_TOTAL_BYTES));
     String version = data.path("schemaVersion").asText("未設定");
-    if (!ApplicationGraph.BEHAVIOR_SCHEMA_VERSION.equals(version))
+    if (!ApplicationGraph.isAnalysisSchema(version))
       throw new IllegalArgumentException("檢視器只接受 schema 2.2，收到 " + version);
     var graph = json.treeToValue(data, ApplicationGraph.class);
     return generate(graph, output,library);

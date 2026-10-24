@@ -37,7 +37,7 @@ function componentLinks(elements,graph,screenId) {
 }
 /** Inspector code is tool-owned; the page context has target JavaScript disabled. */
 export async function collectElementStyles(page,context,graph,screenId,options=captureOptions([])) {
- if(graph.schemaVersion!=='2.2')throw new Error(`預覽樣式只接受 schema 2.2，收到 ${graph.schemaVersion??'未設定'}`);
+ if(!['2.2','2.3'].includes(graph.schemaVersion))throw new Error(`預覽樣式只接受 schema 2.2，收到 ${graph.schemaVersion??'未設定'}`);
  // Force layout to discover used fonts, then wait for completion before recording
  // geometry/computed styles. Tool-owned inspection only; target scripts stay disabled.
  await page.evaluate(()=>{document.documentElement.getBoundingClientRect();});

@@ -167,6 +167,10 @@ The graph remains framework-neutral. Framework identifiers belong in evidence/pa
 
 Schema 2.1 adds `apiContracts`, keyed by `ENDPOINT` ID. A contract records the statically discovered request parameters/body and response status/body, including field type, location, source location, and confidence. `SCREEN -> CALLS -> ENDPOINT` represents an API invoked during page load; `COMPONENT -> TRIGGERS -> ENDPOINT` represents an API invoked by an interactive component. An absent or unresolved contract is never synthesized from runtime assumptions.
 
+### R18：畫面適用條件（schema 2.3）
+
+React 分析輸出 2.3，SCREEN 可帶 `audience: [{text, truth, source}]`，表示 Guard 實際轉交 children 的來源條件。不同可達路徑以析取保留；只有可證明的相同原子真假、嚴格相等常值互斥、物件與屬性存取矛盾可用於後續過濾。元件 guard 不重複畫面已成立的條件。消費端保持嚴格證據驗證並接受 2.2／2.3；非 React 圖仍輸出 2.2，歷史圖不升版。review 狀態容器與存檔鍵不改。詳見 [ADR 0096](adr/0096-r18-audience-facts.md)。
+
 ### 4.2 WP1 行為與檢核 schema 2.2
 
 新增 `behaviors` / `validationRules`（皆依 ID 排序）。schema 2.2 節點與邊必須具來源相對路徑/行號、解析器名稱與解析狀態；COMPONENT 的 attributes.kind 必須是 BUTTON、LINK、SUBMIT、TEXT_INPUT、TEXTAREA、SELECT、CHECKBOX、RADIO、DATE_PICKER、FILE_INPUT、MULTI_SELECT、FORM、MODAL、TABLE、OTHER。

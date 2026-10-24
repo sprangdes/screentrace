@@ -105,7 +105,7 @@
 
 ### WP80　登入後導向與外部登入往返（RV-04、RV-05）
 
-1. **回傳路徑的函式**：`navigate(f(...).path)`、`navigate(f(...))`、`<Navigate to={f(...).path}>` 中，`f` 為專案內可解析的函式，且其每個 `return` 都是常值字串或以常值字串為 `path` 屬性的物件字面值時，目的地為所有常值的聯集（INFERRED）；每個目的地附上該 `return` 所在分支的條件（同 WP78 原子化）。有任一 `return` 無法解析（例如回傳外部傳入的 `returnTo`）時，該分支記為 UNRESOLVED 候選並在 evidence 說明，其餘常值照常列出。遞迴深度沿用分析器既有上限。
+1. **回傳路徑的函式**：`navigate(f(…).path)`、`navigate(f(…))`、`<Navigate to={f(…).path}>` 中，`f` 為專案內可解析的函式，且其每個 `return` 都是常值字串或以常值字串為 `path` 屬性的物件字面值時，目的地為所有常值的聯集（INFERRED）；每個目的地附上該 `return` 所在分支的條件（同 WP78 原子化）。有任一 `return` 無法解析（例如回傳外部傳入的 `returnTo`）時，該分支記為 UNRESOLVED 候選並在 evidence 說明，其餘常值照常列出。遞迴深度沿用分析器既有上限。
 2. **依身分過濾目的地**：目的地條件與來源畫面或 Guard 的 `audience` 可證明矛盾者移除；其餘保留為多目的地，模擬操作時依 R17-5 讓使用者選擇。
 3. **外部登入往返**：整頁導向（`window.location` 指派或 `<a href>`）到後端端點，且該端點的處理程式以 `sendRedirect`／`redirect:` 指向第三方登入，並由 Spring Security `successHandler` 導回前端路由時，建立「外部登入」流程：來源畫面 → 端點 → 回到的前端路由（含常值查詢參數）。後端導回路徑來自設定屬性且無法解析時，維持 UNRESOLVED 並記診斷，不猜測。
 
@@ -123,7 +123,7 @@
 
 ### WP81　分派表呼叫與處理器內的已知 prop（RV-06、RV-07）
 
-1. **分派表**：呼叫 `obj[key](...)`，`obj` 解析為物件字面值且 `key` 無法解析為常值時，視為呼叫該物件所有屬性值（INFERRED），evidence 記錄「分派表，key 未定」；`key` 可證明為常值或來自 `Object.keys(obj)`／`for…in obj` 迭代時，前者只呼叫該屬性、後者為全部屬性且可為 CONFIRMED（依迭代證明全部被呼叫）。屬性超過 20 個時不展開，記診斷 `REACT_DISPATCH_TABLE_TOO_LARGE`。
+1. **分派表**：呼叫 `obj[key] (...)`，`obj` 解析為物件字面值且 `key` 無法解析為常值時，視為呼叫該物件所有屬性值（INFERRED），evidence 記錄「分派表，key 未定」；`key` 可證明為常值或來自 `Object.keys(obj)`／`for…in obj` 迭代時，前者只呼叫該屬性、後者為全部屬性且可為 CONFIRMED（依迭代證明全部被呼叫）。屬性超過 20 個時不展開，記診斷 `REACT_DISPATCH_TABLE_TOO_LARGE`。
 2. **處理器內的已知值**：事件處理器與載入效果的 `if`／三元運算／`&&`，其條件在呼叫端已證明為常值（路由傳入的字面 prop、`useState` 初始值不得視為常值）時，只走成立的分支，與渲染層規則一致。
 
 合成 fixture：

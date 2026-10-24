@@ -1,6 +1,7 @@
 import {parseModules, diagnostic, children, line, text, FUNCTIONS, PARSER} from './modules.mjs';
 import {Evaluator, unwrap, truthy, externalName, returnedExpressions, conditionText} from './values.mjs';
 import {element as htmlElement, htmlAttribute, isAllowedTag, jsxText, serialize, styleText, SAMPLE_TEXT} from './markup.mjs';
+import {atoms, unique, combinations, implied, residualGuard} from './audience.mjs';
 import {stylesheets} from './styles.mjs';
 
 const ROUTER = new Set(['react-router-dom', 'react-router', 'react-router-native']);
@@ -55,7 +56,9 @@ export function analyzeReact({files = [], maxDepth = 24, markup = false} = {}) {
   for (const screen of screens) delete screen.redirects;
   const unique = new Map();
   for (const item of diagnostics) unique.set(JSON.stringify(item), item);
-  const result = {screens, diagnostics: [...unique.values()].sort((a, b) => a.source.file.localeCompare(b.source.file) || a.source.line - b.source.line || a.code.localeCompare(b.code))};
+  const groups = combinations(screens.map(s => s.audience));
+  if (groups.overflow && screens.length) diagnostics.push(diagnostic(screens[0].file, screens[0].line, 'REACT_AUDIENCE_TOO_MANY', '身分組合超過 16，僅保留各畫面的條件'));
+  const result = {screens, audiences: groups.values, diagnostics: [...unique.values()].sort((a, b) => a.source.file.localeCompare(b.source.file) || a.source.line - b.source.line || a.code.localeCompare(b.code))};
   if (markup) result.stylesheets = stylesheets(modules, shell ? [shell.file] : [...new Set(routes.map(route => route.file))].sort());
   return result;
 }
@@ -284,6 +287,7 @@ class ScreenRenderer {
     this.load = [];
     this.loaded = new Set();
     this.view = null;
+    this.audience = [];
     this.inRoute = 0;
     this.routeContent = 0;
     this.emitted = new Set();
@@ -306,8 +310,10 @@ class ScreenRenderer {
     }
     if (!this.reachedRoutes) this.renderRoute(root, state);
     const components = [...this.components.values()];
-    components.forEach(component => { component.behaviors = dedupe(component.behaviors); });
+    components.forEach(component => { component.behaviors = dedupe(component.behaviors); component.guard = residualGuard(component.guard, this.audience); });
+    this.load.forEach(effect => { effect.guard = residualGuard(effect.guard, this.audience); });
     return {
+      audience: unique(this.audience),
       route: route.path, file: route.file, line: route.line, layoutOnly: Boolean(route.layoutOnly),
       view: this.view?.name ?? 'Route', viewSource: this.view?.file ?? route.file,
       // A route that renders nothing of its own and only redirects is a forwarding address, not a page.
@@ -507,6 +513,7 @@ class ScreenRenderer {
   /** Renders what a function returns; component bodies also contribute their page-load effects. */
   body(fn, args, state, isComponent) {
     const scope = this.evaluator.functionScope(fn.node, fn.scope, args, state.depth);
+    if (isComponent) this.audience = unique([...this.audience, ...wrapperFacts(fn.node.body, scope, this.evaluator)]);
     if (isComponent) this.loadEffects(fn.node.body, scope, state, new Set([fn.node]));
     if (fn.node.body.type !== 'BlockStatement') { this.expr(fn.node.body, scope, state); return; }
     this.statements(fn.node.body.body, scope, state);
@@ -1147,3 +1154,39 @@ function dedupe(effects) {
 }
 
 export {PARSER};
+
+/** Only functions that actually forward their children contribute access constraints. */
+function wrapperFacts(body, scope, evaluator) {
+  const accepted = [];
+  const carriesChildren = node => {
+    if (!node) return false;
+    if (['Identifier', 'MemberExpression', 'OptionalMemberExpression'].includes(node.type) && evaluator.evaluate(node, scope).t === 'children') return true;
+    return children(node).some(carriesChildren);
+  };
+  function expression(node, path) {
+    if (!node) return;
+    if (node.type === 'ConditionalExpression') {
+      const known = truthy(evaluator.evaluate(node.test, scope)), condition = text(scope.module, node.test);
+      if (known !== false) expression(node.consequent, known === true ? path : [...path, {expression: condition, node: node.test}]);
+      if (known !== true) expression(node.alternate, known === false ? path : [...path, {expression: `!(${condition})`, node: node.test}]);
+    } else if (carriesChildren(node)) accepted.push(path);
+  }
+  function statements(list, paths) {
+    for (const node of list) {
+      if (node.type === 'ReturnStatement') { paths.forEach(path => expression(node.argument, path)); return []; }
+      if (node.type === 'BlockStatement') { paths = statements(node.body, paths); continue; }
+      if (node.type === 'IfStatement') {
+        const condition = text(scope.module, node.test), known = truthy(evaluator.evaluate(node.test, scope));
+        const left = known === false ? [] : statements(node.consequent.type === 'BlockStatement' ? node.consequent.body : [node.consequent], paths.map(path => known === true ? path : [...path, {expression: condition, node: node.test}]));
+        const other = known === true ? [] : paths.map(path => known === false ? path : [...path, {expression: `!(${condition})`, node: node.test}]);
+        paths = [...left, ...(node.alternate ? statements(node.alternate.type === 'BlockStatement' ? node.alternate.body : [node.alternate], other) : other)];
+      }
+    }
+    return paths;
+  }
+  if (body.type === 'BlockStatement') statements(body.body, [[]]); else expression(body, []);
+  if (!accepted.length || accepted.some(path => !path.length)) return [];
+  if (accepted.length === 1) return accepted[0].flatMap(item => atoms(item.expression, {file: scope.module.file, line: line(item.node)}));
+  const expressionText = accepted.map(path => '(' + path.map(item => '(' + item.expression + ')').join(' && ') + ')').join(' || ');
+  return atoms(expressionText, {file: scope.module.file, line: line(body)}).filter(atom => implied([], atom.truth ? atom.text : `!(${atom.text})`) !== true);
+}

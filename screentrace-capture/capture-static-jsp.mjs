@@ -29,7 +29,7 @@ const output = path.resolve(outputArg || path.join(target, '.screentrace'));
 await resolveExistingDirectoryWithin(target, target);
 const projectRoot = target;
 const graph = await readAnalysisGraph(output);
-if(previewV2&&graph.schemaVersion!=='2.2')throw new Error(`新預覽只接受 schema 2.2，收到 ${graph.schemaVersion??'未設定'}`);
+if(previewV2&&!['2.2','2.3'].includes(graph.schemaVersion))throw new Error(`新預覽只接受 schema 2.2，收到 ${graph.schemaVersion??'未設定'}`);
 const styleCapture={version:'2',schemaVersion:'2.2',screens:{},styles:{},defaults:{},diagnostics:[]};
 const endpointByPath = new Map(graph.nodes.filter(node => node.type === 'ENDPOINT').map(node => [node.attributes?.path, node]));
 const handlerByEndpoint = new Map(graph.relationships.filter(edge => edge.type === 'HANDLED_BY').map(edge => [edge.from, edge.to]));

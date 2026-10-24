@@ -39,7 +39,7 @@ public final class ApplicationGraphMerger {
     ApplicationGraph merged = new ApplicationGraph(new ApplicationGraph.Application(first.application().name(), first.application().path(), List.copyOf(technologies)),
         List.copyOf(nodes.values()), List.copyOf(relationships.values()), List.copyOf(diagnostics.values()),
         List.copyOf(apiContracts.values()),
-        historical ? "2.1" : ApplicationGraph.BEHAVIOR_SCHEMA_VERSION,
+        historical ? "2.1" : ("2.3".equals(first.schemaVersion()) || "2.3".equals(second.schemaVersion()) ? ApplicationGraph.AUDIENCE_SCHEMA_VERSION : ApplicationGraph.BEHAVIOR_SCHEMA_VERSION),
         mergeBehaviors(first.behaviors(), second.behaviors()),
         mergeItems(first.validationRules(), second.validationRules(), ApplicationGraph.ValidationRule::id));
     return historical ? merged : GraphIntegrityValidator.requireAnalysis(merged);
@@ -80,7 +80,7 @@ public final class ApplicationGraphMerger {
   private static ApplicationGraph.GraphNode mergeNode(ApplicationGraph.GraphNode left, ApplicationGraph.GraphNode right) {
     List<ApplicationGraph.AnalysisEvidence> evidence = new ArrayList<>(left.evidence());
     evidence.addAll(right.evidence());
-    return new ApplicationGraph.GraphNode(left.id(), left.type(), left.name(), left.attributes(), left.source(), left.confidence(), evidence);
+    return new ApplicationGraph.GraphNode(left.id(), left.type(), left.name(), left.attributes(), left.source(), left.confidence(), evidence, java.util.stream.Stream.concat(left.audience().stream(), right.audience().stream()).distinct().toList());
   }
 
   private static ApplicationGraph.Relationship mergeRelationship(ApplicationGraph.Relationship left, ApplicationGraph.Relationship right) {
