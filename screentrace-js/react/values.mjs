@@ -264,6 +264,7 @@ export class Evaluator {
   /** The value a call produces, for the hooks and wrappers that matter to rendering and URLs. */
   call(node, scope, depth) {
     const member = unwrap(node.callee);
+    if(member.type==='MemberExpression'&&!member.computed&&member.object.type==='Identifier'&&member.object.name==='Object'&&!this.lookup('Object',scope)&&member.property.name==='keys'&&node.arguments.length===1){const object=this.evaluate(node.arguments[0],scope);if(object.t==='object')return {t:'object-keys',object};}
     if(member.type==='MemberExpression'&&!member.computed&&member.property.name==='includes'&&node.arguments.length===1){const array=this.evaluate(member.object,scope),argument=this.evaluate(node.arguments[0],scope);if(array.t==='array'&&argument.t==='lit'&&array.node.elements.every(e=>e&&['StringLiteral','NumericLiteral','BooleanLiteral','NullLiteral'].includes(unwrap(e).type))){return lit(array.node.elements.some(e=>(unwrap(e).type==='NullLiteral'?null:e.value)===argument.v));}}
     if ((member.type === 'MemberExpression' || member.type === 'OptionalMemberExpression') && !member.computed && member.property.name === 'filter') {
       const filtered = this.filter(this.evaluate(member.object, scope), node.arguments[0] && this.evaluate(node.arguments[0], scope), depth);

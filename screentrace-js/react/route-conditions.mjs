@@ -5,7 +5,7 @@ import {atoms,unique} from './audience.mjs';
 export function resolveRouteFacts(facts,evaluator){
  return unique(facts.flatMap(fact=>{
   const scope=evaluator.transferContext.scopeOf(fact);if(!scope)return [fact];
-  let root,expression=fact.text;try{root=parseExpression(expression,{plugins:['typescript']});const expanded=evaluator.expandAudience(root,{...scope,module:{...scope.module,code:expression}});if(expanded!==null){expression=expanded;root=parseExpression(expression,{plugins:['typescript']});}}catch{return [fact];}
+  let root,expression=fact.raw??fact.text;try{root=parseExpression(expression,{plugins:['typescript']});const expanded=evaluator.expandAudience(root,{...scope,module:{...scope.module,code:expression}});if(expanded!==null){expression=expanded;root=parseExpression(expression,{plugins:['typescript']});}}catch{return [fact];}
   function fold(node){
    const value=evaluator.evaluate(node,scope);
    if(value.t==='lit'&&typeof value.v==='boolean')return value.v;

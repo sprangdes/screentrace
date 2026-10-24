@@ -151,3 +151,5 @@
 - 第二次驗收補正：修復報告暫存連結的 CI 失敗；依同 Context／同 hook／唯一 Provider 與導向前寫入檢查過濾所有目的變體，修正共用元件投影鍵；固定路由 pathname／字面 includes 求值，完整原式保留。callback 例外依需求方決定保留並逐筆顯示條件，獨立 callback 變體列 OQ-038 OPEN 後續候選。詳見 [ADR 0100](adr/0100-r18-context-navigation-and-route-facts.md) 與 R18 報告的實際數字及 PR CI run。WP79／WP80 仍等待需求方重新驗收，未進入 WP81。
 - 實際 callback 選單補驗：五個認證頁共 10 個元件均顯示兩個目的及條件；補齊 behavior 的 canonical 候選 ID，保留 AMBIGUOUS。本機完整驗證 941 項（940 通過、既有 1 略過），E2E 預設並行；程式碼 SHA 2521781 的 PR CI run 40080398983 三個 job 全綠，記於 R18 報告。
 - 回歸證據更正：撤回前次空目錄的 Struts 八模組 SHA 結論。實際固定來源五個模組非空圖一致，三個有兩版本相同既有 validation 阻擋，列 OQ-039 OPEN，停止該項；未修改 Struts 或放寬驗證。
+
+- 第三次驗收：需求方確認 WP78／WP79／WP80 通過，授權 WP81→WP82 第二階段；OQ-039 另案處理、不阻擋 R18。WP81 與 optional 顯示修正見 [ADR 0101](adr/0101-r18-dispatch-props-and-optional-display.md)，WP82 後停止。

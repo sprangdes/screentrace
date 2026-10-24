@@ -30,7 +30,7 @@ function print(f){return f.op?'('+print(f.left)+(f.op==='and'?' && ':' || ')+pri
 export function atoms(expression,source) {
  if(!expression)return [];
  let f;try{f=formula(parse(expression),true,expression);}catch{return [{text:expression,truth:true,source}];}
- const flatten=f=>f.op==='and'?[...flatten(f.left),...flatten(f.right)]:[{...(f.op?{text:print(f),truth:true}:{text:f.text,truth:f.truth,optional:f.optional}),source}];
+ const flatten=f=>f.op==='and'?[...flatten(f.left),...flatten(f.right)]:[{...(f.op?{text:print(f),truth:true}:{text:f.text,truth:f.truth,optional:f.optional,...(f.optional?{raw:f.raw}:{})}),source}];
  return unique(flatten(f));
 }
 export function unique(items){const seen=new Map();for(const item of items)seen.set(item.text+'\0'+item.truth,seen.get(item.text+'\0'+item.truth)??item);return [...seen.values()].sort((a,b)=>a.text.localeCompare(b.text)||Number(a.truth)-Number(b.truth));}
@@ -110,14 +110,22 @@ export function simplify(items){
  // A conjunction of disjunctions may force one of their own leaves, e.g. (a||b)&&(a||!b).
  const leaves=[];function collect(f){if(f.op){collect(f.left);collect(f.right);}else leaves.push(f);}
  for(const item of kept){try{const f=formula(parse(item.text),item.truth,item.text);if(f.op==='or')collect(f);}catch{}}
- for(const leaf of unique(leaves)){const expression=leaf.raw??leaf.text,yes=contradicts([...kept,...atoms(expression)]),no=contradicts([...kept,...atoms('!('+expression+')')]);if(yes===no)continue;const truth=no;if(!kept.some(a=>a.text===leaf.text&&a.truth===truth))kept.push({text:leaf.text,truth,optional:leaf.optional,source:items.find(a=>a.text.includes(leaf.text))?.source??items[0]?.source});}
+ for(const leaf of unique(leaves)){const expression=leaf.raw??leaf.text,yes=contradicts([...kept,...atoms(expression)]),no=contradicts([...kept,...atoms('!('+expression+')')]);if(yes===no)continue;const truth=no;if(!kept.some(a=>a.text===leaf.text&&a.truth===truth))kept.push({text:leaf.text,truth,optional:leaf.optional,...(leaf.optional?{raw:leaf.raw}:{}),source:items.find(a=>a.text.includes(leaf.text))?.source??items[0]?.source});}
  kept=unique(kept);
  for(let round=0;round<items.length+1;round++){
   const next=[];
   for(let i=0;i<kept.length;i++){const item=kept[i];let node;try{node=parse(item.text);}catch{}if(node?.type==='LogicalExpression'&&node.operator==='||')next.push(...reduceUnder([item],kept.filter((_,j)=>j!==i)));else next.push(item);}
   const normalized=unique(next);if(JSON.stringify(normalized.map(a=>[a.text,a.truth]))===JSON.stringify(kept.map(a=>[a.text,a.truth])))break;kept=normalized;
  }
- return kept;
+ const absent=new Set(kept.filter(a=>!a.truth&&/^[A-Za-z_$][\w$]*$/.test(a.text)).map(a=>a.text));
+ return kept.filter(item=>{
+  if(!item.optional||item.truth)return true;
+  let node;try{node=parse(item.raw??item.text);}catch{return true;}
+  const member=node.type==='BinaryExpression'&&node.operator==='==='&&['StringLiteral','NumericLiteral','BooleanLiteral','NullLiteral'].includes(node.right.type)?node.left:node;
+  if(!['MemberExpression','OptionalMemberExpression'].includes(member.type))return true;
+  let root=member;while(['MemberExpression','OptionalMemberExpression'].includes(root.type))root=root.object;
+  return !absent.has(root.name);
+ }).map(item=>item.raw?{...item,text:item.raw}:item);
 }
 
 /** Display/evidence projection under proven assumptions; never changes the original atoms. */

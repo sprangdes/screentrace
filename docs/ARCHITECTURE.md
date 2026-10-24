@@ -650,3 +650,5 @@ JSP 宣告編碼由 scanner 的受限位元組讀取處理，非 UTF-8 metadata 
 ### R18 第二次驗收補正
 
 同 Context／同 hook／唯一 Provider 的來源 audience 與行為 guard 可用於目的變體投影；Context setter 或已知 writer 會使舊身分事實失效，修改後僅使用 OQ-037 窄證據。固定路由的原始 useLocation pathname 及字面陣列 includes 可求值，轉換值、參數路由與 splat 保持自由。SCREEN attributes.audienceOriginal 與 evidence 保存完整原式；ReactAudienceTarget evidence 保存每個目的的條件，供模擬選擇清單顯示。共用元件的投影鍵納入目的變體與條件，避免第一次記錄的行為流入其他身分。欄位契約與 schema 版本不變；見 [ADR 0100](adr/0100-r18-context-navigation-and-route-facts.md)。
+
+R18 WP81：React handler/load 的字面 prop 分支與渲染層共用確定性 evaluator；state 初值不作常值。有限物件分派表最多 20 屬性，未知 key 為 INFERRED，全 key 迭代須有同物件 Object.keys／for…in 證明。ReactDispatchTable evidence 隨跨函式傳遞，後端 matching 保留其推定狀態。audience 比對鍵保持正規化，顯示使用 optional 原式並省略未登入時必成立的 optional 子句。見 [ADR 0101](adr/0101-r18-dispatch-props-and-optional-display.md)。

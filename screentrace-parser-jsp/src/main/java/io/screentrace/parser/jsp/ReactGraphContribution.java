@@ -295,7 +295,7 @@ public final class ReactGraphContribution {
             String expression = effect.path("expression").asText();
             List<AnalysisEvidence> evidence = new ArrayList<>();
             for (JsonNode step : effect.path("trace"))
-                evidence.add(new AnalysisEvidence(source(step), PARSER, confidence.resolutionStatus(), "跨函式呼叫：" + step.path("callee").asText()));
+                evidence.add(new AnalysisEvidence(source(step), step.has("dispatch") ? "ReactDispatchTable" : PARSER, confidence.resolutionStatus(), (step.has("dispatch") ? step.path("dispatch").asText()+"；" : "跨函式呼叫：") + step.path("callee").asText()));
             if (effect.path("viaForm").asBoolean()) evidence.add(new AnalysisEvidence(source, PARSER, confidence.resolutionStatus(), "透過所屬表單的 submit 處理器"));
             List<String> urls = new ArrayList<>();
             effect.path("urls").forEach(item -> urls.add(item.asText()));

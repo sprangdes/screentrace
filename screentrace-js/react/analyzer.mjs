@@ -873,6 +873,7 @@ class ScreenRenderer {
       if (!node?.type || FUNCTIONS.has(node.type)) return;
       if (node.type === 'IfStatement') {
         visit(node.test, guards);
+        const known=truthy(this.evaluator.evaluate(node.test,scope));if(known!==null){visit(known?node.consequent:node.alternate,guards);return;}
         visit(node.consequent, [...guards, text(scope.module, node.test)]);
         visit(node.alternate, [...guards, `!(${text(scope.module, node.test)})`]);
         return;
@@ -921,6 +922,7 @@ class EffectRunner {
     switch (node.type) {
       case 'IfStatement': case 'ConditionalExpression': {
         this.walk(node.test, scope, active, trace, guards);
+        const known=truthy(this.evaluator.evaluate(node.test,scope));if(known!==null){this.walk(known?node.consequent:node.alternate,scope,active,trace,guards);return;}
         const test = text(module, node.test);
         const previous=new Set(this.contextWrites);
         this.walk(node.consequent, scope, active, trace, [...guards, test]);const left=new Set(this.contextWrites);
@@ -930,6 +932,7 @@ class EffectRunner {
       }
       case 'LogicalExpression': {
         this.walk(node.left, scope, active, trace, guards);
+        const value=this.evaluator.evaluate(node.left,scope),known=truthy(value);if(node.operator==='&&'&&known===false||node.operator==='||'&&known===true||node.operator==='??'&&value.t==='lit'&&value.v!=null)return;
         const left = text(module, node.left);
         this.walk(node.right, scope, active, trace, [...guards, node.operator === '&&' ? left : `!(${left})`]);
         return;
@@ -939,9 +942,15 @@ class EffectRunner {
         let current = guards;
         for (const statement of node.body) {
           this.walk(statement, scope, active, trace, current);
+          if(['ReturnStatement','ThrowStatement'].includes(statement.type))break;
+          if(statement.type==='IfStatement'){const known=truthy(this.evaluator.evaluate(statement.test,scope));if(known!==null&&alwaysReturns(known?statement.consequent:statement.alternate))break;}
           if (statement.type === 'IfStatement' && !statement.alternate && alwaysReturns(statement.consequent)) current = [...current, `!(${text(module, statement.test)})`];
         }
         return;
+      }
+      case 'ForInStatement': {
+        const object=this.evaluator.evaluate(node.right,scope),id=node.left.type==='VariableDeclaration'?node.left.declarations[0]?.id:node.left;
+        if(object.t==='object'&&id?.type==='Identifier'){const inner={...scope,bindings:new Map([[id.name,{value:{t:'dispatch-key',object,complete:!hasEarlyExit(node.body)}}]]),locals:new Map(),parent:scope};this.walk(node.body,inner,active,trace,guards);return;}break;
       }
       case 'CallExpression': case 'OptionalCallExpression': case 'NewExpression':
         this.call(node, scope, active, trace, guards);
@@ -959,6 +968,11 @@ class EffectRunner {
     const callee = unwrap(node.callee);
     const value = node.type === 'NewExpression' ? {t: 'unknown'} : this.evaluator.evaluate(callee, scope);
     const where = {...this.state, guards: [...this.state.guards, ...guards]};
+    if(this.dispatch(node,callee,scope,active,trace,guards))return;
+    if(['MemberExpression','OptionalMemberExpression'].includes(callee.type)&&!callee.computed&&['map','forEach'].includes(callee.property.name)){
+      const keys=this.evaluator.evaluate(callee.object,scope),callback=node.arguments[0]&&this.evaluator.evaluate(node.arguments[0],scope);
+      if(keys.t==='object-keys'&&callback?.t==='fn'){this.run(callback,[{value:{t:'dispatch-key',object:keys.object,complete:!hasEarlyExit(callback.node.body)}}],active,trace,guards);return;}
+    }
     for(const id of this.evaluator.transferContext.writes(callee,scope))this.contextWrites.add(id);
     for(const argument of node.arguments)for(const id of this.evaluator.transferContext.writesIn(argument,scope))this.contextWrites.add(id);
     const extra = {trace,contextWrites:[...this.contextWrites]};
@@ -991,6 +1005,23 @@ class EffectRunner {
       if (arg && (arg.type === 'ArrowFunctionExpression' || arg.type === 'FunctionExpression')) this.run({t: 'fn', node: arg, scope}, [], active, trace, guards);
       else this.walk(arg, scope, active, trace, guards);
     }
+  }
+
+  dispatch(node,callee,scope,active,trace,guards){
+    if(!['MemberExpression','OptionalMemberExpression'].includes(callee.type)||!callee.computed)return false;
+    const object=this.evaluator.evaluate(callee.object,scope);if(object.t!=='object')return false;
+    const properties=object.node.properties;
+    if(properties.length>20){this.renderer.diagnostics.push(diagnostic(scope.module.file,line(node),'REACT_DISPATCH_TABLE_TOO_LARGE','分派表超過 20 個屬性，保留未解析呼叫'));return true;}
+    if(properties.some(p=>!['ObjectProperty','ObjectMethod'].includes(p.type)||p.kind&&p.kind!=='method'))return true;
+    const names=[];for(const p of properties){const key=p.computed?this.evaluator.evaluate(p.key,object.scope):{t:'lit',v:p.key.name??p.key.value};if(key.t!=='lit')return true;names.push(String(key.v));}
+    const key=this.evaluator.evaluate(callee.property,scope),fixed=key.t==='lit'&&key.v!==undefined,iteration=key.t==='dispatch-key'&&key.object.node===object.node&&key.object.scope===object.scope&&key.complete;
+    const selected=fixed?[String(key.v)]:[...new Set(names)].sort(),inferred=!fixed&&!iteration;
+    const step={callee:text(scope.module,callee),dispatch:fixed?'分派表，key 常值':iteration?'分派表，全部 key 迭代':'分派表，key 未定',source:{file:scope.module.file,line:line(node)}};
+    const start=this.effects.length;
+    for(const name of selected){const fn=this.evaluator.property(object,name);if(fn.t==='fn')this.run(fn,node.arguments.map(expr=>({expr,scope})),active,[...trace,step],guards);}
+    if(inferred)for(const effect of this.effects.slice(start))if(effect.status==='CONFIRMED')effect.status='INFERRED';
+    for(const arg of node.arguments)this.walk(arg,scope,active,trace,guards);
+    return true;
   }
 
   fullPage(node, target, scope, guards, trace) {
@@ -1363,3 +1394,5 @@ function expandScalarCondition(input,scope,evaluator){
  const path=branch.path.map(item=>{const value=boundText(item.node,inner,evaluator);return item.expression===text(inner.module,item.node)?value:`!(${value})`;});if(!path.length)return 'true';paths.push('('+path.join(' && ')+')');}
  return paths.length?paths.join(' || '):'false';
 }
+
+function hasEarlyExit(node){if(!node||FUNCTIONS.has(node.type))return false;return ["BreakStatement","ContinueStatement","ReturnStatement","ThrowStatement"].includes(node.type)||children(node).some(hasEarlyExit);}

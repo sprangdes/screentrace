@@ -69,7 +69,7 @@ test('R18 accepted guest summary drops optional properties and preserves optiona
  const raw=['!pending','!visitor','!visitor?.renew','!(visitor?.grade === "OWNER")'].flatMap(x=>atoms(x,source));
  assert.deepEqual(simplify(raw).map(a=>[a.text,a.truth]),[['pending',false],['visitor',false]]);
  const uncertain=simplify(atoms('visitor?.renew',source));assert.equal(uncertain[0].text,'visitor?.renew');
- const branch=run(`function Gate({children}){if(pending)return null;if(visitor?.renew)return null;return children;}function Home(){if(!visitor)return <p>Guest</p>;return <p>Member</p>;}function App(){return <Gate><Routes><Route path="/" element={<Home/>}/></Routes></Gate>;}`);
+ const branch=run(`function Gate({children}){if(pending)return null;if(visitor?.renew)return null;return children;}function Guest(){return <p>Guest</p>;}function Member(){return <p>Member</p>;}function Home(){if(!visitor)return <Guest/>;return <Member/>;}function App(){return <Gate><Routes><Route path="/" element={<Home/>}/></Routes></Gate>;}`);
  const guest=branch.screens.find(s=>s.audience.some(a=>a.text==='visitor'&&!a.truth));assert.ok(guest);assert.deepEqual(guest.audienceSummary.map(a=>[a.text,a.truth]),[['pending',false],['visitor',false]]);
  assert.ok(!JSON.stringify(guest.audienceSummary).includes('visitor.'));
 });
