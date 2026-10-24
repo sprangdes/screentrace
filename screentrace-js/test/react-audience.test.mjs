@@ -2,8 +2,8 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {analyzeReact} from '../react/analyzer.mjs';
 import {atoms, contradicts, combinations} from '../react/audience.mjs';
-const router = `import {Routes,Route,Navigate} from 'react-router-dom';`;
-const run = code => analyzeReact({files:[{file:'src/App.tsx',code:router+code}],markup:true});
+const router = `import {Routes,Route,Navigate} from 'react-router-dom'; import {createRoot} from 'react-dom/client';`;
+const run = code => analyzeReact({files:[{file:'src/App.tsx',code:router+code+';createRoot(document.getElementById("root")).render(<App/>);'}],markup:true});
 
 test('WP78 nested and global guards carry source-proven facts, not component guard prefixes',()=>{
  const result=run(`
