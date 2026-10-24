@@ -70,4 +70,11 @@ class R18EndpointPolicyTest {
   write("security.xml",Files.readString(root.resolve("security.xml")).replace("NegatedRequestMatcher","OrRequestMatcher"));assertNull(endpoint(graph(),"/integration/deliver/{key}").attributes().get("externalCall"));
  }
 
+ @Test void conditionalConfigurationDoesNotProveExternalCallAndUnrelatedCallbackWritesDoNotHideProof()throws Exception{
+  project();security(".requestMatchers(\"/integration/**\").permitAll()","\"/integration/**\"");String valid=Files.readString(root.resolve("Security.java"));
+  write("Security.java",valid.replace("return chain.build();","chain.other(event -> {int count=0;count=1;});return chain.build();"));assertEquals("webhook",endpoint(graph(),"/integration/deliver/{key}").attributes().get("externalCall"));
+  write("Security.java",valid.replace("chain.authorizeHttpRequests", "if(enabled)chain.authorizeHttpRequests"));assertNull(endpoint(graph(),"/integration/deliver/{key}").attributes().get("externalCall"));
+  write("Security.java",valid.replace("return chain.build();","return other.build();"));assertNull(endpoint(graph(),"/integration/deliver/{key}").attributes().get("externalCall"));
+ }
+
 }
