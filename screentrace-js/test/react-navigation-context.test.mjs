@@ -1,6 +1,6 @@
 import {test} from 'node:test';import assert from 'node:assert/strict';import {analyzeReact} from '../react/analyzer.mjs';
 const effects=s=>[...s.load,...s.components.flatMap(c=>c.behaviors)].filter(b=>b.type==='NAVIGATE');
-function run({context='useSession()',providers='<SessionProvider><App/></SessionProvider>'}={}){return analyzeReact({files:[{file:'src/App.tsx',code:`
+function run({context='useSession()',providers='<SessionProvider><App/></SessionProvider>',callback=false}={}){return analyzeReact({files:[{file:'src/App.tsx',code:`
 import {createContext,useContext,useState} from 'react';import {createRoot} from 'react-dom/client';import {Routes,Route,Navigate,Link,useNavigate} from 'react-router-dom';
 const Session=createContext(null);const Other=createContext(null);
 function SessionProvider({children}){const [account,store]=useState(null);function signOut(){store(null);}return <Session.Provider value={{account,store,signOut}}>{children}</Session.Provider>;}
@@ -8,7 +8,7 @@ function useSession(){return useContext(Session);}function useOther(){return use
 function Home(){const {account}=useSession();if(!account)return <Guest/>;if(account.tier==='CURATOR')return <Desk/>;return <Navigate to='/reader'/>;}
 function Guest(){return <p>Guest</p>;}function Desk(){return <p>Desk</p>;}
 function Curator({children}){const {account}=${context};if(!account||account.tier!=='CURATOR')return null;return children;}
-function Visitor({children}){const {account}=useSession();if(account)return null;return children;}
+function Visitor({children}){const {account}=useSession();${callback?`if(handoff==='done')return children;`:''}if(account)return null;return children;}
 function Links(){const {store,signOut}=useSession();const go=useNavigate();return <><Link to='/'>Overview</Link><button onClick={()=>{signOut();go('/');}}>Logout</button><button onClick={()=>{store(null);go('/');}}>Direct logout</button><button onClick={()=>{if(flag){signOut();go('/');}else{go('/');}}}>Branches</button></>;}
 function App(){return <Routes><Route path='/' element={<Home/>}/><Route path='/admin' element={<Curator><Links/></Curator>}/><Route path='/enter' element={<Visitor><Links/></Visitor>}/><Route path='/free' element={<Links/>}/><Route path='/reader' element={<p/>}/></Routes>;}createRoot(document.getElementById('root')).render(${providers});`} ]});}
 function targets(r,path,label){const s=r.screens.find(s=>s.route===path),c=s.components.find(c=>c.label===label);return c.behaviors.filter(b=>b.type==='NAVIGATE').flatMap(b=>b.targetScreens??r.screens.filter(s=>(b.targetRoutes??[]).includes(s.route)));}
@@ -16,3 +16,5 @@ test('R18 source Context identity selects curator and guest variants for constan
 test('R18 Context writes invalidate the old audience before navigation',()=>{const r=run();assert.equal(targets(r,'/admin','Logout').length,2);assert.equal(targets(r,'/admin','Direct logout').length,2);const b=r.screens.find(s=>s.route==='/admin').components.find(c=>c.label==='Branches').behaviors;assert.deepEqual(b.filter(b=>b.type==='NAVIGATE').map(b=>b.targetScreens?.length??2).sort(),[1,2]);});
 test('R18 no identity audience retains both variants',()=>assert.equal(targets(run(),'/free','Overview').length,2));
 for(const [name,options]of [['other Context',{context:'useOther()'}],['different hook',{context:'useAnotherHook()'}],['multiple Provider instances',{providers:'<><SessionProvider><App/></SessionProvider><SessionProvider><p/></SessionProvider></>'}]])test('R18 unrelated identity stays conservative: '+name,()=>assert.equal(targets(run(options),'/admin','Overview').length,2));
+
+test('R18 callback exception keeps both variants and explains each target with source evidence',()=>{const r=run({callback:true}),s=r.screens.find(s=>s.route==='/enter'),b=s.components.find(c=>c.label==='Overview').behaviors.find(b=>b.type==='NAVIGATE');assert.equal(targets(r,'/enter','Overview').length,2);assert.equal(b.targetConditions.length,2);const curator=b.targetConditions.find(c=>c.variantKey.includes('CURATOR'));assert.match(curator.condition,/handoff.*done/);assert.ok(curator.sources.every(s=>s.file==='src/App.tsx'&&s.line>0));});
