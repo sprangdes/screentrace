@@ -31,3 +31,5 @@ CI run 40074957166 的 node-dependency-audit 因報告的本機暫存 Markdown �
 完整實測發現：不得把在 optional short-circuit 後方、未必安全求值的直接屬性分支，提取成無條件顯示原子。只在正反兩種假設恰有一種可成立時才提取析取的已蘊含葉節點；新增失敗回歸 ad586e5。此限制只影響摘要，原 audience 與矛盾規則不變。
 
 另查明前次 Struts 八模組 SHA 比對指向空目錄，只比對到空圖，不能作為實際相容性證據。保留其歷史紀錄並撤回該結論；以 Apache Struts 1 固定 commit 02c9ff7485b1900515c6e0b32ed54ea46dd97d51 的實際八模組原始碼，在相同 repo 外路徑分別使用 main dbacc54 與補正版本重新靜態分析，不建置／執行目標或安裝相依。新的非空圖數量與 SHA 列於 R18 報告。
+
+跨獨立 JVM 的回歸 8058140 重現：投影條件曾用不保證迭代次序的 Map.of，令 component ID 隨 JVM 改變。改用 TreeMap，六個獨立 JVM 的完整圖必須逐位元組相同；CLI 報表與 GraphOnly 也比對同一圖。全站 Guard 的非視覺分支另用於 EntryPoint forwarding，避免豁免來源（如未設定身分的初始設定頁）前往根路由後漏掉全站 Guard 的實際導回分支。

@@ -364,3 +364,11 @@
 - 可選方案：後續以來源可證明的查詢參數條件，把一般進入與 callback 建為不同變體；須另定 ID、畫面數、舊決策與查詢參數正規化政策。沒有授權前維持本輪多目的呈現。
 - 與 WP80 的關係：外部登入回到 `/login?lineLogin=success` 的流程，日後可以指向這個 callback 變體；本輪外部登入往返仍使用既有路由與條件證據，不新增畫面。
 - 狀態：OPEN；需求方明確列為後續候選，不阻擋本輪依已決定政策保留 callback 例外。
+
+## OQ-039 — Struts 真實回歸的既有 graph validation 阻擋
+
+- 情境：前次 Struts 八模組回歸誤指向空目錄，不能證明相容性。以 Apache Struts 1 commit 02c9ff7485b1900515c6e0b32ed54ea46dd97d51 的實際來源重建 main dbacc54 與 R18 基準後，blank、faces-example1、faces-example2、mailreader、scripting-mailreader 五個模組的非空圖逐位元組一致；cookbook、el-example、examples 兩個版本都被既有 GraphIntegrityValidator 擋下，分別為 69、31、3 個相同錯誤，不能輸出可接受的 graph SHA。
+- 原因：既有「Navigation target does not match screen route or view」驗證拒絕含查詢參數的 source.jsp 等導覽；完整錯誤及錯誤清單雜湊在 repo 外，報告列數量。本輪未修改目標、Struts 程式、驗證規則或受保護斷言，未跳過驗證來製造輸出。
+- 可選方案：後續另行授權修復 Struts URL／graph 驗證，再完成三個模組的有效圖回歸；本輪只保留兩版本相同既有失敗的證據，不宣稱八模組全部通過。
+- 影響範圍：R18 實際八模組 graph SHA-256 驗收中的上述三個模組。依 R18 §4 停止該項；其他 WP79／WP80 補正、repo 測試及 PR CI 繼續驗證。
+- 狀態：OPEN；未放寬任何既有斷言。

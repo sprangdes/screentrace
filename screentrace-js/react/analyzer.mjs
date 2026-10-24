@@ -30,7 +30,7 @@ export function analyzeReact({files = [], maxDepth = 24, markup = false} = {}) {
   const occurrences = jsxOccurrences(modules);
   const routes = findRoutes(modules, evaluator, diagnostics);
   const shell = findRootRender(modules, evaluator);
-  const screens = [], routeRedirects = [], seen = new Map();
+  const screens = [], routeRedirects = [], entryBranches=[], seen = new Map();
   for (const route of routes) {
     const duplicate = seen.get(route.path);
     if (duplicate) {
@@ -40,6 +40,7 @@ export function analyzeReact({files = [], maxDepth = 24, markup = false} = {}) {
     seen.set(route.path, route);
     const base = new ScreenRenderer(evaluator, occurrences, diagnostics, maxDepth, false).render(route, shell);
     const variants = base.variantDecision ?? [null];
+    entryBranches.push(...base.load.filter(e=>e.redirect).map(effect=>({route:route.path,effect})));
     routeRedirects.push(...base.load.filter(e => e.routeRedirect).map(effect => ({route: route.path, file: route.file, effect})));
     for (const variant of variants) {
       const initial = new ScreenRenderer(evaluator, occurrences, diagnostics, maxDepth, false, variant?.facts ?? (base.redirectOnly ? [] : base.audienceOriginal)).render(route, shell);
@@ -83,7 +84,7 @@ export function analyzeReact({files = [], maxDepth = 24, markup = false} = {}) {
   for(const screen of screens)for(const effect of [...screen.load,...screen.components.flatMap(c=>c.behaviors)]){
     if(effect.type!=='NAVIGATE'||effect.targetScreens?.length!==0)continue;
     const facts=navigationFacts.get(effect)??[],ctx=evaluator.transferContext,targets=new Map(),via=[];
-    for(const redirect of routeRedirects){
+    for(const redirect of entryBranches){
       if(!(effect.targetRoutes??[]).includes(redirect.route)||redirect.effect.contextWrites?.length)continue;
       const guard=redirect.effect.contextGuardFacts??[];if(!guard.length||contradicts([...facts,...guard]))continue;
       const routes=matchRoute(redirect.effect.urls,patterns).targetRoutes??[];
