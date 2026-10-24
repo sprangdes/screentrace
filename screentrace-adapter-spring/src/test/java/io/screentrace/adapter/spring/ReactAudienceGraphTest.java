@@ -56,4 +56,19 @@ class ReactAudienceGraphTest {
   assertTrue(behavior.evidence().stream().anyMatch(e->e.parser().equals("ReactAudienceTarget")&&e.detail().contains("condition")));
   assertDoesNotThrow(()->GraphIntegrityValidator.requireAnalysis(graph));
  }
+
+ @Test void audienceProjectionIsDeterministicAcrossIndependentJvmProcesses() throws Exception {
+  sharedLinkProjectionUsesItsSourceContextAndRecordsExcludedTargets();
+  String expected=null;
+  for(int i=0;i<6;i++){
+   var process=new ProcessBuilder(Path.of(System.getProperty("java.home"),"bin","java").toString(),"-cp",System.getProperty("java.class.path"),getClass().getName(),root.toString()).redirectErrorStream(true).start();
+   String output=new String(process.getInputStream().readAllBytes(),java.nio.charset.StandardCharsets.UTF_8);
+   assertEquals(0,process.waitFor(),output);
+   if(expected==null)expected=output;else assertEquals(expected,output,"Context projection must not depend on JVM collection iteration order");
+  }
+ }
+ public static void main(String[] args) throws Exception {
+  var graph=new SpringBootAnalyzer().analyze(new ProjectScanner().scan(Path.of(args[0])));
+  System.out.print(new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(graph));
+ }
 }
