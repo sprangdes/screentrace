@@ -8,3 +8,9 @@ function reader(r,path){return r.screens.find(s=>s.route===path&&s.view==='Choos
 const nav=s=>s.components.flatMap(c=>c.behaviors).filter(b=>b.type==='NAVIGATE').flatMap(b=>b.urls);
 test('R18 fixed useLocation pathname and literal includes participate in guard contradictions',()=>{const r=run(),s=reader(r,'/feed');assert.ok(s);assert.ok(!nav(s).includes('/admin'));assert.ok(s.audienceSummary.every(a=>!a.text.includes('position.pathname')&&!a.text.includes('exempt')));assert.ok(s.audienceOriginal.some(a=>a.text.includes('exempt')));assert.ok(nav(reader(r,'/onboarding')).includes('/admin'));});
 test('R18 parameter, splat and transformed pathname remain free',()=>{const r=run();for(const path of ['/items/:id','/files/*']){const s=reader(r,path);assert.ok(nav(s).includes('/admin'));assert.ok(s.audience.some(a=>a.text.includes('position.pathname')));}assert.ok(r.screens.filter(s=>s.route==='/transformed').some(s=>s.audience.some(a=>a.text.includes('toLowerCase'))));});
+test('R18 pathname transformed by concatenation or interpolation is also left free',()=>{
+ for(const converted of ["'prefix:'+position.pathname",'`prefix:${position.pathname}`']){
+  const r=analyzeReact({files:[{file:'src/App.tsx',code:`import {Routes,Route,useLocation} from 'react-router-dom';function Guard({children}){const position=useLocation();const changed=${converted};if(changed==='prefix:/changed')return null;return children;}function App(){return <Routes><Route path='/changed' element={<Guard><button>Open</button></Guard>}/></Routes>;}`} ]});
+  assert.ok(r.screens[0].audience.some(a=>a.text.includes('changed')));
+ }
+});
