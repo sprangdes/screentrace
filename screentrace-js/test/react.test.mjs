@@ -141,6 +141,33 @@ test('R18 WP83 functional state updates remain unknown and keep ternary fall-thr
   assert.match(screen(result, '/board').markup,/Empty/);assert.doesNotMatch(screen(result, '/board').markup,/Count/);
 });
 
+test('R18 WP83 view skips a guard, child frame and one-component composition', () => {
+  const result=run({
+    'src/App.tsx':`${ROUTER} import Access from './Access';import Frame from './Frame';import Group from './Group';import Landing from './Landing';export default function App(){return <Routes><Route path="/desk" element={<Access><Frame><Group><Landing/></Group></Frame></Access>}/></Routes>;}`,
+    'src/Access.tsx':`export default function Access({children}){if(!ready)return null;return children;}`,
+    'src/Frame.tsx':`export default function Frame({children}){return <section><nav>Tools</nav>{children}</section>;}`,
+    'src/Group.tsx':`import Landing from './Landing';export default function Group(){return <Landing/>;}`,
+    'src/Landing.tsx':`export default function Landing(){return <article><h1>Desk</h1></article>;}`
+  });
+  const page=screen(result,'/desk');assert.equal(page.view,'Landing');
+  assert.ok(page.sources.includes('src/Access.tsx')&&page.sources.includes('src/Frame.tsx')&&page.sources.includes('src/Group.tsx'));
+});
+
+test('R18 WP83 route variants keep the page component returned by each branch', () => {
+  const result=run({'src/App.tsx':`${ROUTER}function Entry(){if(enabled)return <Amber/>;return <Violet/>;}function Amber(){return <p>A</p>;}function Violet(){return <p>V</p>;}export default function App(){return <Routes><Route path="/tone" element={<Entry/>}/></Routes>;}`});
+  const pages=result.screens.filter(s=>s.route==='/tone');assert.equal(pages.length,2);assert.deepEqual(pages.map(s=>s.view).sort(),['Amber','Violet']);
+});
+
+test('R18 WP83 JSX object spreads provide props with source-order override rules', () => {
+  const result=analyzeReact({markup:true,files:[{file:'src/App.tsx',code:`${ROUTER}const duplicate={main:{title:'調度面板'}};function Header({title}){return <h1>{title}</h1>;}function First(){return <Header {...duplicate.main}/>;}function Second(){return <Header {...duplicate.main} title="覆寫"/>;}export default function App(){return <Routes><Route path="/first" element={<First/>}/><Route path="/second" element={<Second/>}/></Routes>;}`} ]});
+  assert.match(screen(result,'/first').markup,/調度面板/);assert.match(screen(result,'/second').markup,/覆寫/);
+});
+
+test('R18 WP83 does not descend past a page component that emits HTML', () => {
+  const result=run({'src/App.tsx':`${ROUTER}function App(){return <Routes><Route path="/page" element={<Surface/>}/></Routes>;}function Surface(){return <main><Content/></main>;}function Content(){return <p>nested</p>;}`});
+  assert.equal(screen(result,'/page').view,'Surface');
+});
+
 test('links over a literal navigation array are unrolled and resolved to routes', () => {
   const result = run({
     'src/App.tsx': `${ROUTER} const items = [{ to: '/a', label: 'A' }, { to: '/b/7', label: 'B' }];
