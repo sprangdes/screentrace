@@ -32,4 +32,28 @@ class ReactAudienceGraphTest {
   }
   assertDoesNotThrow(()->GraphIntegrityValidator.requireAnalysis(graph));
  }
+
+ @Test void sharedLinkProjectionUsesItsSourceContextAndRecordsExcludedTargets() throws Exception {
+  Files.writeString(root.resolve("App.tsx"),"""
+   import {createContext,useContext,useState} from 'react';import {createRoot} from 'react-dom/client';import {Routes,Route,Link} from 'react-router-dom';
+   const Session=createContext(null);
+   function Provider({children}){const [subject,store]=useState(null);return <Session.Provider value={{subject,store}}>{children}</Session.Provider>;}
+   function useSession(){return useContext(Session);}
+   function Toolbar(){return <Link to="/">Overview</Link>;}
+   function Guest(){return <p>Guest</p>;}function Lead(){return <p>Lead</p>;}
+   function Home(){const {subject}=useSession();if(!subject)return <Guest/>;return <Lead/>;}
+   function Guard({children}){const {subject}=useSession();if(!subject)return null;return children;}
+   function App(){return <><Toolbar/><Routes><Route path="/" element={<Home/>}/><Route path="/desk" element={<Guard><p/></Guard>}/><Route path="/free" element={<p/>}/></Routes></>;}
+   createRoot(document.getElementById('root')).render(<Provider><App/></Provider>);
+   """);
+  var graph=new SpringBootAnalyzer().analyze(new ProjectScanner().scan(root));
+  var desk=graph.nodes().stream().filter(n->n.type()==NodeType.SCREEN&&"/desk".equals(n.attributes().get("route"))).findFirst().orElseThrow();
+  var component=graph.relationships().stream().filter(e->e.type()==EdgeType.CONTAINS&&e.from().equals(desk.id())).map(e->e.to()).findFirst().orElseThrow();
+  var targets=graph.relationships().stream().filter(e->e.type()==EdgeType.NAVIGATES_TO&&e.from().equals(component)).map(e->graph.nodes().stream().filter(n->n.id().equals(e.to())).findFirst().orElseThrow()).toList();
+  assertEquals(1,targets.size());assertTrue(targets.get(0).audience().stream().anyMatch(a->a.text().equals("subject")&&a.truth()));
+  var behavior=graph.behaviors().stream().filter(b->b.triggerId().equals(component)&&b.type()==BehaviorType.NAVIGATE).findFirst().orElseThrow();
+  assertTrue(behavior.evidence().stream().anyMatch(e->e.detail().startsWith("排除身分變體：")));
+  assertTrue(behavior.evidence().stream().anyMatch(e->e.parser().equals("ReactAudienceTarget")&&e.detail().contains("condition")));
+  assertDoesNotThrow(()->GraphIntegrityValidator.requireAnalysis(graph));
+ }
 }
