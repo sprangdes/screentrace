@@ -73,3 +73,7 @@ test('R18 accepted guest summary drops optional properties and preserves optiona
  const guest=branch.screens.find(s=>s.audience.some(a=>a.text==='visitor'&&!a.truth));assert.ok(guest);assert.deepEqual(guest.audienceSummary.map(a=>[a.text,a.truth]),[['pending',false],['visitor',false]]);
  assert.ok(!JSON.stringify(guest.audienceSummary).includes('visitor.'));
 });
+test('R18 simplified optional display retains the prior canonical navigation projection key',()=>{
+ const r=run(`function Gate({children}){if(pending)return null;if(visitor?.renew)return null;return children;}function Guest(){return <p>Guest</p>;}function Member(){return <p>Member</p>;}function Home(){if(!visitor)return <Guest/>;return <Member/>;}function App(){return <><a href="/">Home</a><Gate><Routes><Route path="/" element={<Home/>}/></Routes></Gate></>;}`);
+ const guest=r.screens.find(s=>s.audience.some(a=>a.text==='visitor'&&!a.truth));const target=guest.components.flatMap(c=>c.behaviors).flatMap(b=>b.targetConditions??[]).find(t=>t.variantKey===guest.variantKey);assert.ok(target);assert.equal(target.condition,'!(pending) && !(visitor)');assert.equal(target.conditionKey,'!(pending) && !(visitor) && !(visitor.renew)');
+});
