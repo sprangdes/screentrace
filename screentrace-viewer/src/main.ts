@@ -126,7 +126,7 @@ try {
   for(const message of messages){const note=element('p',message,'notice');note.dataset.importNotice='true';notices.append(note);}
   const first=notices.querySelector<HTMLElement>('p[data-import-notice]');
   if(first){const dismiss=element('button','知道了','notice-dismiss');dismiss.type='button';dismiss.onclick=()=>notices.querySelectorAll('[data-import-notice]').forEach(n=>n.remove());first.append(dismiss);}
-  if(imported.orphans.length){const list=element('ul',undefined,'notice orphan-list');list.dataset.importNotice='true';list.dataset.mdOrphans='true';for(const orphan of imported.orphans)list.append(element('li',`${orphan.screenId}${orphan.componentId?` / ${orphan.componentId}`:''}`));notices.append(list);}
+  if(imported.orphans.length){const list=element('ul',undefined,'notice orphan-list');list.dataset.importNotice='true';list.dataset.mdOrphans='true';for(const orphan of imported.orphans)list.append(element('li',`${orphan.screenId}${orphan.componentId?` / ${orphan.componentId}`:''}${orphan.reason?`：${orphan.reason}`:''}`));notices.append(list);}
  };
  // ---- progress file: the md the person chose, rewritten after every decision (Chrome／Edge)
  type FileState='unsupported'|'none'|'pending'|'saving'|'saved'|'error';

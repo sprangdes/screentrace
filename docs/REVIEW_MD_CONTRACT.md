@@ -83,4 +83,6 @@ manifest 文字同正文隔離（code span、300、控制／隱形可見化）�
 
 ## R18 第一階段
 
-輸入分析圖支援 2.2／2.3，md 一律維持 format_version 1，既有 golden 位元組不變。變體仍按原 screenId／(screenId, componentId) 複合鍵記錄；R18-A 特別匯入政策停於 OQ-035，未把舊畫面決策靜默套到變體。既有未知 ID 的保留與 orphan 檢查照舊。
+分析圖支援 schema 2.2／2.3；review v1 的 schemaVersion 2.2、暫存鍵、screenId／(screenId, componentId) 決策鍵及 md format_version 1 位元組不變。
+
+依 OQ-035 方案 A，拆分畫面以 attributes.supersedesScreenId 記錄拆分前 ID。舊 ID 的畫面與元件決策保留為 orphan，提示「此網址已依身分拆分，請重新標記」，不得套用到任何變體，也不得靜默複製。單一變體網址沿用原 screenId，正常匯入。未知 ID 既有保留規則不變；新提示只在圖有明確拆分來源時使用。詳見 [ADR 0099](adr/0099-r18-review-corrections.md)。

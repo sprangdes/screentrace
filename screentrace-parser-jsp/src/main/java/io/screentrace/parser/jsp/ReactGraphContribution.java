@@ -169,7 +169,8 @@ public final class ReactGraphContribution {
             for (JsonNode atom : screen.path("audience")) audience.add(new ApplicationGraph.AudienceAtom(atom.path("text").asText(), atom.path("truth").asBoolean(), source(atom)));
             String entry = ApplicationGraph.id(NodeType.ENTRY_POINT, routeFile + ":" + route);
             attributes.put("entryPointId", entry);
-            if (screen.hasNonNull("variantKey")) attributes.put("audienceVariant", screen.path("variantKey").asText());
+            if (screen.hasNonNull("variantKey")) { attributes.put("audienceVariant", screen.path("variantKey").asText()); attributes.put("supersedesScreenId", screenId(routeFile, route)); }
+            if (screen.has("audienceSummary")) attributes.put("audienceSummary", json(screen.path("audienceSummary")));
             if (!screen.path("excluded").isEmpty()) attributes.put("hiddenComponents", json(screen.path("excluded")));
             if (!screen.path("excludedBehaviors").isEmpty()) attributes.put("hiddenBehaviors", json(screen.path("excludedBehaviors")));
             nodes.putIfAbsent(entry, new GraphNode(entry, NodeType.ENTRY_POINT, route, Map.of("path", route), source, Confidence.CONFIRMED, proof(source, Confidence.CONFIRMED, "網址入口")));
@@ -182,8 +183,9 @@ public final class ReactGraphContribution {
                 catch (IOException invalid) { throw new IllegalArgumentException("Invalid audience variant", invalid); }
                 name += "（" + String.join(" && ", summary) + "）";
             }
-            nodes.put(id, new GraphNode(id, NodeType.SCREEN, name, attributes, source, Confidence.CONFIRMED,
-                    proof(source, Confidence.CONFIRMED, "路由宣告；畫面元件 " + screen.path("view").asText()), audience));
+            List<AnalysisEvidence> screenEvidence = new ArrayList<>(proof(source, Confidence.CONFIRMED, "路由宣告；畫面元件 " + screen.path("view").asText()));
+            for (var atom : audience) screenEvidence.addAll(proof(atom.source(), Confidence.INFERRED, "原始身分條件：" + (atom.truth() ? atom.text() : "!(" + atom.text() + ")")));
+            nodes.put(id, new GraphNode(id, NodeType.SCREEN, name, attributes, source, Confidence.CONFIRMED, screenEvidence, audience));
             screensByRoute.computeIfAbsent(route, ignored -> new ArrayList<>()).add(id);
             if (screen.path("redirectOnly").asBoolean()) {
                 List<String> targets = new ArrayList<>();

@@ -48,4 +48,6 @@ md 雙格式契約見 REVIEW_MD_CONTRACT；有效／orphan ID 同時可逆還原
 
 ## R18 第一階段
 
-正式消費端另接受分析圖 schema 2.3；既有 review v1 容器的 schemaVersion 2.2、暫存鍵與複合決策鍵不變。單一身分畫面沿用原 screenId。多身分拆分後舊決策的特別匯入政策尚未授權（OQ-035／R18-A），未實作遷移、提示或決策複製；既有未知 ID 保留規則不改。
+分析圖支援 schema 2.2／2.3；review v1 的 schemaVersion 2.2、暫存鍵、screenId／(screenId, componentId) 決策鍵及 md format_version 1 位元組不變。
+
+依 OQ-035 方案 A，拆分畫面以 attributes.supersedesScreenId 記錄拆分前 ID。舊 ID 的畫面與元件決策保留為 orphan，提示「此網址已依身分拆分，請重新標記」，不得套用到任何變體，也不得靜默複製。單一變體網址沿用原 screenId，正常匯入。未知 ID 既有保留規則不變；新提示只在圖有明確拆分來源時使用。詳見 [ADR 0099](adr/0099-r18-review-corrections.md)。

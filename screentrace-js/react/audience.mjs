@@ -103,3 +103,10 @@ export function residualGuard(guard,facts){
  const kept=parts.filter(part=>implied(facts,part)!==true);
  return kept.length===parts.length?guard:kept.length?kept.join(' && '):null;
 }
+
+/** Display-only reduction. Raw audience atoms and their source evidence are retained. */
+export function simplify(items){
+ const kept=unique(items);
+ for(let i=kept.length-1;i>=0;i--){const item=kept[i],others=kept.filter((_,j)=>j!==i);let expression;try{expression=parse(item.text);}catch{continue;}if(expression.type!=='LogicalExpression'||expression.operator!=='||')continue;if(others.length&&implied(others,item.truth?item.text:`!(${item.text})`)===true)kept.splice(i,1);}
+ return kept;
+}

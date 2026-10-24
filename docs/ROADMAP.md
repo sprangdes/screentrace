@@ -142,8 +142,8 @@
 
 ## R18
 
-- 以 `sprangdes/reservio`（Spring Boot＋React）對照原始碼實測：路由與 API 大致正確，但依身分渲染的畫面被合成一張、共用外框未依身分過濾、登入後導向未解析，另有分派表呼叫、處理器 prop 分支、字面路徑優先、外部呼叫端點等缺口。指示見 [ADJUSTMENT_R18_ROLES.md](ADJUSTMENT_R18_ROLES.md)（WP78–WP85，三個停止點；R18-A／B／C 待需求方決定）。
+- 以 `sprangdes/reservio`（Spring Boot＋React）對照原始碼實測：路由與 API 大致正確，但依身分渲染的畫面被合成一張、共用外框未依身分過濾、登入後導向未解析，另有分派表呼叫、處理器 prop 分支、字面路徑優先、外部呼叫端點等缺口。指示見 [ADJUSTMENT_R18_ROLES.md](ADJUSTMENT_R18_ROLES.md)（WP78–WP85，三個停止點；R18-A／C 已決定，R18-B 留待後續階段）。
 
-- 第一階段（WP78 → WP79 → WP80）已提交可驗證實作，停止等待驗收，未進入 WP81。WP78 身分事實／schema 2.3、WP79 變體／外框與預覽、WP80 函式目的地與外部登入已通過合成正反向測試；實測尚有保守邊界，不能宣稱全部驗收條件通過。
-- 待決：OQ-035（R18-A 舊 screenId 匯入）、OQ-036（獨立面板狀態無法由身分條件排除 API）、OQ-037（認證回傳與 Context 身分的同一性）；R18-C 暫顯示條件摘要，R18-B 留待 WP82。
-- 詳見 [R18 第一階段報告](reports/R18.md)、[ADR 0096](adr/0096-r18-audience-facts.md)、[ADR 0097](adr/0097-r18-audience-variants.md)、[ADR 0098](adr/0098-r18-returned-destinations-and-external-login.md)。
+- 第一階段（WP78 → WP79 → WP80）：WP78 已獲驗收通過；WP79、WP80 完成補正，重新送審並停止，未進入 WP81。
+- OQ-035 A、OQ-036 A、OQ-037 窄版 B 已實作；R18-C 簡化顯示與原式並列。OQ-036 狀態值可達性列後續，R18-B 留待 WP82。
+- 詳見 [R18 報告](reports/R18.md)、[ADR 0096](adr/0096-r18-audience-facts.md)、[ADR 0097](adr/0097-r18-audience-variants.md)、[ADR 0098](adr/0098-r18-returned-destinations-and-external-login.md)、[ADR 0099](adr/0099-r18-review-corrections.md)。

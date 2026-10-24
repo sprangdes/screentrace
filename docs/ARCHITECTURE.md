@@ -642,3 +642,7 @@ JS AST 的來源 evidence 可攜帶固定操作 metadata（show/hide/toggle、se
 JSP 宣告編碼由 scanner 的受限位元組讀取處理，非 UTF-8 metadata 經 SourceEncoding evidence 進圖；capture 僅轉換產出，保留來源位元組。Thymeleaf 的具名片段、Struts 代理／具參數 action 鏈、Spring Security DSL 均在各 adapter／parser 貢獻既有圖節點與證據，不進 Core。
 
 有限 JavaScript workflowGate／display／class／confirm 操作與 DTO scalar 欄位契約由同一圖供 viewer 消費。DTO contract 的 scope 為 submitted-fields-only，認證、session、SQL、關聯、日期計算仍未知；未選列的更新只顯示來源正常目的且明示未回放資料。來源條件未知時保留所有候選，巢狀候選可直接選取。決定與邊界見 [ADR 0095](adr/0095-public-batch5-workflow-repairs.md)。
+
+### R18 第一階段驗收補正
+
+依 [ADR 0099](adr/0099-r18-review-corrections.md)，schema 2.3 的 SCREEN attributes.audienceSummary 僅供顯示，原始 audience 保留且逐條記入 evidence；supersedesScreenId 識別拆分前決策的 orphan。Context 同一性只在唯一 Provider、相同 setter 寫入與回傳區域值、同 Context 消費端的來源證據成立時使用；未知與反向案例不修剪。既有 schema、決策鍵與 md v1 不變。

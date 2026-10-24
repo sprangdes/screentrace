@@ -1,7 +1,8 @@
 import {parseModules, diagnostic, children, line, text, FUNCTIONS, PARSER} from './modules.mjs';
 import {Evaluator, unwrap, truthy, externalName, returnedExpressions, conditionText} from './values.mjs';
 import {element as htmlElement, htmlAttribute, isAllowedTag, jsxText, serialize, styleText, SAMPLE_TEXT} from './markup.mjs';
-import {atoms, unique, combinations, implied, residualGuard, contradicts} from './audience.mjs';
+import {atoms, unique, combinations, implied, residualGuard, contradicts, simplify} from './audience.mjs';
+import {contextTransfers} from './context-transfer.mjs';
 import {stylesheets} from './styles.mjs';
 
 const ROUTER = new Set(['react-router-dom', 'react-router', 'react-router-native']);
@@ -23,6 +24,7 @@ const MAX_GUARD = 300;
 export function analyzeReact({files = [], maxDepth = 24, markup = false} = {}) {
   const {modules, diagnostics} = parseModules(files);
   const evaluator = new Evaluator(modules, maxDepth);
+  evaluator.transferContext = contextTransfers(modules,evaluator);
   const occurrences = jsxOccurrences(modules);
   const routes = findRoutes(modules, evaluator, diagnostics);
   const shell = findRootRender(modules, evaluator);
@@ -43,6 +45,7 @@ export function analyzeReact({files = [], maxDepth = 24, markup = false} = {}) {
       if (variant) screen.variantKey = JSON.stringify(unique(variant.facts).map(a => [a.text,a.truth]));
       const present = new Set(screen.components.map(c => c.key));
       screen.excluded = base.components.filter(c => !present.has(c.key)).map(component => ({...component, source:{file:component.file,line:component.line}, audience:screen.audience, reason:'此身分下不顯示'}));
+      screen.audienceSummary = simplify(screen.audience);
       delete screen.variantDecision;
       screens.push(screen);
     }
@@ -54,7 +57,7 @@ export function analyzeReact({files = [], maxDepth = 24, markup = false} = {}) {
         const before = effect.status;
         Object.assign(effect, matchRoute(effect.urls, effect.fullPage ? patterns.filter(item => !item.route.includes('*')) : patterns));
         if (before === 'INFERRED' && effect.status === 'CONFIRMED') effect.status = 'INFERRED';
-        if (effect.destinationFacts) effect.targetScreens = screens.filter(s => (effect.targetRoutes??[]).includes(s.route) && !contradicts([...effect.destinationFacts,...s.audience])).map(s => ({file:s.file,route:s.route,...(s.variantKey?{variantKey:s.variantKey}:{})}));
+        if (effect.destinationFacts) effect.targetScreens = screens.filter(s => (effect.targetRoutes??[]).includes(s.route) && !contradicts([...effect.destinationFacts,...(effect.contextIdentity?evaluator.transferContext.targetFacts(s.audience):s.audience)])).map(s => ({file:s.file,route:s.route,...(s.variantKey?{variantKey:s.variantKey}:{})}));
         // A full-page load of a server URL that is not a client route reaches the backend: treat it as a GET request.
         if (effect.fullPage && effect.status === 'UNRESOLVED' && effect.urls.length && effect.urls.every(url => url.startsWith('/'))) {
           Object.assign(effect, {type: 'CALL_API', method: 'GET', status: effect.urls.some(url => url.includes('{')) ? 'INFERRED' : 'CONFIRMED'});
@@ -328,7 +331,7 @@ class ScreenRenderer {
     const components = [...this.components.values()];
     const excludedBehaviors = [];
     const visible = effect => {
-      if (!contradicts([...this.facts, ...atoms(effect.guard, effect.source)])) return true;
+      if (!contradicts([...this.facts, ...(effect.pruningFacts??atoms(effect.guard, effect.source))])) return true;
       excludedBehaviors.push({...effect, reason:'此身分下不顯示', audience:this.audience}); return false;
     };
     components.forEach(component => { component.behaviors = dedupe(component.behaviors).filter(visible); component.guard = residualGuard(component.guard, this.audience); });
@@ -546,9 +549,9 @@ class ScreenRenderer {
     if (isComponent && this.inRoute && state.routeCandidate !== false && !this.variantDecision) {
       const branches = returnBranches(fn.node.body, scope, this.evaluator);
       const pages = branches.map(b => ({...b, identity: branchIdentity(b.expr, scope, this.evaluator)})).filter(b => b.identity);
-      if (new Set(pages.map(b => b.identity)).size > 1) this.variantDecision = pages.map(b => ({facts: b.path.flatMap(item => atoms(item.expression, {file:scope.module.file,line:line(item.node)}))}));
+      if (new Set(pages.map(b => b.identity)).size > 1) this.variantDecision = pages.map(b => ({facts: this.evaluator.transferContext.remember(b.path.flatMap(item => atoms(item.expression, {file:scope.module.file,line:line(item.node)})),scope)}));
     }
-    if (isComponent) this.audience = unique([...this.audience, ...wrapperFacts(fn.node.body, scope, this.evaluator)]);
+    if (isComponent) this.audience = unique([...this.audience, ...this.evaluator.transferContext.remember(wrapperFacts(fn.node.body, scope, this.evaluator),scope)]);
     if (isComponent) this.loadEffects(fn.node.body, scope, state, new Set([fn.node]));
     if (fn.node.body.type !== 'BlockStatement') { this.expr(fn.node.body, scope, state); return; }
     this.statements(fn.node.body.body, scope, state);
@@ -634,8 +637,9 @@ class ScreenRenderer {
     if (name === 'Link' || name === 'NavLink') {
       if (this.inRoute) this.routeContent++;
       const to = attributeExpression(attribute(node, 'to'));
-      const urls = to ? this.urlsOf(to, scope) : [];
-      const behaviors = [this.effect('NAVIGATE', 'click', node, scope, unguarded(state), {urls, expression: text(scope.module, to)})];
+      const choices=to?this.destinationChoices(to,scope,state):null;
+      const urls = choices?cleanUrls(choices.flatMap(c=>c.urls)):to ? this.urlsOf(to, scope) : [];
+      const behaviors = choices?choices.map(candidate=>this.effect('NAVIGATE','click',node,scope,{...unguarded(state),guards:candidate.conditions},{...candidate,expression:text(scope.module,to)})):[this.effect('NAVIGATE', 'click', node, scope, unguarded(state), {urls, expression: text(scope.module, to)})];
       behaviors.push(...this.handlers(node, scope, state).flatMap(handler => handler.effects));
       const component = this.record(node, scope, state, key, {kind: 'LINK', tag: name, target: urls[0] ?? null, handlers: [], behaviors});
       const out = this.output(node, 'a', scope, state, key);
@@ -679,9 +683,9 @@ class ScreenRenderer {
 
   destinationChoices(expr,scope,state) {
     const result = destinationCandidates(expr,scope,this.evaluator,this.maxDepth);
-    if (!result.handled) return null;
+    if (!result.handled) {const transfer=this.evaluator.transferContext(state.guards.flatMap(g=>atoms(g,{file:scope.module.file,line:line(expr)})),scope);if(!transfer.proofs.length)return null;return [{urls:this.urlsOf(expr,scope),conditions:[],destinationFacts:transfer.facts,contextIdentity:transfer.proofs.length>0,trace:transfer.proofs.map(source=>({callee:'Context state/return identity',source}))}];}
     if (result.limited) this.diagnostics.push(diagnostic(scope.module.file,line(expr),'REACT_DESTINATION_LIMIT','目的地分支超過安全展開限制，保留未解析候選'));
-    return result.items.filter(item=>!contradicts([...this.facts,...state.guards.flatMap(g=>atoms(g,{file:scope.module.file,line:line(expr)})),...item.conditions.flatMap(g=>atoms(g,item.source))])).map(item=>({...item,urls:cleanUrls(item.urls),destinationFacts:item.conditions.flatMap(g=>atoms(g,item.source))}));
+    return result.items.filter(item=>!contradicts([...this.facts,...state.guards.flatMap(g=>atoms(g,{file:scope.module.file,line:line(expr)})),...(result.conditionsProvable?item.conditions:[]).flatMap(g=>atoms(g,item.source))])).map(item=>{const transfer=this.evaluator.transferContext([...state.guards,...(result.conditionsProvable?item.conditions:[])].flatMap(g=>atoms(g,item.source)),scope);return {...item,...(!result.conditionsProvable?{pruningFacts:state.guards.flatMap(g=>atoms(g,item.source))}:{}),urls:cleanUrls(item.urls),destinationFacts:transfer.facts,contextIdentity:transfer.proofs.length>0,trace:[...item.trace,...transfer.proofs.map(source=>({callee:'Context state/return identity',source}))]};});
   }
 
   urlsOf(expr, scope) {
@@ -1267,7 +1271,8 @@ function boundText(node,scope,evaluator,seen=new Set()) {
  visit(node,null,null);let result=source;for(const edit of edits.sort((a,b)=>b.from-a.from))result=result.slice(0,edit.from)+edit.value+result.slice(edit.to);return result;
 }
 function destinationCandidates(input,scope,evaluator,maxDepth) {
- let handled=false,visits=0;
+ let handled=false,visits=0,unprovenArguments=false;
+ function stableArgument(input){const n=unwrap(input);if(!n)return false;if(['Identifier','StringLiteral','NumericLiteral','BooleanLiteral','NullLiteral'].includes(n.type))return true;return ['MemberExpression','OptionalMemberExpression'].includes(n.type)&&stableArgument(n.object)&&(!n.computed||['StringLiteral','NumericLiteral'].includes(n.property.type));}
  function resolve(expr,current,conditions=[],trace=[],depth=0,active=new Set()) {
   const node=unwrap(expr),source={file:current.module.file,line:line(node)};
   const unknown=()=>[{urls:[],conditions,trace,source,status:'UNRESOLVED'}];
@@ -1282,6 +1287,7 @@ function destinationCandidates(input,scope,evaluator,maxDepth) {
     const fn=evaluator.evaluate(node.callee,current);
     if(fn.t!=='fn')return unknown();handled=true;
     if(active.has(fn.node))return unknown();
+    if(node.arguments.some(arg=>!stableArgument(arg)))unprovenArguments=true;
     const inner=evaluator.functionScope(fn.node,fn.scope,node.arguments.map(expr=>({expr,scope:current})),depth+1),next=new Set([...active,fn.node]);
     const branches=returnBranches(fn.node.body,inner,evaluator);
     return branches.flatMap(branch=>{
@@ -1291,6 +1297,7 @@ function destinationCandidates(input,scope,evaluator,maxDepth) {
     });
   }
   if(node.type==='ConditionalExpression') {
+    handled=true;
     const condition=boundText(node.test,current,evaluator),known=truthy(evaluator.evaluate(node.test,current));
     return [...(known!==false?resolve(node.consequent,current,known===true?conditions:[...conditions,condition],trace,depth+1,active):[]),...(known!==true?resolve(node.alternate,current,known===false?conditions:[...conditions,`!(${condition})`],trace,depth+1,active):[])];
   }
@@ -1301,5 +1308,5 @@ function destinationCandidates(input,scope,evaluator,maxDepth) {
   const value=evaluator.evaluate(node,current);
   return value.t==='lit'&&typeof value.v==='string'?[{urls:[value.v],conditions,trace,source,status:'INFERRED'}]:unknown();
  }
- const items=resolve(input,scope);return {handled,items,limited:visits>4096};
+ const items=resolve(input,scope);return {handled,items,conditionsProvable:!unprovenArguments,limited:visits>4096};
 }
