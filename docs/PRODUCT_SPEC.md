@@ -400,3 +400,8 @@ The important acceptance criterion is trace correctness.
 離線原型支援有來源證據的 JSP 宣告編碼、Spring-managed Struts Action、具名 Thymeleaf 片段、Security 處理入口，以及完整 AST 形狀的 class／display／confirm／必填與單筆選取操作。未知分支保留並可選，不會執行來源事件或認證。
 
 DTO 的直接 scalar 複製可在本機示範集合回放提交與清單顯示；category、client、session、日期轉換、SQL／JPQL 結果不視為已還原。未選列更新會明示未回放資料。學生自訂 Hibernate DAO 資料回顯仍屬缺口，不能以可操作旅程宣稱完整功能等價。見 [WP76 報告](reports/WORKFLOW_BATCH5_FIXES_20261020.md)。
+
+
+### R18 第一階段：React 身分畫面與導向
+
+React 路由的 Guard 渲染條件成為畫面 audience；頂層選擇不同畫面元件時，同網址可有不同身分變體，並列於既有畫面頁。共用外框與靜態預覽只排除可證明矛盾的分支。專案內函式回傳的常值目的地以推定候選列出，未知 returnTo 保留未解析。已具 Spring OAuth 設定與 callback 證據的整頁登入顯示外部登入及導回資訊；未解析設定不猜網址。跨事件狀態面板保留（OQ-036）；跨 Context 同一性只接受 OQ-037 窄規則。拆分前決策保留 orphan（OQ-035），條件顯示簡化摘要與原式，見 ADR 0099；本階段停止於 WP80，等待重新驗收。

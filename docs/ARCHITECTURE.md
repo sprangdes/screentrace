@@ -167,6 +167,10 @@ The graph remains framework-neutral. Framework identifiers belong in evidence/pa
 
 Schema 2.1 adds `apiContracts`, keyed by `ENDPOINT` ID. A contract records the statically discovered request parameters/body and response status/body, including field type, location, source location, and confidence. `SCREEN -> CALLS -> ENDPOINT` represents an API invoked during page load; `COMPONENT -> TRIGGERS -> ENDPOINT` represents an API invoked by an interactive component. An absent or unresolved contract is never synthesized from runtime assumptions.
 
+### R18：畫面適用條件（schema 2.3）
+
+React 分析輸出 2.3，application.audiences 保存最多 16 個可渲染條件組合，超過時診斷並只保留畫面條件；SCREEN 可帶 `audience: [{text, truth, source}]`，表示 Guard 實際轉交 children 的來源條件。不同可達路徑以析取保留；只有可證明的相同原子真假、嚴格相等常值互斥、物件與屬性存取矛盾可用於後續過濾。元件 guard 不重複畫面已成立的條件。消費端保持嚴格證據驗證並接受 2.2／2.3；非 React 圖仍輸出 2.2，歷史圖不升版。review 狀態容器與存檔鍵不改。同網址多畫面透過 ENTRY_POINT（path）以 RENDERS 指向變體；入口可帶條件導向行為。不同投影的共用元件以穩定投影鍵分開，隱藏元素與原因仍保留於畫面資料。詳見 [ADR 0096](adr/0096-r18-audience-facts.md)、[ADR 0097](adr/0097-r18-audience-variants.md)。
+
 ### 4.2 WP1 行為與檢核 schema 2.2
 
 新增 `behaviors` / `validationRules`（皆依 ID 排序）。schema 2.2 節點與邊必須具來源相對路徑/行號、解析器名稱與解析狀態；COMPONENT 的 attributes.kind 必須是 BUTTON、LINK、SUBMIT、TEXT_INPUT、TEXTAREA、SELECT、CHECKBOX、RADIO、DATE_PICKER、FILE_INPUT、MULTI_SELECT、FORM、MODAL、TABLE、OTHER。
@@ -638,3 +642,15 @@ JS AST 的來源 evidence 可攜帶固定操作 metadata（show/hide/toggle、se
 JSP 宣告編碼由 scanner 的受限位元組讀取處理，非 UTF-8 metadata 經 SourceEncoding evidence 進圖；capture 僅轉換產出，保留來源位元組。Thymeleaf 的具名片段、Struts 代理／具參數 action 鏈、Spring Security DSL 均在各 adapter／parser 貢獻既有圖節點與證據，不進 Core。
 
 有限 JavaScript workflowGate／display／class／confirm 操作與 DTO scalar 欄位契約由同一圖供 viewer 消費。DTO contract 的 scope 為 submitted-fields-only，認證、session、SQL、關聯、日期計算仍未知；未選列的更新只顯示來源正常目的且明示未回放資料。來源條件未知時保留所有候選，巢狀候選可直接選取。決定與邊界見 [ADR 0095](adr/0095-public-batch5-workflow-repairs.md)。
+
+### R18 第一階段驗收補正
+
+依 [ADR 0099](adr/0099-r18-review-corrections.md)，schema 2.3 的 SCREEN attributes.audienceSummary 僅供顯示，原始 audience 保留且逐條記入 evidence；supersedesScreenId 識別拆分前決策的 orphan。Context 同一性只在唯一 Provider、相同 setter 寫入與回傳區域值、同 Context 消費端的來源證據成立時使用；未知與反向案例不修剪。既有 schema、決策鍵與 md v1 不變。
+
+### R18 第二次驗收補正
+
+同 Context／同 hook／唯一 Provider 的來源 audience 與行為 guard 可用於目的變體投影；Context setter 或已知 writer 會使舊身分事實失效，修改後僅使用 OQ-037 窄證據。固定路由的原始 useLocation pathname 及字面陣列 includes 可求值，轉換值、參數路由與 splat 保持自由。SCREEN attributes.audienceOriginal 與 evidence 保存完整原式；ReactAudienceTarget evidence 保存每個目的的條件，供模擬選擇清單顯示。共用元件的投影鍵納入目的變體與條件，避免第一次記錄的行為流入其他身分。欄位契約與 schema 版本不變；見 [ADR 0100](adr/0100-r18-context-navigation-and-route-facts.md)。
+
+R18 WP81：React handler/load 的字面 prop 分支與渲染層共用確定性 evaluator；state 初值不作常值。有限物件分派表最多 20 屬性，未知 key 為 INFERRED，全 key 迭代須有同物件 Object.keys／for…in 證明。ReactDispatchTable evidence 隨跨函式傳遞，後端 matching 保留其推定狀態。audience 比對鍵保持正規化，顯示使用 optional 原式並省略未登入時必成立的 optional 子句。見 [ADR 0101](adr/0101-r18-dispatch-props-and-optional-display.md)。
+
+R18 WP82：SpringBootAnalyzer 明確啟用 Spring API 的字面路徑優先與有設定檔的 Boot 預設 context；傳統 JSP／MVC／Struts 入口不變。SpringExternalCalls 以唯一 Security builder 或 XML 等價設定的公開＋CSRF 忽略雙證據，為無 caller 端點加附註 metadata；不更動 ApiUsage、D4／D5、md、決策鍵或 schema。兩個設定來源在 API 頁顯示。詳見 [ADR 0102](adr/0102-r18-spring-api-paths-and-external-call-notes.md)。

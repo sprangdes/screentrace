@@ -142,4 +142,16 @@
 
 ## R18
 
-- 以 `sprangdes/reservio`（Spring Boot＋React）對照原始碼實測：路由與 API 大致正確，但依身分渲染的畫面被合成一張、共用外框未依身分過濾、登入後導向未解析，另有分派表呼叫、處理器 prop 分支、字面路徑優先、外部呼叫端點等缺口。指示見 [ADJUSTMENT_R18_ROLES.md](ADJUSTMENT_R18_ROLES.md)（WP78–WP85，三個停止點；R18-A／B／C 待需求方決定）。
+- 以 `sprangdes/reservio`（Spring Boot＋React）對照原始碼實測：路由與 API 大致正確，但依身分渲染的畫面被合成一張、共用外框未依身分過濾、登入後導向未解析，另有分派表呼叫、處理器 prop 分支、字面路徑優先、外部呼叫端點等缺口。指示見 [ADJUSTMENT_R18_ROLES.md](ADJUSTMENT_R18_ROLES.md)（WP78–WP85，三個停止點；R18-A／B／C 已決定）。
+
+- 第一階段（WP78 → WP79 → WP80）：WP78、WP79、WP80 已於第三次驗收全部通過；需求方授權進入第二階段 WP81→WP82。
+- OQ-035 A、OQ-036 A、OQ-037 窄版 B 已實作；R18-C 簡化顯示與原式並列。OQ-036 狀態值可達性列後續，R18-B 已依第三次驗收決定，只加附註、不改 D4／D5。
+- 詳見 [R18 報告](reports/R18.md)、[ADR 0096](adr/0096-r18-audience-facts.md)、[ADR 0097](adr/0097-r18-audience-variants.md)、[ADR 0098](adr/0098-r18-returned-destinations-and-external-login.md)、[ADR 0099](adr/0099-r18-review-corrections.md)。
+
+- 第二次驗收補正：修復報告暫存連結的 CI 失敗；依同 Context／同 hook／唯一 Provider 與導向前寫入檢查過濾所有目的變體，修正共用元件投影鍵；固定路由 pathname／字面 includes 求值，完整原式保留。callback 例外依需求方決定保留並逐筆顯示條件，獨立 callback 變體列 OQ-038 OPEN 後續候選。詳見 [ADR 0100](adr/0100-r18-context-navigation-and-route-facts.md) 與 R18 報告的實際數字及 PR CI run。WP79／WP80 已於第三次驗收通過。
+- 實際 callback 選單補驗：五個認證頁共 10 個元件均顯示兩個目的及條件；補齊 behavior 的 canonical 候選 ID，保留 AMBIGUOUS。本機完整驗證 941 項（940 通過、既有 1 略過），E2E 預設並行；程式碼 SHA 2521781 的 PR CI run 40080398983 三個 job 全綠，記於 R18 報告。
+- 回歸證據更正：撤回前次空目錄的 Struts 八模組 SHA 結論。實際固定來源五個模組非空圖一致，三個有兩版本相同既有 validation 阻擋，列 OQ-039 OPEN，停止該項；未修改 Struts 或放寬驗證。
+
+- 第三次驗收：需求方確認 WP78／WP79／WP80 通過，授權 WP81→WP82 第二階段；OQ-039 另案處理、不阻擋 R18。WP81 與 optional 顯示修正見 [ADR 0101](adr/0101-r18-dispatch-props-and-optional-display.md)，WP82 後停止。
+
+- 第二階段（WP81 → WP82）：分派表、已知 prop、optional chaining 安全摘要、字面 API 優先、Webhook 雙證據附註與 Boot 預設 context 已實作；R18-B 記為 OQ-040 RESOLVED，見 [ADR 0102](adr/0102-r18-spring-api-paths-and-external-call-notes.md)。本機 Maven 526（525 通過、既有 1 略過）、viewer 121、JS 141、capture 83、預設並行 E2E 90 全部通過；reservio 靜態重析維持 36 screens／66 endpoints／1,172 components。第二階段尚未提交／推送，PR CI run 待取得；在 CI 全綠及需求方驗收前不標記完成。WP82 後停止，WP83 未進入。

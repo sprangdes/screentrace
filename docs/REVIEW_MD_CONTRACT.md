@@ -79,3 +79,14 @@ manifest 文字同正文隔離（code span、300、控制／隱形可見化）�
 - 匯出一律為 `format_version` 1，機器區只含 `analysis_fingerprint`、`screen_decisions`、`component_decisions`、`state_sha256`；同樣決策的附錄 A 位元組與 R17 前相同。
 - 正文移除：YAML 檔頭的 `migration_target.component_library`、固定指示原第 6、7 條（原第 8 條改為第 6 條，見 CODEX_INSTRUCTIONS §8.2）、元件表的「建議元件」「styleId」欄、原因／備註欄、API 表的「信心」欄、§6 元件庫對應、§9 樣式表。§7 衝突與警告、§8 分析限制依序改為 §6、§7；分析限制與證據表保留（供 AI 不自行猜測）。
 - `format_version` 2、3 改為**僅匯入相容**：驗證、摘要與欄位檢查不變；匯入後的元件庫覆寫、原因與備註由報表略過並提示，再匯出即為 v1。
+
+
+## R18 第一階段
+
+分析圖支援 schema 2.2／2.3；review v1 的 schemaVersion 2.2、暫存鍵、screenId／(screenId, componentId) 決策鍵及 md format_version 1 位元組不變。
+
+依 OQ-035 方案 A，拆分畫面以 attributes.supersedesScreenId 記錄拆分前 ID。舊 ID 的畫面與元件決策保留為 orphan，提示「此網址已依身分拆分，請重新標記」，不得套用到任何變體，也不得靜默複製。單一變體網址沿用原 screenId，正常匯入。未知 ID 既有保留規則不變；新提示只在圖有明確拆分來源時使用。詳見 [ADR 0099](adr/0099-r18-review-corrections.md)。
+
+## R18-B：API 頁外部呼叫附註
+
+D5 文字、共用 deriveApiUsage 與 md v1 的欄位／位元組契約不變。Webhook 雙設定證據只作 API 頁附註，不產生 caller 或可移除授權，也不把自由 evidence.detail 加入 md 正文。UNREFERENCED 在 md 仍是未被使用，須由人類確認。見 OQ-040、ADR 0102。

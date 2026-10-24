@@ -146,6 +146,7 @@ export class Evaluator {
 
   property(value, key) {
     switch (value.t) {
+      case 'router-location': return key==='pathname'&&this.routePath!=null?{...lit(this.routePath),routerPathname:true}:unknown(String(key));
       case 'object': {
         const properties = value.node.properties;
         for (let i = properties.length - 1; i >= 0; i--) {
@@ -198,7 +199,7 @@ export class Evaluator {
           out += node.quasis[i].value.cooked ?? '';
           if (i < node.expressions.length) {
             const part = this.evaluate(node.expressions[i], scope);
-            if (!printable(part)) return unknown();
+            if (!printable(part)||part.routerPathname) return unknown();
             out += String(part.v);
           }
         }
@@ -231,7 +232,7 @@ export class Evaluator {
           case '!==': return lit(left.v !== right.v);
           case '==': return lit(left.v == right.v); // eslint-disable-line eqeqeq
           case '!=': return lit(left.v != right.v); // eslint-disable-line eqeqeq
-          case '+': return (typeof left.v === 'string' || typeof right.v === 'string') && !(printable(left) && printable(right)) ? unknown() : lit(left.v + right.v);
+          case '+': if(left.routerPathname||right.routerPathname)return unknown();return (typeof left.v === 'string' || typeof right.v === 'string') && !(printable(left) && printable(right)) ? unknown() : lit(left.v + right.v);
           case '<': return lit(left.v < right.v);
           case '>': return lit(left.v > right.v);
           case '<=': return lit(left.v <= right.v);
@@ -263,6 +264,8 @@ export class Evaluator {
   /** The value a call produces, for the hooks and wrappers that matter to rendering and URLs. */
   call(node, scope, depth) {
     const member = unwrap(node.callee);
+    if(member.type==='MemberExpression'&&!member.computed&&member.object.type==='Identifier'&&member.object.name==='Object'&&!this.lookup('Object',scope)&&member.property.name==='keys'&&node.arguments.length===1){const object=this.evaluate(node.arguments[0],scope);if(object.t==='object')return {t:'object-keys',object};}
+    if(member.type==='MemberExpression'&&!member.computed&&member.property.name==='includes'&&node.arguments.length===1){const array=this.evaluate(member.object,scope),argument=this.evaluate(node.arguments[0],scope);if(array.t==='array'&&argument.t==='lit'&&array.node.elements.every(e=>e&&['StringLiteral','NumericLiteral','BooleanLiteral','NullLiteral'].includes(unwrap(e).type))){return lit(array.node.elements.some(e=>(unwrap(e).type==='NullLiteral'?null:e.value)===argument.v));}}
     if ((member.type === 'MemberExpression' || member.type === 'OptionalMemberExpression') && !member.computed && member.property.name === 'filter') {
       const filtered = this.filter(this.evaluate(member.object, scope), node.arguments[0] && this.evaluate(node.arguments[0], scope), depth);
       if (filtered) return filtered;
@@ -271,6 +274,7 @@ export class Evaluator {
     const args = node.arguments.map(expr => ({expr, scope}));
     if (callee.t === 'external') {
       const name = externalName(callee);
+      if(name==='useLocation'&&['react-router','react-router-dom','react-router-native'].includes(callee.specifier))return {t:'router-location'};
       if (name === 'useNavigate') return {t: 'navigate'};
       if (name === 'useCallback') return args[0] ? this.argumentValue(args[0]) : unknown();
       if (name === 'useMemo') { const fn = args[0] ? this.argumentValue(args[0]) : unknown(); return fn.t === 'fn' ? this.result(fn, [], depth) : unknown(); }

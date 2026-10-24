@@ -123,7 +123,7 @@
 
 ### WP81　分派表呼叫與處理器內的已知 prop（RV-06、RV-07）
 
-1. **分派表**：呼叫 `obj[key](...)`，`obj` 解析為物件字面值且 `key` 無法解析為常值時，視為呼叫該物件所有屬性值（INFERRED），evidence 記錄「分派表，key 未定」；`key` 可證明為常值或來自 `Object.keys(obj)`／`for…in obj` 迭代時，前者只呼叫該屬性、後者為全部屬性且可為 CONFIRMED（依迭代證明全部被呼叫）。屬性超過 20 個時不展開，記診斷 `REACT_DISPATCH_TABLE_TOO_LARGE`。
+1. **分派表**：呼叫 `obj[key] (...)`，`obj` 解析為物件字面值且 `key` 無法解析為常值時，視為呼叫該物件所有屬性值（INFERRED），evidence 記錄「分派表，key 未定」；`key` 可證明為常值或來自 `Object.keys(obj)`／`for…in obj` 迭代時，前者只呼叫該屬性、後者為全部屬性且可為 CONFIRMED（依迭代證明全部被呼叫）。屬性超過 20 個時不展開，記診斷 `REACT_DISPATCH_TABLE_TOO_LARGE`。
 2. **處理器內的已知值**：事件處理器與載入效果的 `if`／三元運算／`&&`，其條件在呼叫端已證明為常值（路由傳入的字面 prop、`useState` 初始值不得視為常值）時，只走成立的分支，與渲染層規則一致。
 
 合成 fixture：

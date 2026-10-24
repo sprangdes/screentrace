@@ -44,3 +44,14 @@ md 雙格式契約見 REVIEW_MD_CONTRACT；有效／orphan ID 同時可逆還原
 ## R17：退場欄位
 
 報表不再建立 `decisionNotes`、`component_overrides`、`orphan_component_overrides`、`manifest_sha256`。瀏覽器暫存或匯入的狀態若含這些欄位，載入時略過並提示一次；保留／移除決策與儲存鍵不變。`batchSetComponents` 隨批次標記退場移除。確認進度另可自動寫入使用者選擇的 md 進度檔（見 ADR 0086）；瀏覽器暫存仍同時寫入作為備援。
+
+
+## R18 第一階段
+
+分析圖支援 schema 2.2／2.3；review v1 的 schemaVersion 2.2、暫存鍵、screenId／(screenId, componentId) 決策鍵及 md format_version 1 位元組不變。
+
+依 OQ-035 方案 A，拆分畫面以 attributes.supersedesScreenId 記錄拆分前 ID。舊 ID 的畫面與元件決策保留為 orphan，提示「此網址已依身分拆分，請重新標記」，不得套用到任何變體，也不得靜默複製。單一變體網址沿用原 screenId，正常匯入。未知 ID 既有保留規則不變；新提示只在圖有明確拆分來源時使用。詳見 [ADR 0099](adr/0099-r18-review-corrections.md)。
+
+## R18-B：外部呼叫附註
+
+R-API-1–6 與 D4／D5 不變。符合 WP82 雙設定證據、沒有畫面 caller 的端點仍為 UNREFERENCED／未被使用，不計為 REMOVABLE。API 頁的「外部呼叫（Webhook）」只是來源附註，不新增 caller、決策或狀態；兩處設定來源顯示於 API 詳情。見 OQ-040、ADR 0102。

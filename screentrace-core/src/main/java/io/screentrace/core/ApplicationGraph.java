@@ -20,7 +20,9 @@ public record ApplicationGraph(Application application, List<GraphNode> nodes, L
   @Deprecated
   public static final String CURRENT_SCHEMA_VERSION = "2.1";
   public static final String BEHAVIOR_SCHEMA_VERSION = "2.2";
-  public static final Set<String> SUPPORTED_SCHEMA_VERSIONS = Set.of("1.0", "2.0", CURRENT_SCHEMA_VERSION, BEHAVIOR_SCHEMA_VERSION);
+  public static final String AUDIENCE_SCHEMA_VERSION = "2.3";
+  public static boolean isAnalysisSchema(String version) { return BEHAVIOR_SCHEMA_VERSION.equals(version) || AUDIENCE_SCHEMA_VERSION.equals(version); }
+  public static final Set<String> SUPPORTED_SCHEMA_VERSIONS = Set.of("1.0", "2.0", CURRENT_SCHEMA_VERSION, BEHAVIOR_SCHEMA_VERSION, AUDIENCE_SCHEMA_VERSION);
 
   @JsonCreator
   public ApplicationGraph {
@@ -74,18 +76,26 @@ public record ApplicationGraph(Application application, List<GraphNode> nodes, L
     return type.name().toLowerCase(Locale.ROOT) + ":" + UUID.nameUUIDFromBytes(key.getBytes(StandardCharsets.UTF_8)).toString();
   }
 
-  public record Application(String name, String path, List<String> technologies) {
+  public record Application(String name, String path, List<String> technologies, @JsonInclude(JsonInclude.Include.NON_EMPTY) List<List<AudienceAtom>> audiences) {
+    public Application(String name, String path, List<String> technologies) { this(name,path,technologies,List.of()); }
     public Application {
+      audiences = audiences == null ? List.of() : audiences.stream().map(List::copyOf).toList();
       technologies = (technologies == null ? List.<String>of() : technologies).stream().sorted().toList();
     }
   }
 
   public record GraphNode(String id, NodeType type, String name, Map<String, String> attributes,
-                          SourceLocation source, Confidence confidence, List<AnalysisEvidence> evidence)
+                          SourceLocation source, Confidence confidence, List<AnalysisEvidence> evidence, @JsonInclude(JsonInclude.Include.NON_EMPTY) List<AudienceAtom> audience)
       implements Comparable<GraphNode> {
     public GraphNode {
+      audience = audience == null ? List.of() : List.copyOf(audience);
       attributes = attributes == null ? Map.of() : Collections.unmodifiableMap(new TreeMap<>(attributes));
       evidence = normalizedEvidence(evidence, source, confidence);
+    }
+
+    public GraphNode(String id, NodeType type, String name, Map<String, String> attributes,
+                     SourceLocation source, Confidence confidence, List<AnalysisEvidence> evidence) {
+      this(id, type, name, attributes, source, confidence, evidence, List.of());
     }
 
     /** Source-compatible constructor for schema 1 node producers. */
@@ -96,6 +106,8 @@ public record ApplicationGraph(Application application, List<GraphNode> nodes, L
 
     @Override public int compareTo(GraphNode other) { return id.compareTo(other.id); }
   }
+
+  public record AudienceAtom(String text, boolean truth, SourceLocation source) { }
 
   public record Relationship(String id, EdgeType type, String from, String to, Confidence confidence,
                              SourceLocation source, List<AnalysisEvidence> evidence)

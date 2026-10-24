@@ -71,7 +71,7 @@ export function attachSimulation(payload:Payload,id:string,frame:HTMLIFrameEleme
  };
  /** A conditional result with a single outcome is that outcome; the condition is noted in its label. */
  const outcomeOf=(choice:Effect):Effect=>choice.kind==='choices'&&choice.choices?.length===1?choice.choices[0]:choice;
- const label=(choice:Effect):string=>choice.kind==='sequence'?`${choice.callback==='error'?'失敗':'成功'}：${(choice.choices||[]).map(c=>c.kind==='message'?c.message:c.kind==='ui'&&c.operation==='reload'?'重新顯示本頁':c.kind==='ui'&&c.operation==='setText'?c.value:label(c)).join('；')}`:choice.kind==='choices'&&choice.choices?.length===1?`${label(choice.choices[0])}（有條件）`:choice.kind==='message'?`${choice.callback==='error'?'失敗':choice.callback==='success'?'成功':'訊息'}：${choice.message}`:choice.kind==='navigate'?choice.label||'畫面':choice.kind==='api'?`呼叫 API：${choice.method} ${choice.path}`:choice.kind==='dialog'?`開啟彈窗：${choice.label||''}`:choice.kind==='form'?`送出到 ${choice.path}`:unknownDestination;
+ const label=(choice:Effect):string=>choice.kind==='sequence'?`${choice.callback==='error'?'失敗':'成功'}：${(choice.choices||[]).map(c=>c.kind==='message'?c.message:c.kind==='ui'&&c.operation==='reload'?'重新顯示本頁':c.kind==='ui'&&c.operation==='setText'?c.value:label(c)).join('；')}`:choice.kind==='choices'&&choice.choices?.length===1?`${label(choice.choices[0])}（有條件）`:choice.kind==='message'?`${choice.callback==='error'?'失敗':choice.callback==='success'?'成功':'訊息'}：${choice.message}`:choice.kind==='navigate'?(choice.label||'畫面')+(choice.condition?'（'+choice.condition+'）':''):choice.kind==='api'?(choice.message||`呼叫 API：${choice.method} ${choice.path}`):choice.kind==='dialog'?`開啟彈窗：${choice.label||''}`:choice.kind==='form'?`送出到 ${choice.path}`:unknownDestination;
  const choose=(choices:Effect[],node:Element,record:ElementRecord|undefined,calls:Effect[]=[])=>{
   choices=choiceLeaves(choices);
   closePicker();
@@ -163,7 +163,7 @@ export function attachSimulation(payload:Payload,id:string,frame:HTMLIFrameEleme
   }
   if(effect.kind==='navigate'&&effect.targetId){let dataNotice:string|undefined;if(effect.dataAction&&!applyDataAction(payload,effect.dataAction,node)){if(effect.dataAction.scope==='submitted-fields-only'&&effect.dataAction.useSelectedIdentity)dataNotice='來源正常回傳路徑；未選定資料列，未回放更新資料';else{say('示範資料無法確認操作的資料列或欄位');return;}}setModelFeedback(payload,effect.targetId,effect.feedback??{});setSubmittedValues(payload,effect.targetId,effect.inputProjection??{},node);options.focus(effect.targetId,dataNotice||(effect.inputProjection?'已回放提交欄位；其他資料為來源範例':undefined));return;}
   if(effect.kind==='dialog'&&effect.targetId){popup(effect.targetId);return;}
-  if(effect.kind==='api'&&effect.targetId){const target=effect.targetId;say(`呼叫 API：${effect.method} ${effect.path}（不會真的送出）`,{label:'在 API 頁查看',run:()=>options.api(target)});return;}
+  if(effect.kind==='api'&&effect.targetId){const target=effect.targetId;say(`${effect.message||`呼叫 API：${effect.method} ${effect.path}`}（不會真的送出）`,{label:'在 API 頁查看',run:()=>options.api(target)});return;}
   if(effect.kind==='external'){say('外部連結（不會開啟）');return;}
   const choices=effect.choices||[];
   if(effect.kind==='form'&&choices.length===1&&choices[0].kind==='navigate'&&choices[0].resolution!=='AMBIGUOUS'&&choices[0].targetId){render(choices[0],record,node);return;}

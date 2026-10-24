@@ -51,7 +51,10 @@ public final class ReactGraphContribution {
             List<String> unreadable = new ArrayList<>();
             JsonNode result = analyze(inventory, false, unreadable);
             unreadable.forEach(file -> builder.diagnostic(new SourceLocation(file, 1), "REACT_SOURCE_READ", "前端來源無法安全讀取"));
+            builder.audienceGroups(result.path("audiences"));
+            builder.indexComponentShapes(result.path("screens"));
             for (JsonNode screen : result.path("screens")) builder.screen(screen);
+            for (JsonNode redirect : result.path("routeRedirects")) builder.routeRedirect(redirect);
             builder.navigation();
             for (JsonNode item : result.path("diagnostics")) builder.diagnostic(source(item), item.path("code").asText("REACT_DIAGNOSTIC"), item.path("message").asText());
         } catch (Exception error) {
@@ -76,7 +79,7 @@ public final class ReactGraphContribution {
             throw new IOException("React 靜態預覽重建失敗：" + error.getMessage(), error);
         }
         Map<String, Object> screens = new TreeMap<>();
-        for (JsonNode screen : result.path("screens")) screens.put(screenId(screen.path("file").asText(), screen.path("route").asText()), screen.path("markup").asText(""));
+        for (JsonNode screen : result.path("screens")) screens.put(screenId(screen), screen.path("markup").asText(""));
         Map<String, Object> preview = new LinkedHashMap<>();
         preview.put("stylesheets", result.path("stylesheets"));
         preview.put("screens", screens);
@@ -111,6 +114,11 @@ public final class ReactGraphContribution {
         return ApplicationGraph.id(NodeType.SCREEN, routeFile + ":" + route);
     }
 
+    private static String screenId(JsonNode screen) {
+        String file = screen.path("file").asText(), route = screen.path("route").asText();
+        return screen.hasNonNull("variantKey") ? ApplicationGraph.id(NodeType.SCREEN, file + ":" + route + ":" + screen.path("variantKey").asText()) : screenId(file, route);
+    }
+
     private static SourceLocation source(JsonNode item) {
         return new SourceLocation(item.path("source").path("file").asText("."), Math.max(1, item.path("source").path("line").asInt(1)));
     }
@@ -129,8 +137,10 @@ public final class ReactGraphContribution {
         private final Map<String, Relationship> edges = new TreeMap<>();
         private final Map<String, Behavior> behaviors = new TreeMap<>();
         private final List<Diagnostic> diagnostics = new ArrayList<>();
-        private final Map<String, String> screensByRoute = new HashMap<>();
+        private final Map<String, List<String>> screensByRoute = new HashMap<>();
         private final Map<String, Integer> occurrences = new HashMap<>();
+        private final Map<String, Set<String>> componentShapes = new HashMap<>();
+        private final List<List<ApplicationGraph.AudienceAtom>> audienceGroups = new ArrayList<>();
         private final List<PendingNavigation> navigations = new ArrayList<>();
         private final Map<String, List<String>> redirects = new LinkedHashMap<>();
 
@@ -146,7 +156,7 @@ public final class ReactGraphContribution {
             String route = screen.path("route").asText();
             String routeFile = screen.path("file").asText();
             var source = new SourceLocation(routeFile, Math.max(1, screen.path("line").asInt(1)));
-            String id = screenId(routeFile, route);
+            String id = screenId(screen);
             Map<String, String> attributes = new TreeMap<>();
             attributes.put("route", route);
             attributes.put("view", screen.path("view").asText());
@@ -155,9 +165,30 @@ public final class ReactGraphContribution {
             screen.path("sources").forEach(item -> sources.add(item.asText()));
             attributes.put("viewSources", String.join("|", sources));
             attributes.put("rendering", "static-reconstruction");
-            nodes.put(id, new GraphNode(id, NodeType.SCREEN, route.equals("/") ? "Home" : route.substring(1), attributes, source, Confidence.CONFIRMED,
-                    proof(source, Confidence.CONFIRMED, "路由宣告；畫面元件 " + screen.path("view").asText())));
-            screensByRoute.put(route, id);
+            List<ApplicationGraph.AudienceAtom> audience = new ArrayList<>();
+            for (JsonNode atom : screen.path("audience")) audience.add(new ApplicationGraph.AudienceAtom(atom.path("text").asText(), atom.path("truth").asBoolean(), source(atom)));
+            String entry = ApplicationGraph.id(NodeType.ENTRY_POINT, routeFile + ":" + route);
+            attributes.put("entryPointId", entry);
+            if (screen.hasNonNull("variantKey")) { attributes.put("audienceVariant", screen.path("variantKey").asText()); attributes.put("supersedesScreenId", screenId(routeFile, route)); }
+            if (screen.has("audienceSummary")) attributes.put("audienceSummary", json(screen.path("audienceSummary")));
+            if (screen.has("audienceOriginal")) attributes.put("audienceOriginal", json(screen.path("audienceOriginal")));
+            if (!screen.path("excluded").isEmpty()) attributes.put("hiddenComponents", json(screen.path("excluded")));
+            if (!screen.path("excludedBehaviors").isEmpty()) attributes.put("hiddenBehaviors", json(screen.path("excludedBehaviors")));
+            nodes.putIfAbsent(entry, new GraphNode(entry, NodeType.ENTRY_POINT, route, Map.of("path", route), source, Confidence.CONFIRMED, proof(source, Confidence.CONFIRMED, "網址入口")));
+            String renderedBy = ApplicationGraph.id(NodeType.ENTRY_POINT, entry + ":" + id);
+            edges.put(renderedBy, new Relationship(renderedBy, EdgeType.RENDERS, entry, id, Confidence.INFERRED, source, proof(source, Confidence.INFERRED, "身分條件下渲染畫面")));
+            String name = route.equals("/") ? "Home" : route.substring(1);
+            if (screen.hasNonNull("variantKey")) {
+                List<String> summary = new ArrayList<>();
+                try { for (JsonNode item : JSON.readTree(screen.path("variantKey").asText())) summary.add(item.path(1).asBoolean() ? item.path(0).asText() : "!(" + item.path(0).asText() + ")"); }
+                catch (IOException invalid) { throw new IllegalArgumentException("Invalid audience variant", invalid); }
+                name += "（" + String.join(" && ", summary) + "）";
+            }
+            List<AnalysisEvidence> screenEvidence = new ArrayList<>(proof(source, Confidence.CONFIRMED, "路由宣告；畫面元件 " + screen.path("view").asText()));
+            for (JsonNode atom : screen.path("audienceOriginal")) screenEvidence.addAll(proof(source(atom), Confidence.INFERRED, "原始身分條件：" + (atom.path("truth").asBoolean() ? atom.path("text").asText() : "!(" + atom.path("text").asText() + ")")));
+            for(var atom:audience)screenEvidence.addAll(proof(atom.source(),Confidence.INFERRED,"已知路由下的身分條件："+(atom.truth()?atom.text():"!("+atom.text()+")")));
+            nodes.put(id, new GraphNode(id, NodeType.SCREEN, name, attributes, source, Confidence.CONFIRMED, screenEvidence, audience));
+            screensByRoute.computeIfAbsent(route, ignored -> new ArrayList<>()).add(id);
             if (screen.path("redirectOnly").asBoolean()) {
                 List<String> targets = new ArrayList<>();
                 screen.path("redirectTo").forEach(item -> targets.add(item.asText()));
@@ -171,16 +202,46 @@ public final class ReactGraphContribution {
                     var node = nodes.get(componentIds.get(component.path("key").asText()));
                     var attributesWithForm = new TreeMap<>(node.attributes());
                     attributesWithForm.put("formId", componentIds.get(form));
-                    nodes.put(node.id(), new GraphNode(node.id(), node.type(), node.name(), attributesWithForm, node.source(), node.confidence(), node.evidence()));
+                    nodes.put(node.id(), new GraphNode(node.id(), node.type(), node.name(), attributesWithForm, node.source(), node.confidence(), node.evidence(), node.audience()));
                 }
             }
             for (JsonNode effect : screen.path("load")) behavior(id, effect);
         }
 
+        private void audienceGroups(JsonNode groups) {
+            for (JsonNode group : groups) {
+                List<ApplicationGraph.AudienceAtom> atoms = new ArrayList<>();
+                for (JsonNode atom : group) atoms.add(new ApplicationGraph.AudienceAtom(atom.path("text").asText(),atom.path("truth").asBoolean(),source(atom)));
+                if (!atoms.isEmpty()) audienceGroups.add(atoms);
+            }
+        }
+
+        private void indexComponentShapes(JsonNode screens) {
+            for (JsonNode screen : screens) for (JsonNode component : screen.path("components"))
+                componentShapes.computeIfAbsent(component.path("key").asText(), ignored -> new java.util.TreeSet<>()).add(componentShape(component));
+        }
+
+        private String componentShape(JsonNode component) {
+            List<Object> effects = new ArrayList<>();
+            for (JsonNode effect : component.path("behaviors")) {
+                Map<String, Object> shape = new TreeMap<>();
+                for (String key : List.of("type", "event", "guard", "expression", "urls", "targetRoutes", "targetScreens")) shape.put(key, effect.path(key));
+                if(!effect.path("targetConditions").isEmpty()) {
+                    List<Object> conditions=new ArrayList<>();
+                    for(JsonNode candidate:effect.path("targetConditions")){Map<String,String> condition=new TreeMap<>();condition.put("target",screenId(candidate));condition.put("condition",candidate.path(candidate.has("conditionKey")?"conditionKey":"condition").asText());conditions.add(condition);}
+                    shape.put("targetConditions",conditions);
+                }
+                effects.add(shape);
+            }
+            return component.path("guard").toString() + "\u001f" + json(effects);
+        }
+
         private String component(String screenId, JsonNode component) {
             String file = component.path("file").asText();
             var kind = ComponentKind.valueOf(component.path("kind").asText("OTHER"));
-            String id = StableGraphIds.component(file, kind, Map.of("instance", component.path("key").asText()), 0);
+            String instance = component.path("key").asText();
+            if (componentShapes.getOrDefault(instance, Set.of()).size() > 1) instance += "|projection:" + ApplicationGraph.id(NodeType.COMPONENT, componentShape(component));
+            String id = StableGraphIds.component(file, kind, Map.of("instance", instance), 0);
             var source = new SourceLocation(file, Math.max(1, component.path("line").asInt(1)));
             Map<String, String> attributes = new TreeMap<>();
             component.path("attrs").fields().forEachRemaining(entry -> {
@@ -220,6 +281,11 @@ public final class ReactGraphContribution {
                     proof(source, Confidence.CONFIRMED, null)));
         }
 
+        private void routeRedirect(JsonNode redirect) {
+            String entry = ApplicationGraph.id(NodeType.ENTRY_POINT, redirect.path("file").asText() + ":" + redirect.path("route").asText());
+            if (nodes.containsKey(entry)) behavior(entry, redirect.path("effect"));
+        }
+
         private void behavior(String triggerId, JsonNode effect) {
             var type = BehaviorType.valueOf(effect.path("type").asText("UNKNOWN"));
             String event = effect.path("event").asText("click");
@@ -229,7 +295,7 @@ public final class ReactGraphContribution {
             String expression = effect.path("expression").asText();
             List<AnalysisEvidence> evidence = new ArrayList<>();
             for (JsonNode step : effect.path("trace"))
-                evidence.add(new AnalysisEvidence(source(step), PARSER, confidence.resolutionStatus(), "跨函式呼叫：" + step.path("callee").asText()));
+                evidence.add(new AnalysisEvidence(source(step), step.has("dispatch") ? "ReactDispatchTable" : PARSER, confidence.resolutionStatus(), (step.has("dispatch") ? step.path("dispatch").asText()+"；" : "跨函式呼叫：") + step.path("callee").asText()));
             if (effect.path("viaForm").asBoolean()) evidence.add(new AnalysisEvidence(source, PARSER, confidence.resolutionStatus(), "透過所屬表單的 submit 處理器"));
             List<String> urls = new ArrayList<>();
             effect.path("urls").forEach(item -> urls.add(item.asText()));
@@ -241,15 +307,25 @@ public final class ReactGraphContribution {
                     detail.put("url", url);
                     detail.put("method", method);
                     detail.put("expression", expression);
+                    if (effect.path("fullPage").asBoolean()) detail.put("fullPage", true);
                     String target = url == null || method == null ? null : requestEndpoint(method, url, source, confidence);
                     add(triggerId, event, type, target, guard, expression, method + " " + url, source, confidence, json(detail), evidence);
                 }
                 return;
             }
             if (type == BehaviorType.NAVIGATE) {
+                for(JsonNode excluded:effect.path("excludedTargets")) evidence.add(new AnalysisEvidence(source,PARSER,ApplicationGraph.ResolutionStatus.INFERRED,"排除身分變體："+json(excluded)));
+                for(JsonNode via:effect.path("entryPointRedirects")) evidence.add(new AnalysisEvidence(source(via),PARSER,ApplicationGraph.ResolutionStatus.INFERRED,"入口身分分支導向："+json(via)));
+                for(JsonNode candidate:effect.path("targetConditions")) {
+                    Map<String,Object> detail=new LinkedHashMap<>();detail.put("targetId",screenId(candidate));detail.put("condition",candidate.path("condition").asText());detail.put("sourceConditions",candidate.path("sourceConditions"));
+                    if(candidate.path("sources").isEmpty())evidence.add(new AnalysisEvidence(source,"ReactAudienceTarget",ApplicationGraph.ResolutionStatus.INFERRED,json(detail)));
+                    else for(JsonNode location:candidate.path("sources"))evidence.add(new AnalysisEvidence(new SourceLocation(location.path("file").asText(),Math.max(1,location.path("line").asInt(1))),"ReactAudienceTarget",ApplicationGraph.ResolutionStatus.INFERRED,json(detail)));
+                }
                 List<String> targets = new ArrayList<>();
                 effect.path("targetRoutes").forEach(item -> targets.add(item.asText()));
-                var navigation = new PendingNavigation(triggerId, event, guard, expression, source, confidence, urls, targets, evidence);
+                List<String> candidateIds = null;
+                if (effect.has("targetScreens")) { candidateIds = new ArrayList<>(); for (JsonNode candidate : effect.path("targetScreens")) candidateIds.add(screenId(candidate)); }
+                var navigation = new PendingNavigation(triggerId, event, guard, expression, source, confidence, urls, targets, candidateIds, evidence);
                 navigations.add(navigation);
                 return;
             }
@@ -262,14 +338,14 @@ public final class ReactGraphContribution {
             redirects.forEach((id, routes) -> {
                 var node = nodes.get(id);
                 var attributes = new TreeMap<>(node.attributes());
-                attributes.put("redirectTargets", String.join("|", routes.stream().map(screensByRoute::get).filter(java.util.Objects::nonNull).distinct().toList()));
-                nodes.put(id, new GraphNode(id, node.type(), node.name(), attributes, node.source(), node.confidence(), node.evidence()));
+                attributes.put("redirectTargets", String.join("|", routes.stream().flatMap(route -> screensByRoute.getOrDefault(route, List.of()).stream()).distinct().toList()));
+                nodes.put(id, new GraphNode(id, node.type(), node.name(), attributes, node.source(), node.confidence(), node.evidence(), node.audience()));
             });
             for (var item : navigations) {
-                List<String> screens = item.targets().stream().map(screensByRoute::get).filter(java.util.Objects::nonNull).sorted().toList();
+                List<String> screens = item.candidates() != null ? item.candidates().stream().filter(nodes::containsKey).distinct().sorted().toList() : item.targets().stream().flatMap(route -> screensByRoute.getOrDefault(route, List.of()).stream()).sorted().toList();
                 String target = screens.size() == 1 ? screens.get(0) : null;
                 var confidence = screens.isEmpty() ? Confidence.UNRESOLVED : screens.size() > 1 ? Confidence.AMBIGUOUS : item.confidence();
-                String detail = "目標網址=" + item.urls() + "；候選路由=" + item.targets();
+                String detail = "目標網址=" + item.urls() + "；候選路由=" + item.targets() + "；全部候選=" + screens;
                 add(item.triggerId(), item.event(), BehaviorType.NAVIGATE, target, item.guard(), item.expression(), String.join(" ", item.urls()), item.source(), confidence, detail, item.evidence());
                 var trigger = nodes.get(item.triggerId());
                 if (trigger == null || trigger.type() != NodeType.COMPONENT) continue;
@@ -312,8 +388,8 @@ public final class ReactGraphContribution {
         }
 
         ApplicationGraph build() {
-            return new ApplicationGraph(graph.application(), List.copyOf(nodes.values()), List.copyOf(edges.values()), diagnostics.stream().distinct().toList(),
-                    graph.apiContracts(), graph.schemaVersion(), List.copyOf(behaviors.values()), graph.validationRules());
+            return new ApplicationGraph(new ApplicationGraph.Application(graph.application().name(), graph.application().path(), graph.application().technologies(), audienceGroups), List.copyOf(nodes.values()), List.copyOf(edges.values()), diagnostics.stream().distinct().toList(),
+                    graph.apiContracts(), screensByRoute.isEmpty() ? graph.schemaVersion() : ApplicationGraph.AUDIENCE_SCHEMA_VERSION, List.copyOf(behaviors.values()), graph.validationRules());
         }
     }
 
@@ -336,5 +412,5 @@ public final class ReactGraphContribution {
     }
 
     private record PendingNavigation(String triggerId, String event, String guard, String expression, SourceLocation source, Confidence confidence,
-                                     List<String> urls, List<String> targets, List<AnalysisEvidence> evidence) { }
+                                     List<String> urls, List<String> targets, List<String> candidates, List<AnalysisEvidence> evidence) { }
 }

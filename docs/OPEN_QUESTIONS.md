@@ -341,3 +341,41 @@
 - 狀態：已決定（2026-10-11）；需求方不採 A、B，採方案 C。
 - 審查者判讀：`StrutsCompletenessTest.java:113` 的斷言為 `graph.nodes().stream().anyMatch(n->n.name().equals("child")&&"/WEB-INF/jsp/layout.jsp".equals(n.attributes().get("view")))`，只要求圖中**存在任一類型**、名稱為 `child` 且 `view` 為 `layout.jsp` 的節點，**沒有要求它是 SCREEN**。OQ-029 的「版型不是畫面」與此斷言不衝突：版型以非畫面節點（VIEW／版型證據）保留名稱與 `view` 屬性即可通過。WP55 提交時完整驗證全綠，正是如此通過；現在失敗代表工作區未提交修改把版型節點移除，或移除了其 `name`／`view` 屬性，屬實作退化。
 - 決定：既有測試與 fixture 不改；修正實作，使被 extends 的 Tiles definition 依 OQ-029 不是 SCREEN，但仍以版型節點保留於圖中（保留 `name`、`view`、來源與 extends 關係），供組成證據、片段群組與稽核使用。WP58 新增的 faces fixture（R16 新增測試）若斷言「`.base` 不是 SCREEN」，與本決定一致；若斷言「圖中完全沒有 `.base` 節點」，依 OQ-028 一般授權改為只斷言非 SCREEN。
+
+## OQ-035 — R18-A：拆分前 screenId 決策的匯入
+
+- 決定：方案 A（需求方第一階段驗收回覆）。拆分前 ID 的決策保留為 orphan，提示「此網址已依身分拆分，請重新標記」，不套用到任何變體；單一變體沿用原 ID。
+- 狀態：RESOLVED；已實作，契約與驗證見 ADR 0099、R18 報告。
+
+## OQ-036 — WP79：店家偏好面板的條件不足以證明身分矛盾
+
+- 決定：本階段方案 A。面板本體由獨立狀態控制，保守保留面板及 API；WP79 該項驗收改為「保留，附 OQ-036 說明」。不得從開啟按鈕的角色條件或 useState 初始值推論面板不可達。
+- 狀態：RESOLVED（本階段）；方案 B 的跨事件狀態值可達性分析列後續候選，本輪不做。
+
+## OQ-037 — WP80：認證回傳物件與路由身分的同一性
+
+- 決定：方案 B 的窄規則。F 同路徑以同一區域變數呼叫 useState setter 並回傳；F 與 state 值 X 在唯一同 Context Provider 的 value 物件字面值中公開；呼叫端由同 Context 取得 F，以 const u = await F() 取得結果。只有此證據成立，才將 u 的導向條件對應至目的畫面 X。
+- 反向：setter 使用轉換值、另一條路徑回傳不同變數、setter 經 props 或其他函式、多個或不確定 Provider 均不修剪；不做一般別名／資料流分析。不同 Context、可變回傳區域值與 finally 覆寫也保守保留。
+- 狀態：RESOLVED；reservio 登入後的 `/` 候選僅商家變體，見 ADR 0099 與 R18 報告。
+
+## OQ-038 — callback 查詢情境的獨立畫面變體（後續候選）
+
+- 情境：認證路由的 Guard 明確允許 callback 查詢條件在已有登入身分時渲染。需求方已決定 R18 不另外拆分 callback 情境；五個認證頁的返回首頁／品牌連結保留可證明成立的全部變體，各目的附一般進入或 callback 例外的條件與來源，模擬清單顯示條件。
+- 可選方案：後續以來源可證明的查詢參數條件，把一般進入與 callback 建為不同變體；須另定 ID、畫面數、舊決策與查詢參數正規化政策。沒有授權前維持本輪多目的呈現。
+- 與 WP80 的關係：外部登入回到 `/login?lineLogin=success` 的流程，日後可以指向這個 callback 變體；本輪外部登入往返仍使用既有路由與條件證據，不新增畫面。
+- 狀態：OPEN；需求方明確列為後續候選，不阻擋本輪依已決定政策保留 callback 例外。
+
+## OQ-039 — Struts 真實回歸的既有 graph validation 阻擋
+
+- 情境：前次 Struts 八模組回歸誤指向空目錄，不能證明相容性。以 Apache Struts 1 commit 02c9ff7485b1900515c6e0b32ed54ea46dd97d51 的實際來源重建 main dbacc54 與 R18 基準後，blank、faces-example1、faces-example2、mailreader、scripting-mailreader 五個模組的非空圖逐位元組一致；cookbook、el-example、examples 兩個版本都被既有 GraphIntegrityValidator 擋下，分別為 69、31、3 個相同錯誤，不能輸出可接受的 graph SHA。
+- 原因：既有「Navigation target does not match screen route or view」驗證拒絕含查詢參數的 source.jsp 等導覽；完整錯誤及錯誤清單雜湊在 repo 外，報告列數量。本輪未修改目標、Struts 程式、驗證規則或受保護斷言，未跳過驗證來製造輸出。
+- 可選方案：後續另行授權修復 Struts URL／graph 驗證，再完成三個模組的有效圖回歸；本輪只保留兩版本相同既有失敗的證據，不宣稱八模組全部通過。
+- 影響範圍：R18 實際八模組 graph SHA-256 驗收中的上述三個模組。依 R18 §4 停止該項；其他 WP79／WP80 補正、repo 測試及 PR CI 繼續驗證。
+- 狀態：OPEN，另案處理、不阻擋 R18。需求方第三次驗收已確認 main 與 R18 為相同既有問題；未放寬任何既有斷言。
+
+## OQ-040 — R18-B 外部呼叫端點的 API 呈現
+
+- 情境：靜態分析沒有畫面 caller，但 Spring Security 對該路徑 permitAll 且列於 CSRF ignoringRequestMatchers（或 XML 等價設定）。
+- 決定：需求方第三次驗收採「只加附註」。D5 原文不改、狀態維持「未被使用」，API 清單及詳情加「外部呼叫（Webhook）」並列出兩處設定的檔案／行號；不列入可移除，D4 不變。缺任何一項證據或存在 caller 均不套用，不依 URL 字樣推測。
+- 影響範圍：WP82、API 頁呈現與設定 evidence；md v1、決策鍵及原 API 推導不變。實作與反向測試見 ADR 0102。
+- 狀態：RESOLVED；後續更一般的安全設定／外部系統資料流不在本輪。
