@@ -64,3 +64,12 @@ test('R18 disjunction display exposes the shared atom implied by the conjunction
 test('R18 display never materializes an unsafe member hidden behind an optional short circuit',async()=>{
  const {simplify}=await import('../react/audience.mjs');const source={file:'src/Test.tsx',line:1};const facts=['!actor','!actor?.rotate','busy || !(actor?.tier === "CURATOR") || actor.office','!busy'].flatMap(x=>atoms(x,source));assert.equal(contradicts(facts),false);const shown=simplify(facts);assert.equal(contradicts(shown),false);assert.ok(!shown.some(a=>a.text==='false'));
 });
+test('R18 accepted guest summary drops optional properties and preserves optional syntax elsewhere',async()=>{
+ const {simplify}=await import('../react/audience.mjs');const source={file:'src/Entry.tsx',line:3};
+ const raw=['!pending','!visitor','!visitor?.renew','!(visitor?.grade === "OWNER")'].flatMap(x=>atoms(x,source));
+ assert.deepEqual(simplify(raw).map(a=>[a.text,a.truth]),[['pending',false],['visitor',false]]);
+ const uncertain=simplify(atoms('visitor?.renew',source));assert.equal(uncertain[0].text,'visitor?.renew');
+ const branch=run(`function Gate({children}){if(pending)return null;if(visitor?.renew)return null;return children;}function Home(){if(!visitor)return <p>Guest</p>;return <p>Member</p>;}function App(){return <Gate><Routes><Route path="/" element={<Home/>}/></Routes></Gate>;}`);
+ const guest=branch.screens.find(s=>s.audience.some(a=>a.text==='visitor'&&!a.truth));assert.ok(guest);assert.deepEqual(guest.audienceSummary.map(a=>[a.text,a.truth]),[['pending',false],['visitor',false]]);
+ assert.ok(!JSON.stringify(guest.audienceSummary).includes('visitor.'));
+});
