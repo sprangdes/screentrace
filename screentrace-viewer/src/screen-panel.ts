@@ -53,6 +53,7 @@ export function screenPanel(panel:HTMLElement,index:Index,state:ReviewState,scre
  const url=element('code',routes[0]||text.noUrl,'panel-url');url.title=routes.join('\n');header.append(url);
  if(routes.length>1){const more=element('details',undefined,'panel-routes');more.append(element('summary',`其他網址 ${routes.length-1} 個`));for(const route of routes.slice(1))more.append(element('code',route));header.append(more);}
  header.append(decisionSwitch('這個畫面',decision,value=>actions.setScreen(screenId,value),{screen:screenId}));
+ if(screen.audience?.length){const audience=element('details',undefined,'panel-audience');audience.append(element('summary','適用條件'));for(const atom of screen.audience){const item=element('p',atom.truth?atom.text:`!(${atom.text})`);item.title=`${atom.source.file}:${atom.source.line}`;audience.append(item);}header.append(audience);}
  root.append(header);
 
  const notices=element('section',undefined,'panel-notices');

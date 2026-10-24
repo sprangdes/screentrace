@@ -73,7 +73,7 @@ public final class GraphIntegrityValidator {
       if (behavior.id() == null || behavior.id().isBlank() || behaviors.put(behavior.id(), behavior) != null || nodes.containsKey(behavior.id()) || rules.containsKey(behavior.id())) errors.add("Duplicate or blank behavior id: " + behavior.id());
       if (behavior.event() == null || behavior.event().isBlank() || behavior.type() == null) errors.add("Incomplete behavior: " + behavior.id());
       GraphNode trigger = nodes.get(behavior.triggerId());
-      if (behavior.triggerId() != null && (trigger == null || !Set.of(NodeType.COMPONENT, NodeType.SCREEN).contains(trigger.type()))) errors.add("Invalid behavior trigger: " + behavior.id());
+      if (behavior.triggerId() != null && (trigger == null || !(Set.of(NodeType.COMPONENT, NodeType.SCREEN).contains(trigger.type()) || ("2.3".equals(graph.schemaVersion()) && trigger.type() == NodeType.ENTRY_POINT)))) errors.add("Invalid behavior trigger: " + behavior.id());
       if (behavior.triggerId() == null && behavior.parentId() == null) errors.add("Behavior has no trigger or parent: " + behavior.id());
       requireEvidence(behavior.id(), behavior.evidence(), errors);
       if (behavior.targetId() != null) {
@@ -133,7 +133,7 @@ public final class GraphIntegrityValidator {
 
   private static void validateRoute(GraphNode node, Set<String> routes, List<String> errors) {
     String route = node.attributes().get("route");
-    if (route != null && !routes.add(route)) errors.add("Duplicate screen route: " + route);
+    if (route != null && !routes.add(route + (node.attributes().containsKey("audienceVariant") ? "\u001f" + node.attributes().get("audienceVariant") : ""))) errors.add("Duplicate screen route: " + route);
   }
 
   private static void validateEvidence(String owner, List<ApplicationGraph.AnalysisEvidence> evidence, List<String> errors) {
@@ -173,7 +173,7 @@ public final class GraphIntegrityValidator {
     switch (edge.type()) {
       case CONTAINS -> require(edge, from, to, NodeType.SCREEN, NodeType.COMPONENT, errors);
       case HANDLED_BY -> require(edge, from, to, NodeType.ENDPOINT, NodeType.HANDLER, errors);
-      case RENDERS -> requireTarget(edge, from, to, Set.of(NodeType.HANDLER), Set.of(NodeType.SCREEN, NodeType.VIEW), errors);
+      case RENDERS -> requireTarget(edge, from, to, Set.of(NodeType.HANDLER, NodeType.ENTRY_POINT), Set.of(NodeType.SCREEN, NodeType.VIEW), errors);
       case NAVIGATES_TO -> validateNavigation(edge, from, to, containedComponents, errors);
       case TRIGGERS -> requireTarget(edge, from, to, Set.of(NodeType.COMPONENT), Set.of(NodeType.ENDPOINT, NodeType.ENTRY_POINT), errors);
       case INCLUDES -> requireTarget(edge, from, to, Set.of(NodeType.SCREEN, NodeType.VIEW, NodeType.TEMPLATE_FRAGMENT), Set.of(NodeType.VIEW, NodeType.TEMPLATE_FRAGMENT), errors);

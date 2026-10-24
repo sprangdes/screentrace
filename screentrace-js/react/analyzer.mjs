@@ -1,7 +1,7 @@
 import {parseModules, diagnostic, children, line, text, FUNCTIONS, PARSER} from './modules.mjs';
 import {Evaluator, unwrap, truthy, externalName, returnedExpressions, conditionText} from './values.mjs';
 import {element as htmlElement, htmlAttribute, isAllowedTag, jsxText, serialize, styleText, SAMPLE_TEXT} from './markup.mjs';
-import {atoms, unique, combinations, implied, residualGuard} from './audience.mjs';
+import {atoms, unique, combinations, implied, residualGuard, contradicts} from './audience.mjs';
 import {stylesheets} from './styles.mjs';
 
 const ROUTER = new Set(['react-router-dom', 'react-router', 'react-router-native']);
@@ -26,7 +26,7 @@ export function analyzeReact({files = [], maxDepth = 24, markup = false} = {}) {
   const occurrences = jsxOccurrences(modules);
   const routes = findRoutes(modules, evaluator, diagnostics);
   const shell = findRootRender(modules, evaluator);
-  const screens = [], seen = new Map();
+  const screens = [], routeRedirects = [], seen = new Map();
   for (const route of routes) {
     const duplicate = seen.get(route.path);
     if (duplicate) {
@@ -34,10 +34,21 @@ export function analyzeReact({files = [], maxDepth = 24, markup = false} = {}) {
       continue;
     }
     seen.set(route.path, route);
-    screens.push(new ScreenRenderer(evaluator, occurrences, diagnostics, maxDepth, markup).render(route, shell));
+    const base = new ScreenRenderer(evaluator, occurrences, diagnostics, maxDepth, false).render(route, shell);
+    const variants = base.variantDecision ?? [null];
+    routeRedirects.push(...base.load.filter(e => e.routeRedirect).map(effect => ({route: route.path, file: route.file, effect})));
+    for (const variant of variants) {
+      const initial = new ScreenRenderer(evaluator, occurrences, diagnostics, maxDepth, false, variant?.facts ?? (base.redirectOnly ? [] : base.audience)).render(route, shell);
+      const screen = new ScreenRenderer(evaluator, occurrences, diagnostics, maxDepth, markup, base.redirectOnly ? [] : initial.audience).render(route, shell);
+      if (variant) screen.variantKey = JSON.stringify(unique(variant.facts).map(a => [a.text,a.truth]));
+      const present = new Set(screen.components.map(c => c.key));
+      screen.excluded = base.components.filter(c => !present.has(c.key)).map(component => ({...component, source:{file:component.file,line:component.line}, audience:screen.audience, reason:'此身分下不顯示'}));
+      delete screen.variantDecision;
+      screens.push(screen);
+    }
   }
   const patterns = screens.map(screen => ({route: screen.route, pattern: routePattern(screen.route)}));
-  for (const screen of screens) {
+  for (const screen of [...screens, {load:routeRedirects.map(r=>r.effect),components:[]}]) {
     for (const effect of [...screen.load, ...screen.components.flatMap(component => component.behaviors)])
       if (effect.type === 'NAVIGATE') {
         Object.assign(effect, matchRoute(effect.urls, effect.fullPage ? patterns.filter(item => !item.route.includes('*')) : patterns));
@@ -54,11 +65,11 @@ export function analyzeReact({files = [], maxDepth = 24, markup = false} = {}) {
     screen.redirectTo = [...new Set(ordered.flatMap(item => [...(item.effect.targetRoutes ?? [])].sort()))];
   }
   for (const screen of screens) delete screen.redirects;
-  const unique = new Map();
-  for (const item of diagnostics) unique.set(JSON.stringify(item), item);
+  const uniqueDiagnostics = new Map();
+  for (const item of diagnostics) uniqueDiagnostics.set(JSON.stringify(item), item);
   const groups = combinations(screens.map(s => s.audience));
   if (groups.overflow && screens.length) diagnostics.push(diagnostic(screens[0].file, screens[0].line, 'REACT_AUDIENCE_TOO_MANY', '身分組合超過 16，僅保留各畫面的條件'));
-  const result = {screens, audiences: groups.values, diagnostics: [...unique.values()].sort((a, b) => a.source.file.localeCompare(b.source.file) || a.source.line - b.source.line || a.code.localeCompare(b.code))};
+  const result = {screens, routeRedirects, audiences: groups.values, diagnostics: [...uniqueDiagnostics.values()].sort((a, b) => a.source.file.localeCompare(b.source.file) || a.source.line - b.source.line || a.code.localeCompare(b.code))};
   if (markup) result.stylesheets = stylesheets(modules, shell ? [shell.file] : [...new Set(routes.map(route => route.file))].sort());
   return result;
 }
@@ -274,7 +285,7 @@ function matchRoute(urls, patterns) {
 }
 
 class ScreenRenderer {
-  constructor(evaluator, occurrences, diagnostics, maxDepth, markup = false) {
+  constructor(evaluator, occurrences, diagnostics, maxDepth, markup = false, audience = []) {
     this.evaluator = evaluator;
     this.occurrences = occurrences.keys;
     this.anchorsOf = occurrences.anchors;
@@ -287,7 +298,9 @@ class ScreenRenderer {
     this.load = [];
     this.loaded = new Set();
     this.view = null;
-    this.audience = [];
+    this.audience = audience;
+    this.facts = audience;
+    this.variantDecision = null;
     this.inRoute = 0;
     this.routeContent = 0;
     this.emitted = new Set();
@@ -310,9 +323,17 @@ class ScreenRenderer {
     }
     if (!this.reachedRoutes) this.renderRoute(root, state);
     const components = [...this.components.values()];
-    components.forEach(component => { component.behaviors = dedupe(component.behaviors); component.guard = residualGuard(component.guard, this.audience); });
+    const excludedBehaviors = [];
+    const visible = effect => {
+      if (!contradicts([...this.facts, ...atoms(effect.guard, effect.source)])) return true;
+      excludedBehaviors.push({...effect, reason:'此身分下不顯示', audience:this.audience}); return false;
+    };
+    components.forEach(component => { component.behaviors = dedupe(component.behaviors).filter(visible); component.guard = residualGuard(component.guard, this.audience); });
+    this.load = this.load.filter(visible);
     this.load.forEach(effect => { effect.guard = residualGuard(effect.guard, this.audience); });
     return {
+      excludedBehaviors,
+      variantDecision: this.variantDecision,
       audience: unique(this.audience),
       route: route.path, file: route.file, line: route.line, layoutOnly: Boolean(route.layoutOnly),
       view: this.view?.name ?? 'Route', viewSource: this.view?.file ?? route.file,
@@ -337,6 +358,7 @@ class ScreenRenderer {
   }
 
   expr(input, scope, state) {
+    if (contradicts([...this.facts, ...state.guards.flatMap(g => atoms(g, {file:scope.module.file,line:line(input)}))])) return;
     const node = unwrap(input);
     if (!node) return;
     switch (node.type) {
@@ -346,7 +368,7 @@ class ScreenRenderer {
       case 'StringLiteral': case 'NumericLiteral': case 'TemplateLiteral': case 'BinaryExpression': this.text(node, scope, state); return;
       case 'ArrayExpression': node.elements.forEach(item => item && this.expr(item.type === 'SpreadElement' ? item.argument : item, scope, state)); return;
       case 'ConditionalExpression': {
-        const truth = truthy(this.evaluator.evaluate(node.test, scope));
+        const truth = this.condition(node.test, scope);
         const test = text(scope.module, node.test);
         if (truth === null) {
           this.either(out => this.expr(node.consequent, scope, {...guarded(state, test), out}), out => this.expr(node.alternate, scope, {...guarded(state, `!(${test})`), out}), state);
@@ -356,7 +378,7 @@ class ScreenRenderer {
         return;
       }
       case 'LogicalExpression': {
-        const truth = truthy(this.evaluator.evaluate(node.left, scope));
+        const truth = this.condition(node.left, scope);
         if (node.operator === '&&') { if (truth !== false) this.expr(node.right, scope, truth ? state : guarded(state, text(scope.module, node.left))); return; }
         if (!(truth === null && textual(node.right))) this.expr(node.left, scope, state);
         if (truth !== true) this.expr(node.right, scope, guarded(state, `!(${text(scope.module, node.left)})`));
@@ -367,6 +389,11 @@ class ScreenRenderer {
       case 'Identifier': case 'MemberExpression': case 'OptionalMemberExpression': this.reference(node, scope, state); return;
       default:
     }
+  }
+
+  condition(node, scope) {
+    const known = truthy(this.evaluator.evaluate(node, scope));
+    return known === null ? implied(this.facts, text(scope.module, node)) : known;
   }
 
   reference(node, scope, state) {
@@ -513,6 +540,11 @@ class ScreenRenderer {
   /** Renders what a function returns; component bodies also contribute their page-load effects. */
   body(fn, args, state, isComponent) {
     const scope = this.evaluator.functionScope(fn.node, fn.scope, args, state.depth);
+    if (isComponent && this.inRoute && state.routeCandidate !== false && !this.variantDecision) {
+      const branches = returnBranches(fn.node.body, scope, this.evaluator);
+      const pages = branches.map(b => ({...b, identity: branchIdentity(b.expr, scope, this.evaluator)})).filter(b => b.identity);
+      if (new Set(pages.map(b => b.identity)).size > 1) this.variantDecision = pages.map(b => ({facts: b.path.flatMap(item => atoms(item.expression, {file:scope.module.file,line:line(item.node)}))}));
+    }
     if (isComponent) this.audience = unique([...this.audience, ...wrapperFacts(fn.node.body, scope, this.evaluator)]);
     if (isComponent) this.loadEffects(fn.node.body, scope, state, new Set([fn.node]));
     if (fn.node.body.type !== 'BlockStatement') { this.expr(fn.node.body, scope, state); return; }
@@ -522,7 +554,7 @@ class ScreenRenderer {
   statements(list, scope, state) {
     for (let index = 0; index < list.length; index++) {
       const statement = list[index];
-      if (statement.type === 'IfStatement' && !statement.alternate && alwaysReturns(statement.consequent) && truthy(this.evaluator.evaluate(statement.test, scope)) === null) {
+      if (statement.type === 'IfStatement' && !statement.alternate && alwaysReturns(statement.consequent) && this.condition(statement.test, scope) === null) {
         // `if (x) return <A/>; …rest` — both are recorded; the preview prefers the rest, the resting state.
         const test = text(scope.module, statement.test), rest = list.slice(index + 1);
         let restReturns = false;
@@ -559,7 +591,7 @@ class ScreenRenderer {
       case 'ReturnStatement': this.expr(node.argument, scope, state); return true;
       case 'BlockStatement': return this.statements(node.body, scope, state);
       case 'IfStatement': {
-        const truth = truthy(this.evaluator.evaluate(node.test, scope));
+        const truth = this.condition(node.test, scope);
         const test = text(scope.module, node.test);
         if (truth === true) return this.statement(node.consequent, scope, state);
         if (truth === false) return node.alternate ? this.statement(node.alternate, scope, state) : false;
@@ -656,7 +688,7 @@ class ScreenRenderer {
     const handlers = this.handlers(node, scope, state);
     const kind = intrinsicKind(tag, attrs, state.form !== null, handlers.length > 0);
     const out = this.output(node, tag, scope, state, key);
-    let next = {...state, out};
+    let next = {...state, out, routeCandidate:false};
     if (kind) {
       const component = this.record(node, scope, state, key, {kind, tag, attrs, handlers, target: tag === 'a' ? attrs.href ?? null : null});
       if (out.tag) out.attributes['data-st-expansion-anchor'] = component.anchor;
@@ -1156,37 +1188,50 @@ function dedupe(effects) {
 export {PARSER};
 
 /** Only functions that actually forward their children contribute access constraints. */
-function wrapperFacts(body, scope, evaluator) {
-  const accepted = [];
-  const carriesChildren = node => {
-    if (!node) return false;
-    if (['Identifier', 'MemberExpression', 'OptionalMemberExpression'].includes(node.type) && evaluator.evaluate(node, scope).t === 'children') return true;
-    return children(node).some(carriesChildren);
-  };
-  function expression(node, path) {
-    if (!node) return;
-    if (node.type === 'ConditionalExpression') {
-      const known = truthy(evaluator.evaluate(node.test, scope)), condition = text(scope.module, node.test);
-      if (known !== false) expression(node.consequent, known === true ? path : [...path, {expression: condition, node: node.test}]);
-      if (known !== true) expression(node.alternate, known === false ? path : [...path, {expression: `!(${condition})`, node: node.test}]);
-    } else if (carriesChildren(node)) accepted.push(path);
+function returnBranches(body, scope, evaluator) {
+  const result = [];
+  function expression(node,path) {
+    if(node?.type==='ConditionalExpression') {
+      const known=truthy(evaluator.evaluate(node.test,scope)), condition=text(scope.module,node.test);
+      if(known!==false)expression(node.consequent,known===true?path:[...path,{expression:condition,node:node.test}]);
+      if(known!==true)expression(node.alternate,known===false?path:[...path,{expression:`!(${condition})`,node:node.test}]);
+    } else result.push({expr:node,path});
   }
-  function statements(list, paths) {
-    for (const node of list) {
-      if (node.type === 'ReturnStatement') { paths.forEach(path => expression(node.argument, path)); return []; }
-      if (node.type === 'BlockStatement') { paths = statements(node.body, paths); continue; }
-      if (node.type === 'IfStatement') {
-        const condition = text(scope.module, node.test), known = truthy(evaluator.evaluate(node.test, scope));
-        const left = known === false ? [] : statements(node.consequent.type === 'BlockStatement' ? node.consequent.body : [node.consequent], paths.map(path => known === true ? path : [...path, {expression: condition, node: node.test}]));
-        const other = known === true ? [] : paths.map(path => known === false ? path : [...path, {expression: `!(${condition})`, node: node.test}]);
-        paths = [...left, ...(node.alternate ? statements(node.alternate.type === 'BlockStatement' ? node.alternate.body : [node.alternate], other) : other)];
+  function statements(list,paths) {
+    for(const node of list) {
+      if(node.type==='ReturnStatement'){paths.forEach(p=>expression(node.argument,p));return [];}
+      if(node.type==='BlockStatement'){paths=statements(node.body,paths);continue;}
+      if(node.type==='IfStatement') {
+        const known=truthy(evaluator.evaluate(node.test,scope)),condition=text(scope.module,node.test);
+        const left=known===false?[]:statements(node.consequent.type==='BlockStatement'?node.consequent.body:[node.consequent],paths.map(p=>known===true?p:[...p,{expression:condition,node:node.test}]));
+        const rest=known===true?[]:paths.map(p=>known===false?p:[...p,{expression:`!(${condition})`,node:node.test}]);
+        paths=[...left,...(node.alternate?statements(node.alternate.type==='BlockStatement'?node.alternate.body:[node.alternate],rest):rest)];
       }
     }
     return paths;
   }
-  if (body.type === 'BlockStatement') statements(body.body, [[]]); else expression(body, []);
-  if (!accepted.length || accepted.some(path => !path.length)) return [];
-  if (accepted.length === 1) return accepted[0].flatMap(item => atoms(item.expression, {file: scope.module.file, line: line(item.node)}));
-  const expressionText = accepted.map(path => '(' + path.map(item => '(' + item.expression + ')').join(' && ') + ')').join(' || ');
-  return atoms(expressionText, {file: scope.module.file, line: line(body)}).filter(atom => implied([], atom.truth ? atom.text : `!(${atom.text})`) !== true);
+  if(body.type==='BlockStatement')statements(body.body,[[]]);else expression(body,[]);
+  return result;
+}
+function wrapperFacts(body,scope,evaluator) {
+  function carries(node) {
+    if(!node)return false;
+    if(['Identifier','MemberExpression','OptionalMemberExpression'].includes(node.type)&&evaluator.evaluate(node,scope).t==='children')return true;
+    return children(node).some(carries);
+  }
+  const accepted=returnBranches(body,scope,evaluator).filter(b=>carries(b.expr)).map(b=>b.path);
+  if(!accepted.length||accepted.some(p=>!p.length))return [];
+  if(accepted.length===1)return accepted[0].flatMap(item=>atoms(item.expression,{file:scope.module.file,line:line(item.node)}));
+  const expression=accepted.map(p=>'('+p.map(i=>'('+i.expression+')').join(' && ')+')').join(' || ');
+  return atoms(expression,{file:scope.module.file,line:line(body)}).filter(a=>implied([],a.truth?a.text:`!(${a.text})`)!==true);
+}
+function branchIdentity(input,scope,evaluator) {
+  let node=unwrap(input);if(!node)return null;
+  if(node.type==='Identifier') {const value=evaluator.evaluate(node,scope);if(value.t==='jsx')return branchIdentity(value.node,value.scope,evaluator);}
+  if(node.type==='JSXFragment') {const items=node.children.filter(c=>c.type==='JSXElement');return items.length===1?branchIdentity(items[0],scope,evaluator):null;}
+  if(node.type!=='JSXElement')return null;
+  const value=elementValue(evaluator,node,scope);
+  if(value.t!=='fn')return null;
+  const nested=node.children.filter(c=>c.type==='JSXElement').map(c=>branchIdentity(c,scope,evaluator)).filter(Boolean);
+  return value.scope.module.file+':'+value.node.start+':'+nested.join(',');
 }

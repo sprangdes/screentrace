@@ -23,6 +23,10 @@ export function indexGraph(input:Graph):Index {
 export interface Position {x:number;y:number}
 /** Tarjan SCC condensation, then stable longest-path layers; cycles occupy one layer. */
 export function layeredLayout(index:Index):Map<string,Position>{
+ if(index.screens.some(s=>s.attributes.audienceVariant)){
+  const groups=new Map<string,Node[]>();for(const screen of [...index.screens].sort((a,b)=>order(a.attributes.route||'',b.attributes.route||'')||order(a.id,b.id))){const key=screen.attributes.entryPointId||screen.id;const list=groups.get(key)||[];list.push(screen);groups.set(key,list);}
+  let row=0,col=0;const positions=new Map<string,Position>();for(const screens of groups.values()){if(col+screens.length>4){row++;col=0;}for(const screen of screens){positions.set(screen.id,{x:40+col*320,y:40+row*190});if(++col===4){row++;col=0;}}}return positions;
+ }
  const ids=index.screens.map(s=>s.id),links=new Map(ids.map(id=>[id,index.relations.filter(r=>r.from===id).map(r=>r.to).sort(order)]));
  let sequence=0;const numbers=new Map<string,number>(),low=new Map<string,number>(),stack:string[]=[],active=new Set<string>(),groups:string[][]=[];
  const visit=(id:string)=>{numbers.set(id,sequence);low.set(id,sequence++);stack.push(id);active.add(id);for(const to of links.get(id)||[]){if(!numbers.has(to)){visit(to);low.set(id,Math.min(low.get(id)!,low.get(to)!));}else if(active.has(to))low.set(id,Math.min(low.get(id)!,numbers.get(to)!));}if(low.get(id)===numbers.get(id)){const group:string[]=[];let item:string;do{item=stack.pop()!;active.delete(item);group.push(item);}while(item!==id);groups.push(group.sort(order));}};
