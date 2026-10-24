@@ -11,9 +11,12 @@ public final class UrlGraphContribution {
  private static final ObjectMapper JSON=new ObjectMapper();
  private UrlGraphContribution() { }
  public static ApplicationGraph enrich(ApplicationGraph input,ProjectInventory inventory) {
+  return enrich(input,inventory,false);
+ }
+ public static ApplicationGraph enrich(ApplicationGraph input,ProjectInventory inventory,boolean springApiPolicy) {
   ApplicationGraph graph=ConditionalUrlTargets.enrich(ResourceGraphContribution.enrich(SourceEncodingContribution.enrich(input,inventory),inventory),inventory);
   Map<String,GraphNode> nodes=new TreeMap<>();graph.nodes().forEach(n->nodes.put(n.id(),n));Map<String,Relationship> edges=new TreeMap<>();graph.relationships().forEach(e->edges.put(e.id(),e));Map<String,Behavior> behaviors=new TreeMap<>();graph.behaviors().forEach(b->behaviors.put(b.id(),b));List<Diagnostic> diagnostics=new ArrayList<>(graph.diagnostics());
-  var context=UrlResolution.context(inventory,List.of());var extensions=extensions(inventory,diagnostics);var directories=new Lazy<>(()->new RequestDirectories(graph));
+  var context=UrlResolution.context(inventory,List.of(),springApiPolicy);var extensions=extensions(inventory,diagnostics);var directories=new Lazy<>(()->new RequestDirectories(graph));
   for(var node:graph.nodes())if(node.type()==NodeType.COMPONENT&&"FORM".equals(node.attributes().get("kind"))&&behaviors.values().stream().noneMatch(b->b.triggerId().equals(node.id())&&b.type()==BehaviorType.SUBMIT_FORM)){
    String raw=node.attributes().getOrDefault("target",node.attributes().get("action"));if(raw!=null&&!raw.startsWith("javascript:")){String id=StableGraphIds.behavior(node.id(),"submit",BehaviorType.SUBMIT_FORM,raw,0);behaviors.put(id,new Behavior(id,node.id(),"submit",BehaviorType.SUBMIT_FORM,null,node.attributes().get("guard"),null,raw,node.evidence()));}
   }
@@ -44,7 +47,7 @@ public final class UrlGraphContribution {
    else if("<current-view>".equals(raw)){Set<String> owners=new TreeSet<>();graph.relationships().stream().filter(e->e.type()==EdgeType.CONTAINS&&e.to().equals(b.triggerId())).forEach(e->owners.add(e.from()));Set<String> handlers=new TreeSet<>();graph.relationships().stream().filter(e->e.type()==EdgeType.RENDERS&&owners.contains(e.to())).forEach(e->handlers.add(e.from()));var paths=endpoints.stream().filter(n->graph.relationships().stream().anyMatch(e->e.type()==EdgeType.HANDLED_BY&&e.from().equals(n.id())&&handlers.contains(e.to()))).map(UrlResolution.Endpoint::path).collect(java.util.stream.Collectors.toSet());var current=endpoints.stream().filter(n->paths.contains(n.path())).toList();List<String> candidates=new ArrayList<>();for(var endpoint:current)if(UrlResolution.resolve(endpoint.path(),method,context,List.of(endpoint),false).candidates().contains(endpoint.id()))candidates.add(endpoint.id());var proof=UrlResolution.resolve(null,method,context,List.of(),false).evidence();result=new UrlResolution.Result(candidates.isEmpty()?Confidence.UNRESOLVED:candidates.size()>1?Confidence.AMBIGUOUS:Confidence.INFERRED,candidates.stream().sorted().toList(),List.of(),List.of(),proof);}
    else {
     String relative=relativeRequestPath(raw,b.triggerId(),graph,directories.get());
-    var baseResult=UrlResolution.resolve(relative==null?raw:relative,dynamicMethod?"UNKNOWN":method,context,endpoints,extensions,proven);
+    var baseResult=springApiPolicy?UrlResolution.resolveSpring(relative==null?raw:relative,dynamicMethod?"UNKNOWN":method,context,endpoints,extensions,proven):UrlResolution.resolve(relative==null?raw:relative,dynamicMethod?"UNKNOWN":method,context,endpoints,extensions,proven);
     if(relative!=null||nativeContext){var proof=new ArrayList<>(baseResult.evidence());if(relative!=null)proof.add(new AnalysisEvidence(source,"RelativeRequestPath",ResolutionStatus.INFERRED,"原始相對 URL="+raw+"；由所有來源畫面唯一的已證明請求目錄推導="+relative));result=new UrlResolution.Result(baseResult.confidence()==Confidence.CONFIRMED?Confidence.INFERRED:baseResult.confidence(),baseResult.candidates(),baseResult.paths(),baseResult.diagnostics(),proof);}else result=baseResult;
    }
    final var matched=result;

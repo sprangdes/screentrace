@@ -3,7 +3,7 @@ import {deriveApiUsage,screenDecision,componentDecision,ReviewState} from './sha
 import {componentLabelsForScreen} from './labels';
 import {callerKind,Caller} from './usage';
 import {Index} from './map';
-import {Node} from './contracts';
+import {Node,Evidence} from './contracts';
 import {element} from './text';
 
 /** The three statuses shown to people: inferred usage and system entry points both count as in use. */
@@ -28,10 +28,17 @@ export function apiStatuses(index:Index,state:ReviewState):Map<string,ApiStatus>
  return result;
 }
 
+/** A note is not a caller or a fourth API status. Only the adapter's paired structured proof qualifies. */
+export function externalCallEvidence(node:Node):Evidence[]{
+ if(node.attributes.externalCall!=='webhook')return [];
+ const proofs=(node.evidence||[]).filter((item):item is Evidence=>{if(!item||typeof item!=='object')return false;const e=item as Evidence;if(e.parser!=='SpringSecurityExternalCall'||!['INFERRED','CONFIRMED'].includes(e.resolution)||!e.source?.file)return false;try{const value=JSON.parse(e.detail||'null');return ['permitAll','ignoringRequestMatchers'].includes(value?.kind)&&typeof value.pattern==='string';}catch{return false;}});
+ return ['permitAll','ignoringRequestMatchers'].every(kind=>proofs.some(e=>JSON.parse(e.detail!).kind===kind))?proofs:[];
+}
+
 export interface ApiPageOptions {selected?:string;onSelect?:(id:string)=>void;onCaller:(screenId:string,componentId?:string)=>void}
 type Filter='ALL'|'ATTENTION'|'IN_USE';
 type Grouping='controller'|'url';
-interface ApiRecord {node:Node;method:string;path:string;handlers:Node[];callers:Caller[];screens:number;status:ApiStatus;note?:string;searchable:string;controller:string;prefix:string}
+interface ApiRecord {node:Node;method:string;path:string;handlers:Node[];callers:Caller[];screens:number;status:ApiStatus;note?:string;external:Evidence[];searchable:string;controller:string;prefix:string}
 
 /** A component calling from this many screens is a shared one (a header, a layout), listed once instead of per screen. */
 const SHARED_SCREENS=3;
@@ -55,8 +62,9 @@ export function apiPage(index:Index,state:ReviewState,options:ApiPageOptions):HT
   const method=node.attributes.httpMethod||node.attributes.method||'ANY',path=node.attributes.path||node.attributes.route||node.name;
   const handlers=edges.filter(e=>e.type==='HANDLED_BY'&&e.from===node.id).map(e=>index.nodes.get(e.to)).filter((h):h is Node=>!!h).sort((a,b)=>a.name.localeCompare(b.name,'en'));
   const callers=usage.get(node.id)!.callers,status=statuses.get(node.id)!;
-  const searchable=[method,path,node.attributes.aliases||'',node.attributes.logicalPath||'',...handlers.map(h=>h.name),apiStatusLabels[status],...callers.map(c=>`${index.nodes.get(c.screenId)?.name||''} ${c.componentId?componentLabelsForScreen(index,c.screenId).get(c.componentId)||'':''}`)].join(' ').toLowerCase();
-  return {node,method,path,handlers,callers,screens:new Set(callers.map(c=>c.screenId)).size,status,note:systemEntry(node,index),searchable,controller:controllerOf(handlers),prefix:urlPrefix(path)};
+  const external=status==='UNREFERENCED'?externalCallEvidence(node):[];
+  const searchable=[method,path,...(external.length?['外部呼叫（Webhook）']:[]),node.attributes.aliases||'',node.attributes.logicalPath||'',...handlers.map(h=>h.name),apiStatusLabels[status],...callers.map(c=>`${index.nodes.get(c.screenId)?.name||''} ${c.componentId?componentLabelsForScreen(index,c.screenId).get(c.componentId)||'':''}`)].join(' ').toLowerCase();
+  return {node,method,path,handlers,callers,external,screens:new Set(callers.map(c=>c.screenId)).size,status,note:systemEntry(node,index),searchable,controller:controllerOf(handlers),prefix:urlPrefix(path)};
  });
  const byId=new Map(records.map(r=>[r.node.id,r]));
  // Arriving from a screen for one API: show it whatever the list was narrowed to before.
@@ -130,6 +138,7 @@ export function apiPage(index:Index,state:ReviewState,options:ApiPageOptions):HT
     const meta=element('span',undefined,'api-row-meta');
     meta.append(element('span',record.screens?`${record.screens} 個畫面`:'沒有呼叫來源','api-screen-count'));
     if(record.status!=='IN_USE')meta.append(statusTag(record.status));
+    if(record.external.length)meta.append(element('span','外部呼叫（Webhook）','api-external-call'));
     row.append(methodBadge(record.method),element('code',record.path,'api-path'),meta);
     row.onclick=()=>select(record.node.id);
     body.append(row);
@@ -241,6 +250,8 @@ export function apiPage(index:Index,state:ReviewState,options:ApiPageOptions):HT
   const title=element('div',undefined,'api-detail-title');title.append(methodBadge(record.method),element('code',record.path,'api-detail-path'),statusTag(record.status));
   const why=element('p',reason(record),record.note?'api-reason api-note':'api-reason');why.dataset.apiStatus=record.status;
   inner.append(title,why);
+  if(record.external.length){const box=section('外部呼叫（Webhook）');box.dataset.apiSection='external-call';box.append(element('p','公開存取與 CSRF 例外設定均有來源證據；狀態維持未被使用，不授權移除。'));for(const proof of record.external){const value=JSON.parse(proof.detail!),line=element('p');line.append(element('code',value.kind+' '+value.pattern),element('code',`${proof.source!.file}:${proof.source!.line}`,'api-source'));box.append(line);}inner.append(box);}
+
   const handlers=section('處理程式');handlers.dataset.apiSection='handlers';
   if(!record.handlers.length)handlers.append(element('p',NO_HANDLER,'muted'));
   for(const handler of record.handlers){

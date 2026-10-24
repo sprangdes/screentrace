@@ -24,6 +24,7 @@ public final class RouteTemplateInference {
    if(!exists&&component.attributes().get("target")!=null){BehaviorType type="LINK".equals(component.attributes().get("kind"))?BehaviorType.NAVIGATE:BehaviorType.SUBMIT_FORM;String id=ApplicationGraph.id(NodeType.COMPONENT,"route-template:"+component.id()+":"+type);behaviors.put(id,new Behavior(id,component.id(),type==BehaviorType.NAVIGATE?"click":"submit",type,null,null,null,component.attributes().get("originalExpression"),component.evidence()));}
   }
   for(Behavior b:new ArrayList<>(behaviors.values())) {
+   if(b.type()==BehaviorType.CALL_API&&b.targetId()!=null&&b.evidence().stream().anyMatch(e->e.parser().equals("SpringPathSpecificity")))continue;
    GraphNode trigger=nodes.get(b.triggerId());if(trigger==null||!Set.of(BehaviorType.NAVIGATE,BehaviorType.SUBMIT_FORM,BehaviorType.CALL_API).contains(b.type()))continue;
    String raw=url(b,trigger,inventory);if(raw==null||!template(raw)&&!dynamicExpression(b.expression()))continue;String method=method(b,trigger);
    List<String> normalized=normalize(raw,contexts,b.type()==BehaviorType.CALL_API);

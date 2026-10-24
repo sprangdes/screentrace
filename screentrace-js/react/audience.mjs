@@ -105,7 +105,7 @@ export function residualGuard(guard,facts){
 }
 
 /** Display-only reduction. Raw audience atoms and their source evidence are retained. */
-export function simplify(items){
+export function simplify(items,{canonical=false}={}){
  let kept=unique(items);
  // A conjunction of disjunctions may force one of their own leaves, e.g. (a||b)&&(a||!b).
  const leaves=[];function collect(f){if(f.op){collect(f.left);collect(f.right);}else leaves.push(f);}
@@ -117,6 +117,7 @@ export function simplify(items){
   for(let i=0;i<kept.length;i++){const item=kept[i];let node;try{node=parse(item.text);}catch{}if(node?.type==='LogicalExpression'&&node.operator==='||')next.push(...reduceUnder([item],kept.filter((_,j)=>j!==i)));else next.push(item);}
   const normalized=unique(next);if(JSON.stringify(normalized.map(a=>[a.text,a.truth]))===JSON.stringify(kept.map(a=>[a.text,a.truth])))break;kept=normalized;
  }
+ if(canonical)return kept;
  const absent=new Set(kept.filter(a=>!a.truth&&/^[A-Za-z_$][\w$]*$/.test(a.text)).map(a=>a.text));
  return kept.filter(item=>{
   if(!item.optional||item.truth)return true;

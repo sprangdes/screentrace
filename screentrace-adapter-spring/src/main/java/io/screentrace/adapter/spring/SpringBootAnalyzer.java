@@ -43,9 +43,9 @@ public final class SpringBootAnalyzer {
                 new ApplicationGraph.Application(inventory.root().getFileName().toString(), inventory.root().toString(), inventory.technologies()),
                 state.nodes, state.edges, state.diagnostics, state.apiContracts, ApplicationGraph.BEHAVIOR_SCHEMA_VERSION, List.of(), List.of());
         graph=io.screentrace.parser.jsp.ReactGraphContribution.enrich(graph,inventory);
-        var completed=SpringServerValidation.enrich(io.screentrace.parser.jsp.UrlGraphContribution.enrich(graph,inventory),inventory);
+        var completed=SpringServerValidation.enrich(io.screentrace.parser.jsp.UrlGraphContribution.enrich(graph,inventory,true),inventory);
         completed=io.screentrace.parser.jsp.RouteTemplateInference.enrich(completed,inventory);
-        return io.screentrace.core.GraphIntegrityValidator.requireAnalysis(SpringExternalLoginFlow.enrich(SpringSecurityRedirects.enrich(completed,inventory),inventory));
+        return io.screentrace.core.GraphIntegrityValidator.requireAnalysis(SpringExternalCalls.enrich(SpringExternalLoginFlow.enrich(SpringSecurityRedirects.enrich(completed,inventory),inventory),inventory));
     }
 
     private void parseController(Path root, Path file, AnalysisState state) {

@@ -228,7 +228,7 @@ public final class ReactGraphContribution {
                 for (String key : List.of("type", "event", "guard", "expression", "urls", "targetRoutes", "targetScreens")) shape.put(key, effect.path(key));
                 if(!effect.path("targetConditions").isEmpty()) {
                     List<Object> conditions=new ArrayList<>();
-                    for(JsonNode candidate:effect.path("targetConditions")){Map<String,String> condition=new TreeMap<>();condition.put("target",screenId(candidate));condition.put("condition",candidate.path("condition").asText());conditions.add(condition);}
+                    for(JsonNode candidate:effect.path("targetConditions")){Map<String,String> condition=new TreeMap<>();condition.put("target",screenId(candidate));condition.put("condition",candidate.path(candidate.has("conditionKey")?"conditionKey":"condition").asText());conditions.add(condition);}
                     shape.put("targetConditions",conditions);
                 }
                 effects.add(shape);

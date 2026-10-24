@@ -14,3 +14,5 @@
 先失敗提交：038f636（optional 顯示）、9a513ff（WP81 六個正反向 fixture）、de3d7e9（backend matching 不升級）。038f636 的新 fixture 起初以相同 HTML 元素回傳，未形成畫面變體，已更正為兩個自行撰寫的畫面元件；斷言不變。
 
 沒有修改任何既有期望值、受保護斷言、md v1 golden 或 API D4／D5 推導。內部 raw／dispatch 記錄使用既有 attributes／evidence，沒有 schema 欄位變更。不執行目標程式、不複製目標原始碼作 fixture。
+
+補驗：顯示摘要原先也參與共用導航元件的投影 key；單純修正 optional 顯示不應更換既有 ID。保留原正規化條件作 conditionKey，componentShape 仍使用相同 key 名稱與舊值，顯示與 evidence 使用簡化後 condition。失敗提交 2568241／de5f8f8；新增 fixture 補齊 Context Provider 以實際進入跨畫面條件投影，不修改既有斷言。另 d1562b5 新增 runtime callback 參數反向案例，事件與未知集合參數保持 UNKNOWN，只有明確函式呼叫省略的引數才是 undefined。

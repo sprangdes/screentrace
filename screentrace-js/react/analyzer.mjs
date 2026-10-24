@@ -832,7 +832,7 @@ class ScreenRenderer {
         if (value.t === 'unknown') result.push({event, expression: text(scope.module, expr), effects: [this.effect('UNKNOWN', event, expr, scope, unguarded(state), {expression: text(scope.module, expr), status: 'UNRESOLVED'})]});
         continue;
       }
-      const effects = new EffectRunner(this, event, unguarded(state)).run(value, [], new Set());
+      const effects = new EffectRunner(this, event, unguarded(state)).run(value, value.node.params.map(()=>({value:{t:'unknown'}})), new Set());
       result.push({event, expression: text(scope.module, expr), effects});
     }
     return result;
@@ -1002,7 +1002,7 @@ class EffectRunner {
     if (callee.type === 'MemberExpression' || callee.type === 'OptionalMemberExpression') this.walk(callee.object, scope, active, trace, guards);
     for (const argument of node.arguments) {
       const arg = unwrap(argument);
-      if (arg && (arg.type === 'ArrowFunctionExpression' || arg.type === 'FunctionExpression')) this.run({t: 'fn', node: arg, scope}, [], active, trace, guards);
+      if (arg && (arg.type === 'ArrowFunctionExpression' || arg.type === 'FunctionExpression')) this.run({t: 'fn', node: arg, scope}, arg.params.map(()=>({value:{t:'unknown'}})), active, trace, guards);
       else this.walk(arg, scope, active, trace, guards);
     }
   }
