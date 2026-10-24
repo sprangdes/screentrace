@@ -345,7 +345,7 @@ public final class ReactGraphContribution {
                 List<String> screens = item.candidates() != null ? item.candidates().stream().filter(nodes::containsKey).distinct().sorted().toList() : item.targets().stream().flatMap(route -> screensByRoute.getOrDefault(route, List.of()).stream()).sorted().toList();
                 String target = screens.size() == 1 ? screens.get(0) : null;
                 var confidence = screens.isEmpty() ? Confidence.UNRESOLVED : screens.size() > 1 ? Confidence.AMBIGUOUS : item.confidence();
-                String detail = "目標網址=" + item.urls() + "；候選路由=" + item.targets();
+                String detail = "目標網址=" + item.urls() + "；候選路由=" + item.targets() + "；全部候選=" + screens;
                 add(item.triggerId(), item.event(), BehaviorType.NAVIGATE, target, item.guard(), item.expression(), String.join(" ", item.urls()), item.source(), confidence, detail, item.evidence());
                 var trigger = nodes.get(item.triggerId());
                 if (trigger == null || trigger.type() != NodeType.COMPONENT) continue;
