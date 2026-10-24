@@ -106,7 +106,31 @@ export function residualGuard(guard,facts){
 
 /** Display-only reduction. Raw audience atoms and their source evidence are retained. */
 export function simplify(items){
- const kept=unique(items);
- for(let i=kept.length-1;i>=0;i--){const item=kept[i],others=kept.filter((_,j)=>j!==i);let expression;try{expression=parse(item.text);}catch{continue;}if(expression.type!=='LogicalExpression'||expression.operator!=='||')continue;if(others.length&&implied(others,item.truth?item.text:`!(${item.text})`)===true)kept.splice(i,1);}
+ let kept=unique(items);
+ // A conjunction of disjunctions may force one of their own leaves, e.g. (a||b)&&(a||!b).
+ const leaves=[];function collect(f){if(f.op){collect(f.left);collect(f.right);}else leaves.push(f);}
+ for(const item of kept){try{const f=formula(parse(item.text),item.truth,item.text);if(f.op==='or')collect(f);}catch{}}
+ for(const leaf of unique(leaves)){const truth=implied(kept,leaf.raw??leaf.text);if(truth!==null&&!kept.some(a=>a.text===leaf.text&&a.truth===truth))kept.push({text:leaf.text,truth,optional:leaf.optional,source:items.find(a=>a.text.includes(leaf.text))?.source??items[0]?.source});}
+ kept=unique(kept);
+ for(let round=0;round<items.length+1;round++){
+  const next=[];
+  for(let i=0;i<kept.length;i++){const item=kept[i];let node;try{node=parse(item.text);}catch{}if(node?.type==='LogicalExpression'&&node.operator==='||')next.push(...reduceUnder([item],kept.filter((_,j)=>j!==i)));else next.push(item);}
+  const normalized=unique(next);if(JSON.stringify(normalized.map(a=>[a.text,a.truth]))===JSON.stringify(kept.map(a=>[a.text,a.truth])))break;kept=normalized;
+ }
  return kept;
+}
+
+/** Display/evidence projection under proven assumptions; never changes the original atoms. */
+export function reduceUnder(items,facts=[]){
+ const result=[];
+ for(const item of unique(items)){
+  let node;try{node=parse(item.text);}catch{result.push(item);continue;}
+  function reduce(n){const expression=item.text.slice(n.start,n.end),known=implied(facts,expression);if(known!==null)return known;
+   if(n.type==='LogicalExpression'&&['&&','||'].includes(n.operator)){const a=reduce(n.left),b=reduce(n.right);if(n.operator==='&&'){if(a===false||b===false)return false;if(a===true)return b;if(b===true)return a;}else{if(a===true||b===true)return true;if(a===false)return b;if(b===false)return a;}return `(${a} ${n.operator} ${b})`;}
+   if(n.type==='UnaryExpression'&&n.operator==='!'){const value=reduce(n.argument);return typeof value==='boolean'?!value:`!(${value})`;}
+   return expression;
+  }
+  const reduced=reduce(node);if(typeof reduced==='boolean'){if(reduced!==item.truth)result.push(...atoms('false',item.source));}else result.push(...atoms(item.truth?reduced:`!(${reduced})`,item.source));
+ }
+ return unique(result);
 }

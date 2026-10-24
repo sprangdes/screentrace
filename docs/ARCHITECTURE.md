@@ -646,3 +646,7 @@ JSP 宣告編碼由 scanner 的受限位元組讀取處理，非 UTF-8 metadata 
 ### R18 第一階段驗收補正
 
 依 [ADR 0099](adr/0099-r18-review-corrections.md)，schema 2.3 的 SCREEN attributes.audienceSummary 僅供顯示，原始 audience 保留且逐條記入 evidence；supersedesScreenId 識別拆分前決策的 orphan。Context 同一性只在唯一 Provider、相同 setter 寫入與回傳區域值、同 Context 消費端的來源證據成立時使用；未知與反向案例不修剪。既有 schema、決策鍵與 md v1 不變。
+
+### R18 第二次驗收補正
+
+同 Context／同 hook／唯一 Provider 的來源 audience 與行為 guard 可用於目的變體投影；Context setter 或已知 writer 會使舊身分事實失效，修改後僅使用 OQ-037 窄證據。固定路由的原始 useLocation pathname 及字面陣列 includes 可求值，轉換值、參數路由與 splat 保持自由。SCREEN attributes.audienceOriginal 與 evidence 保存完整原式；ReactAudienceTarget evidence 保存每個目的的條件，供模擬選擇清單顯示。共用元件的投影鍵納入目的變體與條件，避免第一次記錄的行為流入其他身分。欄位契約與 schema 版本不變；見 [ADR 0100](adr/0100-r18-context-navigation-and-route-facts.md)。

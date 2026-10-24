@@ -171,6 +171,7 @@ public final class ReactGraphContribution {
             attributes.put("entryPointId", entry);
             if (screen.hasNonNull("variantKey")) { attributes.put("audienceVariant", screen.path("variantKey").asText()); attributes.put("supersedesScreenId", screenId(routeFile, route)); }
             if (screen.has("audienceSummary")) attributes.put("audienceSummary", json(screen.path("audienceSummary")));
+            if (screen.has("audienceOriginal")) attributes.put("audienceOriginal", json(screen.path("audienceOriginal")));
             if (!screen.path("excluded").isEmpty()) attributes.put("hiddenComponents", json(screen.path("excluded")));
             if (!screen.path("excludedBehaviors").isEmpty()) attributes.put("hiddenBehaviors", json(screen.path("excludedBehaviors")));
             nodes.putIfAbsent(entry, new GraphNode(entry, NodeType.ENTRY_POINT, route, Map.of("path", route), source, Confidence.CONFIRMED, proof(source, Confidence.CONFIRMED, "網址入口")));
@@ -184,7 +185,8 @@ public final class ReactGraphContribution {
                 name += "（" + String.join(" && ", summary) + "）";
             }
             List<AnalysisEvidence> screenEvidence = new ArrayList<>(proof(source, Confidence.CONFIRMED, "路由宣告；畫面元件 " + screen.path("view").asText()));
-            for (var atom : audience) screenEvidence.addAll(proof(atom.source(), Confidence.INFERRED, "原始身分條件：" + (atom.truth() ? atom.text() : "!(" + atom.text() + ")")));
+            for (JsonNode atom : screen.path("audienceOriginal")) screenEvidence.addAll(proof(source(atom), Confidence.INFERRED, "原始身分條件：" + (atom.path("truth").asBoolean() ? atom.path("text").asText() : "!(" + atom.path("text").asText() + ")")));
+            for(var atom:audience)screenEvidence.addAll(proof(atom.source(),Confidence.INFERRED,"已知路由下的身分條件："+(atom.truth()?atom.text():"!("+atom.text()+")")));
             nodes.put(id, new GraphNode(id, NodeType.SCREEN, name, attributes, source, Confidence.CONFIRMED, screenEvidence, audience));
             screensByRoute.computeIfAbsent(route, ignored -> new ArrayList<>()).add(id);
             if (screen.path("redirectOnly").asBoolean()) {
@@ -223,7 +225,12 @@ public final class ReactGraphContribution {
             List<Object> effects = new ArrayList<>();
             for (JsonNode effect : component.path("behaviors")) {
                 Map<String, Object> shape = new TreeMap<>();
-                for (String key : List.of("type", "event", "guard", "expression", "urls", "targetRoutes")) shape.put(key, effect.path(key));
+                for (String key : List.of("type", "event", "guard", "expression", "urls", "targetRoutes", "targetScreens")) shape.put(key, effect.path(key));
+                if(!effect.path("targetConditions").isEmpty()) {
+                    List<Object> conditions=new ArrayList<>();
+                    for(JsonNode candidate:effect.path("targetConditions"))conditions.add(Map.of("target",screenId(candidate),"condition",candidate.path("condition").asText()));
+                    shape.put("targetConditions",conditions);
+                }
                 effects.add(shape);
             }
             return component.path("guard").toString() + "\u001f" + json(effects);
@@ -307,6 +314,13 @@ public final class ReactGraphContribution {
                 return;
             }
             if (type == BehaviorType.NAVIGATE) {
+                for(JsonNode excluded:effect.path("excludedTargets")) evidence.add(new AnalysisEvidence(source,PARSER,ApplicationGraph.ResolutionStatus.INFERRED,"排除身分變體："+json(excluded)));
+                for(JsonNode via:effect.path("entryPointRedirects")) evidence.add(new AnalysisEvidence(source(via),PARSER,ApplicationGraph.ResolutionStatus.INFERRED,"入口身分分支導向："+json(via)));
+                for(JsonNode candidate:effect.path("targetConditions")) {
+                    Map<String,Object> detail=new LinkedHashMap<>();detail.put("targetId",screenId(candidate));detail.put("condition",candidate.path("condition").asText());detail.put("sourceConditions",candidate.path("sourceConditions"));
+                    if(candidate.path("sources").isEmpty())evidence.add(new AnalysisEvidence(source,"ReactAudienceTarget",ApplicationGraph.ResolutionStatus.INFERRED,json(detail)));
+                    else for(JsonNode location:candidate.path("sources"))evidence.add(new AnalysisEvidence(new SourceLocation(location.path("file").asText(),Math.max(1,location.path("line").asInt(1))),"ReactAudienceTarget",ApplicationGraph.ResolutionStatus.INFERRED,json(detail)));
+                }
                 List<String> targets = new ArrayList<>();
                 effect.path("targetRoutes").forEach(item -> targets.add(item.asText()));
                 List<String> candidateIds = null;

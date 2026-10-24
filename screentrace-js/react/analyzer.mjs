@@ -2,6 +2,7 @@ import {parseModules, diagnostic, children, line, text, FUNCTIONS, PARSER} from 
 import {Evaluator, unwrap, truthy, externalName, returnedExpressions, conditionText} from './values.mjs';
 import {element as htmlElement, htmlAttribute, isAllowedTag, jsxText, serialize, styleText, SAMPLE_TEXT} from './markup.mjs';
 import {atoms, unique, combinations, implied, residualGuard, contradicts, simplify} from './audience.mjs';
+import {resolveRouteFacts} from './route-conditions.mjs';
 import {contextTransfers} from './context-transfer.mjs';
 import {stylesheets} from './styles.mjs';
 
@@ -25,6 +26,7 @@ export function analyzeReact({files = [], maxDepth = 24, markup = false} = {}) {
   const {modules, diagnostics} = parseModules(files);
   const evaluator = new Evaluator(modules, maxDepth);
   evaluator.transferContext = contextTransfers(modules,evaluator);
+  evaluator.expandAudience=(node,scope)=>expandScalarCondition(node,scope,evaluator);
   const occurrences = jsxOccurrences(modules);
   const routes = findRoutes(modules, evaluator, diagnostics);
   const shell = findRootRender(modules, evaluator);
@@ -40,8 +42,8 @@ export function analyzeReact({files = [], maxDepth = 24, markup = false} = {}) {
     const variants = base.variantDecision ?? [null];
     routeRedirects.push(...base.load.filter(e => e.routeRedirect).map(effect => ({route: route.path, file: route.file, effect})));
     for (const variant of variants) {
-      const initial = new ScreenRenderer(evaluator, occurrences, diagnostics, maxDepth, false, variant?.facts ?? (base.redirectOnly ? [] : base.audience)).render(route, shell);
-      const screen = new ScreenRenderer(evaluator, occurrences, diagnostics, maxDepth, markup, base.redirectOnly ? [] : initial.audience).render(route, shell);
+      const initial = new ScreenRenderer(evaluator, occurrences, diagnostics, maxDepth, false, variant?.facts ?? (base.redirectOnly ? [] : base.audienceOriginal)).render(route, shell);
+      const screen = new ScreenRenderer(evaluator, occurrences, diagnostics, maxDepth, markup, base.redirectOnly ? [] : initial.audienceOriginal).render(route, shell);
       if (variant) screen.variantKey = JSON.stringify(unique(variant.facts).map(a => [a.text,a.truth]));
       const present = new Set(screen.components.map(c => c.key));
       screen.excluded = base.components.filter(c => !present.has(c.key)).map(component => ({...component, source:{file:component.file,line:component.line}, audience:screen.audience, reason:'此身分下不顯示'}));
@@ -50,6 +52,7 @@ export function analyzeReact({files = [], maxDepth = 24, markup = false} = {}) {
       screens.push(screen);
     }
   }
+  const navigationFacts=new WeakMap();
   const patterns = screens.map(screen => ({route: screen.route, pattern: routePattern(screen.route)}));
   for (const screen of [...screens, {load:routeRedirects.map(r=>r.effect),components:[]}]) {
     for (const effect of [...screen.load, ...screen.components.flatMap(component => component.behaviors)])
@@ -57,13 +60,38 @@ export function analyzeReact({files = [], maxDepth = 24, markup = false} = {}) {
         const before = effect.status;
         Object.assign(effect, matchRoute(effect.urls, effect.fullPage ? patterns.filter(item => !item.route.includes('*')) : patterns));
         if (before === 'INFERRED' && effect.status === 'CONFIRMED') effect.status = 'INFERRED';
-        if (effect.destinationFacts) effect.targetScreens = screens.filter(s => (effect.targetRoutes??[]).includes(s.route) && !contradicts([...effect.destinationFacts,...(effect.contextIdentity?evaluator.transferContext.targetFacts(s.audience):s.audience)])).map(s => ({file:s.file,route:s.route,...(s.variantKey?{variantKey:s.variantKey}:{})}));
+        const blocked=effect.contextWrites??[],ctx=evaluator.transferContext;
+        const facts=[...ctx.navigationFacts(screen.audience??[],blocked),...(effect.contextGuardFacts??[]).filter(a=>!blocked.some(id=>a.text.includes('$context'+id.split('#')[1]+'_'))),...(effect.contextIdentity?effect.destinationFacts??[]:[])];
+        navigationFacts.set(effect,facts);
+        const candidates=screens.filter(s=>(effect.targetRoutes??[]).includes(s.route));
+        // Preserve the historical projection for graphs without any Context identity evidence.
+        if(candidates.length&&facts.length){
+          effect.excludedTargets=[];
+          effect.targetScreens=candidates.filter(target=>{const targetFacts=ctx.navigationFacts(target.audience);if(!targetFacts.length||!contradicts([...facts,...targetFacts]))return true;effect.excludedTargets.push({file:target.file,route:target.route,...(target.variantKey?{variantKey:target.variantKey}:{}),reason:'同一 Context 值的來源與目的身分條件矛盾',sourceFacts:facts,targetFacts});return false;}).map(s=>({file:s.file,route:s.route,...(s.variantKey?{variantKey:s.variantKey}:{})}));
+        }
+        if(effect.excludedTargets?.length)effect.status='INFERRED';
+        if(effect.contextIdentity&&!effect.targetScreens)effect.targetScreens=candidates.filter(s=>!contradicts([...(effect.destinationFacts??[]),...ctx.targetFacts(s.audience)])).map(s=>({file:s.file,route:s.route,...(s.variantKey?{variantKey:s.variantKey}:{})}));
+        effect.targetConditions=(effect.targetScreens??candidates).map(candidate=>{const target=candidates.find(s=>s.file===candidate.file&&s.route===candidate.route&&s.variantKey===candidate.variantKey);if(!ctx.navigationFacts(screen.audience??[]).length&&!ctx.navigationFacts(target?.audience??[]).length&&!effect.contextIdentity)return null;return {file:candidate.file,route:candidate.route,...(candidate.variantKey?{variantKey:candidate.variantKey}:{}),...ctx.explain(blocked.length?[]:screen.audience??[],target?.audience??[])};}).filter(Boolean);
         // A full-page load of a server URL that is not a client route reaches the backend: treat it as a GET request.
         if (effect.fullPage && effect.status === 'UNRESOLVED' && effect.urls.length && effect.urls.every(url => url.startsWith('/'))) {
           Object.assign(effect, {type: 'CALL_API', method: 'GET', status: effect.urls.some(url => url.includes('{')) ? 'INFERRED' : 'CONFIRMED'});
           delete effect.targetRoutes;
         }
       }
+  }
+  // A non-visual branch belongs to the URL EntryPoint, and forwards to its compatible page.
+  for(const screen of screens)for(const effect of [...screen.load,...screen.components.flatMap(c=>c.behaviors)]){
+    if(effect.type!=='NAVIGATE'||effect.targetScreens?.length!==0)continue;
+    const facts=navigationFacts.get(effect)??[],ctx=evaluator.transferContext,targets=new Map(),via=[];
+    for(const redirect of routeRedirects){
+      if(!(effect.targetRoutes??[]).includes(redirect.route)||redirect.effect.contextWrites?.length)continue;
+      const guard=redirect.effect.contextGuardFacts??[];if(!guard.length||contradicts([...facts,...guard]))continue;
+      const routes=matchRoute(redirect.effect.urls,patterns).targetRoutes??[];
+      for(const target of screens.filter(t=>routes.includes(t.route)))if(!contradicts([...facts,...guard,...ctx.navigationFacts(target.audience)])){
+        const ref={file:target.file,route:target.route,...(target.variantKey?{variantKey:target.variantKey}:{})};targets.set(JSON.stringify(ref),ref);via.push({route:redirect.route,source:redirect.effect.source,guard:redirect.effect.guard});
+      }
+    }
+    if(targets.size){effect.targetScreens=[...targets.values()];effect.entryPointRedirects=via;effect.status='INFERRED';effect.targetConditions=effect.targetScreens.map(ref=>{const target=screens.find(s=>s.file===ref.file&&s.route===ref.route&&s.variantKey===ref.variantKey);return {...ref,...ctx.explain(screen.audience,target.audience),via};});}
   }
   for (const screen of screens) {
     if (!screen.redirectOnly) continue;
@@ -313,6 +341,8 @@ class ScreenRenderer {
   }
 
   render(route, shell = null) {
+    this.evaluator.routePath=/[:*]/.test(route.path)?null:route.path;
+    this.facts=resolveRouteFacts(this.audience,this.evaluator);
     this.routesElement = route.routesElement ?? null;
     this.reachedRoutes = false;
     this.routePath = route.path;
@@ -334,13 +364,14 @@ class ScreenRenderer {
       if (!contradicts([...this.facts, ...(effect.pruningFacts??atoms(effect.guard, effect.source))])) return true;
       excludedBehaviors.push({...effect, reason:'此身分下不顯示', audience:this.audience}); return false;
     };
-    components.forEach(component => { component.behaviors = dedupe(component.behaviors).filter(visible); component.guard = residualGuard(component.guard, this.audience); });
+    components.forEach(component => { component.behaviors = dedupe(component.behaviors).filter(visible); component.guard = residualGuard(component.guard, resolveRouteFacts(this.audience,this.evaluator)); });
     this.load = this.load.filter(visible);
-    this.load.forEach(effect => { effect.guard = residualGuard(effect.guard, this.audience); });
+    this.load.forEach(effect => { effect.guard = residualGuard(effect.guard, resolveRouteFacts(this.audience,this.evaluator)); });
     return {
       excludedBehaviors,
       variantDecision: this.variantDecision,
-      audience: unique(this.audience),
+      audience: resolveRouteFacts(this.audience,this.evaluator),
+      audienceOriginal: unique(this.audience),
       route: route.path, file: route.file, line: route.line, layoutOnly: Boolean(route.layoutOnly),
       view: this.view?.name ?? 'Route', viewSource: this.view?.file ?? route.file,
       // A route that renders nothing of its own and only redirects is a forwarding address, not a page.
@@ -399,7 +430,7 @@ class ScreenRenderer {
 
   condition(node, scope) {
     const known = truthy(this.evaluator.evaluate(node, scope));
-    return known === null ? implied(this.facts, text(scope.module, node)) : known;
+    if(known!==null)return known;const expression=this.evaluator.expandAudience(node,scope)??text(scope.module,node);return implied(this.facts,expression);
   }
 
   reference(node, scope, state) {
@@ -637,9 +668,10 @@ class ScreenRenderer {
     if (name === 'Link' || name === 'NavLink') {
       if (this.inRoute) this.routeContent++;
       const to = attributeExpression(attribute(node, 'to'));
+      const click=attributeExpression(attribute(node,'onClick')),contextWrites=click?[...this.evaluator.transferContext.writes(click,scope)]:[];
       const choices=to?this.destinationChoices(to,scope,state):null;
       const urls = choices?cleanUrls(choices.flatMap(c=>c.urls)):to ? this.urlsOf(to, scope) : [];
-      const behaviors = choices?choices.map(candidate=>this.effect('NAVIGATE','click',node,scope,{...unguarded(state),guards:candidate.conditions},{...candidate,expression:text(scope.module,to)})):[this.effect('NAVIGATE', 'click', node, scope, unguarded(state), {urls, expression: text(scope.module, to)})];
+      const behaviors = choices?choices.map(candidate=>this.effect('NAVIGATE','click',node,scope,{...unguarded(state),guards:candidate.conditions},{...candidate,contextWrites,expression:text(scope.module,to)})):[this.effect('NAVIGATE', 'click', node, scope, unguarded(state), {urls, contextWrites,expression: text(scope.module, to)})];
       behaviors.push(...this.handlers(node, scope, state).flatMap(handler => handler.effects));
       const component = this.record(node, scope, state, key, {kind: 'LINK', tag: name, target: urls[0] ?? null, handlers: [], behaviors});
       const out = this.output(node, 'a', scope, state, key);
@@ -831,7 +863,7 @@ class ScreenRenderer {
   }
 
   effect(type, event, node, scope, state, extra = {}) {
-    return {type, event, source: {file: scope.module.file, line: line(node)}, guard: joinGuards(state.guards ?? []), trace: [], expression: text(scope.module, node), status: 'CONFIRMED', ...extra};
+    return {type, event, source: {file: scope.module.file, line: line(node)}, contextGuardFacts:this.evaluator.transferContext.effectFacts(state.guards??[],scope,{file:scope.module.file,line:line(node)}),guard: joinGuards(state.guards ?? []), trace: [], expression: text(scope.module, node), status: 'CONFIRMED', ...extra};
   }
 
   /** Effects that run while the screen renders: `useEffect` bodies, also inside custom hooks. */
@@ -871,6 +903,7 @@ class EffectRunner {
     this.event = event;
     this.state = state;
     this.effects = [];
+    this.contextWrites=new Set();
   }
 
   run(fn, args, active, trace = [], guards = []) {
@@ -888,8 +921,10 @@ class EffectRunner {
       case 'IfStatement': case 'ConditionalExpression': {
         this.walk(node.test, scope, active, trace, guards);
         const test = text(module, node.test);
-        this.walk(node.consequent, scope, active, trace, [...guards, test]);
-        this.walk(node.alternate, scope, active, trace, [...guards, `!(${test})`]);
+        const previous=new Set(this.contextWrites);
+        this.walk(node.consequent, scope, active, trace, [...guards, test]);const left=new Set(this.contextWrites);
+        this.contextWrites=new Set(previous);this.walk(node.alternate, scope, active, trace, [...guards, `!(${test})`]);
+        this.contextWrites=new Set([...left,...this.contextWrites]);
         return;
       }
       case 'LogicalExpression': {
@@ -923,7 +958,9 @@ class EffectRunner {
     const callee = unwrap(node.callee);
     const value = node.type === 'NewExpression' ? {t: 'unknown'} : this.evaluator.evaluate(callee, scope);
     const where = {...this.state, guards: [...this.state.guards, ...guards]};
-    const extra = {trace};
+    for(const id of this.evaluator.transferContext.writes(callee,scope))this.contextWrites.add(id);
+    for(const argument of node.arguments)for(const id of this.evaluator.transferContext.writesIn(argument,scope))this.contextWrites.add(id);
+    const extra = {trace,contextWrites:[...this.contextWrites]};
     if (callee.type === 'Identifier' && callee.name === 'fetch' && !this.evaluator.lookup('fetch', scope)) {
       if (!this.pairedRequest(node, node.arguments[0], node.arguments[1], scope, where, extra))
         this.request(node, node.arguments[0], this.methodOf(node.arguments[1], scope), scope, where, extra);
@@ -940,7 +977,7 @@ class EffectRunner {
       const target = node.arguments[0];
       const candidates = target ? this.renderer.destinationChoices(target,scope,where) : null;
       if (candidates) {
-        for (const candidate of candidates) this.effects.push(this.renderer.effect('NAVIGATE',this.event,node,scope,{...where,guards:[...where.guards,...candidate.conditions]}, {...candidate,source:{file:scope.module.file,line:line(node)},trace:[...trace,...candidate.trace],expression:text(scope.module,node)}));
+        for (const candidate of candidates) this.effects.push(this.renderer.effect('NAVIGATE',this.event,node,scope,{...where,guards:[...where.guards,...candidate.conditions]}, {...candidate,contextWrites:[...this.contextWrites],source:{file:scope.module.file,line:line(node)},trace:[...trace,...candidate.trace],expression:text(scope.module,node)}));
       } else if (target && !(this.evaluator.evaluate(target, scope).t === 'lit' && typeof this.evaluator.evaluate(target, scope).v === 'number'))
         this.effects.push(this.renderer.effect('NAVIGATE', this.event, node, scope, where, {...extra, urls:this.renderer.urlsOf(target,scope), expression: text(scope.module, node)}));
     } else if (value.t === 'fn' && !active.has(value.node)) {
@@ -957,7 +994,7 @@ class EffectRunner {
 
   fullPage(node, target, scope, guards, trace) {
     const where = {...this.state, guards: [...this.state.guards, ...guards]};
-    this.effects.push(this.renderer.effect('NAVIGATE', this.event, node, scope, where, {trace, urls: cleanUrls(this.evaluator.strings(target, scope)), expression: text(scope.module, node).slice(0, 400), fullPage: true}));
+    this.effects.push(this.renderer.effect('NAVIGATE', this.event, node, scope, where, {trace, contextWrites:[...this.contextWrites], urls: cleanUrls(this.evaluator.strings(target, scope)), expression: text(scope.module, node).slice(0, 400), fullPage: true}));
   }
 
   methodOf(options, scope) {
@@ -1237,11 +1274,13 @@ function wrapperFacts(body,scope,evaluator) {
     if(['Identifier','MemberExpression','OptionalMemberExpression'].includes(node.type)&&evaluator.evaluate(node,scope).t==='children')return true;
     return children(node).some(carries);
   }
-  const accepted=returnBranches(body,scope,evaluator).filter(b=>carries(b.expr)).map(b=>b.path);
+  const savedPath=evaluator.routePath;evaluator.routePath=null;
+  let raw;try{raw=returnBranches(body,scope,evaluator);}finally{evaluator.routePath=savedPath;}
+  const accepted=raw.filter(b=>carries(b.expr)).map(b=>b.path);
   if(!accepted.length||accepted.some(p=>!p.length))return [];
   if(accepted.length===1)return accepted[0].flatMap(item=>atoms(item.expression,{file:scope.module.file,line:line(item.node)}));
   const expression=accepted.map(p=>'('+p.map(i=>'('+i.expression+')').join(' && ')+')').join(' || ');
-  return atoms(expression,{file:scope.module.file,line:line(body)}).filter(a=>implied([],a.truth?a.text:`!(${a.text})`)!==true);
+  return atoms(expression,{file:scope.module.file,line:line(body)}).map(atom=>({...atom,origins:accepted.flatMap(path=>path.map(item=>({file:scope.module.file,line:line(item.node)})))})).filter(a=>implied([],a.truth?a.text:`!(${a.text})`)!==true);
 }
 function branchIdentity(input,scope,evaluator) {
   let node=unwrap(input);if(!node)return null;
@@ -1260,7 +1299,7 @@ function boundText(node,scope,evaluator,seen=new Set()) {
  function visit(n,parent,key) {
   if(n.type==='Identifier' && !(parent && ((['MemberExpression','OptionalMemberExpression'].includes(parent.type)&&key==='property'&&!parent.computed)||(parent.type==='ObjectProperty'&&key==='key'&&!parent.computed)))) {
     const found=evaluator.lookup(n.name,scope),binding=found?.binding;
-    if(binding?.expr && !seen.has(binding)) {const next=new Set([...seen,binding]);edits.push({from:n.start-node.start,to:n.end-node.start,value:boundText(binding.expr,binding.scope,evaluator,next)});return;}
+    if(binding?.expr && !seen.has(binding)) {const next=new Set([...seen,binding]);const expr=unwrap(binding.expr);const value=expr.type==='CallExpression'&&expr.callee.type==='Identifier'&&expr.callee.name==='Boolean'&&!evaluator.lookup('Boolean',binding.scope)&&expr.arguments.length===1?'!!('+boundText(expr.arguments[0],binding.scope,evaluator,next)+')':boundText(expr,binding.scope,evaluator,next);edits.push({from:n.start-node.start,to:n.end-node.start,value:'('+value+')'});return;}
   }
   for(const [name,value]of Object.entries(n)) {
     if(!value||typeof value!=='object')continue;
@@ -1309,4 +1348,17 @@ function destinationCandidates(input,scope,evaluator,maxDepth) {
   return value.t==='lit'&&typeof value.v==='string'?[{urls:[value.v],conditions,trace,source,status:'INFERRED'}]:unknown();
  }
  const items=resolve(input,scope);return {handled,items,conditionsProvable:!unprovenArguments,limited:visits>4096};
+}
+
+/** A pure single-return discriminator is the same branch predicate as its literal result. */
+function expandScalarCondition(input,scope,evaluator){
+ const node=unwrap(input);if(node?.type!=='BinaryExpression'||!['===','!=='].includes(node.operator)||unwrap(node.left)?.type!=='CallExpression')return null;
+ const call=unwrap(node.left),fn=evaluator.evaluate(call.callee,scope),expected=evaluator.evaluate(node.right,scope);
+ if(fn.t!=='fn'||expected.t!=='lit')return null;
+ function pure(n,current){n=unwrap(n);if(!n)return false;if(n.type==='CallExpression')return n.callee.type==='Identifier'&&n.callee.name==='Boolean'&&!evaluator.lookup('Boolean',current)&&n.arguments.length===1&&pure(n.arguments[0],current);if(['AssignmentExpression','UpdateExpression','AwaitExpression','NewExpression','YieldExpression'].includes(n.type)||FUNCTIONS.has(n.type))return false;return children(n).every(c=>pure(c,current));}
+ const body=fn.node.body.type==='BlockStatement'?fn.node.body.body:[];if(body.length!==1||body[0].type!=='ReturnStatement'||!pure(body[0].argument,fn.scope)||!call.arguments.every(a=>pure(a,scope)))return null;
+ const inner=evaluator.functionScope(fn.node,fn.scope,call.arguments.map(expr=>({expr,scope}))),branches=returnBranches(fn.node.body,inner,evaluator),paths=[];
+ for(const branch of branches){const value=evaluator.evaluate(branch.expr,inner);if(value.t!=='lit')return null;if((value.v===expected.v)!==(node.operator==='==='))continue;
+ const path=branch.path.map(item=>{const value=boundText(item.node,inner,evaluator);return item.expression===text(inner.module,item.node)?value:`!(${value})`;});if(!path.length)return 'true';paths.push('('+path.join(' && ')+')');}
+ return paths.length?paths.join(' || '):'false';
 }

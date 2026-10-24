@@ -147,3 +147,5 @@
 - 第一階段（WP78 → WP79 → WP80）：WP78 已獲驗收通過；WP79、WP80 完成補正，重新送審並停止，未進入 WP81。
 - OQ-035 A、OQ-036 A、OQ-037 窄版 B 已實作；R18-C 簡化顯示與原式並列。OQ-036 狀態值可達性列後續，R18-B 留待 WP82。
 - 詳見 [R18 報告](reports/R18.md)、[ADR 0096](adr/0096-r18-audience-facts.md)、[ADR 0097](adr/0097-r18-audience-variants.md)、[ADR 0098](adr/0098-r18-returned-destinations-and-external-login.md)、[ADR 0099](adr/0099-r18-review-corrections.md)。
+
+- 第二次驗收補正：修復報告暫存連結的 CI 失敗；依同 Context／同 hook／唯一 Provider 與導向前寫入檢查過濾所有目的變體，修正共用元件投影鍵；固定路由 pathname／字面 includes 求值，完整原式保留。callback 例外依需求方決定保留並逐筆顯示條件，獨立 callback 變體列 OQ-038 OPEN 後續候選。詳見 [ADR 0100](adr/0100-r18-context-navigation-and-route-facts.md) 與 R18 報告的實際數字及 PR CI run。WP79／WP80 仍等待需求方重新驗收，未進入 WP81。

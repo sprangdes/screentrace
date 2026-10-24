@@ -357,3 +357,10 @@
 - 決定：方案 B 的窄規則。F 同路徑以同一區域變數呼叫 useState setter 並回傳；F 與 state 值 X 在唯一同 Context Provider 的 value 物件字面值中公開；呼叫端由同 Context 取得 F，以 const u = await F() 取得結果。只有此證據成立，才將 u 的導向條件對應至目的畫面 X。
 - 反向：setter 使用轉換值、另一條路徑回傳不同變數、setter 經 props 或其他函式、多個或不確定 Provider 均不修剪；不做一般別名／資料流分析。不同 Context、可變回傳區域值與 finally 覆寫也保守保留。
 - 狀態：RESOLVED；reservio 登入後的 `/` 候選僅商家變體，見 ADR 0099 與 R18 報告。
+
+## OQ-038 — callback 查詢情境的獨立畫面變體（後續候選）
+
+- 情境：認證路由的 Guard 明確允許 callback 查詢條件在已有登入身分時渲染。需求方已決定 R18 不另外拆分 callback 情境；五個認證頁的返回首頁／品牌連結保留可證明成立的全部變體，各目的附一般進入或 callback 例外的條件與來源，模擬清單顯示條件。
+- 可選方案：後續以來源可證明的查詢參數條件，把一般進入與 callback 建為不同變體；須另定 ID、畫面數、舊決策與查詢參數正規化政策。沒有授權前維持本輪多目的呈現。
+- 與 WP80 的關係：外部登入回到 `/login?lineLogin=success` 的流程，日後可以指向這個 callback 變體；本輪外部登入往返仍使用既有路由與條件證據，不新增畫面。
+- 狀態：OPEN；需求方明確列為後續候選，不阻擋本輪依已決定政策保留 callback 例外。
