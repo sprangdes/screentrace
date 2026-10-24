@@ -73,6 +73,21 @@ class ReactAudienceGraphTest {
    if(expected==null)expected=output;else assertEquals(expected,output,"Context projection must not depend on JVM collection iteration order");
   }
  }
+ @Test void unknownDispatchRetainsInferredApiResolution() throws Exception {
+  Files.writeString(root.resolve("App.tsx"),"""
+   import {Routes,Route} from 'react-router-dom';import {useEffect} from 'react';
+   function Page(){useEffect(()=>{const dispatch={one:()=>fetch('/api/one'),two:()=>fetch('/api/two')};dispatch[selected]()},[]);return <p/>;}
+   function App(){return <Routes><Route path="/" element={<Page/>}/></Routes>;}
+   """);
+  Files.writeString(root.resolve("Endpoint.java"),"""
+   import org.springframework.web.bind.annotation.*;
+   @RestController class Endpoint{@GetMapping("/api/one") String one(){return "ok";}@GetMapping("/api/two") String two(){return "ok";}}
+   """);
+  var graph=new SpringBootAnalyzer().analyze(new ProjectScanner().scan(root));
+  var calls=graph.relationships().stream().filter(e->e.type()==EdgeType.CALLS).toList();assertEquals(2,calls.size());
+  assertTrue(calls.stream().allMatch(e->e.confidence()==Confidence.INFERRED));
+  assertTrue(calls.stream().allMatch(e->e.evidence().stream().anyMatch(p->p.detail().contains("分派表，key 未定"))));
+ }
  public static void main(String[] args) throws Exception {
   var graph=new SpringBootAnalyzer().analyze(new ProjectScanner().scan(Path.of(args[0])));
   System.out.print(new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(graph));
