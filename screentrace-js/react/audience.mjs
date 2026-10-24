@@ -110,7 +110,7 @@ export function simplify(items){
  // A conjunction of disjunctions may force one of their own leaves, e.g. (a||b)&&(a||!b).
  const leaves=[];function collect(f){if(f.op){collect(f.left);collect(f.right);}else leaves.push(f);}
  for(const item of kept){try{const f=formula(parse(item.text),item.truth,item.text);if(f.op==='or')collect(f);}catch{}}
- for(const leaf of unique(leaves)){const truth=implied(kept,leaf.raw??leaf.text);if(truth!==null&&!kept.some(a=>a.text===leaf.text&&a.truth===truth))kept.push({text:leaf.text,truth,optional:leaf.optional,source:items.find(a=>a.text.includes(leaf.text))?.source??items[0]?.source});}
+ for(const leaf of unique(leaves)){const expression=leaf.raw??leaf.text,yes=contradicts([...kept,...atoms(expression)]),no=contradicts([...kept,...atoms('!('+expression+')')]);if(yes===no)continue;const truth=no;if(!kept.some(a=>a.text===leaf.text&&a.truth===truth))kept.push({text:leaf.text,truth,optional:leaf.optional,source:items.find(a=>a.text.includes(leaf.text))?.source??items[0]?.source});}
  kept=unique(kept);
  for(let round=0;round<items.length+1;round++){
   const next=[];
