@@ -7,6 +7,7 @@ test('WP79 offline variant search, previews and audience conditions stay distinc
   assert.equal(await page.locator('.screen-card').count(),2);
   await page.waitForFunction(()=>document.querySelector('.canvas')?.dataset.fitted==='true');await page.locator('.screen-card[data-screen="a"]').dblclick();await page.waitForSelector('[data-screen-panel="a"]');
   assert.match(await page.locator('[data-screen-panel="a"]').textContent(),/適用條件.*!\(visitor\)/s);
+  assert.match(await page.locator('.panel-audience').textContent(),/原始完整條件/);
   assert.equal(requests,0);
  }finally{await browser.close();}
 });

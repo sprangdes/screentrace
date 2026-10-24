@@ -55,3 +55,6 @@ test('R18 display removes implied disjunctions and duplicate atoms while retaini
  assert.deepEqual(simplify(raw).map(a=>a.text).sort(),['account.rotate','otherAllowed(path)']);
  assert.equal(raw.length,4);
 });
+test('R18 display retains ordinary atoms even when another atom implies them',async()=>{
+ const {simplify}=await import('../react/audience.mjs');const source={file:'src/Test.tsx',line:1};const raw=[...atoms('account',source),...atoms('account.tier === "CURATOR"',source)];assert.equal(simplify(raw).length,2);
+});

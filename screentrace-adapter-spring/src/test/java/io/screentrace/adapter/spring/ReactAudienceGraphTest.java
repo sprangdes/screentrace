@@ -24,6 +24,12 @@ class ReactAudienceGraphTest {
   assertEquals(3,screens.size());assertEquals(2,screens.stream().filter(n->"/".equals(n.attributes().get("route"))).count());
   assertEquals(1,screens.stream().filter(n->"/".equals(n.attributes().get("route"))).map(n->n.attributes().get("entryPointId")).distinct().count());
   assertTrue(screens.stream().anyMatch(n->n.id().equals(ReactGraphContribution.screenId("App.tsx","/single"))));
+  for(var screen:screens) {
+   assertNotNull(screen.attributes().get("audienceSummary"));
+   if("/".equals(screen.attributes().get("route")))assertEquals(ReactGraphContribution.screenId("App.tsx","/"),screen.attributes().get("supersedesScreenId"));
+   else assertFalse(screen.attributes().containsKey("supersedesScreenId"));
+   for(var atom:screen.audience())assertTrue(screen.evidence().stream().anyMatch(e->e.detail().contains(atom.text())&&e.source().equals(atom.source())));
+  }
   assertDoesNotThrow(()->GraphIntegrityValidator.requireAnalysis(graph));
  }
 }
