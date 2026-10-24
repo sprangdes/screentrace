@@ -49,3 +49,9 @@ test('WP78 audience overflow reaches diagnostics instead of disappearing during 
  const result=run(`${gates} function App(){return <Routes>${routes}</Routes>;}`);
  assert.ok(result.diagnostics.some(d=>d.code==='REACT_AUDIENCE_TOO_MANY'));assert.equal(result.audiences.length,0);
 });
+test('R18 display removes implied disjunctions and duplicate atoms while retaining raw evidence',async()=>{
+ const {simplify}=await import('../react/audience.mjs');const source={file:'src/Test.tsx',line:1};
+ const raw=[...atoms('!account.rotate',source),...atoms('!account.rotate || path === "/rotate"',source),...atoms('!account.rotate',source),...atoms('otherAllowed(path)',source)];
+ assert.deepEqual(simplify(raw).map(a=>a.text).sort(),['account.rotate','otherAllowed(path)']);
+ assert.equal(raw.length,4);
+});
