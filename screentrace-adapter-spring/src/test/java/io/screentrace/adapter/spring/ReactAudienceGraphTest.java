@@ -54,6 +54,12 @@ class ReactAudienceGraphTest {
   var behavior=graph.behaviors().stream().filter(b->b.triggerId().equals(component)&&b.type()==BehaviorType.NAVIGATE).findFirst().orElseThrow();
   assertTrue(behavior.evidence().stream().anyMatch(e->e.detail().startsWith("排除身分變體：")));
   assertTrue(behavior.evidence().stream().anyMatch(e->e.parser().equals("ReactAudienceTarget")&&e.detail().contains("condition")));
+  var free=graph.nodes().stream().filter(n->n.type()==NodeType.SCREEN&&"/free".equals(n.attributes().get("route"))).findFirst().orElseThrow();
+  var freeComponent=graph.relationships().stream().filter(e->e.type()==EdgeType.CONTAINS&&e.from().equals(free.id())).map(e->e.to()).findFirst().orElseThrow();
+  var choices=graph.relationships().stream().filter(e->e.type()==EdgeType.NAVIGATES_TO&&e.from().equals(freeComponent)).map(e->e.to()).sorted().toList();
+  assertEquals(2,choices.size());
+  var ambiguous=graph.behaviors().stream().filter(b->b.triggerId().equals(freeComponent)&&b.type()==BehaviorType.NAVIGATE).findFirst().orElseThrow();
+  assertTrue(ambiguous.evidence().stream().anyMatch(e->e.detail().contains("全部候選="+choices)),"Simulator requires canonical candidate IDs in ambiguous navigation evidence");
   assertDoesNotThrow(()->GraphIntegrityValidator.requireAnalysis(graph));
  }
 
