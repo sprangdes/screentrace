@@ -77,4 +77,14 @@ class R18EndpointPolicyTest {
   write("Security.java",valid.replace("return chain.build();","return other.build();"));assertNull(endpoint(graph(),"/integration/deliver/{key}").attributes().get("externalCall"));
  }
 
+ @Test void inferredWrapperShapeCannotOverwriteAnAlreadyProvenLiteralApiTarget()throws Exception{
+  project();write("App.tsx","""
+   import {Routes,Route} from 'react-router-dom';import {useEffect} from 'react';
+   const PREFIX='';async function transport(path){return fetch(`${PREFIX}${path}`);}
+   function Page(){useEffect(()=>{transport('/api/groups/catalog')},[]);return <p/>;}
+   function App(){return <Routes><Route path="/" element={<Page/>}/></Routes>;}
+   """);
+  var g=graph();var call=g.behaviors().stream().filter(b->b.type()==BehaviorType.CALL_API).findFirst().orElseThrow();assertEquals(endpoint(g,"/api/groups/catalog").id(),call.targetId());assertFalse(call.evidence().stream().anyMatch(e->e.parser().equals("RouteTemplateInference")&&e.resolution()==ResolutionStatus.AMBIGUOUS));
+ }
+
 }
