@@ -155,3 +155,5 @@
 - 第三次驗收：需求方確認 WP78／WP79／WP80 通過，授權 WP81→WP82 第二階段；OQ-039 另案處理、不阻擋 R18。WP81 與 optional 顯示修正見 [ADR 0101](adr/0101-r18-dispatch-props-and-optional-display.md)，WP82 後停止。
 
 - 第二階段（WP81 → WP82）：分派表、已知 prop、optional chaining 安全摘要、字面 API 優先、Webhook 雙證據附註與 Boot 預設 context 已實作；R18-B 記為 OQ-040 RESOLVED，見 [ADR 0102](adr/0102-r18-spring-api-paths-and-external-call-notes.md)。本機 Maven 526（525 通過、既有 1 略過）、viewer 121、JS 141、capture 83、預設並行 E2E 90 全部通過；reservio 靜態重析維持 36 screens／66 endpoints／1,172 components。第二階段尚未提交／推送，PR CI run 待取得；在 CI 全綠及需求方驗收前不標記完成。WP82 後停止，WP83 未進入。
+
+- 第三階段（WP83 → WP85）：載入成功狀態預覽（含自訂 hook 狀態）、頁面元件依 Guard／外框／變體分支決定、JSX spread props、未安裝套件樣式表診斷。實測由需求方審查者於 sandbox 外執行：reservio 36 畫面／66 API、7 個頁面元件與 6d 各項全部通過，7 個非 React 專案位元組相同。詳見 [R18 報告](reports/R18.md)「第三階段」與 [ADR 0103](adr/0103-r18-preview-state-page-components-and-style-packages.md)。等待需求方最終驗收 R18。
