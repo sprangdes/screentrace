@@ -626,7 +626,7 @@ class ScreenRenderer {
     const scope=frame.scope;if(!scope)return null;
     const branches=returnBranches(frame.fn.node.body,scope,this.evaluator);
     let chosen=null;
-    const compatible=branches.filter(branch=>!contradicts([...this.facts,...branch.path.flatMap(item=>atoms(item.expression,{file:scope.module.file,line:line(item.node)}))]));
+    const compatible=branches.filter(branch=>!contradicts([...this.facts,...branch.path.flatMap(item=>{const expanded=item.node&&this.evaluator.expandAudience(item.node,scope);const expression=expanded?(item.expression.startsWith('!(')?`!(${expanded})`:expanded):item.expression;return atoms(expression,{file:scope.module.file,line:line(item.node)});})]));
     if(compatible.length===1)chosen=compatible[0];
     else chosen=[...branches].sort((a,b)=>(b.expr?.start??0)-(a.expr?.start??0))[0];
     let expr=unwrap(chosen?.expr);if(expr?.type==='JSXExpressionContainer')expr=unwrap(expr.expression);
