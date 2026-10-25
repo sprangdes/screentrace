@@ -354,3 +354,8 @@ test('UI library components rendered as router links navigate like Link', () => 
   }
   assert.ok(!list.components.some(c => c.label === 'Plain'), 'a library component without a router tag or handler is still not a control');
 });
+
+test('external stylesheet imports identify package roots and ignore relative CSS',()=>{
+ const result=run({'src/App.tsx':`${ROUTER} import 'pkg-a/dist/a.css'; import '@scope/pkg-b/b.css'; import './local.css'; import Page from './Page'; export default function App(){return <Routes><Route path="/x" element={<Page/>}/></Routes>;}`,'src/Page.tsx':'export default function Page(){return <h1>Page</h1>;}'},{markup:true});
+ assert.deepEqual(result.stylesheets.map(s=>s.package),['pkg-a','@scope/pkg-b']);
+});
