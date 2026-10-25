@@ -157,3 +157,7 @@
 - 第二階段（WP81 → WP82）：分派表、已知 prop、optional chaining 安全摘要、字面 API 優先、Webhook 雙證據附註與 Boot 預設 context 已實作；R18-B 記為 OQ-040 RESOLVED，見 [ADR 0102](adr/0102-r18-spring-api-paths-and-external-call-notes.md)。本機 Maven 526（525 通過、既有 1 略過）、viewer 121、JS 141、capture 83、預設並行 E2E 90 全部通過；reservio 靜態重析維持 36 screens／66 endpoints／1,172 components。第二階段尚未提交／推送，PR CI run 待取得；在 CI 全綠及需求方驗收前不標記完成。WP82 後停止，WP83 未進入。
 
 - 第三階段（WP83 → WP85）：載入成功狀態預覽（含自訂 hook 狀態）、頁面元件依 Guard／外框／變體分支決定、JSX spread props、未安裝套件樣式表診斷。實測由需求方審查者於 sandbox 外執行：reservio 36 畫面／66 API、7 個頁面元件與 6d 各項全部通過，7 個非 React 專案位元組相同。詳見 [R18 報告](reports/R18.md)「第三階段」與 [ADR 0103](adr/0103-r18-preview-state-page-components-and-style-packages.md)。等待需求方最終驗收 R18。
+
+## OQ-039 Struts 查詢字串連結修正
+
+- main 上 Struts cookbook、el-example、examples 因相對 `html:link` 帶查詢字串的導覽無法通過 graph 驗證（自 054cf0c 起）。修正後三個模組恢復產出合格圖，其他五個模組位元組不變。詳見 [ADR 0104](adr/0104-oq039-struts-query-link-aliases.md)。
