@@ -450,7 +450,8 @@ class ScreenRenderer {
     if (value.t === 'jsx') this.expr(value.node, value.scope, next);
     else if (value.t === 'children') {
       const closure=value.closure,nested=closure.nodes.some(child=>child.type==='JSXExpressionContainer'&&this.evaluator.evaluate(child.expression,closure.scope).t==='children');
-      for(const child of closure.nodes){const forwarded=child.type==='JSXExpressionContainer'&&this.evaluator.evaluate(child.expression,closure.scope).t==='children';this.expr(child,closure.scope,{...next,passedChild:nested?forwarded:true,anchors:closure.anchors,keys:closure.keys,form:closure.form??state.form});}
+      const single=this.singleComponentChild(closure);
+      for(const child of closure.nodes){const forwarded=child.type==='JSXExpressionContainer'&&this.evaluator.evaluate(child.expression,closure.scope).t==='children';this.expr(child,closure.scope,{...next,passedChild:nested?forwarded:single,anchors:closure.anchors,keys:closure.keys,form:closure.form??state.form});}
     }
     else if (value.t === 'array') this.expr(value.node, value.scope, next);
     else if (value.t === 'lit' && (typeof value.v === 'string' || typeof value.v === 'number')) this.emitText(String(value.v), state);
@@ -598,10 +599,10 @@ class ScreenRenderer {
     if (this.inRoute && this.routeElements.some(expr => expr && node.start >= expr.start && node.end <= expr.end && file === this.routeFile))
       this.view = {name: fn.name ?? 'Route', file: fn.scope.module.file, from: fn.node.loc?.start.line ?? 0, to: fn.node.loc?.end.line ?? 0};
     this.sources.add(fn.scope.module.file);
-    const next = {...state, depth: state.depth + 1, stack: [...state.stack, fn.node], anchors: [...state.anchors, this.anchor(node, file)], keys: key ? [...state.keys, key] : state.keys};
+    const next = {...state, passedChild:false, depth: state.depth + 1, stack: [...state.stack, fn.node], anchors: [...state.anchors, this.anchor(node, file)], keys: key ? [...state.keys, key] : state.keys};
     let frame=null;
     if(state.routeOrigin){
-      frame={fn,name:fn.name,file:fn.scope.module.file,scope:null,selfHasHtml:false,children:[],passedChildren:[],props};
+      frame={fn,name:fn.name,file:fn.scope.module.file,node,scope:null,selfHasHtml:false,children:[],passedChildren:[],props};
       const parent=this.componentFrames.at(-1);if(parent){parent.children.push(frame);if(state.passedChild)parent.passedChildren.push(frame);}else this.routeComponentRoots.push(frame);
       if(parent&&this.forwardsChildren(props))parent.passedChildren.push(frame);
       this.componentFrames.push(frame);
@@ -609,14 +610,28 @@ class ScreenRenderer {
     try{this.body(fn, [{value: props}], next, true);}finally{if(frame)this.componentFrames.pop();}
   }
 
-  pageComponent(frame){
-    if(!frame)return null;
+  pageComponent(frame,candidate=null){
+    if(!frame)return candidate;
     const scope=frame.scope;
     const guard=wrapperFacts(frame.fn.node.body,scope,this.evaluator).length>0;
     const passesChildren=this.componentPassesChildren(frame.fn.node.body,scope);
-    const child=frame.passedChildren[0]??(!passesChildren&&frame.children.length===1?frame.children[0]:null);
-    const skip=(guard||passesChildren||!frame.selfHasHtml)&&!!child;
-    return skip?this.pageComponent(child):frame;
+    const structural=guard||passesChildren;
+    if(structural){const child=frame.passedChildren[0]??null;return child?this.pageComponent(child,candidate):candidate;}
+    const nextCandidate=frame;
+    const returned=this.lastReturnComponent(frame);
+    return returned?this.pageComponent(returned,nextCandidate):nextCandidate;
+  }
+
+  lastReturnComponent(frame){
+    const scope=frame.scope;if(!scope)return null;
+    const branches=returnBranches(frame.fn.node.body,scope,this.evaluator);
+    let chosen=null;
+    const compatible=branches.filter(branch=>!contradicts([...this.facts,...branch.path.flatMap(item=>atoms(item.expression,{file:scope.module.file,line:line(item.node)}))]));
+    if(compatible.length===1)chosen=compatible[0];
+    else chosen=[...branches].sort((a,b)=>(b.expr?.start??0)-(a.expr?.start??0))[0];
+    let expr=unwrap(chosen?.expr);if(expr?.type==='JSXExpressionContainer')expr=unwrap(expr.expression);
+    if(expr?.type!=='JSXElement'||elementValue(this.evaluator,expr,scope).t!=='fn')return null;
+    return frame.children.find(child=>child.node===expr)??null;
   }
 
   componentPassesChildren(body,scope){
@@ -629,6 +644,11 @@ class ScreenRenderer {
   forwardsChildren(props){
     const closure=props?.children;if(!closure?.nodes)return false;
     return closure.nodes.some(node=>node.type==='JSXExpressionContainer'&&this.evaluator.evaluate(node.expression,closure.scope).t==='children');
+  }
+
+  singleComponentChild(closure){
+    if(!closure?.nodes)return false;const nodes=closure.nodes.filter(n=>n.type!=='JSXText'||n.value.trim());
+    return nodes.length===1&&nodes[0].type==='JSXElement'&&elementValue(this.evaluator,nodes[0],closure.scope).t==='fn';
   }
 
   /** Renders what a function returns; component bodies also contribute their page-load effects. */
@@ -673,7 +693,7 @@ class ScreenRenderer {
   }
 
   preparePreviewState(body,componentScope){
-    const states=new Map(),setters=new Map(),hooks=[];
+    const states=new Map(),setters=new Map(),hooks=[],customHooks=[];
     const visit=(node,insideFunction=false)=>{
       if(!node?.type)return;
       if(node!==body&&FUNCTIONS.has(node.type))return;
@@ -691,6 +711,13 @@ class ScreenRenderer {
         const callee=this.evaluator.evaluate(node.callee,componentScope);
         if(callee.t==='external'&&REACT.has(callee.specifier)&&EFFECT_HOOKS.has(externalName(callee))){
           const callback=node.arguments[0]&&this.evaluator.evaluate(node.arguments[0],componentScope);if(callback.t==='fn')hooks.push(callback);
+        }else if(callee.t==='fn'&&this.functionUsesHooks(callee.node,callee.scope)){
+          const hookScope=this.evaluator.functionScope(callee.node,callee.scope,node.arguments.map(expr=>({expr,scope:componentScope})),1);
+          const localStates=new Map(),localHooks=[];this.collectPreviewHook(callee.node.body,hookScope,localStates,localHooks);
+          for(const [key,record] of localStates){const fullKey=`hook:${callee.node.start}:${key}`;states.set(fullKey,record);setters.set(record.setter,record);}
+          hooks.push(...localHooks);
+          const declarator=this.findCallBinding(body,node);
+          customHooks.push({scope:hookScope,fn:callee.node,declarator});
         }
       }
       for(const child of children(node))visit(child,insideFunction);
@@ -698,8 +725,27 @@ class ScreenRenderer {
     visit(body);
     const active=new Set();
     for(const callback of hooks)this.simulatePreviewFunction(callback,[],active,0);
-    for(const record of states.values())this.previewStates.set(`${componentScope.module.file}:${componentScope.fn?.start}:${record.name}`,record);
+    for(const hook of customHooks){const returned=this.lastFunctionReturn(hook.fn.body);if(hook.declarator&&returned)componentScope.bindings.set(hook.declarator.id.name,{value:this.evaluator.evaluate(returned,hook.scope)});}
+    for(const record of states.values())this.previewStates.set(`${componentScope.module.file}:${componentScope.fn?.start}:${record.name}:${record.line}`,record);
   }
+
+  functionUsesHooks(fn,scope){let found=false;const visit=node=>{if(!node?.type||found||node!==fn&&FUNCTIONS.has(node.type))return;if(node.type==='CallExpression'){const value=this.evaluator.evaluate(node.callee,scope);if(value.t==='external'&&REACT.has(value.specifier)&&['useState',...EFFECT_HOOKS].includes(externalName(value)))found=true;}for(const child of children(node))visit(child);};visit(fn.body);return found;}
+
+  collectPreviewHook(body,scope,states,hooks){
+    const visit=node=>{if(!node?.type||node!==body&&FUNCTIONS.has(node.type))return;
+      if(node.type==='VariableDeclarator'&&node.id.type==='ArrayPattern'&&node.init?.type==='CallExpression'){
+        const callee=this.evaluator.evaluate(node.init.callee,scope);if(callee.t==='external'&&REACT.has(callee.specifier)&&externalName(callee)==='useState'){
+          const name=node.id.elements[0]?.name,setter=node.id.elements[1]?.name;if(name&&setter){const initial=node.init.arguments[0]?this.evaluator.evaluate(node.init.arguments[0],scope):{t:'lit',v:undefined},value=['lit','array','object'].includes(initial.t)?initial:{t:'unknown'},record={name,value,file:scope.module.file,line:line(node),ownerScope:scope,setter};states.set(name,record);scope.bindings.set(name,{value});scope.bindings.set(setter,{value:{t:'preview-setter',record}});}
+        }
+      }
+      if(node.type==='CallExpression'){const callee=this.evaluator.evaluate(node.callee,scope);if(callee.t==='external'&&REACT.has(callee.specifier)&&EFFECT_HOOKS.has(externalName(callee))){const callback=node.arguments[0]&&this.evaluator.evaluate(node.arguments[0],scope);if(callback.t==='fn')hooks.push(callback);}}
+      for(const child of children(node))visit(child);
+    };visit(body);
+  }
+
+  findCallBinding(body,call){let found=null;const visit=node=>{if(!node?.type||found||node!==body&&FUNCTIONS.has(node.type))return;if(node.type==='VariableDeclarator'&&node.init===call&&node.id.type==='Identifier'){found=node;return;}for(const child of children(node))visit(child);};visit(body);return found;}
+
+  lastFunctionReturn(body){let found=null;const visit=node=>{if(!node?.type||node!==body&&FUNCTIONS.has(node.type))return;if(node.type==='ReturnStatement'&&(!found||(node.start??0)>(found.start??0)))found=node;for(const child of children(node))visit(child);};visit(body);return found?.argument??null;}
 
   simulatePreviewFunction(fn,args,active,depth){
     if(depth>=this.maxDepth||active.has(fn.node))return false;
