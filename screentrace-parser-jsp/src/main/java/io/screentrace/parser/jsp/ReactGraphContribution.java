@@ -125,6 +125,7 @@ public final class ReactGraphContribution {
 
     private static String screenId(JsonNode screen) {
         String file = screen.path("file").asText(), route = screen.path("route").asText();
+        if(screen.hasNonNull("entryQuery"))return ApplicationGraph.id(NodeType.SCREEN,file+":"+route+":"+screen.path("entryQuery").asText());
         return screen.hasNonNull("variantKey") ? ApplicationGraph.id(NodeType.SCREEN, file + ":" + route + ":" + screen.path("variantKey").asText()) : screenId(file, route);
     }
 
@@ -181,6 +182,7 @@ public final class ReactGraphContribution {
             attributes.put("route", route);
             attributes.put("view", screen.path("view").asText());
             attributes.put("viewSource", screen.path("viewSource").asText());
+            if(screen.hasNonNull("entryQuery")){attributes.put("entryQuery",screen.path("entryQuery").asText());attributes.put("audienceVariant",screen.path("entryQuery").asText());}
             List<String> sources = new ArrayList<>();
             screen.path("sources").forEach(item -> sources.add(item.asText()));
             attributes.put("viewSources", String.join("|", sources));

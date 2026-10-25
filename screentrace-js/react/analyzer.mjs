@@ -5,6 +5,7 @@ import {atoms, unique, combinations, implied, residualGuard, contradicts, simpli
 import {resolveRouteFacts} from './route-conditions.mjs';
 import {contextTransfers} from './context-transfer.mjs';
 import {stylesheets} from './styles.mjs';
+import {parseExpression} from '@babel/parser';
 
 const ROUTER = new Set(['react-router-dom', 'react-router', 'react-router-native']);
 const REACT = new Set(['react', 'preact/compat']);
@@ -39,13 +40,27 @@ export function analyzeReact({files = [], maxDepth = 24, markup = false} = {}) {
     }
     seen.set(route.path, route);
     const base = new ScreenRenderer(evaluator, occurrences, diagnostics, maxDepth, false).render(route, shell);
-    const variants = base.variantDecision ?? [null];
+    const ordinaryVariants = base.variantDecision ?? [null];
+    const queryEntry=findQueryEntry(base.audienceOriginal,modules.get(base.file));
+    const variants=queryEntry?ordinaryVariants.flatMap(original=>{
+      const inherited=original?.facts??base.audienceOriginal;
+      const rest=inherited.filter(fact=>fact.text!==queryEntry.atom.text);
+      const entryScope=evaluator.transferContext.scopeOf(queryEntry.atom),scoped=list=>entryScope?evaluator.transferContext.remember(list,entryScope):list;
+      return [
+        {facts:unique([...rest,...scoped(atoms(`!(${queryEntry.aText})`,queryEntry.atom.source)),...scoped(atoms(queryEntry.bText,queryEntry.atom.source))]),queryEntryPlain:true,...(original?.facts?{baseVariant:original}: {})},
+        {facts:unique([...rest,...scoped(atoms(queryEntry.aText,queryEntry.atom.source))]),entryQuery:`${queryEntry.key}=${queryEntry.values.sort().join('|')}`,...(original?.facts?{baseVariant:original}: {})}
+      ];
+    }):ordinaryVariants;
     entryBranches.push(...base.load.filter(e=>e.redirect).map(effect=>({route:route.path,effect})));
     routeRedirects.push(...base.load.filter(e => e.routeRedirect).map(effect => ({route: route.path, file: route.file, effect})));
     for (const variant of variants) {
       const initial = new ScreenRenderer(evaluator, occurrences, diagnostics, maxDepth, false, variant?.facts ?? (base.redirectOnly ? [] : base.audienceOriginal)).render(route, shell);
       const screen = new ScreenRenderer(evaluator, occurrences, diagnostics, maxDepth, markup, base.redirectOnly ? [] : initial.audienceOriginal).render(route, shell);
-      if (variant) screen.variantKey = JSON.stringify(unique(variant.facts).map(a => [a.text,a.truth]));
+      if(queryEntry&&variant){screen.audience=unique([...screen.audience.filter(fact=>fact.text!==queryEntry.atom.text),...variant.facts]);screen.audienceOriginal=unique([...screen.audienceOriginal.filter(fact=>fact.text!==queryEntry.atom.text),...variant.facts]);}
+      if (variant?.baseVariant) screen.variantKey=JSON.stringify(unique(variant.baseVariant.facts).map(a=>[a.text,a.truth]));
+      else if (variant && !variant.queryEntryPlain && !variant.entryQuery) screen.variantKey = JSON.stringify(unique(variant.facts).map(a => [a.text,a.truth]));
+      if(variant?.entryQuery)screen.entryQuery=variant.entryQuery;
+      if(variant?.queryEntryPlain)screen.queryEntryPlain=true;
       const present = new Set(screen.components.map(c => c.key));
       screen.excluded = base.components.filter(c => !present.has(c.key)).map(component => ({...component, source:{file:component.file,line:component.line}, audience:screen.audience, reason:'此身分下不顯示'}));
       screen.audienceSummary = simplify(screen.audience);
@@ -64,15 +79,16 @@ export function analyzeReact({files = [], maxDepth = 24, markup = false} = {}) {
         const blocked=effect.contextWrites??[],ctx=evaluator.transferContext;
         const facts=[...ctx.navigationFacts(screen.audience??[],blocked),...(effect.contextGuardFacts??[]).filter(a=>!blocked.some(id=>a.text.includes('$context'+id.split('#')[1]+'_'))),...(effect.contextIdentity?effect.destinationFacts??[]:[])];
         navigationFacts.set(effect,facts);
-        const candidates=screens.filter(s=>(effect.targetRoutes??[]).includes(s.route));
+        let candidates=screens.filter(s=>(effect.targetRoutes??[]).includes(s.route));
+        const entryTargets=queryEntryTargets(effect.entryUrls??effect.urls,candidates);if(entryTargets){candidates=entryTargets;if(screens.some(s=>(effect.targetRoutes??[]).includes(s.route)&&s.entryQuery)&&screens.some(s=>(effect.targetRoutes??[]).includes(s.route)&&s.queryEntryPlain))effect.targetScreens=entryTargets.map(s=>({file:s.file,route:s.route,...(s.variantKey?{variantKey:s.variantKey}:{}),...(s.entryQuery?{entryQuery:s.entryQuery}:{})}));}
         // Preserve the historical projection for graphs without any Context identity evidence.
         if(candidates.length&&facts.length){
           effect.excludedTargets=[];
-          effect.targetScreens=candidates.filter(target=>{const targetFacts=ctx.navigationFacts(target.audience);if(!targetFacts.length||!contradicts([...facts,...targetFacts]))return true;effect.excludedTargets.push({file:target.file,route:target.route,...(target.variantKey?{variantKey:target.variantKey}:{}),reason:'同一 Context 值的來源與目的身分條件矛盾',sourceFacts:facts,targetFacts});return false;}).map(s=>({file:s.file,route:s.route,...(s.variantKey?{variantKey:s.variantKey}:{})}));
+          effect.targetScreens=candidates.filter(target=>{const targetFacts=ctx.navigationFacts(target.audience);if(!targetFacts.length||!contradicts([...facts,...targetFacts]))return true;effect.excludedTargets.push({file:target.file,route:target.route,...(target.variantKey?{variantKey:target.variantKey}:{}),reason:'同一 Context 值的來源與目的身分條件矛盾',sourceFacts:facts,targetFacts});return false;}).map(s=>({file:s.file,route:s.route,...(s.variantKey?{variantKey:s.variantKey}:{}),...(s.entryQuery?{entryQuery:s.entryQuery}:{})}));
         }
         if(effect.excludedTargets?.length)effect.status='INFERRED';
         if(effect.contextIdentity&&!effect.targetScreens)effect.targetScreens=candidates.filter(s=>!contradicts([...(effect.destinationFacts??[]),...ctx.targetFacts(s.audience)])).map(s=>({file:s.file,route:s.route,...(s.variantKey?{variantKey:s.variantKey}:{})}));
-        effect.targetConditions=(effect.targetScreens??candidates).map(candidate=>{const target=candidates.find(s=>s.file===candidate.file&&s.route===candidate.route&&s.variantKey===candidate.variantKey);if(!ctx.navigationFacts(screen.audience??[]).length&&!ctx.navigationFacts(target?.audience??[]).length&&!effect.contextIdentity)return null;return {file:candidate.file,route:candidate.route,...(candidate.variantKey?{variantKey:candidate.variantKey}:{}),...ctx.explain(blocked.length?[]:screen.audience??[],target?.audience??[])};}).filter(Boolean);
+        effect.targetConditions=(effect.targetScreens??candidates).map(candidate=>{const target=candidates.find(s=>s.file===candidate.file&&s.route===candidate.route&&s.variantKey===candidate.variantKey&&s.entryQuery===candidate.entryQuery);if(!ctx.navigationFacts(screen.audience??[]).length&&!ctx.navigationFacts(target?.audience??[]).length&&!effect.contextIdentity)return null;return {file:candidate.file,route:candidate.route,...(candidate.variantKey?{variantKey:candidate.variantKey}:{}),...(candidate.entryQuery?{entryQuery:candidate.entryQuery}:{}),...ctx.explain(blocked.length?[]:screen.audience??[],target?.audience??[])};}).filter(Boolean);
         // A full-page load of a server URL that is not a client route reaches the backend: treat it as a GET request.
         if (effect.fullPage && effect.status === 'UNRESOLVED' && effect.urls.length && effect.urls.every(url => url.startsWith('/'))) {
           Object.assign(effect, {type: 'CALL_API', method: 'GET', status: effect.urls.some(url => url.includes('{')) ? 'INFERRED' : 'CONFIRMED'});
@@ -109,6 +125,19 @@ export function analyzeReact({files = [], maxDepth = 24, markup = false} = {}) {
   result.stylesheets=sheetImports.filter(item=>item.package);
   result.localStylesheets=sheetImports.filter(item=>!item.package);
   return result;
+}
+
+function findQueryEntry(audience,module){
+  if(!module||!audience?.length)return null;
+  const locationHooks=new Set(),searchHooks=new Set();
+  for(const statement of module.ast.program.body)if(statement.type==='ImportDeclaration'&&ROUTER.has(statement.source.value))for(const specifier of statement.specifiers){const imported=specifier.imported?.name??specifier.imported?.value;if(imported==='useLocation')locationHooks.add(specifier.local.name);if(imported==='useSearchParams')searchHooks.add(specifier.local.name);}
+  const locations=new Set(),searchValues=new Set(),queryKeys=new Map();
+  const visit=(node,fn)=>{if(!node?.type)return;fn(node);for(const child of children(node))visit(child,fn);};
+  visit(module.ast.program,node=>{if(node.type!=='VariableDeclarator'||!node.init)return;const init=node.init;if(init.type==='CallExpression'&&init.callee.type==='Identifier'&&locationHooks.has(init.callee.name)&&node.id.type==='Identifier')locations.add(node.id.name);if(init.type==='CallExpression'&&init.callee.type==='Identifier'&&searchHooks.has(init.callee.name)&&node.id.type==='ArrayPattern'&&node.id.elements[0]?.type==='Identifier')searchValues.add(node.id.elements[0].name);});
+  visit(module.ast.program,node=>{if(node.type!=='VariableDeclarator'||node.id.type!=='Identifier'||node.init?.type!=='CallExpression')return;const call=node.init,callee=call.callee;if(callee.type!=='MemberExpression'||callee.property.name!=='get'||call.arguments[0]?.type!=='StringLiteral')return;const receiver=callee.object;if(receiver.type==='NewExpression'&&receiver.callee.type==='Identifier'&&receiver.callee.name==='URLSearchParams'){const search=receiver.arguments[0];if(search?.type==='MemberExpression'&&search.property.name==='search'&&search.object.type==='Identifier'&&locations.has(search.object.name))queryKeys.set(node.id.name,call.arguments[0].value);}else if(receiver.type==='Identifier'&&searchValues.has(receiver.name))queryKeys.set(node.id.name,call.arguments[0].value);});
+  const isQueryAtom=node=>{node=unwrap(node);if(node.type==='BinaryExpression'&&node.operator==='==='&&node.left.type==='Identifier'&&node.right.type==='StringLiteral'&&queryKeys.has(node.left.name))return {key:queryKeys.get(node.left.name),value:node.right.value};if(node.type==='LogicalExpression'&&node.operator==='||'){const a=isQueryAtom(node.left),b=isQueryAtom(node.right);if(a&&b&&a.key===b.key)return {key:a.key,values:[...(a.values??[a.value]),...(b.values??[b.value])]};}return null;};
+  for(const atom of audience){if(!atom.truth)continue;let expression;try{expression=parseExpression(atom.text,{plugins:['typescript']});}catch{continue;}const candidates=[];const find=node=>{node=unwrap(node);if(node.type==='LogicalExpression'&&node.operator==='||'){const query=isQueryAtom(node.left);if(query?.values)candidates.push({query,b:node.right,a:node.left});find(node.left);find(node.right);}else for(const child of children(node))find(child);};find(expression);const candidate=candidates[0];if(!candidate)continue;return {atom,key:candidate.query.key,values:[...new Set(candidate.query.values)],aText:atom.text.slice(candidate.a.start,candidate.a.end),bText:atom.text.slice(candidate.b.start,candidate.b.end)};}
+  return null;
 }
 
 /** Per JSX element: a stable key (file, name, same-name occurrence) and a readable anchor (file:line, #n when a line holds several). */
@@ -311,14 +340,24 @@ function matchRoute(urls, patterns) {
   const targets = new Set();
   let inferred = false;
   for (const url of urls ?? []) {
-    const exact = patterns.filter(item => item.route === url);
-    const found = exact.length ? exact : patterns.filter(item => item.pattern.test(url) && !item.route.includes('*'));
-    const fallback = found.length ? found : patterns.filter(item => item.pattern.test(url));
+    const path=String(url).split(/[?#]/,1)[0];
+    const exact = patterns.filter(item => item.route === path);
+    const found = exact.length ? exact : patterns.filter(item => item.pattern.test(path) && !item.route.includes('*'));
+    const fallback = found.length ? found : patterns.filter(item => item.pattern.test(path));
     if (!exact.length || url.includes('{')) inferred = true;
     for (const item of fallback) targets.add(item.route);
   }
   const targetRoutes = [...targets].sort();
   return {targetRoutes, status: targetRoutes.length === 0 ? 'UNRESOLVED' : targetRoutes.length > 1 ? 'AMBIGUOUS' : inferred ? 'INFERRED' : 'CONFIRMED'};
+}
+
+function queryEntryTargets(urls,candidates){
+ const query=candidates.filter(screen=>screen.entryQuery),plain=candidates.filter(screen=>screen.queryEntryPlain);if(!query.length||!plain.length||!urls?.length)return null;
+ const selected=new Map();
+ for(const url of urls){if(typeof url!=='string'||/[{}]/.test(url))return candidates;let parsed;try{parsed=new URL(url,'http://screentrace.invalid');}catch{return candidates;}
+  for(const entry of query){const [key,values='']=entry.entryQuery.split('=',2),value=parsed.searchParams.get(key),accepted=values.split('|');const target=value!==null&&accepted.includes(value)?entry:plain.find(item=>item.route===entry.route);if(target)selected.set(target.route+':'+(target.entryQuery??'plain'),target);}
+ }
+ return selected.size?[...selected.values()]:null;
 }
 
 class ScreenRenderer {
@@ -932,7 +971,8 @@ class ScreenRenderer {
       const click=attributeExpression(attribute(node,'onClick')),contextWrites=click?[...this.evaluator.transferContext.writes(click,scope)]:[];
       const choices=to?this.destinationChoices(to,scope,state):null;
       const urls = choices?cleanUrls(choices.flatMap(c=>c.urls)):to ? this.urlsOf(to, scope) : [];
-      const behaviors = choices?choices.map(candidate=>this.effect('NAVIGATE','click',node,scope,{...unguarded(state),guards:candidate.conditions},{...candidate,contextWrites,expression:text(scope.module,to)})):[this.effect('NAVIGATE', 'click', node, scope, unguarded(state), {urls, contextWrites,expression: text(scope.module, to)})];
+      const entryUrls=to?this.evaluator.strings(to,scope):[];
+      const behaviors = choices?choices.map(candidate=>this.effect('NAVIGATE','click',node,scope,{...unguarded(state),guards:candidate.conditions},{...candidate,entryUrls,contextWrites,expression:text(scope.module,to)})):[this.effect('NAVIGATE', 'click', node, scope, unguarded(state), {urls,entryUrls,contextWrites,expression: text(scope.module, to)})];
       behaviors.push(...this.handlers(node, scope, state).flatMap(handler => handler.effects));
       const component = this.record(node, scope, state, key, {kind: 'LINK', tag: name, target: urls[0] ?? null, handlers: [], behaviors});
       const out = this.output(node, 'a', scope, state, key);

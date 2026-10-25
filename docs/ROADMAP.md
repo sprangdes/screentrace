@@ -165,3 +165,7 @@
 ## OQ-036 狀態值可達性
 
 - 共用元件中由頁面狀態控制的區塊，依畫面身分下可達的寫入點判斷是否可能出現。reservio `/business/setup` 移除只有顧客能開啟的常用商家面板及其 3 個 API；其他畫面與非 React 專案不變。詳見 [ADR 0105](adr/0105-oq036-state-value-reachability.md)。
+
+## OQ-038 查詢參數進入變體
+
+- 認證頁的 LINE 登入回呼與一般進入分成兩個畫面；一般進入沿用原 ID。reservio 畫面 36 → 41，原有 31 個非認證畫面不變。詳見 [ADR 0106](adr/0106-oq038-query-entry-variants.md)。
