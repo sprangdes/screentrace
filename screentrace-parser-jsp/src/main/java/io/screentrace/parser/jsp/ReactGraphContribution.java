@@ -19,6 +19,7 @@ import io.screentrace.scanner.ProjectScanner.ProjectInventory;
 import io.screentrace.scanner.SafeProjectFiles;
 import java.io.IOException;
 import java.nio.file.Path;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -50,6 +51,7 @@ public final class ReactGraphContribution {
         try {
             List<String> unreadable = new ArrayList<>();
             JsonNode result = analyze(inventory, false, unreadable);
+            builder.missingStyles(result.path("stylesheets"), inventory.root());
             unreadable.forEach(file -> builder.diagnostic(new SourceLocation(file, 1), "REACT_SOURCE_READ", "前端來源無法安全讀取"));
             builder.audienceGroups(result.path("audiences"));
             builder.indexComponentShapes(result.path("screens"));
@@ -79,10 +81,17 @@ public final class ReactGraphContribution {
             throw new IOException("React 靜態預覽重建失敗：" + error.getMessage(), error);
         }
         Map<String, Object> screens = new TreeMap<>();
-        for (JsonNode screen : result.path("screens")) screens.put(screenId(screen), screen.path("markup").asText(""));
+        Map<String, Object> previewStates = new TreeMap<>();
+        for (JsonNode screen : result.path("screens")) {
+            String id = screenId(screen);
+            screens.put(id, screen.path("markup").asText(""));
+            if (screen.path("previewState").isArray() && !screen.path("previewState").isEmpty())
+                previewStates.put(id, JSON.convertValue(screen.path("previewState"), Object.class));
+        }
         Map<String, Object> preview = new LinkedHashMap<>();
-        preview.put("stylesheets", result.path("stylesheets"));
+        List<JsonNode> allStyles=new ArrayList<>();result.path("stylesheets").forEach(allStyles::add);result.path("localStylesheets").forEach(allStyles::add);preview.put("stylesheets",allStyles);
         preview.put("screens", screens);
+        if (!previewStates.isEmpty()) preview.put("previewState", previewStates);
         Path target = SafeProjectFiles.requireWritePathWithin(output, output.resolve("static-preview").resolve("react-preview.json"));
         java.nio.file.Files.createDirectories(target.getParent());
         java.nio.file.Files.write(target, JSON.writeValueAsBytes(preview));
@@ -143,6 +152,7 @@ public final class ReactGraphContribution {
         private final List<List<ApplicationGraph.AudienceAtom>> audienceGroups = new ArrayList<>();
         private final List<PendingNavigation> navigations = new ArrayList<>();
         private final Map<String, List<String>> redirects = new LinkedHashMap<>();
+        private final Map<String, Set<String>> missingStylePackages = new HashMap<>();
 
         private Builder(ApplicationGraph graph) {
             this.graph = graph;
@@ -150,6 +160,16 @@ public final class ReactGraphContribution {
             graph.relationships().forEach(edge -> edges.put(edge.id(), edge));
             graph.behaviors().forEach(behavior -> behaviors.put(behavior.id(), behavior));
             diagnostics.addAll(graph.diagnostics());
+        }
+
+        void missingStyles(JsonNode stylesheets, Path root) {
+            for (JsonNode item : stylesheets) {
+                String specifier=item.path("specifier").asText(), pkg=item.path("package").asText(), from=item.path("from").asText();
+                if(pkg.isBlank()||Files.isDirectory(root.resolve("node_modules").resolve(pkg)))continue;
+                SourceLocation location=new SourceLocation(from,Math.max(1,item.path("line").asInt(1)));
+                diagnostic(location,"STYLESHEET_PACKAGE_MISSING","樣式來源套件未安裝："+pkg);
+                missingStylePackages.computeIfAbsent(from,ignored->new java.util.TreeSet<>()).add(pkg);
+            }
         }
 
         void screen(JsonNode screen) {
@@ -164,6 +184,8 @@ public final class ReactGraphContribution {
             List<String> sources = new ArrayList<>();
             screen.path("sources").forEach(item -> sources.add(item.asText()));
             attributes.put("viewSources", String.join("|", sources));
+            var missing=sources.stream().flatMap(file->missingStylePackages.getOrDefault(file,Set.of()).stream()).distinct().sorted().toList();
+            if(!missing.isEmpty())attributes.put("missingStylePackages",String.join("|",missing));
             attributes.put("rendering", "static-reconstruction");
             List<ApplicationGraph.AudienceAtom> audience = new ArrayList<>();
             for (JsonNode atom : screen.path("audience")) audience.add(new ApplicationGraph.AudienceAtom(atom.path("text").asText(), atom.path("truth").asBoolean(), source(atom)));

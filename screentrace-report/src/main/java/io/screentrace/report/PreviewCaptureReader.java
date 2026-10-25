@@ -46,7 +46,7 @@ final class PreviewCaptureReader {
       if (captured.isMissingNode()) {
         var diagnostic = new PreviewDiagnostic("PREVIEW_CAPTURE_MISSING", screen.graphScreenId(), "未取得完整預覽資料", Map.of());
         screens.add(new PreviewScreen(screen.graphScreenId(), screen.staticDocument(), screen.screenshot(), screen.width(), screen.height(),
-            new Rendering("skipped", diagnostic.message()), List.of(), null, List.of(diagnostic)));
+            new Rendering("skipped", diagnostic.message()), List.of(), null, List.of(diagnostic),screen.previewState()));
         continue;
       }
       for (var element : captured.path("elements")) {
@@ -81,7 +81,7 @@ final class PreviewCaptureReader {
       String thumbnail = optional(captured,"thumbnail"); if (thumbnail != null) validateThumbnail(thumbnail);
       screens.add(new PreviewScreen(screen.graphScreenId(), screen.staticDocument(), screen.screenshot(), captured.path("width").asInt(screen.width()),
           captured.path("height").asInt(screen.height()), new Rendering(captured.path("rendering").path("mode").asText("skipped"), optional(captured.path("rendering"),"diagnostic")),
-          strings(captured.path("dynamicExpressions")), thumbnail, diagnostics(captured.path("diagnostics"))));
+          strings(captured.path("dynamicExpressions")), thumbnail, diagnostics(captured.path("diagnostics")),screen.previewState()));
     }
     return new PreviewModel("2", screens, baseline.components(), elements, styles, defaults, diagnostics(data.path("diagnostics")));
   }

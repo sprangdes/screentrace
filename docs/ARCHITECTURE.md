@@ -171,6 +171,8 @@ Schema 2.1 adds `apiContracts`, keyed by `ENDPOINT` ID. A contract records the s
 
 React 分析輸出 2.3，application.audiences 保存最多 16 個可渲染條件組合，超過時診斷並只保留畫面條件；SCREEN 可帶 `audience: [{text, truth, source}]`，表示 Guard 實際轉交 children 的來源條件。不同可達路徑以析取保留；只有可證明的相同原子真假、嚴格相等常值互斥、物件與屬性存取矛盾可用於後續過濾。元件 guard 不重複畫面已成立的條件。消費端保持嚴格證據驗證並接受 2.2／2.3；非 React 圖仍輸出 2.2，歷史圖不升版。review 狀態容器與存檔鍵不改。同網址多畫面透過 ENTRY_POINT（path）以 RENDERS 指向變體；入口可帶條件導向行為。不同投影的共用元件以穩定投影鍵分開，隱藏元素與原因仍保留於畫面資料。詳見 [ADR 0096](adr/0096-r18-audience-facts.md)、[ADR 0097](adr/0097-r18-audience-variants.md)。
 
+R18 第三階段（不改 schema 版本）：React SCREEN 的 `view`／`viewSource` 為「頁面元件」，從路由元素（變體則從產生該變體的分支）出發，略過 Guard 與外框時改看傳入的 children，遇到一般元件時記為候選並只看其最後一個 `return`（拆分變體的元件改看該變體分支），候選中最後一個即頁面元件；被略過的元件仍在 `viewSources`。preview-model 的 React 畫面帶 `previewState`，記錄以「載入成功路徑」模擬掛載時載入函式（含元件呼叫的自訂 hook）後的狀態值與設定來源；這只影響靜態預覽，不影響 graph。前端以套件路徑 import 的 CSS 在 `node_modules` 中找不到該套件時，產生 `STYLESHEET_PACKAGE_MISSING` 診斷（每個套件一則），並在 `viewSources` 含該 import 檔的 SCREEN 上加 `missingStylePackages`（排序後以 `|` 串接）。詳見 [ADR 0103](adr/0103-r18-preview-state-page-components-and-style-packages.md)。
+
 ### 4.2 WP1 行為與檢核 schema 2.2
 
 新增 `behaviors` / `validationRules`（皆依 ID 排序）。schema 2.2 節點與邊必須具來源相對路徑/行號、解析器名稱與解析狀態；COMPONENT 的 attributes.kind 必須是 BUTTON、LINK、SUBMIT、TEXT_INPUT、TEXTAREA、SELECT、CHECKBOX、RADIO、DATE_PICKER、FILE_INPUT、MULTI_SELECT、FORM、MODAL、TABLE、OTHER。

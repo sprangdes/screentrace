@@ -55,14 +55,20 @@ public record PreviewModel(String version, List<PreviewScreen> screens, List<Pre
     }
   }
   public record PreviewScreen(String graphScreenId, String staticDocument, String screenshot, int width, int height,
-      Rendering rendering, List<String> dynamicExpressions, String thumbnail, List<PreviewDiagnostic> diagnostics)
+      Rendering rendering, List<String> dynamicExpressions, String thumbnail, List<PreviewDiagnostic> diagnostics,
+      @JsonInclude(JsonInclude.Include.NON_EMPTY) List<Map<String,Object>> previewState)
       implements Comparable<PreviewScreen> {
     public PreviewScreen {
       dynamicExpressions = dynamicExpressions == null ? List.of() : List.copyOf(dynamicExpressions);
       diagnostics = diagnostics == null ? List.of() : List.copyOf(diagnostics);
+      previewState = previewState == null ? List.of() : List.copyOf(previewState);
+    }
+    public PreviewScreen(String graphScreenId,String staticDocument,String screenshot,int width,int height,
+        Rendering rendering,List<String> dynamicExpressions,String thumbnail,List<PreviewDiagnostic> diagnostics) {
+      this(graphScreenId,staticDocument,screenshot,width,height,rendering,dynamicExpressions,thumbnail,diagnostics,List.of());
     }
     public PreviewScreen(String graphScreenId, String staticDocument, String screenshot, int width, int height) {
-      this(graphScreenId, staticDocument, screenshot, width, height, null, List.of(), null, List.of());
+      this(graphScreenId, staticDocument, screenshot, width, height, null, List.of(), null, List.of(),List.of());
     }
     @Override public int compareTo(PreviewScreen other) { return graphScreenId.compareTo(other.graphScreenId); }
   }

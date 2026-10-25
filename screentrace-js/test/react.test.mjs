@@ -101,6 +101,73 @@ test('literal props prune conditional rendering so each route keeps only its own
   assert.deepEqual(screen(result, '/s/hours').components.map(c => c.label), ['Save hours']);
 });
 
+test('R18 WP83 preview state follows the successful load path and records setter sources', () => {
+  const result = analyzeReact({markup: true, files: [{file: 'src/Board.tsx', code: `${ROUTER}
+    import {useEffect,useState} from 'react';
+    function Board(){
+      const [pending,setPending]=useState(true);
+      const [problem,setProblem]=useState('');
+      const [records,setRecords]=useState([]);
+      useEffect(()=>{async function refresh(){try{
+        const response=await fetch('/api/records');
+        if(requestToken.current !== activeToken.current) return;
+        setRecords(response.items);
+        setPending(false);
+      }catch(error){setProblem('offline');}} void refresh();},[]);
+      return <>{pending&&<p>Loading records</p>}{problem&&<p>Error records</p>}
+        {!pending&&!problem&&records.length===0&&<p>No records</p>}
+        {!pending&&!problem&&records.map(item=><li>{item.name}</li>)}</>;
+    }
+    export default function App(){return <Routes><Route path="/board" element={<Board/>}/></Routes>;}`}]});
+  const page = screen(result, '/board');
+  assert.deepEqual(page.previewState.map(s => [s.name,s.value,s.source]), [
+    ['pending',false,'src/Board.tsx:11'],['problem','','src/Board.tsx:5'],['records',{},'src/Board.tsx:10']
+  ]);
+  assert.match(page.markup, /<li\b/);
+  assert.doesNotMatch(page.markup, /Loading records|Error records|No records/);
+});
+
+test('R18 WP83 pages without a load function retain initial-state and prop evaluation', () => {
+  const result = analyzeReact({markup:true,files:[{file:'src/App.tsx',code:`${ROUTER} import Board from './Board'; export default function App(){return <Routes><Route path="/board" element={<Board enabled={false}/>}/></Routes>;}`},
+    {file:'src/Board.tsx',code:`import {useState} from 'react'; export default function Board({enabled}){const [open,setOpen]=useState(true);return <>{enabled&&<p>Enabled</p>}{open?<p>Initially open</p>:<p>Closed</p>}</>;}`} ]});
+  assert.deepEqual(screen(result, '/board').previewState.map(s=>[s.name,s.value]), [['open',true]]);
+  assert.match(screen(result, '/board').markup,/Initially open/);assert.doesNotMatch(screen(result, '/board').markup,/Enabled|Closed/);
+});
+
+test('R18 WP83 functional state updates remain unknown and keep ternary fall-through', () => {
+  const result = analyzeReact({markup:true,files:[{file:'src/App.tsx',code:`${ROUTER} import Board from './Board'; export default function App(){return <Routes><Route path="/board" element={<Board/>}/></Routes>;}`},
+    {file:'src/Board.tsx',code:`import {useEffect,useState} from 'react'; export default function Board(){const [count,setCount]=useState(0);useEffect(()=>{setCount(previous=>previous+1)},[]);return count?<p>Count</p>:<p>Empty</p>;}`} ]});
+  assert.equal(screen(result, '/board').previewState[0].value, null);
+  assert.match(screen(result, '/board').markup,/Empty/);assert.doesNotMatch(screen(result, '/board').markup,/Count/);
+});
+
+test('R18 WP83 view skips a guard, child frame and one-component composition', () => {
+  const result=run({
+    'src/App.tsx':`${ROUTER} import Access from './Access';import Frame from './Frame';import Group from './Group';import Landing from './Landing';export default function App(){return <Routes><Route path="/desk" element={<Access><Frame><Group><Landing/></Group></Frame></Access>}/></Routes>;}`,
+    'src/Access.tsx':`export default function Access({children}){if(!ready)return null;return children;}`,
+    'src/Frame.tsx':`export default function Frame({children}){return <section><nav>Tools</nav>{children}</section>;}`,
+    'src/Group.tsx':`import Landing from './Landing';export default function Group(){return <Landing/>;}`,
+    'src/Landing.tsx':`export default function Landing(){return <article><h1>Desk</h1></article>;}`
+  });
+  const page=screen(result,'/desk');assert.equal(page.view,'Landing');
+  assert.ok(page.sources.includes('src/Access.tsx')&&page.sources.includes('src/Frame.tsx')&&page.sources.includes('src/Group.tsx'));
+});
+
+test('R18 WP83 route variants keep the page component returned by each branch', () => {
+  const result=run({'src/App.tsx':`${ROUTER}function Entry(){if(enabled)return <Amber/>;return <Violet/>;}function Amber(){return <p>A</p>;}function Violet(){return <p>V</p>;}export default function App(){return <Routes><Route path="/tone" element={<Entry/>}/></Routes>;}`});
+  const pages=result.screens.filter(s=>s.route==='/tone');assert.equal(pages.length,2);assert.deepEqual(pages.map(s=>s.view).sort(),['Amber','Violet']);
+});
+
+test('R18 WP83 JSX object spreads provide props with source-order override rules', () => {
+  const result=analyzeReact({markup:true,files:[{file:'src/App.tsx',code:`${ROUTER}const duplicate={main:{title:'調度面板'}};function Header({title}){return <h1>{title}</h1>;}function First(){return <Header {...duplicate.main}/>;}function Second(){return <Header {...duplicate.main} title="覆寫"/>;}export default function App(){return <Routes><Route path="/first" element={<First/>}/><Route path="/second" element={<Second/>}/></Routes>;}`} ]});
+  assert.match(screen(result,'/first').markup,/調度面板/);assert.match(screen(result,'/second').markup,/覆寫/);
+});
+
+test('R18 WP83 does not descend past a page component that emits HTML', () => {
+  const result=run({'src/App.tsx':`${ROUTER}function App(){return <Routes><Route path="/page" element={<Surface/>}/></Routes>;}function Surface(){return <main><Content/></main>;}function Content(){return <p>nested</p>;}`});
+  assert.equal(screen(result,'/page').view,'Surface');
+});
+
 test('links over a literal navigation array are unrolled and resolved to routes', () => {
   const result = run({
     'src/App.tsx': `${ROUTER} const items = [{ to: '/a', label: 'A' }, { to: '/b/7', label: 'B' }];
@@ -286,4 +353,9 @@ test('UI library components rendered as router links navigate like Link', () => 
     assert.deepEqual(link.behaviors.map(e => [e.type, e.targetRoutes]), [['NAVIGATE', [url === '/groups' ? '/groups' : '/groups/:id']]], label);
   }
   assert.ok(!list.components.some(c => c.label === 'Plain'), 'a library component without a router tag or handler is still not a control');
+});
+
+test('external stylesheet imports identify package roots and ignore relative CSS',()=>{
+ const result=run({'src/App.tsx':`${ROUTER} import 'pkg-a/dist/a.css'; import '@scope/pkg-b/b.css'; import './local.css'; import Page from './Page'; export default function App(){return <Routes><Route path="/x" element={<Page/>}/></Routes>;}`,'src/Page.tsx':'export default function Page(){return <h1>Page</h1>;}'},{markup:true});
+ assert.deepEqual(result.stylesheets.map(s=>s.package),['pkg-a','@scope/pkg-b']);
 });

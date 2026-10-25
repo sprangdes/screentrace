@@ -80,6 +80,8 @@ R17 起報表與 md 不顯示元件庫建議與覆寫；以下指令仍可驗證
 
 React 畫面的預覽由原始碼靜態重建，會連結專案 import 的 CSS。來自套件的樣式（例如 `import 'bootstrap/dist/css/bootstrap.min.css'`）只有在專案已安裝 `node_modules` 時才找得到；找不到時寫入 `static-preview/diagnostics.json`，預覽仍會產生但沒有該樣式。ScreenTrace 不會替目標專案執行 `npm install`，請自行在目標專案安裝後重新分析。
 
+若看到 `STYLESHEET_PACKAGE_MISSING`，代表 React 原始碼匯入了 CSS 套件，但前端目錄的 `node_modules` 找不到該套件；分析仍會完成，畫面詳情會列出缺少套件。可先在分析對象的前端目錄執行套件安裝（例如 `npm ci`），再重新分析。
+
 React 預覽中無法靜態證明的文字顯示為「示例值」；只在特定條件出現的對話框預設關閉；`if (loading) return …` 這類分支在預覽中顯示一般狀態，但兩邊的按鈕都會列在右側欄。
 
 ### Context path 未設定

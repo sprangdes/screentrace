@@ -105,7 +105,9 @@ export function analyzeReact({files = [], maxDepth = 24, markup = false} = {}) {
   const uniqueDiagnostics = new Map();
   for (const item of diagnostics) uniqueDiagnostics.set(JSON.stringify(item), item);
   const result = {screens, routeRedirects, audiences: groups.values, diagnostics: [...uniqueDiagnostics.values()].sort((a, b) => a.source.file.localeCompare(b.source.file) || a.source.line - b.source.line || a.code.localeCompare(b.code))};
-  if (markup) result.stylesheets = stylesheets(modules, shell ? [shell.file] : [...new Set(routes.map(route => route.file))].sort());
+  const sheetImports=stylesheets(modules, shell ? [shell.file] : [...new Set(routes.map(route => route.file))].sort());
+  result.stylesheets=sheetImports.filter(item=>item.package);
+  result.localStylesheets=sheetImports.filter(item=>!item.package);
   return result;
 }
 
@@ -339,6 +341,9 @@ class ScreenRenderer {
     this.inRoute = 0;
     this.routeContent = 0;
     this.emitted = new Set();
+    this.previewStates = new Map();
+    this.routeComponentRoots=[];
+    this.componentFrames=[];
   }
 
   render(route, shell = null) {
@@ -350,15 +355,18 @@ class ScreenRenderer {
     this.routeElements = [...route.layouts, route.element].map(entry => entry.expr ?? entry.component);
     const outlets = [...route.layouts, route.element];
     const root = outlets.shift();
-    const state = {guards: [], anchors: [], keys: [], stack: [], depth: 0, repeated: false, form: null, outlets, out: this.document};
+    const state = {guards: [], anchors: [], keys: [], stack: [], depth: 0, repeated: false, form: null, outlets, out: this.document, routeOrigin:true};
     this.sources.add(route.file);
     this.routeFile = route.file;
     if (shell && this.routesElement) {
       this.sources.add(shell.file);
       this.pendingRoute = {root, state};
-      this.expr(shell.expr, shell.scope, {...state, outlets: []});
+      this.expr(shell.expr, shell.scope, {...state, outlets: [], routeOrigin:false});
     }
     if (!this.reachedRoutes) this.renderRoute(root, state);
+    const redirectOnly=this.routeContent===0&&this.load.some(effect=>effect.routeRedirect);
+    const pageFrame=redirectOnly?null:this.pageComponent(this.routeComponentRoots[0]);
+    if(!redirectOnly&&pageFrame)this.view={name:pageFrame.name??'Route',file:pageFrame.file,from:pageFrame.fn.node.loc?.start.line??0,to:pageFrame.fn.node.loc?.end.line??0};
     const components = [...this.components.values()];
     const excludedBehaviors = [];
     const visible = effect => {
@@ -374,12 +382,13 @@ class ScreenRenderer {
       audience: resolveRouteFacts(this.audience,this.evaluator),
       audienceOriginal: unique(this.audience),
       route: route.path, file: route.file, line: route.line, layoutOnly: Boolean(route.layoutOnly),
-      view: this.view?.name ?? 'Route', viewSource: this.view?.file ?? route.file,
+      view: redirectOnly?'Route':this.view?.name ?? 'Route', viewSource: this.view?.file ?? route.file,
       // A route that renders nothing of its own and only redirects is a forwarding address, not a page.
-      redirectOnly: this.routeContent === 0 && this.load.some(effect => effect.routeRedirect),
+      redirectOnly,
       // Redirects written in the screen's own component come first; a guard's "not signed in" redirect after.
       redirects: this.load.filter(effect => effect.routeRedirect).map(effect => ({effect, own: !!this.view && effect.source.file === this.view.file && effect.source.line >= this.view.from && effect.source.line <= this.view.to})),
       sources: [...this.sources].sort(), components: components.sort((a, b) => a.key.localeCompare(b.key)), load: dedupe(this.load),
+      ...(this.markup ? {previewState: [...this.previewStates.values()].map(item=>({name:item.name,value:this.previewValue(item.value),source:`${item.file}:${item.line}`})).sort((a,b)=>a.name.localeCompare(b.name))} : {}),
       ...(this.markup ? {markup: serialize(closeConditionalDialogs(this.document))} : {})
     };
   }
@@ -439,7 +448,11 @@ class ScreenRenderer {
     const value = this.evaluator.evaluate(node, scope);
     const next = {...state, stack: [...state.stack, node]};
     if (value.t === 'jsx') this.expr(value.node, value.scope, next);
-    else if (value.t === 'children') this.childNodes(value.closure.nodes, value.closure.scope, {...next, anchors: value.closure.anchors, keys: value.closure.keys, form: value.closure.form ?? state.form});
+    else if (value.t === 'children') {
+      const closure=value.closure,nested=closure.nodes.some(child=>child.type==='JSXExpressionContainer'&&this.evaluator.evaluate(child.expression,closure.scope).t==='children');
+      const single=this.singleComponentChild(closure);
+      for(const child of closure.nodes){const forwarded=child.type==='JSXExpressionContainer'&&this.evaluator.evaluate(child.expression,closure.scope).t==='children';this.expr(child,closure.scope,{...next,passedChild:nested?forwarded:single,anchors:closure.anchors,keys:closure.keys,form:closure.form??state.form});}
+    }
     else if (value.t === 'array') this.expr(value.node, value.scope, next);
     else if (value.t === 'lit' && (typeof value.v === 'string' || typeof value.v === 'number')) this.emitText(String(value.v), state);
     else if (value.t === 'unknown') {
@@ -492,6 +505,7 @@ class ScreenRenderer {
         const fn = child.type === 'JSXExpressionContainer' ? unwrap(child.expression) : null;
         if (fn && (fn.type === 'ArrowFunctionExpression' || fn.type === 'FunctionExpression'))
           this.body({t: 'fn', node: fn, scope: closure.scope}, args, {...state, anchors: closure.anchors, keys: closure.keys, form: closure.form ?? state.form}, false);
+        else this.expr(child,closure.scope,{...state,passedChild:true,anchors:closure.anchors,keys:closure.keys,form:closure.form??state.form});
       }
       return;
     }
@@ -549,13 +563,27 @@ class ScreenRenderer {
     const attrs = new Map();
     let spread = false;
     for (const item of node.openingElement.attributes) {
-      if (item.type === 'JSXSpreadAttribute') { spread = true; continue; }
+      if (item.type === 'JSXSpreadAttribute') {
+        const value=this.evaluator.evaluate(item.argument,scope);
+        if(value.t==='object')this.copySpreadProps(value,attrs,new Set());else spread=true;
+        continue;
+      }
       const expr = attributeExpression(item);
       if (expr) attrs.set(jsxName(item.name), {expr, scope});
     }
     const content = node.children.filter(child => child.type !== 'JSXText' || child.value.trim());
     const children = content.length ? {nodes: content, scope, anchors: state.anchors, keys: state.keys, form: state.form} : attrs.has('children') ? null : null;
     return {t: 'props', attrs, children, spread};
+  }
+
+  copySpreadProps(value,attrs,seen){
+    if(value.t!=='object'||seen.has(value.node))return;seen.add(value.node);
+    for(const property of value.node.properties){
+      if(property.type==='SpreadElement'){this.copySpreadProps(this.evaluator.evaluate(property.argument,value.scope),attrs,seen);continue;}
+      if(property.type!=='ObjectProperty')continue;
+      let key;if(!property.computed)key=property.key.name??property.key.value;else{const resolved=this.evaluator.evaluate(property.key,value.scope);if(resolved.t==='lit')key=resolved.v;}
+      if(key!==undefined&&key!==null)attrs.set(String(key),{expr:property.value,scope:value.scope});
+    }
   }
 
   component(fn, props, node, state, file, key = null) {
@@ -571,20 +599,72 @@ class ScreenRenderer {
     if (this.inRoute && this.routeElements.some(expr => expr && node.start >= expr.start && node.end <= expr.end && file === this.routeFile))
       this.view = {name: fn.name ?? 'Route', file: fn.scope.module.file, from: fn.node.loc?.start.line ?? 0, to: fn.node.loc?.end.line ?? 0};
     this.sources.add(fn.scope.module.file);
-    const next = {...state, depth: state.depth + 1, stack: [...state.stack, fn.node], anchors: [...state.anchors, this.anchor(node, file)], keys: key ? [...state.keys, key] : state.keys};
-    this.body(fn, [{value: props}], next, true);
+    const next = {...state, passedChild:false, depth: state.depth + 1, stack: [...state.stack, fn.node], anchors: [...state.anchors, this.anchor(node, file)], keys: key ? [...state.keys, key] : state.keys};
+    let frame=null;
+    if(state.routeOrigin){
+      frame={fn,name:fn.name,file:fn.scope.module.file,node,scope:null,selfHasHtml:false,children:[],passedChildren:[],props};
+      const parent=this.componentFrames.at(-1);if(parent){parent.children.push(frame);if(state.passedChild)parent.passedChildren.push(frame);}else this.routeComponentRoots.push(frame);
+      if(parent&&this.forwardsChildren(props))parent.passedChildren.push(frame);
+      this.componentFrames.push(frame);
+    }
+    try{this.body(fn, [{value: props}], next, true);}finally{if(frame)this.componentFrames.pop();}
+  }
+
+  pageComponent(frame,candidate=null){
+    if(!frame)return candidate;
+    const scope=frame.scope;
+    const guard=wrapperFacts(frame.fn.node.body,scope,this.evaluator).length>0;
+    const passesChildren=this.componentPassesChildren(frame.fn.node.body,scope);
+    const structural=guard||passesChildren;
+    if(structural){const child=frame.passedChildren[0]??null;return child?this.pageComponent(child,candidate):candidate;}
+    const nextCandidate=frame;
+    const returned=this.lastReturnComponent(frame);
+    return returned?this.pageComponent(returned,nextCandidate):nextCandidate;
+  }
+
+  lastReturnComponent(frame){
+    const scope=frame.scope;if(!scope)return null;
+    const branches=returnBranches(frame.fn.node.body,scope,this.evaluator);
+    let chosen=null;
+    const compatible=branches.filter(branch=>!contradicts([...this.facts,...branch.path.flatMap(item=>{const expanded=item.node&&this.evaluator.expandAudience(item.node,scope);const expression=expanded?(item.expression.startsWith('!(')?`!(${expanded})`:expanded):item.expression;return atoms(expression,{file:scope.module.file,line:line(item.node)});})]));
+    if(compatible.length===1)chosen=compatible[0];
+    else chosen=[...branches].sort((a,b)=>(b.expr?.start??0)-(a.expr?.start??0))[0];
+    let expr=unwrap(chosen?.expr);if(expr?.type==='JSXExpressionContainer')expr=unwrap(expr.expression);
+    if(expr?.type!=='JSXElement'||elementValue(this.evaluator,expr,scope).t!=='fn')return null;
+    return frame.children.find(child=>child.node===expr)??null;
+  }
+
+  componentPassesChildren(body,scope){
+    let found=false;const visit=node=>{if(!node?.type||found)return;if(FUNCTIONS.has(node.type))return;
+      if(['Identifier','MemberExpression','OptionalMemberExpression'].includes(node.type)&&this.evaluator.evaluate(node,scope).t==='children'){found=true;return;}
+      if(['JSXIdentifier','JSXMemberExpression'].includes(node.type)&&jsxName(node)==='Outlet'){found=true;return;}
+      for(const child of children(node))visit(child);};visit(body);return found;
+  }
+
+  forwardsChildren(props){
+    const closure=props?.children;if(!closure?.nodes)return false;
+    return closure.nodes.some(node=>node.type==='JSXExpressionContainer'&&this.evaluator.evaluate(node.expression,closure.scope).t==='children');
+  }
+
+  singleComponentChild(closure){
+    if(!closure?.nodes)return false;const nodes=closure.nodes.filter(n=>n.type!=='JSXText'||n.value.trim());
+    return nodes.length===1&&nodes[0].type==='JSXElement'&&elementValue(this.evaluator,nodes[0],closure.scope).t==='fn';
   }
 
   /** Renders what a function returns; component bodies also contribute their page-load effects. */
   body(fn, args, state, isComponent) {
     const scope = this.evaluator.functionScope(fn.node, fn.scope, args, state.depth);
+    if(isComponent&&state.routeOrigin){const frame=this.componentFrames.at(-1);if(frame?.fn.node===fn.node)frame.scope=scope;}
     if (isComponent && this.inRoute && state.routeCandidate !== false && !this.variantDecision) {
       const branches = returnBranches(fn.node.body, scope, this.evaluator);
       const pages = branches.map(b => ({...b, identity: branchIdentity(b.expr, scope, this.evaluator)})).filter(b => b.identity);
       if (new Set(pages.map(b => b.identity)).size > 1) this.variantDecision = pages.map(b => ({facts: this.evaluator.transferContext.remember(b.path.flatMap(item => atoms(item.expression, {file:scope.module.file,line:line(item.node)})),scope)}));
     }
     if (isComponent) this.audience = unique([...this.audience, ...this.evaluator.transferContext.remember(wrapperFacts(fn.node.body, scope, this.evaluator),scope)]);
-    if (isComponent) this.loadEffects(fn.node.body, scope, state, new Set([fn.node]));
+    if (isComponent) {
+      this.loadEffects(fn.node.body, scope, state, new Set([fn.node]));
+      if(this.markup)this.preparePreviewState(fn.node.body,scope);
+    }
     if (fn.node.body.type !== 'BlockStatement') { this.expr(fn.node.body, scope, state); return; }
     this.statements(fn.node.body.body, scope, state);
   }
@@ -602,6 +682,118 @@ class ScreenRenderer {
       if (this.statement(statement, scope, state)) return true;
     }
     return false;
+  }
+
+  previewValue(value){
+    if(value?.t==='lit')return value.v??null;
+    if(value?.t==='array')return value.node.elements.filter(Boolean).map(item=>this.previewValue(this.evaluator.evaluate(item,value.scope)));
+    if(value?.t==='demo-array')return [{}];
+    if(value?.t==='demo-response'||value?.t==='demo-value'||value?.t==='object')return {};
+    return null;
+  }
+
+  preparePreviewState(body,componentScope){
+    const states=new Map(),setters=new Map(),hooks=[],customHooks=[];
+    const visit=(node,insideFunction=false)=>{
+      if(!node?.type)return;
+      if(node!==body&&FUNCTIONS.has(node.type))return;
+      if(node.type==='VariableDeclarator'&&node.id.type==='ArrayPattern'&&node.init?.type==='CallExpression'){
+        const callee=this.evaluator.evaluate(node.init.callee,componentScope);
+        if(callee.t==='external'&&REACT.has(callee.specifier)&&externalName(callee)==='useState'){
+          const name=node.id.elements[0]?.name,setter=node.id.elements[1]?.name;if(!name||!setter)return;
+          const initial=node.init.arguments[0]?this.evaluator.evaluate(node.init.arguments[0],componentScope):{t:'lit',v:undefined};
+          const stateValue=initial.t==='lit'||initial.t==='array'||initial.t==='object'?initial:{t:'unknown'};
+          const record={name,value:stateValue,file:componentScope.module.file,line:line(node),ownerScope:componentScope};states.set(name,record);setters.set(setter,record);
+          componentScope.bindings.set(name,{value:stateValue});componentScope.bindings.set(setter,{value:{t:'preview-setter',record}});
+        }
+      }
+      if(node.type==='CallExpression'){
+        const callee=this.evaluator.evaluate(node.callee,componentScope);
+        if(callee.t==='external'&&REACT.has(callee.specifier)&&EFFECT_HOOKS.has(externalName(callee))){
+          const callback=node.arguments[0]&&this.evaluator.evaluate(node.arguments[0],componentScope);if(callback.t==='fn')hooks.push(callback);
+        }else if(callee.t==='fn'&&this.functionUsesHooks(callee.node,callee.scope)){
+          const hookScope=this.evaluator.functionScope(callee.node,callee.scope,node.arguments.map(expr=>({expr,scope:componentScope})),1);
+          const localStates=new Map(),localHooks=[];this.collectPreviewHook(callee.node.body,hookScope,localStates,localHooks);
+          for(const [key,record] of localStates){const fullKey=`hook:${callee.node.start}:${key}`;states.set(fullKey,record);setters.set(record.setter,record);}
+          hooks.push(...localHooks);
+          const declarator=this.findCallBinding(body,node);
+          customHooks.push({scope:hookScope,fn:callee.node,declarator});
+        }
+      }
+      for(const child of children(node))visit(child,insideFunction);
+    };
+    visit(body);
+    const active=new Set();
+    for(const callback of hooks)this.simulatePreviewFunction(callback,[],active,0);
+    for(const hook of customHooks){const returned=this.lastFunctionReturn(hook.fn.body);if(hook.declarator&&returned)componentScope.bindings.set(hook.declarator.id.name,{value:this.evaluator.evaluate(returned,hook.scope)});}
+    for(const record of states.values())this.previewStates.set(`${componentScope.module.file}:${componentScope.fn?.start}:${record.name}:${record.line}`,record);
+  }
+
+  functionUsesHooks(fn,scope){let found=false;const visit=node=>{if(!node?.type||found||node!==fn&&FUNCTIONS.has(node.type))return;if(node.type==='CallExpression'){const value=this.evaluator.evaluate(node.callee,scope);if(value.t==='external'&&REACT.has(value.specifier)&&['useState',...EFFECT_HOOKS].includes(externalName(value)))found=true;}for(const child of children(node))visit(child);};visit(fn.body);return found;}
+
+  collectPreviewHook(body,scope,states,hooks){
+    const visit=node=>{if(!node?.type||node!==body&&FUNCTIONS.has(node.type))return;
+      if(node.type==='VariableDeclarator'&&node.id.type==='ArrayPattern'&&node.init?.type==='CallExpression'){
+        const callee=this.evaluator.evaluate(node.init.callee,scope);if(callee.t==='external'&&REACT.has(callee.specifier)&&externalName(callee)==='useState'){
+          const name=node.id.elements[0]?.name,setter=node.id.elements[1]?.name;if(name&&setter){const initial=node.init.arguments[0]?this.evaluator.evaluate(node.init.arguments[0],scope):{t:'lit',v:undefined},value=['lit','array','object'].includes(initial.t)?initial:{t:'unknown'},record={name,value,file:scope.module.file,line:line(node),ownerScope:scope,setter};states.set(name,record);scope.bindings.set(name,{value});scope.bindings.set(setter,{value:{t:'preview-setter',record}});}
+        }
+      }
+      if(node.type==='CallExpression'){const callee=this.evaluator.evaluate(node.callee,scope);if(callee.t==='external'&&REACT.has(callee.specifier)&&EFFECT_HOOKS.has(externalName(callee))){const callback=node.arguments[0]&&this.evaluator.evaluate(node.arguments[0],scope);if(callback.t==='fn')hooks.push(callback);}}
+      for(const child of children(node))visit(child);
+    };visit(body);
+  }
+
+  findCallBinding(body,call){let found=null;const visit=node=>{if(!node?.type||found||node!==body&&FUNCTIONS.has(node.type))return;if(node.type==='VariableDeclarator'&&node.init===call&&node.id.type==='Identifier'){found=node;return;}for(const child of children(node))visit(child);};visit(body);return found;}
+
+  lastFunctionReturn(body){let found=null;const visit=node=>{if(!node?.type||node!==body&&FUNCTIONS.has(node.type))return;if(node.type==='ReturnStatement'&&(!found||(node.start??0)>(found.start??0)))found=node;for(const child of children(node))visit(child);};visit(body);return found?.argument??null;}
+
+  simulatePreviewFunction(fn,args,active,depth){
+    if(depth>=this.maxDepth||active.has(fn.node))return false;
+    const scope=this.evaluator.functionScope(fn.node,fn.scope,args,depth+1),next=new Set([...active,fn.node]);
+    return this.simulatePreviewNode(fn.node.body,scope,next,depth+1);
+  }
+
+  simulatePreviewNode(node,scope,active,depth){
+    if(!node?.type||FUNCTIONS.has(node.type))return false;
+    if(node.type==='BlockStatement'){for(const statement of node.body)if(this.simulatePreviewNode(statement,scope,active,depth))return true;return false;}
+    if(node.type==='TryStatement'){this.simulatePreviewNode(node.block,scope,active,depth);if(node.finalizer)this.simulatePreviewNode(node.finalizer,scope,active,depth);return false;}
+    if(node.type==='IfStatement'){
+      const known=truthy(this.evaluator.evaluate(node.test,scope));
+      if(known!==null)return this.simulatePreviewNode(known?node.consequent:node.alternate,scope,active,depth);
+      // Unknown early exits are treated as not taken; unknown two-way effects are not applied.
+      return false;
+    }
+    if(node.type==='ReturnStatement'||node.type==='ThrowStatement')return true;
+    if(node.type==='VariableDeclaration'){
+      for(const declaration of node.declarations){if(declaration.id.type!=='Identifier'||!declaration.init)continue;const value=this.previewExpression(declaration.init,scope);if(value)scope.bindings.set(declaration.id.name,{value});}
+      return false;
+    }
+    if(node.type==='ExpressionStatement'){
+      let expression=unwrap(node.expression);if(expression?.type==='UnaryExpression')expression=unwrap(expression.argument);
+      if(expression?.type==='CallExpression'||expression?.type==='OptionalCallExpression'){
+        const callee=this.evaluator.evaluate(expression.callee,scope);
+        if(callee.t==='preview-setter'){
+          const record=callee.record,arg=expression.arguments[0];let value;
+          if(arg?.type==='ArrowFunctionExpression'||arg?.type==='FunctionExpression')value={t:'unknown'};
+          else value=this.previewExpression(arg,scope)??{t:'unknown'};
+          record.value=value;record.file=scope.module.file;record.line=line(expression);record.ownerScope.bindings.set(record.name,{value});return false;
+        }
+        if(callee.t==='fn')return this.simulatePreviewFunction(callee,expression.arguments.map(expr=>({expr,scope})),active,depth+1);
+      }
+      return false;
+    }
+    for(const child of children(node))if(this.simulatePreviewNode(child,scope,active,depth))return true;
+    return false;
+  }
+
+  previewExpression(expression,scope){
+    const node=unwrap(expression);if(!node)return null;
+    if(node.type==='AwaitExpression'){
+      const call=unwrap(node.argument),lineNo=line(call);
+      return this.load.some(effect=>effect.type==='CALL_API'&&effect.source?.file===scope.module.file&&effect.source?.line===lineNo)?{t:'demo-response'}:this.evaluator.evaluate(node.argument,scope);
+    }
+    if(node.type==='ArrayExpression')return {t:'array',node,scope};
+    return this.evaluator.evaluate(node,scope);
   }
 
   /**
@@ -663,7 +855,7 @@ class ScreenRenderer {
   routerElement(node, name, scope, state, key) {
     if (name === 'Outlet') {
       const [next, ...rest] = state.outlets;
-      if (next) this.renderRoute(next, {...state, outlets: rest});
+      if (next) this.renderRoute(next, {...state, outlets: rest,passedChild:true});
       return;
     }
     if (name === 'Link' || name === 'NavLink') {
@@ -732,6 +924,7 @@ class ScreenRenderer {
   }
 
   intrinsic(node, tag, scope, state, key) {
+    if(state.routeOrigin&&this.componentFrames.length)this.componentFrames.at(-1).selfHasHtml=true;
     if (this.inRoute) this.routeContent++;
     const attrs = this.staticAttributes(node, scope);
     const handlers = this.handlers(node, scope, state);
