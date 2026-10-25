@@ -26,7 +26,9 @@ export function screenNames(screens:Node[],hints:Map<string,NameHint>,routes:Map
   names.set(screen.id,target?`${wildcard?'其他網址':''}轉址到「${target}」`:'轉址頁');}
  const byId=new Map(screens.map(screen=>[screen.id,screen])),groups=new Map<string,string[]>();for(const [id,name]of names)groups.set(name,[...(groups.get(name)||[]),id]);
  for(const [name,ids]of groups)if(ids.length>1){
-  const candidates=new Map(ids.map(id=>{const screen=byId.get(id),source=screen?.attributes.screenNameSourcePath||screen?.attributes.view||screen?.source?.file;return[id,[routes.get(id)?.[0],clean(screen?.attributes.tilesDefinitionName).replace(/^\.+/,''),sourceFileName(source),sourceDirectoryName(source)]];}));
+  const queryIds=ids.filter(id=>byId.get(id)?.attributes.entryQuery);
+  if(queryIds.length){for(const id of queryIds){const query=byId.get(id)!.attributes.entryQuery;names.set(id,`${name}（?${query}）`);}continue;}
+  const candidates=new Map(ids.map(id=>{const screen=byId.get(id),source=screen?.attributes.screenNameSourcePath||screen?.attributes.view||screen?.source?.file;return[id,[screen?.attributes.entryQuery?`?${screen.attributes.entryQuery}`:undefined,routes.get(id)?.[0],clean(screen?.attributes.tilesDefinitionName).replace(/^\.+/,''),sourceFileName(source),sourceDirectoryName(source)]];}));
   for(const id of ids){const available=candidates.get(id)!.filter(Boolean),unique=available.find(value=>ids.filter(other=>candidates.get(other)!.includes(value)).length===1);if(unique)names.set(id,`${name}（${unique}）`);}
  }
  return names;
