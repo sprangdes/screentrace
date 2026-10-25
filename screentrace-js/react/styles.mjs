@@ -20,7 +20,7 @@ export function stylesheets(modules, entries) {
         const key = candidates.join('|');
         if (candidates.length && !seen.has(key)) {
           seen.add(key);
-          result.push({specifier, from: file, line: statement.loc?.start.line ?? 1, candidates});
+          result.push({specifier, ...(packageName(specifier)?{package: packageName(specifier)}:{}), from: file, line: statement.loc?.start.line ?? 1, candidates});
         }
         continue;
       }
@@ -32,6 +32,8 @@ export function stylesheets(modules, entries) {
   entries.forEach(visit);
   return result;
 }
+
+function packageName(specifier){if(specifier.startsWith('.')||specifier.startsWith('/')||/^[a-z]+:/i.test(specifier))return null;const parts=specifier.split('/');return specifier.startsWith('@')?parts.slice(0,2).join('/'):parts[0];}
 
 function cssCandidates(from, specifier) {
   if (specifier.startsWith('.')) {

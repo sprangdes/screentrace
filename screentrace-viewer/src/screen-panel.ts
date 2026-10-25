@@ -58,6 +58,7 @@ export function screenPanel(panel:HTMLElement,index:Index,state:ReviewState,scre
 
  const notices=element('section',undefined,'panel-notices');
  if(screen.attributes.unsupportedComponentFramework==='JSF'){const count=index.screens.filter(s=>s.attributes.unsupportedComponentFramework==='JSF').length,note=element('p',jsfLimitation(count),'notice');note.dataset.jsfReminder='true';notices.append(note);}
+ if(screen.attributes.missingStylePackages){const names=screen.attributes.missingStylePackages.split('|').filter(Boolean).sort();if(names.length)notices.append(element('p',`此畫面的部分樣式來自未安裝的套件：${names.join('、')}`,'notice'));}
  for(const issue of conflicts(index.graph,state).filter(c=>c.screenId===screenId||c.targetScreenId===screenId)){
   const note=element('p',`「${index.nodes.get(issue.screenId)?.name||'畫面'}」保留的「${componentLabelsForScreen(index,issue.screenId).get(issue.componentId)||'按鈕'}」會前往已標記移除的「${index.nodes.get(issue.targetScreenId)?.name||'畫面'}」。`,'notice conflict');
   note.dataset.conflict=`${issue.screenId}:${issue.componentId}`;notices.append(note);

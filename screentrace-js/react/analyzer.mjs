@@ -105,7 +105,9 @@ export function analyzeReact({files = [], maxDepth = 24, markup = false} = {}) {
   const uniqueDiagnostics = new Map();
   for (const item of diagnostics) uniqueDiagnostics.set(JSON.stringify(item), item);
   const result = {screens, routeRedirects, audiences: groups.values, diagnostics: [...uniqueDiagnostics.values()].sort((a, b) => a.source.file.localeCompare(b.source.file) || a.source.line - b.source.line || a.code.localeCompare(b.code))};
-  if (markup) result.stylesheets = stylesheets(modules, shell ? [shell.file] : [...new Set(routes.map(route => route.file))].sort());
+  const sheetImports=stylesheets(modules, shell ? [shell.file] : [...new Set(routes.map(route => route.file))].sort());
+  result.stylesheets=sheetImports.filter(item=>item.package);
+  result.localStylesheets=sheetImports.filter(item=>!item.package);
   return result;
 }
 
