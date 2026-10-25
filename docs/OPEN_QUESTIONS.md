@@ -350,7 +350,7 @@
 ## OQ-036 — WP79：店家偏好面板的條件不足以證明身分矛盾
 
 - 決定：本階段方案 A。面板本體由獨立狀態控制，保守保留面板及 API；WP79 該項驗收改為「保留，附 OQ-036 說明」。不得從開啟按鈕的角色條件或 useState 初始值推論面板不可達。
-- 狀態：RESOLVED（本階段）；方案 B 的跨事件狀態值可達性分析列後續候選，本輪不做。
+- 狀態：RESOLVED。R18 期間採方案 A；之後依需求方決定實作方案 B 的窄規則：以常值初始化的 `useState`，其可能值為初始值加上畫面身分下可達的常值寫入點（含透過區域函式參數的寫入）；setter 或帶參數的寫入函式被當成值傳出、以函式形式更新、或可達寫入點的值無法求值時視為未知，不修剪。reservio `/business/setup` 不再含 `GET /api/preferred-businesses`、`POST /api/preferred-businesses`、`GET /api/businesses/{category}`；其他 35 個畫面不變。見 [ADR 0105](adr/0105-oq036-state-value-reachability.md)。
 
 ## OQ-037 — WP80：認證回傳物件與路由身分的同一性
 

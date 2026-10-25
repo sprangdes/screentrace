@@ -161,3 +161,7 @@
 ## OQ-039 Struts 查詢字串連結修正
 
 - main 上 Struts cookbook、el-example、examples 因相對 `html:link` 帶查詢字串的導覽無法通過 graph 驗證（自 054cf0c 起）。修正後三個模組恢復產出合格圖，其他五個模組位元組不變。詳見 [ADR 0104](adr/0104-oq039-struts-query-link-aliases.md)。
+
+## OQ-036 狀態值可達性
+
+- 共用元件中由頁面狀態控制的區塊，依畫面身分下可達的寫入點判斷是否可能出現。reservio `/business/setup` 移除只有顧客能開啟的常用商家面板及其 3 個 API；其他畫面與非 React 專案不變。詳見 [ADR 0105](adr/0105-oq036-state-value-reachability.md)。

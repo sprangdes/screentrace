@@ -439,8 +439,27 @@ class ScreenRenderer {
   }
 
   condition(node, scope) {
+    const reachable=this.reachableStateCondition(node,scope);if(reachable!==null)return reachable;
     const known = truthy(this.evaluator.evaluate(node, scope));
     if(known!==null)return known;const expression=this.evaluator.expandAudience(node,scope)??text(scope.module,node);return implied(this.facts,expression);
+  }
+
+  reachableStateCondition(node,scope){
+    node=unwrap(node);if(!node)return null;
+    if(node.type==='UnaryExpression'&&node.operator==='!'){const value=this.reachableStateCondition(node.argument,scope);return value===null?null:!value;}
+    if(node.type==='Identifier'){
+      const value=this.evaluator.evaluate(node,scope);if(value.t!=='state-domain')return null;
+      const outcomes=value.values.map(item=>truthy(item));return outcomes.length&&outcomes.every(x=>x!==null&&x===outcomes[0])?outcomes[0]:null;
+    }
+    if(node.type==='BinaryExpression'&&['===','!=='].includes(node.operator)){
+      let left=this.evaluator.evaluate(node.left,scope),right=this.evaluator.evaluate(node.right,scope),domain;
+      if(left.t==='state-domain'){domain=left;}
+      else if(right.t==='state-domain'){domain=right;left=right;right=this.evaluator.evaluate(node.left,scope);}
+      if(!domain||right.t!=='lit')return null;
+      const results=domain.values.map(item=>{const same=item.t==='lit'&&item.v===right.v;return node.operator==='==='?same:!same;});
+      return results.length&&results.every(x=>x===results[0])?results[0]:null;
+    }
+    return null;
   }
 
   reference(node, scope, state) {
@@ -662,12 +681,61 @@ class ScreenRenderer {
     }
     if (isComponent) this.audience = unique([...this.audience, ...this.evaluator.transferContext.remember(wrapperFacts(fn.node.body, scope, this.evaluator),scope)]);
     if (isComponent) {
+      this.prepareStateReachability(fn.node.body,scope);
       this.loadEffects(fn.node.body, scope, state, new Set([fn.node]));
       if(this.markup)this.preparePreviewState(fn.node.body,scope);
     }
     if (fn.node.body.type !== 'BlockStatement') { this.expr(fn.node.body, scope, state); return; }
     this.statements(fn.node.body.body, scope, state);
   }
+
+  prepareStateReachability(body,scope){
+    const states=new Map(),helpers=new Map(),unknown=new Set(),parents=new WeakMap();
+    const collect=(node,parent=null)=>{if(!node?.type)return;if(parent)parents.set(node,parent);if(node.type==='VariableDeclarator'&&node.id.type==='ArrayPattern'&&node.init?.type==='CallExpression'){
+      const hook=this.evaluator.evaluate(node.init.callee,scope);if(hook.t==='external'&&REACT.has(hook.specifier)&&externalName(hook)==='useState'){
+        const name=node.id.elements[0]?.name,setter=node.id.elements[1]?.name,initial=node.init.arguments[0]?this.evaluator.evaluate(node.init.arguments[0],scope):{t:'lit',v:undefined};
+        if(name&&setter&&initial.t==='lit')states.set(setter,{name,values:[initial],writes:[]});
+      }
+    }for(const child of children(node))collect(child,node);};collect(body);
+    if(!states.size)return;
+    const functionNodes=[];const findFns=node=>{if(!node?.type)return;if(FUNCTIONS.has(node.type)&&node!==body)functionNodes.push(node);for(const child of children(node))findFns(child);};findFns(body);
+    const setterByName=new Map([...states].map(([setter,record])=>[setter,record]));
+    for(const fn of functionNodes){const params=fn.params??[];const visit=(node)=>{if(!node?.type||node!==fn&&FUNCTIONS.has(node.type))return;if(node.type==='CallExpression'||node.type==='OptionalCallExpression'){
+        const callee=this.evaluator.evaluate(node.callee,scope),setter=node.callee.type==='Identifier'?setterByName.get(node.callee.name):null;
+        if(setter){const arg=node.arguments[0];if(arg?.type==='Identifier'){const index=params.findIndex(param=>param.type==='Identifier'&&param.name===arg.name);if(index>=0){if(!helpers.has(fn))helpers.set(fn,[]);helpers.get(fn).push({record:setter,index});}else unknown.add(setter);}else if(arg?.type!=='ArrowFunctionExpression'&&arg?.type!=='FunctionExpression'&&this.evaluator.evaluate(arg,scope).t!=='lit')unknown.add(setter);}
+      }for(const child of children(node))visit(child);};visit(fn.body);}
+    const setterReads=new Set();
+    const isEvent= node=>{for(let p=parents.get(node);p;p=parents.get(p))if(p.type==='JSXAttribute'&&/^on[A-Z]/.test(p.name?.name??''))return true;return false;};
+    const eventGuards=node=>{const guards=[];for(let p=parents.get(node);p;p=parents.get(p)){
+      if(p.type==='ConditionalExpression'){const isAlt=node.start>=p.alternate.start&&node.end<=p.alternate.end;guards.push(isAlt?`!(${text(scope.module,p.test)})`:text(scope.module,p.test));}
+      else if(p.type==='IfStatement'&&p.consequent&&node.start>=p.consequent.start&&node.end<=p.consequent.end)guards.push(text(scope.module,p.test));
+      else if(p.type==='IfStatement'&&p.alternate&&node.start>=p.alternate.start&&node.end<=p.alternate.end)guards.push(`!(${text(scope.module,p.test)})`);
+      else if(p.type==='LogicalExpression'&&p.operator==='&&'&&node.start>=p.right.start&&node.end<=p.right.end)guards.push(text(scope.module,p.left));
+    }return guards;};
+    const eligible=(node)=>!isEvent(node)||!contradicts([...this.facts,...eventGuards(node).flatMap(value=>atoms(value,{file:scope.module.file,line:line(node)}))]);
+    const visit=(node,parent=null)=>{if(!node?.type)return;
+      if(node.type==='Identifier'&&setterByName.has(node.name)){
+        const directCall=parent&&(parent.type==='CallExpression'||parent.type==='OptionalCallExpression')&&parent.callee===node;
+        const declaration=parent?.type==='ArrayPattern'||parent?.type==='VariableDeclarator';
+        if(!directCall&&!declaration)unknown.add(setterByName.get(node.name));
+      }
+      if(node.type==='CallExpression'||node.type==='OptionalCallExpression'){
+        const callee=this.evaluator.evaluate(node.callee,scope);let record=node.callee.type==='Identifier'?setterByName.get(node.callee.name):null;
+        if(record){const arg=node.arguments[0];if(arg?.type==='ArrowFunctionExpression'||arg?.type==='FunctionExpression')unknown.add(record);else if(arg?.type==='Identifier'){
+            const owner=functionNodes.find(fn=>{let p=parents.get(node);while(p){if(p===fn)return true;p=parents.get(p);}return false;});const helper=owner&&helpers.get(owner)?.find(item=>item.record===record&&owner.params[item.index]?.name===arg.name);
+            if(helper){for(const call of this.findCalls(body,owner,scope)){const value=this.evaluator.evaluate(call.arguments[helper.index],scope);if(value.t!=='lit')unknown.add(record);else if(eligible(call))record.values.push(value);record.writes.push({file:scope.module.file,line:line(call)});}}
+            else unknown.add(record);
+          }else{const value=this.evaluator.evaluate(arg,scope);if(value.t==='lit'){if(eligible(node))record.values.push(value);record.writes.push({file:scope.module.file,line:line(node)});}else unknown.add(record);}
+        }else if(callee.t==='fn'&&helpers.has(callee.node))for(const item of helpers.get(callee.node)){
+          const value=this.evaluator.evaluate(node.arguments[item.index],scope);if(value.t!=='lit')unknown.add(item.record);else if(eligible(node))item.record.values.push(value);item.record.writes.push({file:scope.module.file,line:line(node)});
+        }
+      }
+      for(const child of children(node))visit(child,node);
+    };visit(body);
+    for(const [setter,record] of states){const value=unknown.has(record)?{t:'unknown'}:{t:'state-domain',values:record.values};scope.bindings.set(record.name,{value});}
+  }
+
+  findCalls(body,fn,scope){const calls=[];const visit=node=>{if(!node?.type)return;if(node.type==='CallExpression'||node.type==='OptionalCallExpression'){const callee=this.evaluator.evaluate(node.callee,scope);if(callee.t==='fn'&&callee.node===fn)calls.push(node);}for(const child of children(node))visit(child);};visit(body);return calls;}
 
   statements(list, scope, state) {
     for (let index = 0; index < list.length; index++) {
