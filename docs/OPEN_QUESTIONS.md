@@ -371,7 +371,7 @@
 - 原因：既有「Navigation target does not match screen route or view」驗證拒絕含查詢參數的 source.jsp 等導覽；完整錯誤及錯誤清單雜湊在 repo 外，報告列數量。本輪未修改目標、Struts 程式、驗證規則或受保護斷言，未跳過驗證來製造輸出。
 - 可選方案：後續另行授權修復 Struts URL／graph 驗證，再完成三個模組的有效圖回歸；本輪只保留兩版本相同既有失敗的證據，不宣稱八模組全部通過。
 - 影響範圍：R18 實際八模組 graph SHA-256 驗收中的上述三個模組。依 R18 §4 停止該項；其他 WP79／WP80 補正、repo 測試及 PR CI 繼續驗證。
-- 狀態：OPEN，另案處理、不阻擋 R18。需求方第三次驗收已確認 main 與 R18 為相同既有問題；未放寬任何既有斷言。
+- 狀態：RESOLVED。根因為 054cf0c（WP69）開始解析相對 `html:link` 目標後，直接連到 JSP 畫面的 CONFIRMED 導覽只把去除查詢字串的路徑登記為 route alias，元件 `target` 保留查詢字串而無法通過 GraphIntegrityValidator。修正為同時把元件 `target` 原值登記為 alias（與 R16 aa8a9f8 對 action 導覽的作法一致）；驗證規則未放寬。cookbook、el-example、examples 恢復產出合格圖；其他五個 Struts 模組 graph 與 preview SHA-256 不變。見 [ADR 0104](adr/0104-oq039-struts-query-link-aliases.md)。
 
 ## OQ-040 — R18-B 外部呼叫端點的 API 呈現
 
