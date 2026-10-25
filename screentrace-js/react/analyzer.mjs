@@ -448,7 +448,10 @@ class ScreenRenderer {
     const value = this.evaluator.evaluate(node, scope);
     const next = {...state, stack: [...state.stack, node]};
     if (value.t === 'jsx') this.expr(value.node, value.scope, next);
-    else if (value.t === 'children') this.childNodes(value.closure.nodes, value.closure.scope, {...next, anchors: value.closure.anchors, keys: value.closure.keys, form: value.closure.form ?? state.form});
+    else if (value.t === 'children') {
+      const closure=value.closure,nested=closure.nodes.some(child=>child.type==='JSXExpressionContainer'&&this.evaluator.evaluate(child.expression,closure.scope).t==='children');
+      for(const child of closure.nodes){const forwarded=child.type==='JSXExpressionContainer'&&this.evaluator.evaluate(child.expression,closure.scope).t==='children';this.expr(child,closure.scope,{...next,passedChild:nested?forwarded:true,anchors:closure.anchors,keys:closure.keys,form:closure.form??state.form});}
+    }
     else if (value.t === 'array') this.expr(value.node, value.scope, next);
     else if (value.t === 'lit' && (typeof value.v === 'string' || typeof value.v === 'number')) this.emitText(String(value.v), state);
     else if (value.t === 'unknown') {
@@ -501,6 +504,7 @@ class ScreenRenderer {
         const fn = child.type === 'JSXExpressionContainer' ? unwrap(child.expression) : null;
         if (fn && (fn.type === 'ArrowFunctionExpression' || fn.type === 'FunctionExpression'))
           this.body({t: 'fn', node: fn, scope: closure.scope}, args, {...state, anchors: closure.anchors, keys: closure.keys, form: closure.form ?? state.form}, false);
+        else this.expr(child,closure.scope,{...state,passedChild:true,anchors:closure.anchors,keys:closure.keys,form:closure.form??state.form});
       }
       return;
     }
@@ -597,8 +601,9 @@ class ScreenRenderer {
     const next = {...state, depth: state.depth + 1, stack: [...state.stack, fn.node], anchors: [...state.anchors, this.anchor(node, file)], keys: key ? [...state.keys, key] : state.keys};
     let frame=null;
     if(state.routeOrigin){
-      frame={fn,name:fn.name,file:fn.scope.module.file,scope:null,selfHasHtml:false,children:[],props};
-      const parent=this.componentFrames.at(-1);if(parent)parent.children.push(frame);else this.routeComponentRoots.push(frame);
+      frame={fn,name:fn.name,file:fn.scope.module.file,scope:null,selfHasHtml:false,children:[],passedChildren:[],props};
+      const parent=this.componentFrames.at(-1);if(parent){parent.children.push(frame);if(state.passedChild)parent.passedChildren.push(frame);}else this.routeComponentRoots.push(frame);
+      if(parent&&this.forwardsChildren(props))parent.passedChildren.push(frame);
       this.componentFrames.push(frame);
     }
     try{this.body(fn, [{value: props}], next, true);}finally{if(frame)this.componentFrames.pop();}
@@ -609,8 +614,9 @@ class ScreenRenderer {
     const scope=frame.scope;
     const guard=wrapperFacts(frame.fn.node.body,scope,this.evaluator).length>0;
     const passesChildren=this.componentPassesChildren(frame.fn.node.body,scope);
-    const skip=guard||(passesChildren&&frame.children.length>0)||(!frame.selfHasHtml&&frame.children.length===1);
-    return skip?this.pageComponent(frame.children[0]):frame;
+    const child=frame.passedChildren[0]??(!passesChildren&&frame.children.length===1?frame.children[0]:null);
+    const skip=(guard||passesChildren||!frame.selfHasHtml)&&!!child;
+    return skip?this.pageComponent(child):frame;
   }
 
   componentPassesChildren(body,scope){
@@ -618,6 +624,11 @@ class ScreenRenderer {
       if(['Identifier','MemberExpression','OptionalMemberExpression'].includes(node.type)&&this.evaluator.evaluate(node,scope).t==='children'){found=true;return;}
       if(['JSXIdentifier','JSXMemberExpression'].includes(node.type)&&jsxName(node)==='Outlet'){found=true;return;}
       for(const child of children(node))visit(child);};visit(body);return found;
+  }
+
+  forwardsChildren(props){
+    const closure=props?.children;if(!closure?.nodes)return false;
+    return closure.nodes.some(node=>node.type==='JSXExpressionContainer'&&this.evaluator.evaluate(node.expression,closure.scope).t==='children');
   }
 
   /** Renders what a function returns; component bodies also contribute their page-load effects. */
@@ -798,7 +809,7 @@ class ScreenRenderer {
   routerElement(node, name, scope, state, key) {
     if (name === 'Outlet') {
       const [next, ...rest] = state.outlets;
-      if (next) this.renderRoute(next, {...state, outlets: rest});
+      if (next) this.renderRoute(next, {...state, outlets: rest,passedChild:true});
       return;
     }
     if (name === 'Link' || name === 'NavLink') {
