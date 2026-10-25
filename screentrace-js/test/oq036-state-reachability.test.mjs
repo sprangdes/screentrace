@@ -43,9 +43,9 @@ test('OQ-036 a setter passed to another component keeps the panel possible', () 
   assert.ok(hasFavorites(screen(result, '/staff')), JSON.stringify(apis(screen(result, '/staff'))));
 });
 
-test('OQ-036 an opener called with a non-literal value keeps the panel possible', () => {
-  const result = run(`function TopNav({choice}){ const [panel, setPanel] = useState(null); const close = () => setPanel(null); const open = (p) => { setPanel(p); };
-    return <><nav>{user?.kind === 'staff' ? <a href="/desk">Desk</a> : <button type="button" onClick={() => open(choice)}>Favorites</button>}</nav>${PANEL}</>; }`);
+test('OQ-036 an opener reachable on the screen and called with a non-literal value keeps the panel possible', () => {
+  const result = run(`function TopNav(){ const choice = window.localStorage.getItem('panel'); const [panel, setPanel] = useState(null); const close = () => setPanel(null); const open = (p) => { setPanel(p); };
+    return <><nav>{user?.kind === 'staff' ? <a href="/desk">Desk</a> : null}<button type="button" onClick={() => open(choice)}>Favorites</button></nav>${PANEL}</>; }`);
   assert.ok(hasFavorites(screen(result, '/staff')), JSON.stringify(apis(screen(result, '/staff'))));
 });
 
