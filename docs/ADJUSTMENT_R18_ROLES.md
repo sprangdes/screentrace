@@ -165,7 +165,7 @@
    - preview-model 每個 React 畫面新增 `previewState`：列出參與求值的每個狀態變數、模擬後的值，以及設定該值的來源（檔案:行號）。本輪不做狀態切換介面。
    - JSP、Struts、Spring MVC 畫面的預覽不變。
 2. **畫面元件與名稱**：
-   - React SCREEN 的 `view`、`viewSource` 改為「頁面元件」：從路由元素開始（變體則從該變體分支回傳的元素開始），依序略過以下三種元件：Guard（WP78 定義）、外框（輸出中把 `children` prop 或 `<Outlet/>` 原樣放入的元件）、純組合（輸出中沒有任何小寫 HTML 元素，而且略過 Guard 與外框後只剩唯一一個元件的元件）。第一個不屬於這三種的元件就是頁面元件。被略過的元件仍列在 `viewSources`。
+   - React SCREEN 的 `view`、`viewSource` 改為「頁面元件」：從路由元素開始（變體則從該變體分支回傳的元素開始），依序略過以下三種元件：Guard（WP78 定義）、外框（輸出中把 `children` prop 或 `<Outlet/>` 原樣放入的元件）、純組合（輸出中沒有任何小寫 HTML 元素，而且略過 Guard 與外框後只剩唯一一個元件的元件）。第一個不屬於這三種的元件就是頁面元件。被略過的元件仍列在 `viewSources`。略過 Guard 或外框時，下一個要檢查的是傳給它的 children（JSX 子元素，或 children prop 的值；以 `<Outlet/>` 放入時為對應的子路由元素）；外框或 Guard 自己輸出的其他元件，一律不列入頁面元件候選。
    - JSX spread 屬性 `{...expr}`：`expr` 可求值為物件字面值時，其屬性視為 props；寫在 spread 之前的同名屬性被覆蓋，寫在之後的會覆蓋 spread 的值。
    - 畫面顯示名稱沿用 viewer 既有的 `screenNames` 規則，不修改；同名時由既有的消歧規則，依新的 `view` 加註區分。
    - SCREEN 節點的 ID 與 `name` 不得改變。
