@@ -8,6 +8,8 @@ public final class StableGraphIds {
   private StableGraphIds() { }
   public static String screen(String relativeView) { return ApplicationGraph.id(NodeType.SCREEN, normalize(relativeView)); }
   public static String endpoint(String method, String route) { return ApplicationGraph.id(NodeType.ENDPOINT,key(method.toUpperCase(Locale.ROOT),route)); }
+  /** A source method: file, declaring type and signature with parameter types, so overloads differ and moving code does not. */
+  public static String handler(String relativeSource, String type, String signature) { return ApplicationGraph.id(NodeType.HANDLER,key(normalize(relativeSource),type,signature)); }
   public static String component(String path, ComponentKind kind, Map<String,String> attributes, int occurrence) {
     if(occurrence<0) throw new IllegalArgumentException("Negative occurrence");
     List<String> fields=new ArrayList<>(List.of(normalize(path),kind.name()));

@@ -14,6 +14,7 @@ import io.screentrace.core.ApplicationGraph.GraphNode;
 import io.screentrace.core.ApplicationGraph.NodeType;
 import io.screentrace.core.ApplicationGraph.Relationship;
 import io.screentrace.core.ApplicationGraph.SourceLocation;
+import io.screentrace.core.StableGraphIds;
 import io.screentrace.scanner.ProjectScanner.ProjectInventory;
 import io.screentrace.scanner.SafeProjectFiles;
 import java.io.IOException;
@@ -81,7 +82,7 @@ public final class SpringBootAnalyzer {
         SpringMappingPaths.report(declaredPaths, source, controller.typeName() + "." + method.getNameAsString() + "()", state.diagnostics);
         List<String> methodPaths = SpringMappingPaths.effective(declaredPaths);
         String handlerName = controller.typeName() + "." + method.getNameAsString() + "()";
-        String handlerId = ApplicationGraph.id(NodeType.HANDLER, controller.relative() + ":" + handlerName + ":" + source.line());
+        String handlerId = StableGraphIds.handler(controller.relative(), controller.declaration().getFullyQualifiedName().orElse(controller.typeName()), method.getSignature().asString());
         addNode(state.nodes, new GraphNode(handlerId, NodeType.HANDLER, handlerName,
                 Map.of("class", controller.typeName(), "method", method.getNameAsString()), source, Confidence.CONFIRMED));
 

@@ -13,6 +13,7 @@ import io.screentrace.core.ApplicationGraph.GraphNode;
 import io.screentrace.core.ApplicationGraph.NodeType;
 import io.screentrace.core.ApplicationGraph.Relationship;
 import io.screentrace.core.ApplicationGraph.SourceLocation;
+import io.screentrace.core.StableGraphIds;
 import io.screentrace.scanner.ProjectScanner.ProjectInventory;
 import io.screentrace.scanner.SafeProjectFiles;
 import io.screentrace.parser.jsp.JspAnalysis;
@@ -154,7 +155,7 @@ public final class SpringMvcAnalyzer {
     private static void addMapping(ClassOrInterfaceDeclaration type, MethodDeclaration method, AnnotationExpr mapping, String relative, List<String> bases, Map<String, String> constants, boolean rest, State state) {
         SourceLocation source = new SourceLocation(relative, method.getBegin().map(p -> p.line).orElse(1));
         String handlerName = type.getNameAsString() + "." + method.getNameAsString() + "()";
-        String handlerId = ApplicationGraph.id(NodeType.HANDLER, relative + ":" + handlerName + ":" + source.line());
+        String handlerId = StableGraphIds.handler(relative, type.getFullyQualifiedName().orElse(type.getNameAsString()), method.getSignature().asString());
         addNode(state, new GraphNode(handlerId, NodeType.HANDLER, handlerName, Map.of("class", type.getNameAsString(), "method", method.getNameAsString()), source, Confidence.CONFIRMED));
         var declaredChildren = SpringMappingPaths.of(mapping, type);
         SpringMappingPaths.report(declaredChildren, source, handlerName, state.diagnostics);
