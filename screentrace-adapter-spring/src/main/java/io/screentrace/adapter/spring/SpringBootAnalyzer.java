@@ -5,7 +5,6 @@ import com.github.javaparser.ast.body.MethodDeclaration;
 import com.github.javaparser.ast.expr.AnnotationExpr;
 import com.github.javaparser.ast.expr.Expression;
 import com.github.javaparser.ast.expr.NormalAnnotationExpr;
-import com.github.javaparser.ast.expr.SingleMemberAnnotationExpr;
 import com.github.javaparser.ast.nodeTypes.NodeWithAnnotations;
 import io.screentrace.core.ApplicationGraph;
 import io.screentrace.core.ApplicationGraph.Confidence;
@@ -31,7 +30,6 @@ public final class SpringBootAnalyzer {
     private static final String REQUEST_MAPPING = "RequestMapping";
     private static final String ROUTE_SEPARATOR = "/";
     private static final Set<String> MAPPINGS = Set.of(REQUEST_MAPPING, "GetMapping", "PostMapping", "PutMapping", "DeleteMapping", "PatchMapping");
-    private static final Set<String> PATH_NAMES = Set.of("value", "path");
 
     public ApplicationGraph analyze(ProjectInventory inventory) throws IOException {
         AnalysisState state = new AnalysisState(inventory.root(), inventory.javaFiles());
@@ -65,10 +63,9 @@ public final class SpringBootAnalyzer {
             return;
         }
         boolean rest = annotation(type, "RestController") != null || annotation(type,"ResponseBody")!=null;
-        List<String> bases = paths(annotation(type, REQUEST_MAPPING));
-        if (bases.isEmpty()) {
-            bases = List.of("");
-        }
+        var declaredBases = SpringMappingPaths.of(annotation(type, REQUEST_MAPPING), type);
+        SpringMappingPaths.report(declaredBases, new SourceLocation(relative, type.getBegin().map(position -> position.line).orElse(1)), type.getNameAsString(), state.diagnostics);
+        List<String> bases = SpringMappingPaths.effective(declaredBases);
         for (MethodDeclaration method : type.getMethods()) {
             java.util.Optional<AnnotationExpr> mapping = mapping(method);
             if (mapping.isPresent()) {
@@ -79,11 +76,10 @@ public final class SpringBootAnalyzer {
 
     private void parseMapping(MethodDeclaration method, AnnotationExpr mapping, ControllerContext controller, AnalysisState state) {
         String httpMethod = httpMethod(mapping);
-        List<String> methodPaths = paths(mapping);
-        if (methodPaths.isEmpty()) {
-            methodPaths = List.of("");
-        }
         SourceLocation source = new SourceLocation(controller.relative(), method.getBegin().map(position -> position.line).orElse(1));
+        var declaredPaths = SpringMappingPaths.of(mapping, controller.declaration());
+        SpringMappingPaths.report(declaredPaths, source, controller.typeName() + "." + method.getNameAsString() + "()", state.diagnostics);
+        List<String> methodPaths = SpringMappingPaths.effective(declaredPaths);
         String handlerName = controller.typeName() + "." + method.getNameAsString() + "()";
         String handlerId = ApplicationGraph.id(NodeType.HANDLER, controller.relative() + ":" + handlerName + ":" + source.line());
         addNode(state.nodes, new GraphNode(handlerId, NodeType.HANDLER, handlerName,
@@ -149,27 +145,6 @@ public final class SpringBootAnalyzer {
 
     private static AnnotationExpr annotation(NodeWithAnnotations<?> node, String name) {
         return node.getAnnotations().stream().filter(candidate -> candidate.getNameAsString().equals(name)).findFirst().orElse(null);
-    }
-
-    private static List<String> paths(AnnotationExpr annotation) {
-        if (annotation == null) {
-            return List.of();
-        }
-        List<String> paths = new ArrayList<>();
-        if (annotation instanceof SingleMemberAnnotationExpr single) {
-            literals(single.getMemberValue(), paths);
-        } else if (annotation instanceof NormalAnnotationExpr normal) {
-            normal.getPairs().stream().filter(pair -> PATH_NAMES.contains(pair.getNameAsString())).forEach(pair -> literals(pair.getValue(), paths));
-        }
-        return paths;
-    }
-
-    private static void literals(Expression expression, List<String> values) {
-        if (expression.isStringLiteralExpr()) {
-            values.add(expression.asStringLiteralExpr().asString());
-        } else if (expression.isArrayInitializerExpr()) {
-            expression.asArrayInitializerExpr().getValues().forEach(value -> literals(value, values));
-        }
     }
 
     private static String httpMethod(AnnotationExpr mapping) {

@@ -5,7 +5,6 @@ import com.github.javaparser.ast.body.MethodDeclaration;
 import com.github.javaparser.ast.expr.AnnotationExpr;
 import com.github.javaparser.ast.expr.Expression;
 import com.github.javaparser.ast.expr.NormalAnnotationExpr;
-import com.github.javaparser.ast.expr.SingleMemberAnnotationExpr;
 import io.screentrace.core.ApplicationGraph;
 import io.screentrace.core.ApplicationGraph.Confidence;
 import io.screentrace.core.ApplicationGraph.Diagnostic;
@@ -41,7 +40,6 @@ import org.w3c.dom.NodeList;
 /** Static analysis for annotation-based, server-rendered Spring MVC applications. */
 public final class SpringMvcAnalyzer {
     private static final Set<String> MAPPINGS = Set.of("RequestMapping", "GetMapping", "PostMapping", "PutMapping", "DeleteMapping", "PatchMapping");
-    private static final Set<String> PATH_NAMES = Set.of("value", "path");
 
     public ApplicationGraph analyze(ProjectInventory inventory) throws IOException {
         State state = new State(inventory.root(), inventory.javaFiles());
@@ -138,8 +136,9 @@ public final class SpringMvcAnalyzer {
                 AnnotationExpr controller = annotation(type, "Controller");
                 boolean rest = annotation(type, "RestController") != null;
                 if (controller == null && !rest) continue;
-                List<String> bases = paths(annotation(type, "RequestMapping"));
-                if (bases.isEmpty()) bases = List.of("");
+                var declaredBases = SpringMappingPaths.of(annotation(type, "RequestMapping"), type);
+                SpringMappingPaths.report(declaredBases, new SourceLocation(relative, type.getBegin().map(p -> p.line).orElse(1)), type.getNameAsString(), state.diagnostics);
+                List<String> bases = SpringMappingPaths.effective(declaredBases);
                 Map<String, String> constants = viewConstants(type);
                 for (MethodDeclaration method : type.getMethods()) {
                     AnnotationExpr mapping = method.getAnnotations().stream().filter(a -> MAPPINGS.contains(a.getNameAsString())).findFirst().orElse(null);
@@ -157,8 +156,9 @@ public final class SpringMvcAnalyzer {
         String handlerName = type.getNameAsString() + "." + method.getNameAsString() + "()";
         String handlerId = ApplicationGraph.id(NodeType.HANDLER, relative + ":" + handlerName + ":" + source.line());
         addNode(state, new GraphNode(handlerId, NodeType.HANDLER, handlerName, Map.of("class", type.getNameAsString(), "method", method.getNameAsString()), source, Confidence.CONFIRMED));
-        List<String> children = paths(mapping);
-        if (children.isEmpty()) children = List.of("");
+        var declaredChildren = SpringMappingPaths.of(mapping, type);
+        SpringMappingPaths.report(declaredChildren, source, handlerName, state.diagnostics);
+        List<String> children = SpringMappingPaths.effective(declaredChildren);
         var returns=rest?List.<SpringControllerReturns.Target>of():SpringControllerReturns.extract(method,relative,type.getNameAsString(),constants);
         List<String> views = returns.stream().filter(t->t.kind()!=SpringControllerReturns.Kind.UNKNOWN)
             .map(t->t.kind()==SpringControllerReturns.Kind.VIEW?t.value():(t.kind()==SpringControllerReturns.Kind.FORWARD?"forward:":"redirect:")+t.value()).distinct().toList();
@@ -693,14 +693,6 @@ public final class SpringMvcAnalyzer {
     }
     private static AnnotationExpr annotation(ClassOrInterfaceDeclaration type, String name) { return type.getAnnotations().stream().filter(a -> a.getNameAsString().equals(name)).findFirst().orElse(null); }
     private static AnnotationExpr annotation(MethodDeclaration method, String name) { return method.getAnnotations().stream().filter(a -> a.getNameAsString().equals(name)).findFirst().orElse(null); }
-    private static List<String> paths(AnnotationExpr annotation) {
-        if (annotation == null) return List.of();
-        List<String> values = new ArrayList<>();
-        if (annotation instanceof SingleMemberAnnotationExpr single) literals(single.getMemberValue(), values);
-        if (annotation instanceof NormalAnnotationExpr normal) normal.getPairs().stream().filter(p -> PATH_NAMES.contains(p.getNameAsString())).forEach(p -> literals(p.getValue(), values));
-        return values;
-    }
-    private static void literals(Expression value, List<String> values) { if (value.isStringLiteralExpr()) values.add(value.asStringLiteralExpr().asString()); else if (value.isArrayInitializerExpr()) value.asArrayInitializerExpr().getValues().forEach(v -> literals(v, values)); }
     private static String httpMethod(AnnotationExpr mapping) {
         if (!mapping.getNameAsString().equals("RequestMapping")) return Map.of("GetMapping", "GET", "PostMapping", "POST", "PutMapping", "PUT", "DeleteMapping", "DELETE", "PatchMapping", "PATCH").getOrDefault(mapping.getNameAsString(), "ANY");
         if (mapping instanceof NormalAnnotationExpr normal) return normal.getPairs().stream().filter(p -> p.getNameAsString().equals("method")).map(p -> p.getValue().toString().replace("RequestMethod.", "")).findFirst().orElse("ANY");
