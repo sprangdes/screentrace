@@ -107,6 +107,45 @@ class NonInteractiveCliTest {
     assertEquals(2,missing.exitCode(),missing.output());assertTrue(missing.output().contains("找不到專案資料夾：no-such-project"),missing.output());assertFalse(missing.output().contains("Exception"),missing.output());
   }
 
+  @Test void sameNamedProjectFromAnotherFolderDoesNotOverwriteItsResults() throws Exception {
+    Path workspace=Files.createTempDirectory("screentrace-same-name-"),home=Files.createDirectory(workspace.resolve("home")),screenTrace=Files.createDirectory(workspace.resolve("screentrace"));
+    Path first=copyFixture(Files.createDirectory(workspace.resolve("a")),"spring-mvc-jsp"),second=copyFixture(Files.createDirectory(workspace.resolve("b")),"spring-mvc-jsp");
+    Path graph=screenTrace.resolve("analyze/spring-mvc-jsp/application-graph.json");
+    Result analyzed=runPath(home,screenTrace,workspace,"analyze",first.toString());
+    assertEquals(0,analyzed.exitCode(),analyzed.output());
+    byte[] before=Files.readAllBytes(graph);
+    Result refused=runPath(home,screenTrace,workspace,"analyze",second.toString());
+    assertEquals(2,refused.exitCode(),refused.output());
+    assertTrue(refused.output().contains("已存放另一個來源的分析結果"),refused.output());
+    assertTrue(refused.output().contains(first.toRealPath().toString()),refused.output());
+    assertFalse(refused.output().contains("Exception"),refused.output());
+    assertArrayEquals(before,Files.readAllBytes(graph),"the first project's graph must stay untouched");
+    Result again=runPath(home,screenTrace,workspace,"analyze",first.toString());
+    assertEquals(0,again.exitCode(),again.output());
+  }
+
+  @Test void unreadableExistingGraphStopsAnalysisInsteadOfOverwriting() throws Exception {
+    Path workspace=Files.createTempDirectory("screentrace-unreadable-graph-"),home=Files.createDirectory(workspace.resolve("home")),screenTrace=Files.createDirectory(workspace.resolve("screentrace"));
+    Path project=copyFixture(Files.createDirectory(workspace.resolve("projects")),"spring-mvc-jsp");
+    Path graph=Files.createDirectories(screenTrace.resolve("analyze/spring-mvc-jsp")).resolve("application-graph.json");
+    Files.writeString(graph,"not json");
+    Result refused=runPath(home,screenTrace,workspace,"analyze",project.toString());
+    assertEquals(2,refused.exitCode(),refused.output());
+    assertTrue(refused.output().contains("無法確認輸出資料夾"),refused.output());
+    assertFalse(refused.output().contains("Exception"),refused.output());
+    assertEquals("not json",Files.readString(graph));
+  }
+
+  @Test void reanalyzingAProjectUnderTheHomeFolderIsNotMistakenForAnotherSource() throws Exception {
+    Path workspace=Files.createTempDirectory("screentrace-home-project-"),home=Files.createDirectory(workspace.resolve("home")),screenTrace=Files.createDirectory(workspace.resolve("screentrace"));
+    Path project=copyFixture(Files.createDirectory(home.resolve("projects")),"spring-mvc-jsp");
+    Result first=runPath(home,screenTrace,workspace,"analyze",project.toString());
+    assertEquals(0,first.exitCode(),first.output());
+    assertTrue(Files.readString(screenTrace.resolve("analyze/spring-mvc-jsp/application-graph.json")).contains("[home]"),"the recorded source path is redacted");
+    Result again=runPath(home,screenTrace,workspace,"analyze",project.toString());
+    assertEquals(0,again.exitCode(),again.output());
+  }
+
   @Test void projectPathUsesTheConfiguredOutputRootWhenOneExists() throws Exception {
     Path workspace=Files.createTempDirectory("screentrace-path-config-"),home=workspace.resolve("home"),output=Files.createDirectory(workspace.resolve("output"));
     Path projects=Files.createDirectory(workspace.resolve("projects")),project=copyFixture(projects,"spring-mvc-jsp");

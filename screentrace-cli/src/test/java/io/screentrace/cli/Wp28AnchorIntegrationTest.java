@@ -18,6 +18,7 @@ class Wp28AnchorIntegrationTest {
   Files.writeString(web.resolve("four.jsp"),"<%@ taglib prefix=\"t\" tagdir=\"/WEB-INF/tags\" %>\n<t:item href=\"/a\"/>\n<t:item href=\"/b\"/>\n<t:item href=\"/c\"/>\n<t:item href=\"/d\"/>");
   var method=ScreenTraceCli.class.getDeclaredMethod("analyze",ProjectCatalog.Project.class,WorkspaceSettings.class);method.setAccessible(true);
   Path outputs=repo.resolve("screentrace-cli/target/wp28-fixtures");
+  if(Files.exists(outputs))try(var stale=Files.walk(outputs)){for(Path stalePath:stale.sorted(java.util.Comparator.reverseOrder()).toList())Files.delete(stalePath);}
   for(var run:List.of("first","second"))method.invoke(null,new ProjectCatalog.Project("anchor-fixture",source,outputs.resolve(run)),new WorkspaceSettings(source.getParent(),outputs));
   for(var file:List.of("application-graph.json","preview-model.json","viewer-documents.json","report/screentrace-report.html"))assertArrayEquals(Files.readAllBytes(outputs.resolve("first").resolve(file)),Files.readAllBytes(outputs.resolve("second").resolve(file)),file);
   var mapper=new ObjectMapper();var graph=mapper.readValue(outputs.resolve("first/application-graph.json").toFile(),ApplicationGraph.class);assertDoesNotThrow(()->GraphIntegrityValidator.requireAnalysis(graph));

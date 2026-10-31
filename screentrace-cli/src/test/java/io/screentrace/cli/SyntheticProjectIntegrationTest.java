@@ -62,6 +62,7 @@ class SyntheticProjectIntegrationTest {
             Path workspace = WorkspaceSettings.defaultFile().getParent();
             Path manifest = root().resolve("docs/examples/component-library.sample.json");
             Path outputs = root().resolve("screentrace-cli/target/wp10-fixtures");
+            if(Files.exists(outputs))try(var stale=Files.walk(outputs)){for(Path stalePath:stale.sorted(java.util.Comparator.reverseOrder()).toList())Files.delete(stalePath);}
             for (String family : List.of("struts1", "struts1-spring", "spring-mvc-jsp", "spring-boot-jsp")) {
                 Path original = fixtures.resolve(family);
                 Path source = temp.resolve("home/projects").resolve(family);
