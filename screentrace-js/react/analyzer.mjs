@@ -41,7 +41,7 @@ export function analyzeReact({files = [], maxDepth = 24, markup = false} = {}) {
     seen.set(route.path, route);
     const base = new ScreenRenderer(evaluator, occurrences, diagnostics, maxDepth, false).render(route, shell);
     const ordinaryVariants = base.variantDecision ?? [null];
-    const queryEntry=findQueryEntry(base.audienceOriginal,modules.get(base.file));
+    const queryEntry=findQueryEntryInSources(base.audienceOriginal,modules,base.file);
     const variants=queryEntry?ordinaryVariants.flatMap(original=>{
       const inherited=original?.facts??base.audienceOriginal;
       const rest=inherited.filter(fact=>fact.text!==queryEntry.atom.text);
@@ -125,6 +125,13 @@ export function analyzeReact({files = [], maxDepth = 24, markup = false} = {}) {
   result.stylesheets=sheetImports.filter(item=>item.package);
   result.localStylesheets=sheetImports.filter(item=>!item.package);
   return result;
+}
+
+/** Each guard atom is read in the module it came from: a query guard imported from another file splits the route too. */
+function findQueryEntryInSources(audience,modules,routeFile){
+  const fileOf=atom=>atom.source?.file??routeFile,files=[...new Set((audience??[]).map(fileOf))].sort();
+  for(const file of [routeFile,...files.filter(item=>item!==routeFile)]){const found=findQueryEntry((audience??[]).filter(atom=>fileOf(atom)===file),modules.get(file));if(found)return found;}
+  return null;
 }
 
 function findQueryEntry(audience,module){
