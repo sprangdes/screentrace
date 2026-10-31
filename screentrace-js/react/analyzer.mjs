@@ -1042,7 +1042,7 @@ class ScreenRenderer {
     if (kind) {
       const component = this.record(node, scope, state, key, {kind, tag, attrs, handlers, target: tag === 'a' ? attrs.href ?? null : null});
       if (out.tag) out.attributes['data-st-expansion-anchor'] = component.anchor;
-      if (tag === 'a' && attrs.href && !attrs.href.startsWith('#')) component.behaviors.push(this.effect('NAVIGATE', 'click', node, scope, unguarded(state), {urls: cleanUrls([attrs.href]), expression: attrs.href, fullPage:true}));
+      if (tag === 'a' && attrs.href && !attrs.href.startsWith('#')) component.behaviors.push(this.effect('NAVIGATE', 'click', node, scope, unguarded(state), {urls: cleanUrls([attrs.href]), entryUrls: hrefEntryUrls(this.evaluator, node, scope, attrs.href), expression: attrs.href, fullPage:true}));
       if (kind === 'FORM') next = {...next, form: component};
       if (kind === 'SUBMIT' && state.form) {
         component.form = state.form.key;
@@ -1293,9 +1293,10 @@ class EffectRunner {
       const target = node.arguments[0];
       const candidates = target ? this.renderer.destinationChoices(target,scope,where) : null;
       if (candidates) {
-        for (const candidate of candidates) this.effects.push(this.renderer.effect('NAVIGATE',this.event,node,scope,{...where,guards:[...where.guards,...candidate.conditions]}, {...candidate,contextWrites:[...this.contextWrites],source:{file:scope.module.file,line:line(node)},trace:[...trace,...candidate.trace],expression:text(scope.module,node)}));
+        const entryUrls = this.evaluator.strings(target, scope);
+        for (const candidate of candidates) this.effects.push(this.renderer.effect('NAVIGATE',this.event,node,scope,{...where,guards:[...where.guards,...candidate.conditions]}, {...candidate,entryUrls,contextWrites:[...this.contextWrites],source:{file:scope.module.file,line:line(node)},trace:[...trace,...candidate.trace],expression:text(scope.module,node)}));
       } else if (target && !(this.evaluator.evaluate(target, scope).t === 'lit' && typeof this.evaluator.evaluate(target, scope).v === 'number'))
-        this.effects.push(this.renderer.effect('NAVIGATE', this.event, node, scope, where, {...extra, urls:this.renderer.urlsOf(target,scope), expression: text(scope.module, node)}));
+        this.effects.push(this.renderer.effect('NAVIGATE', this.event, node, scope, where, {...extra, urls:this.renderer.urlsOf(target,scope), entryUrls:this.evaluator.strings(target,scope), expression: text(scope.module, node)}));
     } else if (value.t === 'fn' && !active.has(value.node)) {
       const step = {callee: text(scope.module, callee).slice(0, 120), source: {file: scope.module.file, line: line(node)}};
       this.run(value, node.arguments.map(expr => ({expr, scope})), active, [...trace, step], guards);
@@ -1327,7 +1328,7 @@ class EffectRunner {
 
   fullPage(node, target, scope, guards, trace) {
     const where = {...this.state, guards: [...this.state.guards, ...guards]};
-    this.effects.push(this.renderer.effect('NAVIGATE', this.event, node, scope, where, {trace, contextWrites:[...this.contextWrites], urls: cleanUrls(this.evaluator.strings(target, scope)), expression: text(scope.module, node).slice(0, 400), fullPage: true}));
+    this.effects.push(this.renderer.effect('NAVIGATE', this.event, node, scope, where, {trace, contextWrites:[...this.contextWrites], urls: cleanUrls(this.evaluator.strings(target, scope)), entryUrls: this.evaluator.strings(target, scope), expression: text(scope.module, node).slice(0, 400), fullPage: true}));
   }
 
   methodOf(options, scope) {
@@ -1455,6 +1456,12 @@ function conditionsIn(expr) {
   if (node.type === 'TemplateLiteral') return node.expressions.flatMap(conditionsIn);
   if (node.type === 'BinaryExpression' && node.operator === '+') return [...conditionsIn(node.left), ...conditionsIn(node.right)];
   return [];
+}
+
+/** The evaluated href with its query (attrs.href of a non-literal href is already query-free), used only for query-entry selection. */
+function hrefEntryUrls(evaluator, node, scope, fallback) {
+  const expr = attributeExpression(attribute(node, 'href'));
+  return expr ? evaluator.strings(expr, scope) : [fallback];
 }
 
 function cleanUrls(candidates) {
