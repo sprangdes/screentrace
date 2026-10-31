@@ -19,6 +19,7 @@ class Wp18SourceFlowIntegrationTest {
     }}
     var method=ScreenTraceCli.class.getDeclaredMethod("analyze",ProjectCatalog.Project.class,WorkspaceSettings.class);method.setAccessible(true);
     Path outputs=root.resolve("screentrace-cli/target/wp18-fixtures");String oldHome=System.getProperty("user.home");
+    if(Files.exists(outputs))try(var stale=Files.walk(outputs)){for(Path stalePath:stale.sorted(java.util.Comparator.reverseOrder()).toList())Files.delete(stalePath);}
     System.setProperty("user.home",temp.resolve("home").toString());
     try {
       for(String run:List.of("first","second"))method.invoke(null,new ProjectCatalog.Project("wp18",source,outputs.resolve(run)),new WorkspaceSettings(source.getParent(),outputs));

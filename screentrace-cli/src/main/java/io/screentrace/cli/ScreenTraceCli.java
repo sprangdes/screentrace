@@ -29,6 +29,10 @@ public final class ScreenTraceCli {
     catch (PreviewResourceBoundaryException rejected) {
       status=reportRejectedPreviewResource(rejected,System.err);
     }
+    catch (OutputOwnershipException refused) {
+      System.err.println(refused.getMessage());
+      status=2;
+    }
     if(status!=0)System.exit(status);
   }
 
@@ -194,7 +198,9 @@ public final class ScreenTraceCli {
         reportOpener.open(report);
         console.waitForMenuReturn(report.toUri().toString());
       } else {
-        AnalysisResult result = analyze(project, hasRoot ? settings : settingsFor(project.sourceDirectory()));
+        AnalysisResult result;
+        try { result = analyze(project, hasRoot ? settings : settingsFor(project.sourceDirectory())); }
+        catch (OutputOwnershipException refused) { System.err.println(refused.getMessage()); continue; }
         console.showAnalysisComplete(result.project(), result.technologies(), result.endpoints(), result.screens(),
             result.components(), result.output(), result.contextPathHintCount());
         offerReport(console::confirmOpenReport, result.report());
@@ -326,7 +332,27 @@ public final class ScreenTraceCli {
     return choice.project();
   }
 
+  /** Refuses to analyze into an output folder that already holds another source folder's results. */
+  static final class OutputOwnershipException extends IOException {
+    OutputOwnershipException(String message){super(message);}
+  }
+
+  /** The graph records its source as a home-redacted real path; a different or unprovable source must not be overwritten. */
+  static void requireSameSource(Path output,Path source) throws IOException {
+    Path graph=output.resolve("application-graph.json");
+    if(!Files.exists(graph,java.nio.file.LinkOption.NOFOLLOW_LINKS))return;
+    String current=io.screentrace.parser.jsp.UrlGraphContribution.hidePrivateLocation(source.toRealPath().toString());
+    String recorded;
+    try{recorded=new com.fasterxml.jackson.databind.ObjectMapper().readTree(graph.toFile()).path("application").path("path").asText(null);}
+    catch(IOException unreadable){recorded=null;}
+    if(recorded==null||recorded.isBlank())
+      throw new OutputOwnershipException("無法確認輸出資料夾 "+output+" 內既有分析結果的來源；為避免覆寫，已停止分析。請先移除或改名該資料夾後再分析。");
+    if(!recorded.equals(current))
+      throw new OutputOwnershipException("輸出資料夾 "+output+" 已存放另一個來源的分析結果（"+recorded+"）；本次來源為 "+current+"。為避免覆寫，已停止分析。請先移除或改名該資料夾，或將其中一個專案資料夾改名後再分析。");
+  }
+
   private static AnalysisResult analyze(ProjectCatalog.Project project,WorkspaceSettings settings) throws IOException, InterruptedException {
+    requireSameSource(project.analysisDirectory(),project.sourceDirectory());
     Path outputRoot = project.analysisDirectory().getParent();
     Files.createDirectories(outputRoot);
     Path safeOutput = SafeProjectFiles.requireWritePathWithin(outputRoot, project.analysisDirectory());
