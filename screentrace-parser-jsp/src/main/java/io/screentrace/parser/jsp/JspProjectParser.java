@@ -147,8 +147,10 @@ public final class JspProjectParser {
           if (action == null && submitsForm(tag) && activeFormTarget != null) { action = activeFormTarget; resolution = activeFormResolution; }
           boolean submitsCurrentView = action == null && submitsForm(tag) && activeFormSubmitsCurrentView;
           String label = interactionLabel(tag, text);
+          String submitterMethod = tag.attribute("formmethod");
+          String requestMethod = submitsForm(tag) && submitterMethod != null && !submitterMethod.isBlank() ? submitterMethod.trim().toUpperCase(Locale.ROOT) : activeFormMethod;
           interaction(relative, submitsForm(tag) ? JspAnalysis.InteractionType.FORM_SUBMIT : JspAnalysis.InteractionType.UNKNOWN,
-              label, action, activeFormMethod, source,
+              label, action, requestMethod, source,
               submitsCurrentView, interactions, diagnostics);
         }
         default -> { }
