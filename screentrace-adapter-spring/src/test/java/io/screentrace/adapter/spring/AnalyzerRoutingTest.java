@@ -20,6 +20,28 @@ class AnalyzerRoutingTest {
     Files.writeString(root.resolve("src/main/resources/templates/error.html"),"<html><body>Error</body></html>");
     assertEquals(1,reactScreens(new SpringProjectAnalyzer().analyze(new ProjectScanner().scan(root))));
   }
+  @Test void reactScreensSurviveAJspOrTemplateInTheSameProject() throws Exception {
+    Path root=Files.createTempDirectory("st-route-react-jsp");
+    Files.createDirectories(root.resolve("src/main/java"));Files.createDirectories(root.resolve("src/main/frontend"));
+    Files.writeString(root.resolve("pom.xml"),"<project><dependency>spring-boot-starter-web</dependency></project>");
+    Files.writeString(root.resolve("src/main/java/Api.java"),"import org.springframework.web.bind.annotation.*;\n@RestController class Api { @PostMapping(\"/api/pets\") String create(){ return null; } }");
+    Files.writeString(root.resolve("src/main/frontend/App.tsx"),"import { Route } from 'react-router-dom';\nimport Home from './Home';\n<Route path=\"/react\" element={<Home />} />");
+    Files.writeString(root.resolve("src/main/frontend/Home.tsx"),"export default function Home(){ return <button onClick={()=>fetch('/api/pets',{method:'POST'})}>Save</button>; }");
+    var reactOnly=new SpringProjectAnalyzer().analyze(new ProjectScanner().scan(root));
+    Files.createDirectories(root.resolve("src/main/webapp"));Files.writeString(root.resolve("src/main/webapp/error.jsp"),"<html><body>Error</body></html>");
+    var withJsp=new SpringProjectAnalyzer().analyze(new ProjectScanner().scan(root));
+    Files.createDirectories(root.resolve("src/main/resources/templates"));Files.writeString(root.resolve("src/main/resources/templates/owners.html"),"<html><body>Owners</body></html>");
+    var withTemplate=new SpringProjectAnalyzer().analyze(new ProjectScanner().scan(root));
+    for(var graph:java.util.List.of(reactOnly,withJsp,withTemplate)){
+      assertTrue(graph.nodes().stream().anyMatch(n->n.type()==ApplicationGraph.NodeType.SCREEN&&"/react".equals(n.attributes().get("route"))),graph.nodes().toString());
+      var save=graph.nodes().stream().filter(n->n.type()==ApplicationGraph.NodeType.COMPONENT&&n.name().equals("Save")).findFirst().orElseThrow(()->new AssertionError(graph.nodes().toString()));
+      var endpoint=graph.nodes().stream().filter(n->n.type()==ApplicationGraph.NodeType.ENDPOINT&&n.name().equals("POST /api/pets")).findFirst().orElseThrow(()->new AssertionError(graph.nodes().toString()));
+      assertTrue(graph.relationships().stream().anyMatch(e->e.type()==ApplicationGraph.EdgeType.TRIGGERS&&e.from().equals(save.id())&&e.to().equals(endpoint.id())),graph.relationships().toString());
+    }
+    assertTrue(withJsp.nodes().stream().anyMatch(n->n.type()==ApplicationGraph.NodeType.SCREEN&&"src/main/webapp/error.jsp".equals(n.attributes().get("view"))));
+    assertTrue(withTemplate.nodes().stream().anyMatch(n->n.type()==ApplicationGraph.NodeType.SCREEN&&"src/main/resources/templates/owners.html".equals(n.attributes().get("view"))));
+  }
+
   @Test void createReactAppWithJsxInJsFilesContributesScreens() throws Exception {
     // oktadev/okta-spring-boot-react-crud-example: JSX in app/src/*.js, react declared in app/package.json.
     Path root=Files.createTempDirectory("st-route-cra");

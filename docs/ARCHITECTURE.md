@@ -6,7 +6,7 @@ WP74 keeps resource references in graph `SOURCE_ARTIFACT` nodes (`STATIC_RESOURC
 
 ## Current POC implementation
 
-The current implementation analyzes server-rendered JSP applications using Struts 1, Spring MVC, Spring Boot, or their supported combinations, and Spring Boot back ends with React single-page front ends (ADR 0088, ADR 0089).
+The current implementation analyzes server-rendered JSP applications using Struts 1, Spring MVC, Spring Boot, or their supported combinations, and Spring Boot back ends with React single-page front ends (ADR 0088, ADR 0089); a project that also contains JSP or Thymeleaf views keeps both the server-rendered and the React screens.
 
 R3 WP17 parser behavior: `JspTagFileExpander` in `screentrace-parser-jsp` follows statically declared taglib `tagdir` mappings, substitutes only literal call-site attributes, expands nested tag files and `<jsp:doBody/>`, and guards recursion at depth 12 with cycle/depth diagnostics. Dynamic attributes remain unresolved. Components are projected from each consuming JSP, retaining both the page call-site and tag-file definition as evidence. `SpringMvcAnalyzer` resolves a relative JSP URL only when exactly one controller route is proven to render that JSP; it joins the relative value to that route's directory and records `INFERRED` evidence. Multiple routes remain `AMBIGUOUS`; no route remains `UNRESOLVED`. ADR 0094 adds a bounded, complete same-source literal choose exception for `c:set`; arbitrary assignments and EL evaluation remain excluded.
 
