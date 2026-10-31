@@ -20,4 +20,4 @@ Computed style 由 Chromium 保存完整 file URL。Petclinic 的 logo backgroun
 
 最終報表測試掃描實際輸出目錄、合成專案根、當前 user.home，另掃描 file://、/Users/、C:\Users\ 與 JSON 跳脫形式。真實 Petclinic／eMusic 報表也以實際根目錄掃描。只發現 Petclinic 兩筆 background-image，沒有其他欄位需要保留絕對路徑；補強後均無洩漏。
 
-完整結果與報表大小見 [R5](../reports/R5.md)。WP10 決定性及所有原有斷言／golden 保留並通過。
+完整結果與報表大小見 R5。WP10 決定性及所有原有斷言／golden 保留並通過。

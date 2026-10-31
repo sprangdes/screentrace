@@ -621,7 +621,7 @@ Java 與 Node 仍有獨立 tag 展開器；共用 docs/examples/expansion-anchor
 
 PreviewElement.unmappedReason 是可選的五類字串：NO_GRAPH_COMPONENT、AMBIGUOUS_CANDIDATES、ANCHOR_MISSING、DYNAMIC_OR_UNRESOLVED_SOURCE、OTHER；只用於 a/button/form/select/input/textarea 且元件未唯一對應。capture 配對完成後記錄，reader／viewer 拒絕未知值、已對應元件或非可操作元素誤用。舊預覽 fixture 缺少此欄位仍可讀取；新 capture 為適用元素輸出原因。沒有 graph schema 改動。
 
-已對應但無法模擬的原因只由 viewer 推導，不寫入 unmappedReason。simulation.ts 的 assessSimulation 呼叫原 simulate／canSimulate，並共用 callback-root、事件適用、證據解析與 effect 判定；simulation-ui.ts 的 elementSimulationAssessment 統一 DOM 彈窗可用性與原生輸入條件；畫面／專案統計、右欄及點選提示使用同一 assessment。每個未知元素恰歸一類；原生可編輯欄位排除於未知分類，無行為與已記錄行為的歧義／目的未解析／類型或事件不支援用中文兩層呈現。見 ADR0055、reports/R7.md。
+已對應但無法模擬的原因只由 viewer 推導，不寫入 unmappedReason。simulation.ts 的 assessSimulation 呼叫原 simulate／canSimulate，並共用 callback-root、事件適用、證據解析與 effect 判定；simulation-ui.ts 的 elementSimulationAssessment 統一 DOM 彈窗可用性與原生輸入條件；畫面／專案統計、右欄及點選提示使用同一 assessment。每個未知元素恰歸一類；原生可編輯欄位排除於未知分類，無行為與已記錄行為的歧義／目的未解析／類型或事件不支援用中文兩層呈現。見 ADR0055。
 
 R7 決定性補強：capture 在元素樣式／bounds 量測前，先觸發版面、於 Node 有界輪詢各 FontFace 是否仍 loading；目標 JavaScript 始終停用。字型完成或失敗的 fallback 才記錄，5 秒逾時維持 capture 失敗診斷。沒有改寫或正規化原始 computed-style 數值，詳 ADR0055。
 

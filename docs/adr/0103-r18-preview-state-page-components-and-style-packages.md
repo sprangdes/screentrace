@@ -21,7 +21,7 @@ reservio 實測顯示：React 靜態預覽同時畫出載入中、錯誤、空�
 
 ## 驗證
 
-需求方審查者於 sandbox 外以 `d7075ff` 執行完整驗證與實測，數字與結果見 [R18 報告](../reports/R18.md)「第三階段」。eMusicStore、PetClinic 與五個 Struts 模組的 `application-graph.json`、`preview-model.json` 與 `e2fcc0b` 位元組相同。
+需求方審查者於 sandbox 外以 `d7075ff` 執行完整驗證與實測，數字與結果見 R18 報告「第三階段」。eMusicStore、PetClinic 與五個 Struts 模組的 `application-graph.json`、`preview-model.json` 與 `e2fcc0b` 位元組相同。
 
 ## 後果
 
