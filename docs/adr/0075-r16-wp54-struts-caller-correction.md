@@ -24,7 +24,7 @@ welcome-file 的 `GET /` 在首頁與 API 頁顯示「系統預設首頁」，�
 | `wp10BehaviorSourceTuplesBeforeWp55RemainPresentAfterTilesDeduplication` | 既有 WP55 invariant | 原始實作少了三筆 `struts-config.xml` action mapping 證據；原始 JSP `onclick` 的 unresolved 行為來源亦需保留。失敗列出四個缺漏 tuple。 | `baeb263` |
 | `R16 confirmed navigation accepts a route alias recorded on its destination screen` | `f64ba10` | 舊嚴格驗證只接受 destination 的 `route`／`view`，拒絕已在 `routeAliases` 記錄的 confirmed URL alias；新增測試在修正前以「導覽關聯」失敗。 | `b21f1d9` |
 
-原始測試輸出、每個剩餘無 caller endpoint 的搜尋命中與判讀、八模組實測及 Spring hash 對照見 [R16 報告](../reports/R16.md)。新增的 module-root 修正只移除錯誤的「target 等於 module 即不加前綴」條件；沒有改動既有 fixture、斷言或 golden。
+原始測試輸出、每個剩餘無 caller endpoint 的搜尋命中與判讀、八模組實測及 Spring hash 對照見 R16 報告。新增的 module-root 修正只移除錯誤的「target 等於 module 即不加前綴」條件；沒有改動既有 fixture、斷言或 golden。
 
 ## 驗收證據
 

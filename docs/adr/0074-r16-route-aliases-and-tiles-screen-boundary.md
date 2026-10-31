@@ -31,7 +31,7 @@ Action forward 鏈導向畫面時，畫面另保留已證明的入口網址於�
 | `child` | `tiles-defs.xml:1`，`outer` extends `child` | 同上；繼承只合併畫面歸屬，不移除來源 |
 | `nested` | `tiles-defs.xml:1`，`outer` 以 `put-attribute` 引用 `nested`；其 path 為 `page.jsp` | `page.jsp:3–28` 的 component/behavior sources 保留在 `page`／`outer`；`page` 作為直接 JSP 畫面仍保留 |
 | `layout.jsp` 隱含畫面 | `base` 的模板引用；不是獨立 page definition | 該 fixture 的 layout 本身沒有額外行為來源；其頁面與 JS 行為仍由上述 49-tuple 不變量驗證 |
-- faces-example2 的 layout JSP `/layout.jsp` 不由 `.base` 的 `/layout.faces` 唯一映射；依 OQ-029 不猜測該檔案關係，故保留 `layout` 無入口畫面。其他明確 put 的 JSP 則歸入 page definition；實際例外及完整來源見 [R16 報告](../reports/R16.md)。
+- faces-example2 的 layout JSP `/layout.jsp` 不由 `.base` 的 `/layout.faces` 唯一映射；依 OQ-029 不猜測該檔案關係，故保留 `layout` 無入口畫面。其他明確 put 的 JSP 則歸入 page definition；實際例外及完整來源見 R16 報告。
 - `everyUnreferencedPageDefinitionRemainsAScreenAndItsJspControlsStayGrouped` 新增對唯一 root JSP `/header.jsp` 解析的失敗斷言；舊輸出產生 `TILES_REFERENCE_UNRESOLVED`，修正後唯一檔案匹配成功，Tiles 未解析診斷由 35 降為 0。沒有放寬既有斷言或 fixture。
 - OQ-031 授權更新 `struts1-spring.summary.json` 的數量欄位。以需求方設定的 `/fixture` workspace context path，重新執行 R16 前提交 `1c61d76` 的 CLI 得到舊值；修正後值取自兩次一致的現行 fixture 報表。逐欄記錄如下：
 

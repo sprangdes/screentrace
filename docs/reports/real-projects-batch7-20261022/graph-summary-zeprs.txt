@@ -1,5 +1,0 @@
-nodes Counter({'COMPONENT': 148598, 'VIEW': 2085, 'SOURCE_ARTIFACT': 1979, 'ENDPOINT': 266, 'SCREEN': 198, 'HANDLER': 125, 'FORM_MODEL': 21})
-components by top dir Counter({'docs': 146662, 'web': 1936})
-relationships Counter({'CONTAINS': 2139, 'CALLS': 1557, 'FORWARDS_TO': 546, 'HANDLED_BY': 250, 'TRIGGERS': 225, 'BINDS_TO': 174, 'NAVIGATES_TO': 111, 'DECLARED_BY': 36})
-endpoint source files [('web/zeprs/WEB-INF/struts-config.xml', 250), ('web/zeprs/WEB-INF/templates/sidenav-clerk.jsp', 5), ('web/zeprs/WEB-INF/pages/history.jsp', 4), ('web/zeprs/WEB-INF/pages/encounters/encounter_form_layout_chart.jsp', 1), ('web/zeprs/WEB-INF/pages/help/toc.jsp', 1)]
-diagnostics [('STRUTS_REDIRECT_CYCLE', 12977), ('JS_SCREEN_OWNER', 7264), ('UNKNOWN_CALL', 454), ('JSP_UNRESOLVED', 308), ('STRUTS_TARGET_UNRESOLVED', 279), ('JS_SCRIPT_REFERENCE', 140), ('STRUTS_ROUTE_UNRESOLVED', 58), ('CONTEXT_PATH_UNSPECIFIED', 46), ('STRUTS_FORWARD_EXPRESSION', 33), ('STRUTS_SERVLET_MAPPING_UNRESOLVED', 28), ('STRUTS_REDIRECT_DEPTH_LIMIT', 24), ('STRUTS_FORWARD_UNRESOLVED', 23), ('VALIDATION_RULE_UNRESOLVED', 7), ('URL_UNRESOLVED', 5), ('JS_SYNTAX_ERROR', 3)]
