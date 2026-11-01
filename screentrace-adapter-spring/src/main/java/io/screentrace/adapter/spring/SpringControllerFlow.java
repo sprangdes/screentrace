@@ -148,13 +148,18 @@ final class SpringControllerFlow {
     for(var d:destinations){var old=result.get(d.screen());List<AnalysisEvidence> proof=new ArrayList<>(d.evidence());if(old!=null)proof.addAll(old.evidence());result.put(d.screen(),new Destination(d.screen(),d.confidence()==Confidence.AMBIGUOUS||old!=null&&old.confidence()==Confidence.AMBIGUOUS?Confidence.AMBIGUOUS:Confidence.INFERRED,proof.stream().distinct().sorted().toList()));}
     return List.copyOf(result.values());
   }
+  /** A full-page load of a server URL (a native link or a location assignment in React) is a GET request that replaces the page. */
+  static boolean fullPageLoad(Behavior behavior) {
+    return behavior.type()==BehaviorType.CALL_API&&behavior.evidence().stream().anyMatch(e->e.detail()!=null&&e.detail().contains("\"fullPage\":true"));
+  }
   static ApplicationGraph project(ApplicationGraph graph) {
     Map<String,GraphNode> nodes=new TreeMap<>();graph.nodes().forEach(n->nodes.put(n.id(),n));
     Map<String,Relationship> output=new TreeMap<>();graph.relationships().forEach(e->output.put(e.id(),e));
     for(var request:graph.relationships())if(request.type()==EdgeType.TRIGGERS&&nodes.get(request.from())!=null&&nodes.get(request.from()).type()==NodeType.COMPONENT) {
       boolean navigation=graph.behaviors().stream().anyMatch(b->request.from().equals(b.triggerId())
-          &&Set.of(BehaviorType.NAVIGATE,BehaviorType.SUBMIT_FORM).contains(b.type())
-          &&(request.to().equals(b.targetId())||b.targetId()==null&&request.evidence().containsAll(b.evidence())));
+          &&(Set.of(BehaviorType.NAVIGATE,BehaviorType.SUBMIT_FORM).contains(b.type())
+          &&(request.to().equals(b.targetId())||b.targetId()==null&&request.evidence().containsAll(b.evidence()))
+          ||fullPageLoad(b)&&request.to().equals(b.targetId())));
       if(!navigation)continue;
       for(var handled:graph.relationships())if(handled.type()==EdgeType.HANDLED_BY&&handled.from().equals(request.to()))
         for(var destination:graph.relationships())if(Set.of(EdgeType.RENDERS,EdgeType.FORWARDS_TO).contains(destination.type())&&destination.from().equals(handled.to())&&nodes.get(destination.to()).type()==NodeType.SCREEN) {
