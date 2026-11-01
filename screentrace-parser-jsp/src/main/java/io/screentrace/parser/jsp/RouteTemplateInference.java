@@ -20,7 +20,9 @@ public final class RouteTemplateInference {
   List<String> contexts=UrlResolution.context(inventory,List.of()).values().stream().map(UrlResolution.ContextValue::value).filter(v->!v.isEmpty()).distinct().sorted().toList();
   List<GraphNode> endpoints=nodes.values().stream().filter(n->n.type()==NodeType.ENDPOINT&&n.attributes().containsKey("path")&&!("javascript-request".equals(n.attributes().get("origin")))).toList();
   for(GraphNode component:nodes.values().stream().filter(n->n.type()==NodeType.COMPONENT&&Set.of("LINK","FORM").contains(n.attributes().get("kind"))).toList()) {
-   boolean exists=behaviors.values().stream().anyMatch(b->component.id().equals(b.triggerId())&&Set.of(BehaviorType.NAVIGATE,BehaviorType.SUBMIT_FORM).contains(b.type()));
+   // A resolved full-page load (React native link) already proves where the link goes; it needs no placeholder navigation.
+   boolean exists=behaviors.values().stream().anyMatch(b->component.id().equals(b.triggerId())&&(Set.of(BehaviorType.NAVIGATE,BehaviorType.SUBMIT_FORM).contains(b.type())
+     ||b.type()==BehaviorType.CALL_API&&b.targetId()!=null&&b.evidence().stream().anyMatch(e->e.detail()!=null&&e.detail().contains("\"fullPage\":true"))));
    if(!exists&&component.attributes().get("target")!=null){BehaviorType type="LINK".equals(component.attributes().get("kind"))?BehaviorType.NAVIGATE:BehaviorType.SUBMIT_FORM;String id=ApplicationGraph.id(NodeType.COMPONENT,"route-template:"+component.id()+":"+type);behaviors.put(id,new Behavior(id,component.id(),type==BehaviorType.NAVIGATE?"click":"submit",type,null,null,null,component.attributes().get("originalExpression"),component.evidence()));}
   }
   for(Behavior b:new ArrayList<>(behaviors.values())) {
