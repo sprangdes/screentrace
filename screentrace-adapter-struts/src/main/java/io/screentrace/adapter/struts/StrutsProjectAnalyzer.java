@@ -194,9 +194,13 @@ public final class StrutsProjectAnalyzer {
         for(Element property:StrutsSources.elements(plugin,"set-property")) attrs.put(property.getAttribute("property"),property.getAttribute("value"));
         addNode(state,ApplicationGraph.id(NodeType.SOURCE_ARTIFACT,path+":plugin:"+plugin.getAttribute("className")),NodeType.SOURCE_ARTIFACT,"設定外掛",attrs,StrutsSources.source(path,plugin),Confidence.CONFIRMED);
       }
+      Map<String,Integer> exceptionOccurrences=new HashMap<>();
       for(Element exception:StrutsSources.elements(document,"exception")) {
         var source=StrutsSources.source(path,exception);
-        String id=ApplicationGraph.id(NodeType.HANDLER,path+":exception:"+exception.getAttribute("key")+":"+source.line());
+        // Scope, exception type and key identify a mapping; only identical repeats differ, by document order, never by line.
+        String scope=exception.getParentNode() instanceof Element parent&&parent.getTagName().equals("action")?"action:"+module+parent.getAttribute("path"):"global";
+        String key=path+":exception:"+scope+":"+exception.getAttribute("type")+":"+exception.getAttribute("key");
+        String id=ApplicationGraph.id(NodeType.HANDLER,key+":"+(exceptionOccurrences.merge(key,1,Integer::sum)-1));
         addNode(state,id,NodeType.HANDLER,"例外處理",StrutsSources.attributes(exception),source,Confidence.CONFIRMED);
         PendingForward target=new PendingForward(id,module,exception.getAttribute("path"),source);
         state.pendingForwards.add(target);
