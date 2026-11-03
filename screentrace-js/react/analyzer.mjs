@@ -6,7 +6,7 @@ import {resolveRouteFacts} from './route-conditions.mjs';
 import {contextTransfers} from './context-transfer.mjs';
 import {stylesheets} from './styles.mjs';
 import {parseExpression} from '@babel/parser';
-import {personaDimensions, normalizePersonas} from './personas.mjs';
+import {personaDimensions, normalizePersonas, applyPersonas} from './personas.mjs';
 
 const ROUTER = new Set(['react-router-dom', 'react-router', 'react-router-native']);
 const REACT = new Set(['react', 'preact/compat']);
@@ -118,7 +118,7 @@ export function analyzeReact({files = [], maxDepth = 24, markup = false, persona
   }
   for (const screen of screens) delete screen.redirects;
   let personaResult;
-  if(personas !== undefined){const found=personaDimensions(screens,routeRedirects);const normalized=normalizePersonas(personas,found.dimensions);diagnostics.push(...found.diagnostics,...normalized.diagnostics);personaResult={personaDimensions:found.dimensions,personas:normalized.personas};}
+  if(personas !== undefined){const found=personaDimensions(screens,routeRedirects);const normalized=normalizePersonas(personas,found.dimensions);diagnostics.push(...found.diagnostics,...normalized.diagnostics);applyPersonas(normalized.personas,screens,routeRedirects);personaResult={personaDimensions:found.dimensions,personas:normalized.personas};}
   const groups = combinations(screens.map(s => s.audience));
   if (groups.overflow && screens.length) diagnostics.push(diagnostic(screens[0].file, screens[0].line, 'REACT_AUDIENCE_TOO_MANY', '身分組合超過 16，僅保留各畫面的條件'));
   const uniqueDiagnostics = new Map();

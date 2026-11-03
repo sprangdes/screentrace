@@ -1,5 +1,5 @@
 import {parseExpression} from '@babel/parser';
-import {atoms, unique, contradicts, leaves} from './audience.mjs';
+import {atoms, unique, contradicts, leaves, implied} from './audience.mjs';
 
 const literal=n=>['StringLiteral','NumericLiteral','BooleanLiteral','NullLiteral'].includes(n.type);
 function parts(leaf){try{const n=parseExpression(leaf,{plugins:['typescript']});if(n.type==='BinaryExpression'&&n.operator==='==='&&literal(n.right))return [leaf.slice(n.left.start,n.left.end),leaf.slice(n.right.start,n.right.end)];return [leaf,null];}catch{return null;}}
@@ -18,4 +18,30 @@ export function normalizePersonas(personas,dimensions){
   for(const fact of facts)for(const leaf of leaves(fact.text)){const part=parts(leaf);if(!dimensions.some(d=>d.text===leaf||(part&&d.text===part[0]&&d.values.includes(part[1]))))diagnostics.push({code:'PERSONA_FACT_UNMATCHED',message:`角色 ${persona.id} 的條件 ${leaf} 未出現在任何畫面或導覽條件中`,source});}
   result.push({id:persona.id,name:persona.name,startPaths:persona.startPaths,facts});
  }return {personas:result,diagnostics};
+}
+
+const expressionOf=a=>a.truth?(a.raw??a.text):`!(${a.raw??a.text})`;
+/** APPLIES when every condition is proven, EXCLUDED when one contradicts the persona, otherwise UNKNOWN. */
+export function verdict(facts,audience,conditions){
+ if(contradicts([...facts,...audience]))return 'EXCLUDED';
+ let unknown=audience.some(a=>implied(facts,expressionOf(a))!==true);
+ for(const condition of conditions){
+  if(!condition)continue;
+  const value=implied([...facts,...audience],condition);
+  if(value===false)return 'EXCLUDED';
+  if(value===null)unknown=true;
+ }
+ return unknown?'UNKNOWN':'APPLIES';
+}
+
+export function applyPersonas(personas,screens,routeRedirects){
+ for(const persona of personas){
+  for(const screen of screens){
+   (screen.personas??={})[persona.id]=verdict(persona.facts,screen.audience??[],[]);
+   for(const effect of screen.load)if(effect.type==='NAVIGATE')(effect.personas??={})[persona.id]=verdict(persona.facts,[],[effect.guard]);
+   for(const component of screen.components)for(const effect of component.behaviors)
+    if(effect.type==='NAVIGATE')(effect.personas??={})[persona.id]=verdict(persona.facts,[],[component.guard,effect.guard]);
+  }
+  for(const redirect of routeRedirects)if(redirect.effect.type==='NAVIGATE')(redirect.effect.personas??={})[persona.id]=verdict(persona.facts,[],[redirect.effect.guard]);
+ }
 }
