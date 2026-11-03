@@ -176,4 +176,4 @@
 - WP87：畫面與導覽角色判定，見 [ADR 0108](adr/0108-r19-persona-verdicts.md)。
 - WP88：角色流程可達性，見 [ADR 0109](adr/0109-r19-persona-flows.md)。
 - P4（viewer）、P5（後端權限）未開始。
-- 驗證：待 PR CI 完成後補入。
+- 驗證：本機 JS 169 通過；Maven 575（567 通過、1 略過，另 OQ-041 的 7 個 Chromium 測試在 sandbox 內無法執行）；PR CI run https://github.com/sprangdes/screentrace/actions/runs/41736269176 三個 job 全綠（含 E2E 與上述 7 個測試）。PR：https://github.com/sprangdes/screentrace/pull/63。
