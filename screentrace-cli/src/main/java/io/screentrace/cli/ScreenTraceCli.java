@@ -24,16 +24,20 @@ public final class ScreenTraceCli {
   private static final Logger LOGGER = Logger.getLogger(ScreenTraceCli.class.getName());
 
   public static void main(String[] args) throws IOException, InterruptedException {
-    int status;
-    try { status=run(args); }
-    catch (PreviewResourceBoundaryException rejected) {
-      status=reportRejectedPreviewResource(rejected,System.err);
-    }
-    catch (OutputOwnershipException refused) {
-      System.err.println(refused.getMessage());
-      status=2;
-    }
+    int status=runReportingRefusals(args,System.err);
     if(status!=0)System.exit(status);
+  }
+
+  /** Runs a command; refusals print one message and exit 2 instead of a stack trace. */
+  static int runReportingRefusals(String[] args, java.io.PrintStream error) throws IOException, InterruptedException {
+    try { return run(args); }
+    catch (PreviewResourceBoundaryException rejected) {
+      return reportRejectedPreviewResource(rejected,error);
+    }
+    catch (OutputOwnershipException | UnsupportedFrameworkException refused) {
+      error.println(refused.getMessage());
+      return 2;
+    }
   }
 
   static int reportRejectedPreviewResource(PreviewResourceBoundaryException rejected, java.io.PrintStream error) {
@@ -200,7 +204,7 @@ public final class ScreenTraceCli {
       } else {
         AnalysisResult result;
         try { result = analyze(project, hasRoot ? settings : settingsFor(project.sourceDirectory())); }
-        catch (OutputOwnershipException refused) { System.err.println(refused.getMessage()); continue; }
+        catch (OutputOwnershipException | UnsupportedFrameworkException refused) { System.err.println(refused.getMessage()); continue; }
         console.showAnalysisComplete(result.project(), result.technologies(), result.endpoints(), result.screens(),
             result.components(), result.output(), result.contextPathHintCount());
         offerReport(console::confirmOpenReport, result.report());
@@ -337,6 +341,11 @@ public final class ScreenTraceCli {
     OutputOwnershipException(String message){super(message);}
   }
 
+  /** Refuses a project whose framework ScreenTrace detects but does not analyze, such as Struts 2. */
+  static final class UnsupportedFrameworkException extends IOException {
+    UnsupportedFrameworkException(String message){super(message);}
+  }
+
   /** The graph records its source as a home-redacted real path; a different or unprovable source must not be overwritten. */
   static void requireSameSource(Path output,Path source) throws IOException {
     Path graph=output.resolve("application-graph.json");
@@ -392,7 +401,7 @@ public final class ScreenTraceCli {
 
   private static ApplicationGraph analyze(ProjectScanner.ProjectInventory inventory) throws IOException {
     var unsupported = io.screentrace.adapter.struts.StrutsFrameworkDetector.unsupported(inventory);
-    if (unsupported.isPresent()) throw new IOException(unsupported.get().code() + ": " + unsupported.get().message());
+    if (unsupported.isPresent()) throw new UnsupportedFrameworkException(unsupported.get().code() + ": " + unsupported.get().message());
     boolean struts = inventory.technologies().contains("Struts 1");
     boolean springWeb = inventory.technologies().contains("Spring MVC") || inventory.technologies().contains("Spring Boot");
     if (struts && springWeb) return io.screentrace.parser.jsp.UrlGraphContribution.enrich(ApplicationGraphMerger.merge(new StrutsProjectAnalyzer().analyze(inventory), new SpringProjectAnalyzer().analyze(inventory)),inventory);
