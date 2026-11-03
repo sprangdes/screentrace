@@ -42,7 +42,7 @@ const shellFixture="import { Routes, Route, Navigate, Link, useLocation } from '
 
 test('WP89 truncated dimensions keep identity leaves and facts match against all dimensions',()=>{
  const modified=files.map(f=>f.file==='src/App.tsx'?{...f,code:f.code.replace("import { useAuth } from './auth';","import { useAuth } from './auth';\nimport { Flags } from './flags';").replace('<h1>Login</h1>','<h1>Login</h1><Flags />')}:f);
- modified.push({file:'src/flags.tsx',code:'export function Flags() {\n  return <div>'+Array.from({length:70},(_,i)=>`{flag${String(i).padStart(2,'0')} && <button>f${i}</button>`).join('')+'</div>;\n}\n'});
+ modified.push({file:'src/flags.tsx',code:'export function Flags() {\n  return <div>'+Array.from({length:70},(_,i)=>`{flag${String(i).padStart(2,'0')} && <button>f${i}</button>}`).join('')+'</div>;\n}\n'});
  const r=analyzeReact({files:modified,personas:[personas[1]]});const names=r.personaDimensions.map(d=>d.text);
  assert.equal(names.length,64);for(const name of ['me','loading','me.role'])assert.ok(names.includes(name),name);assert.deepEqual(names,[...names].sort());assert.ok(r.diagnostics.some(d=>d.code==='PERSONA_DIMENSIONS_TRUNCATED'));assert.ok(!r.diagnostics.some(d=>d.code==='PERSONA_FACT_UNMATCHED'));
 });

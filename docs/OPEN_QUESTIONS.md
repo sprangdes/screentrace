@@ -410,3 +410,10 @@
 - 可選方案 B：授權先執行 §5.6 測試並建立 PR，取得測試數字與連結後再完成文件與 WP88 提交。
 - 影響範圍：WP88 文件與提交順序、PR 建立；WP88 核心及 CLI 實作與測試尚未完成全部驗證。
 - 狀態：RESOLVED（2026-11-04）。需求方採方案 A：WP88 提交時 roadmap 只記「待 PR CI 完成後補入」；PR CI 全綠後，以獨立 commit 補入實際測試數字與 PR、CI run 連結並推送。
+
+## OQ-045 — WP89 新增測試 fixture 抄寫遺漏結尾大括號
+
+- 情境：WP89 失敗測試 commit `3efe6cc` 的 `WP89 truncated dimensions keep identity leaves and facts match against all dimensions`，產生 `src/flags.tsx` 的範本遺漏每個 JSX 表達式結尾的 `}`，與修正指示 §4.1 給定的 fixture 不同。依 §3.3、§3.4 逐字修改實作後，JS 測試輸出 `3 !== 64`，診斷為 `REACT_SYNTAX_ERROR`：`Unexpected token, expected "}" (2:44)`；另一個 WP89 JS 測試及其餘 169 個測試通過。失敗測試提交前的該測試亦因同一 fixture 抄寫錯誤失敗，不能作為所指定行為的有效失敗證據。
+- 可選方案：授權將該測試 fixture 補回 §4.1 指定的 `}`，並重新確認修正前失敗與修正後通過；測試斷言不變。
+- 影響範圍：WP89 測試與提交順序；實作修改尚未提交，Maven、PR 推送及 CI 尚未執行。
+- 狀態：RESOLVED（2026-11-04）。需求方授權補回 §4.1 原文的 }，斷言不變；補正後已在未套用實作的狀態下重新確認測試 1、2 失敗且無 REACT_SYNTAX_ERROR。
