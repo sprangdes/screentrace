@@ -379,3 +379,19 @@
 - 決定：需求方第三次驗收採「只加附註」。D5 原文不改、狀態維持「未被使用」，API 清單及詳情加「外部呼叫（Webhook）」並列出兩處設定的檔案／行號；不列入可移除，D4 不變。缺任何一項證據或存在 caller 均不套用，不依 URL 字樣推測。
 - 影響範圍：WP82、API 頁呈現與設定 evidence；md v1、決策鍵及原 API 推導不變。實作與反向測試見 ADR 0102。
 - 狀態：RESOLVED；後續更一般的安全設定／外部系統資料流不在本輪。
+
+## OQ-041 — R19 基線 Maven 測試失敗
+
+- 情境：在 `feature/r19-persona-flows`、實作前依 R19 §0.2 執行 `mvn -B clean verify`，`screentrace-cli` 的 81 個測試中 1 個失敗、6 個錯誤、1 個略過。Playwright Chromium 啟動時出現 `bootstrap_check_in ... Permission denied (1100)`，JSP 靜態預覽未產生。
+- 失敗：`StandaloneViewerTest.actualProjectAnalysisPackagesCapturedJspIntoSingleFile`（`expected: <true> but was: <false>`）；`NonInteractiveCliTest.actualReportRejectsOutsidePreviewResourceWithChineseMessageAndNonzeroExit` 缺少 `element-styles.json`；`SyntheticProjectIntegrationTest` 的 `sourceOnlyCliPipelineTwiceProducesIdenticalGraphPreviewAndHtmlAndRejectsStrutsTwo`、`cliAnalysisThroughSymlinkOutputRootMatchesTheStandardRootByteForByte`、`cliAnalysisThroughCaseVariantOutputRootMatchesTheStandardRootByteForByteWhenSupported`，以及 `Wp18SourceFlowIntegrationTest.realCliPipelineRetainsEveryReturnFlowAndProducesDeterministicOfflineReports`、`Wp28AnchorIntegrationTest.completePipelineAnchorsEverySyntheticExpansionAndKeepsOfflineBytesStable` 缺少 `viewer-documents.json`。
+- 可選方案：確認可啟動 Chromium 的執行環境後重新執行基線；或由需求方決定如何處理此基線失敗。
+- 影響範圍：R19 §0.2 基線未通過；WP86–WP88、E2E 基線、推送與 PR 尚未執行。JS 基線 162 通過、0 失敗。
+- 狀態：RESOLVED（2026-11-04）。需求方於 sandbox 外對 main 90968b3 重跑上述 7 個測試，23 個全數通過，確認為 Codex sandbox 無法啟動 Chromium 的環境限制。決定：sandbox 內這 7 個測試的失敗不阻擋 R19，E2E 改由 PR CI 驗證，PR CI 全綠為最終判準。
+
+## OQ-042 — R19 §0.3 的測試類別數量與清單不一致
+
+- 情境：依 §0.3 第 3 點執行 `mvn -B verify -Dmaven.test.failure.ignore=true` 與指定的 `grep`。Maven 指令以 0 結束，`grep` 列出 `NonInteractiveCliTest`、`StandaloneViewerTest`、`SyntheticProjectIntegrationTest`、`Wp18SourceFlowIntegrationTest`、`Wp28AnchorIntegrationTest` 共 5 個類別；各失敗項均屬 §0.3 第 1 點列出的 7 個測試，且原始 `mvn -B clean verify` log 含 `bootstrap_check_in`。但第 3 點明定「grep 列出的檔案只能來自上述 7 個測試所屬的 4 個類別」，7 個測試實際分屬 5 個類別。
+- 可選方案 A：將第 3 點的「4 個類別」更正為「5 個類別」，依列舉的 7 個測試判定此基線通過。
+- 可選方案 B：維持第 3 點的 4 個類別限制，指定應排除的類別及處理方式。
+- 影響範圍：R19 基線判定及後續所有 Maven 步驟；WP86 尚未開始。
+- 狀態：RESOLVED（2026-11-04）。需求方採方案 A：第 0.3 節第 3 點更正為 5 個類別，失敗方法仍限第 1 點列出的 7 個測試。
