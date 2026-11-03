@@ -37,3 +37,17 @@ export default function App(){return <Routes><Route path="/callback" element={<G
 createRoot(document.getElementById('root')).render(<App/>);`;
  const r=analyzeReact({files:[{file:'src/App.tsx',code}],personas:[{id:'customer',name:'顧客',startPaths:['/'],line:3,facts:[{text:'loading',truth:false}]}]});assert.equal(r.screens[0].personas.customer,'UNKNOWN');assert.ok(r.screens[0].audience.some(a=>a.text==='mode === "done"'));
 });
+
+const shellFixture="import { Routes, Route, Navigate, Link, useLocation } from 'react-router-dom';\nimport { useAuth } from './auth';\n\nfunction SetupGuard({ children }) {\n  const { me } = useAuth();\n  const location = useLocation();\n  const allowPaths = ['/setup'];\n  if (me?.role === 'ROLE_BUSINESS' && !me.business && !allowPaths.includes(location.pathname)) return <Navigate to=\"/setup\" replace />;\n  return children;\n}\n\nfunction LoginPage() {\n  return <main><h1>Login</h1></main>;\n}\n\nfunction SetupPage() {\n  return <main><h1>Setup</h1><Link to=\"/login\">Login</Link></main>;\n}\n\nexport default function App() {\n  return (\n    <SetupGuard>\n      <Routes>\n        <Route path=\"/login\" element={<LoginPage />} />\n        <Route path=\"/setup\" element={<SetupPage />} />\n      </Routes>\n    </SetupGuard>\n  );\n}\n";
+
+test('WP89 truncated dimensions keep identity leaves and facts match against all dimensions',()=>{
+ const modified=files.map(f=>f.file==='src/App.tsx'?{...f,code:f.code.replace("import { useAuth } from './auth';","import { useAuth } from './auth';\nimport { Flags } from './flags';").replace('<h1>Login</h1>','<h1>Login</h1><Flags />')}:f);
+ modified.push({file:'src/flags.tsx',code:'export function Flags() {\n  return <div>'+Array.from({length:70},(_,i)=>`{flag${String(i).padStart(2,'0')} && <button>f${i}</button>`).join('')+'</div>;\n}\n'});
+ const r=analyzeReact({files:modified,personas:[personas[1]]});const names=r.personaDimensions.map(d=>d.text);
+ assert.equal(names.length,64);for(const name of ['me','loading','me.role'])assert.ok(names.includes(name),name);assert.deepEqual(names,[...names].sort());assert.ok(r.diagnostics.some(d=>d.code==='PERSONA_DIMENSIONS_TRUNCATED'));assert.ok(!r.diagnostics.some(d=>d.code==='PERSONA_FACT_UNMATCHED'));
+});
+test('WP89 shell guard redirect becomes an entry redirect only where route facts allow it',()=>{
+ const input=files.map(f=>f.file==='src/App.tsx'?{...f,code:shellFixture}:f);const setup={id:'merchant-setup',name:'未開店商家',startPaths:['/login'],line:3,facts:[{text:'me.role === "ROLE_BUSINESS"',truth:true},{text:'me.business',truth:false}]};
+ const check=r=>{const redirects=r.routeRedirects.filter(x=>JSON.stringify(x.effect.targetRoutes)===JSON.stringify(['/setup']));assert.equal(redirects.length,1);assert.equal(redirects[0].route,'/login');return redirects[0];};
+ const r=analyzeReact({files:input,personas:[setup]});assert.equal(check(r).effect.personas['merchant-setup'],'APPLIES');const screen=route=>r.screens.find(s=>s.route===route);assert.equal(screen('/setup').personas['merchant-setup'],'APPLIES');assert.equal(screen('/login').personas['merchant-setup'],'EXCLUDED');const load=screen('/setup').load.find(e=>e.type==='NAVIGATE'&&JSON.stringify(e.targetRoutes)===JSON.stringify(['/setup']));assert.equal(load.personas['merchant-setup'],'EXCLUDED');check(analyzeReact({files:input}));
+});

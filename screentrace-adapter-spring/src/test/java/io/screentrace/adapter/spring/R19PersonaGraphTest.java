@@ -32,4 +32,45 @@ class R19PersonaGraphTest {
   for(int i=0;i<3;i++){var f=g.application().personas().get(i).flow();var actual=new java.util.HashMap<String,String>();f.reached().forEach(r->actual.put(routes.get(r.screenId()),r.reach()+":"+r.depth()));assertEquals(expected.get(i),actual);assertEquals(unreached.get(i),f.unreached().stream().map(routes::get).sorted().toList());assertEquals(0,f.unevaluatedNavigations());}
   var steps=g.application().personas().get(2).flow().steps();assertTrue(steps.stream().anyMatch(s->"/".equals(routes.get(s.from()))&&"/dashboard".equals(routes.get(s.to()))&&s.kind().equals("REDIRECT")));assertTrue(steps.stream().anyMatch(s->"/dashboard".equals(routes.get(s.from()))&&"/manage".equals(routes.get(s.to()))&&s.kind().equals("REDIRECT")));
  }
+
+ @Test void shellGuardRedirectLetsSetupPersonaReachSetup() throws Exception {
+  fixture();Files.writeString(root.resolve("src/App.tsx"),"""
+   import { Routes, Route, Navigate, Link, useLocation } from 'react-router-dom';
+   import { useAuth } from './auth';
+   
+   function SetupGuard({ children }) {
+     const { me } = useAuth();
+     const location = useLocation();
+     const allowPaths = ['/setup'];
+     if (me?.role === 'ROLE_BUSINESS' && !me.business && !allowPaths.includes(location.pathname)) return <Navigate to="/setup" replace />;
+     return children;
+   }
+   
+   function LoginPage() {
+     return <main><h1>Login</h1></main>;
+   }
+   
+   function SetupPage() {
+     return <main><h1>Setup</h1><Link to="/login">Login</Link></main>;
+   }
+   
+   export default function App() {
+     return (
+       <SetupGuard>
+         <Routes>
+           <Route path="/login" element={<LoginPage />} />
+           <Route path="/setup" element={<SetupPage />} />
+         </Routes>
+       </SetupGuard>
+     );
+   }
+   """);
+  var setting=new io.screentrace.scanner.PersonaSetting("merchant-setup","未開店商家",List.of(new io.screentrace.scanner.PersonaSetting.Fact("me.role === \"ROLE_BUSINESS\"",true),new io.screentrace.scanner.PersonaSetting.Fact("me.business",false)),List.of("/login"));
+  var graph=io.screentrace.core.PersonaFlows.enrich(new SpringBootAnalyzer().analyze(new ProjectScanner().scan(root).withPersonas(List.of(setting),3));
+  var setup=graph.nodes().stream().filter(n->n.type()==io.screentrace.core.ApplicationGraph.NodeType.SCREEN&&"/setup".equals(n.attributes().get("route"))).findFirst().orElseThrow();
+  var login=graph.nodes().stream().filter(n->n.type()==io.screentrace.core.ApplicationGraph.NodeType.SCREEN&&"/login".equals(n.attributes().get("route"))).findFirst().orElseThrow();
+  var entry=graph.nodes().stream().filter(n->n.type()==io.screentrace.core.ApplicationGraph.NodeType.ENTRY_POINT&&"/login".equals(n.attributes().get("path"))).findFirst().orElseThrow();
+  var persona=graph.application().personas().get(0);assertEquals(io.screentrace.core.ApplicationGraph.PersonaStatus.APPLIES,persona.screens().get(setup.id()));assertEquals(io.screentrace.core.ApplicationGraph.PersonaStatus.EXCLUDED,persona.screens().get(login.id()));
+  var flow=persona.flow();assertEquals(List.of(new io.screentrace.core.ApplicationGraph.PersonaReach(setup.id(),"REACHABLE",1)),flow.reached());assertTrue(flow.unreached().isEmpty());assertEquals(0,flow.unevaluatedNavigations());assertTrue(flow.steps().stream().anyMatch(step->step.from().equals(entry.id())&&step.to().equals(setup.id())&&step.kind().equals("REDIRECT")&&step.status()==io.screentrace.core.ApplicationGraph.PersonaStatus.APPLIES));assertDoesNotThrow(()->io.screentrace.core.GraphIntegrityValidator.requireAnalysis(graph));
+ }
 }
