@@ -169,3 +169,11 @@
 ## OQ-038 查詢參數進入變體
 
 - 認證頁的 LINE 登入回呼與一般進入分成兩個畫面；一般進入沿用原 ID。reservio 畫面 36 → 41，原有 31 個非認證畫面不變。詳見 [ADR 0106](adr/0106-oq038-query-entry-variants.md)。
+
+## R19 角色流程（P1–P3）
+
+- WP86：角色設定、身分維度與 schema 2.4，見 [ADR 0107](adr/0107-r19-persona-settings-and-dimensions.md)。
+- WP87：畫面與導覽角色判定，見 [ADR 0108](adr/0108-r19-persona-verdicts.md)。
+- WP88：角色流程可達性，見 [ADR 0109](adr/0109-r19-persona-flows.md)。
+- P4（viewer）、P5（後端權限）未開始。
+- 驗證：待 PR CI 完成後補入。

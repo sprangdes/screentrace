@@ -72,6 +72,24 @@ R17 起報表與 md 不顯示元件庫建議與覆寫；以下指令仍可驗證
 
 ## 疑難排解
 
+### 角色（React 專案）
+
+在 `~/.screentrace/config.json` 的 `personas` 中依專案路徑設定角色；先設定空陣列 `[]` 並分析一次，可在圖中的 `application.personaDimensions` 查看條件維度。
+
+```json
+"personas": {
+  "/Users/machi/IntelliJ/reservio": [
+    {"id": "guest", "name": "訪客", "startPaths": ["/"],
+     "facts": [{"text": "loading", "truth": false}, {"text": "me", "truth": false}]},
+    {"id": "customer", "name": "顧客", "startPaths": ["/"],
+     "facts": [{"text": "loading", "truth": false}, {"text": "me", "truth": true},
+               {"text": "me.role === \"ROLE_USER\"", "truth": true}, {"text": "me.mustChangePassword", "truth": false}]}
+  ]
+}
+```
+
+`PERSONA_CONTRADICTORY` 表示角色條件矛盾，該角色被略過；`PERSONA_FACT_UNMATCHED` 表示條件未出現在畫面或導覽條件中；`PERSONA_DIMENSIONS_TRUNCATED` 表示維度超過 64 個，只列前 64 個。角色之間的轉換不在本次範圍。
+
 ### 缺少預覽或縮圖
 
 確認分析輸出完整，再重新分析或執行 `report` 重建 HTML。若仍缺少，檢視 `application-graph.json` 與 `preview-model.json` 中的診斷；不要以空白預覽推斷原畫面沒有內容。

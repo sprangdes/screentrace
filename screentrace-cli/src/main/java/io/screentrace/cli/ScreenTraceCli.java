@@ -363,7 +363,7 @@ public final class ScreenTraceCli {
     if (personaSettings.isPresent()) inventory = inventory.withPersonas(personaSettings.get(), settings.personasLine());
     if (personaSettings.isPresent() && !inventory.technologies().contains("React"))
       LOGGER.warning("角色設定目前只支援 React 畫面；本專案未偵測到 React，已略過角色設定。");
-    var graph = io.screentrace.core.GraphIntegrityValidator.requireAnalysis(analyze(inventory));
+    var graph = io.screentrace.core.GraphIntegrityValidator.requireAnalysis(io.screentrace.core.PersonaFlows.enrich(analyze(inventory)));
     var writer = new SingleHtmlAnalysisWriter();
     writer.prepare(graph, output);
     boolean reactScreens = graph.nodes().stream().anyMatch(n -> n.type() == ApplicationGraph.NodeType.SCREEN && "static-reconstruction".equals(n.attributes().get("rendering")));
@@ -379,7 +379,7 @@ public final class ScreenTraceCli {
     long components = graph.nodes().stream().filter(node -> node.type().name().equals("COMPONENT")).count();
     long contextPathHintCount=graph.diagnostics().stream().filter(d->"CONTEXT_PATH_HINT".equals(d.code())).mapToLong(d->d.evidence().size()).sum();
     return new AnalysisResult(report.path(), project.name(), graph.application().technologies(), endpoints,
-        screens, components, output,contextPathHintCount);
+        screens, components, output,contextPathHintCount,graph.application().personas().stream().map(p->{var f=p.flow();return "角色 "+p.name()+"：可達 "+f.reached().stream().filter(r->r.reach().equals("REACHABLE")).count()+"、可能 "+f.reached().stream().filter(r->r.reach().equals("POSSIBLE")).count()+"、未到達 "+f.unreached().size()+"、未判定導覽 "+f.unevaluatedNavigations();}).toList());
   }
 
   static String contextPathHintSummary(long count) {
@@ -391,7 +391,8 @@ public final class ScreenTraceCli {
         + String.join(", ", result.technologies()) + "\n  Endpoints：" + result.endpoints()
         + "\n  Screens：" + result.screens() + "\n  Components：" + result.components()
         + "\n  輸出：" + result.output()
-        + (contextPathHintSummary(result.contextPathHintCount())==null?"":"\n  "+contextPathHintSummary(result.contextPathHintCount())));
+        + (contextPathHintSummary(result.contextPathHintCount())==null?"":"\n  "+contextPathHintSummary(result.contextPathHintCount()))
+        + (result.personaSummaries().isEmpty()?"":"\n  "+String.join("\n  ",result.personaSummaries())));
   }
 
   private static ApplicationGraph analyze(ProjectScanner.ProjectInventory inventory) throws IOException {
@@ -486,7 +487,7 @@ public final class ScreenTraceCli {
   record BrowserOption(String id, String label) { }
 
   private record AnalysisResult(Path report, String project, List<String> technologies, long endpoints, long screens,
-      long components, Path output,long contextPathHintCount) { }
+      long components, Path output,long contextPathHintCount,List<String> personaSummaries) { }
 
   enum Action {
     INTERACTIVE(null, null), ANALYZE("analyze", "分析專案"), PATH(null, null), REPORT("report", "開啟報表"),
