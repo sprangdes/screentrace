@@ -395,3 +395,10 @@
 - 可選方案 B：維持第 3 點的 4 個類別限制，指定應排除的類別及處理方式。
 - 影響範圍：R19 基線判定及後續所有 Maven 步驟；WP86 尚未開始。
 - 狀態：RESOLVED（2026-11-04）。需求方採方案 A：第 0.3 節第 3 點更正為 5 個類別，失敗方法仍限第 1 點列出的 7 個測試。
+
+## OQ-043 — WP86 Maven 驗證出現環境例外清單以外的失敗
+
+- 情境：WP86 實作中執行 `mvn -B clean verify`，除 OQ-041 的 7 個測試外，新增測試 `WorkspacePersonaSettingsTest.invalidFieldsThrow` 也失敗，輸出 `Expected java.io.IOException to be thrown, but nothing was thrown.`；`screentrace-cli` 統計 85 個測試、2 個失敗、6 個錯誤、1 個略過。JS 測試 166 個通過。
+- 可選方案：確認失敗原因並授權後續處理，再重新執行 WP86 驗證。
+- 影響範圍：依 R19 §0.3 第 2 點停止；WP86 實作未提交，WP87／WP88 未開始。
+- 狀態：RESOLVED（2026-11-04）。原因：checkedText 先 trim() 再檢查控制字元，而 String.trim() 會移除頭尾的 U+0007，使 "x\u0007" 通過驗證。決定：控制字元改以去空白前的原始值檢查；R19 新增測試在實作中失敗時改實作、不改測試，同一測試修兩次仍失敗才停止。

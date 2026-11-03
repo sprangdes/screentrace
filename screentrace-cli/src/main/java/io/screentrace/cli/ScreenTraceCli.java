@@ -359,6 +359,10 @@ public final class ScreenTraceCli {
     Files.createDirectories(safeOutput);
     Path output = project.analysisDirectory();
     var inventory = new ProjectScanner().scan(project.sourceDirectory()).withContextPaths(settings.contextPathsFor(project.sourceDirectory()),settings.contextPathsLine());
+    var personaSettings = settings.personasFor(project.sourceDirectory());
+    if (personaSettings.isPresent()) inventory = inventory.withPersonas(personaSettings.get(), settings.personasLine());
+    if (personaSettings.isPresent() && !inventory.technologies().contains("React"))
+      LOGGER.warning("角色設定目前只支援 React 畫面；本專案未偵測到 React，已略過角色設定。");
     var graph = io.screentrace.core.GraphIntegrityValidator.requireAnalysis(analyze(inventory));
     var writer = new SingleHtmlAnalysisWriter();
     writer.prepare(graph, output);

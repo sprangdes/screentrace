@@ -6,6 +6,7 @@ import {resolveRouteFacts} from './route-conditions.mjs';
 import {contextTransfers} from './context-transfer.mjs';
 import {stylesheets} from './styles.mjs';
 import {parseExpression} from '@babel/parser';
+import {personaDimensions, normalizePersonas} from './personas.mjs';
 
 const ROUTER = new Set(['react-router-dom', 'react-router', 'react-router-native']);
 const REACT = new Set(['react', 'preact/compat']);
@@ -23,7 +24,7 @@ const MAX_GUARD = 300;
  * Static React analysis: routes, the component tree each route renders, interactive elements and what
  * their handlers do. Target code is parsed, never run; values that cannot be proven stay unresolved.
  */
-export function analyzeReact({files = [], maxDepth = 24, markup = false} = {}) {
+export function analyzeReact({files = [], maxDepth = 24, markup = false, personas} = {}) {
   const {modules, diagnostics} = parseModules(files);
   const evaluator = new Evaluator(modules, maxDepth);
   evaluator.transferContext = contextTransfers(modules,evaluator);
@@ -116,11 +117,14 @@ export function analyzeReact({files = [], maxDepth = 24, markup = false} = {}) {
     screen.redirectTo = [...new Set(ordered.flatMap(item => [...(item.effect.targetRoutes ?? [])].sort()))];
   }
   for (const screen of screens) delete screen.redirects;
+  let personaResult;
+  if(personas !== undefined){const found=personaDimensions(screens,routeRedirects);const normalized=normalizePersonas(personas,found.dimensions);diagnostics.push(...found.diagnostics,...normalized.diagnostics);personaResult={personaDimensions:found.dimensions,personas:normalized.personas};}
   const groups = combinations(screens.map(s => s.audience));
   if (groups.overflow && screens.length) diagnostics.push(diagnostic(screens[0].file, screens[0].line, 'REACT_AUDIENCE_TOO_MANY', '身分組合超過 16，僅保留各畫面的條件'));
   const uniqueDiagnostics = new Map();
   for (const item of diagnostics) uniqueDiagnostics.set(JSON.stringify(item), item);
   const result = {screens, routeRedirects, audiences: groups.values, diagnostics: [...uniqueDiagnostics.values()].sort((a, b) => a.source.file.localeCompare(b.source.file) || a.source.line - b.source.line || a.code.localeCompare(b.code))};
+  if(personaResult)Object.assign(result,personaResult);
   const sheetImports=stylesheets(modules, shell ? [shell.file] : [...new Set(routes.map(route => route.file))].sort());
   result.stylesheets=sheetImports.filter(item=>item.package);
   result.localStylesheets=sheetImports.filter(item=>!item.package);
