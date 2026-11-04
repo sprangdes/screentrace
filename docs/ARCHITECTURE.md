@@ -179,6 +179,10 @@ R18 第三階段（不改 schema 版本）：React SCREEN 的 `view`／`viewSour
 
 外框重導依固定路由求值，條件不矛盾時才成為入口重導；身分維度以完整清單比對，並依畫面引用數截斷。未設定角色的 React 圖會新增外框重導行為，非 React 圖維持不變。見 [ADR 0110](adr/0110-r19-dimension-matching-and-shell-redirects.md)。
 
+### R20：報表呈現角色流程
+
+viewer 只讀 schema 2.4 的 `application.personas`，不重新判定。每個畫面依角色流程歸為確定可達、可能可達、未到達或不適用；總覽線只在流程中有同一對畫面之間的步驟時標成該角色的線，經由網址入口的步驟不畫成線。圖中沒有角色時不顯示任何角色控制項，md 與保留／移除標記不受角色影響。見 [ADR 0111](adr/0111-r20-persona-viewer.md)。
+
 ### 4.2 WP1 行為與檢核 schema 2.2
 
 新增 `behaviors` / `validationRules`（皆依 ID 排序）。schema 2.2 節點與邊必須具來源相對路徑/行號、解析器名稱與解析狀態；COMPONENT 的 attributes.kind 必須是 BUTTON、LINK、SUBMIT、TEXT_INPUT、TEXTAREA、SELECT、CHECKBOX、RADIO、DATE_PICKER、FILE_INPUT、MULTI_SELECT、FORM、MODAL、TABLE、OTHER。

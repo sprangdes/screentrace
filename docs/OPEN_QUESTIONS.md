@@ -424,3 +424,10 @@
 - 可選方案：授權只補入該右括號，不改測試斷言或 fixture，再重新執行 §3.5 的測試。
 - 影響範圍：WP89 Java 測試無法執行，完整 Maven 驗證、實作提交、推送及 CI 尚未完成。依 R19 §0.3 第 2 點，修好需要修改新增測試本身，故停止。
 - 狀態：RESOLVED（2026-11-04）。需求方授權只補入缺少的 )，斷言與 fixture 不變；補正後已在未套用實作的狀態下確認該測試可編譯且因斷言 2 失敗。另訂通則：新增測試與指示原文不一致的語法／編譯錯誤，可直接改回原文並在回報中列出，不需另開問題。
+
+## OQ-047 — R20 viewer 基線測試失敗
+
+- 指令：`npm --prefix screentrace-viewer test`；基線 commit `2f66ea194d267ec623eb57973b356860df4d9530`。
+- 結果：129 個測試，127 通過、2 失敗、0 略過。失敗為 `WP84 screen style package note bootstrap|flatpickr` 與 `WP84 screen style package note absent`（`screentrace-viewer/test/r18-style-packages.test.mjs`）。
+- 輸出：兩項均為 `browserType.launch: Target page, context or browser has been closed`；Chromium log 含 `bootstrap_check_in ... Permission denied (1100)`，程序以 `SIGTRAP` 結束。
+- 狀態：RESOLVED（2026-11-04）。這 2 個測試會啟動 Chromium，與 OQ-041 同為 Codex sandbox 的環境限制；需求方於 sandbox 外對 2f66ea1 套用 R20 patch 後執行 viewer 單元測試 132 個全數通過。決定：sandbox 內這 2 個測試的失敗不阻擋 R20，由 PR CI 驗證。

@@ -175,6 +175,11 @@
 - WP86：角色設定、身分維度與 schema 2.4，見 [ADR 0107](adr/0107-r19-persona-settings-and-dimensions.md)。
 - WP87：畫面與導覽角色判定，見 [ADR 0108](adr/0108-r19-persona-verdicts.md)。
 - WP88：角色流程可達性，見 [ADR 0109](adr/0109-r19-persona-flows.md)。
-- P4（viewer）、P5（後端權限）未開始。
+- P4（viewer）由 R20 完成；P5（後端權限）未開始。
 - WP89：修正身分維度截斷造成的假診斷，並讓 <Routes> 外 Guard 的重導依固定路由成為入口重導（reservio 未開店商家可達 /business/setup）。見 [ADR 0110](adr/0110-r19-dimension-matching-and-shell-redirects.md)。
 - 驗證：本機 JS 171 通過；Maven 576（568 通過、1 略過，另 OQ-041 的 7 個 Chromium 測試在 sandbox 內無法執行）；PR CI run https://github.com/sprangdes/screentrace/actions/runs/41753736309 三個 job 全綠（含 E2E 與上述 7 個測試）。PR：https://github.com/sprangdes/screentrace/pull/63。
+
+## R20 角色流程呈現（P4）
+
+- WP90：報表依角色呈現流程（角色選單、流程清單、畫布標示、角色比較分頁），見 [ADR 0111](adr/0111-r20-persona-viewer.md)。
+- 驗證：待 PR CI 完成後補入。

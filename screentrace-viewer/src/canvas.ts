@@ -5,9 +5,10 @@ import {relationTooltip,focusedRelations,FocusRelation,sharedNavigation} from '.
 import {Index,Position,fileEntries,searchScreens} from './map';
 import {Payload} from './contracts';
 import {element,text} from './text';
+import {PersonaView,lineKey,reachText} from './personas';
 
 export interface CanvasTransform {zoom:number;x:number;y:number}
-export interface CanvasState {query:string;visible?:Set<string>;screenStatus:(id:string)=>string}
+export interface CanvasState {query:string;visible?:Set<string>;screenStatus:(id:string)=>string;persona?:PersonaView}
 export interface CanvasOptions extends CanvasState {
  transform?:CanvasTransform;
  onTransformChange?:(state:CanvasTransform)=>void;
@@ -87,7 +88,7 @@ export function focusLines(index:Index,id:string):FocusRelation[]{
 export function canvas(index:Index,payload:Payload,options:CanvasOptions):CanvasView{
  const viewport=element('div',undefined,'canvas'),world=element('div',undefined,'world'),controls=element('div',undefined,'canvas-controls');
  viewport.tabIndex=0;viewport.setAttribute('aria-label',text.canvas);viewport.dataset.mode='overview';
- let state:CanvasState={query:options.query,visible:options.visible,screenStatus:options.screenStatus};
+ let state:CanvasState={query:options.query,visible:options.visible,screenStatus:options.screenStatus,persona:options.persona};
  let zoom=options.transform?.zoom??1,x=options.transform?.x??0,y=options.transform?.y??0;
  let focused:string|undefined,overview:(CanvasTransform&{left:number;top:number})|undefined,sequence=0,frameId=0;
  // Where the canvas sat on the page while showing the overview; a zoom may already have moved it by the time focus() runs.
@@ -261,8 +262,16 @@ export function canvas(index:Index,payload:Payload,options:CanvasOptions):Canvas
    const status=state.screenStatus(id);card.querySelector('.review-status-icon')?.remove();
    if(status==='KEEP'||status==='REMOVE'){card.dataset.screenStatus=status;const mark=icon(status==='KEEP'?'check':'close');mark.classList.add('review-status-icon');mark.setAttribute('role','img');mark.setAttribute('aria-label',status==='KEEP'?text.keep:text.remove);card.append(mark);}
    else delete card.dataset.screenStatus;
+   // The chosen persona's view of the screen: where it sits in the flow, or that the persona never sees it.
+   card.querySelector('.persona-badge')?.remove();
+   if(state.persona){const reach=state.persona.reach.get(id)!,badge=element('span',reachText(state.persona,id),'persona-badge');card.dataset.personaReach=reach;badge.dataset.reach=reach;card.append(badge);}
+   else delete card.dataset.personaReach;
   }
-  svg.querySelectorAll<SVGPathElement>('.relation-line').forEach(line=>{(line.parentNode as SVGGElement).style.display=visible(line.dataset.from!)&&visible(line.dataset.to!)?'':'none';});
+  svg.classList.toggle('has-persona',!!state.persona);
+  svg.querySelectorAll<SVGPathElement>('.relation-line').forEach(line=>{
+   (line.parentNode as SVGGElement).style.display=visible(line.dataset.from!)&&visible(line.dataset.to!)?'':'none';
+   if(state.persona)line.dataset.persona=state.persona.lines.get(lineKey(line.dataset.from!,line.dataset.to!))||'OFF';else delete line.dataset.persona;
+  });
   if(refit&&!focused)fit();
  };
 
