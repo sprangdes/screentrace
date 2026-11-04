@@ -1,93 +1,113 @@
 import {Index} from './map';
 import {element,text} from './text';
-import {PersonaView,Reach,reachLabel,reachHelp,reachText,reachSummary,personaDescription,factLabel} from './personas';
+import {PersonaView,reachLabel,reachHelp,reachSummary,personaDescription,factLabel,flowGroups} from './personas';
 
-/** What a comparison cell shows: the step number when reached, × when never reached, nothing when it does not apply. */
-export const personaCellText=(view:PersonaView,id:string)=>{const step=view.depth.get(id);if(step!==undefined)return String(step);return view.reach.get(id)==='UNREACHED'?'×':'';};
-
-/** Screens in flow order: the earliest step any persona reaches them at, then name; screens no persona reaches come last. */
-export function comparisonOrder(index:Index,views:PersonaView[],screens:string[]):string[]{
- const first=(id:string)=>Math.min(...views.map(view=>view.depth.get(id)??Infinity));
- const name=(id:string)=>index.nodes.get(id)?.name||id;
- return [...screens].sort((a,b)=>first(a)-first(b)||name(a).localeCompare(name(b),'zh-Hant')||(a<b?-1:a>b?1:0));
-}
-
-export interface ComparisonSection {key:string;label:string;personas:string[];screens:string[];folded:boolean}
+export interface PersonaOverlap {key:string;label:string;screens:string[]}
 /**
- * Screens grouped by which personas reach them (會走到 or 可能走到): screens shared by more personas first, then each
- * persona's own screens in persona order, then screens no persona reaches, folded.
+ * The screens this persona reaches, split by which other personas also reach them: its own screens first, then
+ * screens shared with more personas before fewer, in persona order.
  */
-export function comparisonSections(index:Index,views:PersonaView[],screens:string[]):ComparisonSection[]{
- const ids=views.map(view=>view.persona.id),names=new Map(views.map(view=>[view.persona.id,view.persona.name]));
- const byKey=new Map<string,{personas:string[];screens:string[]}>();
- for(const id of comparisonOrder(index,views,screens)){
-  const personas=views.filter(view=>view.depth.has(id)).map(view=>view.persona.id),key=personas.join('+')||'none';
-  const section=byKey.get(key)||byKey.set(key,{personas,screens:[]}).get(key)!;section.screens.push(id);
+export function personaOverlap(index:Index,views:PersonaView[],view:PersonaView):PersonaOverlap[]{
+ const others=views.filter(other=>other!==view),order=new Map(views.map((v,i)=>[v.persona.id,i]));
+ const name=(id:string)=>index.nodes.get(id)?.name||id;
+ const groups=new Map<string,{with:PersonaView[];screens:string[]}>();
+ for(const screen of index.screens){
+  if(!view.depth.has(screen.id))continue;
+  const sharing=others.filter(other=>other.depth.has(screen.id)),key=sharing.map(other=>other.persona.id).join('+')||'only';
+  const group=groups.get(key)||groups.set(key,{with:sharing,screens:[]}).get(key)!;group.screens.push(screen.id);
  }
- const rank=(personas:string[])=>personas.map(id=>ids.indexOf(id));
+ const rank=(list:PersonaView[])=>list.map(v=>order.get(v.persona.id)!);
  const compare=(a:number[],b:number[])=>{for(let i=0;i<Math.min(a.length,b.length);i++)if(a[i]!==b[i])return a[i]-b[i];return a.length-b.length;};
- return [...byKey].sort(([ka,a],[kb,b])=>Number(ka==='none')-Number(kb==='none')||b.personas.length-a.personas.length||compare(rank(a.personas),rank(b.personas)))
-  .map(([key,section])=>{
-   const who=section.personas.map(id=>names.get(id)!);
-   const label=!who.length?'沒有角色走得到':who.length===1?`只有${who[0]}`:who.length===ids.length?'所有角色共用':`${who.join('、')}共用`;
-   return {key,label,personas:section.personas,screens:section.screens,folded:!who.length};
-  });
+ const byStep=(a:string,b:string)=>view.depth.get(a)!-view.depth.get(b)!||name(a).localeCompare(name(b),'zh-Hant')||(a<b?-1:a>b?1:0);
+ return [...groups].sort(([ka,a],[kb,b])=>Number(kb==='only')-Number(ka==='only')||b.with.length-a.with.length||compare(rank(a.with),rank(b.with)))
+  .map(([key,group])=>({key,label:key==='only'?'只有這個角色':group.with.length===others.length?'所有角色共用':`和${group.with.map(v=>v.persona.name).join('、')}共用`,screens:group.screens.sort(byStep)}));
 }
 
-/** One legend mark per state, drawn like the cells. */
-function legend():HTMLElement{
- const row=element('div',undefined,'persona-legend-row');
- const items:[Reach,string,string][]=[['REACHABLE','2',`${reachLabel.REACHABLE}（第 2 步）`],['POSSIBLE','2',`${reachLabel.POSSIBLE}（第 2 步）`],['UNREACHED','×',reachLabel.UNREACHED],['EXCLUDED','',`空白：${reachLabel.EXCLUDED}`]];
- for(const [reach,mark,label] of items){const item=element('span',undefined,'persona-legend-item'),dot=element('span',mark,'persona-step');dot.dataset.reach=reach;item.title=reachHelp[reach];item.append(dot,element('span',label));row.append(item);}
- return row;
-}
+/** What the page keeps while the report is open: leaving for a screen and coming back finds the same persona. */
+const memory={selected:undefined as string|undefined};
 
-/** Every screen against every persona, grouped by who reaches it; each cell is the step it is reached at. */
-export function personaPage(index:Index,views:PersonaView[],options:{screens:string[];thumbnail?:(id:string)=>string|undefined;onOpen:(screenId:string,personaId?:string)=>void;onPersona:(personaId:string)=>void}):HTMLElement{
- const root=element('section',undefined,'persona-page');root.dataset.personaPage='true';
- const heading=element('div',undefined,'persona-heading');
- heading.append(element('h1','角色比較'),element('p','每個畫面在各角色從起點網址開始的第幾步出現；依「哪些角色走得到」分組。點角色名稱看該角色的流程圖，點格子以該角色開啟畫面。','muted'),legend());
- const scroll=element('div',undefined,'persona-table-scroll'),table=element('table',undefined,'persona-table'),head=element('thead'),headRow=element('tr');
- headRow.append(element('th','畫面'));
+export interface PersonaPageOptions {selected?:string;onOpen:(screenId:string,personaId:string)=>void;onPersona:(personaId:string)=>void}
+
+/** The persona page, laid out like the API page: personas on the left, the chosen persona's flow on the right. */
+export function personaPage(index:Index,views:PersonaView[],options:PersonaPageOptions):HTMLElement{
+ const byId=new Map(views.map(view=>[view.persona.id,view]));
+ let selected=[options.selected,memory.selected,views[0]?.persona.id].find(id=>!!id&&byId.has(id));
+ const root=element('section',undefined,'api-page persona-page'),master=element('div',undefined,'api-master'),detail=element('aside',undefined,'api-detail');
+ root.dataset.personaPage='true';detail.setAttribute('aria-label','角色詳情');
+ const head=element('div',undefined,'api-heading'),title=element('h1','角色');
+ title.append(element('span',String(views.length),'api-total'));
+ head.append(title,element('p','每個角色從起點網址開始，依步數會走到的畫面。','api-intro'));
+ const list=element('div',undefined,'api-list');list.setAttribute('role','listbox');list.setAttribute('aria-label','角色清單');
+ master.append(head,list);root.append(master,detail);
+ const name=(id:string)=>index.nodes.get(id)?.name||id;
+ const route=(id:string)=>index.routes.get(id)?.[0]||text.noUrl;
+
+ const select=(id:string,focus=false)=>{
+  selected=id;memory.selected=id;
+  for(const row of list.querySelectorAll<HTMLElement>('.persona-row')){const on=row.dataset.personaRow===id;row.setAttribute('aria-selected',String(on));row.tabIndex=on?0:-1;if(on&&focus)row.focus();}
+  renderDetail();
+ };
  for(const view of views){
-  const th=element('th');th.dataset.personaColumn=view.persona.id;
-  const open=element('button',view.persona.name,'persona-column-name');open.dataset.personaFlow=view.persona.id;open.title=`在畫布上看「${view.persona.name}」的流程`;open.onclick=()=>options.onPersona(view.persona.id);
-  const conditions=view.persona.facts.map(factLabel).join('、')||'（沒有條件）';
-  const about=element('span',personaDescription(view.persona),'persona-column-about');about.title=`判定條件：${conditions}`;
-  th.append(open,about,element('span',reachSummary(view),'persona-column-counts'));
-  if(view.unevaluated)th.append(element('span',`${view.unevaluated} 個條件無法判定`,'persona-column-counts'));
-  headRow.append(th);
+  const row=element('button',undefined,'api-row persona-row');row.type='button';row.setAttribute('role','option');row.dataset.personaRow=view.persona.id;
+  const label=element('span',undefined,'persona-row-text');label.append(element('strong',view.persona.name),element('span',personaDescription(view.persona),'persona-row-about'));
+  row.append(label,element('span',reachSummary(view),'api-screen-count'));
+  row.onclick=()=>select(view.persona.id);list.append(row);
  }
- head.append(headRow);table.append(head);
- for(const section of comparisonSections(index,views,options.screens)){
-  const body=element('tbody');body.dataset.personaSection=section.key;
-  const titleRow=element('tr',undefined,'persona-section-row'),titleCell=element('th'),toggle=element('button',undefined,'persona-section-toggle');
-  titleCell.colSpan=views.length+1;titleCell.scope='rowgroup';
-  toggle.append(element('span',section.label,'persona-section-label'),element('span',`${section.screens.length} 個畫面`,'persona-section-count'));
-  toggle.setAttribute('aria-expanded',String(!section.folded));titleCell.append(toggle);titleRow.append(titleCell);body.append(titleRow);
-  const rows:HTMLTableRowElement[]=[];
-  for(const id of section.screens){
-   const screen=index.nodes.get(id);if(!screen)continue;
-   const row=element('tr');row.dataset.personaRow=id;row.hidden=section.folded;
-   const name=element('th');name.scope='row';
-   const screenButton=element('button',undefined,'persona-screen');screenButton.title=`開啟「${screen.name}」`;screenButton.onclick=()=>options.onOpen(id);
-   const thumb=options.thumbnail?.(id);
-   if(thumb){const img=element('img',undefined,'persona-thumb');img.src=thumb;img.alt='';img.loading='lazy';screenButton.append(img);}
-   else screenButton.append(element('span',undefined,'persona-thumb missing'));
-   const label=element('span',undefined,'persona-screen-text');label.append(element('strong',screen.name),element('code',index.routes.get(id)?.[0]||text.noUrl));screenButton.append(label);
-   name.append(screenButton);row.append(name);
-   for(const view of views){
-    const reach=view.reach.get(id)!,cell=element('td');cell.dataset.reach=reach;cell.dataset.persona=view.persona.id;
-    const description=`${view.persona.name}：${reachText(view,id)}`;
-    if(reach==='EXCLUDED'){cell.title=description;cell.setAttribute('aria-label',description);}
-    else{const button=element('button',personaCellText(view,id),'persona-step');button.dataset.reach=reach;button.setAttribute('aria-label',description);button.title=`${description}（${reachHelp[reach]}）。點一下以「${view.persona.name}」開啟`;button.onclick=()=>options.onOpen(id,view.persona.id);cell.append(button);}
-    row.append(cell);
-   }
-   rows.push(row);body.append(row);
+ list.addEventListener('keydown',event=>{
+  const ids=views.map(v=>v.persona.id),at=ids.indexOf(selected||'');
+  const target=event.key==='ArrowDown'?ids[Math.min(ids.length-1,at+1)]:event.key==='ArrowUp'?ids[Math.max(0,at-1)]:event.key==='Home'?ids[0]:event.key==='End'?ids.at(-1):undefined;
+  if(!target)return;event.preventDefault();select(target,true);
+ });
+
+ const section=(heading:string,key:string)=>{const box=element('section',undefined,'api-section');box.dataset.personaSection=key;box.append(element('h3',heading));return box;};
+ /** A screen in the flow: its name opens it as this persona; a mark says when reaching it is not certain. */
+ const screenLine=(view:PersonaView,id:string)=>{
+  const line=element('div',undefined,'persona-screen-line'),link=element('button',name(id),'api-screen-link');link.type='button';link.dataset.personaScreen=id;
+  link.onclick=()=>options.onOpen(id,view.persona.id);line.append(link,element('code',route(id),'api-source'));
+  const reach=view.reach.get(id)!;
+  if(reach==='POSSIBLE'){const mark=element('span',reachLabel.POSSIBLE,'persona-pill');mark.dataset.reach=reach;mark.title=reachHelp.POSSIBLE;line.append(mark);}
+  return line;
+ };
+ /** Screens as compact chips, for the comparison and the screens outside the flow. */
+ const chips=(view:PersonaView,ids:string[])=>{const box=element('div',undefined,'api-caller-list');for(const id of ids){const chip=element('button',name(id),'api-caller');chip.type='button';chip.dataset.personaScreen=id;chip.title=route(id);chip.onclick=()=>options.onOpen(id,view.persona.id);box.append(chip);}return box;};
+ const fold=(label:string,count:number,key:string,body:HTMLElement)=>{const box=element('details',undefined,'api-shared');box.dataset.personaFold=key;const summary=element('summary');summary.append(element('span',label,'api-shared-name'),element('span',`${count} 個畫面`,'muted'));box.append(summary,body);return box;};
+
+ const renderDetail=()=>{
+  detail.replaceChildren();
+  const view=selected?byId.get(selected):undefined;
+  if(!view){detail.append(element('p','沒有角色','empty-list'));return;}
+  const inner=element('div',undefined,'api-detail-inner');inner.dataset.personaDetail=view.persona.id;
+  const heading=element('div',undefined,'api-detail-title'),flow=element('button','在畫布上看流程','persona-flow-button');
+  flow.type='button';flow.dataset.personaFlow=view.persona.id;flow.onclick=()=>options.onPersona(view.persona.id);
+  heading.append(element('h2',view.persona.name,'persona-detail-name'),flow);
+  inner.append(heading,element('p',`${personaDescription(view.persona)}。${reachSummary(view)}。`,'api-reason'));
+
+  const conditions=section('判定條件','conditions');
+  for(const fact of view.persona.facts)conditions.append(element('code',factLabel(fact),'persona-fact'));
+  if(!view.persona.facts.length)conditions.append(element('p','（沒有條件）','muted'));
+  const starts=section('起點','starts');starts.append(element('code',(view.persona.startPaths||[]).join('、')||'/','persona-fact'));
+  inner.append(conditions,starts);
+
+  const groups=flowGroups(index,view),steps=groups.filter(g=>g.key.startsWith('step-'));
+  const flowBox=section(`流程 ${view.depth.size} 個畫面`,'flow');
+  if(!steps.length)flowBox.append(element('p','這個角色從起點走不到任何畫面；請確認設定中的起點網址與條件。','muted'));
+  if(view.unevaluated)flowBox.append(element('p',`有 ${view.unevaluated} 個導覽的條件程式無法判定，經過它們的畫面標為「${reachLabel.POSSIBLE}」。`,'muted'));
+  for(const group of steps){const step=element('div',undefined,'api-caller-screen persona-step-group');step.dataset.personaStep=group.key;step.append(element('h4',`${group.title} · ${group.screens.length}`,'persona-step-title'));for(const id of group.screens)step.append(screenLine(view,id));flowBox.append(step);}
+  inner.append(flowBox);
+
+  if(views.length>1&&view.depth.size){
+   const compare=section('和其他角色比較','compare');
+   for(const overlap of personaOverlap(index,views,view))compare.append(fold(overlap.label,overlap.screens.length,overlap.key,chips(view,overlap.screens)));
+   inner.append(compare);
   }
-  toggle.onclick=()=>{const open=toggle.getAttribute('aria-expanded')!=='true';toggle.setAttribute('aria-expanded',String(open));for(const row of rows)row.hidden=!open;};
-  table.append(body);
- }
- scroll.append(table);root.append(heading,scroll);
+  const outside=groups.filter(g=>g.reach==='UNREACHED'||g.reach==='EXCLUDED');
+  if(outside.length){
+   const rest=section('流程以外','outside');
+   for(const group of outside){const box=fold(group.title,group.screens.length,group.key,chips(view,group.screens));box.title=reachHelp[group.reach];rest.append(box);}
+   inner.append(rest);
+  }
+  detail.append(inner);detail.scrollTop=0;
+ };
+ if(selected)select(selected);else renderDetail();
  return root;
 }
