@@ -213,4 +213,4 @@
 ## R26 值的求值：沿著提早回傳算出輔助函式的結果
 
 - WP96：有多個 `return` 的函式，在條件能確定時沿著提早回傳算出結果。reservio 顧客「會走到」由 0 個增加為 7 個，見 [ADR 0117](adr/0117-r26-early-return-helpers.md)。
-- 驗證：待 PR CI 完成後補入。
+- 驗證：JS 測試 180 個（新增 3）；viewer 單元測試 137 個（sandbox 內 135 通過，OQ-047 的 2 個 Chromium 測試無法執行）；Maven 579（571 通過、1 略過，另 OQ-041 的 7 個 Chromium 測試在 sandbox 內無法執行）；PR CI run https://github.com/sprangdes/screentrace/actions/runs/41864199127 三個 job 全綠（含 E2E 與上述 7 個測試）。PR：https://github.com/sprangdes/screentrace/pull/70。
