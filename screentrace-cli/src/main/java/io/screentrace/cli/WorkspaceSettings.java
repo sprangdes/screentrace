@@ -75,12 +75,13 @@ final class WorkspaceSettings {
           String id=item.path("id").asText("");
           if(!item.path("id").isTextual()||!id.matches("^[a-z][a-z0-9-]{0,31}$")||!ids.add(id))throw personaError(project,id,"id");
           String name=checkedText(item.path("name"),project,id,"name",40);
+          String description=item.path("description").isMissingNode()?null:checkedText(item.path("description"),project,id,"description",80);
           var facts=item.path("facts");if(!facts.isArray()||facts.size()<1||facts.size()>32)throw personaError(project,id,"facts");
           var parsedFacts=new java.util.ArrayList<PersonaSetting.Fact>();
           for(var fact:facts){String text=checkedText(fact.path("text"),project,id,"facts.text",200);if(!fact.path("truth").isBoolean())throw personaError(project,id,"facts.truth");parsedFacts.add(new PersonaSetting.Fact(text,fact.path("truth").booleanValue()));}
           var starts=new java.util.ArrayList<String>();var pathsNode=item.path("startPaths");
           if(pathsNode.isMissingNode())starts.add("/");else {if(!pathsNode.isArray()||pathsNode.size()<1||pathsNode.size()>8)throw personaError(project,id,"startPaths");for(var path:pathsNode){if(!path.isTextual()||!path.asText().startsWith("/")||hasControl(path.asText()))throw personaError(project,id,"startPaths");starts.add(path.asText());}}
-          parsed.add(new PersonaSetting(id,name,parsedFacts,starts));
+          parsed.add(new PersonaSetting(id,name,description,parsedFacts,starts));
         }
         settings.personas.put(RealPaths.resolveAllowMissing(Path.of(project)).toString(),java.util.List.copyOf(parsed));
       }

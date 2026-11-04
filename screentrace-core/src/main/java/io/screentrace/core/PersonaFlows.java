@@ -22,7 +22,7 @@ public final class PersonaFlows {
       var certain=bfs(starts,expand,true,null);var allSteps=new LinkedHashSet<PersonaStep>();var possible=bfs(starts,expand,false,allSteps);
       var reached=new ArrayList<PersonaReach>();for(var e:possible.entrySet()){var node=nodes.get(e.getKey());if(node!=null&&node.type()==NodeType.SCREEN){boolean applies=certain.containsKey(e.getKey());reached.add(new PersonaReach(e.getKey(),applies?"REACHABLE":"POSSIBLE",applies?certain.get(e.getKey()):e.getValue()));}}
       var unreached=nodes.values().stream().filter(n->n.type()==NodeType.SCREEN&&status(p,n.id())!=PersonaStatus.EXCLUDED&&!possible.containsKey(n.id())).map(GraphNode::id).toList();
-      var flow=new PersonaFlow(List.copyOf(starts),reached,unreached,List.copyOf(allSteps),unevaluated.size());personas.add(new Persona(p.id(),p.name(),p.facts(),p.startPaths(),p.screens(),p.navigations(),flow));
+      var flow=new PersonaFlow(List.copyOf(starts),reached,unreached,List.copyOf(allSteps),unevaluated.size());personas.add(new Persona(p.id(),p.name(),p.description(),p.facts(),p.startPaths(),p.screens(),p.navigations(),flow));
     }
     var app=graph.application();return new ApplicationGraph(new Application(app.name(),app.path(),app.technologies(),app.audiences(),app.personaDimensions(),personas),graph.nodes(),graph.relationships(),diagnostics,graph.apiContracts(),graph.schemaVersion(),graph.behaviors(),graph.validationRules());
   }

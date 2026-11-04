@@ -13,7 +13,7 @@ const line=(page,from,to)=>page.locator(`.relations .relation-line[data-from="${
 test('R20 a report without personas shows no persona controls',async()=>{
  const browser=await chromium.launch();try{
   const {page,state}=await open(browser,fixture());
-  assert.equal(await page.locator('[data-persona-select]').count(),0);
+  assert.equal(await page.locator('[data-persona-bar],[data-persona-option]').count(),0);
   assert.equal(await page.locator('.page-tab[data-page="personas"]').count(),0);
   assert.equal(await page.locator('.persona-badge,[data-persona-reach],.relation-line[data-persona]').count(),0);
   assert.deepEqual(state.errors,[]);assert.equal(state.requests,0);
@@ -23,27 +23,29 @@ test('R20 a report without personas shows no persona controls',async()=>{
 test('R20 choosing a persona shows its flow in the list, on the map and on the open screen',async()=>{
  const browser=await chromium.launch();try{
   const {page,state}=await open(browser,personaFixture());
-  assert.deepEqual(await page.locator('[data-persona-select] option').allTextContents(),['不套用角色','訪客','會員']);
-  await page.selectOption('[data-persona-select]','member');
+  assert.deepEqual(await page.locator('[data-persona-option]').allTextContents(),['不套用角色','訪客','會員']);
+  await page.locator('[data-persona-option="member"]').click();
+  assert.equal(await page.locator('[data-persona-option="member"]').getAttribute('aria-pressed'),'true');
   assert.equal(await page.locator('.screen-card[data-screen="a"]').getAttribute('data-persona-reach'),'REACHABLE');
   assert.equal(await page.locator('.screen-card[data-screen="b"]').getAttribute('data-persona-reach'),'POSSIBLE');
-  assert.equal(await page.locator('.screen-card[data-screen="a"] .persona-badge').textContent(),'確定可達 · 第 1 步');
+  assert.equal(await page.locator('.screen-card[data-screen="a"] .persona-badge').count(),0);
+  assert.equal(await page.locator('.screen-card[data-screen="b"] .persona-badge').textContent(),'可能走到');
   assert.equal(await line(page,'a','b').getAttribute('data-persona'),'UNKNOWN');
-  assert.match(await page.locator('[data-persona-summary="member"]').textContent(),/user：是.*確定可達 1 · 可能可達 1 · 未到達 0 · 不適用 0.*有 1 個導覽的條件無法判定/s);
+  assert.match(await page.locator('[data-persona-summary="member"]').textContent(),/會員.*依 1 個條件判定.*會走到 1 · 可能走到 1.*判定條件.*user：是/s);
   assert.deepEqual(await page.locator('[data-persona-group]').evaluateAll(nodes=>nodes.map(n=>n.dataset.personaGroup)),['step-1','step-2']);
   assert.deepEqual(await page.locator('[data-persona-group="step-2"] .screen-row').evaluateAll(nodes=>nodes.map(n=>n.dataset.screenList)),['b']);
 
-  await page.selectOption('[data-persona-select]','visitor');
+  await page.locator('[data-persona-option="visitor"]').click();
   assert.equal(await page.locator('.screen-card[data-screen="b"]').getAttribute('data-persona-reach'),'EXCLUDED');
-  assert.equal(await line(page,'a','b').getAttribute('data-persona'),'OFF');
+  assert.equal(await page.locator('.screen-card[data-screen="b"]').isVisible(),false);
   assert.equal(await page.locator('details[data-persona-group="excluded"] summary').textContent(),'不適用 1');
 
   await page.locator('.screen-card[data-screen="a"]').dblclick();
-  assert.equal(await page.locator('[data-screen-panel="a"] [data-persona-status]').textContent(),'角色「訪客」：確定可達 · 第 1 步');
+  assert.equal(await page.locator('[data-screen-panel="a"] [data-persona-status]').textContent(),'角色「訪客」：會走到 · 第 1 步');
   assert.equal(await page.locator('[data-persona-status]').getAttribute('data-persona-status'),'REACHABLE');
 
   await page.keyboard.press('Escape');
-  await page.selectOption('[data-persona-select]','');
+  await page.locator('[data-persona-option=""]').click();
   assert.equal(await page.locator('.persona-badge,[data-persona-reach],[data-persona-summary]').count(),0);
   assert.equal(await line(page,'a','b').getAttribute('data-persona'),null);
   assert.deepEqual(state.errors,[]);assert.equal(state.requests,0);
@@ -56,13 +58,13 @@ test('R20 the persona page compares every screen across personas and opens a scr
   await page.locator('.page-tab[data-page="personas"]').click();
   await page.waitForSelector('[data-persona-page]');
   assert.deepEqual(await page.locator('.persona-table thead th').allTextContents(),['畫面','訪客','會員']);
-  assert.equal(await page.locator('[data-persona-row="b"] .persona-cell[data-persona="visitor"]').textContent(),'不適用');
-  assert.equal(await page.locator('[data-persona-row="b"] .persona-cell[data-persona="member"]').textContent(),'可能可達 · 第 2 步');
-  assert.match(await page.locator('[data-persona-facts="member"]').textContent(),/會員.*user：是.*1 個導覽的條件無法判定/s);
+  assert.equal(await page.locator('[data-persona-row="b"] .persona-cell[data-persona="visitor"]').textContent(),'—');
+  assert.equal(await page.locator('[data-persona-row="b"] .persona-cell[data-persona="member"]').textContent(),'可能走到 · 第 2 步');
+  assert.match(await page.locator('[data-persona-facts="member"]').textContent(),/會員.*依 1 個條件判定.*1 個導覽的條件程式無法判定.*user：是/s);
   await page.locator('[data-persona-row="b"] .persona-cell[data-persona="member"]').click();
   await page.waitForSelector('[data-screen-panel="b"] [data-persona-status]');
-  assert.equal(await page.locator('[data-persona-select]').inputValue(),'member');
-  assert.equal(await page.locator('[data-persona-status]').textContent(),'角色「會員」：可能可達 · 第 2 步');
+  assert.equal(await page.locator('[data-persona-option="member"]').getAttribute('aria-pressed'),'true');
+  assert.equal(await page.locator('[data-persona-status]').textContent(),'角色「會員」：可能走到 · 第 2 步');
   assert.equal(await page.locator('.page-tab[data-page="screens"]').getAttribute('aria-current'),'page');
   assert.deepEqual(state.errors,[]);assert.equal(state.requests,0);
  }finally{await browser.close();}

@@ -17,7 +17,7 @@ import {previewDocument,previewSelector} from './preview';
 import {generateMarkdown,importMarkdown,markdownSizeWarning} from './shared/review-md';
 import {autosaveSupported,chooseSaveFile,chooseOpenFile,isCancel,writeFile,handleStore,FileHandle} from './progress-file';
 import {revealInPreview} from './reveal';
-import {graphPersonas,personaView,flowGroups,factLabel,reachLabel,reachText,REACH_ORDER,PersonaView} from './personas';
+import {graphPersonas,personaView,flowGroups,factLabel,reachLabel,reachHelp,reachText,reachSummary,personaDescription,personaLayout,PersonaView} from './personas';
 import {personaPage} from './persona-page';
 import {loadReview,saveReview,screenDecision,componentDecision,effectiveComponent,setScreen,setComponent,statistics,conflicts,ReviewState,Decision} from './shared/review';
 
@@ -56,7 +56,7 @@ try {
 
  // ---- view state
  let page:'screens'|'api'|'personas'='screens',current:string|undefined,filter:Filter='ALL',listMode:'list'|'files'='list',query='',canvasTransform:CanvasTransform|undefined;
- let buttonsOpen=false,highlightComponent:string|undefined,selectedApi:string|undefined,personaId:string|undefined;
+ let buttonsOpen=false,highlightComponent:string|undefined,selectedApi:string|undefined,personaId:string|undefined,showUnreached=false;
  const activePersona=():PersonaView|undefined=>personaViews.find(view=>view.persona.id===personaId);
  const history=new PrototypeHistory();
 
@@ -105,18 +105,36 @@ try {
  modes.setAttribute('role','group');modes.setAttribute('aria-label','清單顯示方式');modes.append(listButton,filesButton);
  const chips=element('div',undefined,'chips');chips.setAttribute('role','group');chips.setAttribute('aria-label','依狀態篩選');
  const notices=element('div',undefined,'sidebar-notices'),list=element('div',undefined,'screen-list');
- // The persona picker: the list becomes that persona's flow and the map shows what it can reach.
- const personaPicker=element('label',undefined,'persona-picker'),personaSelect=element('select');
- personaSelect.dataset.personaSelect='true';personaPicker.append(element('span','角色'),personaSelect);
- const noPersona=element('option','不套用角色');noPersona.value='';personaSelect.append(noPersona);
- for(const view of personaViews){const option=element('option',view.persona.name);option.value=view.persona.id;personaSelect.append(option);}
- personaSelect.onchange=()=>{personaId=personaSelect.value||undefined;render();};
+ // The persona bar sits on the map: one button per persona turns the map into that persona's flow, step by step.
+ const personaBar=element('section',undefined,'persona-bar'),personaSwitch=element('div',undefined,'persona-switch'),personaInfo=element('div',undefined,'persona-info');
+ personaBar.dataset.personaBar='true';personaBar.setAttribute('aria-label','角色流程');
+ personaSwitch.setAttribute('role','group');personaSwitch.setAttribute('aria-label','依角色顯示流程');personaBar.append(personaSwitch,personaInfo);
+ // The buttons and the checkbox stay mounted, so keyboard focus survives a switch; only their state and the text change.
+ const personaButtons=[{id:'',name:'不套用角色'},...personaViews.map(view=>({id:view.persona.id,name:view.persona.name}))].map(option=>{
+  const button=element('button',option.name);button.dataset.personaOption=option.id;
+  button.onclick=()=>{if((personaId||'')===option.id)return;personaId=option.id||undefined;showUnreached=false;render();};
+  personaSwitch.append(button);return button;
+ });
+ const personaWho=element('p',undefined,'persona-who'),personaKeys=element('span',undefined,'persona-keys'),personaLegend=element('div',undefined,'persona-legend'),personaNote=element('p',undefined,'persona-note');
+ const showAll=element('label',undefined,'persona-toggle'),showAllBox=element('input'),showAllText=element('span');
+ showAllBox.type='checkbox';showAllBox.dataset.personaShowAll='true';showAllBox.onchange=()=>{showUnreached=showAllBox.checked;render();};
+ showAll.append(showAllBox,showAllText);personaLegend.append(personaKeys,showAll);personaInfo.append(personaWho,personaLegend,personaNote);
+ const renderPersonaBar=()=>{
+  for(const button of personaButtons)button.setAttribute('aria-pressed',String((personaId||'')===button.dataset.personaOption));
+  const persona=activePersona();personaInfo.hidden=!persona;if(!persona)return;
+  personaWho.dataset.personaDescription=persona.persona.id;personaWho.replaceChildren(element('strong',persona.persona.name),element('span',personaDescription(persona.persona)));
+  personaKeys.replaceChildren(...(['REACHABLE','POSSIBLE'] as const).map(reach=>{const key=element('span',`${reachLabel[reach]} ${persona.counts[reach]}`,'persona-key');key.dataset.reach=reach;key.title=reachHelp[reach];return key;}));
+  const hidden=persona.counts.UNREACHED+persona.counts.EXCLUDED;
+  showAll.hidden=!hidden;showAllBox.disabled=!hidden;showAllBox.checked=showUnreached;showAllText.textContent=`顯示走不到、不適用的畫面 ${hidden}`;
+  personaNote.textContent=!persona.depth.size?'這個角色從起點走不到任何畫面；請確認設定中的起點網址與條件。':persona.unevaluated?`有 ${persona.unevaluated} 個導覽的條件程式無法判定，經過它們的畫面列為「可能走到」。`:'';
+  personaNote.hidden=!personaNote.textContent;
+ };
  // The same sidebar toggle sits in the same top-left spot whether the list is open or folded into the rail.
  const sidebarHeader=element('div',undefined,'sidebar-header'),collapseList=iconButton('收起畫面清單','sidebar');
  sidebarHeader.append(collapseList,element('h2','畫面清單'));
  const rail=element('div',undefined,'sidebar-rail'),expandList=iconButton('展開畫面清單','sidebar'),railSearch=iconButton('搜尋畫面','search');
  expandList.classList.add('rail-toggle');rail.append(expandList,railSearch);
- const sidebarBody=element('div',undefined,'sidebar-body');sidebarBody.append(sidebarHeader,searchBox,modes,...(personaViews.length?[personaPicker]:[]),chips,notices,list);
+ const sidebarBody=element('div',undefined,'sidebar-body');sidebarBody.append(sidebarHeader,searchBox,modes,chips,notices,list);
  nav.append(rail,sidebarBody);
  // The screen details appear only while a screen is open; they fold into a rail on their own edge, mirroring the list.
  const panelBody=element('div',undefined,'details-body'),collapseDetails=iconButton('收起畫面資訊','sidebarRight'),detailsRail=element('div',undefined,'details-rail'),expandDetails=iconButton('展開畫面資訊','sidebarRight');
@@ -228,7 +246,6 @@ try {
   }
   listButton.setAttribute('aria-pressed',String(listMode==='list'));filesButton.setAttribute('aria-pressed',String(listMode==='files'));
   const visible=visibleScreens(),matches=searchScreens(index,query);
-  personaSelect.value=personaId||'';
   if(listMode==='files'){list.replaceChildren(fileTree(index,query,id=>openScreen(id),{visible,current}));return;}
   list.replaceChildren();
   const shown=(id:string)=>!(visible&&!visible.has(id))&&!(query&&!matches.has(id));
@@ -247,14 +264,15 @@ try {
   if(persona){
    // The persona's flow: what it is, then its screens step by step from the start URL.
    const summary=element('section',undefined,'persona-summary');summary.dataset.personaSummary=persona.persona.id;
-   summary.append(element('strong',persona.persona.name),element('p',persona.persona.facts.map(factLabel).join('、')||'（沒有條件）','persona-facts-line'));
-   summary.append(element('p',REACH_ORDER.map(r=>`${reachLabel[r]} ${persona.counts[r]}`).join(' · '),'muted'));
-   if(persona.unevaluated)summary.append(element('p',`有 ${persona.unevaluated} 個導覽的條件無法判定，經過它們的畫面列為可能可達。`,'notice'));
+   summary.append(element('strong',persona.persona.name),element('p',personaDescription(persona.persona)),element('p',reachSummary(persona),'muted'));
+   const facts=element('details',undefined,'persona-conditions');facts.append(element('summary','判定條件'),element('p',persona.persona.facts.map(factLabel).join('、')||'（沒有條件）','persona-facts-line'));summary.append(facts);
    list.append(summary);
    for(const group of flowGroups(index,persona)){
     const ids=group.screens.filter(shown);if(!ids.length)continue;
-    const section=group.reach==='EXCLUDED'?element('details',undefined,'persona-group'):element('div',undefined,'persona-group');section.dataset.personaGroup=group.key;
-    const title=group.reach==='EXCLUDED'?element('summary',`${group.title} ${ids.length}`):element('h3',`${group.title} · ${ids.length}`);
+    // Screens the persona never reaches stay folded: the list reads as the flow, step by step.
+    const folded=group.reach==='UNREACHED'||group.reach==='EXCLUDED';
+    const section=folded?element('details',undefined,'persona-group'):element('div',undefined,'persona-group');section.dataset.personaGroup=group.key;
+    const title=folded?element('summary',`${group.title} ${ids.length}`):element('h3',`${group.title} · ${ids.length}`);
     section.append(title);for(const id of ids)section.append(row(id,persona));list.append(section);
    }
    if(!list.querySelector('.screen-row'))list.append(element('p','沒有符合的畫面','empty-list'));
@@ -293,7 +311,13 @@ try {
  // ---- main area: the canvas (zooming into the open screen) or the API page
  let simulation:ReturnType<typeof attachSimulation>|undefined,view:CanvasView|undefined,frame:HTMLIFrameElement|undefined,viewer:HTMLElement|undefined;
  const thumbnail=(id:string)=>{const value=payload.preview.screens?.find(s=>s.graphScreenId===id)?.thumbnail;return value?.startsWith('data:image/')?value:undefined;};
- const canvasState=()=>({query,visible:visibleScreens(),screenStatus:(id:string)=>screenDecision(reviewState,id),persona:activePersona()});
+ /** With a persona chosen, the map keeps only the screens on its flow unless the person asks for the rest. */
+ const mapScreens=():Set<string>|undefined=>{
+  const base=visibleScreens(),persona=activePersona();
+  if(!persona||showUnreached)return base;
+  return new Set(index.screens.filter(s=>persona.depth.has(s.id)&&(!base||base.has(s.id))).map(s=>s.id));
+ };
+ const canvasState=()=>({query,visible:mapScreens(),screenStatus:(id:string)=>screenDecision(reviewState,id),persona:activePersona()});
  const nodesFor=(doc:Document,id:string,component:string)=>{const nodes=new Set<HTMLElement>(doc.querySelectorAll<HTMLElement>(`[data-st-component-id="${CSS.escape(component)}"]`));for(const record of payload.preview.elements||[])if(record.graphScreenId===id&&record.graphComponentId===component)try{const node=doc.querySelector<HTMLElement>(previewSelector(record.path));if(node)nodes.add(node);}catch{}return [...nodes];};
  /** Top-left of each button in the captured preview; buttons that were not visible there have no entry. */
  const previewPositions=(id:string)=>{
@@ -407,10 +431,18 @@ try {
   doc.querySelectorAll<HTMLElement>('[data-line-trigger]').forEach(node=>{node.style.outline=node.dataset.lineTrigger||'';delete node.dataset.lineTrigger;});
   for(const component of triggers||[])for(const node of nodesFor(doc,current,component)){node.dataset.lineTrigger=node.style.outline;node.style.outline='3px solid #2347c5';revealInPreview(node,frame!,viewer?.querySelector('.prototype-scroll')??null);}
  };
+ // Each persona has its own map laid out as its flow; switching persona builds that map and fits it anew.
+ let canvasKey:string|undefined;
  const ensureCanvas=()=>{
-  if(view&&main.contains(view.element))return view;
-  view=canvas(index,payload,{...canvasState(),transform:canvasTransform,onTransformChange:state=>{canvasTransform=state;},onOpen:id=>openScreen(id),renderFocus,presenting:()=>presenting,onLineHover:highlightTriggers,onIntent:prepare,onExitRequest:()=>showCanvas()});
-  main.replaceChildren(view.element);
+  const persona=activePersona(),key=persona?.persona.id||'';
+  if(view&&main.contains(view.element)&&canvasKey===key)return view;
+  if(canvasKey!==undefined&&canvasKey!==key)canvasTransform=undefined;
+  canvasKey=key;
+  // The persona bar moves into the new map; whatever in it had keyboard focus keeps it.
+  const active=personaBar.contains(document.activeElement)?document.activeElement as HTMLElement:undefined;
+  view=canvas(index,payload,{...canvasState(),transform:canvasTransform,onTransformChange:state=>{canvasTransform=state;},onOpen:id=>openScreen(id),renderFocus,presenting:()=>presenting,onLineHover:highlightTriggers,onIntent:prepare,onExitRequest:()=>showCanvas(),
+   layout:persona?personaLayout(index,persona):undefined,toolbar:personaViews.length?personaBar:undefined});
+  main.replaceChildren(view.element);active?.focus({preventScroll:true});
   return view;
  };
  const viewerScroll=()=>viewer?.querySelector('.prototype-scroll')?.scrollTop||0;
@@ -423,7 +455,7 @@ try {
   if(!zoomed)detailsCollapsed=false;
   wasZoomed=zoomed;syncList();syncDetails();
   screensTab.setAttribute('aria-current',page==='screens'?'page':'false');apiTab.setAttribute('aria-current',page==='api'?'page':'false');personasTab.setAttribute('aria-current',page==='personas'?'page':'false');
-  renderProgress();renderSidebar();renderPanel();
+  renderProgress();renderSidebar();renderPanel();renderPersonaBar();
   if(page==='personas'){
    main.replaceChildren(personaPage(index,personaViews,{screens:orderedScreens.map(s=>s.id),onOpen:(screenId,id)=>{personaId=id;openScreen(screenId);}}));view=undefined;frame=undefined;viewer=undefined;simulation=undefined;
    return;

@@ -26,8 +26,8 @@ test('R20 persona view places every screen and keeps screen-to-screen flow lines
 });
 test('R20 flow groups list steps in order, then unreached, then excluded',async()=>{
  const p=await ownModule('personas'),m=await ownModule('map');const g=graph(),index=m.indexGraph(g),view=p.personaView(index,p.graphPersonas(g)[0]);
- assert.deepEqual(p.flowGroups(index,view).map(group=>[group.key,group.title,group.screens]),[['step-1','第 1 步',['s1']],['step-2','第 2 步',['s2']],['unreached','未到達',['s4']],['excluded','不適用',['s3']]]);
- assert.equal(p.reachText(view,'s2'),'可能可達 · 第 2 步');
+ assert.deepEqual(p.flowGroups(index,view).map(group=>[group.key,group.title,group.screens]),[['step-1','第 1 步',['s1']],['step-2','第 2 步',['s2']],['unreached','走不到',['s4']],['excluded','不適用',['s3']]]);
+ assert.equal(p.reachText(view,'s2'),'可能走到 · 第 2 步');
  assert.equal(p.reachText(view,'s3'),'不適用');
  assert.equal(p.factLabel({text:'me.business',truth:false}),'me.business：否');
 });

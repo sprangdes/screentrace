@@ -101,7 +101,7 @@ public record ApplicationGraph(Application application, List<GraphNode> nodes, L
   public record PersonaFlow(List<String> entryPoints,List<PersonaReach> reached,List<String> unreached,List<PersonaStep> steps,int unevaluatedNavigations) {
     public PersonaFlow {entryPoints=entryPoints==null?List.of():entryPoints.stream().sorted().toList();reached=reached==null?List.of():reached.stream().sorted(Comparator.comparingInt(PersonaReach::depth).thenComparing(PersonaReach::screenId)).toList();unreached=unreached==null?List.of():unreached.stream().sorted().toList();steps=steps==null?List.of():steps.stream().sorted(Comparator.comparing(PersonaStep::from).thenComparing(PersonaStep::to).thenComparing(PersonaStep::kind).thenComparing(PersonaStep::behaviorId,Comparator.nullsFirst(Comparator.naturalOrder()))).toList();}
   }
-  public record Persona(String id,String name,List<AudienceAtom> facts,List<String> startPaths,Map<String,PersonaStatus> screens,List<PersonaNavigation> navigations,@JsonInclude(JsonInclude.Include.NON_NULL) PersonaFlow flow) {
+  public record Persona(String id,String name,@JsonInclude(JsonInclude.Include.NON_NULL) String description,List<AudienceAtom> facts,List<String> startPaths,Map<String,PersonaStatus> screens,List<PersonaNavigation> navigations,@JsonInclude(JsonInclude.Include.NON_NULL) PersonaFlow flow) {
     public Persona {facts=facts==null?List.of():List.copyOf(facts);startPaths=startPaths==null?List.of():List.copyOf(startPaths);screens=Collections.unmodifiableMap(new TreeMap<>(screens==null?Map.of():screens));navigations=navigations==null?List.of():navigations.stream().sorted(Comparator.comparing(PersonaNavigation::behaviorId)).toList();}
   }
 

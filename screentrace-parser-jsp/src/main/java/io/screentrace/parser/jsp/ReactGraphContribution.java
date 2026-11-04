@@ -15,6 +15,7 @@ import io.screentrace.core.ApplicationGraph.NodeType;
 import io.screentrace.core.ApplicationGraph.Relationship;
 import io.screentrace.core.ApplicationGraph.SourceLocation;
 import io.screentrace.core.StableGraphIds;
+import io.screentrace.scanner.PersonaSetting;
 import io.screentrace.scanner.ProjectScanner.ProjectInventory;
 import io.screentrace.scanner.SafeProjectFiles;
 import java.io.IOException;
@@ -47,7 +48,7 @@ public final class ReactGraphContribution {
 
     public static ApplicationGraph enrich(ApplicationGraph graph, ProjectInventory inventory) {
         if (!applies(inventory)) return graph;
-        var builder = new Builder(graph, inventory.personasConfigured());
+        var builder = new Builder(graph, inventory.personasConfigured(), inventory.personas());
         try {
             List<String> unreadable = new ArrayList<>();
             JsonNode result = analyze(inventory, false, unreadable);
@@ -163,9 +164,12 @@ public final class ReactGraphContribution {
         private final Map<String, List<String>> redirects = new LinkedHashMap<>();
         private final Map<String, Set<String>> missingStylePackages = new HashMap<>();
 
-        private Builder(ApplicationGraph graph,boolean personasConfigured) {
+        private final Map<String, String> personaDescriptions = new HashMap<>();
+
+        private Builder(ApplicationGraph graph,boolean personasConfigured,List<PersonaSetting> settings) {
             this.graph = graph;
             this.personasConfigured=personasConfigured;
+            for (var setting : settings) if (setting.description() != null) personaDescriptions.put(setting.id(), setting.description());
             graph.nodes().forEach(node -> nodes.put(node.id(), node));
             graph.relationships().forEach(edge -> edges.put(edge.id(), edge));
             graph.behaviors().forEach(behavior -> behaviors.put(behavior.id(), behavior));
@@ -174,7 +178,7 @@ public final class ReactGraphContribution {
 
         void personas(JsonNode dimensions,JsonNode definitions){
             for(JsonNode d:dimensions){List<String> values=new ArrayList<>();d.path("values").forEach(x->values.add(x.asText()));personaDimensions.add(new ApplicationGraph.PersonaDimension(d.path("text").asText(),values,d.path("truthy").asBoolean(),source(d)));}
-            for(JsonNode p:definitions){List<ApplicationGraph.AudienceAtom> facts=new ArrayList<>();for(JsonNode a:p.path("facts"))facts.add(new ApplicationGraph.AudienceAtom(a.path("text").asText(),a.path("truth").asBoolean(),source(a)));List<String> starts=new ArrayList<>();p.path("startPaths").forEach(x->starts.add(x.asText()));personas.add(new ApplicationGraph.Persona(p.path("id").asText(),p.path("name").asText(),facts,starts,Map.of(),List.of(),null));}
+            for(JsonNode p:definitions){List<ApplicationGraph.AudienceAtom> facts=new ArrayList<>();for(JsonNode a:p.path("facts"))facts.add(new ApplicationGraph.AudienceAtom(a.path("text").asText(),a.path("truth").asBoolean(),source(a)));List<String> starts=new ArrayList<>();p.path("startPaths").forEach(x->starts.add(x.asText()));personas.add(new ApplicationGraph.Persona(p.path("id").asText(),p.path("name").asText(),personaDescriptions.get(p.path("id").asText()),facts,starts,Map.of(),List.of(),null));}
         }
 
         void missingStyles(JsonNode stylesheets, Path root) {
@@ -434,7 +438,7 @@ public final class ReactGraphContribution {
         }
 
         ApplicationGraph build() {
-            return new ApplicationGraph(new ApplicationGraph.Application(graph.application().name(), graph.application().path(), graph.application().technologies(), audienceGroups,personaDimensions,personas.stream().map(p->new ApplicationGraph.Persona(p.id(),p.name(),p.facts(),p.startPaths(),personaScreens.getOrDefault(p.id(),Map.of()),List.copyOf(personaNavigations.getOrDefault(p.id(),Map.of()).values()),null)).toList()), List.copyOf(nodes.values()), List.copyOf(edges.values()), diagnostics.stream().distinct().toList(),
+            return new ApplicationGraph(new ApplicationGraph.Application(graph.application().name(), graph.application().path(), graph.application().technologies(), audienceGroups,personaDimensions,personas.stream().map(p->new ApplicationGraph.Persona(p.id(),p.name(),p.description(),p.facts(),p.startPaths(),personaScreens.getOrDefault(p.id(),Map.of()),List.copyOf(personaNavigations.getOrDefault(p.id(),Map.of()).values()),null)).toList()), List.copyOf(nodes.values()), List.copyOf(edges.values()), diagnostics.stream().distinct().toList(),
                     graph.apiContracts(), screensByRoute.isEmpty() ? graph.schemaVersion() : personasConfigured ? ApplicationGraph.PERSONA_SCHEMA_VERSION : ApplicationGraph.AUDIENCE_SCHEMA_VERSION, List.copyOf(behaviors.values()), graph.validationRules());
         }
     }

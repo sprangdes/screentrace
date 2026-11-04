@@ -13,7 +13,7 @@ class PersonaFlowsTest {
   var edges=List.of(edge("e",EdgeType.RENDERS,"E","A"),edge("f",EdgeType.RENDERS,"F","X"),edge("c",EdgeType.CONTAINS,"A","c"));
   var navs=new ArrayList<PersonaNavigation>();navs.add(new PersonaNavigation("b1",nav,List.of(redirect?"X":"B")));if(redirect)navs.add(new PersonaNavigation("b2",PersonaStatus.APPLIES,List.of("Y")));
   var statuses=new HashMap<String,PersonaStatus>();statuses.put("A",PersonaStatus.APPLIES);statuses.put("B",PersonaStatus.APPLIES);statuses.put("X",PersonaStatus.EXCLUDED);statuses.put("Y",PersonaStatus.APPLIES);
-  var p=new Persona("guest","訪客",List.of(new AudienceAtom("me",false,new SourceLocation("workspace:config.json",3))),starts,statuses,navs,null);
+  var p=new Persona("guest","訪客",null,List.of(new AudienceAtom("me",false,new SourceLocation("workspace:config.json",3))),starts,statuses,navs,null);
   var bs=new ArrayList<Behavior>();bs.add(behavior("b1","c"));if(redirect)bs.add(behavior("b2","F"));if(missing)bs.add(behavior("b3","B"));
   return new ApplicationGraph(new Application("x",".",List.of(),List.of(),List.of(),List.of(p)),nodes,edges,List.of(),List.of(),"2.4",bs,List.of());
  }

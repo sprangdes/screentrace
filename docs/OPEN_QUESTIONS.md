@@ -431,3 +431,13 @@
 - 結果：129 個測試，127 通過、2 失敗、0 略過。失敗為 `WP84 screen style package note bootstrap|flatpickr` 與 `WP84 screen style package note absent`（`screentrace-viewer/test/r18-style-packages.test.mjs`）。
 - 輸出：兩項均為 `browserType.launch: Target page, context or browser has been closed`；Chromium log 含 `bootstrap_check_in ... Permission denied (1100)`，程序以 `SIGTRAP` 結束。
 - 狀態：RESOLVED（2026-11-04）。這 2 個測試會啟動 Chromium，與 OQ-041 同為 Codex sandbox 的環境限制；需求方於 sandbox 外對 2f66ea1 套用 R20 patch 後執行 viewer 單元測試 132 個全數通過。決定：sandbox 內這 2 個測試的失敗不阻擋 R20，由 PR CI 驗證。
+
+## OQ-048 — R21 基線 Maven 失敗測試名稱不在指定清單
+
+- 指令：`mvn -B clean verify`
+- 現象：`screentrace-cli` 結果為 `Tests run: 87, Failures: 1, Errors: 6, Skipped: 1`。其中一項實際失敗方法名稱與 R21 指示第 0.3 節所列名稱不同：
+  ```text
+  [ERROR]   SyntheticProjectIntegrationTest.cliAnalysisThroughSymlinkOutputRootMatchesTheStandardRootByteForByte:203 » NoSuchFile /var/folders/m_/bwcwtp193hg10z9_r1_2nsbc0000gn/T/junit10529483116696425369/standard-output/spring-mvc-jsp/viewer-documents.json
+  ```
+  第 0.3 節列出的名稱為 `SyntheticProjectIntegrationTest.cliAnalysisThroughSymlinkOutputRootMatchesTheStandardRootByteForByteWhenSupported`。日誌亦包含 `bootstrap_check_in ... Permission denied (1100)`。
+- 狀態：RESOLVED（2026-11-04）。指示 v1.0 誤寫方法名稱；實際失敗的 cliAnalysisThroughSymlinkOutputRootMatchesTheStandardRootByteForByte 即 OQ-041 所指的同一個 Chromium 環境失敗（日誌含 bootstrap_check_in）。決定：R21 指示 v1.1 更正名稱，該失敗不阻擋 R21，由 PR CI 驗證。

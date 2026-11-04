@@ -183,6 +183,10 @@ R18 第三階段（不改 schema 版本）：React SCREEN 的 `view`／`viewSour
 
 viewer 只讀 schema 2.4 的 `application.personas`，不重新判定。每個畫面依角色流程歸為確定可達、可能可達、未到達或不適用；總覽線只在流程中有同一對畫面之間的步驟時標成該角色的線，經由網址入口的步驟不畫成線。圖中沒有角色時不顯示任何角色控制項，md 與保留／移除標記不受角色影響。見 [ADR 0111](adr/0111-r20-persona-viewer.md)。
 
+### R21：角色流程改以流程圖呈現
+
+選了角色時，viewer 以該角色的流程重新排版畫布：每一步一欄，只畫從第 N 步到第 N+1 步的線，走不到與不適用的畫面放在最後兩欄且預設隱藏；排版只用圖中的 `flow`，不重新判定；報表上的步數只算畫面，經由網址入口的轉址不另算一步（圖中的 `depth` 不變）。角色可帶分析人員寫的 `description`（schema 2.4 選填欄位，未設定時不輸出）。見 [ADR 0112](adr/0112-r21-persona-presentation.md)。
+
 ### 4.2 WP1 行為與檢核 schema 2.2
 
 新增 `behaviors` / `validationRules`（皆依 ID 排序）。schema 2.2 節點與邊必須具來源相對路徑/行號、解析器名稱與解析狀態；COMPONENT 的 attributes.kind 必須是 BUTTON、LINK、SUBMIT、TEXT_INPUT、TEXTAREA、SELECT、CHECKBOX、RADIO、DATE_PICKER、FILE_INPUT、MULTI_SELECT、FORM、MODAL、TABLE、OTHER。
