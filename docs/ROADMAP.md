@@ -182,4 +182,4 @@
 ## R20 角色流程呈現（P4）
 
 - WP90：報表依角色呈現流程（角色選單、流程清單、畫布標示、角色比較分頁），見 [ADR 0111](adr/0111-r20-persona-viewer.md)。
-- 驗證：待 PR CI 完成後補入。
+- 驗證：viewer 單元測試 132 個（新增 3；sandbox 內 130 通過，OQ-047 的 2 個 Chromium 測試無法執行）；Maven 577（569 通過、1 略過，另 OQ-041 的 7 個 Chromium 測試在 sandbox 內無法執行）；PR CI run https://github.com/sprangdes/screentrace/actions/runs/41773720829 三個 job 全綠（含 E2E 新增 3 個與上述 7 個測試）。PR：https://github.com/sprangdes/screentrace/pull/64。
