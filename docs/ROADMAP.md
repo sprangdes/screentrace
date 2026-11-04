@@ -208,4 +208,4 @@
 ## R25 角色判定：網址參數由連結決定
 
 - WP95：判定角色時，不帶網址參數的畫面版本不計參數條件；網址沒有決定版本的導覽最多是無法判定。reservio 訪客「會走到」由 1 個增加為 5 個，見 [ADR 0116](adr/0116-r25-query-parameter-decided-by-link.md)。
-- 驗證：待 PR CI 完成後補入。
+- 驗證：JS 測試 177 個（新增 3）；viewer 單元測試 137 個（sandbox 內 135 通過，OQ-047 的 2 個 Chromium 測試無法執行）；Maven 579（571 通過、1 略過，另 OQ-041 的 7 個 Chromium 測試在 sandbox 內無法執行）；PR CI run https://github.com/sprangdes/screentrace/actions/runs/41859746555 三個 job 全綠（含 E2E 與上述 7 個測試）。PR：https://github.com/sprangdes/screentrace/pull/69。
