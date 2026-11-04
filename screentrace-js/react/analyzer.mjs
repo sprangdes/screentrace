@@ -47,8 +47,9 @@ export function analyzeReact({files = [], maxDepth = 24, markup = false, persona
       const inherited=original?.facts??base.audienceOriginal;
       const rest=inherited.filter(fact=>fact.text!==queryEntry.atom.text);
       const entryScope=evaluator.transferContext.scopeOf(queryEntry.atom),scoped=list=>entryScope?evaluator.transferContext.remember(list,entryScope):list;
+      const queryDefaults=scoped(atoms(`!(${queryEntry.aText})`,queryEntry.atom.source));
       return [
-        {facts:unique([...rest,...scoped(atoms(`!(${queryEntry.aText})`,queryEntry.atom.source)),...scoped(atoms(queryEntry.bText,queryEntry.atom.source))]),queryEntryPlain:true,...(original?.facts?{baseVariant:original}: {})},
+        {facts:unique([...rest,...queryDefaults,...scoped(atoms(queryEntry.bText,queryEntry.atom.source))]),queryEntryPlain:true,queryDefaults,...(original?.facts?{baseVariant:original}: {})},
         {facts:unique([...rest,...scoped(atoms(queryEntry.aText,queryEntry.atom.source))]),entryQuery:`${queryEntry.key}=${queryEntry.values.sort().join('|')}`,...(original?.facts?{baseVariant:original}: {})}
       ];
     }):ordinaryVariants;
@@ -61,7 +62,7 @@ export function analyzeReact({files = [], maxDepth = 24, markup = false, persona
       if (variant?.baseVariant) screen.variantKey=JSON.stringify(unique(variant.baseVariant.facts).map(a=>[a.text,a.truth]));
       else if (variant && !variant.queryEntryPlain && !variant.entryQuery) screen.variantKey = JSON.stringify(unique(variant.facts).map(a => [a.text,a.truth]));
       if(variant?.entryQuery)screen.entryQuery=variant.entryQuery;
-      if(variant?.queryEntryPlain)screen.queryEntryPlain=true;
+      if(variant?.queryEntryPlain){screen.queryEntryPlain=true;screen.queryDefaults=variant.queryDefaults;}
       const present = new Set(screen.components.map(c => c.key));
       screen.excluded = base.components.filter(c => !present.has(c.key)).map(component => ({...component, source:{file:component.file,line:component.line}, audience:screen.audience, reason:'此身分下不顯示'}));
       screen.audienceSummary = simplify(screen.audience);
@@ -119,6 +120,7 @@ export function analyzeReact({files = [], maxDepth = 24, markup = false, persona
   for (const screen of screens) delete screen.redirects;
   let personaResult;
   if(personas !== undefined){const found=personaDimensions(screens,routeRedirects);const normalized=normalizePersonas(personas,found.all);diagnostics.push(...found.diagnostics,...normalized.diagnostics);applyPersonas(normalized.personas,screens,routeRedirects);personaResult={personaDimensions:found.dimensions,personas:normalized.personas};}
+  for(const screen of screens)delete screen.queryDefaults;
   const groups = combinations(screens.map(s => s.audience));
   if (groups.overflow && screens.length) diagnostics.push(diagnostic(screens[0].file, screens[0].line, 'REACT_AUDIENCE_TOO_MANY', '身分組合超過 16，僅保留各畫面的條件'));
   const uniqueDiagnostics = new Map();
