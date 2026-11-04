@@ -198,4 +198,4 @@
 ## R23 角色頁改用 API 頁的版面
 
 - WP93：角色頁改為角色清單＋詳情，與 API 頁一致（流程、和其他角色比較、流程以外），取代 R22 的比較表，見 [ADR 0114](adr/0114-r23-persona-page.md)。
-- 驗證：待 PR CI 完成後補入。
+- 驗證：viewer 單元測試 137 個（移除 3、新增 2；sandbox 內 135 通過，OQ-047 的 2 個 Chromium 測試無法執行）；Maven 579（571 通過、1 略過，另 OQ-041 的 7 個 Chromium 測試在 sandbox 內無法執行）；PR CI run https://github.com/sprangdes/screentrace/actions/runs/41829954393 三個 job 全綠（含 E2E 移除 2、新增 2 個與上述 7 個測試）。PR：https://github.com/sprangdes/screentrace/pull/67。
