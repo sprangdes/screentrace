@@ -203,4 +203,4 @@
 ## R24 角色判定：物件為否時的可選存取
 
 - WP94：`me` 為否時 `me?.flag` 視為不成立，reservio 訪客首頁改為「會走到」，見 [ADR 0115](adr/0115-r24-optional-access-on-false-object.md)。
-- 驗證：待 PR CI 完成後補入。
+- 驗證：JS 測試 174 個（新增 3）；viewer 單元測試 137 個（sandbox 內 135 通過，OQ-047 的 2 個 Chromium 測試無法執行）；Maven 579（571 通過、1 略過，另 OQ-041 的 7 個 Chromium 測試在 sandbox 內無法執行）；PR CI run https://github.com/sprangdes/screentrace/actions/runs/41847314208 三個 job 全綠（含 E2E 與上述 7 個測試）。PR：https://github.com/sprangdes/screentrace/pull/68。
