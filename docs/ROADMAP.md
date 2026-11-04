@@ -214,3 +214,8 @@
 
 - WP96：有多個 `return` 的函式，在條件能確定時沿著提早回傳算出結果。reservio 顧客「會走到」由 0 個增加為 7 個，見 [ADR 0117](adr/0117-r26-early-return-helpers.md)。
 - 驗證：JS 測試 180 個（新增 3）；viewer 單元測試 137 個（sandbox 內 135 通過，OQ-047 的 2 個 Chromium 測試無法執行）；Maven 579（571 通過、1 略過，另 OQ-041 的 7 個 Chromium 測試在 sandbox 內無法執行）；PR CI run https://github.com/sprangdes/screentrace/actions/runs/41864199127 三個 job 全綠（含 E2E 與上述 7 個測試）。PR：https://github.com/sprangdes/screentrace/pull/70。
+
+## R27 角色流程：入口只開啟不需要網址參數的畫面
+
+- WP97：角色流程從入口只開啟不需要網址參數的畫面。reservio 顧客的「可能走到」由 5 個減為 1 個、商家由 8 個減為 4 個，見 [ADR 0118](adr/0118-r27-entry-renders-plain-version.md)。
+- 驗證：Maven 581（新增 2；573 通過、1 略過，另 OQ-041 的 7 個 Chromium 測試在 sandbox 內無法執行）；JS 測試 180 個；viewer 單元測試 137 個（sandbox 內 135 通過，OQ-047 的 2 個 Chromium 測試無法執行）；PR CI run https://github.com/sprangdes/screentrace/actions/runs/41933815522 三個 job 全綠（含 E2E 與上述 7 個測試）。PR：https://github.com/sprangdes/screentrace/pull/71。
