@@ -183,3 +183,4 @@
 
 - WP90：報表依角色呈現流程（角色選單、流程清單、畫布標示、角色比較分頁），見 [ADR 0111](adr/0111-r20-persona-viewer.md)。
 - 驗證：viewer 單元測試 132 個（新增 3；sandbox 內 130 通過，OQ-047 的 2 個 Chromium 測試無法執行）；Maven 577（569 通過、1 略過，另 OQ-041 的 7 個 Chromium 測試在 sandbox 內無法執行）；PR CI run https://github.com/sprangdes/screentrace/actions/runs/41773720829 三個 job 全綠（含 E2E 新增 3 個與上述 7 個測試）。PR：https://github.com/sprangdes/screentrace/pull/64。
+- R19 修正：設定角色後圖譜為 schema 2.4，預覽擷取（`capture-static-jsp.mjs`、`element-styles.mjs`）原本只接受 2.2／2.3，導致報表沒有預覽與中文畫面名稱；現已接受 2.4，並在 `preview-v2.test.mjs` 加上 2.3／2.4 回歸測試。
