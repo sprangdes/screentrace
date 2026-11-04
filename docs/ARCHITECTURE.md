@@ -187,6 +187,10 @@ viewer 只讀 schema 2.4 的 `application.personas`，不重新判定。每個�
 
 選了角色時，viewer 以該角色的流程重新排版畫布：每一步一欄，只畫從第 N 步到第 N+1 步的線，走不到與不適用的畫面放在最後兩欄且預設隱藏；排版只用圖中的 `flow`，不重新判定；報表上的步數只算畫面，經由網址入口的轉址不另算一步（圖中的 `depth` 不變）。角色可帶分析人員寫的 `description`（schema 2.4 選填欄位，未設定時不輸出）。見 [ADR 0112](adr/0112-r21-persona-presentation.md)。
 
+### R26：沿著提早回傳算出輔助函式的結果
+
+值的求值器（`screentrace-js/react/values.mjs`）遇到有多個 `return` 的函式時，依序走過本體：條件能確定的 `if` 進入對應分支，遇到 `return` 就算出它的值；遇到其他敘述或無法確定的條件就是無法判定。沒有傳入的參數因此能算出結果，例如 `safeInternalReturnTo(undefined)` 為 `null`。見 [ADR 0117](adr/0117-r26-early-return-helpers.md)。
+
 ### R25：網址參數由連結決定
 
 同一路由依網址參數分成兩個畫面時，判定角色是否適用不帶參數的版本，不計「參數不是這些值」的條件，因為參數是由連進來的網址決定，不是角色。網址沒有決定版本的導覽最多是無法判定。見 [ADR 0116](adr/0116-r25-query-parameter-decided-by-link.md)。

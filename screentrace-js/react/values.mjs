@@ -312,8 +312,36 @@ export class Evaluator {
     try {
       const scope = this.functionScope(fn.node, fn.scope, args, depth + 1);
       const returned = returnedExpressions(fn.node);
-      return returned.length === 1 ? this.evaluate(returned[0], scope, depth + 1) : unknown();
+      if (returned.length === 1) return this.evaluate(returned[0], scope, depth + 1);
+      return returned.length > 1 ? this.earlyReturn(fn.node.body.body, scope, depth + 1) ?? unknown() : unknown();
     } finally { this.active.delete(fn.node); }
+  }
+
+  /**
+   * Walks a block of early returns: `if (test) return value;` is followed only while every test is proven,
+   * `const` declarations are read lazily, and any other statement leaves the result unknown.
+   * Returns the value, `null` when the block falls through, or an unknown value.
+   */
+  earlyReturn(statements, scope, depth) {
+    for (const statement of statements) {
+      switch (statement.type) {
+        case 'ReturnStatement': return statement.argument ? this.evaluate(statement.argument, scope, depth) : lit(undefined);
+        case 'VariableDeclaration': if (statement.kind === 'const') continue; return unknown();
+        case 'EmptyStatement': continue;
+        case 'BlockStatement': { const value = this.earlyReturn(statement.body, scope, depth); if (value) return value; continue; }
+        case 'IfStatement': {
+          const truth = truthy(this.evaluate(statement.test, scope, depth));
+          if (truth === null) return unknown();
+          const branch = truth ? statement.consequent : statement.alternate;
+          if (!branch) continue;
+          const value = this.earlyReturn(branch.type === 'BlockStatement' ? branch.body : [branch], scope, depth);
+          if (value) return value;
+          continue;
+        }
+        default: return unknown();
+      }
+    }
+    return null;
   }
 
   /** Candidate string values, keeping `{name}` placeholders for parts that cannot be proven. */
