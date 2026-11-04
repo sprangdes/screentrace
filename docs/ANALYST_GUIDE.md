@@ -79,18 +79,20 @@ R17 起報表與 md 不顯示元件庫建議與覆寫；以下指令仍可驗證
 ```json
 "personas": {
   "/Users/machi/IntelliJ/reservio": [
-    {"id": "guest", "name": "訪客", "startPaths": ["/"],
+    {"id": "guest", "name": "訪客", "description": "尚未登入的訪客", "startPaths": ["/"],
      "facts": [{"text": "loading", "truth": false}, {"text": "me", "truth": false}]},
-    {"id": "customer", "name": "顧客", "startPaths": ["/"],
+    {"id": "customer", "name": "顧客", "description": "已登入的一般會員", "startPaths": ["/"],
      "facts": [{"text": "loading", "truth": false}, {"text": "me", "truth": true},
                {"text": "me.role === \"ROLE_USER\"", "truth": true}, {"text": "me.mustChangePassword", "truth": false}]}
   ]
 }
 ```
 
+`description` 可省略，是報表上說明這個角色的一句話（最多 80 字）；沒有寫時，報表顯示「依 N 個條件判定」。條件本身在報表中收在「判定條件」裡。
+
 `PERSONA_CONTRADICTORY` 表示角色條件矛盾，該角色被略過；`PERSONA_FACT_UNMATCHED` 表示條件未出現在畫面或導覽條件中；`PERSONA_DIMENSIONS_TRUNCATED` 表示維度超過 64 個，只列前 64 個。角色之間的轉換不在本次範圍。
 
-報表在圖中有角色時才顯示角色功能：左側「角色」選單把清單換成該角色的流程（依步數、未到達、不適用），畫布標出卡片狀態與該角色會走的線，上方「角色」分頁比較所有角色。報表只讀 `application.personas`，不重新計算；要改變結果，請調整設定後重新分析。
+報表在圖中有角色時才顯示角色功能：畫布左上角的角色按鈕把畫布換成該角色的流程圖（由左到右依步數排列，走不到與不適用的畫面預設隱藏），清單也改成依步數列出，上方「角色」分頁比較所有角色。報表只讀 `application.personas`，不重新計算；要改變結果，請調整設定後重新分析。
 
 ### 缺少預覽或縮圖
 

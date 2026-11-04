@@ -1,11 +1,11 @@
 import {iconButton,icon} from './shell-ui';
 import {partitionNavigation,flowLayout,roundedPath,commonDestinations} from './overview';
-import {groupedLayout,crossPoints} from './groups';
+import {groupedLayout,crossPoints,GroupedLayout} from './groups';
 import {relationTooltip,focusedRelations,FocusRelation,sharedNavigation} from './relations';
 import {Index,Position,fileEntries,searchScreens} from './map';
 import {Payload} from './contracts';
 import {element,text} from './text';
-import {PersonaView,lineKey,reachText} from './personas';
+import {PersonaView,lineKey,reachLabel,reachHelp} from './personas';
 
 export interface CanvasTransform {zoom:number;x:number;y:number}
 export interface CanvasState {query:string;visible?:Set<string>;screenStatus:(id:string)=>string;persona?:PersonaView}
@@ -23,6 +23,10 @@ export interface CanvasOptions extends CanvasState {
  /** A focus line is hovered (its trigger components) or left (undefined). */
  onLineHover?:(triggers:string[]|undefined)=>void;
  onExitRequest:()=>void;
+ /** Lays the map out this way instead of by URL areas, e.g. a persona's flow by step. */
+ layout?:GroupedLayout;
+ /** Shown above the hint in the top-left corner of the overview, e.g. the persona switch. */
+ toolbar?:HTMLElement;
 }
 export interface CanvasView {
  element:HTMLElement;
@@ -105,12 +109,12 @@ export function canvas(index:Index,payload:Payload,options:CanvasOptions):Canvas
   if(!focused&&viewport.dataset.fitted==='true')options.onTransformChange?.({zoom,x,y});
  };
  // Many screens are shown as areas by URL; a small map keeps one flow layout.
- const grouped=groupedLayout(index),layout=grouped??flowLayout(index),positions=layout.positions;
+ const grouped=options.layout??groupedLayout(index),layout=grouped??flowLayout(index),positions=layout.positions;
  const width=Math.max(800,layout.width),height=Math.max(600,layout.height);
  world.style.width=`${width}px`;world.style.height=`${height}px`;
  const visible=(id:string)=>!state.visible||state.visible.has(id);
  // Fitting keeps the map below the hint in the top-left corner so it never covers an area's title.
- const reserved=()=>{const hint=viewport.querySelector<HTMLElement>('.canvas-hint');return hint&&!focused?Math.max(24,hint.offsetTop+hint.offsetHeight+8):24;};
+ const reserved=()=>{const hint=viewport.querySelector<HTMLElement>('.canvas-top')||viewport.querySelector<HTMLElement>('.canvas-hint');return hint&&!focused?Math.max(24,hint.offsetTop+hint.offsetHeight+8):24;};
  const frameRect=(left:number,top:number,w:number,h:number):CanvasTransform=>{
   const above=reserved(),room=viewport.clientHeight-above-24,z=Math.min(1,(viewport.clientWidth-48)/w,room/h);
   return {zoom:z,x:(viewport.clientWidth-w*z)/2-(left-40)*z,y:above+(room-h*z)/2-(top-40)*z};
@@ -262,11 +266,13 @@ export function canvas(index:Index,payload:Payload,options:CanvasOptions):Canvas
    const status=state.screenStatus(id);card.querySelector('.review-status-icon')?.remove();
    if(status==='KEEP'||status==='REMOVE'){card.dataset.screenStatus=status;const mark=icon(status==='KEEP'?'check':'close');mark.classList.add('review-status-icon');mark.setAttribute('role','img');mark.setAttribute('aria-label',status==='KEEP'?text.keep:text.remove);card.append(mark);}
    else delete card.dataset.screenStatus;
-   // The chosen persona's view of the screen: where it sits in the flow, or that the persona never sees it.
+   // The chosen persona's view of the screen: its frame says whether it is reached; a badge names anything less than certain.
    card.querySelector('.persona-badge')?.remove();
-   if(state.persona){const reach=state.persona.reach.get(id)!,badge=element('span',reachText(state.persona,id),'persona-badge');card.dataset.personaReach=reach;badge.dataset.reach=reach;card.append(badge);}
+   if(state.persona){const reach=state.persona.reach.get(id)!;card.dataset.personaReach=reach;if(reach!=='REACHABLE'){const badge=element('span',reachLabel[reach],'persona-badge');badge.dataset.reach=reach;badge.title=reachHelp[reach];card.append(badge);}}
    else delete card.dataset.personaReach;
   }
+  // A supplied layout drops the areas whose screens are all hidden, so hidden columns leave no empty frame.
+  if(options.layout)for(const group of options.layout.groups){const frame=world.querySelector<HTMLElement>(`.screen-group[data-group="${CSS.escape(group.key)}"]`);if(frame)frame.hidden=!group.members.some(visible);}
   svg.classList.toggle('has-persona',!!state.persona);
   svg.querySelectorAll<SVGPathElement>('.relation-line').forEach(line=>{
    (line.parentNode as SVGGElement).style.display=visible(line.dataset.from!)&&visible(line.dataset.to!)?'':'none';
@@ -485,7 +491,7 @@ export function canvas(index:Index,payload:Payload,options:CanvasOptions):Canvas
   event.preventDefault();apply();
  });
  let dragging:{x:number;y:number}|undefined,travel=0;
- viewport.addEventListener('pointerdown',event=>{dragged=false;travel=0;if(focused||(event.target as Element).closest('button,.relation'))return;dragging={x:event.clientX,y:event.clientY};viewport.setPointerCapture(event.pointerId);});
+ viewport.addEventListener('pointerdown',event=>{dragged=false;travel=0;if(focused||(event.target as Element).closest('button,.relation,.canvas-top'))return;dragging={x:event.clientX,y:event.clientY};viewport.setPointerCapture(event.pointerId);});
  viewport.addEventListener('pointermove',event=>{if(!dragging)return;travel+=Math.abs(event.clientX-dragging.x)+Math.abs(event.clientY-dragging.y);if(travel>4)dragged=true;x+=event.clientX-dragging.x;y+=event.clientY-dragging.y;dragging={x:event.clientX,y:event.clientY};apply();});
  for(const name of ['pointerup','pointercancel'])viewport.addEventListener(name,()=>{dragging=undefined;});
  viewport.addEventListener('wheel',event=>{
@@ -500,7 +506,9 @@ export function canvas(index:Index,payload:Payload,options:CanvasOptions):Canvas
   x-=event.deltaX*unit;y-=event.deltaY*unit;viewport.dataset.fitted='true';apply();
  },{passive:false});
  const hint=element('p','點一下畫面看關聯 · 點兩下開啟畫面 · n 下一個未確認 · / 搜尋','canvas-hint');
- viewport.append(world,lines,layer,tips,hint,controls);
+ let top:HTMLElement=hint;
+ if(options.toolbar){top=element('div',undefined,'canvas-top');top.append(options.toolbar,hint);}
+ viewport.append(world,lines,layer,tips,top,controls);
  update(state);apply();
  let observed:{width:number;height:number}|undefined;
  new ResizeObserver(entries=>{
