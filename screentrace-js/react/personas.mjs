@@ -8,8 +8,9 @@ export function personaDimensions(screens,routeRedirects){
  for(const screen of screens){for(const atom of screen.audience??[])add(atom.raw??atom.text,atom.source);for(const e of screen.load)if(e.type==='NAVIGATE')add(e.guard,e.source);for(const c of screen.components){add(c.guard,{file:c.file,line:c.line});for(const e of c.behaviors)if(e.type==='NAVIGATE')add(e.guard,e.source);}}
  for(const r of routeRedirects)add(r.effect.guard,r.effect.source);
  const map=new Map();for(const {expression,source} of sources)for(const leaf of leaves(expression)){const part=parts(leaf);if(!part)continue;const [text,value]=part;let d=map.get(text);if(!d){d={text,values:new Set(),truthy:false,source};map.set(text,d);}if(value===null)d.truthy=true;else d.values.add(value);if(source&&(source.file<d.source.file||(source.file===d.source.file&&source.line<d.source.line)))d.source=source;}
- const all=[...map.values()].sort((a,b)=>a.text<b.text?-1:a.text>b.text?1:0).map(d=>({...d,values:[...d.values].sort()}));
- const dimensions=all.slice(0,64),diagnostics=all.length>64?[{code:'PERSONA_DIMENSIONS_TRUNCATED',message:'身分維度超過 64 個，只列出前 64 個',source:dimensions[0].source}]:[];return {dimensions,diagnostics};
+ const uses=new Map();for(const screen of screens){const seen=new Set();for(const atom of screen.audience??[])for(const leaf of leaves(atom.raw??atom.text)){const part=parts(leaf);if(part)seen.add(part[0]);}for(const text of seen)uses.set(text,(uses.get(text)??0)+1);}
+ const all=[...map.values()].map(d=>({...d,values:[...d.values].sort(),uses:uses.get(d.text)??0})).sort((a,b)=>b.uses-a.uses||(a.text<b.text?-1:a.text>b.text?1:0)).map(({uses,...d})=>d);
+ const dimensions=all.slice(0,64).sort((a,b)=>a.text<b.text?-1:a.text>b.text?1:0),diagnostics=all.length>64?[{code:'PERSONA_DIMENSIONS_TRUNCATED',message:'身分維度超過 64 個，只列出前 64 個',source:dimensions[0].source}]:[];return {dimensions,all,diagnostics};
 }
 export function normalizePersonas(personas,dimensions){
  const result=[],diagnostics=[];
@@ -38,10 +39,10 @@ export function applyPersonas(personas,screens,routeRedirects){
  for(const persona of personas){
   for(const screen of screens){
    (screen.personas??={})[persona.id]=verdict(persona.facts,screen.audience??[],[]);
-   for(const effect of screen.load)if(effect.type==='NAVIGATE')(effect.personas??={})[persona.id]=verdict(persona.facts,[],[effect.guard]);
+   for(const effect of screen.load)if(effect.type==='NAVIGATE')(effect.personas??={})[persona.id]=effect.shellRouteFacts?verdict(persona.facts,effect.shellRouteFacts,[]):verdict(persona.facts,[],[effect.guard]);
    for(const component of screen.components)for(const effect of component.behaviors)
     if(effect.type==='NAVIGATE')(effect.personas??={})[persona.id]=verdict(persona.facts,[],[component.guard,effect.guard]);
   }
-  for(const redirect of routeRedirects)if(redirect.effect.type==='NAVIGATE')(redirect.effect.personas??={})[persona.id]=verdict(persona.facts,[],[redirect.effect.guard]);
+  for(const redirect of routeRedirects)if(redirect.effect.type==='NAVIGATE')(redirect.effect.personas??={})[persona.id]=redirect.effect.shellRouteFacts?verdict(persona.facts,redirect.effect.shellRouteFacts,[]):verdict(persona.facts,[],[redirect.effect.guard]);
  }
 }
