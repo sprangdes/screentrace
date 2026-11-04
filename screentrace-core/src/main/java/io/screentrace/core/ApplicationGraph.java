@@ -21,8 +21,10 @@ public record ApplicationGraph(Application application, List<GraphNode> nodes, L
   public static final String CURRENT_SCHEMA_VERSION = "2.1";
   public static final String BEHAVIOR_SCHEMA_VERSION = "2.2";
   public static final String AUDIENCE_SCHEMA_VERSION = "2.3";
-  public static boolean isAnalysisSchema(String version) { return BEHAVIOR_SCHEMA_VERSION.equals(version) || AUDIENCE_SCHEMA_VERSION.equals(version); }
-  public static final Set<String> SUPPORTED_SCHEMA_VERSIONS = Set.of("1.0", "2.0", CURRENT_SCHEMA_VERSION, BEHAVIOR_SCHEMA_VERSION, AUDIENCE_SCHEMA_VERSION);
+  public static final String PERSONA_SCHEMA_VERSION = "2.4";
+  public static boolean isAudienceSchema(String version) { return AUDIENCE_SCHEMA_VERSION.equals(version) || PERSONA_SCHEMA_VERSION.equals(version); }
+  public static boolean isAnalysisSchema(String version) { return BEHAVIOR_SCHEMA_VERSION.equals(version) || isAudienceSchema(version); }
+  public static final Set<String> SUPPORTED_SCHEMA_VERSIONS = Set.of("1.0", "2.0", CURRENT_SCHEMA_VERSION, BEHAVIOR_SCHEMA_VERSION, AUDIENCE_SCHEMA_VERSION, PERSONA_SCHEMA_VERSION);
 
   @JsonCreator
   public ApplicationGraph {
@@ -76,12 +78,31 @@ public record ApplicationGraph(Application application, List<GraphNode> nodes, L
     return type.name().toLowerCase(Locale.ROOT) + ":" + UUID.nameUUIDFromBytes(key.getBytes(StandardCharsets.UTF_8)).toString();
   }
 
-  public record Application(String name, String path, List<String> technologies, @JsonInclude(JsonInclude.Include.NON_EMPTY) List<List<AudienceAtom>> audiences) {
-    public Application(String name, String path, List<String> technologies) { this(name,path,technologies,List.of()); }
+  public record Application(String name, String path, List<String> technologies, @JsonInclude(JsonInclude.Include.NON_EMPTY) List<List<AudienceAtom>> audiences, @JsonInclude(JsonInclude.Include.NON_EMPTY) List<PersonaDimension> personaDimensions, @JsonInclude(JsonInclude.Include.NON_EMPTY) List<Persona> personas) {
+    public Application(String name, String path, List<String> technologies) { this(name,path,technologies,List.of(),List.of(),List.of()); }
+    public Application(String name,String path,List<String> technologies,List<List<AudienceAtom>> audiences){this(name,path,technologies,audiences,List.of(),List.of());}
     public Application {
+      personaDimensions=personaDimensions==null?List.of():List.copyOf(personaDimensions);
+      personas=personas==null?List.of():List.copyOf(personas);
       audiences = audiences == null ? List.of() : audiences.stream().map(List::copyOf).toList();
       technologies = (technologies == null ? List.<String>of() : technologies).stream().sorted().toList();
     }
+  }
+
+  public enum PersonaStatus { APPLIES, UNKNOWN, EXCLUDED }
+  public record PersonaDimension(String text,List<String> values,boolean truthy,SourceLocation source) {
+    public PersonaDimension {values=values==null?List.of():values.stream().sorted().toList();}
+  }
+  public record PersonaNavigation(String behaviorId,PersonaStatus status,List<String> targets) {
+    public PersonaNavigation {targets=targets==null?List.of():targets.stream().sorted().toList();}
+  }
+  public record PersonaReach(String screenId,String reach,int depth) { }
+  public record PersonaStep(String from,String to,String kind,String behaviorId,PersonaStatus status) { }
+  public record PersonaFlow(List<String> entryPoints,List<PersonaReach> reached,List<String> unreached,List<PersonaStep> steps,int unevaluatedNavigations) {
+    public PersonaFlow {entryPoints=entryPoints==null?List.of():entryPoints.stream().sorted().toList();reached=reached==null?List.of():reached.stream().sorted(Comparator.comparingInt(PersonaReach::depth).thenComparing(PersonaReach::screenId)).toList();unreached=unreached==null?List.of():unreached.stream().sorted().toList();steps=steps==null?List.of():steps.stream().sorted(Comparator.comparing(PersonaStep::from).thenComparing(PersonaStep::to).thenComparing(PersonaStep::kind).thenComparing(PersonaStep::behaviorId,Comparator.nullsFirst(Comparator.naturalOrder()))).toList();}
+  }
+  public record Persona(String id,String name,List<AudienceAtom> facts,List<String> startPaths,Map<String,PersonaStatus> screens,List<PersonaNavigation> navigations,@JsonInclude(JsonInclude.Include.NON_NULL) PersonaFlow flow) {
+    public Persona {facts=facts==null?List.of():List.copyOf(facts);startPaths=startPaths==null?List.of():List.copyOf(startPaths);screens=Collections.unmodifiableMap(new TreeMap<>(screens==null?Map.of():screens));navigations=navigations==null?List.of():navigations.stream().sorted(Comparator.comparing(PersonaNavigation::behaviorId)).toList();}
   }
 
   public record GraphNode(String id, NodeType type, String name, Map<String, String> attributes,

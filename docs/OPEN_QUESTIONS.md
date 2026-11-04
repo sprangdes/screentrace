@@ -379,3 +379,48 @@
 - 決定：需求方第三次驗收採「只加附註」。D5 原文不改、狀態維持「未被使用」，API 清單及詳情加「外部呼叫（Webhook）」並列出兩處設定的檔案／行號；不列入可移除，D4 不變。缺任何一項證據或存在 caller 均不套用，不依 URL 字樣推測。
 - 影響範圍：WP82、API 頁呈現與設定 evidence；md v1、決策鍵及原 API 推導不變。實作與反向測試見 ADR 0102。
 - 狀態：RESOLVED；後續更一般的安全設定／外部系統資料流不在本輪。
+
+## OQ-041 — R19 基線 Maven 測試失敗
+
+- 情境：在 `feature/r19-persona-flows`、實作前依 R19 §0.2 執行 `mvn -B clean verify`，`screentrace-cli` 的 81 個測試中 1 個失敗、6 個錯誤、1 個略過。Playwright Chromium 啟動時出現 `bootstrap_check_in ... Permission denied (1100)`，JSP 靜態預覽未產生。
+- 失敗：`StandaloneViewerTest.actualProjectAnalysisPackagesCapturedJspIntoSingleFile`（`expected: <true> but was: <false>`）；`NonInteractiveCliTest.actualReportRejectsOutsidePreviewResourceWithChineseMessageAndNonzeroExit` 缺少 `element-styles.json`；`SyntheticProjectIntegrationTest` 的 `sourceOnlyCliPipelineTwiceProducesIdenticalGraphPreviewAndHtmlAndRejectsStrutsTwo`、`cliAnalysisThroughSymlinkOutputRootMatchesTheStandardRootByteForByte`、`cliAnalysisThroughCaseVariantOutputRootMatchesTheStandardRootByteForByteWhenSupported`，以及 `Wp18SourceFlowIntegrationTest.realCliPipelineRetainsEveryReturnFlowAndProducesDeterministicOfflineReports`、`Wp28AnchorIntegrationTest.completePipelineAnchorsEverySyntheticExpansionAndKeepsOfflineBytesStable` 缺少 `viewer-documents.json`。
+- 可選方案：確認可啟動 Chromium 的執行環境後重新執行基線；或由需求方決定如何處理此基線失敗。
+- 影響範圍：R19 §0.2 基線未通過；WP86–WP88、E2E 基線、推送與 PR 尚未執行。JS 基線 162 通過、0 失敗。
+- 狀態：RESOLVED（2026-11-04）。需求方於 sandbox 外對 main 90968b3 重跑上述 7 個測試，23 個全數通過，確認為 Codex sandbox 無法啟動 Chromium 的環境限制。決定：sandbox 內這 7 個測試的失敗不阻擋 R19，E2E 改由 PR CI 驗證，PR CI 全綠為最終判準。
+
+## OQ-042 — R19 §0.3 的測試類別數量與清單不一致
+
+- 情境：依 §0.3 第 3 點執行 `mvn -B verify -Dmaven.test.failure.ignore=true` 與指定的 `grep`。Maven 指令以 0 結束，`grep` 列出 `NonInteractiveCliTest`、`StandaloneViewerTest`、`SyntheticProjectIntegrationTest`、`Wp18SourceFlowIntegrationTest`、`Wp28AnchorIntegrationTest` 共 5 個類別；各失敗項均屬 §0.3 第 1 點列出的 7 個測試，且原始 `mvn -B clean verify` log 含 `bootstrap_check_in`。但第 3 點明定「grep 列出的檔案只能來自上述 7 個測試所屬的 4 個類別」，7 個測試實際分屬 5 個類別。
+- 可選方案 A：將第 3 點的「4 個類別」更正為「5 個類別」，依列舉的 7 個測試判定此基線通過。
+- 可選方案 B：維持第 3 點的 4 個類別限制，指定應排除的類別及處理方式。
+- 影響範圍：R19 基線判定及後續所有 Maven 步驟；WP86 尚未開始。
+- 狀態：RESOLVED（2026-11-04）。需求方採方案 A：第 0.3 節第 3 點更正為 5 個類別，失敗方法仍限第 1 點列出的 7 個測試。
+
+## OQ-043 — WP86 Maven 驗證出現環境例外清單以外的失敗
+
+- 情境：WP86 實作中執行 `mvn -B clean verify`，除 OQ-041 的 7 個測試外，新增測試 `WorkspacePersonaSettingsTest.invalidFieldsThrow` 也失敗，輸出 `Expected java.io.IOException to be thrown, but nothing was thrown.`；`screentrace-cli` 統計 85 個測試、2 個失敗、6 個錯誤、1 個略過。JS 測試 166 個通過。
+- 可選方案：確認失敗原因並授權後續處理，再重新執行 WP86 驗證。
+- 影響範圍：依 R19 §0.3 第 2 點停止；WP86 實作未提交，WP87／WP88 未開始。
+- 狀態：RESOLVED（2026-11-04）。原因：checkedText 先 trim() 再檢查控制字元，而 String.trim() 會移除頭尾的 U+0007，使 "x\u0007" 通過驗證。決定：控制字元改以去空白前的原始值檢查；R19 新增測試在實作中失敗時改實作、不改測試，同一測試修兩次仍失敗才停止。
+
+## OQ-044 — WP88 文件要求在建立 PR 前寫入 PR 連結
+
+- 情境：R19 §5.5 第 4 點要求在 `docs/ROADMAP.md` 寫入 PR 連結，接著 §5.6 要提交該文件；但 PR 須依 §6 在提交與推送後才建立。建立 PR 前無法得知其實際連結。§5.5 同時要求寫入測試數字，而文件所列 WP88 完整測試在下一步 §5.6 才執行。
+- 可選方案 A：先在 roadmap 記錄待補，完成 §5.6 後依 §6 建立 PR，再補入實際測試數字與 PR 連結並提交推送。
+- 可選方案 B：授權先執行 §5.6 測試並建立 PR，取得測試數字與連結後再完成文件與 WP88 提交。
+- 影響範圍：WP88 文件與提交順序、PR 建立；WP88 核心及 CLI 實作與測試尚未完成全部驗證。
+- 狀態：RESOLVED（2026-11-04）。需求方採方案 A：WP88 提交時 roadmap 只記「待 PR CI 完成後補入」；PR CI 全綠後，以獨立 commit 補入實際測試數字與 PR、CI run 連結並推送。
+
+## OQ-045 — WP89 新增測試 fixture 抄寫遺漏結尾大括號
+
+- 情境：WP89 失敗測試 commit `3efe6cc` 的 `WP89 truncated dimensions keep identity leaves and facts match against all dimensions`，產生 `src/flags.tsx` 的範本遺漏每個 JSX 表達式結尾的 `}`，與修正指示 §4.1 給定的 fixture 不同。依 §3.3、§3.4 逐字修改實作後，JS 測試輸出 `3 !== 64`，診斷為 `REACT_SYNTAX_ERROR`：`Unexpected token, expected "}" (2:44)`；另一個 WP89 JS 測試及其餘 169 個測試通過。失敗測試提交前的該測試亦因同一 fixture 抄寫錯誤失敗，不能作為所指定行為的有效失敗證據。
+- 可選方案：授權將該測試 fixture 補回 §4.1 指定的 `}`，並重新確認修正前失敗與修正後通過；測試斷言不變。
+- 影響範圍：WP89 測試與提交順序；實作修改尚未提交，Maven、PR 推送及 CI 尚未執行。
+- 狀態：RESOLVED（2026-11-04）。需求方授權補回 §4.1 原文的 }，斷言不變；補正後已在未套用實作的狀態下重新確認測試 1、2 失敗且無 REACT_SYNTAX_ERROR。
+
+## OQ-046 — WP89 Java 測試缺少右括號而無法編譯
+
+- 情境：完成 OQ-045 的補正並還原實作後，`npm --prefix screentrace-js test` 全部 171 個通過；`mvn -B clean verify` 在測試編譯階段失敗：`R19PersonaGraphTest.java:[69,151] ')' or ',' expected`。WP89 新增的 `shellGuardRedirectLetsSetupPersonaReachSetup` 測試在 `PersonaFlows.enrich(new SpringBootAnalyzer().analyze(...))` 呼叫末尾漏寫一個 `)`，與 §4.2 指定的呼叫不符；這是測試撰寫錯誤。
+- 可選方案：授權只補入該右括號，不改測試斷言或 fixture，再重新執行 §3.5 的測試。
+- 影響範圍：WP89 Java 測試無法執行，完整 Maven 驗證、實作提交、推送及 CI 尚未完成。依 R19 §0.3 第 2 點，修好需要修改新增測試本身，故停止。
+- 狀態：RESOLVED（2026-11-04）。需求方授權只補入缺少的 )，斷言與 fixture 不變；補正後已在未套用實作的狀態下確認該測試可編譯且因斷言 2 失敗。另訂通則：新增測試與指示原文不一致的語法／編譯錯誤，可直接改回原文並在回報中列出，不需另開問題。

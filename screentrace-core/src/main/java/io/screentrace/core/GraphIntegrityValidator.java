@@ -23,16 +23,37 @@ public final class GraphIntegrityValidator {
     validateSchema(graph, errors);
     if(graph.application().audiences().size()>16)errors.add("Too many application audiences");
     for(var group:graph.application().audiences())for(var atom:group)
-      if(!"2.3".equals(graph.schemaVersion())||atom.text()==null||atom.text().isBlank()||atom.source()==null||atom.source().line()<1||!validSource(atom.source().file()))errors.add("Invalid application audience");
+      if(!ApplicationGraph.isAudienceSchema(graph.schemaVersion())||atom.text()==null||atom.text().isBlank()||atom.source()==null||atom.source().line()<1||!validSource(atom.source().file()))errors.add("Invalid application audience");
     Map<String, GraphNode> nodes = validateNodes(graph.nodes(), errors);
+    validatePersonas(graph,nodes,errors);
     validateRelationships(graph.relationships(), nodes, errors);
     validateApiContracts(graph.apiContracts(), nodes, errors);
     validateBehaviors(graph, nodes, errors);
     if (ApplicationGraph.isAnalysisSchema(graph.schemaVersion())) validateStrictEvidence(graph, errors);
+    if (!errors.isEmpty() && (!graph.application().personas().isEmpty() || !graph.application().personaDimensions().isEmpty())) throw new IllegalArgumentException("Application graph validation failed:\n - " + String.join("\n - ", errors));
     if (!errors.isEmpty()) {
       throw new IllegalStateException("Application graph validation failed:\n - " + String.join("\n - ", errors));
     }
   }
+
+  private static void validatePersonas(ApplicationGraph graph,Map<String,GraphNode> nodes,List<String> errors){
+    var app=graph.application();
+    if((!app.personaDimensions().isEmpty()||!app.personas().isEmpty())&&!ApplicationGraph.PERSONA_SCHEMA_VERSION.equals(graph.schemaVersion()))errors.add("Personas require schema 2.4");
+    if(app.personas().size()>8)errors.add("Too many personas");
+    var ids=new HashSet<String>();var behaviors=new HashMap<String,ApplicationGraph.Behavior>();graph.behaviors().forEach(b->behaviors.put(b.id(),b));
+    for(var p:app.personas()){
+      if(p.id()==null||!p.id().matches("^[a-z][a-z0-9-]{0,31}$")||!ids.add(p.id()))errors.add("Invalid persona id: "+p.id());
+      for(var f:p.facts())if(f.text()==null||f.text().isBlank()||f.source()==null||f.source().line()<1||!validSource(f.source().file()))errors.add("Invalid persona fact: "+p.id());
+      for(String id:p.screens().keySet())if(!nodeIs(nodes,id,NodeType.SCREEN))errors.add("Invalid persona screen: "+id);
+      for(var n:p.navigations()){var b=behaviors.get(n.behaviorId());if(b==null||b.type()!=ApplicationGraph.BehaviorType.NAVIGATE)errors.add("Invalid persona navigation: "+n.behaviorId());for(String id:n.targets())if(!nodeIs(nodes,id,NodeType.SCREEN))errors.add("Invalid persona target: "+id);}
+      var flow=p.flow();if(flow==null)continue;
+      for(String id:flow.entryPoints())if(!nodeIs(nodes,id,NodeType.ENTRY_POINT))errors.add("Invalid persona entry: "+id);
+      for(var reach:flow.reached())if(!nodeIs(nodes,reach.screenId(),NodeType.SCREEN)||!Set.of("REACHABLE","POSSIBLE").contains(reach.reach())||reach.depth()<1)errors.add("Invalid persona reach: "+reach.screenId());
+      for(String id:flow.unreached())if(!nodeIs(nodes,id,NodeType.SCREEN))errors.add("Invalid persona unreached: "+id);
+      for(var step:flow.steps())if(!(nodeIs(nodes,step.from(),NodeType.SCREEN)||nodeIs(nodes,step.from(),NodeType.ENTRY_POINT))||!(nodeIs(nodes,step.to(),NodeType.SCREEN)||nodeIs(nodes,step.to(),NodeType.ENTRY_POINT))||!Set.of("RENDERS","NAVIGATE","REDIRECT").contains(step.kind())||(step.kind().equals("RENDERS")?step.behaviorId()!=null:!behaviors.containsKey(step.behaviorId())))errors.add("Invalid persona step: "+step);
+    }
+  }
+  private static boolean nodeIs(Map<String,GraphNode> nodes,String id,NodeType type){return nodes.containsKey(id)&&nodes.get(id).type()==type;}
 
   private static void validateStrictEvidence(ApplicationGraph graph, List<String> errors) {
     for (GraphNode node : graph.nodes()) {
@@ -76,7 +97,7 @@ public final class GraphIntegrityValidator {
       if (behavior.id() == null || behavior.id().isBlank() || behaviors.put(behavior.id(), behavior) != null || nodes.containsKey(behavior.id()) || rules.containsKey(behavior.id())) errors.add("Duplicate or blank behavior id: " + behavior.id());
       if (behavior.event() == null || behavior.event().isBlank() || behavior.type() == null) errors.add("Incomplete behavior: " + behavior.id());
       GraphNode trigger = nodes.get(behavior.triggerId());
-      if (behavior.triggerId() != null && (trigger == null || !(Set.of(NodeType.COMPONENT, NodeType.SCREEN).contains(trigger.type()) || ("2.3".equals(graph.schemaVersion()) && trigger.type() == NodeType.ENTRY_POINT)))) errors.add("Invalid behavior trigger: " + behavior.id());
+      if (behavior.triggerId() != null && (trigger == null || !(Set.of(NodeType.COMPONENT, NodeType.SCREEN).contains(trigger.type()) || (ApplicationGraph.isAudienceSchema(graph.schemaVersion()) && trigger.type() == NodeType.ENTRY_POINT)))) errors.add("Invalid behavior trigger: " + behavior.id());
       if (behavior.triggerId() == null && behavior.parentId() == null) errors.add("Behavior has no trigger or parent: " + behavior.id());
       requireEvidence(behavior.id(), behavior.evidence(), errors);
       if (behavior.targetId() != null) {

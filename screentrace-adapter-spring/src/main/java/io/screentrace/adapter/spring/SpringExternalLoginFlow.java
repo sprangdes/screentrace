@@ -21,7 +21,7 @@ final class SpringExternalLoginFlow {
  private SpringExternalLoginFlow() { }
 
  static ApplicationGraph enrich(ApplicationGraph graph,ProjectInventory inventory) {
-  if(!"2.3".equals(graph.schemaVersion()))return graph;
+  if(!ApplicationGraph.isAudienceSchema(graph.schemaVersion()))return graph;
   var units=new TreeMap<String,Unit>();
   for(Path file:inventory.javaFiles())try {
    String name=inventory.root().relativize(file).toString().replace('\\','/');

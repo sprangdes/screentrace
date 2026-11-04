@@ -33,6 +33,13 @@ export function atoms(expression,source) {
  const flatten=f=>f.op==='and'?[...flatten(f.left),...flatten(f.right)]:[{...(f.op?{text:print(f),truth:true}:{text:f.text,truth:f.truth,optional:f.optional,...(f.optional?{raw:f.raw}:{})}),source}];
  return unique(flatten(f));
 }
+/** Leaf conditions of an expression, normalized like atoms(); used to list persona dimensions. */
+export function leaves(expression){
+ if(!expression)return [];
+ let f;try{f=formula(parse(expression),true,expression);}catch{return [];}
+ const result=[];(function collect(n){if(n.op){collect(n.left);collect(n.right);}else result.push(n.text);})(f);
+ return [...new Set(result)].sort();
+}
 export function unique(items){const seen=new Map();for(const item of items)seen.set(item.text+'\0'+item.truth,seen.get(item.text+'\0'+item.truth)??item);return [...seen.values()].sort((a,b)=>a.text.localeCompare(b.text)||Number(a.truth)-Number(b.truth));}
 function rows(f) {
  if(!f.op)return [[f]];

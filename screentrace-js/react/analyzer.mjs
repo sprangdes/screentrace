@@ -6,6 +6,7 @@ import {resolveRouteFacts} from './route-conditions.mjs';
 import {contextTransfers} from './context-transfer.mjs';
 import {stylesheets} from './styles.mjs';
 import {parseExpression} from '@babel/parser';
+import {personaDimensions, normalizePersonas, applyPersonas} from './personas.mjs';
 
 const ROUTER = new Set(['react-router-dom', 'react-router', 'react-router-native']);
 const REACT = new Set(['react', 'preact/compat']);
@@ -23,7 +24,7 @@ const MAX_GUARD = 300;
  * Static React analysis: routes, the component tree each route renders, interactive elements and what
  * their handlers do. Target code is parsed, never run; values that cannot be proven stay unresolved.
  */
-export function analyzeReact({files = [], maxDepth = 24, markup = false} = {}) {
+export function analyzeReact({files = [], maxDepth = 24, markup = false, personas} = {}) {
   const {modules, diagnostics} = parseModules(files);
   const evaluator = new Evaluator(modules, maxDepth);
   evaluator.transferContext = contextTransfers(modules,evaluator);
@@ -52,7 +53,7 @@ export function analyzeReact({files = [], maxDepth = 24, markup = false} = {}) {
       ];
     }):ordinaryVariants;
     entryBranches.push(...base.load.filter(e=>e.redirect).map(effect=>({route:route.path,effect})));
-    routeRedirects.push(...base.load.filter(e => e.routeRedirect).map(effect => ({route: route.path, file: route.file, effect})));
+    routeRedirects.push(...base.load.filter(e => e.routeRedirect || (e.redirect && e.shellRouteFacts && !contradicts(e.shellRouteFacts))).map(effect => ({route: route.path, file: route.file, effect})));
     for (const variant of variants) {
       const initial = new ScreenRenderer(evaluator, occurrences, diagnostics, maxDepth, false, variant?.facts ?? (base.redirectOnly ? [] : base.audienceOriginal)).render(route, shell);
       const screen = new ScreenRenderer(evaluator, occurrences, diagnostics, maxDepth, markup, base.redirectOnly ? [] : initial.audienceOriginal).render(route, shell);
@@ -116,11 +117,14 @@ export function analyzeReact({files = [], maxDepth = 24, markup = false} = {}) {
     screen.redirectTo = [...new Set(ordered.flatMap(item => [...(item.effect.targetRoutes ?? [])].sort()))];
   }
   for (const screen of screens) delete screen.redirects;
+  let personaResult;
+  if(personas !== undefined){const found=personaDimensions(screens,routeRedirects);const normalized=normalizePersonas(personas,found.all);diagnostics.push(...found.diagnostics,...normalized.diagnostics);applyPersonas(normalized.personas,screens,routeRedirects);personaResult={personaDimensions:found.dimensions,personas:normalized.personas};}
   const groups = combinations(screens.map(s => s.audience));
   if (groups.overflow && screens.length) diagnostics.push(diagnostic(screens[0].file, screens[0].line, 'REACT_AUDIENCE_TOO_MANY', '身分組合超過 16，僅保留各畫面的條件'));
   const uniqueDiagnostics = new Map();
   for (const item of diagnostics) uniqueDiagnostics.set(JSON.stringify(item), item);
   const result = {screens, routeRedirects, audiences: groups.values, diagnostics: [...uniqueDiagnostics.values()].sort((a, b) => a.source.file.localeCompare(b.source.file) || a.source.line - b.source.line || a.code.localeCompare(b.code))};
+  if(personaResult)Object.assign(result,personaResult);
   const sheetImports=stylesheets(modules, shell ? [shell.file] : [...new Set(routes.map(route => route.file))].sort());
   result.stylesheets=sheetImports.filter(item=>item.package);
   result.localStylesheets=sheetImports.filter(item=>!item.package);
@@ -993,8 +997,12 @@ class ScreenRenderer {
     if (name === 'Navigate') {
       const to = attributeExpression(attribute(node, 'to'));
       const destinations = to ? this.destinationChoices(to, scope, state) : null;
-      for (const candidate of destinations ?? [{urls:to?this.urlsOf(to,scope):[],conditions:[],trace:[]}])
-        this.addLoad(this.effect('NAVIGATE','load',node,scope,{...state,guards:[...state.guards,...candidate.conditions]}, {...candidate,source:{file:scope.module.file,line:line(node)},expression:text(scope.module,node),redirect:true,routeRedirect:this.inRoute>0}));
+      for (const candidate of destinations ?? [{urls:to?this.urlsOf(to,scope):[],conditions:[],trace:[]}]) {
+        const effect=this.effect('NAVIGATE','load',node,scope,{...state,guards:[...state.guards,...candidate.conditions]}, {...candidate,source:{file:scope.module.file,line:line(node)},expression:text(scope.module,node),redirect:true,routeRedirect:this.inRoute>0});
+        // A redirect in the shell around <Routes> is read under this route's fixed pathname, in the scope it was written in.
+        if(!effect.routeRedirect)effect.shellRouteFacts=resolveRouteFacts(this.evaluator.transferContext.remember(state.guards.flatMap(g=>atoms(g,effect.source)),scope),this.evaluator);
+        this.addLoad(effect);
+      }
       return;
     }
     if (name === 'Routes' && node === this.routesElement && this.pendingRoute && !this.reachedRoutes) {

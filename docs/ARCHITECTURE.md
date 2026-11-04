@@ -173,6 +173,12 @@ React 分析輸出 2.3，application.audiences 保存最多 16 個可渲染條�
 
 R18 第三階段（不改 schema 版本）：React SCREEN 的 `view`／`viewSource` 為「頁面元件」，從路由元素（變體則從產生該變體的分支）出發，略過 Guard 與外框時改看傳入的 children，遇到一般元件時記為候選並只看其最後一個 `return`（拆分變體的元件改看該變體分支），候選中最後一個即頁面元件；被略過的元件仍在 `viewSources`。preview-model 的 React 畫面帶 `previewState`，記錄以「載入成功路徑」模擬掛載時載入函式（含元件呼叫的自訂 hook）後的狀態值與設定來源；這只影響靜態預覽，不影響 graph。前端以套件路徑 import 的 CSS 在 `node_modules` 中找不到該套件時，產生 `STYLESHEET_PACKAGE_MISSING` 診斷（每個套件一則），並在 `viewSources` 含該 import 檔的 SCREEN 上加 `missingStylePackages`（排序後以 `|` 串接）。詳見 [ADR 0103](adr/0103-r18-preview-state-page-components-and-style-packages.md)。
 
+### R19：角色流程（schema 2.4）
+
+角色由工作區 `config.json` 的 `personas` 依專案設定；條件以既有 audience 原子正規化。畫面與導覽判定為 `APPLIES`、`UNKNOWN` 或 `EXCLUDED`。`application.personaDimensions` 列出條件維度及來源，`application.personas` 保存角色、條件、起點、畫面與導覽判定及流程。流程從網址入口走訪渲染、導覽及重導，區分確定可達與可能可達，並保留未到達畫面。未設定角色時圖的位元組維持不變。詳見 [ADR 0107](adr/0107-r19-persona-settings-and-dimensions.md)、[ADR 0108](adr/0108-r19-persona-verdicts.md)、[ADR 0109](adr/0109-r19-persona-flows.md)。
+
+外框重導依固定路由求值，條件不矛盾時才成為入口重導；身分維度以完整清單比對，並依畫面引用數截斷。未設定角色的 React 圖會新增外框重導行為，非 React 圖維持不變。見 [ADR 0110](adr/0110-r19-dimension-matching-and-shell-redirects.md)。
+
 ### 4.2 WP1 行為與檢核 schema 2.2
 
 新增 `behaviors` / `validationRules`（皆依 ID 排序）。schema 2.2 節點與邊必須具來源相對路徑/行號、解析器名稱與解析狀態；COMPONENT 的 attributes.kind 必須是 BUTTON、LINK、SUBMIT、TEXT_INPUT、TEXTAREA、SELECT、CHECKBOX、RADIO、DATE_PICKER、FILE_INPUT、MULTI_SELECT、FORM、MODAL、TABLE、OTHER。

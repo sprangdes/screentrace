@@ -47,13 +47,14 @@ public final class ReactGraphContribution {
 
     public static ApplicationGraph enrich(ApplicationGraph graph, ProjectInventory inventory) {
         if (!applies(inventory)) return graph;
-        var builder = new Builder(graph);
+        var builder = new Builder(graph, inventory.personasConfigured());
         try {
             List<String> unreadable = new ArrayList<>();
             JsonNode result = analyze(inventory, false, unreadable);
             builder.missingStyles(result.path("stylesheets"), inventory.root());
             unreadable.forEach(file -> builder.diagnostic(new SourceLocation(file, 1), "REACT_SOURCE_READ", "前端來源無法安全讀取"));
             builder.audienceGroups(result.path("audiences"));
+            builder.personas(result.path("personaDimensions"),result.path("personas"));
             builder.indexComponentShapes(result.path("screens"));
             for (JsonNode screen : result.path("screens")) builder.screen(screen);
             for (JsonNode redirect : result.path("routeRedirects")) builder.routeRedirect(redirect);
@@ -108,7 +109,9 @@ public final class ReactGraphContribution {
                 unreadable.add(relative);
             }
         }
-        return JavaScriptGraphContribution.run(Map.of("mode", "react", "files", files, "markup", markup, "maxDepth", Integer.getInteger("screentrace.react.maxDepth", 24)));
+        Map<String,Object> request=new LinkedHashMap<>();request.put("mode","react");request.put("files",files);request.put("markup",markup);request.put("maxDepth",Integer.getInteger("screentrace.react.maxDepth",24));
+        if(inventory.personasConfigured())request.put("personas",inventory.personas().stream().map(p->Map.of("id",p.id(),"name",p.name(),"startPaths",p.startPaths(),"facts",p.facts().stream().map(f->Map.of("text",f.text(),"truth",f.truth())).toList(),"line",inventory.personaSettingsLine())).toList());
+        return JavaScriptGraphContribution.run(request);
     }
 
     static boolean isSource(String relative) {
@@ -143,6 +146,11 @@ public final class ReactGraphContribution {
 
     private static final class Builder {
         private final ApplicationGraph graph;
+        private final boolean personasConfigured;
+        private final List<ApplicationGraph.PersonaDimension> personaDimensions=new ArrayList<>();
+        private final List<ApplicationGraph.Persona> personas=new ArrayList<>();
+        private final Map<String, Map<String, ApplicationGraph.PersonaStatus>> personaScreens = new LinkedHashMap<>();
+        private final Map<String, Map<String, ApplicationGraph.PersonaNavigation>> personaNavigations = new LinkedHashMap<>();
         private final Map<String, GraphNode> nodes = new TreeMap<>();
         private final Map<String, Relationship> edges = new TreeMap<>();
         private final Map<String, Behavior> behaviors = new TreeMap<>();
@@ -155,12 +163,18 @@ public final class ReactGraphContribution {
         private final Map<String, List<String>> redirects = new LinkedHashMap<>();
         private final Map<String, Set<String>> missingStylePackages = new HashMap<>();
 
-        private Builder(ApplicationGraph graph) {
+        private Builder(ApplicationGraph graph,boolean personasConfigured) {
             this.graph = graph;
+            this.personasConfigured=personasConfigured;
             graph.nodes().forEach(node -> nodes.put(node.id(), node));
             graph.relationships().forEach(edge -> edges.put(edge.id(), edge));
             graph.behaviors().forEach(behavior -> behaviors.put(behavior.id(), behavior));
             diagnostics.addAll(graph.diagnostics());
+        }
+
+        void personas(JsonNode dimensions,JsonNode definitions){
+            for(JsonNode d:dimensions){List<String> values=new ArrayList<>();d.path("values").forEach(x->values.add(x.asText()));personaDimensions.add(new ApplicationGraph.PersonaDimension(d.path("text").asText(),values,d.path("truthy").asBoolean(),source(d)));}
+            for(JsonNode p:definitions){List<ApplicationGraph.AudienceAtom> facts=new ArrayList<>();for(JsonNode a:p.path("facts"))facts.add(new ApplicationGraph.AudienceAtom(a.path("text").asText(),a.path("truth").asBoolean(),source(a)));List<String> starts=new ArrayList<>();p.path("startPaths").forEach(x->starts.add(x.asText()));personas.add(new ApplicationGraph.Persona(p.path("id").asText(),p.path("name").asText(),facts,starts,Map.of(),List.of(),null));}
         }
 
         void missingStyles(JsonNode stylesheets, Path root) {
@@ -178,6 +192,7 @@ public final class ReactGraphContribution {
             String routeFile = screen.path("file").asText();
             var source = new SourceLocation(routeFile, Math.max(1, screen.path("line").asInt(1)));
             String id = screenId(screen);
+            screen.path("personas").fields().forEachRemaining(e->personaScreens.computeIfAbsent(e.getKey(),ignored->new LinkedHashMap<>()).put(id,ApplicationGraph.PersonaStatus.valueOf(e.getValue().asText())));
             Map<String, String> attributes = new TreeMap<>();
             attributes.put("route", route);
             attributes.put("view", screen.path("view").asText());
@@ -349,7 +364,7 @@ public final class ReactGraphContribution {
                 effect.path("targetRoutes").forEach(item -> targets.add(item.asText()));
                 List<String> candidateIds = null;
                 if (effect.has("targetScreens")) { candidateIds = new ArrayList<>(); for (JsonNode candidate : effect.path("targetScreens")) candidateIds.add(screenId(candidate)); }
-                var navigation = new PendingNavigation(triggerId, event, guard, expression, source, confidence, urls, targets, candidateIds, evidence);
+                var navigation = new PendingNavigation(triggerId, event, guard, expression, source, confidence, urls, targets, candidateIds, evidence, effect.path("personas"));
                 navigations.add(navigation);
                 return;
             }
@@ -370,7 +385,8 @@ public final class ReactGraphContribution {
                 String target = screens.size() == 1 ? screens.get(0) : null;
                 var confidence = screens.isEmpty() ? Confidence.UNRESOLVED : screens.size() > 1 ? Confidence.AMBIGUOUS : item.confidence();
                 String detail = "目標網址=" + item.urls() + "；候選路由=" + item.targets() + "；全部候選=" + screens;
-                add(item.triggerId(), item.event(), BehaviorType.NAVIGATE, target, item.guard(), item.expression(), String.join(" ", item.urls()), item.source(), confidence, detail, item.evidence());
+                String behaviorId=add(item.triggerId(), item.event(), BehaviorType.NAVIGATE, target, item.guard(), item.expression(), String.join(" ", item.urls()), item.source(), confidence, detail, item.evidence());
+                item.personas().fields().forEachRemaining(e->recordPersonaNavigation(e.getKey(),behaviorId,ApplicationGraph.PersonaStatus.valueOf(e.getValue().asText()),screens));
                 var trigger = nodes.get(item.triggerId());
                 if (trigger == null || trigger.type() != NodeType.COMPONENT) continue;
                 for (String screen : screens) {
@@ -383,8 +399,13 @@ public final class ReactGraphContribution {
             }
         }
 
+        private void recordPersonaNavigation(String personaId,String behaviorId,ApplicationGraph.PersonaStatus status,List<String> targets){
+            var map=personaNavigations.computeIfAbsent(personaId,ignored->new LinkedHashMap<>());
+            map.merge(behaviorId,new ApplicationGraph.PersonaNavigation(behaviorId,status,targets),(a,b)->{var union=new java.util.TreeSet<String>(a.targets());union.addAll(b.targets());return new ApplicationGraph.PersonaNavigation(behaviorId,a.status()==b.status()?a.status():ApplicationGraph.PersonaStatus.UNKNOWN,List.copyOf(union));});
+        }
+
         /** Behavior IDs are keyed by trigger, event, type, expression and resolved target text, never by line. */
-        private void add(String triggerId, String event, BehaviorType type, String target, String guard, String expression, String resolved,
+        private String add(String triggerId, String event, BehaviorType type, String target, String guard, String expression, String resolved,
                          SourceLocation source, Confidence confidence, String detail, List<AnalysisEvidence> trace) {
             String key = expression + "\u001f" + resolved;
             int occurrence = occurrences.merge(triggerId + "\u001f" + event + "\u001f" + type + "\u001f" + key, 1, Integer::sum) - 1;
@@ -392,6 +413,7 @@ public final class ReactGraphContribution {
             List<AnalysisEvidence> evidence = new ArrayList<>(proof(source, confidence, detail));
             evidence.addAll(trace);
             behaviors.put(id, new Behavior(id, triggerId, event, type, target, guard, null, expression, evidence.stream().distinct().toList()));
+            return id;
         }
 
         private String requestEndpoint(String method, String url, SourceLocation source, Confidence confidence) {
@@ -412,8 +434,8 @@ public final class ReactGraphContribution {
         }
 
         ApplicationGraph build() {
-            return new ApplicationGraph(new ApplicationGraph.Application(graph.application().name(), graph.application().path(), graph.application().technologies(), audienceGroups), List.copyOf(nodes.values()), List.copyOf(edges.values()), diagnostics.stream().distinct().toList(),
-                    graph.apiContracts(), screensByRoute.isEmpty() ? graph.schemaVersion() : ApplicationGraph.AUDIENCE_SCHEMA_VERSION, List.copyOf(behaviors.values()), graph.validationRules());
+            return new ApplicationGraph(new ApplicationGraph.Application(graph.application().name(), graph.application().path(), graph.application().technologies(), audienceGroups,personaDimensions,personas.stream().map(p->new ApplicationGraph.Persona(p.id(),p.name(),p.facts(),p.startPaths(),personaScreens.getOrDefault(p.id(),Map.of()),List.copyOf(personaNavigations.getOrDefault(p.id(),Map.of()).values()),null)).toList()), List.copyOf(nodes.values()), List.copyOf(edges.values()), diagnostics.stream().distinct().toList(),
+                    graph.apiContracts(), screensByRoute.isEmpty() ? graph.schemaVersion() : personasConfigured ? ApplicationGraph.PERSONA_SCHEMA_VERSION : ApplicationGraph.AUDIENCE_SCHEMA_VERSION, List.copyOf(behaviors.values()), graph.validationRules());
         }
     }
 
@@ -436,5 +458,5 @@ public final class ReactGraphContribution {
     }
 
     private record PendingNavigation(String triggerId, String event, String guard, String expression, SourceLocation source, Confidence confidence,
-                                     List<String> urls, List<String> targets, List<String> candidates, List<AnalysisEvidence> evidence) { }
+                                     List<String> urls, List<String> targets, List<String> candidates, List<AnalysisEvidence> evidence, JsonNode personas) { }
 }

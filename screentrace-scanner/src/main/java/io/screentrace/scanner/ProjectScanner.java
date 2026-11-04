@@ -199,13 +199,16 @@ public final class ProjectScanner {
   }
 
   /** {@code webRoots} is resolved once from nbproject/project.properties when the inventory is built. */
-  public record ProjectInventory(Path root, List<Path> files, List<String> technologies, List<String> diagnostics,List<String> contextPaths,String contextSettingsFile,int contextSettingsLine,List<String> webRoots) {
+  public record ProjectInventory(Path root, List<Path> files, List<String> technologies, List<String> diagnostics,List<String> contextPaths,String contextSettingsFile,int contextSettingsLine,List<String> webRoots,List<PersonaSetting> personas,boolean personasConfigured,int personaSettingsLine) {
+    public ProjectInventory(Path root,List<Path> files,List<String> technologies,List<String> diagnostics,List<String> contextPaths,String contextSettingsFile,int contextSettingsLine,List<String> webRoots){this(root,files,technologies,diagnostics,contextPaths,contextSettingsFile,contextSettingsLine,webRoots,List.of(),false,1);}
     public ProjectInventory(Path root,List<Path> files,List<String> technologies,List<String> diagnostics){this(root,files,technologies,diagnostics,List.of(),".",1);}
     public ProjectInventory(Path root,List<Path> files,List<String> technologies,List<String> diagnostics,List<String> contextPaths,String contextSettingsFile,int contextSettingsLine){this(root,files,technologies,diagnostics,contextPaths,contextSettingsFile,contextSettingsLine,webRootsFor(configuredWebRoot(root)));}
     public ProjectInventory withContextPaths(List<String> values,String source){return withContextPaths(values,1);}
-    public ProjectInventory withContextPaths(List<String> values,int line){return new ProjectInventory(root,files,technologies,diagnostics,values,"workspace:config.json",Math.max(1,line),webRoots);}
+    public ProjectInventory withContextPaths(List<String> values,int line){return new ProjectInventory(root,files,technologies,diagnostics,values,"workspace:config.json",Math.max(1,line),webRoots,personas,personasConfigured,personaSettingsLine);
+    }
+    public ProjectInventory withPersonas(List<PersonaSetting> values,int line){return new ProjectInventory(root,files,technologies,diagnostics,contextPaths,contextSettingsFile,contextSettingsLine,webRoots,values,true,Math.max(1,line));}
     public ProjectInventory(Path root, List<Path> files, List<String> technologies) { this(root, files, technologies, List.of()); }
-    public ProjectInventory { files = List.copyOf(files); technologies = List.copyOf(technologies); diagnostics = List.copyOf(diagnostics); contextPaths=List.copyOf(contextPaths); contextSettingsFile=contextPaths.isEmpty()?".":"workspace:config.json"; webRoots=List.copyOf(webRoots); }
+    public ProjectInventory { files = List.copyOf(files); technologies = List.copyOf(technologies); diagnostics = List.copyOf(diagnostics); contextPaths=List.copyOf(contextPaths); contextSettingsFile=contextPaths.isEmpty()?".":"workspace:config.json"; webRoots=List.copyOf(webRoots); personas=List.copyOf(personas); }
     public List<Path> javaFiles() { return files.stream().filter(path -> hasExtension(path, ".java")).toList(); }
     public List<Path> reactFiles() { return files.stream().filter(path -> hasExtension(path, ".tsx") || hasExtension(path, ".jsx")).toList(); }
     public List<Path> jspFiles() { return files.stream().filter(path -> hasExtension(path, ".jsp")).toList(); }
