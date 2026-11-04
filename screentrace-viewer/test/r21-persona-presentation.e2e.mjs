@@ -65,14 +65,14 @@ test('R21 opening a screen hides the bar and coming back keeps the persona flow'
  }finally{await browser.close();}
 });
 
-test('R21 the comparison shows each persona description in its column heading',async()=>{
+test('R21 the persona page shows each persona description in the list',async()=>{
  const browser=await chromium.launch();try{
   const {page,state}=await open(browser,personaFixture());
   await page.locator('.page-tab[data-page="personas"]').click();
   await page.waitForSelector('[data-persona-page]');
-  assert.match(await page.locator('th[data-persona-column="visitor"]').textContent(),/訪客尚未登入的訪客會走到 1 · 可能走到 0/);
-  assert.deepEqual(await page.locator('[data-persona-row]').evaluateAll(rows=>rows.map(r=>r.dataset.personaRow)),['a','b']);
-  assert.deepEqual(await page.locator('[data-persona-row="a"] td').allTextContents(),['1','1','']);
+  assert.deepEqual(await page.locator('.persona-row').allTextContents(),['訪客尚未登入的訪客會走到 1 · 可能走到 0','會員依 1 個條件判定會走到 1 · 可能走到 1','停權依 1 個條件判定會走到 0 · 可能走到 0']);
+  await page.locator('[data-persona-row="locked"]').click();
+  assert.match(await page.locator('[data-persona-detail="locked"] [data-persona-section="flow"]').textContent(),/走不到任何畫面/);
   assert.deepEqual(state.errors,[]);assert.equal(state.requests,0);
  }finally{await browser.close();}
 });

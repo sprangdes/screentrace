@@ -441,3 +441,12 @@
   ```
   第 0.3 節列出的名稱為 `SyntheticProjectIntegrationTest.cliAnalysisThroughSymlinkOutputRootMatchesTheStandardRootByteForByteWhenSupported`。日誌亦包含 `bootstrap_check_in ... Permission denied (1100)`。
 - 狀態：RESOLVED（2026-11-04）。指示 v1.0 誤寫方法名稱；實際失敗的 cliAnalysisThroughSymlinkOutputRootMatchesTheStandardRootByteForByte 即 OQ-041 所指的同一個 Chromium 環境失敗（日誌含 bootstrap_check_in）。決定：R21 指示 v1.1 更正名稱，該失敗不阻擋 R21，由 PR CI 驗證。
+
+## OQ-049 — R23 暫存後狀態顯示為重新命名
+
+- 指令：`git add -A`，接著 `git status --short`。
+- 現象：狀態輸出為 14 行，其中 E2E 檔案顯示為重新命名；R23 第 3.3 節要求 15 個檔案的狀態為 `M `、`D ` 或 `A `。
+  ```text
+  R  screentrace-viewer/test/r22-persona-comparison.e2e.mjs -> screentrace-viewer/test/r23-persona-page.e2e.mjs
+  ```
+- 狀態：RESOLVED（2026-11-04）。git 的重新命名偵測把內容相近的刪除與新增檔案顯示為 R，屬預期行為；指示 v1.0 漏列此情況。決定：R23 指示 v1.1 第 3.3 節改列 R 狀態，並把 OQ-049 與 WP93 一起提交。

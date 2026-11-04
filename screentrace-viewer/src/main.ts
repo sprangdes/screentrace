@@ -457,9 +457,9 @@ try {
   screensTab.setAttribute('aria-current',page==='screens'?'page':'false');apiTab.setAttribute('aria-current',page==='api'?'page':'false');personasTab.setAttribute('aria-current',page==='personas'?'page':'false');
   renderProgress();renderSidebar();renderPanel();renderPersonaBar();
   if(page==='personas'){
-   main.replaceChildren(personaPage(index,personaViews,{screens:orderedScreens.map(s=>s.id),thumbnail,
-    // A cell opens the screen as that persona; a screen its flow does not reach is shown with the rest of the map.
-    onOpen:(screenId,id)=>{if(id){personaId=id;showUnreached=!activePersona()?.depth.has(screenId);}openScreen(screenId);},
+   main.replaceChildren(personaPage(index,personaViews,{selected:personaId,
+    // A screen opens as that persona; a screen its flow does not reach is shown with the rest of the map.
+    onOpen:(screenId,id)=>{personaId=id;showUnreached=!activePersona()?.depth.has(screenId);openScreen(screenId);},
     onPersona:id=>{personaId=id;showUnreached=false;showCanvas();}}));view=undefined;frame=undefined;viewer=undefined;simulation=undefined;
    return;
   }

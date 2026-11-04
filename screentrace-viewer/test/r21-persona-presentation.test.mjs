@@ -34,10 +34,6 @@ test('R21 the flow map has one column per step, then unreached and excluded, wit
  assert.deepEqual(p.personaLayout(index,member),layout,'the layout is deterministic');
 });
 
-test('R21 the comparison orders rows by step',async()=>{
- const {index,views}=await load(),page=await ownModule('persona-page');
- assert.deepEqual(page.comparisonOrder(index,views,['s5','s4','s3','s2','s1']),['s1','s2','s3','s4','s5']);
-});
 
 test('R21 steps count screens: a redirect through a URL entry is not a step, and the flow map still draws that move',async()=>{
  const p=await ownModule('personas'),m=await ownModule('map');
