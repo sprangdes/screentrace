@@ -47,6 +47,8 @@ function rows(f) {
  if(a.length*b.length>256)return [[{text:print(f),truth:true}]];
  return f.op==='or'?[...a,...b]:a.flatMap(x=>b.map(y=>[...x,...y]));
 }
+/** Properties a false value still has through its prototype, e.g. `false?.toString` is a function. */
+const INHERITED=new Set([Object.prototype,String.prototype,Number.prototype,Boolean.prototype].flatMap(proto=>Object.getOwnPropertyNames(proto)));
 function clash(items){
  const values=new Map(),equals=new Map(),falseObjects=[];
  for(const item of items){
@@ -70,6 +72,9 @@ function clash(items){
   // Direct access cannot be evaluated on a false object. Optional equality to a defined literal is false.
   // Optional syntax is normalized away; equality to undefined is deliberately excluded.
   if(n.type==='BinaryExpression' && n.operator==='===' && ['StringLiteral','NumericLiteral','BooleanLiteral','NullLiteral'].includes(n.right.type) && item.truth)return true;
+  // Optional access straight on a false object is undefined, so it cannot be true: `!me` rules out `me?.flag`.
+  // Names every primitive or object inherits (toString, length, ...) are left alone; deeper optional hops are not assumed.
+  if(n.type!=='BinaryExpression' && item.optional && item.truth && (item.raw??'').startsWith(name+'?.')){let first=member;while(first.object.type!=='Identifier')first=first.object;if(!first.computed&&first.property.type==='Identifier'&&!INHERITED.has(first.property.name))return true;}
   if(!item.optional && ['MemberExpression','OptionalMemberExpression'].includes(member.type))return true;
  }
  return false;
@@ -81,7 +86,7 @@ export function contradicts(items) {
 }
 function contradictsUncached(items) {
  let alternatives=[[]];
- for(const item of items){let f;try{f=formula(parse(item.text),item.truth,item.text);if(!f.op&&item.optional!==undefined)f.optional=item.optional;}catch{f=item;}
+ for(const item of items){let f;try{f=formula(parse(item.text),item.truth,item.text);if(!f.op&&item.optional!==undefined)f.optional=item.optional;if(!f.op&&item.raw!==undefined)f.raw=item.raw;}catch{f=item;}
   const next=rows(f);if(alternatives.length*next.length>256)return false;
   alternatives=alternatives.flatMap(a=>next.map(b=>[...a,...b])).filter(a=>!clash(a));if(!alternatives.length)return true;
  }
