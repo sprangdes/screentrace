@@ -66,7 +66,7 @@ class R19PersonaGraphTest {
    }
    """);
   var setting=new io.screentrace.scanner.PersonaSetting("merchant-setup","未開店商家",List.of(new io.screentrace.scanner.PersonaSetting.Fact("me.role === \"ROLE_BUSINESS\"",true),new io.screentrace.scanner.PersonaSetting.Fact("me.business",false)),List.of("/login"));
-  var graph=io.screentrace.core.PersonaFlows.enrich(new SpringBootAnalyzer().analyze(new ProjectScanner().scan(root).withPersonas(List.of(setting),3));
+  var graph=io.screentrace.core.PersonaFlows.enrich(new SpringBootAnalyzer().analyze(new ProjectScanner().scan(root).withPersonas(List.of(setting),3)));
   var setup=graph.nodes().stream().filter(n->n.type()==io.screentrace.core.ApplicationGraph.NodeType.SCREEN&&"/setup".equals(n.attributes().get("route"))).findFirst().orElseThrow();
   var login=graph.nodes().stream().filter(n->n.type()==io.screentrace.core.ApplicationGraph.NodeType.SCREEN&&"/login".equals(n.attributes().get("route"))).findFirst().orElseThrow();
   var entry=graph.nodes().stream().filter(n->n.type()==io.screentrace.core.ApplicationGraph.NodeType.ENTRY_POINT&&"/login".equals(n.attributes().get("path"))).findFirst().orElseThrow();

@@ -417,3 +417,10 @@
 - 可選方案：授權將該測試 fixture 補回 §4.1 指定的 `}`，並重新確認修正前失敗與修正後通過；測試斷言不變。
 - 影響範圍：WP89 測試與提交順序；實作修改尚未提交，Maven、PR 推送及 CI 尚未執行。
 - 狀態：RESOLVED（2026-11-04）。需求方授權補回 §4.1 原文的 }，斷言不變；補正後已在未套用實作的狀態下重新確認測試 1、2 失敗且無 REACT_SYNTAX_ERROR。
+
+## OQ-046 — WP89 Java 測試缺少右括號而無法編譯
+
+- 情境：完成 OQ-045 的補正並還原實作後，`npm --prefix screentrace-js test` 全部 171 個通過；`mvn -B clean verify` 在測試編譯階段失敗：`R19PersonaGraphTest.java:[69,151] ')' or ',' expected`。WP89 新增的 `shellGuardRedirectLetsSetupPersonaReachSetup` 測試在 `PersonaFlows.enrich(new SpringBootAnalyzer().analyze(...))` 呼叫末尾漏寫一個 `)`，與 §4.2 指定的呼叫不符；這是測試撰寫錯誤。
+- 可選方案：授權只補入該右括號，不改測試斷言或 fixture，再重新執行 §3.5 的測試。
+- 影響範圍：WP89 Java 測試無法執行，完整 Maven 驗證、實作提交、推送及 CI 尚未完成。依 R19 §0.3 第 2 點，修好需要修改新增測試本身，故停止。
+- 狀態：RESOLVED（2026-11-04）。需求方授權只補入缺少的 )，斷言與 fixture 不變；補正後已在未套用實作的狀態下確認該測試可編譯且因斷言 2 失敗。另訂通則：新增測試與指示原文不一致的語法／編譯錯誤，可直接改回原文並在回報中列出，不需另開問題。
