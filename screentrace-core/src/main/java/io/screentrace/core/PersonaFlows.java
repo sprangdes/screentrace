@@ -3,6 +3,11 @@ package io.screentrace.core;
 import java.util.*;
 import static io.screentrace.core.ApplicationGraph.*;
 
+/**
+ * Persona flows over the graph. An entry point is reached by a URL without a known query, so it only renders the
+ * screens that need no URL parameter; a screen split off by a parameter ({@code entryQuery}) is reached only by a
+ * navigation that targets it.
+ */
 public final class PersonaFlows {
   private PersonaFlows() { }
   public static ApplicationGraph enrich(ApplicationGraph graph) {
@@ -16,7 +21,7 @@ public final class PersonaFlows {
       var starts=new TreeSet<String>();for(String path:p.startPaths()){var found=entries.getOrDefault(path,List.of());starts.addAll(found);if(found.isEmpty()){var source=new SourceLocation("workspace:config.json",p.facts().isEmpty()?1:p.facts().get(0).source().line());String message="角色 "+p.id()+" 的起點 "+path+" 沒有對應的網址入口";diagnostics.add(new Diagnostic(message,Confidence.UNRESOLVED,source,"PERSONA_START_UNRESOLVED",List.of(new AnalysisEvidence(source,"PersonaFlows",ResolutionStatus.UNRESOLVED,message))));}}
       Map<String,PersonaNavigation> navs=new HashMap<>();p.navigations().forEach(n->navs.put(n.behaviorId(),n));Set<String> unevaluated=new HashSet<>();
       java.util.function.Function<String,List<PersonaStep>> expand=id->{var steps=new ArrayList<PersonaStep>();var node=nodes.get(id);if(node==null)return steps;
-        if(node.type()==NodeType.ENTRY_POINT)for(String s:renders.getOrDefault(id,List.of())){var status=status(p,s);if(status!=PersonaStatus.EXCLUDED)steps.add(new PersonaStep(id,s,"RENDERS",null,status));}
+        if(node.type()==NodeType.ENTRY_POINT)for(String s:renders.getOrDefault(id,List.of())){if(nodes.get(s).attributes().containsKey("entryQuery"))continue;var status=status(p,s);if(status!=PersonaStatus.EXCLUDED)steps.add(new PersonaStep(id,s,"RENDERS",null,status));}
         if(node.type()==NodeType.ENTRY_POINT||node.type()==NodeType.SCREEN){for(var b:byTrigger.getOrDefault(id,List.of()))navigate(id,"REDIRECT",b,p,navs,renderedBy,unevaluated,steps);if(node.type()==NodeType.SCREEN)for(String c:contained.getOrDefault(id,List.of()))for(var b:byTrigger.getOrDefault(c,List.of()))navigate(id,"NAVIGATE",b,p,navs,renderedBy,unevaluated,steps);}
         return steps;};
       var certain=bfs(starts,expand,true,null);var allSteps=new LinkedHashSet<PersonaStep>();var possible=bfs(starts,expand,false,allSteps);
