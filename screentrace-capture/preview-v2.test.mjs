@@ -36,6 +36,7 @@ test('captures every element with stable paths, all computed deltas and lossless
 });
 test('limits diagnose overflow without dropping any element or style',async()=>{const f=await fixture();try{const result=await run(f,['--style-element-limit=2','--style-byte-limit=1']);assert.equal(result.status,0,result.error);const c=await read(f);assert.equal(c.screens.screen.elements.length,10);assert.ok(c.diagnostics.some(d=>d.code==='STYLE_ELEMENT_LIMIT'));assert.ok(c.diagnostics.some(d=>d.code==='STYLE_BYTE_LIMIT'));assert.equal(c.screens.screen.rendering.mode,'reconstructed');}finally{await rm(f.root,{recursive:true,force:true});}});
 test('new capture explicitly rejects historical graphs',async()=>{const f=await fixture('2.1');try{const result=await run(f);assert.notEqual(result.status,0);assert.match(result.error,/2\.2.*2\.1|2\.1.*2\.2/);}finally{await rm(f.root,{recursive:true,force:true});}});
+test('new capture accepts audience (2.3) and persona (2.4) graphs',async()=>{for(const version of ['2.3','2.4']){const f=await fixture(version);try{const result=await run(f);assert.equal(result.status,0,result.error);const c=await read(f);assert.equal(c.screens.screen.elements.find(e=>e.tag==='input').graphComponentId,'email');}finally{await rm(f.root,{recursive:true,force:true});}}});
 test('HTML screens and declared local tag libraries preserve all branch/source evidence without executing target scripts',async()=>{
  const f=await fixture();try{
  const web=path.join(f.root,'src/main/webapp');await mkdir(path.join(web,'WEB-INF/tags'),{recursive:true});

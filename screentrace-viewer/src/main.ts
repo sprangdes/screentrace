@@ -17,6 +17,8 @@ import {previewDocument,previewSelector} from './preview';
 import {generateMarkdown,importMarkdown,markdownSizeWarning} from './shared/review-md';
 import {autosaveSupported,chooseSaveFile,chooseOpenFile,isCancel,writeFile,handleStore,FileHandle} from './progress-file';
 import {revealInPreview} from './reveal';
+import {graphPersonas,personaView,flowGroups,factLabel,reachLabel,reachText,REACH_ORDER,PersonaView} from './personas';
+import {personaPage} from './persona-page';
 import {loadReview,saveReview,screenDecision,componentDecision,effectiveComponent,setScreen,setComponent,statistics,conflicts,ReviewState,Decision} from './shared/review';
 
 type Filter='ALL'|'UNDECIDED'|'KEEP'|'REMOVE';
@@ -44,6 +46,8 @@ try {
  initializeComponentLabels(index,documentsByScreen,dynamicScreens,payload.preview.elements||[]);
  const mdPayload:Payload={...payload,componentLibrary:undefined};
  const orderedScreens=[...index.screens].sort((a,b)=>a.name.localeCompare(b.name,'zh-Hant')||(a.id<b.id?-1:a.id>b.id?1:0));
+ // Personas exist only when the analyst set them up; without them nothing about personas is shown.
+ const personaViews=graphPersonas(graph).map(persona=>personaView(index,persona));
 
  let storage:Storage|undefined;
  try{storage=window.localStorage;}catch{}
@@ -51,8 +55,9 @@ try {
  let reviewState=initial.state;
 
  // ---- view state
- let page:'screens'|'api'='screens',current:string|undefined,filter:Filter='ALL',listMode:'list'|'files'='list',query='',canvasTransform:CanvasTransform|undefined;
- let buttonsOpen=false,highlightComponent:string|undefined,selectedApi:string|undefined;
+ let page:'screens'|'api'|'personas'='screens',current:string|undefined,filter:Filter='ALL',listMode:'list'|'files'='list',query='',canvasTransform:CanvasTransform|undefined;
+ let buttonsOpen=false,highlightComponent:string|undefined,selectedApi:string|undefined,personaId:string|undefined;
+ const activePersona=():PersonaView|undefined=>personaViews.find(view=>view.persona.id===personaId);
  const history=new PrototypeHistory();
 
  // ---- top bar
@@ -64,6 +69,8 @@ try {
  screensTab.append(icon('screen'),element('span','畫面'));apiTab.append(icon('api'),element('span','API'));
  screensTab.dataset.page='screens';apiTab.dataset.page='api';
  tabs.append(screensTab,apiTab);
+ const personasTab=element('button',undefined,'page-tab');personasTab.append(icon('persona'),element('span','角色'));personasTab.dataset.page='personas';
+ if(personaViews.length)tabs.append(personasTab);
  const actions=element('div',undefined,'topbar-actions');
  const progress=element('details',undefined,'progress-menu'),progressSummary=element('summary',undefined,'progress-button'),progressPanel=element('div',undefined,'popover progress-panel');
  progressSummary.setAttribute('aria-label','確認進度');progress.append(progressSummary,progressPanel);
@@ -98,12 +105,18 @@ try {
  modes.setAttribute('role','group');modes.setAttribute('aria-label','清單顯示方式');modes.append(listButton,filesButton);
  const chips=element('div',undefined,'chips');chips.setAttribute('role','group');chips.setAttribute('aria-label','依狀態篩選');
  const notices=element('div',undefined,'sidebar-notices'),list=element('div',undefined,'screen-list');
+ // The persona picker: the list becomes that persona's flow and the map shows what it can reach.
+ const personaPicker=element('label',undefined,'persona-picker'),personaSelect=element('select');
+ personaSelect.dataset.personaSelect='true';personaPicker.append(element('span','角色'),personaSelect);
+ const noPersona=element('option','不套用角色');noPersona.value='';personaSelect.append(noPersona);
+ for(const view of personaViews){const option=element('option',view.persona.name);option.value=view.persona.id;personaSelect.append(option);}
+ personaSelect.onchange=()=>{personaId=personaSelect.value||undefined;render();};
  // The same sidebar toggle sits in the same top-left spot whether the list is open or folded into the rail.
  const sidebarHeader=element('div',undefined,'sidebar-header'),collapseList=iconButton('收起畫面清單','sidebar');
  sidebarHeader.append(collapseList,element('h2','畫面清單'));
  const rail=element('div',undefined,'sidebar-rail'),expandList=iconButton('展開畫面清單','sidebar'),railSearch=iconButton('搜尋畫面','search');
  expandList.classList.add('rail-toggle');rail.append(expandList,railSearch);
- const sidebarBody=element('div',undefined,'sidebar-body');sidebarBody.append(sidebarHeader,searchBox,modes,chips,notices,list);
+ const sidebarBody=element('div',undefined,'sidebar-body');sidebarBody.append(sidebarHeader,searchBox,modes,...(personaViews.length?[personaPicker]:[]),chips,notices,list);
  nav.append(rail,sidebarBody);
  // The screen details appear only while a screen is open; they fold into a rail on their own edge, mirroring the list.
  const panelBody=element('div',undefined,'details-body'),collapseDetails=iconButton('收起畫面資訊','sidebarRight'),detailsRail=element('div',undefined,'details-rail'),expandDetails=iconButton('展開畫面資訊','sidebarRight');
@@ -215,19 +228,39 @@ try {
   }
   listButton.setAttribute('aria-pressed',String(listMode==='list'));filesButton.setAttribute('aria-pressed',String(listMode==='files'));
   const visible=visibleScreens(),matches=searchScreens(index,query);
+  personaSelect.value=personaId||'';
   if(listMode==='files'){list.replaceChildren(fileTree(index,query,id=>openScreen(id),{visible,current}));return;}
   list.replaceChildren();
-  for(const screen of orderedScreens){
-   if((visible&&!visible.has(screen.id))||(query&&!matches.has(screen.id)))continue;
-   const status=screenDecision(reviewState,screen.id),button=element('button',undefined,'screen-row');
-   button.dataset.screenList=screen.id;button.dataset.decision=status;
-   button.setAttribute('aria-current',current===screen.id?'page':'false');
-   const label=element('span',undefined,'screen-row-text');label.append(element('strong',screen.name),element('code',index.routes.get(screen.id)?.[0]||text.noUrl));
+  const shown=(id:string)=>!(visible&&!visible.has(id))&&!(query&&!matches.has(id));
+  const row=(id:string,persona?:PersonaView)=>{
+   const screen=index.nodes.get(id)!,status=screenDecision(reviewState,id),button=element('button',undefined,'screen-row');
+   button.dataset.screenList=id;button.dataset.decision=status;
+   button.setAttribute('aria-current',current===id?'page':'false');
+   const label=element('span',undefined,'screen-row-text');label.append(element('strong',screen.name),element('code',index.routes.get(id)?.[0]||text.noUrl));
    button.append(label);
+   if(persona){const reach=persona.reach.get(id)!,tag=element('span',reachLabel[reach],'persona-reach');tag.dataset.reach=reach;button.dataset.personaReach=reach;button.append(tag);}
    if(status!=='UNDECIDED'){const mark=icon(status==='KEEP'?'check':'close');mark.classList.add('status-mark',`decision-${status}`);mark.setAttribute('role','img');mark.setAttribute('aria-label',decisionLabel(status));button.append(mark);}
-   button.onclick=()=>openScreen(screen.id);
-   list.append(button);
+   button.onclick=()=>openScreen(id);
+   return button;
+  };
+  const persona=activePersona();
+  if(persona){
+   // The persona's flow: what it is, then its screens step by step from the start URL.
+   const summary=element('section',undefined,'persona-summary');summary.dataset.personaSummary=persona.persona.id;
+   summary.append(element('strong',persona.persona.name),element('p',persona.persona.facts.map(factLabel).join('、')||'（沒有條件）','persona-facts-line'));
+   summary.append(element('p',REACH_ORDER.map(r=>`${reachLabel[r]} ${persona.counts[r]}`).join(' · '),'muted'));
+   if(persona.unevaluated)summary.append(element('p',`有 ${persona.unevaluated} 個導覽的條件無法判定，經過它們的畫面列為可能可達。`,'notice'));
+   list.append(summary);
+   for(const group of flowGroups(index,persona)){
+    const ids=group.screens.filter(shown);if(!ids.length)continue;
+    const section=group.reach==='EXCLUDED'?element('details',undefined,'persona-group'):element('div',undefined,'persona-group');section.dataset.personaGroup=group.key;
+    const title=group.reach==='EXCLUDED'?element('summary',`${group.title} ${ids.length}`):element('h3',`${group.title} · ${ids.length}`);
+    section.append(title);for(const id of ids)section.append(row(id,persona));list.append(section);
+   }
+   if(!list.querySelector('.screen-row'))list.append(element('p','沒有符合的畫面','empty-list'));
+   return;
   }
+  for(const screen of orderedScreens)if(shown(screen.id))list.append(row(screen.id));
   if(!list.childElementCount)list.append(element('p','沒有符合的畫面','empty-list'));
  };
 
@@ -244,7 +277,7 @@ try {
  const setDetails=(collapsed:boolean)=>{detailsCollapsed=collapsed;syncDetails();(collapsed?expandDetails:collapseDetails).focus();};
  expandDetails.onclick=()=>setDetails(false);collapseDetails.onclick=()=>setDetails(true);
  const renderPanel=()=>{
-  if(page==='api'||!current){panelBody.replaceChildren();return;}
+  if(page!=='screens'||!current){panelBody.replaceChildren();return;}
   const shown=panel.querySelector<HTMLDetailsElement>(`[data-screen-panel="${CSS.escape(current)}"] .panel-buttons`);
   if(shown)buttonsOpen=shown.open||buttonsOpen&&!!highlightComponent;
   screenPanel(panelBody,index,reviewState,current,{
@@ -252,13 +285,15 @@ try {
    buttonsOpen,onButtonsToggle:open=>{buttonsOpen=open;},highlight:highlightComponent,
    positions:(()=>{const found=previewPositions(current);return found.size?found:undefined;})(),hover:id=>pointAt(id),locate:id=>locate(id)
   });
+  const persona=activePersona();
+  if(persona){const reach=persona.reach.get(current)!,note=element('p',`角色「${persona.persona.name}」：${reachText(persona,current)}`,'persona-status');note.dataset.personaStatus=reach;panelBody.querySelector('.panel-header')?.append(note);}
   if(highlightComponent)requestAnimationFrame(()=>panel.querySelector(`[data-component-row="${CSS.escape(highlightComponent!)}"]`)?.scrollIntoView({block:'nearest'}));
  };
 
  // ---- main area: the canvas (zooming into the open screen) or the API page
  let simulation:ReturnType<typeof attachSimulation>|undefined,view:CanvasView|undefined,frame:HTMLIFrameElement|undefined,viewer:HTMLElement|undefined;
  const thumbnail=(id:string)=>{const value=payload.preview.screens?.find(s=>s.graphScreenId===id)?.thumbnail;return value?.startsWith('data:image/')?value:undefined;};
- const canvasState=()=>({query,visible:visibleScreens(),screenStatus:(id:string)=>screenDecision(reviewState,id)});
+ const canvasState=()=>({query,visible:visibleScreens(),screenStatus:(id:string)=>screenDecision(reviewState,id),persona:activePersona()});
  const nodesFor=(doc:Document,id:string,component:string)=>{const nodes=new Set<HTMLElement>(doc.querySelectorAll<HTMLElement>(`[data-st-component-id="${CSS.escape(component)}"]`));for(const record of payload.preview.elements||[])if(record.graphScreenId===id&&record.graphComponentId===component)try{const node=doc.querySelector<HTMLElement>(previewSelector(record.path));if(node)nodes.add(node);}catch{}return [...nodes];};
  /** Top-left of each button in the captured preview; buttons that were not visible there have no entry. */
  const previewPositions=(id:string)=>{
@@ -387,8 +422,12 @@ try {
   else if(!zoomed&&wasZoomed)listCollapsed=overviewCollapsed;
   if(!zoomed)detailsCollapsed=false;
   wasZoomed=zoomed;syncList();syncDetails();
-  screensTab.setAttribute('aria-current',page==='screens'?'page':'false');apiTab.setAttribute('aria-current',page==='api'?'page':'false');
+  screensTab.setAttribute('aria-current',page==='screens'?'page':'false');apiTab.setAttribute('aria-current',page==='api'?'page':'false');personasTab.setAttribute('aria-current',page==='personas'?'page':'false');
   renderProgress();renderSidebar();renderPanel();
+  if(page==='personas'){
+   main.replaceChildren(personaPage(index,personaViews,{screens:orderedScreens.map(s=>s.id),onOpen:(screenId,id)=>{personaId=id;openScreen(screenId);}}));view=undefined;frame=undefined;viewer=undefined;simulation=undefined;
+   return;
+  }
   if(page==='api'){
    const apis=apiPage(index,reviewState,{selected:selectedApi,onSelect:id=>{selectedApi=id;},onCaller:(screenId,componentId)=>openScreen(screenId,{component:componentId})});
    const hint=(graph.diagnostics as {code?:string;evidence?:unknown}[]|undefined||[]).find(d=>d?.code==='CONTEXT_PATH_HINT');
@@ -426,6 +465,7 @@ try {
  const showApi=(id?:string)=>{setPresenting(false);page='api';selectedApi=id;current=undefined;render();};
  screensTab.onclick=()=>{if(page!=='screens'||current)showCanvas();};
  apiTab.onclick=()=>showApi();
+ personasTab.onclick=()=>{setPresenting(false);page='personas';current=undefined;render();};
  listButton.onclick=()=>{listMode='list';renderSidebar();};
  filesButton.onclick=()=>{listMode='files';renderSidebar();};
  let searchTimer:ReturnType<typeof setTimeout>|undefined;

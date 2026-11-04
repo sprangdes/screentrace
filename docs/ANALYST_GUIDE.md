@@ -90,6 +90,8 @@ R17 起報表與 md 不顯示元件庫建議與覆寫；以下指令仍可驗證
 
 `PERSONA_CONTRADICTORY` 表示角色條件矛盾，該角色被略過；`PERSONA_FACT_UNMATCHED` 表示條件未出現在畫面或導覽條件中；`PERSONA_DIMENSIONS_TRUNCATED` 表示維度超過 64 個，只列前 64 個。角色之間的轉換不在本次範圍。
 
+報表在圖中有角色時才顯示角色功能：左側「角色」選單把清單換成該角色的流程（依步數、未到達、不適用），畫布標出卡片狀態與該角色會走的線，上方「角色」分頁比較所有角色。報表只讀 `application.personas`，不重新計算；要改變結果，請調整設定後重新分析。
+
 ### 缺少預覽或縮圖
 
 確認分析輸出完整，再重新分析或執行 `report` 重建 HTML。若仍缺少，檢視 `application-graph.json` 與 `preview-model.json` 中的診斷；不要以空白預覽推斷原畫面沒有內容。
