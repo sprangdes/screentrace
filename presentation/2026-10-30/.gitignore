@@ -1,0 +1,6 @@
+# 產出檔不進版控：pptx 由 src/build-deck.js 產生，PDF／講者資料 zip 由 pptx 匯出，
+# demo/ 是 analyze/reservio/report/screentrace-report.html 的副本。
+/ScreenTrace-*.pptx
+/ScreenTrace-*.pdf
+/ScreenTrace-*.zip
+/demo/
