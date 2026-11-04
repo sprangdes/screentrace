@@ -189,3 +189,8 @@
 
 - WP91：角色流程改以流程圖呈現（畫布上的角色按鈕、依步數分欄的流程圖、角色說明 `description`、簡化的狀態文字與比較表），見 [ADR 0112](adr/0112-r21-persona-presentation.md)。
 - 驗證：viewer 單元測試 136 個（新增 4；sandbox 內 134 通過，OQ-047 的 2 個 Chromium 測試無法執行）；Maven 579（新增 2；571 通過、1 略過，另 OQ-041 的 7 個 Chromium 測試在 sandbox 內無法執行）；PR CI run https://github.com/sprangdes/screentrace/actions/runs/41794022299 三個 job 全綠（含 E2E 新增 3 個與上述 7 個測試）。PR：https://github.com/sprangdes/screentrace/pull/65。
+
+## R22 角色比較改善
+
+- WP92：角色比較依可見角色分組（分組、步數圓標、欄位標題的角色資訊、畫面縮圖），見 [ADR 0113](adr/0113-r22-persona-comparison.md)。
+- 驗證：待 PR CI 完成後補入。

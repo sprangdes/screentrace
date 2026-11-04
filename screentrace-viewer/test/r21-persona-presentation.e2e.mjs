@@ -65,17 +65,14 @@ test('R21 opening a screen hides the bar and coming back keeps the persona flow'
  }finally{await browser.close();}
 });
 
-test('R21 the comparison shows descriptions and can keep only screens that differ between personas',async()=>{
+test('R21 the comparison shows each persona description in its column heading',async()=>{
  const browser=await chromium.launch();try{
   const {page,state}=await open(browser,personaFixture());
   await page.locator('.page-tab[data-page="personas"]').click();
   await page.waitForSelector('[data-persona-page]');
-  assert.match(await page.locator('[data-persona-facts="visitor"]').textContent(),/訪客尚未登入的訪客會走到 1 · 可能走到 0/);
-  assert.equal(await page.locator('[data-persona-facts="visitor"] .persona-conditions').getAttribute('open'),null,'conditions stay folded');
+  assert.match(await page.locator('th[data-persona-column="visitor"]').textContent(),/訪客尚未登入的訪客會走到 1 · 可能走到 0/);
   assert.deepEqual(await page.locator('[data-persona-row]').evaluateAll(rows=>rows.map(r=>r.dataset.personaRow)),['a','b']);
-  assert.deepEqual(await page.locator('[data-persona-row="a"] .persona-cell').allTextContents(),['會走到 · 第 1 步','會走到 · 第 1 步','—']);
-  await page.locator('[data-persona-diff]').check();
-  assert.deepEqual(await page.locator('[data-persona-row]:visible').evaluateAll(rows=>rows.map(r=>r.dataset.personaRow)),['a','b']);
+  assert.deepEqual(await page.locator('[data-persona-row="a"] td').allTextContents(),['1','1','']);
   assert.deepEqual(state.errors,[]);assert.equal(state.requests,0);
  }finally{await browser.close();}
 });
