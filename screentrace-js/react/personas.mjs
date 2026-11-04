@@ -35,14 +35,23 @@ export function verdict(facts,audience,conditions){
  return unknown?'UNKNOWN':'APPLIES';
 }
 
+/** The screen's conditions a persona has to meet: a route split by a URL parameter leaves the parameter to the link, so the plain version drops its "parameter absent" conditions. */
+function personaAudience(screen){const defaults=screen.queryDefaults??[];return (screen.audience??[]).filter(a=>!defaults.some(d=>d.text===a.text&&d.truth===a.truth));}
+/** A navigation whose URL does not choose between a route's plain and parameter versions cannot make either one certain. */
+function undecided(effect,screens){
+ const targets=effect.targetScreens?screens.filter(s=>effect.targetScreens.some(t=>t.file===s.file&&t.route===s.route&&t.variantKey===s.variantKey&&t.entryQuery===s.entryQuery)):screens.filter(s=>(effect.targetRoutes??[]).includes(s.route));
+ return targets.some(plain=>plain.queryEntryPlain&&targets.some(other=>other.route===plain.route&&other.entryQuery));
+}
+const cap=(value,effect,screens)=>value==='APPLIES'&&undecided(effect,screens)?'UNKNOWN':value;
+
 export function applyPersonas(personas,screens,routeRedirects){
  for(const persona of personas){
   for(const screen of screens){
-   (screen.personas??={})[persona.id]=verdict(persona.facts,screen.audience??[],[]);
-   for(const effect of screen.load)if(effect.type==='NAVIGATE')(effect.personas??={})[persona.id]=effect.shellRouteFacts?verdict(persona.facts,effect.shellRouteFacts,[]):verdict(persona.facts,[],[effect.guard]);
+   (screen.personas??={})[persona.id]=verdict(persona.facts,personaAudience(screen),[]);
+   for(const effect of screen.load)if(effect.type==='NAVIGATE')(effect.personas??={})[persona.id]=cap(effect.shellRouteFacts?verdict(persona.facts,effect.shellRouteFacts,[]):verdict(persona.facts,[],[effect.guard]),effect,screens);
    for(const component of screen.components)for(const effect of component.behaviors)
-    if(effect.type==='NAVIGATE')(effect.personas??={})[persona.id]=verdict(persona.facts,[],[component.guard,effect.guard]);
+    if(effect.type==='NAVIGATE')(effect.personas??={})[persona.id]=cap(verdict(persona.facts,[],[component.guard,effect.guard]),effect,screens);
   }
-  for(const redirect of routeRedirects)if(redirect.effect.type==='NAVIGATE')(redirect.effect.personas??={})[persona.id]=redirect.effect.shellRouteFacts?verdict(persona.facts,redirect.effect.shellRouteFacts,[]):verdict(persona.facts,[],[redirect.effect.guard]);
+  for(const redirect of routeRedirects)if(redirect.effect.type==='NAVIGATE')(redirect.effect.personas??={})[persona.id]=cap(redirect.effect.shellRouteFacts?verdict(persona.facts,redirect.effect.shellRouteFacts,[]):verdict(persona.facts,[],[redirect.effect.guard]),redirect.effect,screens);
  }
 }
