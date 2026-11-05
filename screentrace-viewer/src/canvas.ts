@@ -25,7 +25,7 @@ export interface CanvasOptions extends CanvasState {
  onExitRequest:()=>void;
  /** Lays the map out this way instead of by URL areas, e.g. a persona's flow by step. */
  layout?:GroupedLayout;
- /** Shown above the hint in the top-left corner of the overview, e.g. the persona switch. */
+ /** Shown in the top-left corner of the overview, e.g. the persona switch. */
  toolbar?:HTMLElement;
 }
 export interface CanvasView {
@@ -113,8 +113,8 @@ export function canvas(index:Index,payload:Payload,options:CanvasOptions):Canvas
  const width=Math.max(800,layout.width),height=Math.max(600,layout.height);
  world.style.width=`${width}px`;world.style.height=`${height}px`;
  const visible=(id:string)=>!state.visible||state.visible.has(id);
- // Fitting keeps the map below the hint in the top-left corner so it never covers an area's title.
- const reserved=()=>{const hint=viewport.querySelector<HTMLElement>('.canvas-top')||viewport.querySelector<HTMLElement>('.canvas-hint');return hint&&!focused?Math.max(24,hint.offsetTop+hint.offsetHeight+8):24;};
+ // Fitting keeps the map below the toolbar in the top-left corner so it never covers an area's title.
+ const reserved=()=>{const top=viewport.querySelector<HTMLElement>('.canvas-top');return top&&!focused?Math.max(24,top.offsetTop+top.offsetHeight+8):24;};
  const frameRect=(left:number,top:number,w:number,h:number):CanvasTransform=>{
   const above=reserved(),room=viewport.clientHeight-above-24,z=Math.min(1,(viewport.clientWidth-48)/w,room/h);
   return {zoom:z,x:(viewport.clientWidth-w*z)/2-(left-40)*z,y:above+(room-h*z)/2-(top-40)*z};
@@ -505,10 +505,8 @@ export function canvas(index:Index,payload:Payload,options:CanvasOptions):Canvas
   if(zooming){zoomAt(Math.exp(-Math.max(-50,Math.min(50,event.deltaY*unit))*0.01),event.clientX,event.clientY);return;}
   x-=event.deltaX*unit;y-=event.deltaY*unit;viewport.dataset.fitted='true';apply();
  },{passive:false});
- const hint=element('p','點一下畫面看關聯 · 點兩下開啟畫面 · n 下一個未確認 · / 搜尋','canvas-hint');
- let top:HTMLElement=hint;
- if(options.toolbar){top=element('div',undefined,'canvas-top');top.append(options.toolbar,hint);}
- viewport.append(world,lines,layer,tips,top,controls);
+ viewport.append(world,lines,layer,tips,controls);
+ if(options.toolbar){const top=element('div',undefined,'canvas-top');top.append(options.toolbar);viewport.append(top);}
  update(state);apply();
  let observed:{width:number;height:number}|undefined;
  new ResizeObserver(entries=>{

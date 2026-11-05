@@ -152,13 +152,13 @@ test('R17 WP62 zooming in folds the screen list into a rail; opening it there fl
 test('R17 the screen details appear only while a screen is open, fold into a rail on their own edge and keep that choice across screens',async()=>{
  const {browser,page}=await open();
  try{
-  const shell=page.locator('.shell'),details=page.locator('.details-panel'),hint=page.locator('.canvas-hint');
+  const shell=page.locator('.shell'),details=page.locator('.details-panel');
   const expand=page.getByRole('button',{name:'展開畫面資訊'}),collapse=page.getByRole('button',{name:'收起畫面資訊'});
   const spot=async button=>button.evaluate(b=>{const r=b.getBoundingClientRect();return [Math.round(r.right),Math.round(r.top)];});
   assert.equal(await shell.getAttribute('data-details'),'hidden');assert.equal(await details.isVisible(),false);
-  assert.match(await hint.innerText(),/點一下畫面看關聯 · 點兩下開啟畫面/);
+  assert.equal(await page.locator('.canvas-hint').count(),0,'the canvas has no usage hint');
   await page.locator('.screen-card[data-screen="a"]').dblclick();await ready(page);
-  assert.equal(await shell.getAttribute('data-details'),'open');assert.equal(await hint.isVisible(),false);
+  assert.equal(await shell.getAttribute('data-details'),'open');
   assert.equal(await page.locator('.details-panel [data-screen-panel="a"]').isVisible(),true);
   const openSpot=await spot(collapse),before=await page.locator('.focus-layer:not(.is-leaving)').evaluate(l=>l.offsetWidth);
   await collapse.click();
@@ -174,7 +174,7 @@ test('R17 the screen details appear only while a screen is open, fold into a rai
   await collapse.click();
   await page.locator('.prototype-back').click();
   await page.waitForFunction(()=>document.querySelector('.canvas').dataset.mode==='overview');
-  assert.equal(await shell.getAttribute('data-details'),'hidden');assert.equal(await hint.isVisible(),true);
+  assert.equal(await shell.getAttribute('data-details'),'hidden');
   await page.locator('.screen-card[data-screen="a"]').dblclick();await ready(page);
   assert.equal(await shell.getAttribute('data-details'),'open','returning to the canvas resets the choice');
  }finally{await browser.close();}

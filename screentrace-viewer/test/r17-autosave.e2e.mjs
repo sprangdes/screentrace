@@ -62,6 +62,8 @@ test('R17 WP65 reopening offers to continue the last progress file and the file 
   await page.waitForFunction(()=>document.querySelector('.save-menu').dataset.fileState==='saved');
   assert.equal(await page.locator('.screen-list [data-screen-list="a"]').getAttribute('data-decision'),'KEEP');
   assert.match(await page.locator('.save-status').innerText(),/已載入上次進度/);
+  await page.waitForFunction(()=>document.querySelector('.save-status').textContent==='',null,{timeout:8000});
+  assert.equal(await page.locator('.save-menu').getAttribute('data-file-state'),'saved','the save menu still says the file is saved');
   // A permission that is still granted resumes without asking.
   await page.reload();await page.locator('#app[data-ready="true"]').waitFor();
   await page.waitForFunction(()=>document.querySelector('.save-menu').dataset.fileState==='saved');

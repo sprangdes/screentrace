@@ -19,7 +19,11 @@ import {autosaveSupported,chooseSaveFile,chooseOpenFile,isCancel,writeFile,handl
 import {revealInPreview} from './reveal';
 import {graphPersonas,personaView,flowGroups,factLabel,reachLabel,reachHelp,reachText,reachSummary,personaDescription,personaLayout,PersonaView} from './personas';
 import {personaPage} from './persona-page';
+import {splitter,LIST_SPLIT} from './splitter';
 import {loadReview,saveReview,screenDecision,componentDecision,effectiveComponent,setScreen,setComponent,statistics,conflicts,ReviewState,Decision} from './shared/review';
+
+/** How long a message that something worked stays beside the save menu before it fades. */
+const STATUS_SHOWN_MS=5000;
 
 type Filter='ALL'|'UNDECIDED'|'KEEP'|'REMOVE';
 const root=document.querySelector<HTMLDivElement>('#app')!;
@@ -135,7 +139,7 @@ try {
  const rail=element('div',undefined,'sidebar-rail'),expandList=iconButton('展開畫面清單','sidebar'),railSearch=iconButton('搜尋畫面','search');
  expandList.classList.add('rail-toggle');rail.append(expandList,railSearch);
  const sidebarBody=element('div',undefined,'sidebar-body');sidebarBody.append(sidebarHeader,searchBox,modes,chips,notices,list);
- nav.append(rail,sidebarBody);
+ nav.append(rail,sidebarBody,splitter(shell,{label:'畫面清單寬度',side:'start',range:LIST_SPLIT,value:LIST_SPLIT.initial,property:'--list-split',unit:'',onChange:()=>{}}));
  // The screen details appear only while a screen is open; they fold into a rail on their own edge, mirroring the list.
  const panelBody=element('div',undefined,'details-body'),collapseDetails=iconButton('收起畫面資訊','sidebarRight'),detailsRail=element('div',undefined,'details-rail'),expandDetails=iconButton('展開畫面資訊','sidebarRight');
  collapseDetails.classList.add('details-toggle');expandDetails.classList.add('rail-toggle');detailsRail.append(expandDetails);panel.append(collapseDetails,detailsRail,panelBody);
@@ -144,7 +148,12 @@ try {
  if(initial.dropped)notices.append(element('p','先前的進度含已不再使用的欄位（原因、備註、元件庫對應），已略過；保留／移除標記不受影響。','notice'));
 
  const visibleScreens=():Set<string>|undefined=>filter==='ALL'?undefined:new Set(index.screens.filter(s=>screenDecision(reviewState,s.id)===filter).map(s=>s.id));
- const say=(message:string,state:'saved'|'error'='saved')=>{saveStatus.textContent=message;saveStatus.dataset.state=state;};
+ // A message that something worked fades after a few seconds; a failure stays until the next message.
+ let sayTimer:number|undefined;
+ const say=(message:string,state:'saved'|'error'='saved')=>{
+  window.clearTimeout(sayTimer);saveStatus.classList.remove('is-fading');saveStatus.textContent=message;saveStatus.dataset.state=state;
+  if(state==='saved')sayTimer=window.setTimeout(()=>{saveStatus.classList.add('is-fading');sayTimer=window.setTimeout(()=>{saveStatus.textContent='';saveStatus.classList.remove('is-fading');},400);},STATUS_SHOWN_MS);
+ };
  const persist=()=>{if(saveReview(storage,reviewState))say('⚠ 無法暫存在瀏覽器，請下載 md','error');};
 
  const applyImported=(imported:Awaited<ReturnType<typeof importMarkdown>>)=>{

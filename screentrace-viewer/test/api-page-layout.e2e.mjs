@@ -45,7 +45,7 @@ test('API page lists APIs by controller beside one API\'s detail, and moves with
   await page.locator('.api-row[data-api-row="ep"]').click();
   const contract=page.locator('.api-detail .api-contract');
   assert.equal(await contract.evaluate(details=>details.open),false);
-  assert.equal(await page.locator('.api-detail-inner > :last-child').evaluate(node=>node.classList.contains('api-contract')),true);
+  assert.equal(await page.locator('.api-detail-inner').evaluate(inner=>{const blocks=[...inner.querySelectorAll('.api-section,.api-contract')],bottom=Math.max(...blocks.map(b=>b.getBoundingClientRect().bottom));return blocks.find(b=>b.getBoundingClientRect().bottom===bottom)?.classList.contains('api-contract');}),true,'the contract is the bottom block');
   await contract.locator('summary').click();
   assert.match(await contract.innerText(),/LoginRequest[\s\S]*account\s+String\s+BODY\s+是[\s\S]*Response 200[\s\S]*LoginResponse/);
   // Grouping by URL area and folding a group.

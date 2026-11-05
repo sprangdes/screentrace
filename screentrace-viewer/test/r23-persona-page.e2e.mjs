@@ -11,20 +11,23 @@ function personaFixture(){
 const open=async(browser,data)=>{const page=await browser.newPage({viewport:{width:1440,height:900},reducedMotion:'reduce'});const state={requests:0,errors:[]};page.on('request',r=>{if(/^https?:/.test(r.url()))state.requests++;});page.on('pageerror',e=>state.errors.push(String(e)));await page.goto(await fileFixture(data));await page.waitForSelector('[data-ready="true"]');return {page,state};};
 const toPersonas=async page=>{await page.click('.page-tab[data-page="personas"]');await page.waitForSelector('[data-persona-page]');};
 
-test('R23 the persona page uses the API page layout: a persona list, its details, and keyboard movement',async()=>{
+test('R23 the persona page lists personas as cards above the chosen persona, with keyboard movement',async()=>{
  const browser=await chromium.launch();try{
   const {page,state}=await open(browser,personaFixture());
   await toPersonas(page);
-  assert.equal(await page.locator('[data-persona-page].api-page .api-master .api-list .persona-row').count(),2);
-  assert.equal(await page.locator('[data-persona-page] .api-detail [data-persona-detail="visitor"]').count(),1,'the first persona is shown at first');
+  assert.equal(await page.locator('[data-persona-page] .persona-cards[role=listbox] .persona-row').count(),2);
+  assert.equal(await page.locator('[data-persona-page] .persona-detail [data-persona-detail="visitor"]').count(),1,'the first persona is shown at first');
   assert.equal(await page.locator('[data-persona-row="visitor"]').getAttribute('aria-selected'),'true');
-  assert.deepEqual(await page.locator('[data-persona-detail="visitor"] .api-section h3').allTextContents(),['判定條件','起點','流程 1 個畫面','和其他角色比較','流程以外']);
+  assert.deepEqual(await page.locator('[data-persona-detail="visitor"] .api-section h3').allTextContents(),['流程 1 個畫面','判定條件','起點','和其他角色比較','流程以外']);
   assert.deepEqual(await page.locator('[data-persona-section="compare"] .api-shared-name').allTextContents(),['所有角色共用']);
   assert.deepEqual(await page.locator('[data-persona-section="outside"] .api-shared-name').allTextContents(),['走不到']);
   await page.locator('[data-persona-row="visitor"]').focus();await page.keyboard.press('ArrowDown');
   assert.equal(await page.locator('[data-persona-row="member"]').getAttribute('aria-selected'),'true');
   assert.equal(await page.evaluate(()=>document.activeElement?.dataset.personaRow),'member');
   assert.deepEqual(await page.locator('[data-persona-section="compare"] .api-shared-name').allTextContents(),['只有這個角色','所有角色共用']);
+  await page.keyboard.press('ArrowLeft');
+  assert.equal(await page.locator('[data-persona-row="visitor"]').getAttribute('aria-selected'),'true','left and right move along the cards too');
+  await page.keyboard.press('ArrowRight');
   assert.equal(await page.locator('[data-persona-section="outside"]').count(),0,'nothing outside the flow');
   assert.deepEqual(state.errors,[]);assert.equal(state.requests,0);
  }finally{await browser.close();}
