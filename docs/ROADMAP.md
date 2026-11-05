@@ -219,3 +219,8 @@
 
 - WP97：角色流程從入口只開啟不需要網址參數的畫面。reservio 顧客的「可能走到」由 5 個減為 1 個、商家由 8 個減為 4 個，見 [ADR 0118](adr/0118-r27-entry-renders-plain-version.md)。
 - 驗證：Maven 581（新增 2；573 通過、1 略過，另 OQ-041 的 7 個 Chromium 測試在 sandbox 內無法執行）；JS 測試 180 個；viewer 單元測試 137 個（sandbox 內 135 通過，OQ-047 的 2 個 Chromium 測試無法執行）；PR CI run https://github.com/sprangdes/screentrace/actions/runs/41933815522 三個 job 全綠（含 E2E 與上述 7 個測試）。PR：https://github.com/sprangdes/screentrace/pull/71。
+
+## R28 API 頁與角色頁的圖形摘要
+
+- WP98：API 頁加上狀態分布條，角色頁加上觸及條、條件標記與每一步的畫面數直條，見 [ADR 0119](adr/0119-r28-visual-summaries.md)。
+- 驗證：viewer 單元測試 139 個（新增 2；sandbox 內 137 通過，OQ-047 的 2 個 Chromium 測試無法執行）；JS 測試 180 個；Maven 581（573 通過、1 略過，另 OQ-041 的 7 個 Chromium 測試在 sandbox 內無法執行）；PR CI run https://github.com/sprangdes/screentrace/actions/runs/41947147871 三個 job 全綠（含 E2E 新增 2 個與上述 7 個測試）。PR：https://github.com/sprangdes/screentrace/pull/72。

@@ -5,6 +5,7 @@ import {callerKind,Caller} from './usage';
 import {Index} from './map';
 import {Node,Evidence} from './contracts';
 import {element} from './text';
+import {proportionBar} from './proportion';
 
 /** The three statuses shown to people: inferred usage and system entry points both count as in use. */
 export type ApiStatus='IN_USE'|'UNREFERENCED'|'REMOVABLE';
@@ -35,6 +36,16 @@ export function externalCallEvidence(node:Node):Evidence[]{
  return ['permitAll','ignoringRequestMatchers'].every(kind=>proofs.some(e=>JSON.parse(e.detail!).kind===kind))?proofs:[];
 }
 
+const STATUS_ORDER:ApiStatus[]=['IN_USE','UNREFERENCED','REMOVABLE'];
+/** How many APIs have each status, in the order the page shows them. */
+export function apiStatusCounts(statuses:Iterable<ApiStatus>):Record<ApiStatus,number>{
+ const counts:Record<ApiStatus,number>={IN_USE:0,UNREFERENCED:0,REMOVABLE:0};
+ for(const status of statuses)counts[status]++;
+ return counts;
+}
+const statusShares=(counts:Record<ApiStatus,number>)=>STATUS_ORDER.map(key=>({key,count:counts[key]}));
+const statusCountsLabel=(counts:Record<ApiStatus,number>)=>STATUS_ORDER.map(key=>`${apiStatusLabels[key]} ${counts[key]}`).join('、');
+
 export interface ApiPageOptions {selected?:string;onSelect?:(id:string)=>void;onCaller:(screenId:string,componentId?:string)=>void}
 type Filter='ALL'|'ATTENTION'|'IN_USE';
 type Grouping='controller'|'url';
@@ -55,6 +66,13 @@ export function urlPrefix(path:string):string{
 }
 const methodBadge=(method:string)=>{const badge=element('span',method==='ANY'?'任何':method,'method-badge');badge.dataset.method=method;return badge;};
 const statusTag=(status:ApiStatus)=>{const tag=element('span',apiStatusLabels[status],'api-status');tag.dataset.apiStatus=status;return tag;};
+/** All APIs at a glance: one bar split by status, with the counts in words underneath. */
+const statusSummary=(counts:Record<ApiStatus,number>)=>{
+ const box=element('div',undefined,'api-summary'),keys=element('div',undefined,'api-summary-keys');
+ for(const key of STATUS_ORDER){const item=element('span',`${apiStatusLabels[key]} ${counts[key]}`,'api-summary-key');item.dataset.share=key;keys.append(item);}
+ box.append(proportionBar(statusShares(counts),statusCountsLabel(counts),'api-summary-bar'),keys);
+ return box;
+};
 
 export function apiPage(index:Index,state:ReviewState,options:ApiPageOptions):HTMLElement{
  const usage=deriveApiUsage(index.graph,state),statuses=apiStatuses(index,state),edges=index.graph.relationships||[];
@@ -76,6 +94,7 @@ export function apiPage(index:Index,state:ReviewState,options:ApiPageOptions):HT
  const head=element('div',undefined,'api-heading'),title=element('h1','API');
  title.append(element('span',String(records.length),'api-total'));
  head.append(title,element('p','狀態依目前的保留／移除標記即時計算。','api-intro'));
+ if(records.length)head.append(statusSummary(apiStatusCounts(records.map(r=>r.status))));
  const search=element('input'),grouping=element('div',undefined,'segmented api-grouping'),chips=element('div',undefined,'chips');
  search.type='search';search.placeholder='搜尋網址、處理程式或畫面';search.setAttribute('aria-label','搜尋 API');search.value=memory.query;
  grouping.setAttribute('role','group');grouping.setAttribute('aria-label','分組方式');
@@ -129,8 +148,10 @@ export function apiPage(index:Index,state:ReviewState,options:ApiPageOptions):HT
    group.dataset.apiGroup=key;group.classList.toggle('is-collapsed',collapsed);body.setAttribute('role','group');body.setAttribute('aria-label',key);
    header.type='button';header.setAttribute('aria-expanded',String(!collapsed));
    const attention=items.filter(r=>r.status!=='IN_USE').length;
+   const counts=apiStatusCounts(items.map(r=>r.status));
    header.append(element('span',undefined,'api-group-caret'),element('span',key,'api-group-name'),element('span',String(items.length),'api-group-count'));
    if(attention)header.append(element('span',`${attention} 需要注意`,'api-group-attention'));
+   header.append(proportionBar(statusShares(counts),statusCountsLabel(counts),'api-group-bar',true));
    header.onclick=()=>{const now=!group.classList.contains('is-collapsed');group.classList.toggle('is-collapsed',now);header.setAttribute('aria-expanded',String(!now));if(now)memory.collapsed.add(memoryKey);else memory.collapsed.delete(memoryKey);};
    for(const record of items){
     const row=element('button',undefined,'api-row');row.type='button';row.setAttribute('role','option');
