@@ -100,3 +100,38 @@ test('R32 a wide detail sets its sections side by side, a narrow one stacks them
   assert.deepEqual(state.errors,[]);assert.equal(state.requests,0);
  }finally{await browser.close();}
 });
+
+test('R32 a divider resizes the API list and the persona side column, by pointer and by keyboard',async()=>{
+ const browser=await chromium.launch();try{
+  const {page,state}=await open(browser);
+  await page.click('.page-tab[data-page="api"]');await page.waitForSelector('.api-page');
+  const handle=page.locator('.api-page>.splitter[role=separator]');
+  const master=()=>page.locator('.api-master').evaluate(m=>Math.round(m.getBoundingClientRect().width));
+  assert.equal(await handle.getAttribute('aria-valuenow'),'30');
+  assert.equal(await master(),Math.round(1440*0.3),'30% of the page');
+  const box=await handle.boundingBox();
+  await page.mouse.move(box.x+box.width/2,box.y+200);await page.mouse.down();await page.mouse.move(box.x+box.width/2+144,box.y+200,{steps:4});await page.mouse.up();
+  assert.equal(await handle.getAttribute('aria-valuenow'),'40');
+  const dragged=await master(),target=Math.round(box.x+box.width/2+144);assert.ok(Math.abs(dragged-target)<=2,`the list ends where the pointer let go (${dragged} vs ${target})`);
+  await handle.focus();await page.keyboard.press('ArrowLeft');
+  assert.equal(await handle.getAttribute('aria-valuenow'),'38');
+  await page.keyboard.press('End');assert.equal(await handle.getAttribute('aria-valuenow'),'50');
+  await handle.dblclick();assert.equal(await handle.getAttribute('aria-valuenow'),'30','a double click puts it back');
+  await page.keyboard.press('ArrowRight');
+  await page.click('.page-tab[data-page="personas"]');await page.waitForSelector('[data-persona-page]');
+  const side=page.locator('.persona-layout>.splitter[role=separator]');
+  assert.equal(await side.getAttribute('aria-valuenow'),'28');
+  const width=()=>page.locator('.persona-side').evaluate(s=>Math.round(s.getBoundingClientRect().width));
+  const before=await width();
+  await side.focus();await page.keyboard.press('ArrowLeft');
+  assert.equal(await side.getAttribute('aria-valuenow'),'30','moving the divider left widens the right column');
+  assert.ok(await width()>before);
+  await page.locator('[data-persona-row="member"]').click();
+  assert.equal(await page.locator('.persona-layout>.splitter').getAttribute('aria-valuenow'),'30','another persona keeps the width');
+  await page.click('.page-tab[data-page="api"]');await page.waitForSelector('.api-page');
+  assert.equal(await handle.getAttribute('aria-valuenow'),'32','coming back keeps the API width');
+  await page.setViewportSize({width:800,height:900});
+  assert.equal(await handle.isVisible(),false,'one column needs no divider');
+  assert.deepEqual(state.errors,[]);assert.equal(state.requests,0);
+ }finally{await browser.close();}
+});

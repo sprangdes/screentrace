@@ -301,8 +301,8 @@ body[data-presenting=true] .focus-layer{position:fixed!important;inset:0!importa
 .fragment-group summary{font-size:12px;color:var(--gray-500);cursor:pointer;padding:4px 0}
 
 /* API page */
-.api-page{position:absolute;inset:0;display:grid;grid-template-columns:minmax(340px,440px) minmax(0,1fr);overflow:hidden}
-.api-master{display:flex;flex-direction:column;min-height:0;background:white;border-right:1px solid var(--gray-200)}
+.api-page{position:absolute;inset:0;display:grid;grid-template-columns:max(280px,var(--split,30%)) 8px minmax(0,1fr);overflow:hidden}
+.api-master{display:flex;flex-direction:column;min-height:0;background:white}
 .api-heading{display:flex;flex-direction:column;gap:8px;padding:16px 16px 10px;border-bottom:1px solid var(--gray-200)}
 .api-heading h1{display:flex;align-items:baseline;gap:8px;font-size:20px}
 .api-total{font-size:13px;font-weight:600;color:var(--gray-500)}
@@ -365,7 +365,8 @@ body[data-presenting=true] .focus-layer{position:fixed!important;inset:0!importa
 .api-fields td{padding:4px 8px;border-bottom:1px solid var(--gray-100);overflow-wrap:anywhere}
 @media (max-width:900px){
  .api-page{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,45%) minmax(0,1fr)}
- .api-master{border-right:0;border-bottom:1px solid var(--gray-200)}
+ .api-master{border-bottom:1px solid var(--gray-200)}
+ .api-page>.splitter{display:none}
  .api-detail{padding:16px}
 }
 
@@ -562,7 +563,9 @@ button.persona-coverage-dot:hover{outline:2px solid var(--primary);outline-offse
 .persona-compare-all{margin-left:auto}
 .persona-compare-all[aria-pressed=true]{background:var(--primary);border-color:var(--primary);color:white}
 .persona-detail{flex:1;min-height:0;overflow:auto;padding:20px 24px 48px}
-.persona-layout{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:24px;align-items:start}
+.persona-layout{display:grid;grid-template-columns:minmax(0,1fr) 12px max(260px,var(--split,28%));column-gap:6px;row-gap:24px;align-items:stretch}
+.persona-main{align-self:start}
+.persona-side{align-self:start}
 .persona-main,.persona-side{display:flex;flex-direction:column;gap:16px;min-width:0}
 .persona-side{padding:16px;border:1px solid var(--gray-200);border-radius:var(--radius);background:white}
 .persona-board{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(180px,1fr);gap:12px;overflow-x:auto;padding:2px 2px 6px}
@@ -577,5 +580,15 @@ button.persona-coverage-dot:hover{outline:2px solid var(--primary);outline-offse
 .persona-all{max-width:900px}
 .persona-all .persona-coverage-table{width:calc(320px + var(--personas,4) * 72px);max-width:100%}
 .persona-all .persona-coverage-table thead th:not(:first-child),.persona-all .persona-coverage-table td{width:72px}
-@media (max-width:1100px){.persona-layout{grid-template-columns:minmax(0,1fr)}}
+@media (max-width:1100px){.persona-layout{grid-template-columns:minmax(0,1fr)}.persona-layout>.splitter{display:none}}
 @media (max-width:900px){.persona-top,.persona-detail{padding-left:16px;padding-right:16px}.persona-cards .persona-row{width:100%}}
+/* R32: a divider that resizes two columns; the layout reads the sized column's share from --split. */
+.splitter{position:relative;min-height:24px;cursor:col-resize;touch-action:none;outline:none}
+.splitter::before{content:'';position:absolute;top:0;bottom:0;left:50%;width:1px;transform:translateX(-50%);background:var(--gray-200)}
+.splitter::after{content:'';position:absolute;top:50%;left:50%;width:4px;height:28px;border-radius:2px;transform:translate(-50%,-50%);background:var(--gray-300)}
+.splitter:hover::before,.splitter.is-dragging::before,.splitter:focus-visible::before{width:3px;background:var(--primary)}
+.splitter:focus-visible::after{background:var(--primary)}
+.persona-layout>.splitter::before{background:transparent}
+.persona-layout>.splitter:hover::before,.persona-layout>.splitter.is-dragging::before,.persona-layout>.splitter:focus-visible::before{background:var(--primary)}
+.persona-layout>.splitter::after{top:120px}
+.splitter:focus-visible{outline:none}

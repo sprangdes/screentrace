@@ -2,6 +2,7 @@ import {Index} from './map';
 import {element,text} from './text';
 import {PersonaView,reachLabel,reachHelp,reachSummary,personaDescription,factLabel,flowGroups,reachShares,reachCountsLabel} from './personas';
 import {proportionBar,sharePercent} from './proportion';
+import {splitter,SplitRange} from './splitter';
 
 export interface PersonaOverlap {key:string;label:string;screens:string[]}
 /**
@@ -39,7 +40,9 @@ export function coverageScreens(index:Index,views:PersonaView[]):string[]{
 }
 
 /** What the page keeps while the report is open: leaving for a screen and coming back finds the same view. */
-const memory={selected:undefined as string|undefined,all:false};
+const memory={selected:undefined as string|undefined,all:false,split:undefined as number|undefined};
+/** The side column's share of the layout: 28% at first, between 20% and 45%, and never narrower than 260px (CSS). */
+export const PERSONA_SPLIT:SplitRange={initial:28,min:20,max:45};
 
 export interface PersonaPageOptions {selected?:string;onOpen:(screenId:string,personaId:string)=>void;onPersona:(personaId:string)=>void}
 
@@ -175,7 +178,7 @@ export function personaPage(index:Index,views:PersonaView[],options:PersonaPageO
    for(const group of outside){const box=fold(group.title,group.screens.length,group.key,chips(view,group.screens));box.title=reachHelp[group.reach];rest.append(box);}
    side.append(rest);
   }
-  inner.append(main,side);
+  inner.append(main,splitter(inner,{label:'條件與比較欄寬度',side:'end',range:PERSONA_SPLIT,value:memory.split??PERSONA_SPLIT.initial,onChange:value=>{memory.split=value;}}),side);
   detail.append(inner);detail.scrollTop=0;
  };
  sync();

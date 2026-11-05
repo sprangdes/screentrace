@@ -6,6 +6,7 @@ import {Index} from './map';
 import {Node,Evidence} from './contracts';
 import {element} from './text';
 import {proportionBar,sharePercent} from './proportion';
+import {splitter,SplitRange} from './splitter';
 
 /** The three statuses shown to people: inferred usage and system entry points both count as in use. */
 export type ApiStatus='IN_USE'|'UNREFERENCED'|'REMOVABLE';
@@ -70,7 +71,9 @@ interface ApiRecord {node:Node;method:string;path:string;handlers:Node[];callers
 const SHARED_SCREENS=3;
 const NO_HANDLER='找不到處理程式';
 /** What the page keeps while the report is open: leaving for a screen and coming back finds the list as it was. */
-const memory={filter:'ALL' as Filter,grouping:'controller' as Grouping,query:'',collapsed:new Set<string>()};
+const memory={filter:'ALL' as Filter,grouping:'controller' as Grouping,query:'',collapsed:new Set<string>(),split:undefined as number|undefined};
+/** The API list's share of the page width: 30% at first, between 20% and 50%, and never narrower than 280px (CSS). */
+export const API_SPLIT:SplitRange={initial:30,min:20,max:50};
 
 const controllerOf=(handlers:Node[])=>{const handler=handlers.map(h=>h.attributes.class||h.name.split('.')[0]).filter(Boolean).sort()[0];return handler||NO_HANDLER;};
 /** The URL area: `/api/v1/auth/login` → `/api/v1/auth`; a bare `api` or version segment is not an area of its own. */
@@ -133,7 +136,8 @@ export function apiPage(index:Index,state:ReviewState,options:ApiPageOptions):HT
  chips.setAttribute('role','group');chips.setAttribute('aria-label','API 狀態篩選');
  const toolbar=element('div',undefined,'api-toolbar');toolbar.append(chips,grouping);
  const list=element('div',undefined,'api-list');list.setAttribute('role','listbox');list.setAttribute('aria-label','API 清單');
- head.append(search,toolbar);master.append(head,list);root.append(master,detail);
+ head.append(search,toolbar);master.append(head,list);
+ root.append(master,splitter(root,{label:'API 清單寬度',side:'start',range:API_SPLIT,value:memory.split??API_SPLIT.initial,onChange:value=>{memory.split=value;}}),detail);
 
  const visible=(r:ApiRecord)=>{const q=memory.query.trim().toLowerCase();return (memory.filter==='ALL'||(memory.filter==='IN_USE'?r.status==='IN_USE':r.status!=='IN_USE'))&&(!q||r.searchable.includes(q));};
  const rows=()=>[...list.querySelectorAll<HTMLButtonElement>('.api-row')].filter(row=>!row.closest('.api-group.is-collapsed'));
