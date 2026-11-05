@@ -44,7 +44,7 @@ class StrutsR16ScreenLoadCallersTest {
       assertTrue(caller.evidence().stream().anyMatch(proof->proof.source().file().equals("src/main/webapp/page.jsp")&&proof.detail()!=null&&proof.detail().contains("basis=STATIC_URL")),path+" evidence="+caller.evidence());
     }
 
-    Map<String,ApiUsage.Usage> usage=ApiUsage.derive(graph,Map.of(),Map.of());
+    Map<String,ApiUsage.Usage> usage=ApiUsage.derive(graph);
     for(String path:Set.of("/image.do","/forward.do","/include.do"))assertEquals(1,usage.get(endpoints.get(path).id()).callers().size(),path);
     assertTrue(usage.get(endpoints.get("/rewrite.do").id()).callers().stream().anyMatch(caller->caller.screenId().equals(screen.id())),"rewrite page-load caller was not included");
   }

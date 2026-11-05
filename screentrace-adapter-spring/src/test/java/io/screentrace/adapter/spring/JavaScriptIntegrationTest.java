@@ -18,7 +18,7 @@ class JavaScriptIntegrationTest {
     var calls=graph.behaviors().stream().filter(b->b.type()==BehaviorType.CALL_API).toList();assertEquals(3,calls.size());
     assertTrue(calls.stream().anyMatch(b->b.event().equals("load")&&graph.nodes().stream().anyMatch(n->n.id().equals(b.triggerId())&&n.type()==NodeType.SCREEN)));
     assertTrue(calls.stream().anyMatch(b->b.evidence().stream().anyMatch(e->e.resolution()==ResolutionStatus.UNRESOLVED&&e.detail().contains("#missing"))));
-    assertTrue(ApiUsage.derive(graph,Map.of(),Map.of()).entrySet().stream().filter(e->graph.nodes().stream().anyMatch(n->n.id().equals(e.getKey())&&"javascript-request".equals(n.attributes().get("origin")))).allMatch(e->e.getValue().status()==ApiUsage.Status.IN_USE));
+    assertTrue(ApiUsage.derive(graph).entrySet().stream().filter(e->graph.nodes().stream().anyMatch(n->n.id().equals(e.getKey())&&"javascript-request".equals(n.attributes().get("origin")))).allMatch(e->e.getValue().status()==ApiUsage.Status.IN_USE));
     assertDoesNotThrow(()->GraphIntegrityValidator.validate(graph));
   }
   @Test void sourceOnlyIncludeLoadCustomValidationAndCallbacksEnterCanonicalGraph() throws Exception {
@@ -44,7 +44,7 @@ class JavaScriptIntegrationTest {
   @Test void eventBoundStaticDivBecomesAnOtherComponentWithSourceAndCaller() throws Exception {
     var root=project("<div id='choice' class='choice'>Pick</div><script>$('.choice').click(function(){fetch('/div');});</script>","");
     var graph=new SpringMvcAnalyzer().analyze(new ProjectScanner().scan(root));var call=graph.behaviors().stream().filter(b->b.type()==BehaviorType.CALL_API).findFirst().orElseThrow();
-    var component=graph.nodes().stream().filter(n->n.id().equals(call.triggerId())).findFirst().orElseThrow();assertEquals(NodeType.COMPONENT,component.type());assertEquals("OTHER",component.attributes().get("kind"));assertEquals("choice",component.attributes().get("id"));assertEquals(1,component.source().line());assertEquals(ApiUsage.Status.IN_USE,ApiUsage.derive(graph,java.util.Map.of(),java.util.Map.of()).get(call.targetId()).status());assertDoesNotThrow(()->GraphIntegrityValidator.validate(graph));
+    var component=graph.nodes().stream().filter(n->n.id().equals(call.triggerId())).findFirst().orElseThrow();assertEquals(NodeType.COMPONENT,component.type());assertEquals("OTHER",component.attributes().get("kind"));assertEquals("choice",component.attributes().get("id"));assertEquals(1,component.source().line());assertEquals(ApiUsage.Status.IN_USE,ApiUsage.derive(graph).get(call.targetId()).status());assertDoesNotThrow(()->GraphIntegrityValidator.validate(graph));
   }
   @Test void multilineScriptOpeningTagRetainsActualOperationLine() throws Exception {
     var root=project("<script\n type='module'>\nfetch('/line');\n</script>","");

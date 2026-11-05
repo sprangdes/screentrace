@@ -32,7 +32,7 @@ final class SpringExternalCalls {
    }catch(Exception error){invalid=true;}
   }
   if(invalid||chains.size()!=1)return graph;
-  Chain chain=chains.get(0);var usage=ApiUsage.derive(graph,Map.of(),Map.of());List<GraphNode> nodes=new ArrayList<>();
+  Chain chain=chains.get(0);var usage=ApiUsage.derive(graph);List<GraphNode> nodes=new ArrayList<>();
   for(var node:graph.nodes()){
    if(node.type()!=NodeType.ENDPOINT||"javascript-request".equals(node.attributes().get("origin"))||usage.get(node.id())==null||usage.get(node.id()).status()!=ApiUsage.Status.UNREFERENCED){nodes.add(node);continue;}
    String route=node.attributes().get("path"),method=node.attributes().getOrDefault("httpMethod","ANY");Rule publicRule=null;

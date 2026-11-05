@@ -41,7 +41,7 @@ class R18EndpointPolicyTest {
   project();security(".requestMatchers(HttpMethod.OPTIONS,\"/**\").permitAll()\n.requestMatchers(HttpMethod.POST,\"/integration/deliver/**\").permitAll()\n.requestMatchers(\"/open/permit\",\"/open/used\").permitAll()\n.requestMatchers(\"/integration/denied/**\").denyAll()\n.requestMatchers(\"/integration/denied/**\").permitAll()","\"/integration/**\",\"/open/csrf\",\"/open/used\"");
   var g=graph();var external=endpoint(g,"/integration/deliver/{key}");assertEquals("webhook",external.attributes().get("externalCall"));
   var proofs=external.evidence().stream().filter(e->e.parser().equals("SpringSecurityExternalCall")).toList();assertEquals(2,proofs.size());assertTrue(proofs.stream().allMatch(e->e.source().file().equals("Security.java")&&e.source().line()>1));assertNotEquals(proofs.get(0).source().line(),proofs.get(1).source().line());
-  assertEquals(ApiUsage.Status.UNREFERENCED,ApiUsage.derive(g,Map.of(),Map.of()).get(external.id()).status());
+  assertEquals(ApiUsage.Status.UNREFERENCED,ApiUsage.derive(g).get(external.id()).status());
   for(String path:List.of("/open/permit","/open/csrf","/open/used","/integration/denied/{key}"))assertNull(endpoint(g,path).attributes().get("externalCall"),path);
  }
  @Test void multipleProvidersOrWrongHttpMethodDoNotProveExternalCall()throws Exception{

@@ -25,7 +25,7 @@ class StrutsR16ForwardInheritanceTest {
     file("src/main/webapp/index.jsp","<html:link action='/start.do'>Start</html:link>");file("src/main/webapp/done.jsp","<h1>Done</h1>");
     var graph=analyze();var start=endpoint(graph,"/start.do");var next=endpoint(graph,"/next.do");
     var inherited=graph.relationships().stream().filter(e->e.type()==EdgeType.CALLS&&e.to().equals(next.id())&&e.confidence()==Confidence.INFERRED&&e.evidence().stream().anyMatch(p->"RedirectInheritance".equals(p.parser()))).findFirst().orElseThrow();
-    assertEquals(ApiUsage.Status.IN_USE,ApiUsage.derive(graph,Map.of(),Map.of()).get(next.id()).status());
+    assertEquals(ApiUsage.Status.IN_USE,ApiUsage.derive(graph).get(next.id()).status());
     assertTrue(inherited.evidence().stream().anyMatch(p->Objects.toString(p.detail(),"").contains("/start.do")&&p.detail().contains("/next.do")&&p.detail().contains("struts-config.xml")),inherited.evidence().toString());
     assertTrue(graph.relationships().stream().anyMatch(e->e.type()==EdgeType.TRIGGERS&&e.to().equals(start.id())));
   }
