@@ -465,7 +465,6 @@ body[data-presenting=true] .focus-layer{position:fixed!important;inset:0!importa
 .persona-flow-button{margin-left:auto;font-size:12px}
 .persona-fact{display:inline-block;margin:0 8px 4px 0;font-size:12px}
 .persona-step-title{margin:0 0 2px;font-size:12px;font-weight:600;color:var(--gray-700)}
-.persona-screen-line{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 10px}
 .persona-pill{padding:1px 8px;border-radius:999px;background:white;color:var(--gray-700);box-shadow:inset 0 0 0 1px var(--gray-300);font-size:11px;font-weight:600;white-space:nowrap}
 /* R28: small pictures of counts the API and persona pages already state in words. */
 .proportion-bar{display:flex;gap:2px;overflow:hidden;border-radius:999px}
@@ -491,13 +490,6 @@ body[data-presenting=true] .focus-layer{position:fixed!important;inset:0!importa
 .persona-fact[data-truth=false]{background:var(--gray-50);color:var(--gray-700);box-shadow:inset 0 0 0 1px var(--gray-200)}
 .persona-fact[data-truth=true]::before{content:'✓ ' / ''}
 .persona-fact[data-truth=false]::before{content:'✕ ' / ''}
-.persona-step-chart{display:flex;flex-wrap:wrap;gap:4px;margin:0 0 8px}
-.persona-step-column{display:flex;flex-direction:column;align-items:center;gap:2px;width:52px;padding:4px 2px;border:0;border-radius:6px;background:transparent;color:var(--gray-700)}
-.persona-step-column:hover{background:var(--gray-50)}
-.persona-step-track{display:flex;align-items:flex-end;width:24px;height:48px}
-.persona-step-stack{display:flex;flex-direction:column;gap:1px;width:100%;min-height:3px;border-radius:3px 3px 0 0;overflow:hidden}
-.persona-step-count{font-size:12px;font-weight:600}
-.persona-step-name{font-size:11px;color:var(--gray-500);white-space:nowrap}
 @media print{.persona-bar{display:none}}
 /* R29: an API's call chain, and how much of a persona's flow it shares with the others. */
 .api-chain{display:flex;align-items:stretch;gap:0;margin:12px 0 4px;padding:12px;border:1px solid var(--gray-200);border-radius:var(--radius);background:var(--gray-100)}
@@ -541,8 +533,6 @@ body[data-presenting=true] .focus-layer{position:fixed!important;inset:0!importa
 .persona-coverage-table tbody tr{border-top:1px solid var(--gray-100)}
 .persona-coverage-table tbody tr:hover{background:var(--gray-50)}
 .persona-coverage-persona{width:100%;padding:2px;border:0;border-radius:4px;background:transparent;font-size:11px;font-weight:600;color:var(--gray-700);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.persona-coverage .is-selected{background:var(--primary-soft)}
-.persona-coverage-persona.is-selected{color:var(--primary)}
 .persona-coverage-dot{display:inline-block;width:12px;height:12px;padding:0;border:0;border-radius:50%;vertical-align:middle;box-sizing:border-box}
 button.persona-coverage-dot:hover{outline:2px solid var(--primary);outline-offset:1px}
 .persona-coverage-dot[data-reach=REACHABLE],.persona-coverage-key[data-reach=REACHABLE]::before{background:var(--keep)}
@@ -557,3 +547,35 @@ button.persona-coverage-dot:hover{outline:2px solid var(--primary);outline-offse
  .api-detail-main,.api-detail-side{display:flex;flex-direction:column;gap:20px;min-width:0}
  .api-detail-columns .api-contract{order:0}
 }
+/* R32: the persona page as cards on top, the chosen persona's flow as a board by step, and everyone at once. */
+.persona-page{position:absolute;inset:0;display:flex;flex-direction:column;overflow:hidden;background:var(--gray-50)}
+.persona-top{display:flex;align-items:center;flex-wrap:wrap;gap:12px 16px;padding:12px 24px;background:white;border-bottom:1px solid var(--gray-200)}
+.persona-top h1{display:flex;align-items:baseline;gap:6px;font-size:18px}
+.persona-cards{display:flex;flex-wrap:wrap;gap:8px;flex:1;min-width:0}
+.persona-cards .persona-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 8px;align-items:baseline;width:250px;padding:8px 10px;border:1px solid var(--gray-200);border-radius:var(--radius);background:white}
+.persona-cards .persona-row-text{display:contents}
+.persona-cards .persona-row strong{grid-row:1;grid-column:1}
+.persona-cards .persona-row .api-screen-count{grid-row:1;grid-column:2;padding:0}
+.persona-cards .persona-row-about{grid-row:2;grid-column:1/3}
+.persona-cards .persona-reach-bar{grid-row:3;grid-column:1/3;width:100%}
+.persona-cards .persona-row.is-current{border-color:var(--primary);box-shadow:inset 0 0 0 1px var(--primary);background:var(--primary-soft)}
+.persona-compare-all{margin-left:auto}
+.persona-compare-all[aria-pressed=true]{background:var(--primary);border-color:var(--primary);color:white}
+.persona-detail{flex:1;min-height:0;overflow:auto;padding:20px 24px 48px}
+.persona-layout{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:24px;align-items:start}
+.persona-main,.persona-side{display:flex;flex-direction:column;gap:16px;min-width:0}
+.persona-side{padding:16px;border:1px solid var(--gray-200);border-radius:var(--radius);background:white}
+.persona-board{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(180px,1fr);gap:12px;overflow-x:auto;padding:2px 2px 6px}
+.persona-step-group{display:flex;flex-direction:column;gap:6px;min-width:0;padding:10px;border:1px solid var(--gray-200);border-radius:var(--radius);background:var(--gray-100)}
+.persona-card{display:flex;flex-direction:column;align-items:flex-start;gap:2px;width:100%;padding:8px 10px;border:1px solid var(--card-edge);border-radius:6px;background:white;text-align:left}
+.persona-card:hover{border-color:var(--primary);background:white}
+.persona-card[data-reach=POSSIBLE]{border-style:dashed;border-color:var(--gray-500);background:var(--gray-50)}
+.persona-card-name{font-size:13px;font-weight:600;color:var(--primary);overflow-wrap:anywhere}
+.persona-card-route{font-size:11px;color:var(--gray-500);overflow-wrap:anywhere}
+.persona-card .persona-pill{margin-top:2px}
+.persona-side .persona-overlap-bar{flex-basis:56px}
+.persona-all{max-width:900px}
+.persona-all .persona-coverage-table{width:calc(320px + var(--personas,4) * 72px);max-width:100%}
+.persona-all .persona-coverage-table thead th:not(:first-child),.persona-all .persona-coverage-table td{width:72px}
+@media (max-width:1100px){.persona-layout{grid-template-columns:minmax(0,1fr)}}
+@media (max-width:900px){.persona-top,.persona-detail{padding-left:16px;padding-right:16px}.persona-cards .persona-row{width:100%}}

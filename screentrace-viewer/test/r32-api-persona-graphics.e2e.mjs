@@ -36,23 +36,32 @@ test('R32 API rows color the method, mark path parameters, and draw callers as a
  }finally{await browser.close();}
 });
 
-test('R32 the persona page shows every reached screen against every persona',async()=>{
+test('R32 the all-personas view shows every reached screen against every persona',async()=>{
  const browser=await chromium.launch();try{
   const {page,state}=await open(browser);
   await page.click('.page-tab[data-page="personas"]');await page.waitForSelector('[data-persona-page]');
-  const table=page.locator('[data-persona-section="coverage"]');
+  const toggle=page.locator('[data-persona-compare-all]');
+  assert.equal(await toggle.getAttribute('aria-pressed'),'false');
+  assert.equal(await page.locator('[data-persona-section="coverage"]').count(),0,'the table is a view of its own');
+  await toggle.click();
+  assert.equal(await toggle.getAttribute('aria-pressed'),'true');
+  assert.equal(await page.locator('[data-persona-detail]').count(),0);
+  assert.equal(await page.locator('.persona-row[aria-selected=true]').count(),0,'no single persona is shown');
+  const table=page.locator('[data-persona-all] [data-persona-section="coverage"]');
   assert.deepEqual(await table.locator('thead button').allTextContents(),['訪客','會員']);
   assert.deepEqual(await table.locator('tbody tr').evaluateAll(rows=>rows.map(r=>[r.dataset.coverageScreen,...[...r.querySelectorAll('.persona-coverage-dot')].map(d=>d.dataset.reach+(d.tagName==='BUTTON'?'':'-'))])),
    [['a','REACHABLE','REACHABLE'],['b','EXCLUDED-','POSSIBLE']]);
   assert.equal(await table.locator('tbody tr[data-coverage-screen="b"] button').getAttribute('aria-label'),'乙，會員：可能走到');
   assert.equal(await table.locator('tbody tr[data-coverage-screen="b"] span.persona-coverage-dot').getAttribute('aria-label'),'訪客：不適用');
-  const selected=()=>table.locator('.is-selected').evaluateAll(list=>[...new Set(list.map(e=>e.dataset.coveragePersona))]);
-  assert.deepEqual(await selected(),['visitor']);
   await table.locator('thead button[data-coverage-persona="member"]').click();
+  assert.equal(await toggle.getAttribute('aria-pressed'),'false','a persona name goes to its flow');
   assert.equal(await page.locator('[data-persona-row="member"]').getAttribute('aria-selected'),'true');
-  assert.deepEqual(await selected(),['member']);
-  await table.locator('tbody tr[data-coverage-screen="b"] button').click();
+  assert.equal(await page.locator('[data-persona-detail="member"]').count(),1);
+  await toggle.click();
+  await page.locator('[data-persona-all] tbody tr[data-coverage-screen="b"] button').click();
   await page.waitForFunction(()=>!document.querySelector('[data-persona-page]'));
+  await page.click('.page-tab[data-page="personas"]');await page.waitForSelector('[data-persona-page]');
+  assert.equal(await page.locator('[data-persona-compare-all]').getAttribute('aria-pressed'),'true','coming back keeps the view');
   assert.deepEqual(state.errors,[]);assert.equal(state.requests,0);
  }finally{await browser.close();}
 });
@@ -62,11 +71,11 @@ test('R32 a report with one persona has no coverage table',async()=>{
   const page=await browser.newPage();const d=data();d.graph.application.personas.pop();
   await page.goto(await fileFixture(d));await page.waitForSelector('[data-ready="true"]');
   await page.click('.page-tab[data-page="personas"]');await page.waitForSelector('[data-persona-page]');
-  assert.equal(await page.locator('[data-persona-section="coverage"]').count(),0);
+  assert.equal(await page.locator('[data-persona-compare-all]').count(),0,'one persona has nothing to compare');
  }finally{await browser.close();}
 });
 
-test('R32 a wide detail sets its sections side by side, a narrow one stacks them in the old order',async()=>{
+test('R32 a wide detail sets its sections side by side, a narrow one stacks them',async()=>{
  const browser=await chromium.launch();try{
   const {page,state}=await open(browser);
   const box=selector=>page.locator(selector).boundingBox();
@@ -76,12 +85,13 @@ test('R32 a wide detail sets its sections side by side, a narrow one stacks them
   assert.ok(callers.x>handlers.x+handlers.width,'callers sit right of the handler');
   assert.equal(Math.round(callers.y),Math.round(handlers.y));
   await page.click('.page-tab[data-page="personas"]');await page.waitForSelector('[data-persona-page]');
-  const flow=await box('[data-persona-section="flow"]'),coverage=await box('[data-persona-section="coverage"]');
-  assert.ok(coverage.x>flow.x+flow.width,'the coverage table sits right of the flow');
-  assert.equal(await page.locator('.api-master [data-persona-section="coverage"]').count(),0,'the persona list column holds only the list');
-  await page.setViewportSize({width:1100,height:900});
+  const flow=await box('[data-persona-section="flow"]'),conditions=await box('[data-persona-section="conditions"]');
+  assert.ok(conditions.x>flow.x+flow.width,'conditions and comparison sit right of the flow board');
+  const cards=await page.locator('.persona-cards .persona-row').evaluateAll(list=>list.map(r=>Math.round(r.getBoundingClientRect().top)));
+  assert.equal(new Set(cards).size,1,'the persona cards share one row');
+  await page.setViewportSize({width:1000,height:900});
   const order=await page.locator('[data-persona-detail] [data-persona-section]').evaluateAll(list=>list.map(s=>[s.dataset.personaSection,Math.round(s.getBoundingClientRect().top)]));
-  assert.deepEqual(order.map(([key])=>key),['conditions','starts','flow','compare','coverage','outside']);
+  assert.deepEqual(order.map(([key])=>key),['flow','conditions','starts','compare','outside']);
   assert.ok(order.every(([,top],i)=>!i||top>order[i-1][1]),'one column, top to bottom');
   await page.click('.page-tab[data-page="api"]');await page.waitForSelector('.api-page');
   handlers=await box('[data-api-detail="ep"] [data-api-section="handlers"]');callers=await box('[data-api-detail="ep"] [data-api-section="callers"]');

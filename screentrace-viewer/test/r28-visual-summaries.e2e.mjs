@@ -43,14 +43,13 @@ test('R28 the persona page shows each persona reach as a bar, conditions as mark
   assert.deepEqual(await shares(visitorBar),[['REACHABLE','1'],['EXCLUDED','1']]);
   assert.deepEqual(await shares(page.locator('[data-persona-row="member"] .persona-reach-bar')),[['REACHABLE','1'],['POSSIBLE','1']]);
   assert.equal(await page.locator('[data-persona-section="conditions"] .persona-fact').getAttribute('data-truth'),'false');
-  assert.equal(await page.locator('[data-persona-section="flow"] .persona-step-chart').count(),0,'one step needs no chart');
+  assert.deepEqual(await page.locator('[data-persona-section="flow"] .persona-step-title').allTextContents(),['第 1 步 · 1']);
   await page.locator('[data-persona-row="member"]').click();
   assert.equal(await page.locator('[data-persona-section="conditions"] .persona-fact').getAttribute('data-truth'),'true');
-  const columns=page.locator('[data-persona-section="flow"] .persona-step-chart .persona-step-column');
-  assert.deepEqual(await columns.evaluateAll(list=>list.map(c=>c.getAttribute('aria-label'))),['第 1 步：會走到 1、可能走到 0','第 2 步：會走到 0、可能走到 1']);
-  assert.deepEqual(await columns.locator('.persona-step-count').allTextContents(),['1','1']);
-  assert.deepEqual(await shares(columns.nth(1)),[['POSSIBLE','1']]);
-  await columns.nth(1).click();
+  // R32: the step bar chart became the board, one column per step with a card per screen.
+  const columns=page.locator('[data-persona-section="flow"] .persona-board .persona-step-group');
+  assert.deepEqual(await columns.locator('.persona-step-title').allTextContents(),['第 1 步 · 1','第 2 步 · 1']);
+  assert.deepEqual(await columns.locator('.persona-card').evaluateAll(list=>list.map(c=>[c.dataset.personaScreen,c.dataset.reach,getComputedStyle(c).borderTopStyle])),[['a','REACHABLE','solid'],['b','POSSIBLE','dashed']]);
   assert.equal(await page.locator('[data-persona-step="step-2"]').isVisible(),true);
   assert.deepEqual(state.errors,[]);assert.equal(state.requests,0);
  }finally{await browser.close();}

@@ -240,7 +240,7 @@
 - WP101：`pack-preview.mjs` 只保留 `packStandaloneDocuments`，使用舊入口的 4 個測試改用正式入口，見 [ADR 0122](adr/0122-r31-retire-inline-css-pack.md)。
 - 驗證：Maven 579（571 通過、1 略過，另 OQ-041 的 7 個 Chromium 測試在 sandbox 內無法執行）；viewer 單元測試 141 個（sandbox 內 139 通過，OQ-047 的 2 個 Chromium 測試無法執行）；JS 測試 180 個；PR CI run https://github.com/sprangdes/screentrace/actions/runs/41980760505 三個 job 全綠（含 E2E 與上述 7 個測試）。PR：https://github.com/sprangdes/screentrace/pull/75。
 
-## R32 API 與角色頁的圖形化元素
+## R32 API 與角色頁的圖形化元素與角色頁改版
 
-- WP102：API 清單的方法色標、路徑參數標示與呼叫畫面數長條；角色頁的「畫面 × 角色」覆蓋表；寬螢幕上兩頁的詳情區分成左右兩欄，見 [ADR 0123](adr/0123-r32-api-persona-graphics.md)。
-- 驗證：viewer 單元測試 144 個（新增 3）、E2E 106 個（新增 4；`api-page-layout` 與 `r23-persona-page` 各一個斷言隨版面調整）、JS 測試 180 個、Maven 579（0 失敗、1 略過）全部通過；reservio 的 `viewer-documents.json` 與修改前逐位元組相同，只有報表 HTML 內的 viewer 改變。
+- WP102：API 清單的方法色標、路徑參數標示與呼叫畫面數長條；API 詳情區在寬螢幕上分成左右兩欄；角色頁改為上方角色卡片、流程看板與「全部角色對照」覆蓋表，見 [ADR 0123](adr/0123-r32-api-persona-graphics.md)。
+- 驗證：viewer 單元測試 144 個（新增 3）、E2E 106 個（新增 4；`api-page-layout`、`r23-persona-page`、`r28-visual-summaries` 中與舊版面綁定的斷言隨改版調整）、JS 測試 180 個、Maven 579（0 失敗、1 略過）全部通過；reservio 的 `viewer-documents.json` 與修改前逐位元組相同，只有報表 HTML 內的 viewer 改變。
