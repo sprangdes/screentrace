@@ -135,3 +135,26 @@ test('R32 a divider resizes the API list and the persona side column, by pointer
   assert.deepEqual(state.errors,[]);assert.equal(state.requests,0);
  }finally{await browser.close();}
 });
+
+test('R32 the screen list beside the canvas is a share of the window, resized by its divider and hidden while folded',async()=>{
+ const browser=await chromium.launch();try{
+  const {page,state}=await open(browser);
+  const list=page.locator('.sidebar'),handle=page.locator('.sidebar>.splitter');
+  const width=()=>list.evaluate(n=>Math.round(n.getBoundingClientRect().width));
+  assert.equal(await page.locator('.canvas-hint').count(),0,'the canvas has no usage hint');
+  assert.equal(await handle.getAttribute('role'),'separator');assert.equal(await handle.getAttribute('aria-valuenow'),'18');
+  assert.ok(Math.abs(await width()-259)<=1,'18% of 1440');
+  const box=await handle.boundingBox(),y=box.y+300,target=Math.round(box.x+box.width/2+144);
+  await page.mouse.move(box.x+box.width/2,y);await page.mouse.down();await page.mouse.move(target,y,{steps:4});await page.mouse.up();
+  assert.equal(await handle.getAttribute('aria-valuenow'),String(Math.round(target/1440*100)));assert.ok(Math.abs(await width()-target)<=2,'the list ends where the pointer let go');
+  await handle.focus();await page.keyboard.press('ArrowLeft');assert.equal(await handle.getAttribute('aria-valuenow'),'26');
+  await page.keyboard.press('Home');assert.equal(await handle.getAttribute('aria-valuenow'),'14');
+  assert.ok(Math.abs(await width()-202)<=1,'14% of 1440');
+  await page.keyboard.press('End');assert.equal(await handle.getAttribute('aria-valuenow'),'35');
+  await handle.dblclick();assert.equal(await handle.getAttribute('aria-valuenow'),'18');
+  await page.getByRole('button',{name:'收起畫面清單'}).click();
+  assert.equal(await handle.isVisible(),false,'no divider on the folded rail');
+  await page.getByRole('button',{name:'展開畫面清單'}).click();assert.equal(await handle.isVisible(),true);
+  assert.deepEqual(state.errors,[]);
+ }finally{await browser.close();}
+});

@@ -16,7 +16,16 @@ export function splitAt(x:number,left:number,width:number,side:'start'|'end',ran
  return clampSplit(share,range);
 }
 
-export interface SplitterOptions {label:string;side:'start'|'end';range:SplitRange;value:number;onChange:(value:number)=>void}
+/** The screen list beside the canvas: a share of the window's width (18% is 260px on a 1440px window). */
+export const LIST_SPLIT:SplitRange={initial:18,min:14,max:35};
+
+export interface SplitterOptions {
+ label:string;side:'start'|'end';range:SplitRange;value:number;onChange:(value:number)=>void;
+ /** The custom property the share is written to, `--split` unless given. */
+ property?:string;
+ /** The unit written after the share, `%` unless given; an empty unit lets the stylesheet scale it, e.g. by 1vw. */
+ unit?:string;
+}
 
 /**
  * A draggable divider between two columns. The layout reads the sized column's share from `--split` on `host`;
@@ -31,7 +40,7 @@ export function splitter(host:HTMLElement,options:SplitterOptions):HTMLElement{
  handle.tabIndex=0;handle.title=`${options.label}：拖曳調整寬度，按兩下恢復預設`;
  const set=(value:number)=>{
   const share=clampSplit(value,range);
-  host.style.setProperty('--split',`${share}%`);handle.setAttribute('aria-valuenow',String(Math.round(share)));handle.setAttribute('aria-valuetext',`${Math.round(share)}%`);
+  host.style.setProperty(options.property??'--split',`${share}${options.unit??'%'}`);handle.setAttribute('aria-valuenow',String(Math.round(share)));handle.setAttribute('aria-valuetext',`${Math.round(share)}%`);
   options.onChange(share);return share;
  };
  let value=set(options.value);

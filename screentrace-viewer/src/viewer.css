@@ -71,7 +71,8 @@ h1,h2,h3{margin:0}
 /* layout: the side panels slide in step with the canvas zoom (same 450ms curve as canvas.ts) */
 @property --left{syntax:'<length>';inherits:true;initial-value:260px}
 @property --right{syntax:'<length>';inherits:true;initial-value:340px}
-.shell{--left:260px;--right:340px;--list-width:260px;--details-width:340px;display:grid;grid-template-columns:var(--left) minmax(0,1fr) var(--right);height:calc(100vh - 56px);transition:--left .45s cubic-bezier(.65,0,.35,1),--right .45s cubic-bezier(.65,0,.35,1)}
+/* The list is a share of the window (--list-split, set by its divider) but never narrower than 200px. */
+.shell{--list-width:max(200px,calc(var(--list-split,18) * 1vw));--left:var(--list-width);--right:340px;--details-width:340px;display:grid;grid-template-columns:var(--left) minmax(0,1fr) var(--right);height:calc(100vh - 56px);transition:--left .45s cubic-bezier(.65,0,.35,1),--right .45s cubic-bezier(.65,0,.35,1)}
 .shell:is([data-sidebar=collapsed],[data-sidebar=overlay]){--left:48px}
 .shell[data-details=collapsed]{--right:48px}
 .shell[data-details=hidden]{--right:0px}
@@ -93,7 +94,7 @@ h1,h2,h3{margin:0}
 .shell:is([data-sidebar=collapsed],[data-sidebar=overlay]) .sidebar-rail,.shell[data-details=collapsed] .details-rail{opacity:1;visibility:visible;transition:opacity .2s .2s}
 .shell[data-sidebar=collapsed] .sidebar-body,.shell[data-details=collapsed] :is(.details-body,.details-toggle){opacity:0;visibility:hidden;transition:opacity .15s,visibility 0s .15s}
 .shell[data-sidebar=overlay] .sidebar{z-index:25;overflow:visible}
-.shell[data-sidebar=overlay] .sidebar-body{position:absolute;top:0;bottom:0;left:0;width:260px;padding:12px;overflow:auto;background:white;border-right:1px solid var(--gray-200);box-shadow:var(--shadow-float)}
+.shell[data-sidebar=overlay] .sidebar-body{position:absolute;top:0;bottom:0;left:0;width:var(--list-width);padding:12px;overflow:auto;background:white;border-right:1px solid var(--gray-200);box-shadow:var(--shadow-float)}
 .details-panel{display:flex;flex-direction:column;align-items:flex-end;border-left:1px solid var(--gray-200)}
 /* At rest the details fill the panel beside any scrollbar; while the panel narrows they keep that width.
    A fixed width would overflow past the left edge whenever a scrollbar takes room (panel is right-aligned). */
@@ -165,8 +166,6 @@ main{position:relative;overflow:hidden;min-width:0}
 .screen-card[data-screen-status=KEEP] .review-status-icon{background:var(--keep)}
 .screen-card[data-screen-status=REMOVE] .review-status-icon{background:var(--remove)}
 .canvas[data-semantic-zoom=compact] .screen-caption strong{font-size:16px}
-.canvas-hint{position:absolute;left:16px;top:16px;z-index:5;margin:0;padding:6px 12px;background:white;border:1px solid var(--gray-200);border-radius:8px;box-shadow:var(--shadow-card);font-size:13px;color:var(--gray-500);pointer-events:none}
-.canvas[data-mode=focus] .canvas-hint{display:none}
 .canvas-controls{position:absolute;right:16px;bottom:16px;z-index:5;display:flex;gap:4px;padding:4px;background:white;border:1px solid var(--gray-200);border-radius:8px;box-shadow:var(--shadow-float)}
 .relation-tooltip{position:absolute;z-index:20;min-width:200px;max-width:280px;padding:12px;background:white;border:1px solid var(--gray-200);border-radius:var(--radius);box-shadow:var(--shadow-float);pointer-events:none;font-size:13px}
 .relation-tooltip strong{font-size:14px}
@@ -371,11 +370,11 @@ body[data-presenting=true] .focus-layer{position:fixed!important;inset:0!importa
 }
 
 @media (max-width:1180px){
- .shell{--left:220px;--right:300px;--list-width:220px;--details-width:300px}
+ .shell{--right:300px;--details-width:300px}
  #application,.save-status{display:none}
 }
 @media (max-width:1024px){
- .shell{--left:200px;--right:280px;--list-width:200px;--details-width:280px}
+ .shell{--right:280px;--details-width:280px}
  .topbar{gap:8px;padding:0 8px}
  .page-tab{padding:6px 8px}
 }
@@ -411,7 +410,6 @@ body[data-presenting=true] .focus-layer{position:fixed!important;inset:0!importa
 .shell[data-page=personas]{grid-template-columns:minmax(0,1fr)}
 .shell[data-page=personas] .sidebar,.shell[data-page=personas] .details-panel{display:none}
 .canvas-top{position:absolute;left:16px;top:16px;right:16px;z-index:5;display:flex;flex-direction:column;align-items:flex-start;gap:8px;pointer-events:none}
-.canvas-top .canvas-hint{position:static}
 .canvas[data-mode=focus] .canvas-top{display:none}
 .persona-bar{display:flex;flex-direction:column;gap:6px;max-width:100%;padding:8px 10px;background:white;border:1px solid var(--gray-200);border-radius:10px;box-shadow:var(--shadow-card);pointer-events:auto}
 .persona-switch{display:flex;flex-wrap:wrap;gap:4px}
@@ -592,3 +590,10 @@ button.persona-coverage-dot:hover{outline:2px solid var(--primary);outline-offse
 .persona-layout>.splitter:hover::before,.persona-layout>.splitter.is-dragging::before,.persona-layout>.splitter:focus-visible::before{background:var(--primary)}
 .persona-layout>.splitter::after{top:120px}
 .splitter:focus-visible{outline:none}
+/* The screen list's divider sits on the list's right edge, over its border, and only while the list is open. */
+.sidebar>.splitter{position:absolute;top:0;bottom:0;right:0;z-index:2;width:8px}
+.sidebar>.splitter::before{left:auto;right:0;transform:none;background:transparent}
+.sidebar>.splitter:is(:hover,.is-dragging,:focus-visible)::before{background:var(--primary)}
+.sidebar>.splitter::after{left:auto;right:2px;transform:translateY(-50%)}
+.shell:not([data-sidebar=expanded]) .sidebar>.splitter{display:none}
+.shell:has(.sidebar>.splitter.is-dragging){transition:none}

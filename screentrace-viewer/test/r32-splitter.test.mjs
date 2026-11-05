@@ -19,4 +19,5 @@ test('R32 the API list starts at 30% and the persona side column at 28%',async()
  const api=await ownModule('api-page'),persona=await ownModule('persona-page');
  assert.deepEqual(api.API_SPLIT,{initial:30,min:20,max:50});
  assert.deepEqual(persona.PERSONA_SPLIT,{initial:28,min:20,max:45});
+ assert.deepEqual((await ownModule('splitter')).LIST_SPLIT,{initial:18,min:14,max:35},'the screen list is 18% of the window');
 });

@@ -19,6 +19,7 @@ import {autosaveSupported,chooseSaveFile,chooseOpenFile,isCancel,writeFile,handl
 import {revealInPreview} from './reveal';
 import {graphPersonas,personaView,flowGroups,factLabel,reachLabel,reachHelp,reachText,reachSummary,personaDescription,personaLayout,PersonaView} from './personas';
 import {personaPage} from './persona-page';
+import {splitter,LIST_SPLIT} from './splitter';
 import {loadReview,saveReview,screenDecision,componentDecision,effectiveComponent,setScreen,setComponent,statistics,conflicts,ReviewState,Decision} from './shared/review';
 
 type Filter='ALL'|'UNDECIDED'|'KEEP'|'REMOVE';
@@ -135,7 +136,7 @@ try {
  const rail=element('div',undefined,'sidebar-rail'),expandList=iconButton('展開畫面清單','sidebar'),railSearch=iconButton('搜尋畫面','search');
  expandList.classList.add('rail-toggle');rail.append(expandList,railSearch);
  const sidebarBody=element('div',undefined,'sidebar-body');sidebarBody.append(sidebarHeader,searchBox,modes,chips,notices,list);
- nav.append(rail,sidebarBody);
+ nav.append(rail,sidebarBody,splitter(shell,{label:'畫面清單寬度',side:'start',range:LIST_SPLIT,value:LIST_SPLIT.initial,property:'--list-split',unit:'',onChange:()=>{}}));
  // The screen details appear only while a screen is open; they fold into a rail on their own edge, mirroring the list.
  const panelBody=element('div',undefined,'details-body'),collapseDetails=iconButton('收起畫面資訊','sidebarRight'),detailsRail=element('div',undefined,'details-rail'),expandDetails=iconButton('展開畫面資訊','sidebarRight');
  collapseDetails.classList.add('details-toggle');expandDetails.classList.add('rail-toggle');detailsRail.append(expandDetails);panel.append(collapseDetails,detailsRail,panelBody);

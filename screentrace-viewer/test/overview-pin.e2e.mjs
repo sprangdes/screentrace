@@ -25,8 +25,9 @@ test('single click shows a screen’s relations and frames them, double click op
   const transform=()=>page.locator('.world').evaluate(w=>w.style.transform);
   assert.equal(await page.locator('.screen-group').count(),4,'shop, admin, report and 其他');
   assert.equal(await page.locator('.group-link.is-shown').count(),0,'links between areas are not drawn until an area is pointed at');
-  const hint=await page.locator('.canvas-hint').boundingBox(),titles=await page.locator('.screen-group-title').evaluateAll(nodes=>nodes.map(n=>n.getBoundingClientRect().top));
-  assert.ok(Math.min(...titles)>hint.y+hint.height,'the fitted map starts below the hint, so no area title is covered');
+  const canvas=await page.locator('.canvas').boundingBox(),titles=await page.locator('.screen-group-title').evaluateAll(nodes=>nodes.map(n=>n.getBoundingClientRect().top));
+  assert.equal(await page.locator('.canvas-hint').count(),0,'the canvas has no usage hint');
+  assert.ok(Math.min(...titles)>=canvas.y+16,'the fitted map keeps a margin above the first area title');
   const [declared,actual]=await page.locator('.world').evaluate(w=>[Number(w.style.getPropertyValue('--zoom')),new DOMMatrix(w.style.transform).a]);
   assert.ok(Math.abs(declared-actual)<1e-4,'borders know the zoom so they stay one screen pixel');
 
