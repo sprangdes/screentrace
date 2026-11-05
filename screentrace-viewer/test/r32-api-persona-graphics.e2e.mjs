@@ -158,3 +158,17 @@ test('R32 the screen list beside the canvas is a share of the window, resized by
   assert.deepEqual(state.errors,[]);
  }finally{await browser.close();}
 });
+
+test('R32 a controller heading sticks flush to the top of the API list, leaving no gap for rows scrolled past',async()=>{
+ const browser=await chromium.launch();try{
+  const {page,state}=await open(browser);
+  await page.click('.page-tab[data-page="api"]');await page.waitForSelector('.api-page');
+  const gap=await page.locator('.api-list').evaluate(list=>{
+   list.style.flex='none';list.style.height='60px';
+   const group=list.querySelector('.api-group');list.scrollTop=group.offsetTop-list.offsetTop+20;
+   return group.querySelector('.api-group-header').getBoundingClientRect().top-list.getBoundingClientRect().top;
+  });
+  assert.equal(gap,0);
+  assert.deepEqual(state.errors,[]);
+ }finally{await browser.close();}
+});

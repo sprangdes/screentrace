@@ -312,7 +312,8 @@ body[data-presenting=true] .focus-layer{position:fixed!important;inset:0!importa
 .api-grouping{flex:none}
 .api-grouping button{padding:3px 8px;font-size:13px;white-space:nowrap}
 .chip.is-attention:not([aria-pressed=true]){border-color:var(--warning);color:var(--warning)}
-.api-list{flex:1;min-height:0;overflow:auto;padding:4px 8px 16px}
+/* No top padding: a sticky controller heading sticks inside the padding, so a gap there would show the rows scrolled past. */
+.api-list{flex:1;min-height:0;overflow:auto;padding:0 8px 16px}
 .api-list:focus-visible{outline-offset:-3px}
 .api-group-header{position:sticky;top:0;z-index:1;display:flex;align-items:center;gap:6px;width:100%;margin-top:4px;padding:8px 6px;border:0;border-radius:0;background:white;text-align:left;font-size:13px;font-weight:700;color:var(--gray-700)}
 .api-group-header:hover{background:white;color:var(--gray-900)}
