@@ -240,6 +240,11 @@
 - WP101：`pack-preview.mjs` 只保留 `packStandaloneDocuments`，使用舊入口的 4 個測試改用正式入口，見 [ADR 0122](adr/0122-r31-retire-inline-css-pack.md)。
 - 驗證：Maven 579（571 通過、1 略過，另 OQ-041 的 7 個 Chromium 測試在 sandbox 內無法執行）；viewer 單元測試 141 個（sandbox 內 139 通過，OQ-047 的 2 個 Chromium 測試無法執行）；JS 測試 180 個；PR CI run https://github.com/sprangdes/screentrace/actions/runs/41980760505 三個 job 全綠（含 E2E 與上述 7 個測試）。PR：https://github.com/sprangdes/screentrace/pull/75。
 
+## R33 縮小的總覽上看得出每一區與每個畫面
+
+- WP103：總覽的區名放在區塊框頂端加高的標題帶並固定在可讀的字級，下面列出這一區前 3 個畫面的名稱；縮小時滑過卡片立即顯示畫面名稱與網址，見 [ADR 0124](adr/0124-r33-overview-labels.md)。
+- 驗證：viewer 單元測試 148 個（新增 1）、E2E 111 個（新增 2）、JS 測試 180 個、Maven 建置通過；reservio 的 `viewer-documents.json` 與修改前逐位元組相同。
+
 ## R32 API 與角色頁的圖形化元素與角色頁改版
 
 - WP102：API 清單的方法色標、路徑參數標示與呼叫畫面數長條；API 詳情區在寬螢幕上分成左右兩欄；角色頁改為上方角色卡片、流程看板與「全部角色對照」覆蓋表；API 清單、角色頁右欄與畫面清單改為比例寬度並可拖曳調整；viewer 小字放大 1px；移除畫布左上角的操作提示；進度檔的成功訊息幾秒後自動消失；API 清單捲動時 Controller 標題上方不再露出捲過的列，見 [ADR 0123](adr/0123-r32-api-persona-graphics.md)。

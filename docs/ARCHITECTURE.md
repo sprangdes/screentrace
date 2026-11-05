@@ -187,6 +187,10 @@ viewer 只讀 schema 2.4 的 `application.personas`，不重新判定。每個�
 
 選了角色時，viewer 以該角色的流程重新排版畫布：每一步一欄，只畫從第 N 步到第 N+1 步的線，走不到與不適用的畫面放在最後兩欄且預設隱藏；排版只用圖中的 `flow`，不重新判定；報表上的步數只算畫面，經由網址入口的轉址不另算一步（圖中的 `depth` 不變）。角色可帶分析人員寫的 `description`（schema 2.4 選填欄位，未設定時不輸出）。見 [ADR 0112](adr/0112-r21-persona-presentation.md)。
 
+### R33：縮小總覽的區名與畫面提示
+
+總覽的區塊標籤（`.screen-group-label`）放在區塊框頂端加高的標題帶（`TITLE` 200），以 `scale(max(1, 0.4667 / --zoom))` 反向放大，維持至少約 14px；縮小時第二行列出前 3 個畫面（`areaPreview`，依卡片位置排序）。連線只走區塊之間的間隔，不會經過標籤。縮小時滑過卡片顯示 `.card-tip`（名稱與網址），移動畫布時隱藏。只用 CSS 與 DOM，版面配置與 graph 不變。見 [ADR 0124](adr/0124-r33-overview-labels.md)。
+
 ### R32：API 方法色標、路徑參數、呼叫數長條，與角色頁改版
 
 viewer 的 API 清單依方法上色、把網址中的 `{name}` 參數標示出來（`pathParts`，接回後與原網址相同），並在每一列的畫面數前加上與最多者相比的短長條（`sharePercent`，R29 的 `overlapPercent` 改用同一個函式）。API 詳情區在 1360px 以上的視窗分成左右兩欄（`.api-detail-main`／`.api-detail-side`），較窄時以 `display:contents` 還原為單欄與原本的區塊順序。角色頁改為上方角色卡片、下方流程看板（每一步一欄、每個畫面一張卡片）加右側條件與比較，另有「全部角色對照」檢視顯示「畫面 × 角色」覆蓋表（`coverageScreens`）；都只用各角色已有的 `reach` 與 `depth`，不重新判定。API 清單與角色頁右欄的寬度改為比例（`--split`），畫面清單改為視窗寬度的比例（`--list-split` × 1vw，保留收合動畫），由共用的 `splitter.ts` 分隔線拖曳或用鍵盤調整，比例只記在頁面的記憶中。只用 CSS 與 DOM，graph 不變。見 [ADR 0123](adr/0123-r32-api-persona-graphics.md)。
