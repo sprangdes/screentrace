@@ -233,4 +233,4 @@
 ## R30 API 狀態的標記判定只留在 viewer
 
 - WP100：Java `ApiUsage` 移除保留／移除標記與 REMOVABLE，只推導呼叫來源；標記判定只由 viewer 的 `deriveApiUsage` 計算，見 [ADR 0121](adr/0121-r30-api-decisions-viewer-only.md)。
-- 驗證：待 PR CI 完成後補入。
+- 驗證：Maven 579（移除 2；571 通過、1 略過，另 OQ-041 的 7 個 Chromium 測試在 sandbox 內無法執行）；viewer 單元測試 141 個（sandbox 內 139 通過，OQ-047 的 2 個 Chromium 測試無法執行）；JS 測試 180 個；PR CI run https://github.com/sprangdes/screentrace/actions/runs/41966943589 三個 job 全綠（含 E2E 與上述 7 個測試）。PR：https://github.com/sprangdes/screentrace/pull/74。
