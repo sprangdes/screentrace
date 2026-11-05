@@ -22,6 +22,9 @@ import {personaPage} from './persona-page';
 import {splitter,LIST_SPLIT} from './splitter';
 import {loadReview,saveReview,screenDecision,componentDecision,effectiveComponent,setScreen,setComponent,statistics,conflicts,ReviewState,Decision} from './shared/review';
 
+/** How long a message that something worked stays beside the save menu before it fades. */
+const STATUS_SHOWN_MS=5000;
+
 type Filter='ALL'|'UNDECIDED'|'KEEP'|'REMOVE';
 const root=document.querySelector<HTMLDivElement>('#app')!;
 
@@ -145,7 +148,12 @@ try {
  if(initial.dropped)notices.append(element('p','先前的進度含已不再使用的欄位（原因、備註、元件庫對應），已略過；保留／移除標記不受影響。','notice'));
 
  const visibleScreens=():Set<string>|undefined=>filter==='ALL'?undefined:new Set(index.screens.filter(s=>screenDecision(reviewState,s.id)===filter).map(s=>s.id));
- const say=(message:string,state:'saved'|'error'='saved')=>{saveStatus.textContent=message;saveStatus.dataset.state=state;};
+ // A message that something worked fades after a few seconds; a failure stays until the next message.
+ let sayTimer:number|undefined;
+ const say=(message:string,state:'saved'|'error'='saved')=>{
+  window.clearTimeout(sayTimer);saveStatus.classList.remove('is-fading');saveStatus.textContent=message;saveStatus.dataset.state=state;
+  if(state==='saved')sayTimer=window.setTimeout(()=>{saveStatus.classList.add('is-fading');sayTimer=window.setTimeout(()=>{saveStatus.textContent='';saveStatus.classList.remove('is-fading');},400);},STATUS_SHOWN_MS);
+ };
  const persist=()=>{if(saveReview(storage,reviewState))say('⚠ 無法暫存在瀏覽器，請下載 md','error');};
 
  const applyImported=(imported:Awaited<ReturnType<typeof importMarkdown>>)=>{

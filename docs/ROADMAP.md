@@ -242,5 +242,5 @@
 
 ## R32 API 與角色頁的圖形化元素與角色頁改版
 
-- WP102：API 清單的方法色標、路徑參數標示與呼叫畫面數長條；API 詳情區在寬螢幕上分成左右兩欄；角色頁改為上方角色卡片、流程看板與「全部角色對照」覆蓋表；API 清單、角色頁右欄與畫面清單改為比例寬度並可拖曳調整；viewer 小字放大 1px；移除畫布左上角的操作提示，見 [ADR 0123](adr/0123-r32-api-persona-graphics.md)。
+- WP102：API 清單的方法色標、路徑參數標示與呼叫畫面數長條；API 詳情區在寬螢幕上分成左右兩欄；角色頁改為上方角色卡片、流程看板與「全部角色對照」覆蓋表；API 清單、角色頁右欄與畫面清單改為比例寬度並可拖曳調整；viewer 小字放大 1px；移除畫布左上角的操作提示；進度檔的成功訊息幾秒後自動消失，見 [ADR 0123](adr/0123-r32-api-persona-graphics.md)。
 - 驗證：viewer 單元測試 147 個（新增 6）、E2E 108 個（新增 6；`api-page-layout`、`r23-persona-page`、`r28-visual-summaries`、`r17-focus`、`overview-pin` 中與舊版面或操作提示綁定的斷言隨改版調整）、JS 測試 180 個、Maven 579（0 失敗、1 略過）全部通過；reservio 的 `viewer-documents.json` 與修改前逐位元組相同，只有報表 HTML 內的 viewer 改變。

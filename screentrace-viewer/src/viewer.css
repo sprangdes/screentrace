@@ -38,7 +38,8 @@ h1,h2,h3{margin:0}
 .page-tab[aria-current=page]{background:var(--primary-soft);color:var(--primary)}
 .topbar-actions{margin-left:auto;display:flex;align-items:center;gap:8px;min-width:0}
 .topbar-actions button{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
-.save-status{font-size:13px;color:var(--gray-500);white-space:nowrap}
+.save-status{font-size:13px;color:var(--gray-500);white-space:nowrap;transition:opacity .4s}
+.save-status.is-fading{opacity:0}
 .save-status[data-state=error]{color:var(--remove)}
 .progress-menu,.help-menu{position:relative}
 .progress-menu>summary,.help-menu>summary{list-style:none;cursor:pointer}
