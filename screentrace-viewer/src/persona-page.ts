@@ -24,6 +24,9 @@ export function personaOverlap(index:Index,views:PersonaView[],view:PersonaView)
   .map(([key,group])=>({key,label:key==='only'?'只有這個角色':group.with.length===others.length?'所有角色共用':`和${group.with.map(v=>v.persona.name).join('、')}共用`,screens:group.screens.sort(byStep)}));
 }
 
+/** A group's share of the persona's screens as a bar length, rounded to a whole percent and never below 1. */
+export const overlapPercent=(count:number,total:number)=>total>0&&count>0?Math.max(1,Math.round(count/total*100)):0;
+
 /** What the page keeps while the report is open: leaving for a screen and coming back finds the same persona. */
 const memory={selected:undefined as string|undefined};
 
@@ -114,7 +117,13 @@ export function personaPage(index:Index,views:PersonaView[],options:PersonaPageO
 
   if(views.length>1&&view.depth.size){
    const compare=section('和其他角色比較','compare');
-   for(const overlap of personaOverlap(index,views,view))compare.append(fold(overlap.label,overlap.screens.length,overlap.key,chips(view,overlap.screens)));
+   // Each group's bar is as long as its share of this persona's screens, so the groups compare at a glance.
+   for(const overlap of personaOverlap(index,views,view)){
+    const box=fold(overlap.label,overlap.screens.length,overlap.key,chips(view,overlap.screens));
+    const bar=element('span',undefined,'persona-overlap-bar'),fill=element('span',undefined,'persona-overlap-fill');
+    bar.setAttribute('aria-hidden','true');bar.dataset.overlap=overlap.key==='only'?'only':'shared';fill.style.width=`${overlapPercent(overlap.screens.length,view.depth.size)}%`;bar.append(fill);
+    box.querySelector('summary')!.insertBefore(bar,box.querySelector('summary .muted'));compare.append(box);
+   }
    inner.append(compare);
   }
   const outside=groups.filter(g=>g.reach==='UNREACHED'||g.reach==='EXCLUDED');
