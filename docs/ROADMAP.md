@@ -60,7 +60,7 @@
 
 - R10 WP37 已由 R14 WP45 第 8 點取代；WP38 流程大綱、全域搜尋、首次引導與說明浮層已由 R11–R14 完成，見 R10 報告。
 
-- capture 相容清理：packDocuments 舊 inline CSS 入口僅供 C 增量歷史 fixture；正式 CLI 使用 packStandaloneDocuments。依 OQ-006 保留原斷言，後續與歷史 capture 路徑一併移除（ADR 0021）。
+- capture 相容清理：已完成（R31）。packDocuments 舊 inline CSS 入口已移除，封裝只剩 packStandaloneDocuments，原本的測試改用正式入口（[ADR 0122](adr/0122-r31-retire-inline-css-pack.md)）。
 
 - OQ-015：WP21 已補足靜態 tag body 名稱（ADR 0045）；R4 範圍內缺少確切 graphComponentId 對應的 tag-body 導覽元件暫用圖中 title；UI3 此項未完成，另案補強分析／capture 的可證明對應後再採可見文字，不依 DOM 順序或文字相似度猜配。
 
@@ -234,3 +234,8 @@
 
 - WP100：Java `ApiUsage` 移除保留／移除標記與 REMOVABLE，只推導呼叫來源；標記判定只由 viewer 的 `deriveApiUsage` 計算，見 [ADR 0121](adr/0121-r30-api-decisions-viewer-only.md)。
 - 驗證：Maven 579（移除 2；571 通過、1 略過，另 OQ-041 的 7 個 Chromium 測試在 sandbox 內無法執行）；viewer 單元測試 141 個（sandbox 內 139 通過，OQ-047 的 2 個 Chromium 測試無法執行）；JS 測試 180 個；PR CI run https://github.com/sprangdes/screentrace/actions/runs/41966943589 三個 job 全綠（含 E2E 與上述 7 個測試）。PR：https://github.com/sprangdes/screentrace/pull/74。
+
+## R31 移除 capture 舊的 inline CSS 封裝入口
+
+- WP101：`pack-preview.mjs` 只保留 `packStandaloneDocuments`，使用舊入口的 4 個測試改用正式入口，見 [ADR 0122](adr/0122-r31-retire-inline-css-pack.md)。
+- 驗證：Maven 579（571 通過、1 略過，另 OQ-041 的 7 個 Chromium 測試在 sandbox 內無法執行）；viewer 單元測試 141 個（sandbox 內 139 通過，OQ-047 的 2 個 Chromium 測試無法執行）；JS 測試 180 個；PR CI run https://github.com/sprangdes/screentrace/actions/runs/41980760505 三個 job 全綠（含 E2E 與上述 7 個測試）。PR：https://github.com/sprangdes/screentrace/pull/75。
