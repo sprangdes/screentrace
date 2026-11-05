@@ -85,6 +85,20 @@ export const factLabel=(fact:PersonaFact)=>`${fact.text}：${fact.truth?'是':'�
 export const personaDescription=(persona:Persona)=>persona.description||`依 ${persona.facts.length} 個條件判定`;
 /** The persona's screens at a glance: only the counts that say where it goes. */
 export const reachSummary=(view:PersonaView)=>`${reachLabel.REACHABLE} ${view.counts.REACHABLE} · ${reachLabel.POSSIBLE} ${view.counts.POSSIBLE}`;
+/** Every screen of the map by where it sits for this persona, in reach order: the persona row's bar. */
+export const reachShares=(view:PersonaView)=>REACH_ORDER.map(key=>({key,count:view.counts[key]}));
+/** The four counts in words, e.g. `會走到 3、可能走到 1、走不到 2、不適用 0`. */
+export const reachCountsLabel=(view:PersonaView)=>REACH_ORDER.map(key=>`${reachLabel[key]} ${view.counts[key]}`).join('、');
+export interface StepCount {step:number;reachable:number;possible:number}
+/** How many screens the persona first sees at each step, split into certain and possible, in step order. */
+export function stepCounts(view:PersonaView):StepCount[]{
+ const steps=new Map<number,StepCount>();
+ for(const [id,step] of view.depth){
+  const count=steps.get(step)||steps.set(step,{step,reachable:0,possible:0}).get(step)!;
+  if(view.reach.get(id)==='POSSIBLE')count.possible++;else count.reachable++;
+ }
+ return [...steps.values()].sort((a,b)=>a.step-b.step);
+}
 /** Where a screen sits in one persona's flow, for badges and the comparison table. */
 export const reachText=(view:PersonaView,id:string)=>{const value=view.reach.get(id)!,step=view.depth.get(id);return step===undefined?reachLabel[value]:`${reachLabel[value]} · 第 ${step} 步`;};
 

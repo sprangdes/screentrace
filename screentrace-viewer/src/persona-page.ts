@@ -1,6 +1,7 @@
 import {Index} from './map';
 import {element,text} from './text';
-import {PersonaView,reachLabel,reachHelp,reachSummary,personaDescription,factLabel,flowGroups} from './personas';
+import {PersonaView,reachLabel,reachHelp,reachSummary,personaDescription,factLabel,flowGroups,reachShares,reachCountsLabel,stepCounts} from './personas';
+import {proportionBar} from './proportion';
 
 export interface PersonaOverlap {key:string;label:string;screens:string[]}
 /**
@@ -49,7 +50,7 @@ export function personaPage(index:Index,views:PersonaView[],options:PersonaPageO
  };
  for(const view of views){
   const row=element('button',undefined,'api-row persona-row');row.type='button';row.setAttribute('role','option');row.dataset.personaRow=view.persona.id;
-  const label=element('span',undefined,'persona-row-text');label.append(element('strong',view.persona.name),element('span',personaDescription(view.persona),'persona-row-about'));
+  const label=element('span',undefined,'persona-row-text');label.append(element('strong',view.persona.name),element('span',personaDescription(view.persona),'persona-row-about'),proportionBar(reachShares(view),reachCountsLabel(view),'persona-reach-bar',true));
   row.append(label,element('span',reachSummary(view),'api-screen-count'));
   row.onclick=()=>select(view.persona.id);list.append(row);
  }
@@ -68,6 +69,21 @@ export function personaPage(index:Index,views:PersonaView[],options:PersonaPageO
   if(reach==='POSSIBLE'){const mark=element('span',reachLabel.POSSIBLE,'persona-pill');mark.dataset.reach=reach;mark.title=reachHelp.POSSIBLE;line.append(mark);}
   return line;
  };
+ /** Screens per step as columns, certain below and possible on top; a column scrolls to its step in the list. */
+ const stepChart=(view:PersonaView,flowBox:HTMLElement)=>{
+  const chart=element('div',undefined,'persona-step-chart');chart.setAttribute('role','group');chart.setAttribute('aria-label','每一步的畫面數');
+  const counts=stepCounts(view),most=Math.max(...counts.map(c=>c.reachable+c.possible));
+  for(const count of counts){
+   const total=count.reachable+count.possible,key=`step-${count.step}`,label=`第 ${count.step} 步：${reachLabel.REACHABLE} ${count.reachable}、${reachLabel.POSSIBLE} ${count.possible}`;
+   const column=element('button',undefined,'persona-step-column');column.type='button';column.dataset.personaStepColumn=key;column.title=label;column.setAttribute('aria-label',label);
+   const track=element('span',undefined,'persona-step-track'),stack=element('span',undefined,'persona-step-stack');stack.style.height=`${Math.round(total/most*100)}%`;
+   for(const [share,value] of [['POSSIBLE',count.possible],['REACHABLE',count.reachable]] as const)if(value){const part=element('span',undefined,'proportion-part');part.dataset.share=share;part.style.flexGrow=String(value);stack.append(part);}
+   track.append(stack);column.append(track,element('span',String(total),'persona-step-count'),element('span',`第 ${count.step} 步`,'persona-step-name'));
+   column.onclick=()=>flowBox.querySelector(`[data-persona-step="${key}"]`)?.scrollIntoView({block:'start'});
+   chart.append(column);
+  }
+  return chart;
+ };
  /** Screens as compact chips, for the comparison and the screens outside the flow. */
  const chips=(view:PersonaView,ids:string[])=>{const box=element('div',undefined,'api-caller-list');for(const id of ids){const chip=element('button',name(id),'api-caller');chip.type='button';chip.dataset.personaScreen=id;chip.title=route(id);chip.onclick=()=>options.onOpen(id,view.persona.id);box.append(chip);}return box;};
  const fold=(label:string,count:number,key:string,body:HTMLElement)=>{const box=element('details',undefined,'api-shared');box.dataset.personaFold=key;const summary=element('summary');summary.append(element('span',label,'api-shared-name'),element('span',`${count} 個畫面`,'muted'));box.append(summary,body);return box;};
@@ -83,7 +99,7 @@ export function personaPage(index:Index,views:PersonaView[],options:PersonaPageO
   inner.append(heading,element('p',`${personaDescription(view.persona)}。${reachSummary(view)}。`,'api-reason'));
 
   const conditions=section('判定條件','conditions');
-  for(const fact of view.persona.facts)conditions.append(element('code',factLabel(fact),'persona-fact'));
+  for(const fact of view.persona.facts){const chip=element('code',factLabel(fact),'persona-fact');chip.dataset.truth=String(fact.truth);conditions.append(chip);}
   if(!view.persona.facts.length)conditions.append(element('p','（沒有條件）','muted'));
   const starts=section('起點','starts');starts.append(element('code',(view.persona.startPaths||[]).join('、')||'/','persona-fact'));
   inner.append(conditions,starts);
@@ -92,6 +108,7 @@ export function personaPage(index:Index,views:PersonaView[],options:PersonaPageO
   const flowBox=section(`流程 ${view.depth.size} 個畫面`,'flow');
   if(!steps.length)flowBox.append(element('p','這個角色從起點走不到任何畫面；請確認設定中的起點網址與條件。','muted'));
   if(view.unevaluated)flowBox.append(element('p',`有 ${view.unevaluated} 個導覽的條件程式無法判定，經過它們的畫面標為「${reachLabel.POSSIBLE}」。`,'muted'));
+  if(steps.length>1)flowBox.append(stepChart(view,flowBox));
   for(const group of steps){const step=element('div',undefined,'api-caller-screen persona-step-group');step.dataset.personaStep=group.key;step.append(element('h4',`${group.title} · ${group.screens.length}`,'persona-step-title'));for(const id of group.screens)step.append(screenLine(view,id));flowBox.append(step);}
   inner.append(flowBox);
 

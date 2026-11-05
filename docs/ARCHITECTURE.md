@@ -187,6 +187,10 @@ viewer 只讀 schema 2.4 的 `application.personas`，不重新判定。每個�
 
 選了角色時，viewer 以該角色的流程重新排版畫布：每一步一欄，只畫從第 N 步到第 N+1 步的線，走不到與不適用的畫面放在最後兩欄且預設隱藏；排版只用圖中的 `flow`，不重新判定；報表上的步數只算畫面，經由網址入口的轉址不另算一步（圖中的 `depth` 不變）。角色可帶分析人員寫的 `description`（schema 2.4 選填欄位，未設定時不輸出）。見 [ADR 0112](adr/0112-r21-persona-presentation.md)。
 
+### R28：API 頁與角色頁的圖形摘要
+
+viewer 在 API 頁加上全部 API 與各分組的狀態分布條，在角色頁加上每個角色的觸及條、判定條件的成立標記，以及每一步的畫面數直條。圖形只畫頁面已計算的數量（`apiStatusCounts`、`reachShares`、`stepCounts`），共用的分段長條在 `screentrace-viewer/src/proportion.ts`，只用 CSS 與 DOM。見 [ADR 0119](adr/0119-r28-visual-summaries.md)。
+
 ### R27：入口只開啟不需要網址參數的畫面
 
 角色流程（`screentrace-core` 的 `PersonaFlows`）從入口往下一步時，只開啟不需要網址參數的畫面；有 `entryQuery` 的畫面只能由直接指向它的導覽走到。見 [ADR 0118](adr/0118-r27-entry-renders-plain-version.md)。
