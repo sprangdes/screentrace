@@ -189,7 +189,7 @@ viewer 只讀 schema 2.4 的 `application.personas`，不重新判定。每個�
 
 ### R32：API 方法色標、路徑參數、呼叫數長條與角色覆蓋表
 
-viewer 的 API 清單依方法上色、把網址中的 `{name}` 參數標示出來（`pathParts`，接回後與原網址相同），並在每一列的畫面數前加上與最多者相比的短長條（`sharePercent`，R29 的 `overlapPercent` 改用同一個函式）。角色頁左欄加上「畫面 × 角色」覆蓋表（`coverageScreens`），只用各角色已有的 `reach` 與 `depth`，不重新判定。只用 CSS 與 DOM，graph 不變。見 [ADR 0123](adr/0123-r32-api-persona-graphics.md)。
+viewer 的 API 清單依方法上色、把網址中的 `{name}` 參數標示出來（`pathParts`，接回後與原網址相同），並在每一列的畫面數前加上與最多者相比的短長條（`sharePercent`，R29 的 `overlapPercent` 改用同一個函式）。角色頁詳情加上「畫面 × 角色」覆蓋表（`coverageScreens`），只用各角色已有的 `reach` 與 `depth`，不重新判定。兩頁的詳情區在 1360px 以上的視窗分成左右兩欄（`.api-detail-main`／`.api-detail-side`），較窄時以 `display:contents` 還原為單欄與原本的區塊順序。只用 CSS 與 DOM，graph 不變。見 [ADR 0123](adr/0123-r32-api-persona-graphics.md)。
 
 ### R31：capture 封裝只剩正式入口
 

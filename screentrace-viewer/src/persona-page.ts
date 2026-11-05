@@ -60,7 +60,6 @@ export function personaPage(index:Index,views:PersonaView[],options:PersonaPageO
  const select=(id:string,focus=false)=>{
   selected=id;memory.selected=id;
   for(const row of list.querySelectorAll<HTMLElement>('.persona-row')){const on=row.dataset.personaRow===id;row.setAttribute('aria-selected',String(on));row.tabIndex=on?0:-1;if(on&&focus)row.focus();}
-  for(const cell of root.querySelectorAll<HTMLElement>('.persona-coverage [data-coverage-persona]'))cell.classList.toggle('is-selected',cell.dataset.coveragePersona===id);
   renderDetail();
  };
  for(const view of views){
@@ -69,20 +68,22 @@ export function personaPage(index:Index,views:PersonaView[],options:PersonaPageO
   row.append(label,element('span',reachSummary(view),'api-screen-count'));
   row.onclick=()=>select(view.persona.id);list.append(row);
  }
- /** Every reached screen against every persona: a dot per cell; a reached cell opens the screen as that persona. */
- const coverage=()=>{
-  const box=element('section',undefined,'persona-coverage');box.dataset.personaSection='coverage';
-  box.append(element('h2','畫面 × 角色','persona-coverage-title'));
+ /**
+  * Every reached screen against every persona: a dot per cell; a reached cell opens the screen as that persona,
+  * a persona's name selects it, and the selected persona's column is shaded.
+  */
+ const coverage=(current:string)=>{
+  const box=section('畫面 × 角色','coverage');box.classList.add('persona-coverage');
   const legend=element('p',undefined,'persona-coverage-legend');
   for(const reach of ['REACHABLE','POSSIBLE','UNREACHED'] as const){const key=element('span',reach==='UNREACHED'?`${reachLabel.UNREACHED}／${reachLabel.EXCLUDED}`:reachLabel[reach],'persona-coverage-key');key.dataset.reach=reach;legend.append(key);}
   const table=element('table',undefined,'persona-coverage-table'),head=element('tr');
   head.append(element('th',undefined));
-  for(const view of views){const cell=element('th',undefined),button=element('button',view.persona.name,'persona-coverage-persona');cell.scope='col';button.type='button';button.dataset.coveragePersona=view.persona.id;button.title=view.persona.name;button.onclick=()=>select(view.persona.id);cell.append(button);head.append(cell);}
+  for(const view of views){const cell=element('th',undefined),button=element('button',view.persona.name,'persona-coverage-persona');cell.scope='col';button.type='button';button.dataset.coveragePersona=view.persona.id;button.title=view.persona.name;button.onclick=()=>select(view.persona.id);button.classList.toggle('is-selected',view.persona.id===current);cell.append(button);head.append(cell);}
   const thead=element('thead');thead.append(head);const tbody=element('tbody');
   for(const id of coverageScreens(index,views)){
    const row=element('tr'),label=element('th',name(id));row.dataset.coverageScreen=id;label.scope='row';label.title=route(id);row.append(label);
    for(const view of views){
-    const reach=view.reach.get(id)!,cell=element('td'),words=`${view.persona.name}：${reachLabel[reach]}`;cell.dataset.coveragePersona=view.persona.id;
+    const reach=view.reach.get(id)!,cell=element('td'),words=`${view.persona.name}：${reachLabel[reach]}`;cell.dataset.coveragePersona=view.persona.id;cell.classList.toggle('is-selected',view.persona.id===current);
     if(reach==='REACHABLE'||reach==='POSSIBLE'){const dot=element('button',undefined,'persona-coverage-dot');dot.type='button';dot.dataset.reach=reach;dot.title=words;dot.setAttribute('aria-label',`${name(id)}，${words}`);dot.onclick=()=>options.onOpen(id,view.persona.id);cell.append(dot);}
     else{const dot=element('span',undefined,'persona-coverage-dot');dot.dataset.reach=reach;dot.title=words;dot.setAttribute('role','img');dot.setAttribute('aria-label',words);cell.append(dot);}
     row.append(cell);
@@ -91,8 +92,6 @@ export function personaPage(index:Index,views:PersonaView[],options:PersonaPageO
   }
   table.append(thead,tbody);box.append(legend,table);return box;
  };
- const coverageBox=views.length>1&&views.some(view=>view.depth.size)?coverage():undefined;
- if(coverageBox)master.append(coverageBox);
  list.addEventListener('keydown',event=>{
   const ids=views.map(v=>v.persona.id),at=ids.indexOf(selected||'');
   const target=event.key==='ArrowDown'?ids[Math.min(ids.length-1,at+1)]:event.key==='ArrowUp'?ids[Math.max(0,at-1)]:event.key==='Home'?ids[0]:event.key==='End'?ids.at(-1):undefined;
@@ -141,7 +140,10 @@ export function personaPage(index:Index,views:PersonaView[],options:PersonaPageO
   for(const fact of view.persona.facts){const chip=element('code',factLabel(fact),'persona-fact');chip.dataset.truth=String(fact.truth);conditions.append(chip);}
   if(!view.persona.facts.length)conditions.append(element('p','（沒有條件）','muted'));
   const starts=section('起點','starts');starts.append(element('code',(view.persona.startPaths||[]).join('、')||'/','persona-fact'));
-  inner.append(conditions,starts);
+  // On a wide screen the persona's own flow is the left column; how it compares with the others is the right one.
+  const columns=element('div',undefined,'api-detail-columns'),main=element('div',undefined,'api-detail-main'),side=element('div',undefined,'api-detail-side');
+  columns.append(main,side);inner.append(columns);
+  main.append(conditions,starts);
 
   const groups=flowGroups(index,view),steps=groups.filter(g=>g.key.startsWith('step-'));
   const flowBox=section(`流程 ${view.depth.size} 個畫面`,'flow');
@@ -149,7 +151,7 @@ export function personaPage(index:Index,views:PersonaView[],options:PersonaPageO
   if(view.unevaluated)flowBox.append(element('p',`有 ${view.unevaluated} 個導覽的條件程式無法判定，經過它們的畫面標為「${reachLabel.POSSIBLE}」。`,'muted'));
   if(steps.length>1)flowBox.append(stepChart(view,flowBox));
   for(const group of steps){const step=element('div',undefined,'api-caller-screen persona-step-group');step.dataset.personaStep=group.key;step.append(element('h4',`${group.title} · ${group.screens.length}`,'persona-step-title'));for(const id of group.screens)step.append(screenLine(view,id));flowBox.append(step);}
-  inner.append(flowBox);
+  main.append(flowBox);
 
   if(views.length>1&&view.depth.size){
    const compare=section('和其他角色比較','compare');
@@ -160,13 +162,14 @@ export function personaPage(index:Index,views:PersonaView[],options:PersonaPageO
     bar.setAttribute('aria-hidden','true');bar.dataset.overlap=overlap.key==='only'?'only':'shared';fill.style.width=`${overlapPercent(overlap.screens.length,view.depth.size)}%`;bar.append(fill);
     box.querySelector('summary')!.insertBefore(bar,box.querySelector('summary .muted'));compare.append(box);
    }
-   inner.append(compare);
+   side.append(compare);
   }
+  if(views.length>1&&views.some(other=>other.depth.size))side.append(coverage(view.persona.id));
   const outside=groups.filter(g=>g.reach==='UNREACHED'||g.reach==='EXCLUDED');
   if(outside.length){
    const rest=section('流程以外','outside');
    for(const group of outside){const box=fold(group.title,group.screens.length,group.key,chips(view,group.screens));box.title=reachHelp[group.reach];rest.append(box);}
-   inner.append(rest);
+   side.append(rest);
   }
   detail.append(inner);detail.scrollTop=0;
  };

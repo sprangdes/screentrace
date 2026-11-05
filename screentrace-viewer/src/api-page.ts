@@ -328,7 +328,10 @@ export function apiPage(index:Index,state:ReviewState,options:ApiPageOptions):HT
   const title=element('div',undefined,'api-detail-title');title.append(methodBadge(record.method),pathCode(record.path,'api-detail-path'),statusTag(record.status));
   const why=element('p',reason(record),record.note?'api-reason api-note':'api-reason');why.dataset.apiStatus=record.status;
   inner.append(title,why,renderChain(record));
-  if(record.external.length){const box=section('外部呼叫（Webhook）');box.dataset.apiSection='external-call';box.append(element('p','公開存取與 CSRF 例外設定均有來源證據；狀態維持未被使用，不授權移除。'));for(const proof of record.external){const value=JSON.parse(proof.detail!),line=element('p');line.append(element('code',value.kind+' '+value.pattern),element('code',`${proof.source!.file}:${proof.source!.line}`,'api-source'));box.append(line);}inner.append(box);}
+  // On a wide screen the handler and contract are the left column and the callers the right; narrower, one column.
+  const columns=element('div',undefined,'api-detail-columns'),main=element('div',undefined,'api-detail-main'),side=element('div',undefined,'api-detail-side');
+  columns.append(main,side);inner.append(columns);
+  if(record.external.length){const box=section('外部呼叫（Webhook）');box.dataset.apiSection='external-call';box.append(element('p','公開存取與 CSRF 例外設定均有來源證據；狀態維持未被使用，不授權移除。'));for(const proof of record.external){const value=JSON.parse(proof.detail!),line=element('p');line.append(element('code',value.kind+' '+value.pattern),element('code',`${proof.source!.file}:${proof.source!.line}`,'api-source'));box.append(line);}main.append(box);}
 
   const handlers=section('處理程式');handlers.dataset.apiSection='handlers';
   if(!record.handlers.length)handlers.append(element('p',NO_HANDLER,'muted'));
@@ -338,8 +341,8 @@ export function apiPage(index:Index,state:ReviewState,options:ApiPageOptions):HT
    if(source?.file)line.append(element('code',`${source.file}${source.line?`:${source.line}`:''}`,'api-source'));
    handlers.append(line);
   }
-  inner.append(handlers,renderCallers(record));
-  const contract=renderContract(record);if(contract)inner.append(contract);
+  main.append(handlers);side.append(renderCallers(record));
+  const contract=renderContract(record);if(contract)main.append(contract);
   detail.append(inner);detail.scrollTop=0;
  };
 

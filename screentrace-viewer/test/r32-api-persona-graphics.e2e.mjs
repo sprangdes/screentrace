@@ -65,3 +65,28 @@ test('R32 a report with one persona has no coverage table',async()=>{
   assert.equal(await page.locator('[data-persona-section="coverage"]').count(),0);
  }finally{await browser.close();}
 });
+
+test('R32 a wide detail sets its sections side by side, a narrow one stacks them in the old order',async()=>{
+ const browser=await chromium.launch();try{
+  const {page,state}=await open(browser);
+  const box=selector=>page.locator(selector).boundingBox();
+  await page.click('.page-tab[data-page="api"]');await page.waitForSelector('.api-page');
+  await page.click('.api-row[data-api-row="ep"]');
+  let handlers=await box('[data-api-detail="ep"] [data-api-section="handlers"]'),callers=await box('[data-api-detail="ep"] [data-api-section="callers"]');
+  assert.ok(callers.x>handlers.x+handlers.width,'callers sit right of the handler');
+  assert.equal(Math.round(callers.y),Math.round(handlers.y));
+  await page.click('.page-tab[data-page="personas"]');await page.waitForSelector('[data-persona-page]');
+  const flow=await box('[data-persona-section="flow"]'),coverage=await box('[data-persona-section="coverage"]');
+  assert.ok(coverage.x>flow.x+flow.width,'the coverage table sits right of the flow');
+  assert.equal(await page.locator('.api-master [data-persona-section="coverage"]').count(),0,'the persona list column holds only the list');
+  await page.setViewportSize({width:1100,height:900});
+  const order=await page.locator('[data-persona-detail] [data-persona-section]').evaluateAll(list=>list.map(s=>[s.dataset.personaSection,Math.round(s.getBoundingClientRect().top)]));
+  assert.deepEqual(order.map(([key])=>key),['conditions','starts','flow','compare','coverage','outside']);
+  assert.ok(order.every(([,top],i)=>!i||top>order[i-1][1]),'one column, top to bottom');
+  await page.click('.page-tab[data-page="api"]');await page.waitForSelector('.api-page');
+  handlers=await box('[data-api-detail="ep"] [data-api-section="handlers"]');callers=await box('[data-api-detail="ep"] [data-api-section="callers"]');
+  assert.equal(Math.round(callers.x),Math.round(handlers.x));
+  assert.ok(callers.y>handlers.y+handlers.height,'callers below the handler');
+  assert.deepEqual(state.errors,[]);assert.equal(state.requests,0);
+ }finally{await browser.close();}
+});

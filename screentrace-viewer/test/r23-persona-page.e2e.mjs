@@ -18,7 +18,7 @@ test('R23 the persona page uses the API page layout: a persona list, its details
   assert.equal(await page.locator('[data-persona-page].api-page .api-master .api-list .persona-row').count(),2);
   assert.equal(await page.locator('[data-persona-page] .api-detail [data-persona-detail="visitor"]').count(),1,'the first persona is shown at first');
   assert.equal(await page.locator('[data-persona-row="visitor"]').getAttribute('aria-selected'),'true');
-  assert.deepEqual(await page.locator('[data-persona-detail="visitor"] .api-section h3').allTextContents(),['判定條件','起點','流程 1 個畫面','和其他角色比較','流程以外']);
+  assert.deepEqual(await page.locator('[data-persona-detail="visitor"] .api-section h3').allTextContents(),['判定條件','起點','流程 1 個畫面','和其他角色比較','畫面 × 角色','流程以外']);
   assert.deepEqual(await page.locator('[data-persona-section="compare"] .api-shared-name').allTextContents(),['所有角色共用']);
   assert.deepEqual(await page.locator('[data-persona-section="outside"] .api-shared-name').allTextContents(),['走不到']);
   await page.locator('[data-persona-row="visitor"]').focus();await page.keyboard.press('ArrowDown');

@@ -531,14 +531,10 @@ body[data-presenting=true] .focus-layer{position:fixed!important;inset:0!importa
 .api-caller-bar{flex:none;width:24px;height:4px;border-radius:999px;background:var(--gray-200);overflow:hidden}
 .api-caller-fill{display:block;min-width:2px;height:100%;background:var(--gray-500)}
 .api-row[aria-selected=true] .api-caller-fill{background:var(--primary)}
-.persona-page .api-master{overflow:auto}
-.persona-page .api-list{flex:none;overflow:visible}
-.persona-coverage{padding:12px 16px 24px;border-top:1px solid var(--gray-200)}
-.persona-coverage-title{font-size:13px;font-weight:600}
-.persona-coverage-legend{display:flex;flex-wrap:wrap;gap:4px 12px;margin:6px 0 8px;font-size:11px;color:var(--gray-500)}
+.persona-coverage-legend{display:flex;flex-wrap:wrap;gap:4px 12px;margin:0 0 8px;font-size:11px;color:var(--gray-500)}
 .persona-coverage-key{display:inline-flex;align-items:center;gap:4px}
 .persona-coverage-key::before{content:'';width:10px;height:10px;border-radius:50%;box-sizing:border-box}
-.persona-coverage-table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:12px}
+.persona-coverage-table{width:100%;max-width:560px;border-collapse:collapse;table-layout:fixed;font-size:12px}
 .persona-coverage-table th[scope=row]{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:400;text-align:left;padding:3px 6px 3px 0}
 .persona-coverage-table thead th:first-child{width:auto}
 .persona-coverage-table thead th:not(:first-child),.persona-coverage-table td{width:56px;text-align:center}
@@ -552,3 +548,12 @@ button.persona-coverage-dot:hover{outline:2px solid var(--primary);outline-offse
 .persona-coverage-dot[data-reach=REACHABLE],.persona-coverage-key[data-reach=REACHABLE]::before{background:var(--keep)}
 .persona-coverage-dot[data-reach=POSSIBLE],.persona-coverage-key[data-reach=POSSIBLE]::before{background:white;border:2px solid var(--keep)}
 .persona-coverage-dot[data-reach=UNREACHED],.persona-coverage-dot[data-reach=EXCLUDED],.persona-coverage-key[data-reach=UNREACHED]::before{width:6px;height:6px;background:var(--gray-300)}
+.api-detail-columns{display:flex;flex-direction:column;gap:20px}
+.api-detail-main,.api-detail-side{display:contents}
+.api-detail-columns .api-contract{order:1}
+@media (min-width:1360px){
+ .api-detail-inner{max-width:1440px}
+ .api-detail-columns{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:20px 40px;align-items:start}
+ .api-detail-main,.api-detail-side{display:flex;flex-direction:column;gap:20px;min-width:0}
+ .api-detail-columns .api-contract{order:0}
+}
