@@ -46,6 +46,21 @@ export function apiStatusCounts(statuses:Iterable<ApiStatus>):Record<ApiStatus,n
 const statusShares=(counts:Record<ApiStatus,number>)=>STATUS_ORDER.map(key=>({key,count:counts[key]}));
 const statusCountsLabel=(counts:Record<ApiStatus,number>)=>STATUS_ORDER.map(key=>`${apiStatusLabels[key]} ${counts[key]}`).join('、');
 
+/** How a caller triggers the API, in plain words: its component's label, or a load call on the screen. */
+export function callerLabel(index:Index,caller:Caller):string{
+ return caller.componentId?componentLabelsForScreen(index,caller.screenId).get(caller.componentId)||'沒有文字的按鈕':callerKind(index,caller)==='unresolved'?'無法確定的觸發來源':'畫面載入時';
+}
+export interface ChainScreen {screenId:string;triggers:string[]}
+/** The screens at the start of an API's call chain, each with what on it triggers the API, by screen name. */
+export function chainScreens(index:Index,callers:Caller[]):ChainScreen[]{
+ const byScreen=new Map<string,string[]>();
+ for(const caller of callers){const list=byScreen.get(caller.screenId)||byScreen.set(caller.screenId,[]).get(caller.screenId)!;const label=callerLabel(index,caller);if(!list.includes(label))list.push(label);}
+ const name=(id:string)=>index.nodes.get(id)?.name||'畫面';
+ return [...byScreen].map(([screenId,triggers])=>({screenId,triggers})).sort((a,b)=>name(a.screenId).localeCompare(name(b.screenId),'zh-Hant')||(a.screenId<b.screenId?-1:a.screenId>b.screenId?1:0));
+}
+/** The chain shows this many screens and handlers; the rest are counted, and listed in the sections below. */
+export const CHAIN_LIMIT=5;
+
 export interface ApiPageOptions {selected?:string;onSelect?:(id:string)=>void;onCaller:(screenId:string,componentId?:string)=>void}
 type Filter='ALL'|'ATTENTION'|'IN_USE';
 type Grouping='controller'|'url';
@@ -179,7 +194,6 @@ export function apiPage(index:Index,state:ReviewState,options:ApiPageOptions):HT
  });
  search.oninput=()=>{memory.query=search.value;renderList();};
 
- const callerLabel=(caller:Caller)=>caller.componentId?componentLabelsForScreen(index,caller.screenId).get(caller.componentId)||'沒有文字的按鈕':callerKind(index,caller)==='unresolved'?'無法確定的觸發來源':'畫面載入時';
  const removed=(caller:Caller)=>screenDecision(state,caller.screenId)==='REMOVE'||!!caller.componentId&&componentDecision(state,caller.screenId,caller.componentId)==='REMOVE';
  const callerButton=(caller:Caller,label:string)=>{
   const link=element('button',undefined,'api-caller');link.type='button';
@@ -188,6 +202,32 @@ export function apiPage(index:Index,state:ReviewState,options:ApiPageOptions):HT
   if(removed(caller)){link.classList.add('is-removed');link.append(element('span','已標記移除','api-removed-tag'));}
   link.onclick=()=>options.onCaller(caller.screenId,caller.componentId);
   return link;
+ };
+ /** Screen → what triggers it → this API → handler, as three linked stages; each screen opens it at the caller. */
+ const renderChain=(record:ApiRecord)=>{
+  const screens=chainScreens(index,record.callers),handlerCount=record.handlers.length;
+  const chain=element('div',undefined,'api-chain');chain.dataset.apiSection='chain';chain.setAttribute('role','group');
+  chain.setAttribute('aria-label',`呼叫鏈：${screens.length?`${screens.length} 個畫面`:'沒有呼叫來源'} → ${record.method} ${record.path} → ${handlerCount?`${handlerCount} 個處理程式`:NO_HANDLER}`);
+  const stage=(key:string,heading:string)=>{const box=element('div',undefined,'api-chain-stage');box.dataset.chainStage=key;box.append(element('span',heading,'api-chain-heading'));const items=element('div',undefined,'api-chain-items');box.append(items);return {box,items};};
+  const more=(items:HTMLElement,rest:number,unit:string)=>{if(rest>0)items.append(element('span',`還有 ${rest} 個${unit}`,'api-chain-more'));};
+  const arrow=()=>{const link=element('span',undefined,'api-chain-link');link.setAttribute('aria-hidden','true');return link;};
+  const from=stage('screens',`畫面 ${screens.length}`);
+  if(!screens.length)from.items.append(element('span','沒有呼叫來源','api-chain-node is-empty'));
+  for(const item of screens.slice(0,CHAIN_LIMIT)){
+   const node=element('button',undefined,'api-chain-node');node.type='button';node.dataset.chainScreen=item.screenId;
+   node.append(element('span',index.nodes.get(item.screenId)?.name||'畫面','api-chain-name'),element('span',item.triggers.length>1?`${item.triggers.length} 個觸發`:item.triggers[0],'api-chain-trigger'));
+   node.title=item.triggers.join('、');
+   if(screenDecision(state,item.screenId)==='REMOVE'||record.callers.filter(c=>c.screenId===item.screenId).every(removed))node.classList.add('is-removed');
+   node.onclick=()=>options.onCaller(item.screenId);from.items.append(node);
+  }
+  more(from.items,screens.length-CHAIN_LIMIT,'畫面');
+  const api=stage('api','API'),self=element('span',undefined,'api-chain-node is-self');self.dataset.apiStatus=record.status;self.append(methodBadge(record.method),element('code',record.path,'api-chain-name'));api.items.append(self);
+  const to=stage('handlers',`處理程式 ${handlerCount}`);
+  if(!handlerCount)to.items.append(element('span',NO_HANDLER,'api-chain-node is-empty'));
+  for(const handler of record.handlers.slice(0,CHAIN_LIMIT)){const node=element('span',undefined,'api-chain-node');node.append(element('span',handler.name,'api-chain-name'));to.items.append(node);}
+  more(to.items,handlerCount-CHAIN_LIMIT,'處理程式');
+  chain.append(from.box,arrow(),api.box,arrow(),to.box);
+  return chain;
  };
  const section=(heading:string)=>{const box=element('section',undefined,'api-section');box.append(element('h3',heading));return box;};
 
@@ -211,7 +251,7 @@ export function apiPage(index:Index,state:ReviewState,options:ApiPageOptions):HT
   for(const [key,screens] of [...screensOf].filter(([key])=>shared.has(key)).sort((a,b)=>b[1].size-a[1].size||a[0].localeCompare(b[0],'en'))){
    const callers=record.callers.filter(c=>sharedKey(c)===key),first=callers[0],component=first.componentId?index.nodes.get(first.componentId):undefined;
    const fold=element('details',undefined,'api-shared'),summary=element('summary');fold.dataset.apiShared=key;
-   summary.append(element('span',component?`共用按鈕「${callerLabel(first).replace(/（第 \d+ 個）$/,'')}」`:`${callerLabel(first)}（共用程式）`,'api-shared-name'),element('span',`${screens.size} 個畫面`,'muted'));
+   summary.append(element('span',component?`共用按鈕「${callerLabel(index,first).replace(/（第 \d+ 個）$/,'')}」`:`${callerLabel(index,first)}（共用程式）`,'api-shared-name'),element('span',`${screens.size} 個畫面`,'muted'));
    if(component?.source?.file&&component.source.file!=='.')summary.append(element('code',`${component.source.file}${component.source.line?`:${component.source.line}`:''}`,'api-source'));
    const triggers=element('div',undefined,'api-caller-list');
    const perScreen=new Map<string,Caller>();for(const caller of callers)if(!perScreen.has(caller.screenId))perScreen.set(caller.screenId,caller);
@@ -223,7 +263,7 @@ export function apiPage(index:Index,state:ReviewState,options:ApiPageOptions):HT
    link.dataset.callerScreen=screenId;link.onclick=()=>options.onCaller(screenId);
    if(screenDecision(state,screenId)==='REMOVE')group.classList.add('is-removed');
    const triggers=element('div',undefined,'api-caller-list');
-   for(const caller of callers)triggers.append(callerButton(caller,callerLabel(caller)));
+   for(const caller of callers)triggers.append(callerButton(caller,callerLabel(index,caller)));
    group.append(link,triggers);box.append(group);
   }
   return box;
@@ -270,7 +310,7 @@ export function apiPage(index:Index,state:ReviewState,options:ApiPageOptions):HT
   if(record.node.attributes.externalLogin==='true')inner.append(element('p',`外部登入：${record.node.attributes.externalLoginReturns?`完成後回到 ${record.node.attributes.externalLoginReturns.split('\u001f').join('、')}`:'完成後的導回路徑無法確定'}`,'notice'));
   const title=element('div',undefined,'api-detail-title');title.append(methodBadge(record.method),element('code',record.path,'api-detail-path'),statusTag(record.status));
   const why=element('p',reason(record),record.note?'api-reason api-note':'api-reason');why.dataset.apiStatus=record.status;
-  inner.append(title,why);
+  inner.append(title,why,renderChain(record));
   if(record.external.length){const box=section('外部呼叫（Webhook）');box.dataset.apiSection='external-call';box.append(element('p','公開存取與 CSRF 例外設定均有來源證據；狀態維持未被使用，不授權移除。'));for(const proof of record.external){const value=JSON.parse(proof.detail!),line=element('p');line.append(element('code',value.kind+' '+value.pattern),element('code',`${proof.source!.file}:${proof.source!.line}`,'api-source'));box.append(line);}inner.append(box);}
 
   const handlers=section('處理程式');handlers.dataset.apiSection='handlers';
