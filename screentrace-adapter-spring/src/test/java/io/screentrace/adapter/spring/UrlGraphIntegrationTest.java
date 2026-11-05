@@ -22,7 +22,7 @@ class UrlGraphIntegrationTest {
   assertEquals(2,g.behaviors().stream().filter(b->b.type()==BehaviorType.CALL_API&&api.id().equals(b.targetId())).count());
   assertTrue(g.relationships().stream().anyMatch(e->e.type()==EdgeType.CALLS&&e.to().equals(api.id())));
   assertTrue(g.relationships().stream().anyMatch(e->e.type()==EdgeType.TRIGGERS&&e.to().equals(form.id())));
-  assertEquals(ApiUsage.Status.IN_USE,ApiUsage.derive(g,Map.of(),Map.of()).get(api.id()).status());
+  assertEquals(ApiUsage.Status.IN_USE,ApiUsage.derive(g).get(api.id()).status());
   assertTrue(g.behaviors().stream().anyMatch(b->api.id().equals(b.targetId())&&b.evidence().stream().anyMatch(e->e.resolution()==ResolutionStatus.UNRESOLVED&&e.detail().contains("#missing"))));
   assertDoesNotThrow(()->GraphIntegrityValidator.validate(g));
  }

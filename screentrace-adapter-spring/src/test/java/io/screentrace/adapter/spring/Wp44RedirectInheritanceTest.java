@@ -33,7 +33,7 @@ class Wp44RedirectInheritanceTest {
         """, "<a href='/cart/'>View cart</a>");
     var source = graph.nodes().stream().filter(n -> n.type()==NodeType.ENDPOINT && "/cart/".equals(n.attributes().get("path"))).findFirst().orElseThrow();
     var destination = graph.nodes().stream().filter(n -> n.type()==NodeType.ENDPOINT && "/cart/{cartId}".equals(n.attributes().get("path"))).findFirst().orElseThrow();
-    var usage = ApiUsage.derive(graph, Map.of(), Map.of()).get(destination.id());
+    var usage = ApiUsage.derive(graph).get(destination.id());
     assertEquals(ApiUsage.Status.IN_USE, usage.status());
     assertEquals(1, usage.callers().size());
     assertEquals("View cart", graph.nodes().stream().filter(n -> n.id().equals(usage.callers().get(0).componentId())).findFirst().orElseThrow().name());

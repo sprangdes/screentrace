@@ -187,6 +187,10 @@ viewer 只讀 schema 2.4 的 `application.personas`，不重新判定。每個�
 
 選了角色時，viewer 以該角色的流程重新排版畫布：每一步一欄，只畫從第 N 步到第 N+1 步的線，走不到與不適用的畫面放在最後兩欄且預設隱藏；排版只用圖中的 `flow`，不重新判定；報表上的步數只算畫面，經由網址入口的轉址不另算一步（圖中的 `depth` 不變）。角色可帶分析人員寫的 `description`（schema 2.4 選填欄位，未設定時不輸出）。見 [ADR 0112](adr/0112-r21-persona-presentation.md)。
 
+### R30：API 狀態的標記判定只留在 viewer
+
+Java 的 `ApiUsage` 只推導呼叫來源（IN_USE / UNREFERENCED），保留／移除標記與 REMOVABLE 只由 viewer 的 `deriveApiUsage` 判定；共用向量不變，Java 端只比對呼叫來源。見 [ADR 0121](adr/0121-r30-api-decisions-viewer-only.md)。
+
 ### R29：API 呼叫鏈與角色重疊長條
 
 viewer 在 API 詳情的狀態原因下方加上三欄的呼叫鏈（畫面 → API → 處理程式，左右兩欄最多 5 格），在角色頁「和其他角色比較」的每一組加上依比例的長條。呼叫鏈的畫面來自 `chainScreens`（依畫面名稱排序、每個畫面的觸發元件不重複），長條長度來自 `overlapPercent`；只用 CSS 與 DOM。見 [ADR 0120](adr/0120-r29-call-chain-and-overlap-bars.md)。
@@ -227,7 +231,7 @@ Behavior 欄位為 id、triggerId、event、type、targetId、guard、parentId�
 
 ValidationRule 欄位為 id、kind、fields、message、layer、parameters、evidence。layer 只用 MARKUP / CLIENT / SERVER；需求方指定框架語意保留於 evidence.detail（OQ-001 已決定）。validator 拒絕不合法引用、缺證據、kind 以及父循環。
 
-`StableGraphIds` 定義不含行號與絕對路徑的鍵與 matched / orphaned / new 比對。`ApiUsage.derive(graph, screenDecisions, componentDecisions)` 共用純函式輸出 IN_USE / REMOVABLE / UNREFERENCED 與排序 callers；畫面決策以 screenId 為鍵，元件決策以 ComponentKey(screenId, componentId) 為鍵；共用元件在不同畫面各自決策。畫面 REMOVE 或該畫面的元件 REMOVE 才算移除來源。KEEP / UNDECIDED 皆保留；未偵測 caller 不授權移除。規則與相容策略見 [ADR 0002](adr/0002-behavior-model-and-stable-ids.md)。
+`StableGraphIds` 定義不含行號與絕對路徑的鍵與 matched / orphaned / new 比對。`ApiUsage.derive(graph)` 純函式輸出排序 callers 與 IN_USE / UNREFERENCED；保留／移除標記與 REMOVABLE 只由 viewer 的 `deriveApiUsage` 判定（[ADR 0121](adr/0121-r30-api-decisions-viewer-only.md)）：畫面決策以 screenId 為鍵，元件決策以 (screenId, componentId) 為鍵；共用元件在不同畫面各自決策。畫面 REMOVE 或該畫面的元件 REMOVE 才算移除來源。KEEP / UNDECIDED 皆保留；未偵測 caller 不授權移除。規則與相容策略見 [ADR 0002](adr/0002-behavior-model-and-stable-ids.md)。
 
 ### Example nodes
 

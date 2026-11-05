@@ -49,7 +49,7 @@
 
 - OQ-013：spring:url 與 c:url 在迴圈內行為不一致；本次僅授權 spring:url 的同作用域靜態樣板例外，c:url 維持既有 UNRESOLVED 邊界。待日後授權統一，見 ADR 0005。
 
-- API 狀態規則目前有 Java ApiUsage 與 TypeScript deriveApiUsage 兩份實作；以 [共用向量](examples/api-usage-vectors.json) 為一致性依據，兩端測試比對同一份完整預期（R-API-1～6）。後續規則變更須同時通過兩端向量測試，待未來整合共用執行實作；見 [ADR 0034](adr/0034-api-usage-shared-vectors.md)。
+- API 狀態的保留／移除標記判定只在 TypeScript `deriveApiUsage`（R30，[ADR 0121](adr/0121-r30-api-decisions-viewer-only.md)）；呼叫來源的推導仍有 Java `ApiUsage` 與 TypeScript `callSources` 兩份，以 [共用向量](examples/api-usage-vectors.json) 為一致性依據（R-API-1～6）。後續規則變更須同時通過兩端向量測試；完全消除需要把呼叫來源寫進圖的 schema 變更。
 
 - OQ-005：待既有歷史測試遷移後移除 ApplicationGraph 舊版相容建構子；目前只供讀取歷史資料與既有 fixture，正式分析不得使用。
 
@@ -229,3 +229,8 @@
 
 - WP99：API 詳情加上呼叫鏈（畫面 → API → 處理程式），角色比較的每一組加上依比例的長條，見 [ADR 0120](adr/0120-r29-call-chain-and-overlap-bars.md)。
 - 驗證：viewer 單元測試 141 個（新增 2；sandbox 內 139 通過，OQ-047 的 2 個 Chromium 測試無法執行）；JS 測試 180 個；Maven 581（573 通過、1 略過，另 OQ-041 的 7 個 Chromium 測試在 sandbox 內無法執行）；PR CI run https://github.com/sprangdes/screentrace/actions/runs/41959774613 三個 job 全綠（含 E2E 新增 2 個與上述 7 個測試）。PR：https://github.com/sprangdes/screentrace/pull/73。
+
+## R30 API 狀態的標記判定只留在 viewer
+
+- WP100：Java `ApiUsage` 移除保留／移除標記與 REMOVABLE，只推導呼叫來源；標記判定只由 viewer 的 `deriveApiUsage` 計算，見 [ADR 0121](adr/0121-r30-api-decisions-viewer-only.md)。
+- 驗證：Maven 579（移除 2；571 通過、1 略過，另 OQ-041 的 7 個 Chromium 測試在 sandbox 內無法執行）；viewer 單元測試 141 個（sandbox 內 139 通過，OQ-047 的 2 個 Chromium 測試無法執行）；JS 測試 180 個；PR CI run https://github.com/sprangdes/screentrace/actions/runs/41966943589 三個 job 全綠（含 E2E 與上述 7 個測試）。PR：https://github.com/sprangdes/screentrace/pull/74。
