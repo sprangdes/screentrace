@@ -10,7 +10,15 @@ export interface GroupLink {from:string;to:string;relations:Relation[];points:Po
 export interface GroupedLayout {positions:Map<string,Position>;routes:RoutedRelation[];width:number;height:number;groups:ScreenGroup[];links:GroupLink[];cross:Relation[]}
 
 export const OTHER_GROUP='其他';
-const TITLE=64,GAP=170,ORIGIN=60;
+
+/** The line under an area's title on the zoomed-out map: its first screens' names, so the area says what it is for. */
+export function areaPreview(names:readonly string[],count=3):string{
+ const named=names.filter(name=>name.trim()),shown=named.slice(0,count);
+ return shown.join('、')+(named.length>shown.length?'…':'');
+}
+// TITLE is the band at the top of an area that holds its label: tall enough for the label's two lines at the
+// zoomed-out overview, where the label is scaled back up to stay readable (see .screen-group-label).
+const TITLE=200,GAP=170,ORIGIN=60;
 const order=(a:string,b:string)=>a<b?-1:a>b?1:0;
 
 const segments=(route:string)=>route.split(/[?#]/)[0].split('/').filter(Boolean).map(part=>part.replace(/\.[a-z0-9]+$/i,''));

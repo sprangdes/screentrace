@@ -1,6 +1,6 @@
 import {iconButton,icon} from './shell-ui';
 import {partitionNavigation,flowLayout,roundedPath,commonDestinations} from './overview';
-import {groupedLayout,crossPoints,GroupedLayout} from './groups';
+import {groupedLayout,crossPoints,areaPreview,GroupedLayout} from './groups';
 import {relationTooltip,focusedRelations,FocusRelation,sharedNavigation} from './relations';
 import {Index,Position,fileEntries,searchScreens} from './map';
 import {Payload} from './contracts';
@@ -99,9 +99,12 @@ export function canvas(index:Index,payload:Payload,options:CanvasOptions):Canvas
  let rest:{left:number;top:number}|undefined;
  // Back on the overview a side panel may still be sliding; until the canvas is moved, it stays where the overview was.
  let settling:(CanvasTransform&{target:()=>CanvasTransform})|undefined;
+ // The name and route of a screen pointed at on the zoomed-out map, where the cards are too small to read.
+ const cardTip=element('div',undefined,'card-tip');cardTip.hidden=true;cardTip.setAttribute('aria-hidden','true');
  const keepRest=()=>{if(!focused&&viewport.isConnected){const r=viewport.getBoundingClientRect();rest={left:r.left,top:r.top};}};
  const apply=()=>{
   keepRest();
+  cardTip.hidden=true;
   world.style.transform=`translate(${x}px, ${y}px) scale(${zoom})`;
   // Card and area borders divide by this so they stay one screen pixel at any zoom instead of vanishing when zoomed out.
   world.style.setProperty('--zoom',String(zoom));
@@ -180,7 +183,12 @@ export function canvas(index:Index,payload:Payload,options:CanvasOptions):Canvas
   for(const group of grouped.groups){
    const frame=element('div',undefined,'screen-group');frame.dataset.group=group.key;frame.title=`${group.label}：點一下放大這一區`;
    Object.assign(frame.style,{left:`${group.box.x}px`,top:`${group.box.y}px`,width:`${group.box.width}px`,height:`${group.box.height}px`});
-   frame.append(element('span',group.label,'screen-group-title'));world.append(frame);
+   // The label keeps a readable size however far the map is zoomed out (see .screen-group-label); its second line,
+   // the area's first screens in reading order, is shown only while the cards are too small to read.
+   const names=group.members.filter(id=>positions.has(id)).sort((a,b)=>positions.get(a)!.y-positions.get(b)!.y||positions.get(a)!.x-positions.get(b)!.x).map(id=>index.nodes.get(id)?.name||'');
+   const label=element('div',undefined,'screen-group-label');label.style.setProperty('--label-room',`${group.box.width-40}px`);
+   label.append(element('span',group.label,'screen-group-title'),element('span',areaPreview(names),'screen-group-names'));
+   frame.append(label);world.append(frame);
    // Links between areas are only shown for the area being pointed at.
    const showLinks=(on:boolean)=>{world.querySelectorAll<HTMLElement|SVGElement>('.group-link,.group-link-count').forEach(node=>node.classList.toggle('is-shown',on&&(node.dataset.from===group.key||node.dataset.to===group.key)));};
    frame.addEventListener('mouseenter',()=>showLinks(true));frame.addEventListener('mouseleave',()=>showLinks(false));
@@ -203,9 +211,19 @@ export function canvas(index:Index,payload:Payload,options:CanvasOptions):Canvas
  }
  svg.append(raised);world.append(svg);
  const cards=new Map<string,HTMLButtonElement>();
+ /** Shown below the card (above it near the bottom edge), only while the map is zoomed out and no screen is open. */
+ const showCardTip=(card:HTMLElement,name:string,route:string)=>{
+  if(focused||viewport.dataset.semanticZoom!=='compact'){cardTip.hidden=true;return;}
+  cardTip.replaceChildren(element('strong',name),element('span',route));
+  const r=card.getBoundingClientRect(),v=viewport.getBoundingClientRect(),half=Math.min(150,v.width/2);
+  const below=r.bottom-v.top+72<v.height;
+  cardTip.style.left=`${Math.min(v.width-half,Math.max(half,r.left-v.left+r.width/2))}px`;
+  cardTip.style.top=`${below?r.bottom-v.top+6:r.top-v.top-6}px`;cardTip.dataset.side=below?'below':'above';
+  cardTip.hidden=false;
+ };
  for(const screen of index.screens){
   const p=positions.get(screen.id)!,card=element('button',undefined,'screen-card'),route=index.routes.get(screen.id)?.[0]||text.noUrl;
-  card.dataset.screen=screen.id;card.style.left=`${p.x}px`;card.style.top=`${p.y}px`;card.title=`${screen.name}\n${route}`;
+  card.dataset.screen=screen.id;card.style.left=`${p.x}px`;card.style.top=`${p.y}px`;
   const thumb=payload.preview.screens?.find(s=>s.graphScreenId===screen.id)?.thumbnail;
   if(thumb?.startsWith('data:image/')){const img=element('img',undefined,'card-preview');img.src=thumb;img.alt=screen.name;if(index.screens.length>150){img.loading='lazy';img.decoding='async';}card.append(img);}
   else{const missing=element('div',undefined,'card-preview missing-preview');missing.append(element('span',text.noPreview));card.append(missing);}
@@ -218,6 +236,8 @@ export function canvas(index:Index,payload:Payload,options:CanvasOptions):Canvas
   if(entries){const badge=icon('menu');badge.classList.add('shared-entry');badge.setAttribute('role','img');const label=`可從 ${entries} 個畫面的頁首／頁尾連結進入`;badge.setAttribute('aria-label',label);const title=document.createElementNS('http://www.w3.org/2000/svg','title');title.textContent=label;badge.append(title);badge.dataset.count=String(entries);card.append(badge);}
   const linked=()=>{if(!focused)linkedFor(screen.id);};
   card.onmouseenter=card.onfocus=linked;card.onmouseleave=card.onblur=()=>settle();
+  const tip=()=>showCardTip(card,screen.name,route),untip=()=>{cardTip.hidden=true;};
+  card.addEventListener('mouseenter',tip);card.addEventListener('focus',tip);card.addEventListener('mouseleave',untip);card.addEventListener('blur',untip);
   card.addEventListener('pointerenter',()=>{if(!frameId)options.onIntent?.(screen.id);});
   // One click shows where this screen leads and who leads here; a second click (a double click) opens it.
   card.onclick=event=>{if(event.detail===0)return;event.stopPropagation();pin(screen.id);};
@@ -505,7 +525,7 @@ export function canvas(index:Index,payload:Payload,options:CanvasOptions):Canvas
   if(zooming){zoomAt(Math.exp(-Math.max(-50,Math.min(50,event.deltaY*unit))*0.01),event.clientX,event.clientY);return;}
   x-=event.deltaX*unit;y-=event.deltaY*unit;viewport.dataset.fitted='true';apply();
  },{passive:false});
- viewport.append(world,lines,layer,tips,controls);
+ viewport.append(world,lines,layer,tips,cardTip,controls);
  if(options.toolbar){const top=element('div',undefined,'canvas-top');top.append(options.toolbar);viewport.append(top);}
  update(state);apply();
  let observed:{width:number;height:number}|undefined;
