@@ -223,4 +223,4 @@
 ## R28 API 頁與角色頁的圖形摘要
 
 - WP98：API 頁加上狀態分布條，角色頁加上觸及條、條件標記與每一步的畫面數直條，見 [ADR 0119](adr/0119-r28-visual-summaries.md)。
-- 驗證：待 PR CI 完成後補入。
+- 驗證：viewer 單元測試 139 個（新增 2；sandbox 內 137 通過，OQ-047 的 2 個 Chromium 測試無法執行）；JS 測試 180 個；Maven 581（573 通過、1 略過，另 OQ-041 的 7 個 Chromium 測試在 sandbox 內無法執行）；PR CI run https://github.com/sprangdes/screentrace/actions/runs/41947147871 三個 job 全綠（含 E2E 新增 2 個與上述 7 個測試）。PR：https://github.com/sprangdes/screentrace/pull/72。
