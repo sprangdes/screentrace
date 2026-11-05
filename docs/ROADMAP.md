@@ -145,7 +145,7 @@
 - 以 `sprangdes/reservio`（Spring Boot＋React）對照原始碼實測：路由與 API 大致正確，但依身分渲染的畫面被合成一張、共用外框未依身分過濾、登入後導向未解析，另有分派表呼叫、處理器 prop 分支、字面路徑優先、外部呼叫端點等缺口。指示見 ADJUSTMENT_R18_ROLES.md（WP78–WP85，三個停止點；R18-A／B／C 已決定）。
 
 - 第一階段（WP78 → WP79 → WP80）：WP78、WP79、WP80 已於第三次驗收全部通過；需求方授權進入第二階段 WP81→WP82。
-- OQ-035 A、OQ-036 A、OQ-037 窄版 B 已實作；R18-C 簡化顯示與原式並列。OQ-036 狀態值可達性列後續，R18-B 已依第三次驗收決定，只加附註、不改 D4／D5。
+- OQ-035 A、OQ-036 A、OQ-037 窄版 B 已實作；R18-C 簡化顯示與原式並列。OQ-036 狀態值可達性當時列為後續，已於下方「OQ-036 狀態值可達性」完成（[ADR 0105](adr/0105-oq036-state-value-reachability.md)）。R18-B 已依第三次驗收決定，只加附註、不改 D4／D5。
 - 詳見 R18 報告、[ADR 0096](adr/0096-r18-audience-facts.md)、[ADR 0097](adr/0097-r18-audience-variants.md)、[ADR 0098](adr/0098-r18-returned-destinations-and-external-login.md)、[ADR 0099](adr/0099-r18-review-corrections.md)。
 
 - 第二次驗收補正：修復報告暫存連結的 CI 失敗；依同 Context／同 hook／唯一 Provider 與導向前寫入檢查過濾所有目的變體，修正共用元件投影鍵；固定路由 pathname／字面 includes 求值，完整原式保留。callback 例外依需求方決定保留並逐筆顯示條件，獨立 callback 變體列 OQ-038 OPEN 後續候選。詳見 [ADR 0100](adr/0100-r18-context-navigation-and-route-facts.md) 與 R18 報告的實際數字及 PR CI run。WP79／WP80 已於第三次驗收通過。
