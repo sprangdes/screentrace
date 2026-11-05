@@ -1,7 +1,7 @@
 import {Index} from './map';
 import {element,text} from './text';
 import {PersonaView,reachLabel,reachHelp,reachSummary,personaDescription,factLabel,flowGroups,reachShares,reachCountsLabel,stepCounts} from './personas';
-import {proportionBar} from './proportion';
+import {proportionBar,sharePercent} from './proportion';
 
 export interface PersonaOverlap {key:string;label:string;screens:string[]}
 /**
@@ -25,7 +25,18 @@ export function personaOverlap(index:Index,views:PersonaView[],view:PersonaView)
 }
 
 /** A group's share of the persona's screens as a bar length, rounded to a whole percent and never below 1. */
-export const overlapPercent=(count:number,total:number)=>total>0&&count>0?Math.max(1,Math.round(count/total*100)):0;
+export const overlapPercent=sharePercent;
+
+/**
+ * The screens any persona reaches, for the coverage table: grouped by the first persona (in persona order) that
+ * reaches them, then by that persona's step, then by name, so each persona's own screens sit together.
+ */
+export function coverageScreens(index:Index,views:PersonaView[]):string[]{
+ const name=(id:string)=>index.nodes.get(id)?.name||id,first=new Map<string,number>();
+ for(const screen of index.screens){const at=views.findIndex(view=>view.depth.has(screen.id));if(at>=0)first.set(screen.id,at);}
+ const step=(id:string)=>views[first.get(id)!].depth.get(id)!;
+ return [...first.keys()].sort((a,b)=>first.get(a)!-first.get(b)!||step(a)-step(b)||name(a).localeCompare(name(b),'zh-Hant')||(a<b?-1:a>b?1:0));
+}
 
 /** What the page keeps while the report is open: leaving for a screen and coming back finds the same persona. */
 const memory={selected:undefined as string|undefined};
@@ -49,6 +60,7 @@ export function personaPage(index:Index,views:PersonaView[],options:PersonaPageO
  const select=(id:string,focus=false)=>{
   selected=id;memory.selected=id;
   for(const row of list.querySelectorAll<HTMLElement>('.persona-row')){const on=row.dataset.personaRow===id;row.setAttribute('aria-selected',String(on));row.tabIndex=on?0:-1;if(on&&focus)row.focus();}
+  for(const cell of root.querySelectorAll<HTMLElement>('.persona-coverage [data-coverage-persona]'))cell.classList.toggle('is-selected',cell.dataset.coveragePersona===id);
   renderDetail();
  };
  for(const view of views){
@@ -57,6 +69,30 @@ export function personaPage(index:Index,views:PersonaView[],options:PersonaPageO
   row.append(label,element('span',reachSummary(view),'api-screen-count'));
   row.onclick=()=>select(view.persona.id);list.append(row);
  }
+ /** Every reached screen against every persona: a dot per cell; a reached cell opens the screen as that persona. */
+ const coverage=()=>{
+  const box=element('section',undefined,'persona-coverage');box.dataset.personaSection='coverage';
+  box.append(element('h2','畫面 × 角色','persona-coverage-title'));
+  const legend=element('p',undefined,'persona-coverage-legend');
+  for(const reach of ['REACHABLE','POSSIBLE','UNREACHED'] as const){const key=element('span',reach==='UNREACHED'?`${reachLabel.UNREACHED}／${reachLabel.EXCLUDED}`:reachLabel[reach],'persona-coverage-key');key.dataset.reach=reach;legend.append(key);}
+  const table=element('table',undefined,'persona-coverage-table'),head=element('tr');
+  head.append(element('th',undefined));
+  for(const view of views){const cell=element('th',undefined),button=element('button',view.persona.name,'persona-coverage-persona');cell.scope='col';button.type='button';button.dataset.coveragePersona=view.persona.id;button.title=view.persona.name;button.onclick=()=>select(view.persona.id);cell.append(button);head.append(cell);}
+  const thead=element('thead');thead.append(head);const tbody=element('tbody');
+  for(const id of coverageScreens(index,views)){
+   const row=element('tr'),label=element('th',name(id));row.dataset.coverageScreen=id;label.scope='row';label.title=route(id);row.append(label);
+   for(const view of views){
+    const reach=view.reach.get(id)!,cell=element('td'),words=`${view.persona.name}：${reachLabel[reach]}`;cell.dataset.coveragePersona=view.persona.id;
+    if(reach==='REACHABLE'||reach==='POSSIBLE'){const dot=element('button',undefined,'persona-coverage-dot');dot.type='button';dot.dataset.reach=reach;dot.title=words;dot.setAttribute('aria-label',`${name(id)}，${words}`);dot.onclick=()=>options.onOpen(id,view.persona.id);cell.append(dot);}
+    else{const dot=element('span',undefined,'persona-coverage-dot');dot.dataset.reach=reach;dot.title=words;dot.setAttribute('role','img');dot.setAttribute('aria-label',words);cell.append(dot);}
+    row.append(cell);
+   }
+   tbody.append(row);
+  }
+  table.append(thead,tbody);box.append(legend,table);return box;
+ };
+ const coverageBox=views.length>1&&views.some(view=>view.depth.size)?coverage():undefined;
+ if(coverageBox)master.append(coverageBox);
  list.addEventListener('keydown',event=>{
   const ids=views.map(v=>v.persona.id),at=ids.indexOf(selected||'');
   const target=event.key==='ArrowDown'?ids[Math.min(ids.length-1,at+1)]:event.key==='ArrowUp'?ids[Math.max(0,at-1)]:event.key==='Home'?ids[0]:event.key==='End'?ids.at(-1):undefined;

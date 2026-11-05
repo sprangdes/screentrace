@@ -5,7 +5,7 @@ import {callerKind,Caller} from './usage';
 import {Index} from './map';
 import {Node,Evidence} from './contracts';
 import {element} from './text';
-import {proportionBar} from './proportion';
+import {proportionBar,sharePercent} from './proportion';
 
 /** The three statuses shown to people: inferred usage and system entry points both count as in use. */
 export type ApiStatus='IN_USE'|'UNREFERENCED'|'REMOVABLE';
@@ -79,6 +79,23 @@ export function urlPrefix(path:string):string{
  for(const part of parts){kept.push(part);if(part!=='api'&&!/^v\d+$/.test(part))break;}
  return '/'+kept.join('/');
 }
+export interface PathPart {text:string;param:boolean}
+/** A path split into its fixed text and its `{name}` parameters, in order; joined back they are the path. */
+export function pathParts(path:string):PathPart[]{
+ return path.split(/(\{[^{}/]+\})/).filter(Boolean).map(text=>({text,param:/^\{[^{}/]+\}$/.test(text)}));
+}
+/** A path as code with each parameter marked, so the fixed parts and the values a caller fills in read apart. */
+export function pathCode(path:string,className:string):HTMLElement{
+ const code=element('code',undefined,className);
+ for(const part of pathParts(path))code.append(part.param?element('span',part.text,'api-path-param'):document.createTextNode(part.text));
+ return code;
+}
+/** How many screens call this API next to the API with the most callers, as a short bar beside the count. */
+const callerBar=(screens:number,most:number)=>{
+ const bar=element('span',undefined,'api-caller-bar');bar.setAttribute('aria-hidden','true');
+ const width=sharePercent(screens,most);if(width){const fill=element('span',undefined,'api-caller-fill');fill.style.width=`${width}%`;bar.append(fill);}
+ return bar;
+};
 const methodBadge=(method:string)=>{const badge=element('span',method==='ANY'?'任何':method,'method-badge');badge.dataset.method=method;return badge;};
 const statusTag=(status:ApiStatus)=>{const tag=element('span',apiStatusLabels[status],'api-status');tag.dataset.apiStatus=status;return tag;};
 /** All APIs at a glance: one bar split by status, with the counts in words underneath. */
@@ -99,7 +116,7 @@ export function apiPage(index:Index,state:ReviewState,options:ApiPageOptions):HT
   const searchable=[method,path,...(external.length?['外部呼叫（Webhook）']:[]),node.attributes.aliases||'',node.attributes.logicalPath||'',...handlers.map(h=>h.name),apiStatusLabels[status],...callers.map(c=>`${index.nodes.get(c.screenId)?.name||''} ${c.componentId?componentLabelsForScreen(index,c.screenId).get(c.componentId)||'':''}`)].join(' ').toLowerCase();
   return {node,method,path,handlers,callers,external,screens:new Set(callers.map(c=>c.screenId)).size,status,note:systemEntry(node,index),searchable,controller:controllerOf(handlers),prefix:urlPrefix(path)};
  });
- const byId=new Map(records.map(r=>[r.node.id,r]));
+ const byId=new Map(records.map(r=>[r.node.id,r])),mostScreens=Math.max(0,...records.map(r=>r.screens));
  // Arriving from a screen for one API: show it whatever the list was narrowed to before.
  if(options.selected&&byId.has(options.selected)){memory.filter='ALL';memory.query='';}
  let selected=options.selected&&byId.has(options.selected)?options.selected:undefined;
@@ -172,10 +189,10 @@ export function apiPage(index:Index,state:ReviewState,options:ApiPageOptions):HT
     const row=element('button',undefined,'api-row');row.type='button';row.setAttribute('role','option');
     row.dataset.apiRow=record.node.id;row.dataset.apiStatus=record.status;row.title=`${record.method} ${record.path}`;
     const meta=element('span',undefined,'api-row-meta');
-    meta.append(element('span',record.screens?`${record.screens} 個畫面`:'沒有呼叫來源','api-screen-count'));
+    meta.append(callerBar(record.screens,mostScreens),element('span',record.screens?`${record.screens} 個畫面`:'沒有呼叫來源','api-screen-count'));
     if(record.status!=='IN_USE')meta.append(statusTag(record.status));
     if(record.external.length)meta.append(element('span','外部呼叫（Webhook）','api-external-call'));
-    row.append(methodBadge(record.method),element('code',record.path,'api-path'),meta);
+    row.append(methodBadge(record.method),pathCode(record.path,'api-path'),meta);
     row.onclick=()=>select(record.node.id);
     body.append(row);
    }
@@ -221,7 +238,7 @@ export function apiPage(index:Index,state:ReviewState,options:ApiPageOptions):HT
    node.onclick=()=>options.onCaller(item.screenId);from.items.append(node);
   }
   more(from.items,screens.length-CHAIN_LIMIT,'畫面');
-  const api=stage('api','API'),self=element('span',undefined,'api-chain-node is-self');self.dataset.apiStatus=record.status;self.append(methodBadge(record.method),element('code',record.path,'api-chain-name'));api.items.append(self);
+  const api=stage('api','API'),self=element('span',undefined,'api-chain-node is-self');self.dataset.apiStatus=record.status;self.append(methodBadge(record.method),pathCode(record.path,'api-chain-name'));api.items.append(self);
   const to=stage('handlers',`處理程式 ${handlerCount}`);
   if(!handlerCount)to.items.append(element('span',NO_HANDLER,'api-chain-node is-empty'));
   for(const handler of record.handlers.slice(0,CHAIN_LIMIT)){const node=element('span',undefined,'api-chain-node');node.append(element('span',handler.name,'api-chain-name'));to.items.append(node);}
@@ -308,7 +325,7 @@ export function apiPage(index:Index,state:ReviewState,options:ApiPageOptions):HT
   if(!record){detail.append(element('p','選一個 API 查看詳情','empty-list'));return;}
   const inner=element('div',undefined,'api-detail-inner');inner.dataset.apiDetail=record.node.id;
   if(record.node.attributes.externalLogin==='true')inner.append(element('p',`外部登入：${record.node.attributes.externalLoginReturns?`完成後回到 ${record.node.attributes.externalLoginReturns.split('\u001f').join('、')}`:'完成後的導回路徑無法確定'}`,'notice'));
-  const title=element('div',undefined,'api-detail-title');title.append(methodBadge(record.method),element('code',record.path,'api-detail-path'),statusTag(record.status));
+  const title=element('div',undefined,'api-detail-title');title.append(methodBadge(record.method),pathCode(record.path,'api-detail-path'),statusTag(record.status));
   const why=element('p',reason(record),record.note?'api-reason api-note':'api-reason');why.dataset.apiStatus=record.status;
   inner.append(title,why,renderChain(record));
   if(record.external.length){const box=section('外部呼叫（Webhook）');box.dataset.apiSection='external-call';box.append(element('p','公開存取與 CSRF 例外設定均有來源證據；狀態維持未被使用，不授權移除。'));for(const proof of record.external){const value=JSON.parse(proof.detail!),line=element('p');line.append(element('code',value.kind+' '+value.pattern),element('code',`${proof.source!.file}:${proof.source!.line}`,'api-source'));box.append(line);}inner.append(box);}

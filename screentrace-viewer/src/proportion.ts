@@ -16,3 +16,6 @@ export function proportionBar(shares:Share[],label:string,className:string,decor
  }
  return bar;
 }
+
+/** A count's share of a total as a bar length: a whole percent, never below 1 for a count that is there. */
+export const sharePercent=(count:number,total:number)=>total>0&&count>0?Math.max(1,Math.round(count/total*100)):0;
