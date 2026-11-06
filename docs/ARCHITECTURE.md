@@ -193,7 +193,7 @@ viewer 只讀 schema 2.4 的 `application.personas`，不重新判定。每個�
 
 ### R36：放大畫面的標籤對齊與預覽比例
 
-有標籤時 `drawLines` 先為每一列建立同寬的 `.focus-bundle`（填滿留白、留 `LABEL_GAP`），所有的線從標籤內側邊緣起訖；`box()` 讓預覽框高度不超過寬度 ÷ `SCREEN_RATIO`（1440／900），多出的高度留在上下。見 [ADR 0127](adr/0127-r36-focus-label-layout.md)。
+有標籤時 `drawLines` 先為每一列建立同寬的 `.focus-bundle`（填滿留白、留 `LABEL_GAP`），所有的線從標籤內側邊緣起訖；每側留白由 `margins()` 依該側最寬標籤的文字量測決定（最寬 `LABEL_SIDE_MAX` 140px，沒有線的一側 56px）；`box()` 讓預覽框高度不超過寬度 ÷ `SCREEN_RATIO`（1440／900），多出的高度留在上下。見 [ADR 0127](adr/0127-r36-focus-label-layout.md)。
 
 ### R33：縮小總覽的區名與畫面提示
 

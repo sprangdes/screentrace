@@ -39,12 +39,12 @@ export interface CanvasView {
 }
 
 const CARD={width:250,height:220},MOTION_MS=450,DENSE_SCREENS=20,BOX_MARGIN={side:56,top:48,bottom:56};
-/** The side margin of the preview box when some line around it stands for a whole area and carries its label. */
-const BUNDLE_SIDE=176;
+/** When some line around the preview stands for a whole area, each side with lines widens to fit its labels, up to this; a longer screen name wraps onto a second line, a longer area name ends in an ellipsis. */
+const LABEL_SIDE_MAX=140;
 /** The preview box is never taller than a 1440×900 desktop screen for its width; any spare height is left above and below. */
 const SCREEN_RATIO=1440/900;
 /** Room kept between a margin label and the preview box for the line and its arrow. */
-const LABEL_GAP=28;
+const LABEL_GAP=20;
 /** The preview fades in over this part of the zoom; if it is still loading, it waits at most READY_MS more. */
 const REVEAL={from:0.3,span:0.45},LEAVE_SPAN=0.3,READY_MS=600,FADE_MS=180;
 /** Same curve as the side panels' width transition, so the canvas and the panels move as one. */
@@ -317,9 +317,9 @@ export function canvas(index:Index,payload:Payload,options:CanvasOptions):Canvas
  lines.classList.add('focus-lines');lines.innerHTML=`<defs>${focusMarkers}</defs>`;
  lines.style.display='none';
  const box=(id=focused)=>{
-  const w=viewport.clientWidth,h=viewport.clientHeight,side=labelled(id)?BUNDLE_SIDE:BOX_MARGIN.side,width=Math.max(1,w-2*side),room=Math.max(1,h-BOX_MARGIN.top-BOX_MARGIN.bottom);
+  const w=viewport.clientWidth,h=viewport.clientHeight,side=margins(id),width=Math.max(1,w-side.left-side.right),room=Math.max(1,h-BOX_MARGIN.top-BOX_MARGIN.bottom);
   const height=Math.max(1,Math.min(room,Math.round(width/SCREEN_RATIO))),top=BOX_MARGIN.top+Math.round((room-height)/2);
-  return {left:side,top,right:w-side,bottom:top+height,width,height};
+  return {left:side.left,top,right:w-side.right,bottom:top+height,width,height};
  };
  const transformFor=(id:string):CanvasTransform=>{const p=positions.get(id)!,b=box(id),z=Math.min(b.width/CARD.width,b.height/CARD.height);return {zoom:z,x:b.left+b.width/2-(p.x+CARD.width/2)*z,y:b.top+b.height/2-(p.y+CARD.height/2)*z};};
  const placeLayer=(host:HTMLElement=layer,id=focused)=>{const b=box(id);Object.assign(host.style,{left:`${b.left}px`,top:`${b.top}px`,width:`${b.width}px`,height:`${b.height}px`});};
@@ -348,6 +348,20 @@ export function canvas(index:Index,payload:Payload,options:CanvasOptions):Canvas
   bundleCache.set(id,result);return result;
  };
  const labelled=(id:string|undefined)=>{if(!id)return false;const b=focusBundles(id);return [...b.known,...b.incoming].some(bundle=>bundle.others.length>1);};
+ /** What a row's label says: the area, or the one screen's name. */
+ const rowName=(bundle:Bundle)=>bundle.others.length>1?bundle.label:(index.nodes.get(bundle.others[0])?.name||bundle.others[0]);
+ // A side's labels share the width its widest label needs on one line (measured from the text, so the box is known
+ // before anything is drawn), up to LABEL_SIDE_MAX; a side without lines keeps the usual margin.
+ let measure:CanvasRenderingContext2D|null|undefined;
+ const textWidth=(value:string)=>{measure??=document.createElement('canvas').getContext('2d');if(!measure)return value.length*13;measure.font=`600 13px ${getComputedStyle(viewport).fontFamily}`;return measure.measureText(value).width;};
+ const labelWidth=(bundle:Bundle)=>{const merged=bundle.others.length>1;return Math.ceil(textWidth(rowName(bundle))+(merged?10+6+Math.max(18,textWidth(String(bundle.others.length))+12)+3:20)+2+2);};
+ const marginCache=new Map<string,{left:number;right:number}>();
+ const margins=(id:string|undefined)=>{
+  const plain={left:BOX_MARGIN.side,right:BOX_MARGIN.side};if(!id||!labelled(id))return plain;
+  const cached=marginCache.get(id);if(cached)return cached;
+  const b=focusBundles(id),side=(list:Bundle[])=>list.length?Math.max(BOX_MARGIN.side,Math.min(LABEL_SIDE_MAX,8+Math.max(...list.map(labelWidth))+LABEL_GAP)):BOX_MARGIN.side;
+  const result={left:side(b.incoming),right:side(b.known)};marginCache.set(id,result);return result;
+ };
  // Shared navigation (header/footer links) is summarised as one dashed line each way above the preview box;
  // its label opens the list of screens behind it.
  const drawShared=(id:string,b:ReturnType<typeof box>)=>{
@@ -398,12 +412,12 @@ export function canvas(index:Index,payload:Payload,options:CanvasOptions):Canvas
   const pills=new Map<Row,HTMLElement>();
   if(wide){
    for(const row of rows){
-    const arriving=row.kind==='incoming',merged=row.bundle.others.length>1,name=merged?row.bundle.label:(index.nodes.get(row.bundle.others[0])?.name||row.bundle.others[0]);
+    const arriving=row.kind==='incoming',merged=row.bundle.others.length>1,name=rowName(row.bundle);
     const pill=element('button',undefined,`focus-bundle${merged?'':' is-screen'} ${arriving?'is-in':'is-out'}`);pill.append(element('span',name,'focus-bundle-name'));
     if(merged)pill.append(element('span',String(row.bundle.others.length),'focus-bundle-count'));
     pill.title=name;tips.append(pill);pills.set(row,pill);
    }
-   for(const [row,pill] of pills)pill.style.width=`${Math.max(64,(row.kind==='incoming'?b.left:w-b.right)-8-LABEL_GAP)}px`;
+   for(const [row,pill] of pills)pill.style.width=`${Math.max(24,(row.kind==='incoming'?b.left:w-b.right)-8-LABEL_GAP)}px`;
   }
   const outer=(row:Row)=>{const pill=pills.get(row),pw=pill?(pill.offsetWidth||parseFloat(pill.style.width)||120):-2;return row.kind==='incoming'?8+pw:w-8-pw;};
   // One screen: one line per flow, side by side.

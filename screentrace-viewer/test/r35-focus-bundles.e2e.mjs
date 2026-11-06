@@ -35,7 +35,7 @@ test('R35 around an open screen, lines arrive on the left one row per area, and 
   const named=(await page.locator('.focus-bundle[data-kind="incoming-screen"]').evaluateAll(n=>n.map(x=>x.dataset.screen))).sort();
   assert.deepEqual(named,['s10','s4'],'a single screen keeps its own line, labelled with its name');
   const box=await layerBox(page);
-  assert.ok(box.left>=170,'the margins widen to hold the labels');
+  assert.ok(box.left>56&&box.left<=140,'the left margin widens to hold its labels, up to 140px');
   const arriving=await page.locator('.focus-line[data-kind="incoming"],.focus-line[data-kind="incoming-bundle"]').evaluateAll(lines=>lines.map(l=>{const t=l.getTotalLength(),a=l.getPointAtLength(0),b=l.getPointAtLength(t);return {a:{x:a.x,y:a.y},b:{x:b.x,y:b.y}};}));
   assert.equal(arriving.length,3,'three rows: /shop, /admin and 其他');
   for(const line of arriving){assert.ok(line.a.x<line.b.x&&line.b.x<=box.left+1&&Math.abs(line.a.y-line.b.y)<0.5,'each row runs straight into the left edge');}
@@ -89,6 +89,20 @@ test('R36 the open screen keeps a desktop screen\'s proportions even when the ma
   const {page,errors}=await open(browser);await focus(page,'s5');
   const size=await page.locator('.focus-layer:not(.is-leaving)').evaluate(l=>{const r=l.getBoundingClientRect();return {w:r.width,h:r.height};});
   assert.ok(size.w/size.h>=1440/900-0.01,`the preview is no taller than 1440×900 for its width (${size.w}×${size.h})`);
+  assert.deepEqual(errors,[]);
+ }finally{await browser.close();}
+});
+
+test('R36a each side is only as wide as its labels need, so the open screen stays as large as it can',async()=>{
+ const browser=await chromium.launch();try{
+  const {page,errors}=await open(browser);await focus(page,'s5');
+  const box=await layerBox(page),width=await page.locator('.canvas').evaluate(c=>c.getBoundingClientRect().width);
+  const labels=await page.locator('.focus-bundle').evaluateAll(n=>{const c=document.querySelector('.canvas').getBoundingClientRect();return n.map(x=>{const r=x.getBoundingClientRect(),name=x.querySelector('.focus-bundle-name');return {kind:x.dataset.kind,left:r.left-c.left,right:r.right-c.left,clipped:name.scrollWidth>name.clientWidth+1};});});
+  const left=labels.filter(l=>l.kind.startsWith('incoming')),right=labels.filter(l=>l.kind.startsWith('known'));
+  assert.ok(left.every(l=>!l.clipped)&&right.every(l=>!l.clipped),'short names fit their labels whole');
+  assert.ok(Math.abs(box.left-(left[0].right+20))<1.5,'the box starts 20px past the left labels');
+  assert.ok(Math.abs(width-box.right-(width-right[0].left+20))<1.5,'and ends 20px before the right labels');
+  assert.ok(box.left<130&&width-box.right<130,'short labels leave narrower margins than the 140px cap');
   assert.deepEqual(errors,[]);
  }finally{await browser.close();}
 });
