@@ -39,6 +39,8 @@ export interface CanvasView {
 }
 
 const CARD={width:250,height:220},MOTION_MS=450,DENSE_SCREENS=20,BOX_MARGIN={side:56,top:48,bottom:56};
+/** The side margin of the preview box when some line around it stands for a whole area and carries its label. */
+const BUNDLE_SIDE=176;
 /** The preview fades in over this part of the zoom; if it is still loading, it waits at most READY_MS more. */
 const REVEAL={from:0.3,span:0.45},LEAVE_SPAN=0.3,READY_MS=600,FADE_MS=180;
 /** Same curve as the side panels' width transition, so the canvas and the panels move as one. */
@@ -310,10 +312,34 @@ export function canvas(index:Index,payload:Payload,options:CanvasOptions):Canvas
  const lines=document.createElementNS(svgNs,'svg') as SVGSVGElement,tips=element('div',undefined,'focus-tips');
  lines.classList.add('focus-lines');lines.innerHTML=`<defs>${focusMarkers}</defs>`;
  lines.style.display='none';
- const box=()=>{const w=viewport.clientWidth,h=viewport.clientHeight;return {left:BOX_MARGIN.side,top:BOX_MARGIN.top,right:w-BOX_MARGIN.side,bottom:h-BOX_MARGIN.bottom,width:Math.max(1,w-2*BOX_MARGIN.side),height:Math.max(1,h-BOX_MARGIN.top-BOX_MARGIN.bottom)};};
- const transformFor=(id:string):CanvasTransform=>{const p=positions.get(id)!,b=box(),z=Math.min(b.width/CARD.width,b.height/CARD.height);return {zoom:z,x:b.left+b.width/2-(p.x+CARD.width/2)*z,y:b.top+b.height/2-(p.y+CARD.height/2)*z};};
- const placeLayer=(host:HTMLElement=layer)=>{const b=box();Object.assign(host.style,{left:`${b.left}px`,top:`${b.top}px`,width:`${b.width}px`,height:`${b.height}px`});};
+ const box=(id=focused)=>{const w=viewport.clientWidth,h=viewport.clientHeight,side=labelled(id)?BUNDLE_SIDE:BOX_MARGIN.side;return {left:side,top:BOX_MARGIN.top,right:w-side,bottom:h-BOX_MARGIN.bottom,width:Math.max(1,w-2*side),height:Math.max(1,h-BOX_MARGIN.top-BOX_MARGIN.bottom)};};
+ const transformFor=(id:string):CanvasTransform=>{const p=positions.get(id)!,b=box(id),z=Math.min(b.width/CARD.width,b.height/CARD.height);return {zoom:z,x:b.left+b.width/2-(p.x+CARD.width/2)*z,y:b.top+b.height/2-(p.y+CARD.height/2)*z};};
+ const placeLayer=(host:HTMLElement=layer,id=focused)=>{const b=box(id);Object.assign(host.style,{left:`${b.left}px`,top:`${b.top}px`,width:`${b.width}px`,height:`${b.height}px`});};
  const center=(id:string)=>{const p=positions.get(id)!;return {x:p.x+CARD.width/2,y:p.y+CARD.height/2};};
+ // Around an open screen, lines arrive on the left and leave on the right, one row per area of the map (per screen
+ // when the map has no areas), in the order those screens sit on the map from top to bottom. An area with several
+ // screens is one line whose label names the area and its count, and opens the list of its screens.
+ type Bundle={key:string;label:string;relations:FocusRelation[];others:string[]};
+ const areaOf=new Map<string,{key:string;label:string}>();
+ if(grouped)for(const g of grouped.groups)for(const member of g.members)areaOf.set(member,{key:g.key,label:g.label.split(' · ')[0]});
+ const bundleCache=new Map<string,{known:Bundle[];incoming:Bundle[]}>();
+ const focusBundles=(id:string)=>{
+  const cached=bundleCache.get(id);if(cached)return cached;
+  const gather=(items:{relation:FocusRelation;other:string}[])=>{
+   const map=new Map<string,Bundle>();
+   for(const {relation,other} of items){
+    const area=areaOf.get(other),key=area?`area:${area.key}`:`screen:${other}`;
+    const bundle=map.get(key)??map.set(key,{key,label:area?.label??(index.nodes.get(other)?.name||other),relations:[],others:[]}).get(key)!;
+    bundle.relations.push(relation);if(!bundle.others.includes(other))bundle.others.push(other);
+   }
+   const middle=(bundle:Bundle)=>{const points=bundle.others.map(center);return {x:points.reduce((s,p)=>s+p.x,0)/points.length,y:points.reduce((s,p)=>s+p.y,0)/points.length};};
+   return [...map.values()].map(bundle=>({bundle,at:middle(bundle)})).sort((a,b)=>a.at.y-b.at.y||a.at.x-b.at.x||(a.bundle.key<b.bundle.key?-1:a.bundle.key>b.bundle.key?1:0)).map(item=>item.bundle);
+  };
+  const result={known:gather(focusLines(index,id).filter(r=>!r.unresolved&&r.to!==id).map(relation=>({relation,other:relation.to}))),
+   incoming:gather(partitionNavigation(index).flows.filter(r=>r.to===id&&r.from!==id).map(relation=>({relation,other:relation.from})))};
+  bundleCache.set(id,result);return result;
+ };
+ const labelled=(id:string|undefined)=>{if(!id)return false;const b=focusBundles(id);return [...b.known,...b.incoming].some(bundle=>bundle.others.length>1);};
  // Shared navigation (header/footer links) is summarised as one dashed line each way above the preview box;
  // its label opens the list of screens behind it.
  const drawShared=(id:string,b:ReturnType<typeof box>)=>{
@@ -347,7 +373,7 @@ export function canvas(index:Index,payload:Payload,options:CanvasOptions):Canvas
  const lightLines=(component:string|undefined)=>{for(const {group,triggers} of triggerLines)group.classList.toggle('is-lit',!!component&&triggers.includes(component));};
  const drawLines=(id:string)=>{
   lines.querySelectorAll('g').forEach(g=>g.remove());tips.replaceChildren();triggerLines=[];
-  const b=box(),cx=b.left+b.width/2,cy=b.top+b.height/2,w=viewport.clientWidth,h=viewport.clientHeight,from=center(id);
+  const b=box(id),w=viewport.clientWidth,h=viewport.clientHeight;
   lines.setAttribute('width',String(w));lines.setAttribute('height',String(h));
   // Lines leave toward each destination and arrive from each source, in the directions the overview draws them.
   const relations=focusLines(index,id),known=relations.filter(r=>!r.unresolved&&r.to!==id),loops=relations.filter(r=>r.to===id),stubs=relations.filter(r=>r.unresolved);
@@ -355,21 +381,21 @@ export function canvas(index:Index,payload:Payload,options:CanvasOptions):Canvas
   type Kind='known'|'incoming'|'loop'|'unresolved';
   type Segment={relation:FocusRelation;sx:number;sy:number;ex:number;ey:number;d?:string;kind:Kind};
   const segments:Segment[]=[];
-  const rays=[...known.map(relation=>({relation,other:relation.to,kind:'known' as Kind})),...incoming.map(relation=>({relation,other:relation.from,kind:'incoming' as Kind}))]
-   .map(ray=>{const to=center(ray.other),dx=to.x-from.x,dy=to.y-from.y,length=Math.hypot(dx,dy)||1;return {...ray,ux:dx/length,uy:dy/length,angle:Math.atan2(dy,dx)};})
-   .sort((a,b)=>a.angle-b.angle||(a.other<b.other?-1:a.other>b.other?1:0)||(a.kind<b.kind?-1:a.kind>b.kind?1:0));
-  const groups:(typeof rays)[]=[];for(const ray of rays){const last=groups.at(-1);if(last&&ray.angle-last[0].angle<5*Math.PI/180)last.push(ray);else groups.push([ray]);}
-  for(const group of groups)group.forEach((ray,i)=>{
-   const {ux,uy}=ray,edge=Math.min(ux?b.width/2/Math.abs(ux):Infinity,uy?b.height/2/Math.abs(uy):Infinity);
-   const reach=Math.min(ux>0?(w-6-cx)/ux:ux<0?(6-cx)/ux:Infinity,uy>0?(h-6-cy)/uy:uy<0?(6-cy)/uy:Infinity);
-   const offset=(i-(group.length-1)/2)*18,nx=-uy*offset,ny=ux*offset,inner={x:cx+ux*edge+nx,y:cy+uy*edge+ny},outer={x:cx+ux*reach+nx,y:cy+uy*reach+ny};
-   const [start,end]=ray.kind==='incoming'?[outer,inner]:[inner,outer];
-   segments.push({relation:ray.relation,kind:ray.kind,sx:start.x,sy:start.y,ex:end.x,ey:end.y});
-  });
+  const bundles=focusBundles(id),wide=labelled(id),labels:{bundle:Bundle;kind:'known'|'incoming';y:number}[]=[],names:{bundle:Bundle;kind:'known'|'incoming';y:number}[]=[];
+  for(const kind of ['incoming','known'] as const){
+   const list=bundles[kind];
+   list.forEach((bundle,i)=>{
+    const y=Math.round(b.top+b.height*(i+1)/(list.length+1)),edge=kind==='incoming'?b.left:b.right,outer=kind==='incoming'?6:w-6;
+    if(bundle.others.length>1){labels.push({bundle,kind,y});return;}
+    // One screen: one line per flow, side by side; when the margins hold labels, its name labels it too.
+    if(wide)names.push({bundle,kind,y});
+    bundle.relations.forEach((relation,j)=>{const ly=y+(j-(bundle.relations.length-1)/2)*10;segments.push(kind==='incoming'?{relation,kind,sx:outer,sy:ly,ex:edge,ey:ly}:{relation,kind,sx:edge,sy:ly,ex:outer,ey:ly});});
+   });
+  }
   drawShared(id,b);
   stubs.forEach((relation,i)=>{const sx=b.left+b.width*(i+1)/(stubs.length+1);segments.push({relation,kind:'unresolved',sx,sy:b.bottom,ex:sx,ey:Math.min(h-8,b.bottom+44)});});
   // Lines back to this screen sit where the box edge is free: away from every other line's end and the shared links.
-  const shared=sharedNavigation(index,id),taken=segments.map(segment=>segment.kind==='incoming'?{x:segment.ex,y:segment.ey}:{x:segment.sx,y:segment.sy});
+  const shared=sharedNavigation(index,id),taken=[...segments.map(segment=>segment.kind==='incoming'?{x:segment.ex,y:segment.ey}:{x:segment.sx,y:segment.sy}),...labels.map(l=>({x:l.kind==='incoming'?b.left:b.right,y:l.y}))];
   if(shared.into.length)taken.push({x:b.left+b.width*0.3,y:b.top});if(shared.out.length)taken.push({x:b.left+b.width*0.7,y:b.top});
   loops.forEach(relation=>{const spot=freeSpot(b,taken,!shared.into.length&&!shared.out.length);taken.push(spot);segments.push({relation,kind:'loop',...loopPath(spot,b)});});
   for(const segment of segments){
@@ -394,13 +420,49 @@ export function canvas(index:Index,payload:Payload,options:CanvasOptions):Canvas
    group.append(visibleLine,hit);lines.append(group);
    if(!arriving)triggerLines.push({group,triggers:relation.triggers});
   }
+  for(const {bundle,kind,y} of names){
+   const arriving=kind==='incoming',other=bundle.others[0],name=index.nodes.get(other)?.name||other;
+   const pill=element('button',undefined,`focus-bundle is-screen ${arriving?'is-in':'is-out'}`);pill.append(element('span',name,'focus-bundle-name'));
+   pill.dataset.kind=arriving?'incoming-screen':'known-screen';pill.dataset.screen=other;pill.setAttribute('aria-label',`${arriving?'來自':'前往'}「${name}」`);
+   pill.style.maxWidth=`${Math.max(64,(arriving?b.left:w-b.right)-28)}px`;tips.append(pill);
+   const pw=pill.offsetWidth||120,ph=pill.offsetHeight||24;Object.assign(pill.style,{left:`${arriving?8:w-8-pw}px`,top:`${y-ph/2}px`});
+   pill.onpointerenter=()=>{if(!frameId)options.onIntent?.(other);};pill.onclick=event=>{event.stopPropagation();options.onOpen(other);};
+  }
+  for(const {bundle,kind,y} of labels){
+   const arriving=kind==='incoming',count=bundle.others.length,dataKind=arriving?'incoming-bundle':'known-bundle';
+   const pill=element('button',undefined,`focus-bundle ${arriving?'is-in':'is-out'}`);
+   pill.append(element('span',bundle.label,'focus-bundle-name'),element('span',String(count),'focus-bundle-count'));
+   pill.dataset.group=bundle.key;pill.dataset.kind=dataKind;pill.dataset.count=String(count);
+   pill.setAttribute('aria-haspopup','true');pill.setAttribute('aria-expanded','false');pill.setAttribute('aria-label',`${arriving?'來自':'前往'}「${bundle.label}」的 ${count} 個畫面`);
+   pill.style.maxWidth=`${Math.max(64,(arriving?b.left:w-b.right)-28)}px`;tips.append(pill);
+   const pw=pill.offsetWidth||120,ph=pill.offsetHeight||24,left=arriving?8:w-8-pw;
+   Object.assign(pill.style,{left:`${left}px`,top:`${y-ph/2}px`});
+   const [sx,ex]=arriving?[left+pw,b.left]:[b.right,left],end=arrowEnd(sx,y,ex,y);
+   const group=document.createElementNS(svgNs,'g'),line=document.createElementNS(svgNs,'path') as SVGPathElement;
+   line.setAttribute('d',`M${sx},${y} L${end.x},${end.y}`);line.setAttribute('class',`focus-line bundle ${arriving?'is-in':'is-out'}`);
+   line.style.strokeWidth=String(Math.min(8,2.5+Math.log2(count)*1.5));line.dataset.kind=dataKind;line.dataset.group=bundle.key;line.dataset.count=String(count);
+   group.append(line);lines.append(group);
+   const triggers=arriving?[]:bundle.relations.flatMap(relation=>relation.triggers);if(!arriving)triggerLines.push({group,triggers});
+   const menu=element('div',undefined,'shared-popover focus-bundle-menu');menu.hidden=true;menu.setAttribute('role','menu');menu.dataset.group=bundle.key;
+   menu.append(element('strong',`${arriving?'從':'前往'}「${bundle.label}」的 ${count} 個畫面`));
+   for(const other of bundle.others){const item=element('button',index.nodes.get(other)?.name||other,'link-row');item.setAttribute('role','menuitem');item.dataset.bundleScreen=other;item.onclick=()=>options.onOpen(other);item.onpointerenter=()=>{if(!frameId)options.onIntent?.(other);};menu.append(item);}
+   const close=()=>{menu.hidden=true;pill.setAttribute('aria-expanded','false');};
+   pill.onpointerenter=pill.onfocus=()=>{group.classList.add('is-active');if(!arriving)options.onLineHover?.(triggers);};
+   pill.onpointerleave=pill.onblur=()=>{group.classList.remove('is-active');options.onLineHover?.(undefined);};
+   pill.onclick=event=>{event.stopPropagation();const open=menu.hidden;tips.querySelectorAll<HTMLElement>('.shared-popover').forEach(m=>{m.hidden=true;});tips.querySelectorAll('.shared-link,.focus-bundle').forEach(p=>p.setAttribute('aria-expanded','false'));
+    if(!open)return;menu.hidden=false;pill.setAttribute('aria-expanded','true');
+    const mw=menu.offsetWidth||260,mh=menu.offsetHeight||200;menu.style.left=`${arriving?left:Math.max(8,w-8-mw)}px`;menu.style.top=`${Math.max(8,Math.min(h-mh-8,y+ph/2+6))}px`;menu.querySelector<HTMLElement>('button')?.focus();};
+   menu.addEventListener('keydown',event=>{if(event.key==='Escape'){event.stopPropagation();close();pill.focus();}});
+   menu.addEventListener('click',event=>event.stopPropagation());
+   tips.append(menu);
+  }
  };
  // Zooming is a shared-element move: the card's thumbnail lands exactly where the page appears in the preview box,
  // and the box travels with the card, so only its frame fades in around a picture that never jumps.
  const aligned=(id:string,host:HTMLElement):CanvasTransform=>{
   const card=cards.get(id),image=card?.querySelector<HTMLImageElement>('img.card-preview'),scroller=host.querySelector<HTMLElement>('.prototype-scroll'),frame=scroller?.offsetParent as HTMLElement|null;
   if(!card||!image?.naturalWidth||!image.naturalHeight||!scroller||!frame||host.hidden)return transformFor(id);
-  const page=Math.max(1,payload.preview.screens?.find(s=>s.graphScreenId===id)?.width||1440),b=box(),p=positions.get(id)!;
+  const page=Math.max(1,payload.preview.screens?.find(s=>s.graphScreenId===id)?.width||1440),b=box(id),p=positions.get(id)!;
   const boxWidth=image.clientWidth,boxHeight=image.clientHeight,shown=boxWidth/boxHeight<image.naturalWidth/image.naturalHeight?boxWidth:boxHeight*image.naturalWidth/image.naturalHeight;
   const thumbX=p.x+card.clientLeft+image.offsetLeft+(boxWidth-shown)/2,thumbY=p.y+card.clientTop+image.offsetTop;
   const inner=scroller.clientWidth,scale=Math.min(1,Math.max(1,inner-16)/page);
@@ -410,7 +472,7 @@ export function canvas(index:Index,payload:Payload,options:CanvasOptions):Canvas
  };
  /** Keeps a preview box glued to its card while the world moves. */
  const glue=(host:HTMLElement,id:string)=>{
-  placeLayer(host);const a=aligned(id,host),k=zoom/a.zoom,b=box();
+  placeLayer(host,id);const a=aligned(id,host),k=zoom/a.zoom,b=box(id);
   host.style.transformOrigin='0 0';
   host.style.transform=Math.abs(k-1)<1e-4&&Math.abs(x-a.x)<.5&&Math.abs(y-a.y)<.5?'':`translate(${x+(b.left-a.x)*k-b.left}px, ${y+(b.top-a.y)*k-b.top}px) scale(${k})`;
  };
@@ -478,7 +540,7 @@ export function canvas(index:Index,payload:Payload,options:CanvasOptions):Canvas
    if(loaded||reducedMotion())reveal();else Promise.race([ready!,wait(READY_MS)]).then(reveal);
   };
   if(reducedMotion()||crossfade){finish();return;}
-  animate(()=>{placeLayer(host);return aligned(id,host);},center(id),t=>{
+  animate(()=>{placeLayer(host,id);return aligned(id,host);},center(id),t=>{
    if(t>0)build();
    if(previous)fadeLeaving(previous,t,oldOpacity);
    glue(host,id);host.style.opacity=loaded?String(clamp((t-REVEAL.from)/REVEAL.span)):'0';
