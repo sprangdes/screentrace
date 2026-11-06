@@ -202,7 +202,16 @@ main{position:relative;overflow:hidden;min-width:0}
 #focus-arrow-in path{fill:var(--flow-in)}
 #focus-arrow-unresolved path{fill:#64748b}
 .focus-line.shared{stroke-dasharray:5 4}
-.shared-link,.shared-popover{pointer-events:auto}
+.shared-link,.shared-popover,.focus-bundle{pointer-events:auto}
+/* An area's lines around an open screen, merged: the label names the area and counts its screens, and opens their list. */
+.focus-bundle{position:absolute;z-index:7;display:inline-flex;align-items:center;gap:6px;height:24px;padding:0 3px 0 10px;border:1px solid currentColor;border-radius:12px;background:white;font-size:13px;font-weight:600;white-space:nowrap;cursor:pointer}
+.focus-bundle.is-in{color:var(--flow-in)}
+.focus-bundle.is-out{color:var(--flow-out)}
+.focus-bundle:hover,.focus-bundle[aria-expanded=true]{background:var(--gray-100)}
+.focus-bundle-name{min-width:0;overflow:hidden;text-overflow:ellipsis}
+.focus-bundle-count{flex:none;min-width:18px;padding:0 6px;border-radius:9px;color:white;text-align:center;line-height:18px}
+.focus-bundle.is-in .focus-bundle-count{background:var(--flow-in)}
+.focus-bundle.is-out .focus-bundle-count{background:var(--flow-out)}
 .shared-link{position:absolute;z-index:7;display:inline-flex;align-items:center;height:24px;padding:0 10px;border:1px solid currentColor;border-radius:12px;background:white;font-size:13px;font-weight:600;white-space:nowrap;cursor:pointer}
 .shared-link.is-in{color:var(--flow-in)}
 .shared-link.is-out{color:var(--flow-out)}

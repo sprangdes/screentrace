@@ -25,7 +25,7 @@ async function open(reducedMotion='reduce'){
 const focused=page=>page.locator('.canvas').getAttribute('data-focused');
 const ready=page=>page.locator('.focus-layer:not([hidden]):not(.is-leaving) .preview[aria-busy="false"]').waitFor();
 
-test('R17 WP62 clicking a card zooms the same canvas into it and keeps only its outgoing lines in their original directions',async()=>{
+test('R17 WP62 clicking a card zooms the same canvas into it and keeps only its outgoing lines, side by side on the right',async()=>{
  const {browser,page,requests}=await open();
  try{
   const overviewTargets=(await page.locator('.relation-line[data-from="a"]').evaluateAll(lines=>lines.map(l=>l.dataset.to))).sort();
@@ -36,9 +36,13 @@ test('R17 WP62 clicking a card zooms the same canvas into it and keeps only its 
   assert.deepEqual(await page.locator('.screen-card:not([data-screen="a"])').evaluateAll(cards=>cards.every(c=>c.classList.contains('is-dim'))),true);
   const focusTargets=(await page.locator('.focus-line-hit[data-kind="known"],.focus-line-hit[data-kind="loop"]').evaluateAll(lines=>lines.map(l=>l.dataset.to))).sort();
   assert.deepEqual(focusTargets,overviewTargets);
-  const known=await page.locator('.focus-line-hit[data-kind="known"]').evaluateAll(lines=>lines.map(l=>{const a=l.getPointAtLength(0),b=l.getPointAtLength(l.getTotalLength());return {to:l.dataset.to,angle:Math.atan2(b.y-a.y,b.x-a.x)};}));
+  // R35: outgoing lines leave the box's right edge side by side, in the order their screens sit on the map top to bottom.
+  const known=await page.locator('.focus-line-hit[data-kind="known"]').evaluateAll(lines=>lines.map(l=>{const a=l.getPointAtLength(0),b=l.getPointAtLength(l.getTotalLength());return {to:l.dataset.to,a:{x:a.x,y:a.y},b:{x:b.x,y:b.y}};}));
   assert.ok(known.length>0);
-  for(const line of known){const from=centers.a,to=centers[line.to],expected=Math.atan2(to.y-from.y,to.x-from.x),diff=Math.abs(Math.atan2(Math.sin(line.angle-expected),Math.cos(line.angle-expected)))*180/Math.PI;assert.ok(diff<=15,`${line.to} differs ${diff}°`);}
+  const right=await page.evaluate(()=>{const box=document.querySelector('.focus-layer:not(.is-leaving)').getBoundingClientRect(),c=document.querySelector('.canvas').getBoundingClientRect();return box.right-c.left;});
+  for(const line of known){assert.ok(Math.abs(line.a.x-right)<=1,`${line.to} starts on the right edge`);assert.ok(line.b.x>line.a.x&&Math.abs(line.b.y-line.a.y)<0.5,`${line.to} runs straight to the right`);}
+  const byRow=[...known].sort((p,q)=>p.a.y-q.a.y).map(line=>line.to),byMap=[...new Set(byRow)].sort((p,q)=>centers[p].y-centers[q].y||centers[p].x-centers[q].x);
+  assert.deepEqual([...new Set(byRow)],byMap,'rows follow the map from top to bottom');
   assert.equal(await page.locator('.focus-line-hit[data-kind="unresolved"]').count(),2);
   // A line back to the same screen sits in a free part of the box edge, not on top of the other lines.
   const ends=await page.locator('.focus-line-hit').evaluateAll(lines=>lines.map(l=>{const a=l.getPointAtLength(0),b=l.getPointAtLength(l.getTotalLength());return {kind:l.dataset.kind,points:(l.dataset.kind==='loop'?[a,b]:[l.dataset.kind==='incoming'?b:a]).map(p=>({x:p.x,y:p.y}))};}));
