@@ -76,3 +76,19 @@ test('R21 the persona page shows each persona description in the list',async()=>
   assert.deepEqual(state.errors,[]);assert.equal(state.requests,0);
  }finally{await browser.close();}
 });
+
+test('R33 zoomed out, a persona step column keeps its plain title, clear of its cards',async()=>{
+ const browser=await chromium.launch();try{
+  const {page,state}=await open(browser,personaFixture());
+  await page.locator('[data-persona-option="member"]').click();
+  for(let i=0;i<6&&await page.locator('.canvas').getAttribute('data-semantic-zoom')!=='compact';i++){await page.locator('.canvas-controls button').nth(1).click();await page.waitForTimeout(60);}
+  assert.equal(await page.locator('.canvas').getAttribute('data-semantic-zoom'),'compact');
+  assert.equal(await page.locator('.screen-group-names').count(),0,'no list of screen names under a step');
+  for(const group of await page.locator('.screen-group:not([hidden])').all()){
+   const label=await group.locator('.screen-group-label').boundingBox();
+   const firstCard=await page.evaluate(key=>{const f=document.querySelector(`.screen-group[data-group="${CSS.escape(key)}"]`).getBoundingClientRect();return Math.min(...[...document.querySelectorAll('.screen-card')].filter(c=>c.offsetParent).map(c=>c.getBoundingClientRect()).filter(r=>r.left>=f.left&&r.right<=f.right&&r.top>=f.top&&r.bottom<=f.bottom).map(r=>r.top));},await group.getAttribute('data-group'));
+   assert.ok(label.y+label.height<=firstCard,`the title of ${await group.getAttribute('data-group')} stays above its cards`);
+  }
+  assert.deepEqual(state.errors,[]);
+ }finally{await browser.close();}
+});

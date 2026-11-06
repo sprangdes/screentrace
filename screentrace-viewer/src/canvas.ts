@@ -186,8 +186,11 @@ export function canvas(index:Index,payload:Payload,options:CanvasOptions):Canvas
    // The label keeps a readable size however far the map is zoomed out (see .screen-group-label); its second line,
    // the area's first screens in reading order, is shown only while the cards are too small to read.
    const names=group.members.filter(id=>positions.has(id)).sort((a,b)=>positions.get(a)!.y-positions.get(b)!.y||positions.get(a)!.x-positions.get(b)!.x).map(id=>index.nodes.get(id)?.name||'');
+   // Only the overview's URL areas have the taller band (TITLE in groups.ts) these need; a supplied layout, such as a
+   // persona's step columns, keeps its plain title at the map's own scale.
    const label=element('div',undefined,'screen-group-label');label.style.setProperty('--label-room',`${group.box.width-40}px`);
-   label.append(element('span',group.label,'screen-group-title'),element('span',areaPreview(names),'screen-group-names'));
+   label.append(element('span',group.label,'screen-group-title'));
+   if(options.layout)label.classList.add('is-plain');else label.append(element('span',areaPreview(names),'screen-group-names'));
    frame.append(label);world.append(frame);
    // Links between areas are only shown for the area being pointed at.
    const showLinks=(on:boolean)=>{world.querySelectorAll<HTMLElement|SVGElement>('.group-link,.group-link-count').forEach(node=>node.classList.toggle('is-shown',on&&(node.dataset.from===group.key||node.dataset.to===group.key)));};
