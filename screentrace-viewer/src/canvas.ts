@@ -39,8 +39,12 @@ export interface CanvasView {
 }
 
 const CARD={width:250,height:220},MOTION_MS=450,DENSE_SCREENS=20,BOX_MARGIN={side:56,top:48,bottom:56};
-/** The side margin of the preview box when some line around it stands for a whole area and carries its label. */
-const BUNDLE_SIDE=176;
+/** When some line around the preview stands for a whole area, each side with lines widens to fit its labels, up to this; a longer screen name wraps onto a second line, a longer area name ends in an ellipsis. */
+const LABEL_SIDE_MAX=140;
+/** The preview box is never taller than a 1440×900 desktop screen for its width; any spare height is left above and below. */
+const SCREEN_RATIO=1440/900;
+/** Room kept between a margin label and the preview box for the line and its arrow. */
+const LABEL_GAP=20;
 /** The preview fades in over this part of the zoom; if it is still loading, it waits at most READY_MS more. */
 const REVEAL={from:0.3,span:0.45},LEAVE_SPAN=0.3,READY_MS=600,FADE_MS=180;
 /** Same curve as the side panels' width transition, so the canvas and the panels move as one. */
@@ -312,7 +316,11 @@ export function canvas(index:Index,payload:Payload,options:CanvasOptions):Canvas
  const lines=document.createElementNS(svgNs,'svg') as SVGSVGElement,tips=element('div',undefined,'focus-tips');
  lines.classList.add('focus-lines');lines.innerHTML=`<defs>${focusMarkers}</defs>`;
  lines.style.display='none';
- const box=(id=focused)=>{const w=viewport.clientWidth,h=viewport.clientHeight,side=labelled(id)?BUNDLE_SIDE:BOX_MARGIN.side;return {left:side,top:BOX_MARGIN.top,right:w-side,bottom:h-BOX_MARGIN.bottom,width:Math.max(1,w-2*side),height:Math.max(1,h-BOX_MARGIN.top-BOX_MARGIN.bottom)};};
+ const box=(id=focused)=>{
+  const w=viewport.clientWidth,h=viewport.clientHeight,side=margins(id),width=Math.max(1,w-side.left-side.right),room=Math.max(1,h-BOX_MARGIN.top-BOX_MARGIN.bottom);
+  const height=Math.max(1,Math.min(room,Math.round(width/SCREEN_RATIO))),top=BOX_MARGIN.top+Math.round((room-height)/2);
+  return {left:side.left,top,right:w-side.right,bottom:top+height,width,height};
+ };
  const transformFor=(id:string):CanvasTransform=>{const p=positions.get(id)!,b=box(id),z=Math.min(b.width/CARD.width,b.height/CARD.height);return {zoom:z,x:b.left+b.width/2-(p.x+CARD.width/2)*z,y:b.top+b.height/2-(p.y+CARD.height/2)*z};};
  const placeLayer=(host:HTMLElement=layer,id=focused)=>{const b=box(id);Object.assign(host.style,{left:`${b.left}px`,top:`${b.top}px`,width:`${b.width}px`,height:`${b.height}px`});};
  const center=(id:string)=>{const p=positions.get(id)!;return {x:p.x+CARD.width/2,y:p.y+CARD.height/2};};
@@ -340,6 +348,20 @@ export function canvas(index:Index,payload:Payload,options:CanvasOptions):Canvas
   bundleCache.set(id,result);return result;
  };
  const labelled=(id:string|undefined)=>{if(!id)return false;const b=focusBundles(id);return [...b.known,...b.incoming].some(bundle=>bundle.others.length>1);};
+ /** What a row's label says: the area, or the one screen's name. */
+ const rowName=(bundle:Bundle)=>bundle.others.length>1?bundle.label:(index.nodes.get(bundle.others[0])?.name||bundle.others[0]);
+ // A side's labels share the width its widest label needs on one line (measured from the text, so the box is known
+ // before anything is drawn), up to LABEL_SIDE_MAX; a side without lines keeps the usual margin.
+ let measure:CanvasRenderingContext2D|null|undefined;
+ const textWidth=(value:string)=>{measure??=document.createElement('canvas').getContext('2d');if(!measure)return value.length*13;measure.font=`600 13px ${getComputedStyle(viewport).fontFamily}`;return measure.measureText(value).width;};
+ const labelWidth=(bundle:Bundle)=>{const merged=bundle.others.length>1;return Math.ceil(textWidth(rowName(bundle))+(merged?10+6+Math.max(18,textWidth(String(bundle.others.length))+12)+3:20)+2+2);};
+ const marginCache=new Map<string,{left:number;right:number}>();
+ const margins=(id:string|undefined)=>{
+  const plain={left:BOX_MARGIN.side,right:BOX_MARGIN.side};if(!id||!labelled(id))return plain;
+  const cached=marginCache.get(id);if(cached)return cached;
+  const b=focusBundles(id),side=(list:Bundle[])=>list.length?Math.max(BOX_MARGIN.side,Math.min(LABEL_SIDE_MAX,8+Math.max(...list.map(labelWidth))+LABEL_GAP)):BOX_MARGIN.side;
+  const result={left:side(b.incoming),right:side(b.known)};marginCache.set(id,result);return result;
+ };
  // Shared navigation (header/footer links) is summarised as one dashed line each way above the preview box;
  // its label opens the list of screens behind it.
  const drawShared=(id:string,b:ReturnType<typeof box>)=>{
@@ -381,21 +403,33 @@ export function canvas(index:Index,payload:Payload,options:CanvasOptions):Canvas
   type Kind='known'|'incoming'|'loop'|'unresolved';
   type Segment={relation:FocusRelation;sx:number;sy:number;ex:number;ey:number;d?:string;kind:Kind};
   const segments:Segment[]=[];
-  const bundles=focusBundles(id),wide=labelled(id),labels:{bundle:Bundle;kind:'known'|'incoming';y:number}[]=[],names:{bundle:Bundle;kind:'known'|'incoming';y:number}[]=[];
-  for(const kind of ['incoming','known'] as const){
-   const list=bundles[kind];
-   list.forEach((bundle,i)=>{
-    const y=Math.round(b.top+b.height*(i+1)/(list.length+1)),edge=kind==='incoming'?b.left:b.right,outer=kind==='incoming'?6:w-6;
-    if(bundle.others.length>1){labels.push({bundle,kind,y});return;}
-    // One screen: one line per flow, side by side; when the margins hold labels, its name labels it too.
-    if(wide)names.push({bundle,kind,y});
-    bundle.relations.forEach((relation,j)=>{const ly=y+(j-(bundle.relations.length-1)/2)*10;segments.push(kind==='incoming'?{relation,kind,sx:outer,sy:ly,ex:edge,ey:ly}:{relation,kind,sx:edge,sy:ly,ex:outer,ey:ly});});
-   });
+  const bundles=focusBundles(id),wide=labelled(id);
+  type Row={bundle:Bundle;kind:'known'|'incoming';y:number};
+  const rows:Row[]=[];
+  for(const kind of ['incoming','known'] as const){const list=bundles[kind];list.forEach((bundle,i)=>rows.push({bundle,kind,y:Math.round(b.top+b.height*(i+1)/(list.length+1))}));}
+  // When the margins hold labels, every row has one: an area with its count, or a single screen's name. Every label
+  // fills its margin up to a short gap, so every line runs the same short way from a label's inner edge to the box.
+  const pills=new Map<Row,HTMLElement>();
+  if(wide){
+   for(const row of rows){
+    const arriving=row.kind==='incoming',merged=row.bundle.others.length>1,name=rowName(row.bundle);
+    const pill=element('button',undefined,`focus-bundle${merged?'':' is-screen'} ${arriving?'is-in':'is-out'}`);pill.append(element('span',name,'focus-bundle-name'));
+    if(merged)pill.append(element('span',String(row.bundle.others.length),'focus-bundle-count'));
+    pill.title=name;tips.append(pill);pills.set(row,pill);
+   }
+   for(const [row,pill] of pills)pill.style.width=`${Math.max(24,(row.kind==='incoming'?b.left:w-b.right)-8-LABEL_GAP)}px`;
+  }
+  const outer=(row:Row)=>{const pill=pills.get(row),pw=pill?(pill.offsetWidth||parseFloat(pill.style.width)||120):-2;return row.kind==='incoming'?8+pw:w-8-pw;};
+  // One screen: one line per flow, side by side.
+  for(const row of rows){
+   if(row.bundle.others.length>1)continue;
+   const edge=row.kind==='incoming'?b.left:b.right,start=outer(row);
+   row.bundle.relations.forEach((relation,j)=>{const ly=row.y+(j-(row.bundle.relations.length-1)/2)*10;segments.push(row.kind==='incoming'?{relation,kind:row.kind,sx:start,sy:ly,ex:edge,ey:ly}:{relation,kind:row.kind,sx:edge,sy:ly,ex:start,ey:ly});});
   }
   drawShared(id,b);
   stubs.forEach((relation,i)=>{const sx=b.left+b.width*(i+1)/(stubs.length+1);segments.push({relation,kind:'unresolved',sx,sy:b.bottom,ex:sx,ey:Math.min(h-8,b.bottom+44)});});
   // Lines back to this screen sit where the box edge is free: away from every other line's end and the shared links.
-  const shared=sharedNavigation(index,id),taken=[...segments.map(segment=>segment.kind==='incoming'?{x:segment.ex,y:segment.ey}:{x:segment.sx,y:segment.sy}),...labels.map(l=>({x:l.kind==='incoming'?b.left:b.right,y:l.y}))];
+  const shared=sharedNavigation(index,id),taken=[...segments.map(segment=>segment.kind==='incoming'?{x:segment.ex,y:segment.ey}:{x:segment.sx,y:segment.sy}),...rows.filter(row=>row.bundle.others.length>1).map(row=>({x:row.kind==='incoming'?b.left:b.right,y:row.y}))];
   if(shared.into.length)taken.push({x:b.left+b.width*0.3,y:b.top});if(shared.out.length)taken.push({x:b.left+b.width*0.7,y:b.top});
   loops.forEach(relation=>{const spot=freeSpot(b,taken,!shared.into.length&&!shared.out.length);taken.push(spot);segments.push({relation,kind:'loop',...loopPath(spot,b)});});
   for(const segment of segments){
@@ -420,23 +454,18 @@ export function canvas(index:Index,payload:Payload,options:CanvasOptions):Canvas
    group.append(visibleLine,hit);lines.append(group);
    if(!arriving)triggerLines.push({group,triggers:relation.triggers});
   }
-  for(const {bundle,kind,y} of names){
-   const arriving=kind==='incoming',other=bundle.others[0],name=index.nodes.get(other)?.name||other;
-   const pill=element('button',undefined,`focus-bundle is-screen ${arriving?'is-in':'is-out'}`);pill.append(element('span',name,'focus-bundle-name'));
-   pill.dataset.kind=arriving?'incoming-screen':'known-screen';pill.dataset.screen=other;pill.setAttribute('aria-label',`${arriving?'來自':'前往'}「${name}」`);
-   pill.style.maxWidth=`${Math.max(64,(arriving?b.left:w-b.right)-28)}px`;tips.append(pill);
-   const pw=pill.offsetWidth||120,ph=pill.offsetHeight||24;Object.assign(pill.style,{left:`${arriving?8:w-8-pw}px`,top:`${y-ph/2}px`});
-   pill.onpointerenter=()=>{if(!frameId)options.onIntent?.(other);};pill.onclick=event=>{event.stopPropagation();options.onOpen(other);};
-  }
-  for(const {bundle,kind,y} of labels){
-   const arriving=kind==='incoming',count=bundle.others.length,dataKind=arriving?'incoming-bundle':'known-bundle';
-   const pill=element('button',undefined,`focus-bundle ${arriving?'is-in':'is-out'}`);
-   pill.append(element('span',bundle.label,'focus-bundle-name'),element('span',String(count),'focus-bundle-count'));
+  for(const [row,pill] of pills){
+   const {bundle,kind,y}=row,arriving=kind==='incoming',pw=pill.offsetWidth||parseFloat(pill.style.width)||120,ph=pill.offsetHeight||24,left=arriving?8:w-8-pw;
+   Object.assign(pill.style,{left:`${left}px`,top:`${y-ph/2}px`});
+   if(bundle.others.length===1){
+    const other=bundle.others[0],name=index.nodes.get(other)?.name||other;
+    pill.dataset.kind=arriving?'incoming-screen':'known-screen';pill.dataset.screen=other;pill.setAttribute('aria-label',`${arriving?'來自':'前往'}「${name}」`);
+    pill.onpointerenter=()=>{if(!frameId)options.onIntent?.(other);};pill.onclick=event=>{event.stopPropagation();options.onOpen(other);};
+    continue;
+   }
+   const count=bundle.others.length,dataKind=arriving?'incoming-bundle':'known-bundle';
    pill.dataset.group=bundle.key;pill.dataset.kind=dataKind;pill.dataset.count=String(count);
    pill.setAttribute('aria-haspopup','true');pill.setAttribute('aria-expanded','false');pill.setAttribute('aria-label',`${arriving?'來自':'前往'}「${bundle.label}」的 ${count} 個畫面`);
-   pill.style.maxWidth=`${Math.max(64,(arriving?b.left:w-b.right)-28)}px`;tips.append(pill);
-   const pw=pill.offsetWidth||120,ph=pill.offsetHeight||24,left=arriving?8:w-8-pw;
-   Object.assign(pill.style,{left:`${left}px`,top:`${y-ph/2}px`});
    const [sx,ex]=arriving?[left+pw,b.left]:[b.right,left],end=arrowEnd(sx,y,ex,y);
    const group=document.createElementNS(svgNs,'g'),line=document.createElementNS(svgNs,'path') as SVGPathElement;
    line.setAttribute('d',`M${sx},${y} L${end.x},${end.y}`);line.setAttribute('class',`focus-line bundle ${arriving?'is-in':'is-out'}`);
