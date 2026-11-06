@@ -260,4 +260,4 @@
 - WP106：有標籤時每一列都有同寬、靠外側的標籤，所有的線從標籤內側畫到預覽框、箭頭不被遮住；預覽框不高於 16:10 的桌機比例，見 [ADR 0127](adr/0127-r36-focus-label-layout.md)。
 - WP107：標籤留白改為依該側標籤所需寬度決定（最寬 140px，沒有線的一側 56px），較長的畫面名稱換到第二行，讓預覽在維持比例下盡量放大，見 ADR 0127 R36a。
 - 驗證：Maven 579（571 通過、1 略過，另 OQ-041 的 7 個 Chromium 測試在 sandbox 內無法執行）；viewer 單元測試 148 個（sandbox 內 146 通過，OQ-047 的 2 個 Chromium 測試無法執行）；JS 測試 180 個；PR CI run https://github.com/sprangdes/screentrace/actions/runs/42246302520 三個 job 全綠（含 E2E 與上述 7 個測試）。PR：https://github.com/sprangdes/screentrace/pull/81。
-- 驗證（WP107）：待 PR CI 完成後補入。
+- 驗證（WP107）：Maven 579（571 通過、1 略過，另 OQ-041 的 7 個 Chromium 測試在 sandbox 內無法執行）；viewer 單元測試 148 個（sandbox 內 146 通過，OQ-047 的 2 個 Chromium 測試無法執行）；JS 測試 180 個；PR CI run https://github.com/sprangdes/screentrace/actions/runs/42256006047 三個 job 全綠（含 E2E 與上述 7 個測試）。
