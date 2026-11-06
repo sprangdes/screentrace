@@ -253,4 +253,4 @@
 ## R35 放大畫面時的關聯線整理
 
 - WP105：放大畫面時，進來的線排在預覽框左側、出去的在右側，依畫布位置由上而下排列；同一區有多個畫面的線合成一條附區名與數量的線，點標籤列出畫面，見 [ADR 0126](adr/0126-r35-focus-line-bundles.md)。
-- 驗證：待 PR CI 完成後補入。
+- 驗證：Maven 579（571 通過、1 略過，另 OQ-041 的 7 個 Chromium 測試在 sandbox 內無法執行）；viewer 單元測試 148 個（sandbox 內 146 通過，OQ-047 的 2 個 Chromium 測試無法執行）；JS 測試 180 個；PR CI run https://github.com/sprangdes/screentrace/actions/runs/42174596612 三個 job 全綠（含 E2E 與上述 7 個測試）。PR：https://github.com/sprangdes/screentrace/pull/80。
