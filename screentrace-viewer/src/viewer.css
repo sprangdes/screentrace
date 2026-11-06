@@ -208,7 +208,8 @@ main{position:relative;overflow:hidden;min-width:0}
 .focus-bundle.is-in{color:var(--flow-in)}
 .focus-bundle.is-out{color:var(--flow-out)}
 .focus-bundle:hover,.focus-bundle[aria-expanded=true]{background:var(--gray-100)}
-.focus-bundle-name{min-width:0;overflow:hidden;text-overflow:ellipsis}
+.focus-bundle.is-screen{padding-right:10px}
+.focus-bundle-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;text-align:left}
 .focus-bundle-count{flex:none;min-width:18px;padding:0 6px;border-radius:9px;color:white;text-align:center;line-height:18px}
 .focus-bundle.is-in .focus-bundle-count{background:var(--flow-in)}
 .focus-bundle.is-out .focus-bundle-count{background:var(--flow-out)}

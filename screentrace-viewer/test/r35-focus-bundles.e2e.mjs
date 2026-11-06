@@ -64,3 +64,31 @@ test('R35 without a merged line the preview keeps its narrow margins and lines c
   assert.deepEqual(errors,[]);
  }finally{await browser.close();}
 });
+
+test('R36 every margin label on a side has the same width and every line ends at its label, not under it',async()=>{
+ const browser=await chromium.launch();try{
+  const {page,errors}=await open(browser);await focus(page,'s5');
+  const box=await layerBox(page);
+  const labels=await page.locator('.focus-bundle').evaluateAll(n=>{const c=document.querySelector('.canvas').getBoundingClientRect();return n.map(x=>{const r=x.getBoundingClientRect();return {kind:x.dataset.kind,left:r.left-c.left,right:r.right-c.left,y:(r.top+r.bottom)/2-c.top};});});
+  const incoming=labels.filter(l=>l.kind.startsWith('incoming'));
+  assert.equal(incoming.length,3,'the single screens are labelled too');
+  assert.equal(new Set(incoming.map(l=>Math.round(l.right-l.left))).size,1,'one width for every label on the left');
+  assert.equal(new Set(incoming.map(l=>Math.round(l.left))).size,1,'and one left edge');
+  const lines=await page.locator('.focus-line[data-kind="incoming"],.focus-line[data-kind="incoming-bundle"]').evaluateAll(n=>n.map(l=>{const a=l.getPointAtLength(0);return {x:a.x,y:a.y};}));
+  for(const line of lines){const label=incoming.find(l=>Math.abs(l.y-line.y)<12);assert.ok(label,'each row has its label');assert.ok(Math.abs(line.x-label.right)<1.5,'the line starts at the label\'s inner edge');}
+  // The arrow of the line leaving for 畫面6 ends at that screen's label instead of underneath it.
+  const out=await page.locator('.focus-bundle[data-kind="known-screen"]').first().evaluate(x=>{const c=document.querySelector('.canvas').getBoundingClientRect();return x.getBoundingClientRect().left-c.left;});
+  const ends=await page.locator('.focus-line[data-kind="known"]').evaluateAll(n=>n.map(l=>l.getPointAtLength(l.getTotalLength()).x));
+  assert.ok(ends.length>0);for(const end of ends)assert.ok(end<out,'the line stops before the label so its arrow stays visible');
+  assert.deepEqual(errors,[]);
+ }finally{await browser.close();}
+});
+
+test('R36 the open screen keeps a desktop screen\'s proportions even when the margins hold labels',async()=>{
+ const browser=await chromium.launch();try{
+  const {page,errors}=await open(browser);await focus(page,'s5');
+  const size=await page.locator('.focus-layer:not(.is-leaving)').evaluate(l=>{const r=l.getBoundingClientRect();return {w:r.width,h:r.height};});
+  assert.ok(size.w/size.h>=1440/900-0.01,`the preview is no taller than 1440×900 for its width (${size.w}×${size.h})`);
+  assert.deepEqual(errors,[]);
+ }finally{await browser.close();}
+});

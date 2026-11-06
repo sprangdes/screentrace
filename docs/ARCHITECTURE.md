@@ -191,6 +191,10 @@ viewer 只讀 schema 2.4 的 `application.personas`，不重新判定。每個�
 
 `canvas.ts` 的 `focusBundles` 依總覽的區塊（`grouped.groups`，角色流程為步驟欄）把進出的線分列，列依畫面位置排序；多畫面的列畫成一條合併線並附 `.focus-bundle` 標籤與畫面清單，單一畫面的列沿用原本的線。有合併線時預覽框左右留白加寬為 176px。見 [ADR 0126](adr/0126-r35-focus-line-bundles.md)。
 
+### R36：放大畫面的標籤對齊與預覽比例
+
+有標籤時 `drawLines` 先為每一列建立同寬的 `.focus-bundle`（填滿留白、留 `LABEL_GAP`），所有的線從標籤內側邊緣起訖；`box()` 讓預覽框高度不超過寬度 ÷ `SCREEN_RATIO`（1440／900），多出的高度留在上下。見 [ADR 0127](adr/0127-r36-focus-label-layout.md)。
+
 ### R33：縮小總覽的區名與畫面提示
 
 總覽的區塊標籤（`.screen-group-label`）放在區塊框頂端加高的標題帶（`TITLE` 200），以 `scale(max(1, 0.4667 / --zoom))` 反向放大，維持至少約 14px；縮小時第二行列出前 3 個畫面（`areaPreview`，依卡片位置排序）。連線只走區塊之間的間隔，不會經過標籤。縮小時滑過卡片顯示 `.card-tip`（名稱與網址），移動畫布時隱藏。只用 CSS 與 DOM，版面配置與 graph 不變。見 [ADR 0124](adr/0124-r33-overview-labels.md)。
