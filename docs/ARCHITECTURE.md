@@ -195,6 +195,10 @@ viewer 只讀 schema 2.4 的 `application.personas`，不重新判定。每個�
 
 有標籤時 `drawLines` 先為每一列建立同寬的 `.focus-bundle`（填滿留白、留 `LABEL_GAP`），所有的線從標籤內側邊緣起訖；每側留白由 `margins()` 依該側最寬標籤的文字量測決定（最寬 `LABEL_SIDE_MAX` 140px，沒有線的一側 56px）；`box()` 讓預覽框高度不超過寬度 ÷ `SCREEN_RATIO`（1440／900），多出的高度留在上下。見 [ADR 0127](adr/0127-r36-focus-label-layout.md)。
 
+### R37：畫面側欄的 API 方法標籤
+
+`screen-panel.ts` 的「呼叫的 API」每一列使用 `api-page.ts` 匯出的 `methodBadge` 與 `pathCode`，與 API 頁的方法標籤共用同一個元件與樣式。見 [ADR 0128](adr/0128-r37-panel-method-tags.md)。
+
 ### R33：縮小總覽的區名與畫面提示
 
 總覽的區塊標籤（`.screen-group-label`）放在區塊框頂端加高的標題帶（`TITLE` 200），以 `scale(max(1, 0.4667 / --zoom))` 反向放大，維持至少約 14px；縮小時第二行列出前 3 個畫面（`areaPreview`，依卡片位置排序）。連線只走區塊之間的間隔，不會經過標籤。縮小時滑過卡片顯示 `.card-tip`（名稱與網址），移動畫布時隱藏。只用 CSS 與 DOM，版面配置與 graph 不變。見 [ADR 0124](adr/0124-r33-overview-labels.md)。
