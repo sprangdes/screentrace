@@ -3,6 +3,7 @@ import {Node} from './contracts';
 import {element,text} from './text';
 import {componentLabelsForScreen} from './labels';
 import {callSources} from './usage';
+import {methodBadge,pathCode} from './api-page';
 import {jsfLimitation} from './unsupported-framework';
 import {apiEndpoints} from './api-page';
 import {sharedNavigation} from './relations';
@@ -101,7 +102,12 @@ export function screenPanel(panel:HTMLElement,index:Index,state:ReviewState,scre
  const apiSection=element('section',undefined,'panel-section');apiSection.dataset.section='apis';
  apiSection.append(element('h3',`呼叫的 API ${called.length} 個`));
  if(!called.length)apiSection.append(element('p','沒有已知的 API 呼叫','muted'));
- for(const node of called){const link=element('button',endpointLabel(node),'link-row');link.dataset.api=node.id;link.onclick=()=>actions.api(node.id);apiSection.append(link);}
+ // Each API reads as on the API page: the same colored method tag, then the path with its parameters marked.
+ for(const node of called){
+  const link=element('button',undefined,'link-row api-link');link.dataset.api=node.id;link.setAttribute('aria-label',endpointLabel(node));
+  link.append(methodBadge(node.attributes.httpMethod||node.attributes.method||'ANY'),pathCode(node.attributes.path||node.attributes.route||node.name,'api-link-path'));
+  link.onclick=()=>actions.api(node.id);apiSection.append(link);
+ }
  root.append(apiSection);
 
  const sources=[...new Set(index.relations.filter(r=>r.to===screenId&&r.from!==screenId).map(r=>r.from))].map(id=>index.nodes.get(id)!).sort((a,b)=>a.name.localeCompare(b.name,'zh-Hant'));

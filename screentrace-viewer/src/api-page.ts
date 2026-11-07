@@ -99,7 +99,8 @@ const callerBar=(screens:number,most:number)=>{
  const width=sharePercent(screens,most);if(width){const fill=element('span',undefined,'api-caller-fill');fill.style.width=`${width}%`;bar.append(fill);}
  return bar;
 };
-const methodBadge=(method:string)=>{const badge=element('span',method==='ANY'?'任何':method,'method-badge');badge.dataset.method=method;return badge;};
+/** The method tag the API page uses everywhere, colored by method; the screen panel's API list uses it too. */
+export const methodBadge=(method:string)=>{const badge=element('span',method==='ANY'?'任何':method,'method-badge');badge.dataset.method=method;return badge;};
 const statusTag=(status:ApiStatus)=>{const tag=element('span',apiStatusLabels[status],'api-status');tag.dataset.apiStatus=status;return tag;};
 /** All APIs at a glance: one bar split by status, with the counts in words underneath. */
 const statusSummary=(counts:Record<ApiStatus,number>)=>{
