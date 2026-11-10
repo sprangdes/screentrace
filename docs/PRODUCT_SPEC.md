@@ -2,13 +2,13 @@
 
 ## POC priority
 
-The executable POC supports server-rendered JSP applications using Struts 1, Struts + Spring, Spring MVC, or Spring Boot. Spring MVC support resolves annotation and XML Controller mappings, literal `ModelAndView` views, `InternalResourceViewResolver` JSP paths, Tiles definitions, literal Spring URL-tag variables, and literal JSP form/link/button targets. JSP reports expand supported local tag files, transform supported Spring/JSTL markup into standalone static HTML, fill dynamic JSP values with deterministic demonstration data, then use Playwright Chromium to capture rendered screenshots and component bounds. FreeMarker remains unsupported. Bounded Thymeleaf HTML view, application-relative URL-template and literal JavaScript navigation projection is supported (ADR 0092); arbitrary template expressions and layout dialect execution remain unsupported. Source-proven Spring Data paths can drive session-local demonstration CRUD in the offline report; this never executes backend code or writes a real database. ScreenTrace is standalone: it never joins the target Maven/Gradle build and does not execute or modify target source, apart from writing analysis data to the user-configured analysis results directory.
+The executable POC supports server-rendered JSP applications using Struts 1, Struts + Spring, Spring MVC, or Spring Boot, and Spring Boot back ends with React (react-router) front ends, including React routes, Guard audience variants, personas and static previews (ADR 0088, 0089, 0096–0110). Spring MVC support resolves annotation and XML Controller mappings, literal `ModelAndView` views, `InternalResourceViewResolver` JSP paths, Tiles definitions, literal Spring URL-tag variables, and literal JSP form/link/button targets. JSP reports expand supported local tag files, transform supported Spring/JSTL markup into standalone static HTML, fill dynamic JSP values with deterministic demonstration data, then use Playwright Chromium to capture rendered screenshots and component bounds. FreeMarker remains unsupported. Bounded Thymeleaf HTML view, application-relative URL-template and literal JavaScript navigation projection is supported (ADR 0092); arbitrary template expressions and layout dialect execution remain unsupported. Source-proven Spring Data paths can drive session-local demonstration CRUD in the offline report; this never executes backend code or writes a real database. ScreenTrace is standalone: it never joins the target Maven/Gradle build and does not execute or modify target source, apart from writing analysis data to the user-configured analysis results directory.
 
 WP74 adds source-proven Java resolver defaults, relative redirects to public views, finite conditional form targets, native DOM/class/date/key filtering, local template styles, and direct submitted scalar-field demonstrations. Custom DAO and external HTTP collection results remain unsupported; source missing views are not invented. See [ADR 0094](adr/0094-public-batch4-workflow-repairs.md).
 
 ## Prototype and Edit Mode Contract
 
-Edit Mode operates on a framework-neutral prototype model containing screen/component IDs, bounds, style overrides, actions, source locations, and confidence. User edits are persisted as an overlay and never mutate the source-derived Application Graph or the analyzed application.
+Edit Mode operates on a framework-neutral prototype model containing screen/component IDs, bounds, style overrides, actions, source locations, and confidence. User edits are persisted as an overlay and never mutate the source-derived Application Graph or the analyzed application. Current status: only the core `EditOverlay` model exists; no viewer or CLI feature creates or saves overlays. The user-facing non-destructive marking is the review KEEP/REMOVE decision stored in the review md.
 
 ## 1. Product Vision
 
@@ -32,6 +32,7 @@ Analyze applications using technologies such as:
 - JSP
 - Spring MVC
 - Spring Boot MVC
+- React (react-router) front ends with Spring Boot back ends
 
 and reconstruct their screen flows.
 
@@ -192,11 +193,11 @@ Example:
   "changes": [
     {
       "component": "historyButton",
-      "action": "REMOVE"
+      "operation": "HIDE"
     },
     {
       "component": "phoneInput",
-      "action": "REMOVE"
+      "operation": "HIDE"
     }
   ]
 }
@@ -239,10 +240,15 @@ Instead:
           Application Graph
 ```
 
+Actual modules: Spring MVC and Spring Boot share `screentrace-adapter-spring`; React screens are analyzed by `screentrace-js` and contributed through `ReactGraphContribution` in `screentrace-parser-jsp`.
+
+Currently supported beyond the three adapters above:
+
+- React (routes, Guard audience variants, personas, static preview)
+
 Future adapters may support:
 
 - Angular
-- React
 - Vue
 - Full Thymeleaf engine / SpEL / layout dialect execution (bounded source projection is supported; ADR 0092)
 - JSF
@@ -303,11 +309,13 @@ ScreenTrace shall eventually render the discovered screens and interactions as a
 
 ### FR-012 Edit Mode
 
-ScreenTrace shall allow non-destructive modifications to the visual target state.
+ScreenTrace shall allow non-destructive modifications to the visual target state. (Not yet exposed: only the core overlay model exists; requesters currently mark screens and components KEEP/REMOVE.)
 
 ### FR-013 Page API trace
 
 ScreenTrace shall show APIs relevant to a screen in two groups: APIs called as the page loads and APIs triggered by an interactive component. For statically resolvable Spring APIs, it shall show the request and response contract. Selecting a component-bound API, its component, or its navigation target shall keep the related items highlighted together.
+
+Current implementation (R17 onward): the screen panel lists the APIs the screen calls as one list (method tag + path); selecting one opens the API page. The API page labels each caller as 「畫面載入時」 or by its triggering component and shows the statically resolvable Spring request/response contract. The two-group panel display is not currently implemented.
 
 ---
 

@@ -1,10 +1,10 @@
 # Review md 契約 v1（WP8／指示文件 v1.8）
 
-瀏覽器與 Node 共用 screentrace-viewer/src/shared/review-md.ts；建置另產出 dist/review-md.mjs，可在 Node 22+ 直接 import。無 DOM／檔案／網路相依（純 Acorn AST parser 釘選 8.18.0，ADR 0024）；輸入為嚴格 schema 2.2 Graph、Preview、分析指紋及 shared/review v1 狀態。歷史／缺證據／不合法引用明確拒絕，不升版。
+瀏覽器與 Node 共用 screentrace-viewer/src/shared/review-md.ts；建置另產出 dist/review-md.mjs，可在 Node 22+ 直接 import。無 DOM／檔案／網路相依（純 Acorn AST parser 釘選 8.18.0，ADR 0024）；輸入為嚴格 schema 2.2／2.3／2.4 Graph、Preview、分析指紋及 shared/review v1 狀態。歷史／缺證據／不合法引用明確拒絕，不升版。
 
 ## 固定檔頭
 
-鍵順序：screentrace_review_schema（1）、generated_at（ISO-8601 UTC）、tool_version、analysis_fingerprint、application、technologies、context_path、migration_target。migration_target 固定 backend、frontend、component_library，值為 Spring Boot 4、Angular、none。
+鍵順序：screentrace_review_schema（1）、generated_at（ISO-8601 UTC）、tool_version、analysis_fingerprint、application、technologies、context_path、migration_target。migration_target 固定 backend、frontend，值為 Spring Boot 4、Angular（R17 起不輸出 component_library）。
 
 所有字串為雙引號 JSON 相容字串；technologies 排序。application 完整保存，不截斷。tool_version 取 Java 注入的根 pom.xml 建置版本；Node 可明確傳入，缺值為「—」，不得捏造。分析指紋沿用單檔 Java 注入的圖 JSON SHA-256。
 
@@ -12,15 +12,15 @@ context_path 為值／來源物件陣列（source、value），依來源和值�
 
 ## 固定正文與排序
 
-標題固定「審查結果(給 AI 的執行指示)」，專案名稱留檔頭；避免專案文字形成標題。章節 1–9 與附錄 A 名稱逐字依 CODEX_INSTRUCTIONS.md WP8；§1 的八條文字逐字依 §8.2，測試直接比對文件。
+標題固定「審查結果(給 AI 的執行指示)」，專案名稱留檔頭；避免專案文字形成標題。章節 1–7 與附錄 A：§1 如何使用本文件、§2 統計、§3 畫面、§4 API、§5 導覽關係、§6 衝突與警告、§7 分析限制（R17 起；CODEX_INSTRUCTIONS WP8 的九章列表為 R17 前的歷史版本）。§1 的六條文字逐字依 CODEX_INSTRUCTIONS §8.2，測試直接比對文件。
 
-畫面依第一路由、ID（Unicode 字串碼序）排序。小標題只有編號與三態；路由／名稱以表格 code span 保留。REMOVE 僅 ID、路由、來源與移除標示；KEEP／UNDECIDED 保留全部元件與行為，明確 REMOVE 元件仍列出。元件依 ID，行為依 ID；同一共用元件每畫面各自決策。載入／未綁定來源另外列行為。元件表固定 id、kind、標籤、事件、行為類型、結果指向、條件、決策、建議元件、styleId、來源。
+畫面依第一路由、ID（Unicode 字串碼序）排序。小標題只有編號與三態；路由／名稱以表格 code span 保留。REMOVE 僅 ID、路由、來源與移除標示；KEEP／UNDECIDED 保留全部元件與行為，明確 REMOVE 元件仍列出。元件依 ID，行為依 ID；同一共用元件每畫面各自決策。載入／未綁定來源另外列行為。元件表固定 id、kind、標籤、事件、行為類型、結果指向、條件、決策、來源（R17 起不含建議元件與 styleId）。
 
-API 依 ID 排序；共用 deriveApiUsage 推導三態，不另寫判定。呼叫來源依畫面／元件／行為排序，保留來源行號。§4 未引用且另有目標未解析 API 呼叫時逐項標「另有 N 個未解析呼叫,可能指向此 API」；§8 列出這些行為。靜態分析不能證明某未解析呼叫屬特定 API，不推斷候選。
+API 依 ID 排序；共用 deriveApiUsage 推導三態，不另寫判定。呼叫來源依畫面／元件／行為排序，保留來源行號。§4 未引用且另有目標未解析 API 呼叫時逐項標「另有 N 個未解析呼叫,可能指向此 API」；§7 列出這些行為。UNREFERENCED API 一律附註「外部系統、反射或動態路徑呼叫無法靜態偵測」。靜態分析不能證明某未解析呼叫屬特定 API，不推斷候選。
 
-契約只列 contentType、bodyType、fields 的 name／type／location／required 及 response status，遞迴欄位鍵排序；不序列化整個任意物件。檢核以 ID 排序，保留欄位、訊息、層級和來源。§5 導覽按來源／目標；§6 固定「未匯入元件庫」；不實作 WP9。§7 保留衝突，不自動修正。§8 包含節點／關聯／行為／規則解析限制與診斷代碼，來源可追查，不輸出診斷自由文字。
+契約只列 contentType、bodyType、fields 的 name／type／location／required 及 response status，遞迴欄位鍵排序；不序列化整個任意物件。檢核以 ID 排序，保留欄位、訊息、層級和來源。§5 導覽按來源／目標；§6 衝突與警告保留衝突，不自動修正。§7 分析限制包含節點／關聯／行為／規則解析限制與診斷代碼及證據表，來源可追查，不輸出診斷自由文字。
 
-§9 僅保留非 REMOVE 畫面中已匯出元件實際參照的 styleId（含歧義全候選），去重、styleId／屬性排序。值沿用 Preview.styles 的非預設屬性字典，不捏造全樣式或從不同 defaultId 擇一；其餘字典／縮圖／HTML 不輸出。缺值「—」，缺少被參照的 styleId 明確失敗。
+（R17 已移除，以下為歷史規則）原 §9 僅保留非 REMOVE 畫面中已匯出元件實際參照的 styleId（含歧義全候選），去重、styleId／屬性排序。值沿用 Preview.styles 的非預設屬性字典，不捏造全樣式或從不同 defaultId 擇一；其餘字典／縮圖／HTML 不輸出。缺值「—」，缺少被參照的 styleId 明確失敗。
 
 ## 正文隔離（OQ-007）
 
@@ -36,7 +36,7 @@ evidence.detail 自由文字從不複製；僅接受結構化白名單鍵解析�
 
 機器區保留完整名稱／ID，不套用 code span／300 上限。每字串 JSON 序列化，再 Unicode 跳脫反引號、<、>、&、C0／C1 控制、換行、雙向控制 U+202A–202E／U+2066–2069、U+2028／2029；另跳脫正文新增集合（零寬／格式、變體選擇器、Unicode 標籤字元），正規表示式使用 u 旗標。所有新增字元轉成 JSON 合法的 UTF-16 \uXXXX，非 BMP 使用兩個代理對跳脫；不得使用 JSON 不接受的 \u{XXXXX}。不得改變字面反斜線序列。
 
-附錄固定資訊字串 json screentrace-review-state，只產生一個末尾區塊。共同已知鍵：format_version（1 或 2）、analysis_fingerprint、screen_decisions、component_decisions、state_sha256。component_decisions 是 screenId → componentId → 決策巢狀字典，完整保存未知 ID；不含 application、標籤、條件、訊息、URL 或任何證據。v1 不接受 v2 專屬欄位；v2 必須另含 component_overrides 與 orphan_component_overrides，其他未知欄位拒絕。
+附錄固定資訊字串 json screentrace-review-state，只產生一個末尾區塊。共同已知鍵：format_version（匯出固定 1；匯入接受 1／2／3，2、3 僅匯入相容）、analysis_fingerprint、screen_decisions、component_decisions、state_sha256。component_decisions 是 screenId → componentId → 決策巢狀字典，完整保存未知 ID；不含 application、標籤、條件、訊息、URL 或任何證據。v1 不接受 v2 專屬欄位；v2 必須另含 component_overrides 與 orphan_component_overrides，其他未知欄位拒絕。
 
 state_sha256 對排除自身的狀態物件正規化 JSON（所有物件鍵遞迴排序，原始值 JSON 編碼、無空白）UTF-8 求 SHA-256；與機器顯示用 Unicode 加強跳脫分開。摘要僅偵測損毀，不宣稱防竄改。
 
@@ -50,7 +50,9 @@ state_sha256 對排除自身的狀態物件正規化 JSON（所有物件鍵遞�
 
 generateMarkdown(payload, state, options) 回傳 Promise<string>；importMarkdown(md, payload) 回傳 state、orphans、changed。sha256／canonicalJson／machineJson／projectText 可獨立測試；golden 固定 generatedAt 和 toolVersion。瀏覽器只讀使用者選取檔案，不讀網路資源。
 
-## WP9／OQ-010：元件庫與覆寫（v1.9）
+## WP9／OQ-010：元件庫與覆寫（v1.9；R17 起僅匯入相容）
+
+> 本節的匯出規則（component_library 檔頭、format_version 2、§6 涵蓋率）自 R17 起不再產生；現行程式只保留 v2 匯入時的檔頭解析與欄位驗證，匯入後的覆寫由報表略過並提示。見下方 R17 一節。
 
 未選用時 migration_target.component_library 保持雙引號 none，正文 §6 保持「未匯入元件庫」，原兩份 v1 golden 位元組不變。選用時 component_library 為單行 JSON 相容物件，只有 name_version（名稱@版本）與 manifest_sha256（完整 64 碼小寫十六進位）兩個雙引號字串。不列工作區路徑。v2 匯入只讀檔頭首個 --- 區塊中的唯一 component_library，不從正文猜測。有效覆寫原來源摘要取此檔頭；foreign record 自帶原摘要。
 
@@ -66,7 +68,9 @@ manifest 文字同正文隔離（code span、300、控制／隱形可見化）�
 
 比對 priority 須為 Schema 驗證的 JavaScript 安全整數；拒絕可能失真的 JSON 數值，不把不同分數讀成假同分。
 
-## WP47：決策原因與備註（format_version 3）
+## WP47：決策原因與備註（format_version 3；R17 起僅匯入相容）
+
+> 本節的匯出規則（format_version 3、原因／備註欄）自 R17 起不再產生；現行程式只保留 v3 `decision_notes` 的匯入驗證，匯入後的原因與備註由報表略過並提示。
 
 沒有目前已決定項目的非空原因／備註時，沿用 format_version 1 或 2，既有 v1／v2 golden 位元組不變。任一 KEEP／REMOVE 決策有原因或備註時輸出 format_version 3；v3 必含 `component_overrides`、`orphan_component_overrides`（可為空）及 `decision_notes`，其形狀為 `{screens: {screenId: Note}, components: {screenId: {componentId: Note}}}`。`Note` 僅允許 `reason?` 與 `note?`。UNDECIDED 項目的草稿只留在瀏覽器狀態，不放入正文或附錄；重新決定後若原因相容則恢復輸出。v1／v2 匯入的 `decisionNotes` 為空。
 
@@ -83,7 +87,7 @@ manifest 文字同正文隔離（code span、300、控制／隱形可見化）�
 
 ## R18 第一階段
 
-分析圖支援 schema 2.2／2.3；review v1 的 schemaVersion 2.2、暫存鍵、screenId／(screenId, componentId) 決策鍵及 md format_version 1 位元組不變。
+分析圖支援 schema 2.2／2.3（R19 起另含 2.4）；review v1 的 schemaVersion 2.2、暫存鍵、screenId／(screenId, componentId) 決策鍵及 md format_version 1 位元組不變。
 
 依 OQ-035 方案 A，拆分畫面以 attributes.supersedesScreenId 記錄拆分前 ID。舊 ID 的畫面與元件決策保留為 orphan，提示「此網址已依身分拆分，請重新標記」，不得套用到任何變體，也不得靜默複製。單一變體網址沿用原 screenId，正常匯入。未知 ID 既有保留規則不變；新提示只在圖有明確拆分來源時使用。詳見 [ADR 0099](adr/0099-r18-review-corrections.md)。
 

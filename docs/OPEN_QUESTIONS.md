@@ -2,6 +2,8 @@
 
 每項問題記錄：編號、情境、可選方案、影響範圍、狀態與需求方決定。未決問題不得由實作者自行選擇；依附件 §0.3 暫停受影響工作包。
 
+> 現況（2026-11）：OQ-001 至 OQ-049 皆已決定或已解決，沒有未決問題。文中引用的 `reports/*.md`、`docs/reports/*.md` 已於 commit df28b33 移除，僅能從 git 歷史查閱。
+
 ## OQ-001 — 檢核來源層級與框架中立約束衝突
 
 - 情境：WP1 §4 指定 core 的 ValidationRule 來源層級為 `HTML5` / `JS` / `STRUTS_VALIDATOR` / `ACTION_FORM` / `BEAN_VALIDATION` / `CUSTOM_VALIDATOR`；C4 同時規定 core 圖模型不得出現框架名稱，框架專屬語意只能放 adapter 與 evidence。`STRUTS_VALIDATOR` 明確含框架名稱。
@@ -181,6 +183,7 @@
 - 情境：需求方要求整個專案只使用一種功能區域依據，並要求減少單畫面區域、提供切換及易讀名稱。
 - 決定：已決定（2026-10-05）。依據選項為網址前段、控制器類別、JSP 所在目錄。預設選擇單畫面區域數最少的依據；平手順序為網址前段、控制器、JSP 目錄。介面提供切換並標明依據。分組由單一決定性純函式完成，技術後綴須移除並將名稱人性化。
 - R14 修訂（2026-10-09）：產生區域數為 1 的依據不得成為預設，除非網址前段、控制器類別與 JSP 目錄三種依據都只產生 1 個區域。其他排序、切換與命名規則不變；viewer 實作屬 WP45，本次未開始。
+- R17 後現況：依據切換與上述區域規則已隨 R17 移除（ADR 0084）；總覽改為依網址第一個不同的段分區，沒有切換（ADR 0090）。
 - 範圍：viewer 分組與呈現，不改 Application Graph、分析結果、API 推導或 review state。PetClinic 與 eMusicStore 的選擇依據及各區域畫面數記入 R10 實際報告。
 - 舊規格：WP35 原先先依控制器／Action 分組，再按 URL 退補；因此出現 PetClinic 五個及 eMusicStore 三個單畫面區域。此分組假設由本決定取代。
 
@@ -192,6 +195,7 @@
 - 影響範圍：R-API-1～6 的 caller 定義、Java `ApiUsage`、TypeScript `deriveApiUsage`、共用 `docs/examples/api-usage-vectors.json`、API 詳情的轉址提示。不得把僅可到達的路由自行升為 IN_USE。
 - 狀態：已決定（2026-10-09）；需求方採方案 A，限制如下。
 - 決定：只有可證明且**唯一**的轉址／forward 目的地（handler 回傳常值 `redirect:`／`forward:` 或既有 INFERRED 路由樣板唯一命中）才繼承轉址來源端點的全部呼叫來源，confidence 一律 INFERRED，證據記錄完整轉址鏈（每一跳的 handler、檔案與行號）。目的地 AMBIGUOUS 或 UNRESOLVED → 不繼承，記診斷。鏈長上限 5，偵測循環並記診斷。來源被標移除時依 R-API-2／3 重新推導。Java `ApiUsage` 與 TypeScript `deriveApiUsage` 同步，共用向量新增：只有轉址繼承來源、來源全被移除→REMOVABLE、目的地多候選不繼承、循環、鏈長超限。不得因「可到達」而把沒有任何來源鏈的路由升為 IN_USE。
+- R30 後現況（ADR 0121）：Java `ApiUsage` 只推導呼叫來源（IN_USE／UNREFERENCED），REMOVABLE 與需求方決策只由 TypeScript `deriveApiUsage` 判定；轉址繼承的呼叫來源規則仍由兩端共用向量鎖定。
 
 ## OQ-022 — WP44 JavaScript 路徑佔位符與既有斷言範圍
 
@@ -330,7 +334,7 @@
   1. `scripting-mailreader` 的 `/Delete*` 依證據維持「找不到呼叫來源」；報告寫明實際刪除流程由 `/EditSubscription?task=Delete`（命中 `/Edit*`）與 `/SaveSubscription.do` 承載。§6 驗收中「scripting-mailreader 的 `/Delete*` 為使用中」一句撤回；mailreader 的 `/Delete*` 驗收不變。
   2. 轉義的 HTML 文字（`&lt;`、`&gt;` 內、`<pre>`／`<code>` 內）不是呼叫來源，納入稽核規則與測試。
   3. 授權新增並實作：`<html:img action=…>`（以及 `html:image`、`html:rewrite` 等產生 action URL 的 tag）作為畫面載入時的呼叫來源（R-API-1(a)）；`<jsp:forward page=…>`、`<jsp:include page=…>` 指向 action 時作為呼叫來源（常值為 `STATIC_URL`）。先提交失敗測試；因此改變的 Struts 數量欄位依 OQ-031 處理。
-  4. 已完成：OQ-033 所列決定落地；三個新增測試先於實作提交。Struts parser 現將安全的 page-load action URL 建成畫面 `CALLS` 關係，並略過 escaped、`pre`、`code` 中的示例標記；view include 不會因 wildcard 被誤認為 action。八模組實測與驗證見 `docs/reports/R16.md`、ADR 0077。WP54 仍待需求方驗收。
+  4. 已完成：OQ-033 所列決定落地；三個新增測試先於實作提交。Struts parser 現將安全的 page-load action URL 建成畫面 `CALLS` 關係，並略過 escaped、`pre`、`code` 中的示例標記；view include 不會因 wildcard 被誤認為 action。八模組實測與驗證見 `docs/reports/R16.md`、ADR 0077。WP54 已隨 R16 結案（2026-10-11）。
 
 ## OQ-034 — WP58 Tiles 界線規則與既有測試斷言衝突
 

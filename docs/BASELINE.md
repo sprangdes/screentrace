@@ -1,5 +1,7 @@
 # 基線實測
 
+> 本檔為 2026-10-02 的歷史基線紀錄，數字與指令不代表目前狀態。之後的變更：`report-design.test.mjs` 與舊 HTTP 報表（`report/index.html`、`ReportGenerator`）已於 commit 152de7a6 退場，以下相關指令已無法執行；報表現為不需 HTTP server 的單一 `report/screentrace-report.html`（`SingleHtmlReportGenerator`），`capture-static-jsp.mjs` 也需要輸出目錄中已有分析圖。目前驗證指令見 README「開發與驗證」與 `.github/workflows/security.yml`。
+
 - 日期：2026-10-02（Asia/Taipei）。
 - 起點：`main`，commit `6183e87cb1bba2d2d6fcae3e773780852ac9d808`，原工作區乾淨。
 - 調整分支：`codex/m1-static-analysis`。
