@@ -1,6 +1,8 @@
 # ScreenTrace 工作包路線圖
 
-依 [CODEX_INSTRUCTIONS.md](CODEX_INSTRUCTIONS.md) 1.9（2026-10-03）與 [REQUIREMENTS.md](REQUIREMENTS.md) 執行。過去 POC 已有功能不等同新驗收完成；基線見 [BASELINE.md](BASELINE.md)。每個工作包獨立提交，每個里程碑結束後等待需求方確認。
+依 [CODEX_INSTRUCTIONS.md](CODEX_INSTRUCTIONS.md) 1.9（2026-10-03）與 [REQUIREMENTS.md](REQUIREMENTS.md) 執行。過去 POC 已有功能不等同新驗收完成；基線見 [BASELINE.md](BASELINE.md)。每個工作包獨立提交，每個里程碑結束後等待需求方確認。M1–M4 完成後的工作以輪次（R*）進行，記錄於本檔下方。
+
+> 本檔引用的 `reports/*.md`、`docs/reports/*.md` 與 `ADJUSTMENT_R*.md` 已於 commit df28b33（2026-10-31）移除，僅能從 git 歷史查閱。
 
 | 工作包 | 範圍 | 狀態 |
 |---|---|---|
@@ -17,13 +19,13 @@
 | WP10 | 限定合成 fixture、決定性、完整 E2E、使用文件 | 完成；17dd801 遠端全綠，204 Java／46 三引擎 E2E；見 reports/M4.md，不做效能／格式化／相容清理 |
 | R2 | WP11–WP16：報表呈現補強與查證 | 完成；各工作包獨立提交；WP16 記錄於 reports/R2.md |
 | R4 | UI1–UI5：報表介面改善 | UI1 已驗收；UI2／UI4 完成（241 Java／52 viewer／60 Chromium E2E）；UI2–UI4 已驗收；UI3 無對應 tag-body 名稱依 OQ-015 方案 A 未完成、另案處理；UI5 完成待驗收（241 Java／54 viewer／65 Chromium E2E），見 reports/R4.md |
-| R5 | WP21–WP23：靜態名稱、端點分群與流向 | 已驗收（2026-10-09，隨 R14 實測確認）；靜態名稱與端點分群仍由報表資料使用，WP23 的流向關係與容納版面由 R14 WP49 泳道地圖延續。證據：`wp23-flow.e2e.mjs`「WP23 owner workflow cards follow deterministic WP49 feature lanes…」、`NonInteractiveCliTest.actualAnalyzeAndReportAcceptCaseAndSymlinkWorkspaceRootsWithIdenticalHtml`；見 reports/R5.md。 |
-| R3 | WP17–WP20：流程補強與呈現修正 | 已驗收（2026-10-09，隨 R14 實測確認）；G9 導覽關係、格狀配置與 G10 元件名稱仍可用，R14 WP49 以泳道地圖承接總覽版面。證據：`wp20.e2e.mjs`「WP20 overview global toggle, grid, incident highlights and focus navigation groups」、`wp23-flow.e2e.mjs`「WP23 owner workflow cards follow deterministic WP49 feature lanes…」；見 reports/R3.md。 |
-| R8 | WP30–WP32：需求方文件、可重現截圖與 CLI 友善失敗 | 已驗收（2026-10-09，隨 R14 實測確認）；使用者指南與無互動終端機的 config 友善失敗仍可用。證據：`guide-docs.test.mjs`「requester guide is task-focused, safe, plain-language and illustrated」、`wp40-guide-contract.test.mjs`「WP40 guide uses always-available marking and retains storage and size notices」、`NonInteractiveCliTest.configWithoutAnInteractiveTerminalNamesTheConfigRequirement`；見 reports/R8.md。 |
+| R5 | WP21–WP23：靜態名稱、端點分群與流向 | 已驗收（2026-10-09，隨 R14 實測確認）；靜態名稱與端點分群仍由報表資料使用，WP23 的流向關係與容納版面由 R14 WP49 泳道地圖延續。證據：`wp23-flow.e2e.mjs`「WP23 owner workflow cards follow deterministic WP49 feature lanes…」、`NonInteractiveCliTest.actualAnalyzeAndReportAcceptCaseAndSymlinkWorkspaceRootsWithIdenticalHtml`；見 reports/R5.md。 （R17 註：WP49 泳道地圖已於 R17 移除，總覽改為網址分區，見 ADR 0084、ADR 0090；`wp23-flow.e2e.mjs` 已刪除。） |
+| R3 | WP17–WP20：流程補強與呈現修正 | 已驗收（2026-10-09，隨 R14 實測確認）；G9 導覽關係、格狀配置與 G10 元件名稱仍可用，R14 WP49 以泳道地圖承接總覽版面。證據：`wp20.e2e.mjs`「WP20 overview global toggle, grid, incident highlights and focus navigation groups」、`wp23-flow.e2e.mjs`「WP23 owner workflow cards follow deterministic WP49 feature lanes…」；見 reports/R3.md。 （R17 註：泳道地圖已於 R17 移除，總覽改為網址分區，見 ADR 0084、ADR 0090；`wp20.e2e.mjs`、`wp23-flow.e2e.mjs` 已刪除。） |
+| R8 | WP30–WP32：需求方文件、可重現截圖與 CLI 友善失敗 | 已驗收（2026-10-09，隨 R14 實測確認）；使用者指南與無互動終端機的 config 友善失敗仍可用。證據：`guide-docs.test.mjs`「requester guide is task-focused, safe, plain-language and illustrated」、`wp40-guide-contract.test.mjs`「guide uses always-available marking, explains the progress file and retains storage and size notices」、`NonInteractiveCliTest.configWithoutAnInteractiveTerminalNamesTheConfigRequirement`；見 reports/R8.md。 |
 | R9 | WP33：路徑大小寫與符號連結 | 已驗收（2026-10-09，隨 R14 實測確認）；路徑邊界與符號連結防護仍存在。證據：`JspProjectParserSecurityTest.traversalAndSymlinkIncludesAreUnresolved`、`NonInteractiveCliTest.actualAnalyzeAndReportAcceptCaseAndSymlinkWorkspaceRootsWithIdenticalHtml`。Windows 仍未驗證；見 reports/R9.md、ADR 0061。 |
-| R10 | WP34–WP38：需求方功能理解與確認工作流 | WP34–WP36 已驗收；WP37 已由 R14 WP45 第 8 點首頁盤點與交付清單取代。WP38 已完成（隨 R11–R14 實作）：流程大綱、全域搜尋、首次引導、「?」說明浮層均有現行實作與測試。證據：`wp38.e2e.mjs`「WP38 flow outline, global search, first-run guide and help can be used without changing decisions」及「WP38 rendered flow tree expands each screen once…」；見 reports/R10.md。 |
-| R11 | WP39–WP40：檢視器簡化與決策介面常駐 | 已驗收（2026-10-09，隨 R14 實測確認）；無模式決策與檢視器能力保留，R14 WP45／WP46 取代舊確認版面。證據：`wp39-simplify.e2e.mjs`「WP39 viewer removes mode controls…」、`wp40-always-on-decisions.e2e.mjs`「WP40 decisions stay available without a mode…」；見 reports/R11.md。 |
-| R13 | WP43：畫面切換動畫 | 已驗收（2026-10-09，隨 R14 實測確認）；轉場仍保留舊預覽至新 iframe 載入、支援 reduced motion 與快速切換。證據：`wp43-transition.e2e.mjs` 中 `WP43 in-screen navigation keeps the old preview until the next iframe loads…`、`WP43 rapid navigation cancels pending switches…`；見 reports/R13.md。 |
+| R10 | WP34–WP38：需求方功能理解與確認工作流 | WP34–WP36 已驗收；WP37 已由 R14 WP45 第 8 點首頁盤點與交付清單取代。WP38 已完成（隨 R11–R14 實作）：流程大綱、全域搜尋、首次引導、「?」說明浮層均有現行實作與測試。證據：`wp38.e2e.mjs`「WP38 flow outline, global search, first-run guide and help can be used without changing decisions」及「WP38 rendered flow tree expands each screen once…」；見 reports/R10.md。 （R17 註：流程大綱、全域搜尋、首次引導與「?」說明浮層已於 R17 移除，`wp38.e2e.mjs` 已刪除，見 ADR 0084。） |
+| R11 | WP39–WP40：檢視器簡化與決策介面常駐 | 已驗收（2026-10-09，隨 R14 實測確認）；無模式決策與檢視器能力保留，R14 WP45／WP46 取代舊確認版面。證據：`wp39-simplify.e2e.mjs`「WP39 viewer removes mode controls…」、`wp40-always-on-decisions.e2e.mjs`「WP40 decisions stay available without a mode…」；見 reports/R11.md。 （R17 註：R14 WP45／WP46 的盤點首頁與逐頁確認亦於 R17 由兩頁報表取代，所列兩個 e2e 測試已刪除，見 ADR 0084。） |
+| R13 | WP43：畫面切換動畫 | 已驗收（2026-10-09，隨 R14 實測確認）；轉場仍保留舊預覽至新 iframe 載入、支援 reduced motion 與快速切換。證據：`wp43-transition.e2e.mjs` 中 `WP43 in-screen navigation keeps the old preview until the next iframe loads…`、`WP43 rapid navigation cancels pending switches…`；見 reports/R13.md。 （R17 註：`wp43-transition.e2e.mjs` 已於 R17 刪除，見 ADR 0084；canvas.ts 仍保留淡入與 reduced-motion 處理。） |
 | R14 | WP44–WP50：功能盤點工作台（分析誤判修正、盤點首頁、逐頁確認、決策原因與備註、按鈕合併、地圖泳道、API 與交付清單） | WP44–WP50、§11.1 與 §12 抽查補正完成，R14 結案。最終 §5 驗證：305 Java（304 通過、1 跳過）、118 viewer、45 JS、43 capture、168 預設並行 E2E 全綠。§12 提交 `d090315`、`03db57b`、`cdb2353`、`b60683a`，先補失敗測試再修正；API basis 區分完整常值與動態串接，REDIRECT 類別顯示「轉址」。eMusicStore 實測：無 context path 為 1／1／5／0，有 `/eMusicStore` 為 2／4／1／0（使用中／推定使用中／找不到呼叫來源／可移除）。詳見 reports/R14.md、ADR 0067／0069／0070／0071。 |
 | R15 | WP51–WP53：API 轉址標示收尾、ROADMAP 狀態整理、Struts 1 官方範例唯讀實測稽核 | 已驗收（2026-10-09）；WP53 稽核發現 Struts 1 系統性誤判，OQ-024–026 已決定，修正於 R16。見 reports/R15.md、ADR 0072。 |
 | R16 | WP54–WP59：Struts URL 別名與 forward 正規化、Tiles 畫面界線、Validator／DispatchAction、訊息資源、JSF 標示、重新稽核 | 完成並結案（2026-10-11）。§9.1 Tiles 畫面依 title put、body JSP、definition 名稱排序，重複名稱以可讀資訊區分；faces-example2 與 WP10 outer 實測完成。完整驗證與 Spring graph 雜湊見 reports/R16.md、ADR 0074–0083。 |
@@ -53,12 +55,12 @@
 
 - OQ-005：待既有歷史測試遷移後移除 ApplicationGraph 舊版相容建構子；目前只供讀取歷史資料與既有 fixture，正式分析不得使用。
 
-- WP7 E 已移除 Deprecated ReportGenerator 與原測試／localhost／POST endpoint；新資料注入只接受嚴格 2.2。
-- WP8 C 已移除 ReviewResultGenerator／原測試與 CLI export；新 md 與共用模組嚴格 2.2。
+- WP7 E 已移除 Deprecated ReportGenerator 與原測試／localhost／POST endpoint；新資料注入只接受嚴格 2.2（R18 起 2.3、R19 起 2.4 亦接受）。
+- WP8 C 已移除 ReviewResultGenerator／原測試與 CLI export；新 md 與共用模組嚴格 2.2（R18 起 2.3、R19 起 2.4 亦接受）。
 
 - WP7 B：單檔畫布／決定性 SCC 分層、檔案樹、URL 搜尋與平移縮放已實作；逐增量 CI gate 見 docs/reports/WP7.md。
 
-- R10 WP37 已由 R14 WP45 第 8 點取代；WP38 流程大綱、全域搜尋、首次引導與說明浮層已由 R11–R14 完成，見 R10 報告。
+- R10 WP37 已由 R14 WP45 第 8 點取代；WP38 流程大綱、全域搜尋、首次引導與說明浮層曾由 R11–R14 完成，已於 R17 移除（ADR 0084）。
 
 - capture 相容清理：已完成（R31）。packDocuments 舊 inline CSS 入口已移除，封裝只剩 packStandaloneDocuments，原本的測試改用正式入口（[ADR 0122](adr/0122-r31-retire-inline-css-pack.md)）。
 
@@ -154,7 +156,7 @@
 
 - 第三次驗收：需求方確認 WP78／WP79／WP80 通過，授權 WP81→WP82 第二階段；OQ-039 另案處理、不阻擋 R18。WP81 與 optional 顯示修正見 [ADR 0101](adr/0101-r18-dispatch-props-and-optional-display.md)，WP82 後停止。
 
-- 第二階段（WP81 → WP82）：分派表、已知 prop、optional chaining 安全摘要、字面 API 優先、Webhook 雙證據附註與 Boot 預設 context 已實作；R18-B 記為 OQ-040 RESOLVED，見 [ADR 0102](adr/0102-r18-spring-api-paths-and-external-call-notes.md)。本機 Maven 526（525 通過、既有 1 略過）、viewer 121、JS 141、capture 83、預設並行 E2E 90 全部通過；reservio 靜態重析維持 36 screens／66 endpoints／1,172 components。第二階段尚未提交／推送，PR CI run 待取得；在 CI 全綠及需求方驗收前不標記完成。WP82 後停止，WP83 未進入。
+- 第二階段（WP81 → WP82）：分派表、已知 prop、optional chaining 安全摘要、字面 API 優先、Webhook 雙證據附註與 Boot 預設 context 已實作；R18-B 記為 OQ-040 RESOLVED，見 [ADR 0102](adr/0102-r18-spring-api-paths-and-external-call-notes.md)。本機 Maven 526（525 通過、既有 1 略過）、viewer 121、JS 141、capture 83、預設並行 E2E 90 全部通過；reservio 靜態重析維持 36 screens／66 endpoints／1,172 components。第二階段已提交（c414f0c）並隨 PR #45 合併（4340592，2026-10-25）。WP82 後停止，WP83 未進入。
 
 - 第三階段（WP83 → WP85）：載入成功狀態預覽（含自訂 hook 狀態）、頁面元件依 Guard／外框／變體分支決定、JSX spread props、未安裝套件樣式表診斷。實測由需求方審查者於 sandbox 外執行：reservio 36 畫面／66 API、7 個頁面元件與 6d 各項全部通過，7 個非 React 專案位元組相同。詳見 R18 報告「第三階段」與 [ADR 0103](adr/0103-r18-preview-state-page-components-and-style-packages.md)。等待需求方最終驗收 R18。
 
@@ -249,6 +251,11 @@
 
 - WP103：總覽的區名放在區塊框頂端加高的標題帶並固定在可讀的字級，下面列出這一區前 3 個畫面的名稱；縮小時滑過卡片立即顯示畫面名稱與網址，見 [ADR 0124](adr/0124-r33-overview-labels.md)。
 - 驗證：viewer 單元測試 148 個（新增 1）、E2E 111 個（新增 2）、JS 測試 180 個、Maven 建置通過；reservio 的 `viewer-documents.json` 與修改前逐位元組相同。
+- 後續修正（PR #79，7adf7f0）：角色頁的步驟欄維持原本的純文字標題，見 ADR 0124 R33-5a。主要變更隨 PR #78 合併。
+
+## R34（未合併）
+
+- WP104（分析效能與安全，ADR 0125）只存在於分支 `feature/r34-analysis-performance-security`（e19d7f0，2026-11-06），未合併到 main；因此 main 上沒有 R34 紀錄與 ADR 0125。
 
 ## R35 放大畫面時的關聯線整理
 

@@ -50,7 +50,7 @@ Windows：
 
 ```text
 ❯ 分析專案
-  開啟報表
+  開啟報表          （已有分析結果時才出現）
   設定
   結束 ScreenTrace
 ```
@@ -65,16 +65,19 @@ Windows：
 ./bin/screentrace analyze 專案名稱
 ./bin/screentrace report 專案名稱
 ./bin/screentrace config
+./bin/screentrace analyze /path/to/your-project
+./bin/screentrace doctor
 ```
 
-`analyze` 只分析、印出報表路徑，不開啟瀏覽器；`report` 以既有分析結果重新產生並開啟報表，不重新掃描。`config` 開啟同一個「設定」選單。報表為單一 HTML，可搬移後直接開啟，不依賴分析資料夾、網路或本機服務。
+`analyze` 只分析、印出報表路徑，不開啟瀏覽器；參數含 `/`、`\` 或以 `~`、`.` 開頭時視為資料夾路徑，不需先設定。`doctor` 檢查 Java、Maven、Node、Playwright Chromium 與 JS parser 是否就緒，缺項時結束碼 1。`report` 以既有分析結果重新產生並開啟報表，不重新掃描。`config` 開啟同一個「設定」選單。報表為單一 HTML，可搬移後直接開啟，不依賴分析資料夾、網路或本機服務。
 
 ## 報表操作
 
-報表只有兩頁：
+報表有「畫面」「API」兩頁；分析人員設定角色（`personas`）時另有「角色」頁：
 
-- **畫面**：畫布呈現所有畫面與關聯線；畫面較多時依網址第一段分區。觸控板兩指滑動移動畫布，捏合或 ⌘／Ctrl＋滾輪縮放。點一下畫面標出它的關聯線，點兩下在同一張畫布放大成完整預覽，四周留下進出的關聯線，滑過線顯示目的畫面縮圖，點線前往。在預覽中點按鈕會模擬前往的畫面（不做資料檢核）；按 `f` 或預覽右上角按鈕可切換全螢幕預覽。右側欄標記保留／移除，並列出按鈕、呼叫的 API 與來源畫面；左右側欄都可收合。左側搜尋框可用實際網址比對路由樣板。
-- **API**：左側依 Controller（或網址）分組列出後端 API，只標示需要注意的「未被使用」「可移除」；右側是選中 API 的詳情：狀態原因、處理程式與原始檔位置、依畫面分組的呼叫來源，以及預設收合的 Request／Response。
+- **畫面**：畫布呈現所有畫面與關聯線；畫面較多時依網址第一段分區。觸控板兩指滑動移動畫布，捏合或 ⌘／Ctrl＋滾輪縮放。點一下畫面標出它的關聯線，點兩下在同一張畫布放大成完整預覽，四周留下進出的關聯線，滑過線顯示目的畫面縮圖，點線前往；進入的線從左側進、離開的線從右側出，同一區的多個畫面合併成一條並在左右留白標示名稱或數量。在預覽中點按鈕會模擬前往的畫面（不做資料檢核）；按 `f` 或預覽右上角按鈕可切換全螢幕預覽。右側欄標記保留／移除，並列出按鈕、呼叫的 API 與來源畫面；左右側欄都可收合。左側搜尋框可用實際網址比對路由樣板；畫面清單與畫布之間的分隔線可拖曳調整寬度。
+- **API**：上方是 API 狀態比例條與「全部／需要注意／使用中」篩選；左側依 Controller（或網址）分組列出後端 API，方法以顏色標籤、路徑參數 `{…}` 加框標示，只標示需要注意的「未被使用」「可移除」；由系統設定進入（welcome-file、繼承樣板、自動轉址）的 API 視為使用中。右側是選中 API 的詳情：狀態原因、處理程式與原始檔位置、呼叫鏈（畫面 → API → 處理程式）、依畫面分組的呼叫來源，以及預設收合的 Request／Response。列表與詳情之間的分隔線可拖曳。
+- **角色**（僅在設定角色時出現）：上方為角色卡片與「會走到／可能走到／走不到／不適用」比例條，下方為所選角色的步驟看板、判定條件、起點與「和其他角色比較」；有兩個以上角色時可切到「全部角色對照」。
 
 ## 確認進度與 md
 
@@ -89,11 +92,17 @@ md 一律為 format_version 1，舊版 v2／v3 檔仍可開啟。格式、排序
 ├── application-graph.json       # 靜態分析出的標準 Application Graph
 ├── prototype-model.json         # 原型畫面與元件基準資料
 ├── preview-model.json           # 預覽畫面、全部元素與去重樣式的統一資料
+├── viewer-documents.json        # 封裝後的離線預覽文件與資產
+├── report-size.json             # 單一 HTML 實際大小與 100 MB 警告
 ├── report/
 │   └── screentrace-report.html  # 單檔離線報表
 ├── static-preview/
 │   ├── manifest.json            # Screen ID 與靜態頁面對應
-│   └── *.html                   # JSP 轉換後的靜態頁面
+│   ├── reconstruction.json      # 重建預覽的元素資料
+│   ├── element-styles.json      # 元素樣式
+│   ├── diagnostics.json         # 擷取診斷
+│   ├── react-preview.json       # React 畫面的靜態預覽（React 專案）
+│   └── *.html                   # JSP／模板轉換後的靜態頁面
 └── screenshots/
     ├── manifest.json            # Screen ID 與渲染截圖對應
     ├── interactions.json        # 可見元件的實際位置與 CSS
@@ -129,10 +138,11 @@ mvn clean verify
 
 ### 依賴安全檢查
 
-GitHub Actions 的 `Security checks` 在 push、PR 與每週排程執行。Java 與 Node 使用獨立 job，因此其中一項失敗不會跳過另一項。
+GitHub Actions 的 `Security checks` 在 push、PR 與每週排程執行。分成三個獨立 job，其中一項失敗不會跳過其他項。
 
-- Java：先建置與測試，再使用 Dependency-Check 12.2.2 掃描；CVSS ≥ 7 或掃描錯誤仍會使檢查失敗。
-- Node：依 lockfile 安裝依賴，再執行 `npm audit --audit-level=high`。
+- 建置與測試：viewer 建置、Java `mvn verify`、三引擎 E2E。
+- Java 依賴掃描：`-DskipTests package` 後以 Dependency-Check 12.2.2 掃描；CVSS ≥ 7 或掃描錯誤仍會使檢查失敗。
+- Node：capture、viewer、screentrace-js 三個套件依 lockfile 安裝並執行測試，再各自執行 `npm audit --audit-level=high`。
 - NVD 資料使用官方公開 JSON 2.0 檔案，不需要 API Key；漏洞資料庫使用每日快取，並依掃描器版本隔離；升級掃描器時也要更新 workflow 的快取版本。
 - Java 掃描報告以 `java-dependency-audit` artifact 保存，掃描失敗時也會嘗試上傳。
 
@@ -146,6 +156,8 @@ npm --prefix screentrace-js test
 npm --prefix screentrace-js audit --audit-level=high
 npm --prefix screentrace-capture ci
 npm --prefix screentrace-capture audit --audit-level=high
+npm --prefix screentrace-viewer ci --ignore-scripts
+npm --prefix screentrace-viewer audit --audit-level=high
 ```
 
 掃描設定集中在根目錄 `pom.xml`，不會自動附加到一般 `mvn verify`。新版掃描器不可沿用不相容的舊資料庫；上例使用獨立資料目錄，避免改動已有快取。
@@ -158,15 +170,15 @@ npm --prefix screentrace-capture audit --audit-level=high
 
 JS API request 節點保存來源方法、URL、資料欄位；只有在後端 URL 配對成立時才連到 handler，無法證明的配對保留 UNRESOLVED 或歧義。script src context 前綴例外見 ADR 0008，不套用到 API URL。
 
-WAR context path 可在 `~/.screentrace/config.json` 加入 `contextPaths`，鍵為專案絕對路徑，值為明確候選陣列，例如 `"contextPaths": {"/workspace/shop": ["/shop"]}`。未設定不推測部署路徑；多個不同候選保留歧義。Spring Boot properties／YAML 的 `server.servlet.context-path` 亦保留來源證據。
+WAR context path 可在 `~/.screentrace/config.json` 加入 `contextPaths`，鍵為專案絕對路徑，值為明確候選陣列，例如 `"contextPaths": {"/workspace/shop": ["/shop"]}`。需在已用 `config` 設定專案根目錄（且該資料夾存在）的 config.json 中才會生效；設定格式錯誤時整份設定會被略過。`config` 選單不提供此項，請直接編輯檔案。未設定不推測部署路徑；多個不同候選保留歧義。Spring Boot properties／YAML 的 `server.servlet.context-path` 亦保留來源證據。
 
 ### Graph schema 與 context
 
-新分析的 Struts／Spring／混合圖一律 schema 2.2，嚴格驗證來源證據。URL 配對與明確 context 候選保留全部歧義；API 契約與 SERVER 規則附來源。core 舊版 API 僅歷史相容；舊報表與 JSON 匯出已退場，決定見 [ADR 0015](docs/adr/0015-schema-two-production-and-historical-compatibility.md)、[ADR 0016](docs/adr/0016-historical-report-entries-and-schema-retirement.md)。
+新分析的 Struts／Spring／混合圖為 schema 2.2；含 React 身分條件時為 2.3，設定角色時為 2.4；三者都嚴格驗證來源證據。URL 配對與明確 context 候選保留全部歧義；API 契約與 SERVER 規則附來源。core 舊版 API 僅歷史相容；舊報表與 JSON 匯出已退場，決定見 [ADR 0015](docs/adr/0015-schema-two-production-and-historical-compatibility.md)、[ADR 0016](docs/adr/0016-historical-report-entries-and-schema-retirement.md)。
 
 ### 靜態重建預覽
 
-正式 CLI 使用 schema 2.2 的完整預覽模式；獨立執行：
+正式 CLI 使用完整預覽模式（接受 schema 2.2／2.3／2.4，需先有同一輸出目錄的分析圖）；獨立執行：
 
 ```bash
 node screentrace-capture/capture-static-jsp.mjs <target-project> <analysis-directory> --preview-v2
@@ -184,7 +196,7 @@ npm --prefix screentrace-viewer test
 node --test screentrace-viewer/test/*.e2e.mjs
 ```
 
-新入口 `SingleHtmlReportGenerator.generate` 只接受嚴格 schema 2.2，注入圖、預覽、內嵌文件與 manifest，產出 `report/screentrace-report.html` 及實際 bytes 的 `report-size.json`；超過 100 MB 只警告。單檔以 `file://` 開啟，沒有執行期 npm 相依。CLI 透過 SingleHtmlAnalysisWriter 產生報表，不啟動 localhost 服務。設定 `ST_BROWSERS=chromium,firefox,webkit` 可執行三引擎測試，須先安裝對應 Playwright 瀏覽器。
+新入口 `SingleHtmlReportGenerator.generate` 只接受嚴格 schema 2.2／2.3／2.4，注入圖、預覽、內嵌文件與 manifest，產出 `report/screentrace-report.html`，並在分析目錄根層寫入實際 bytes 的 `report-size.json`；超過 100 MB 只警告。單檔以 `file://` 開啟，沒有執行期 npm 相依。CLI 透過 SingleHtmlAnalysisWriter 產生報表，不啟動 localhost 服務。設定 `ST_BROWSERS=chromium,firefox,webkit` 可執行三引擎測試，須先安裝對應 Playwright 瀏覽器。
 
 標記自動暫存在應用名稱＋分析指紋的 localStorage，並可自動寫入使用者選擇的 md 進度檔；拒絕存取時只警告。複合鍵契約見 [REVIEW_STATE_CONTRACT](docs/REVIEW_STATE_CONTRACT.md)。md 匯出／匯入共用模組見 [REVIEW_MD_CONTRACT](docs/REVIEW_MD_CONTRACT.md)；決策可用單一 md 跨瀏覽器還原。
 

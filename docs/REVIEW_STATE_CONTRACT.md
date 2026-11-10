@@ -1,6 +1,6 @@
 # Review 狀態契約 v1（WP7 D；WP8 共用）
 
-正式模組：`screentrace-viewer/src/shared/review.ts`，可於瀏覽器與 Node 使用。圖只接受 schema 2.2；注入入口另做完整 GraphIntegrityValidator 嚴格證據驗證。
+正式模組：`screentrace-viewer/src/shared/review.ts`，可於瀏覽器與 Node 使用。圖接受 schema 2.2／2.3／2.4（ReviewState 自身的 `schemaVersion` 固定 `'2.2'`）；注入入口另做完整 GraphIntegrityValidator 嚴格證據驗證。
 
 ```typescript
 interface ReviewState {
@@ -19,13 +19,13 @@ interface ReviewState {
 
 `screenDecisions[screenId]` 與 `componentDecisions[screenId][componentId]` 為明確決策。缺值等於 UNDECIDED；以巢狀字典表示複合鍵，ID 不串接、不假設分隔符，也不存取繼承屬性。標記對象為全部畫面、BUTTON／LINK／SUBMIT，以及有 graph 行為／導頁／API／表單觸發的其他元件；共用元件各 owner 是獨立決策。
 
-`setScreen`／`setComponent` 回傳新狀態，不突變輸入。畫面 REMOVE 不改寫其元件；`effectiveComponent` 顯示 INHERITED_REMOVE（隨畫面移除），不寫入字典。統計分別計算明確三態，另列隨畫面移除數量。總覽／檔案樹依畫面明確狀態篩選；聚焦元件依有效狀態篩選。保留元件導向移除畫面列警告，不自動修正。
+`setScreen`／`setComponent` 回傳新狀態，不突變輸入。畫面 REMOVE 不改寫其元件；`effectiveComponent` 顯示 INHERITED_REMOVE（隨畫面移除），不寫入字典。統計分別計算明確三態，另列隨畫面移除數量；元件統計（含 md §2）只計 BUTTON／LINK／SUBMIT，不含上述其他可標記元件。總覽／檔案樹依畫面明確狀態篩選；聚焦元件依有效狀態篩選。保留元件導向移除畫面列警告，不自動修正。
 
 API 使用狀態依 R-API-1–6 推導；載入時／未解析 selector 的畫面來源不可遺失，回呼從父行為追蹤。元件來源依其 `(screenId, componentId)` 或畫面 REMOVE 視為移除；無來源為 UNREFERENCED，不授權移除。
 
 localStorage 鍵為 `screentrace:review:v1:<encodeURIComponent(application)>:<fingerprint>`。指紋來自排序鍵的分析圖 JSON SHA-256。讀取需 format／version／schema／application／fingerprint 相符，決策限三態；非法或存取失敗顯示警告並保留操作能力。儲存失敗不刪當前記憶體決策。未知 ID 不丟棄；還原模組保留，WP8 匯入層據圖列 orphan 清單。
 
-WP8 已支援 md 匯出／匯入且 JSON 匯出退場。WP9 OQ-010：覆寫資料使用與附錄相同的 component_overrides／orphan_component_overrides，當前來源由 manifest_sha256 標識；格式 version 1 為瀏覽器容器版本，md format_version 1／2 由是否有覆寫決定。
+WP8 已支援 md 匯出／匯入且 JSON 匯出退場。WP9 OQ-010：覆寫資料使用與附錄相同的 component_overrides／orphan_component_overrides，當前來源由 manifest_sha256 標識；格式 version 1 為瀏覽器容器版本，md format_version 1／2 由是否有覆寫決定（R17 起匯出固定 1，2／3 僅匯入相容，見下方 R17 一節）。
 
 partitionOverrides 是唯一分區邏輯：把全部覆寫收集為帶來源摘要的 ID record，按 (screenId, componentId, manifest_sha256) 去重；相同來源鍵衝突拒絕。摘要等於目前、元件庫 ID 有效且圖 owner 相符者有效，其餘 orphan。換回來源庫／圖 ID 可恢復，不丟棄。每個 record 只含 ID 與 64 碼小寫摘要，未知鍵拒絕。API 推導／kind 涵蓋率不讀覆寫。有效覆寫只在 KEEP 畫面展示；setOverride 只允許 KEEP 並驗證 owner／元件庫 ID。
 
@@ -43,12 +43,12 @@ md 雙格式契約見 REVIEW_MD_CONTRACT；有效／orphan ID 同時可逆還原
 
 ## R17：退場欄位
 
-報表不再建立 `decisionNotes`、`component_overrides`、`orphan_component_overrides`、`manifest_sha256`。瀏覽器暫存或匯入的狀態若含這些欄位，載入時略過並提示一次；保留／移除決策與儲存鍵不變。`batchSetComponents` 隨批次標記退場移除。確認進度另可自動寫入使用者選擇的 md 進度檔（見 ADR 0086）；瀏覽器暫存仍同時寫入作為備援。
+報表不再建立 `component_overrides`、`orphan_component_overrides`、`manifest_sha256`，也不再填寫 `decisionNotes`（內部狀態與瀏覽器暫存可能仍含空的 `decisionNotes` 字典，不匯出）。瀏覽器暫存或匯入的狀態若含這些欄位，載入時略過並提示一次；保留／移除決策與儲存鍵不變。`batchSetComponents` 隨批次標記退場移除。確認進度另可自動寫入使用者選擇的 md 進度檔（見 ADR 0086）；瀏覽器暫存仍同時寫入作為備援。
 
 
 ## R18 第一階段
 
-分析圖支援 schema 2.2／2.3；review v1 的 schemaVersion 2.2、暫存鍵、screenId／(screenId, componentId) 決策鍵及 md format_version 1 位元組不變。
+分析圖支援 schema 2.2／2.3（R19 起另含 2.4）；review v1 的 schemaVersion 2.2、暫存鍵、screenId／(screenId, componentId) 決策鍵及 md format_version 1 位元組不變。
 
 依 OQ-035 方案 A，拆分畫面以 attributes.supersedesScreenId 記錄拆分前 ID。舊 ID 的畫面與元件決策保留為 orphan，提示「此網址已依身分拆分，請重新標記」，不得套用到任何變體，也不得靜默複製。單一變體網址沿用原 screenId，正常匯入。未知 ID 既有保留規則不變；新提示只在圖有明確拆分來源時使用。詳見 [ADR 0099](adr/0099-r18-review-corrections.md)。
 

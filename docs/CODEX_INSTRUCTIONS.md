@@ -19,7 +19,7 @@
 1. 本文件(第 1、2 節為需求方原意,不得改寫)
 2. `AGENTS.md`(與本文件衝突時以本文件為準,並在 `docs/adr/` 記錄衝突點與決定)
 3. `docs/ARCHITECTURE.md`、`docs/PRODUCT_SPEC.md`
-4. `docs/ROADMAP.md`(目前為過時文件,WP0 會整理)
+4. `docs/ROADMAP.md`(工作包與輪次進度;WP0 已整理)
 
 ### 0.3 停止條件(不得自行猜測)
 
@@ -162,6 +162,7 @@
    - 輸入:圖 + 需求方決策集合。**決策鍵**:畫面決策以 `screenId`;元件決策以 (`screenId`, `componentId`) 複合鍵(同一元件可出現在多個畫面,各畫面獨立決策,不得以單一 `componentId` 跨畫面套用)
    - 呼叫來源(caller)= 呼叫該 API 的 (畫面) 或 (畫面, 元件/行為)
    - 輸出狀態(見 9.5 規則):`IN_USE` / `REMOVABLE` / `UNREFERENCED`
+   - R30 註(ADR 0121):Java `ApiUsage` 現只推導呼叫來源並輸出 `IN_USE` / `UNREFERENCED`;需求方決策與 `REMOVABLE` 只由檢視器 `deriveApiUsage` 判定,md 匯出使用同一 TypeScript 函式。
 
 **驗收**:模型單元測試;完整性驗證測試(不合法的邊 / 缺證據 / 缺 kind 會被拒絕);ID 在「重新排序檔案、無關檔案修改」後不變的測試;API 狀態推導的窮舉測試(見 9.5 各情境)。
 
@@ -270,7 +271,7 @@
 
 ### WP7 單一 HTML 檢視器(Screen Map、API 頁、review 模式)
 
-**OQ-006 新增驗收**：新資料注入及共用模組只接受嚴格 schema 2.2；其他版本清楚失敗。ReportGenerator 歷史入口與既有測試須隨舊程式碼一併移除。
+**OQ-006 新增驗收**：新資料注入及共用模組只接受嚴格 schema 2.2（R18 起另接受 2.3、R19 起 2.4）；其他版本清楚失敗。ReportGenerator 歷史入口與既有測試須隨舊程式碼一併移除。
 
 **架構要求**
 1. 新增前端模組 `screentrace-viewer/`(TypeScript + esbuild;不使用 UI 框架,除非 ADR 證明必要)。**移除** `ReportGenerator.java` 內的整段內嵌 HTML / JS / 樣式注入。
@@ -326,7 +327,7 @@ H. 品質
 
 ### WP8 review md 匯出(取代 JSON)
 
-**OQ-006 新增驗收**：新 md 匯出及共用模組只接受嚴格 schema 2.2；其他版本清楚失敗。ReviewResultGenerator 歷史入口與既有測試須隨舊程式碼一併移除。
+**OQ-006 新增驗收**：新 md 匯出及共用模組只接受嚴格 schema 2.2（R18 起另接受 2.3、R19 起 2.4）；其他版本清楚失敗。ReviewResultGenerator 歷史入口與既有測試須隨舊程式碼一併移除。
 
 **要求**
 1. **移除**:`ReviewResultGenerator`、`docs/REVIEW_RESULT_CONTRACT.md`、`docs/examples/review-result.json`、CLI `export` 指令、相關測試(`ReviewResultGeneratorTest`、`ReviewExportContractTest`);同步更新 README。
@@ -452,7 +453,7 @@ migration_target:
 - [ ] 相關文件已更新
 - [ ] `docs/OPEN_QUESTIONS.md` 中屬於該工作包的項目已處理或已在回報中提出
 
-**里程碑回報格式**(提交於 PR 描述或 `docs/reports/Mx.md`)
+**里程碑回報格式**(提交於 PR 描述;`docs/reports/` 已於 df28b33 移除)
 1. 完成的工作包與對應 commit
 2. 新增 / 修改 / 刪除的主要檔案
 3. 測試:新增數量、執行結果(貼出指令與結果摘要,含失敗項)
@@ -498,14 +499,14 @@ R18-B（需求方第三次驗收）：符合 WP82 的公開存取＋CSRF 忽略�
 | I3 | 以實際 url 搜尋 | 輸入具體 URL(含實際參數值),與路由樣板比對;同時支援子字串搜尋 |
 | I4 | 畫面呈現的條件分支 | 所有分支全部渲染並標記條件(不做分支切換) |
 | I5 | 移除畫面時其按鈕的狀態 | 計算 API 狀態時,畫面被標移除即視為其下所有元件已移除;但介面與 md 不自動改寫元件的明確標記 |
-| I6 | 畫面四周以關聯線連往畫面外 | 聚焦畫面居中,可前往的畫面分佈於其四周,以關聯線連接（R17 改為在原畫布 zoom in，線維持原畫布方向，見 ADR 0085） |
+| I6 | 畫面四周以關聯線連往畫面外 | 聚焦畫面居中,可前往的畫面分佈於其四周,以關聯線連接（R17 改為在原畫布 zoom in，見 ADR 0085；R35／R36 起進入的線在左、離開的線在右，同區多畫面合併並標示，見 ADR 0126／0127） |
 | I7 | 決策保存方式 | 瀏覽器暫存 + md 內嵌 review state 作為還原來源(不另產生 JSON 檔) |
 
 ---
 
 ## 10. 不在本次範圍
 
-- Struts 2、FreeMarker、Thymeleaf 等其他視圖技術。
+- Struts 2、FreeMarker、Thymeleaf 等其他視圖技術。（後續擴充：WP70 加入有限的 Thymeleaf 投影，見 ADR 0092；React 前端見 ADR 0088／0089；Struts 2 與 FreeMarker 仍不支援。）
 - 任何形式的動態分析、啟動專案、連線資料庫。
 - 自動產生 Spring Boot 4 / Angular 的遷移程式碼。
 - 解析真實元件庫的原始格式(Angular 套件、Storybook、型別定義),待需求方提供格式後另開工作包。

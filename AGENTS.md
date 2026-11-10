@@ -62,11 +62,11 @@ Unless there is a strong technical reason to change it, use:
 
 ### Backend
 - Java 17+
-- Spring Boot
-- Maven multi-module project
+- Maven multi-module project, run as a CLI (`bin/screentrace`); there is no Spring Boot runtime or server
+- Main libraries: JavaParser, Jackson, SnakeYAML
 
 ### Frontend
-- Angular or React may be selected later.
+- The report viewer is `screentrace-viewer`: TypeScript + esbuild, no runtime UI framework, delivered as one offline HTML file (ADR 0019).
 - Keep frontend implementation separate from graph generation logic.
 
 ### Parsing
@@ -75,15 +75,31 @@ Prefer dedicated parsers where possible:
 - XML parser for Struts configuration and Spring XML
 - JavaParser or equivalent AST parser for Java source
 - HTML/JSP parser for markup
-- JavaScript parser when required
+- JavaScript / React AST parsing in `screentrace-js` (Acorn / acorn-loose for scripts, @babel/parser for React/TSX)
 
 Avoid regex as the primary parser for structured programming languages.
 
 ---
 
-## 4. Proposed Module Boundaries
+## 4. Module Boundaries
 
-Target structure:
+Current structure (7 Maven modules + 3 Node packages):
+
+```text
+screentrace/
+├── screentrace-core            framework-neutral graph, merger, validation, ApiUsage, PersonaFlows
+├── screentrace-scanner         file inventory and technology signals
+├── screentrace-parser-jsp      JSP/JSPF/Tiles/Thymeleaf markup, URL engine, API contracts, JS/React bridges
+├── screentrace-adapter-spring  Spring MVC and Spring Boot (shared module)
+├── screentrace-adapter-struts  Struts 1 (Struts 2 is rejected)
+├── screentrace-report          single offline HTML report
+├── screentrace-cli             workspace, commands, orchestration
+├── screentrace-js        (Node) JavaScript / React AST analysis
+├── screentrace-capture   (Node) static preview, Playwright Chromium capture, packing
+└── screentrace-viewer    (Node) TypeScript report viewer and shared review/md modules
+```
+
+Original target structure (the modules below that are not listed above are still planned, see `docs/ARCHITECTURE.md`):
 
 ```text
 screentrace/
@@ -142,6 +158,8 @@ Handler
 
 Do not encode Struts-specific names such as `ActionMapping` into the core model.
 
+Implemented graph types (`ApplicationGraph`): node types SCREEN, ENDPOINT, HANDLER, COMPONENT, VIEW, ENTRY_POINT, FORM_MODEL, TEMPLATE_FRAGMENT, INTEGRATION, SOURCE_ARTIFACT; edges include CONTAINS, TRIGGERS, CALLS, HANDLED_BY, RENDERS, NAVIGATES_TO, FORWARDS_TO; plus `behaviors`, `validationRules` and `apiContracts`. Project, Action and Navigation are expressed through these rather than as separate node types.
+
 ---
 
 ## 6. Parser / Adapter Contract
@@ -167,9 +185,13 @@ A contribution may include:
 
 Adapters should be independently testable.
 
+Current implementation: this interface is conceptual and does not exist in code. Adapters are concrete classes with `ApplicationGraph analyze(ProjectInventory)` (`StrutsProjectAnalyzer`, `SpringProjectAnalyzer` → `SpringMvcAnalyzer` / `SpringBootAnalyzer`); `ScreenTraceCli` selects them and combines results with `ApplicationGraphMerger`.
+
 ---
 
 ## 7. V1 Scope
+
+This section records the original V1 scope. The current scope also covers Spring MVC / Spring Boot JSP, bounded Thymeleaf, and Spring Boot + React projects, and the delivered output is a single offline HTML report plus the review md (see `README.md`).
 
 V1 is a Struts-focused proof of concept.
 
@@ -249,10 +271,10 @@ Prefer small deterministic test fixtures over large application snapshots.
 Before implementing a task:
 
 1. Read `AGENTS.md`.
-   Read `docs/CODEX_INSTRUCTIONS.md` and `docs/REQUIREMENTS.md` when present; current adjustment work follows the milestone order and stop conditions in those instructions.
+   Read `docs/CODEX_INSTRUCTIONS.md` and `docs/REQUIREMENTS.md` when present; milestones M1–M4 in those instructions are complete; later work runs as rounds (R*) recorded in `docs/ROADMAP.md` with decisions in `docs/adr/`, and the stop conditions in CODEX_INSTRUCTIONS §0.3 still apply.
 2. Read `docs/PRODUCT_SPEC.md`.
 3. Read `docs/ARCHITECTURE.md`.
-4. Check `docs/ROADMAP.md` for current phase.
+4. Check `docs/ROADMAP.md` for the latest round and its status.
 5. Inspect existing code before creating new abstractions.
 6. Keep changes scoped to the requested task.
 7. Add tests for newly introduced parsing or graph behavior.

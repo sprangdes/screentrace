@@ -14,11 +14,11 @@ R3 WP17 parser behavior: `JspTagFileExpander` in `screentrace-parser-jsp` follow
 Target source (read-only) -> scanner -> selected Spring and/or Struts adapter -> ApplicationGraph JSON -> embedded standalone HTML
 ```
 
-`screentrace-core` has no Spring dependency. `screentrace-scanner` inventories files and technology signals only. `screentrace-parser-jsp` is the shared, framework-neutral parser for JSP, JSPF, literal interactive targets, JSP includes, Tiles definitions, and literal Spring URL-tag variables. `screentrace-adapter-spring` consumes that contribution and adds annotation and XML Controller endpoint correlation, `SimpleUrlHandlerMapping`, `InternalResourceViewResolver`, and Tiles view resolution. `screentrace-adapter-struts` consumes the same contribution, resolves Struts 1 Action mappings, ActionForms, local/global forwards, and Spring XML-managed Action beans. A project with Struts and annotation-based Spring MVC/Boot combines both contributions through the core graph merger; a classic Struts + Spring XML project is resolved directly by the Struts adapter. The static JSP renderer expands supported local markup and resources into `static-preview/`; Playwright Chromium then captures each rendered page, all DOM elements, deduplicated computed-style differences and graph-component correspondence without starting the target application. `screentrace-report` strictly validates schema 2.2 and injects Graph, Preview, asset dictionaries and manifest into a compiled `screentrace-viewer` template. `screentrace-cli` persists the workspace configuration in `~/.screentrace/config.json`, writes each result to `<output-root>/<project-name>/`, and opens the single report HTML with file://; no report server runs.
+`screentrace-core` has no Spring dependency. `screentrace-scanner` inventories files and technology signals only. `screentrace-parser-jsp` is the shared, framework-neutral parser for JSP, JSPF, literal interactive targets, JSP includes, Tiles definitions, and literal Spring URL-tag variables. `screentrace-adapter-spring` consumes that contribution and adds annotation and XML Controller endpoint correlation, `SimpleUrlHandlerMapping`, `InternalResourceViewResolver`, and Tiles view resolution. `screentrace-adapter-struts` consumes the same contribution, resolves Struts 1 Action mappings, ActionForms, local/global forwards, and Spring XML-managed Action beans. When the scanner reports both Struts and Spring MVC/Boot (from `spring-webmvc`/`spring-boot` build declarations), the CLI runs both adapters, merges them through the core graph merger and then applies `UrlGraphContribution.enrich`; a Struts project without those declarations (e.g. classic Struts + Spring XML) is resolved by the Struts adapter alone. React screens are added by `ReactGraphContribution` from inside both Spring analyzers, and `PersonaFlows.enrich` runs in the CLI before validation. The static JSP renderer expands supported local markup and resources into `static-preview/`; Playwright Chromium then captures each rendered page, all DOM elements, deduplicated computed-style differences and graph-component correspondence without starting the target application. `screentrace-report` strictly validates analysis schemas 2.2/2.3/2.4 and injects the graph (without `application.path`), Preview, packed documents, asset manifest, optional component library, tool version and fingerprint into a compiled `screentrace-viewer` template. `screentrace-cli` persists the workspace configuration in `~/.screentrace/config.json`, writes each result to `<output-root>/<project-name>/`, and opens the single report HTML with file://; no report server runs.
 
-The viewer is split into graph projection/search (`map.ts`), focused relations (`relations.ts`), requester/API details (`details.ts`, `api-page.ts`), preview rendering and element-style display (`preview.ts`), and shared review state. URL search strips a context-path prefix only when `UrlResolution` evidence records an adopted value. Preview style records contain computed-style deltas from clean browser defaults for each captured non-script/style DOM element; this preserves effects from inline and external styles without embedding the original CSS source.
+Since R17 (ADR 0084–0086) the viewer has a screens page, an API page and, when the graph has personas, a personas page (`main.ts`). It is split into graph projection/search (`map.ts`), canvas, zoom-focus and focus lines (`canvas.ts`, `groups.ts`, `overview.ts`), focused relations (`relations.ts`), the screen side panel (`screen-panel.ts`, `review-ui.ts`), the API page (`api-page.ts`, `endpoint-presentation.ts`, `usage.ts`), the personas page (`persona-page.ts`, `personas.ts`), preview document assembly and click simulation (`preview.ts`, `prototype.ts`, `simulation*.ts`), progress-file autosave (`progress-file.ts`), shared splitters/bars (`splitter.ts`, `proportion.ts`) and shared review state (`shared/`). Element styles are captured and used for simulation overlays but are no longer displayed. URL search strips a context-path prefix only when `UrlResolution` evidence records an adopted value. Preview style records contain computed-style deltas from clean browser defaults for each captured non-script/style DOM element; this preserves effects from inline and external styles without embedding the original CSS source.
 
-R11 WP39 removes the screen viewer's operation/inspection and element-visibility modes. Preview clicks continue through the existing static simulation path; Alt/Option-click and touch long-press select without simulation. The right panel keeps operation, API, validation, style, and technical evidence in fixed tabs; toolbar overflow actions remain keyboard accessible. These presentation changes do not alter graph data, simulation results, review state, or Markdown contracts. WP40's always-visible decision controls are not part of WP39.
+R11 WP39 removes the screen viewer's operation/inspection and element-visibility modes. Preview clicks continue through the existing static simulation path; Alt/Option-click and touch long-press select without simulation. The right panel keeps operation, API, validation, style, and technical evidence in fixed tabs; toolbar overflow actions remain keyboard accessible. These presentation changes do not alter graph data, simulation results, review state, or Markdown contracts. WP40's always-visible decision controls are not part of WP39. (Superseded by R17: the fixed tabs, the toolbar overflow "⋯" menu and Alt/Option-click select-only were removed — ADR 0084/0085; touch long-press remains in the WebKit simulation surface.)
 
 OQ-016: `PreviewCaptureReader` normalizes computed local file URIs in styles/defaults into stable output-relative resource identifiers, rehashing changed style dictionaries and remapping element references. The original capture and packed documents remain unchanged; actual rendering still uses packed assets. URI paths outside the output root are rejected without disclosing paths. See [ADR 0047](adr/0047-report-local-resource-normalization.md).
 
@@ -57,19 +57,19 @@ Consumers
 
 Consumers include:
 
-- REST API
-- Screen Explorer
-- Prototype Viewer
-- Flow Viewer
-- Documentation generator
-- Edit Mode
-- Modernization analysis
+- Single offline HTML report (screens / API / personas pages) — implemented
+- Review md for AI-assisted migration — implemented
+- REST API — planned; no server exists
+- Flow Viewer — retired in R17 (relations are shown on the canvas)
+- Documentation generator — planned
+- Edit Mode — planned; only the core `EditOverlay` model exists
+- Modernization analysis — planned
 
 ---
 
 ## 2. 實際模組與分析流程
 
-截至 WP0，根目錄 `pom.xml` 宣告七個 Maven 模組，另有一個 Node 模組。下圖只列目前存在的模組；箭頭表示資料流，不表示 Maven 相依方向。
+根目錄 `pom.xml` 宣告七個 Maven 模組，另有三個 Node 套件（screentrace-js、screentrace-capture、screentrace-viewer）。下圖只列目前存在的模組；箭頭表示資料流，不表示 Maven 相依方向。
 
 ```text
 唯讀目標原始碼
@@ -77,19 +77,22 @@ Consumers include:
 screentrace-scanner
         ↓
 screentrace-parser-jsp ──→ screentrace-adapter-struts
-        └───────────────→ screentrace-adapter-spring
+   ↕ (node 子行程, JSON)  └──→ screentrace-adapter-spring
+screentrace-js (Node)                ↓
+JS / React AST          screentrace-core
+                        Application Graph / merger / PersonaFlows
                                     ↓
-                         screentrace-core
-                         Application Graph / merger
+                        screentrace-cli（協調）
+                        1. writer.prepare：圖 / Prototype / Preview JSON
+                        2. node screentrace-capture/capture-static-jsp.mjs --preview-v2
+                           靜態 HTML / Chromium 截圖
+                        3. node screentrace-capture/pack-preview.mjs
+                        4. writer.generate
                                     ↓
-                         screentrace-report
-                         Graph / Prototype / Preview
-                                    ↕
-                         screentrace-capture (Node)
-                         靜態 HTML / Chromium 截圖
+                        screentrace-report
+                        注入資料到 screentrace-viewer 建置產物
                                     ↓
-                         screentrace-cli
-                         工作區 / 指令 / file:// 單檔 HTML
+                        file:// 單檔 HTML
 ```
 
 JavaScript AST 分析模組 screentrace-js 已建立（WP4 增量一）；單一 HTML 檢視器由 WP7 新增。WP7 單檔可離線直接開啟；圖／預覽／CSS／圖片／字型與 bundle 全部內嵌，沒有 localhost 或 fetch 相對資源。
@@ -98,7 +101,7 @@ JavaScript AST 分析模組 screentrace-js 已建立（WP4 增量一）；單一
 
 ### screentrace-core
 
-框架中立的 Application Graph、evidence、resolution、API contract、graph merger、完整性驗證，以及 Prototype、Preview、Edit Overlay 契約。新分析 schemaVersion 一律 `2.2` 並嚴格驗證；`2.1` 僅供歷史相容資料／fixture。舊建構子與預設標 Deprecated，正式來源禁止使用。
+框架中立的 Application Graph、evidence、resolution、API contract、graph merger、完整性驗證，以及 Prototype、Preview、Edit Overlay 契約。新分析 schemaVersion 為 `2.2`（非 React）、`2.3`（React 身分條件）或 `2.4`（已設定角色），合併時取最高版本並嚴格驗證；`2.1` 僅供歷史相容資料／fixture。另含 `ApiUsage`、`StableGraphIds` 與角色流程 `PersonaFlows`。舊建構子與預設標 Deprecated，正式來源禁止使用。
 
 ### screentrace-scanner
 
@@ -106,11 +109,11 @@ JavaScript AST 分析模組 screentrace-js 已建立（WP4 增量一）；單一
 
 ### screentrace-parser-jsp
 
-共用 JSP/JSPF 標記解析、字面值互動目標、include、Tiles、`c:url`／`spring:url` 變數與 JSP tag file 展開。輸出 `JspAnalysis`，不自行解析後端路由或 handler。
+共用 JSP/JSPF 標記解析、字面值互動目標、include、Tiles、`c:url`／`spring:url` 變數與 JSP tag file 展開，輸出 `JspAnalysis`。此模組同時是框架中立的圖貢獻模組：URL 引擎 `UrlResolution`／`UrlGraphContribution`、API 契約擷取 `ApiContractExtractor`（adapter-spring 的同名類別只是外觀）、`RouteTemplateInference`、通往 screentrace-js 的 `JavaScriptGraphContribution` 與 `ReactGraphContribution`、`ResourceGraphContribution`、`SourceEncodingContribution`、Thymeleaf 標記／片段與 `StrutsMenus`。
 
 ### screentrace-adapter-spring
 
-透過 JavaParser 解析 Spring annotation、Controller 與 API 契約，並解析 XML Controller、view resolver、Tiles 和 JSP 路由對應。Spring MVC 與 Spring Boot 共用此模組，沒有獨立 adapter-spring-boot 模組。
+透過 JavaParser 解析 Spring annotation、Controller 與 API 契約，並解析 XML Controller、view resolver、Tiles 和 JSP 路由對應。Spring MVC 與 Spring Boot 共用此模組（`SpringProjectAnalyzer` 依技術訊號委派 `SpringMvcAnalyzer` 或 `SpringBootAnalyzer`），沒有獨立 adapter-spring-boot 模組。另含 Controller 回傳流程、Security processor／重導／外部登入、Web Flow、表單綁定、Spring Data／DTO 示範資料等貢獻。
 
 ### screentrace-adapter-struts
 
@@ -126,7 +129,7 @@ SingleHtmlAnalysisWriter 彙整嚴格圖／Preview 與靜態封裝；SingleHtmlR
 
 ### screentrace-capture
 
-Node 模組，使用 Playwright 1.55.1；靜態化 JSP、展開支援的標記與本地資源、移除 active markup，在關閉 JavaScript 的 Chromium context 內產生截圖、元件 bounds 與樣式。`safe-files.mjs` 提供安全讀寫。正式 CLI 使用 `--preview-v2`，輸入嚴格 schema 2.2；完整元素／差異樣式與預設字典寫入 `static-preview/element-styles.json`，由 PreviewCaptureReader 轉為 PreviewModel version 2。條件分支原文、動態運算式、320px PNG data URI 縮圖與超量診斷完整保留。舊 capture 入口維持歷史相容，WP7 隨舊檢視器移除；詳見 ADR 0018。
+Node 模組，使用 Playwright 1.55.1；靜態化 JSP、展開支援的標記與本地資源、移除 active markup，在關閉 JavaScript 的 Chromium context 內產生截圖、元件 bounds 與樣式。`safe-files.mjs` 提供安全讀寫。正式 CLI 使用 `--preview-v2`，輸入嚴格 schema 2.2／2.3／2.4，且需先有同一輸出目錄的分析圖；另以 `react-preview.mjs` 處理 React 重建 markup，以 `template-preview.mjs` 處理 Thymeleaf／HTML 模板；完整元素／差異樣式與預設字典寫入 `static-preview/element-styles.json`，由 PreviewCaptureReader 轉為 PreviewModel version 2。條件分支原文、動態運算式、640px PNG data URI 縮圖與超量診斷完整保留。舊 capture 入口維持歷史相容，WP7 隨舊檢視器移除；詳見 ADR 0018。
 
 ### screentrace-parser（規劃中）
 
@@ -144,12 +147,12 @@ Node 模組，使用 Playwright 1.55.1；靜態化 JSP、展開支援的標記�
 
 未建立此模組；正式 UI 位於 screentrace-viewer。WP7 指定新增的名稱是 `screentrace-viewer`。
 
-### 後續工作包指定的新模組（規劃中）
+### 其他 Node 套件與共用檔案（已建立）
 
-- `screentrace-js`：已建立的 Node 模組，Acorn / acorn-loose AST 與容錯診斷；ADR 0007 記錄釘選與 JSON 邊界。
+- `screentrace-js`：已建立的 Node 模組，由 `JavaScriptGraphContribution` 以 `node screentrace-js/cli.mjs` 子行程呼叫，stdin／stdout JSON，逾時 60 秒，Acorn / acorn-loose AST 與容錯診斷；ADR 0007 記錄釘選與 JSON 邊界。
   `screentrace-js/react/` 以 @babel/parser 解析 React／TSX：路由、渲染展開、元件、事件處理器效果與靜態重建預覽 markup，由 `ReactGraphContribution`（screentrace-parser-jsp）轉成圖；見 [ADR 0088](adr/0088-react-ast-analysis.md)、[ADR 0089](adr/0089-react-static-preview.md)。
-- `screentrace-viewer`：WP7 TypeScript + esbuild 離線檢視器。
-- `review-md`：WP8 瀏覽器與 Node 共用匯出邏輯，名稱可依 ADR 調整。
+- `screentrace-viewer`：WP7 TypeScript + esbuild 離線檢視器。`tsc --noEmit` 後以 esbuild 產生 `dist/viewer.js`、`viewer.sha256`、`viewer.version`、`template.html`、`viewer.css` 與 `review-md.mjs`；screentrace-report 把 `dist/` 打包為 jar 內的 `/viewer`。
+- `review-md`：不是獨立模組，而是 `screentrace-viewer/src/shared/review-md.ts`，建置另產出 ESM `dist/review-md.mjs` 供 Node 使用。
 
 ---
 
@@ -159,7 +162,7 @@ The Application Graph is the canonical representation of an analyzed system.
 
 ### 4.1 Schema contract and compatibility
 
-`application-graph.json` is versioned. New analyses emit strict schema version `2.2`. Historical reading accepts versions `1.0`, `2.0`, `2.1` and versionless legacy JSON; versionless JSON keeps the historical `2.1` default. Historical data cannot silently become `2.2`.
+`application-graph.json` is versioned. New analyses emit strict schema version `2.2`, or `2.3`/`2.4` for React audience / persona graphs. Historical reading accepts versions `1.0`, `2.0`, `2.1` and versionless legacy JSON; versionless JSON keeps the historical `2.1` default. Historical data cannot silently become `2.2`.
 
 Schema 2 preserves schema-1 fields (`source`, `confidence`) and constructors. It adds an `evidence` collection to nodes, relationships, and diagnostics so multiple source assertions can support one discovered relationship. Each evidence item records source location, parser, resolution status, and optional detail. This keeps existing report output readable while allowing Struts, Spring, JSP, and Tiles adapters to contribute independently.
 
@@ -169,7 +172,7 @@ Schema 2.1 adds `apiContracts`, keyed by `ENDPOINT` ID. A contract records the s
 
 ### R18：畫面適用條件（schema 2.3）
 
-React 分析輸出 2.3，application.audiences 保存最多 16 個可渲染條件組合，超過時診斷並只保留畫面條件；SCREEN 可帶 `audience: [{text, truth, source}]`，表示 Guard 實際轉交 children 的來源條件。不同可達路徑以析取保留；只有可證明的相同原子真假、嚴格相等常值互斥、物件與屬性存取矛盾可用於後續過濾。元件 guard 不重複畫面已成立的條件。消費端保持嚴格證據驗證並接受 2.2／2.3；非 React 圖仍輸出 2.2，歷史圖不升版。review 狀態容器與存檔鍵不改。同網址多畫面透過 ENTRY_POINT（path）以 RENDERS 指向變體；入口可帶條件導向行為。不同投影的共用元件以穩定投影鍵分開，隱藏元素與原因仍保留於畫面資料。詳見 [ADR 0096](adr/0096-r18-audience-facts.md)、[ADR 0097](adr/0097-r18-audience-variants.md)。
+React 分析輸出 2.3，application.audiences 保存最多 16 個可渲染條件組合，超過時診斷並只保留畫面條件；SCREEN 可帶 `audience: [{text, truth, source}]`，表示 Guard 實際轉交 children 的來源條件。不同可達路徑以析取保留；只有可證明的相同原子真假、嚴格相等常值互斥、物件與屬性存取矛盾可用於後續過濾。元件 guard 不重複畫面已成立的條件。消費端保持嚴格證據驗證並接受 2.2／2.3（R19 起另含 2.4）；非 React 圖仍輸出 2.2，歷史圖不升版。review 狀態容器與存檔鍵不改。同網址多畫面透過 ENTRY_POINT（path）以 RENDERS 指向變體；入口可帶條件導向行為。不同投影的共用元件以穩定投影鍵分開，隱藏元素與原因仍保留於畫面資料。詳見 [ADR 0096](adr/0096-r18-audience-facts.md)、[ADR 0097](adr/0097-r18-audience-variants.md)。
 
 R18 第三階段（不改 schema 版本）：React SCREEN 的 `view`／`viewSource` 為「頁面元件」，從路由元素（變體則從產生該變體的分支）出發，略過 Guard 與外框時改看傳入的 children，遇到一般元件時記為候選並只看其最後一個 `return`（拆分變體的元件改看該變體分支），候選中最後一個即頁面元件；被略過的元件仍在 `viewSources`。preview-model 的 React 畫面帶 `previewState`，記錄以「載入成功路徑」模擬掛載時載入函式（含元件呼叫的自訂 hook）後的狀態值與設定來源；這只影響靜態預覽，不影響 graph。前端以套件路徑 import 的 CSS 在 `node_modules` 中找不到該套件時，產生 `STYLESHEET_PACKAGE_MISSING` 診斷（每個套件一則），並在 `viewSources` 含該 import 檔的 SCREEN 上加 `missingStylePackages`（排序後以 `|` 串接）。詳見 [ADR 0103](adr/0103-r18-preview-state-page-components-and-style-packages.md)。
 
@@ -189,7 +192,7 @@ viewer 只讀 schema 2.4 的 `application.personas`，不重新判定。每個�
 
 ### R35：放大畫面的關聯線左進右出、依區塊合併
 
-`canvas.ts` 的 `focusBundles` 依總覽的區塊（`grouped.groups`，角色流程為步驟欄）把進出的線分列，列依畫面位置排序；多畫面的列畫成一條合併線並附 `.focus-bundle` 標籤與畫面清單，單一畫面的列沿用原本的線。有合併線時預覽框左右留白加寬為 176px。見 [ADR 0126](adr/0126-r35-focus-line-bundles.md)。
+`canvas.ts` 的 `focusBundles` 依總覽的區塊（`grouped.groups`，角色流程為步驟欄）把進出的線分列，列依畫面位置排序；多畫面的列畫成一條合併線並附 `.focus-bundle` 標籤與畫面清單，單一畫面的列沿用原本的線。有合併線時預覽框左右留白加寬（R35 為固定 176px；R36 起改依標籤寬度計算，見下節）。見 [ADR 0126](adr/0126-r35-focus-line-bundles.md)。
 
 ### R36：放大畫面的標籤對齊與預覽比例
 
@@ -201,7 +204,7 @@ viewer 只讀 schema 2.4 的 `application.personas`，不重新判定。每個�
 
 ### R33：縮小總覽的區名與畫面提示
 
-總覽的區塊標籤（`.screen-group-label`）放在區塊框頂端加高的標題帶（`TITLE` 200），以 `scale(max(1, 0.4667 / --zoom))` 反向放大，維持至少約 14px；縮小時第二行列出前 3 個畫面（`areaPreview`，依卡片位置排序）。連線只走區塊之間的間隔，不會經過標籤。縮小時滑過卡片顯示 `.card-tip`（名稱與網址），移動畫布時隱藏。只用 CSS 與 DOM，版面配置與 graph 不變。見 [ADR 0124](adr/0124-r33-overview-labels.md)。
+總覽的區塊標籤（`.screen-group-label`）放在區塊框頂端加高的標題帶（`TITLE` 200），以 `scale(clamp(1, 0.4667 / --zoom, 2.4))` 反向放大，維持至少約 14px；縮小時第二行列出前 3 個畫面（`areaPreview`，依卡片位置排序）。連線只走區塊之間的間隔，不會經過標籤。縮小時滑過卡片顯示 `.card-tip`（名稱與網址），移動畫布時隱藏。只用 CSS 與 DOM，版面配置與 graph 不變。見 [ADR 0124](adr/0124-r33-overview-labels.md)。
 
 ### R32：API 方法色標、路徑參數、呼叫數長條，與角色頁改版
 
@@ -310,17 +313,16 @@ SCREEN:result
 
 ## 5. Evidence Model
 
-目前模型可接受缺 evidence 的舊資料；附件 C2 要求新的節點、邊、行為與檢核規則具有來源行號、解析器與解析狀態。WP1 已實作 schema 2.2 的嚴格驗證，歷史 schema 仍走相容路徑；所有 adapter 已遷移至嚴格 2.2；歷史 API 不供新分析使用。
+目前模型可接受缺 evidence 的舊資料；附件 C2 要求新的節點、邊、行為與檢核規則具有來源行號、解析器與解析狀態。WP1 已實作 schema 2.2 的嚴格驗證，歷史 schema 仍走相容路徑；所有 adapter 已遷移至嚴格 2.2（React 另為 2.3／2.4）；歷史 API 不供新分析使用。
 
-Suggested structure:
+Actual structure (`ApplicationGraph.AnalysisEvidence`):
 
 ```json
 {
-  "source": "src/main/webapp/WEB-INF/jsp/query.jsp",
-  "lineStart": 42,
-  "lineEnd": 44,
+  "source": {"file": "src/main/webapp/WEB-INF/jsp/query.jsp", "line": 42},
   "parser": "JspParser",
-  "resolution": "CONFIRMED"
+  "resolution": "CONFIRMED",
+  "detail": "optional structured detail"
 }
 ```
 
@@ -424,7 +426,7 @@ Expose initial graph output for validation before building a sophisticated UI.
 
 ## 7. Suggested Java Model
 
-Conceptual only; refine during implementation.
+Conceptual only. The implemented records are `ApplicationGraph.GraphNode(id, type, name, attributes, source, confidence, evidence, audience)` and `ApplicationGraph.Relationship(id, type, from, to, confidence, source, evidence)`, plus `Behavior`, `ValidationRule` and `ApiContract`; the records below are not in the code.
 
 ```java
 public record Screen(
@@ -496,6 +498,8 @@ ReferenceResolver
 
 Do not over-engineer this before the first Struts pipeline works.
 
+Current implementation: no `AnalysisAdapter`／`ProjectContext`／`AnalysisContribution` interface or `StrutsConfigAdapter` class exists. Adapters are concrete classes exposing `ApplicationGraph analyze(ProjectInventory)` (`StrutsProjectAnalyzer`, `SpringProjectAnalyzer`). `ScreenTraceCli` selects them from scanner technology flags, rejects Struts 2 via `StrutsFrameworkDetector`, merges the graphs and runs `UrlGraphContribution.enrich` when both are present.
+
 ---
 
 ## 9. Persistence
@@ -511,7 +515,7 @@ Analysis execution
    ↓
 ApplicationGraph object
    ↓
-JSON file / REST response
+JSON file + single offline HTML (no REST response; the CLI server was removed in WP7 E)
 ```
 
 Later persistence options may include:
@@ -526,7 +530,7 @@ Do not introduce a graph database solely because the domain is graph-shaped.
 
 ## 10. UI Architecture
 
-Initial UI should consume backend graph APIs.
+Initial UI should consume backend graph APIs. (Actual: the viewer reads graph data embedded in a single `file://` HTML; there are no backend graph APIs.)
 
 Suggested views:
 
@@ -561,7 +565,7 @@ Target Screen
 
 ### Flow Viewer
 
-Graph-oriented view showing screen transitions.
+Graph-oriented view showing screen transitions. (Retired in R17; screen transitions are shown as canvas lines and the panel's 「從哪些畫面可來到這裡」.)
 
 ### Edit Mode
 
@@ -575,7 +579,7 @@ Edit Overlay
 Target-State View
 ```
 
-Do not mutate discovery results when a user edits a prototype.
+Do not mutate discovery results when a user edits a prototype. (Not implemented: only the core `EditOverlay` model exists; no viewer or CLI creates overlays.)
 
 ---
 
@@ -619,23 +623,23 @@ R3 的 `JspTagFileExpander` 靜態讀取 taglib `tagdir` 內的 `.tag`，只代�
 
 Spring 只在來源中的正式 `@ModelAttribute`、名稱、類別、欄位及表單提交／畫面 rendering 處理器作用域可唯一證明時綁定；同名非 Spring 註解、缺少／多個型別等保留 UNRESOLVED。Struts 以 action 對應的 form-bean、Dyna 屬性或可解析 ActionForm 欄位／getter 來源建立 BINDS_TO。未證明的欄位保留 `bindingStatus=UNRESOLVED`。已發現元件的存在性、kind、目標、模型綁定各自記錄信心，既有 UNRESOLVED 元件信心不升級。
 
-WP3 未引入相依；Spring 輸出仍保留既有 schema 2.1 相容路徑，Struts 為 2.2。所有 adapter 統一為 2.2 與移除混合降版屬 WP5，尚未宣稱完成。WP4 已加入靜態 JavaScript 貢獻（見下節）；WP5／WP6 未開始。
+WP3 未引入相依；Spring 輸出仍保留既有 schema 2.1 相容路徑，Struts 為 2.2。所有 adapter 統一為 2.2 與移除混合降版屬 WP5，尚未宣稱完成。WP4 已加入靜態 JavaScript 貢獻（見下節）。（此段為 WP3 當時狀態；WP5 已統一所有 adapter 為 2.2，見「WP5 增量四」。）
 
 ### WP4 靜態 JavaScript 貢獻
 
 獨立 screentrace-js 模組以 Acorn／acorn-loose AST 解析，bindings 對 ScriptSources 的原始靜態 DOM 解析事件，api-table.json 識別公開第三方 API 並略過其內部。values 提供抽象值，modules 只解析安全的本地相對 import；analyzer 追蹤函式及回呼，預設深度 10、循環保護，所有失敗保留來源與診斷。
 
-JavaScriptGraphContribution 以 JSON 邊界整合 Spring／Struts adapter 的 inline script、src、事件屬性、javascript URL 及 include 使用者。載入來源使用畫面 ID；失敗綁定保留 selector／UNRESOLVED 呼叫來源。CLIENT 規則、父子行為、HTTP method／URL／資料欄位、條件與呼叫鏈進入 canonical graph。已解析的前端請求建立 backendStatus=UNRESOLVED 的描述節點，後端匹配與統一 schema 2.2 屬 WP5。ApiUsage 對 canonical 行為與簡化邊去重。見 ADR 0007–0010。
+JavaScriptGraphContribution 以 JSON 邊界整合 Spring／Struts adapter 的 inline script、src、事件屬性、javascript URL 及 include 使用者。載入來源使用畫面 ID；失敗綁定保留 selector／UNRESOLVED 呼叫來源。CLIENT 規則、父子行為、HTTP method／URL／資料欄位、條件與呼叫鏈進入 canonical graph。已解析的前端請求建立 backendStatus=UNRESOLVED 的描述節點，後端匹配與統一 schema 2.2 已於 WP5 完成。ApiUsage 對 canonical 行為與簡化邊去重。見 ADR 0007–0010。
 
 script src 的不透明 context 前綴依 v1.3／OQ-003，僅用於定位來源檔案；API URL 不套用該例外。相同來源可證明的單次常值定義附 evidence；未知 API context 部分保留樣板。目標程式不執行，渲染仍移除 script 並關閉 JavaScript。
 
 ### WP5 增量一
 
-UrlResolution 為 Spring／Struts 的共用 URL 引擎，保留全部候選及信心、方法不符與 context 診斷。設定以 Properties／安全 SnakeYAML 2.4 解析，工作區 contextPaths 以專案絕對路徑為鍵、候選陣列為值，透過 ProjectInventory 傳入；無設定不推測。見 ADR 0011。圖關聯接入、契約與 SERVER 檢核、schema 退場依序在後續增量實作。
+UrlResolution 為 Spring／Struts 的共用 URL 引擎，保留全部候選及信心、方法不符與 context 診斷。設定以 Properties／安全 SnakeYAML 2.4 解析，工作區 contextPaths 以專案絕對路徑為鍵、候選陣列為值，透過 ProjectInventory 傳入；無設定不推測。見 ADR 0011。圖關聯接入、契約與 SERVER 檢核、schema 退場已於增量二至四完成。
 
 ### WP5 增量二
 
-UrlGraphContribution 對 canonical API／表單請求套用共用引擎，保留全部候選、方法診斷及載入／失敗綁定來源。唯一結果連端點，多候選 targetId=null 並建立全部歧義關聯。workspace context 證據使用 workspace:config.json 與設定鍵行號，detail 只有鍵／候選／採用值；reserved 目標名稱被 scanner／safe read 拒絕。圖輸出前遮蔽使用者家目錄文字，工作區真實設定路徑不進圖。見 ADR 0012／0013 與 OQ-004；契約／SERVER 檢核及 schema 退場待後續增量。
+UrlGraphContribution 對 canonical API／表單請求套用共用引擎，保留全部候選、方法診斷及載入／失敗綁定來源。唯一結果連端點，多候選 targetId=null 並建立全部歧義關聯。workspace context 證據使用 workspace:config.json 與設定鍵行號，detail 只有鍵／候選／採用值；reserved 目標名稱被 scanner／safe read 拒絕。圖輸出前遮蔽使用者家目錄文字，工作區真實設定路徑不進圖。見 ADR 0012／0013 與 OQ-004；契約／SERVER 檢核及 schema 退場已於增量三、四完成。
 
 ### WP5 增量三
 
@@ -643,43 +647,43 @@ UrlGraphContribution 對 canonical API／表單請求套用共用引擎，保留
 
 ### WP5 增量四與歷史入口
 
-所有 adapter／CLI 新分析回傳 2.2 並通過 requireAnalysis。合併嚴格 2.2 輸入／輸出均驗證；混合版本與缺證據 2.2 拒絕，兩份 2.1 僅回傳明確標示的歷史圖，不升版。相同行為的證據合併、不同結果不擇一，CLI 再執行共用 URL 配對。ReportGenerator 歷史入口與原測試已於 WP7 E 移除；ReviewResultGenerator 與其測試已於 WP8 移除；新檢視器／共用 review／md 模組只接受嚴格 2.2。見 ADR 0015／0016。
+所有 adapter／CLI 新分析回傳 2.2 並通過 requireAnalysis。合併嚴格 2.2 輸入／輸出均驗證；混合版本與缺證據 2.2 拒絕，兩份 2.1 僅回傳明確標示的歷史圖，不升版。相同行為的證據合併、不同結果不擇一，CLI 再執行共用 URL 配對。ReportGenerator 歷史入口與原測試已於 WP7 E 移除；ReviewResultGenerator 與其測試已於 WP8 移除；新檢視器／共用 review／md 模組只接受嚴格 2.2（R18 起 2.3、R19 起 2.4 亦接受）。見 ADR 0015／0016。
 
 ### screentrace-viewer
 
-WP7 新單檔檢視器；TypeScript 7.0.2／esbuild 0.28.2 僅建置期，執行期無 UI 框架。Java SingleHtmlReportGenerator 嚴格 2.2，僅注入資料並驗證建置 script 雜湊。單檔 file:// 不 fetch 任何資源；CSP style-src unsafe-inline 依 v1.5 授權，script-src 僅雜湊，srcdoc sandbox 不含 allow-scripts。E 已移除舊 ReportGenerator 與 server。B 自製 SCC 分層；C srcdoc 及全部樣式／來源面板；D review 共用模組；E API 頁。資料／版本契約見 REVIEW_STATE_CONTRACT，設計見 ADR 0019–0021。
+WP7 新單檔檢視器；TypeScript 7.0.2／esbuild 0.28.2 僅建置期，執行期無 UI 框架。Java SingleHtmlReportGenerator 嚴格驗證 2.2／2.3／2.4，僅注入資料並驗證建置 script 雜湊。單檔 file:// 不 fetch 任何資源；CSP style-src unsafe-inline 依 v1.5 授權，script-src 僅雜湊，srcdoc sandbox 不含 allow-scripts。E 已移除舊 ReportGenerator 與 server。B 自製 SCC 分層；C srcdoc 及全部樣式／來源面板；D review 共用模組；E API 頁。資料／版本契約見 REVIEW_STATE_CONTRACT，設計見 ADR 0019–0021。
 
 ### WP8 本地 review md
 
-shared/review-md 與 strict-graph 供瀏覽器／Node 共用，建置同時提供 ESM artifact。Acorn 8.18.0 MIT 只解析輸出運算式的內容邊界，不執行。md-controls 以 Blob 下載和檔案選擇器讀本地內容；通過最後附錄／已知鍵／決策／大小／SHA 驗證後才原子更新目前狀態。指紋不同／orphan 保留決策並提示，不猜測改名。正文／機器區隔離、格式、排序與容量見 REVIEW_MD_CONTRACT、ADR 0022–0025；元件庫覆寫已於 WP9 接入同一共用狀態模型。
+shared/review-md 與 strict-graph 供瀏覽器／Node 共用，建置同時提供 ESM artifact。Acorn 8.18.0 MIT 只解析輸出運算式的內容邊界，不執行。`main.ts` 以 Blob 下載（`screentrace-review.md`）和檔案選擇器讀本地內容（原 md-controls 已併入）；R17 起 `progress-file.ts` 以 File System Access API 自動寫入使用者選擇的 md 進度檔，檔案 handle 存於 IndexedDB（ADR 0086）；通過最後附錄／已知鍵／決策／大小／SHA 驗證後才原子更新目前狀態。指紋不同／orphan 保留決策並提示，不猜測改名。正文／機器區隔離、格式、排序與容量見 REVIEW_MD_CONTRACT、ADR 0022–0025；元件庫覆寫已於 WP9 接入同一共用狀態模型。
 
 ### WP9 元件庫選用與覆寫
 
-CLI LibraryStore／LibraryCommands 使用工作區內容 SHA-256 定址、專案明確綁定／解除與 --replace；ComponentLibrary 在 report 邊界以打包的 draft 2020-12 Schema 驗證，不改 core。Java analyze／report 只注入選用 manifest 與摘要；viewer／Node 共用 library 精確比對／kind 涵蓋率與 review 可逆來源分區。外庫覆寫保留 orphan，不參與有效建議／API。md 動態 v1/v2 與同一分區往返，契約見 REVIEW_STATE_CONTRACT／REVIEW_MD_CONTRACT；設計 ADR 0027–0031。WP10 合成整合驗證見下節。
+CLI LibraryStore／LibraryCommands 使用工作區內容 SHA-256 定址、專案明確綁定／解除與 --replace；ComponentLibrary 在 report 邊界以打包的 draft 2020-12 Schema 驗證，不改 core。Java analyze／report 只注入選用 manifest 與摘要；viewer／Node 共用 library 精確比對／kind 涵蓋率與 review 可逆來源分區。外庫覆寫保留 orphan，不參與有效建議／API。md 動態 v1/v2 與同一分區往返。（R17 起 viewer 忽略元件庫與覆寫，`matchLibrary` 已無呼叫端；md 匯出固定 v1，v2／v3 僅匯入相容；Java 端驗證與注入不變。）契約見 REVIEW_STATE_CONTRACT／REVIEW_MD_CONTRACT；設計 ADR 0027–0031。WP10 合成整合驗證見下節。
 
 ### WP10 合成來源與整合驗證
 
 fixtures/wp10 是自行撰寫的 source-only 分析資料，不是 Maven 模組或可啟動系統。coverage.json 以要求編號、檔案及原始 token 清單覆蓋 WP2–WP5。CLI 測試透過現有 analyze 入口使用隔離來源／工作區，綁定虛構 manifest，兩次經 adapter／嚴格 2.2／capture／pack／SingleHtmlAnalysisWriter，保存實際產物供 Node 使用；沒有替換 payload 的測試捷徑。每份目標來源分析前後 SHA-256 相同。
 
-screentrace-viewer/test/synthetic-project.e2e.mjs 直接讀取 Java 產物，Node md 決定性與 Chromium／Firefox／WebKit file:// 標記、覆寫、下載、清暫存、匯入還原共用正式資料與模組。預覽比較限定同次測試的相同 Chromium／viewport／字型環境；沒有跨環境圖片 golden。完整圖／預覽／HTML 不忽略任何欄位，md 只正規化 generated_at。
+screentrace-viewer/test/synthetic-project.e2e.mjs 直接讀取 Java 產物，Node md 決定性與 file:// 標記、下載、清暫存、匯入還原共用正式資料與模組（預設只跑 Chromium，`ST_BROWSERS` 可加 Firefox／WebKit；R17 起測試改為確認沒有元件庫／覆寫 UI 且 md 為 format_version 1，也不再綁定虛構 manifest）。預覽比較限定同次測試的相同 Chromium／viewport／字型環境；沒有跨環境圖片 golden。完整圖／預覽／HTML 不忽略任何欄位，md 只正規化 generated_at。
 
 本輪只含 fixture、決定性、E2E、USER_GUIDE／README／架構文件；既有 security.yml 已涵蓋新增 Java 與 *.e2e.mjs，不修改 CI、效能、格式化或相容入口。決定見 ADR 0032；使用步驟與實際合成報表截圖位置見 USER_GUIDE。
 
 R3 WP19：畫面顯示名稱由 viewer names.ts 單一決定，唯一 title → 唯一 h1 → 人性化 view basename，重名追加主要 URL／穩定序號。卡片只顯示名稱與主要 URL，來源保留於右欄／檔案樹；display graph 不修改 canonical graph 或 md，見 ADR 0038。
 
-R3 WP17／WP20：JspTagFileExpander 在 JSP adapter 依已證明 tagdir 與呼叫屬性展開，保留呼叫／定義證據、循環與深度限制。僅已知字面屬性的 ${fn:escapeXml(var)} 做 XML 跳脫代入，動態屬性／未知函式保持資料及未解析邊界；不執行目標碼。Spring adapter 的 ControllerReturns 以 JavaParser 提取每個 return，保留 guard、來源與 INFERRED／AMBIGUOUS；經端點／handler 投射畫面邊，AJAX 不當成導頁。
+R3 WP17／WP20：JspTagFileExpander 在 screentrace-parser-jsp 依已證明 tagdir 與呼叫屬性展開，保留呼叫／定義證據、循環與深度限制。僅已知字面屬性的 ${fn:escapeXml(var)} 做 XML 跳脫代入，動態屬性／未知函式保持資料及未解析邊界；不執行目標碼。Spring adapter 的 SpringControllerReturns 以 JavaParser 提取每個 return，保留 guard、來源與 INFERRED／AMBIGUOUS；經端點／handler 投射畫面邊，AJAX 不當成導頁。
 
-R3 WP20：overview.ts 在 viewer 依相同連結目的／名稱／屬性跨至少兩個且 ≥50% 畫面計算全站導覽，混合關聯保留非導覽觸發者；canonical graph 與 schema 不變。總覽採穩定 ID 排序格狀座標、卡片間走廊正交路徑與進出邊 hover；聚焦將全站導覽另分組，未解析目的合併且保留所有觸發／證據。labels.ts 共用可讀元件標籤，diagnostics.ts 為每個現有代碼提供中文收合分類，英文與完整來源置技術明細。主要 URL 先選直接 render 的路由，再選入站路由；全部候選仍保留。見 ADR 0039。
+R3 WP20：overview.ts 在 viewer 依相同連結目的／名稱／屬性跨至少兩個且 ≥50% 畫面計算全站導覽，混合關聯保留非導覽觸發者；canonical graph 與 schema 不變。總覽採穩定 ID 排序格狀座標、卡片間走廊正交路徑與進出邊 hover；聚焦將全站導覽另分組，未解析目的合併且保留所有觸發／證據。labels.ts 共用可讀元件標籤，diagnostics.ts 為每個現有代碼提供中文收合分類，英文與完整來源置技術明細（diagnostics.ts 與診斷抽屜已於 R17 移除，診斷只留在圖與 md §7）。主要 URL 先選直接 render 的路由，再選入站路由；全部候選仍保留。見 ADR 0039。
 
-R4 UI1：shell-ui.ts 只建立本地 SVG 圖示與外殼控制元件，main.ts 組織頂部導覽／左側畫面脈絡／右側空狀態；診斷與元件庫原內容移至本地 dialog。CSS 變數提供系統字型與 AA 色彩，不載入外部資源。md-controls 只更換檔案選擇的呈現入口，共用格式／決策／API 模組不變；見 ADR 0040。
+R4 UI1：shell-ui.ts 只建立本地 SVG 圖示與外殼控制元件，main.ts 組織頂部導覽／左側畫面脈絡／右側空狀態；診斷與元件庫原內容移至本地 dialog（兩者皆於 R17 移除）。CSS 變數提供系統字型與 AA 色彩，不載入外部資源。md-controls（已併入 main.ts）只更換檔案選擇的呈現入口，共用格式／決策／API 模組不變；見 ADR 0040。
 
 R5 WP23：總覽改由流程邊（不含全站導覽與自我迴圈）做 sorted DFS 去回邊、DAG 最長路徑分層與重心排序；無流程關聯者獨立置右欄。保留卡片間走廊路由與聚焦版面，全站導覽只疊加較淡的線；>150 畫面或 >600 關聯使用原格狀保護。見 ADR 0049。單一 HTML 的 application.path 不注入，但指紋仍來自完整 canonical graph，見 ADR 0048。
 
-R6 WP24–WP25：capture 縮圖為決定性的640px PNG，reader保留格式／範圍驗證。總覽卡片80%為縮圖，擴大既有走廊格距。prototype.ts 以原單一 sandbox iframe 顯示完整靜態文件，依原寬度縮放及內容高度撐高；FLIP使用父頁WAAPI300ms，reduced-motion直接切換。prototype-history.ts只在記憶體保存畫面與捲動位置，canvas保留平移縮放；流程視圖為明確切換入口。所有預覽文字仍經DOM及textContent顯示，inert-document先中和會預載的屬性再由DOMParser解析，offline-css沿用本專案capture的資源token掃描，僅允許嵌入資源、遞迴隔離data CSS，另有iframe CSP。父頁攔截點擊／送出與鍵盤，目標腳本移除且sandbox無allow-scripts；WP25僅提示，不執行WP26模擬。canonical graph、review/md/API規則與指紋不變；見ADR0050／0051。
+R6 WP24–WP25：capture 縮圖為決定性的640px PNG，reader保留格式／範圍驗證。總覽卡片80%為縮圖，擴大既有走廊格距。prototype.ts 以原單一 sandbox iframe 顯示完整靜態文件，依原寬度縮放及內容高度撐高；FLIP使用父頁WAAPI300ms，reduced-motion直接切換。prototype-history.ts只在記憶體保存畫面與捲動位置，canvas保留平移縮放；流程視圖為明確切換入口（R17 已移除流程視圖）。所有預覽文字仍經DOM及textContent顯示，inert-document先中和會預載的屬性再由DOMParser解析，offline-css沿用本專案capture的資源token掃描，僅允許嵌入資源、遞迴隔離data CSS，另有iframe CSP。父頁攔截點擊／送出與鍵盤，目標腳本移除且sandbox無allow-scripts；WP25僅提示，不執行WP26模擬。canonical graph、review/md/API規則與指紋不變；見ADR0050／0051。
 
-R6 WP26：simulation.ts 為純圖規則，exact preview path→元件→行為，保留全部候選／未知分支與來源證據，不執行條件。simulation-ui.ts 將效果轉為原型導覽、原生表單驗證／可能的 SERVER 訊息、既有 MODAL 覆蓋層及不發送的 API 提示；覆蓋率以真實靜態 DOM 計算，未配對／缺失文件不隱藏。WebKit 阻擋 sandbox 內父頁事件回呼，simulation-surface.ts 使用精確 DOM 矩形的父頁原生控制與暫時值同步，規則共用、目標 HTML／腳本不進父頁，原 iframe 保持無 allow-scripts。模擬狀態僅記憶體，重置重建；canonical graph、review/md、API 推導及指紋不變。見 ADR0052。
+R6 WP26：simulation.ts 為純圖規則，exact preview path→元件→行為，保留全部候選／未知分支與來源證據，不執行條件。simulation-ui.ts 將效果轉為原型導覽、原生表單驗證／可能的 SERVER 訊息、既有 MODAL 覆蓋層及不發送的 API 提示；覆蓋率以真實靜態 DOM 計算，未配對／缺失文件不隱藏。WebKit 阻擋 sandbox 內父頁事件回呼，simulation-surface.ts 使用精確 DOM 矩形的父頁原生控制與暫時值同步，規則共用、目標 HTML／腳本不進父頁，原 iframe 保持無 allow-scripts。模擬狀態僅記憶體，重置重建；canonical graph、review/md、API 推導及指紋不變。見 ADR0052。（R17／ADR 0085 起表單一律視為通過檢核送出，不再做原生表單驗證；覆蓋率統計已移除。）
 
-WP26驗收呈現補強（ADR0053）：操作模式以元素摘要為主，計算樣式收合、檢查模式保留樣式優先。送出結果窄條有高度上限及內部捲動，每個候選白話原因與完整證據分離、技術細節預設收合。覆蓋率分成互斥的圖支持行為／可直接輸入欄位／無法確認三類；不改推導、圖、review或md。
+WP26驗收呈現補強（ADR0053）：操作模式以元素摘要為主，計算樣式收合、檢查模式保留樣式優先。送出結果窄條有高度上限及內部捲動，每個候選白話原因與完整證據分離、技術細節預設收合。覆蓋率分成互斥的圖支持行為／可直接輸入欄位／無法確認三類；不改推導、圖、review或md。（操作／檢查模式已於 R11 移除；元素摘要、樣式、覆蓋率與技術證據展開於 R17 移除。）
 
 ## R7 展開來源錨點
 
@@ -687,15 +691,15 @@ Java JspTagFileExpander 在原始檔案分組開啟標籤，臨時書籤保存�
 
 capture 在 annotateSource 原文階段使用同一行號／序號规则，自訂 tag 展開時傳遞呼叫鏈。分組名稱轉小寫，但 tag 檔案查找保留原始名稱大小寫，避免大小寫不敏感檔案系統產生不同來源字串。componentLinks 僅在同畫面精確錨點相等時標記 ANCHOR；唯一候選為 INFERRED，多候選為 AMBIGUOUS 全列。無錨點候選時依既有 ID／name／field／來源證據標 HEURISTIC；移除無來源的同標籤第一筆猜測。
 
-PreviewElement 增 optional expansionAnchor、matchBasis（ANCHOR／HEURISTIC）。PreviewCaptureReader 與 viewer.requirePreview 驗證已知值、同畫面全部錨點候選與解析狀態。capture 原始 HTML 保留 data-st-expansion-anchor；打包成展示用文件時移除這個重複的工具屬性，圖與 preview model 保留完整錨點。原始 capture 文件、身分與安全處理不變。
+PreviewElement 增 optional expansionAnchor、matchBasis（ANCHOR／HEURISTIC）。PreviewCaptureReader 與 viewer 的 `requirePreview`（contracts.ts）驗證已知值、同畫面全部錨點候選與解析狀態。capture 原始 HTML 保留 data-st-expansion-anchor；打包成展示用文件時移除這個重複的工具屬性，圖與 preview model 保留完整錨點。原始 capture 文件、身分與安全處理不變。
 
-Java 與 Node 仍有獨立 tag 展開器；共用 docs/examples/expansion-anchor-vectors.json，配合 CLI 整合與真實專案唯讀驗收降低漂移。WP29 的未對應原因分類尚未實作。
+Java 與 Node 仍有獨立 tag 展開器；共用 docs/examples/expansion-anchor-vectors.json，配合 CLI 整合與真實專案唯讀驗收降低漂移。WP29 的未對應原因分類已於下節實作。
 
 ## R7 WP29 預覽原因契約（OQ-018）
 
 PreviewElement.unmappedReason 是可選的五類字串：NO_GRAPH_COMPONENT、AMBIGUOUS_CANDIDATES、ANCHOR_MISSING、DYNAMIC_OR_UNRESOLVED_SOURCE、OTHER；只用於 a/button/form/select/input/textarea 且元件未唯一對應。capture 配對完成後記錄，reader／viewer 拒絕未知值、已對應元件或非可操作元素誤用。舊預覽 fixture 缺少此欄位仍可讀取；新 capture 為適用元素輸出原因。沒有 graph schema 改動。
 
-已對應但無法模擬的原因只由 viewer 推導，不寫入 unmappedReason。simulation.ts 的 assessSimulation 呼叫原 simulate／canSimulate，並共用 callback-root、事件適用、證據解析與 effect 判定；simulation-ui.ts 的 elementSimulationAssessment 統一 DOM 彈窗可用性與原生輸入條件；畫面／專案統計、右欄及點選提示使用同一 assessment。每個未知元素恰歸一類；原生可編輯欄位排除於未知分類，無行為與已記錄行為的歧義／目的未解析／類型或事件不支援用中文兩層呈現。見 ADR0055。
+已對應但無法模擬的原因只由 viewer 推導，不寫入 unmappedReason。simulation.ts 的 assessSimulation 呼叫原 simulate／canSimulate，並共用 callback-root、事件適用、證據解析與 effect 判定；simulation-ui.ts 的 elementSimulationAssessment 統一 DOM 彈窗可用性與原生輸入條件；畫面／專案統計、右欄及點選提示使用同一 assessment（R17 移除統計後，`elementSimulationAssessment` 目前沒有呼叫端）。每個未知元素恰歸一類；原生可編輯欄位排除於未知分類，無行為與已記錄行為的歧義／目的未解析／類型或事件不支援用中文兩層呈現。見 ADR0055。
 
 R7 決定性補強：capture 在元素樣式／bounds 量測前，先觸發版面、於 Node 有界輪詢各 FontFace 是否仍 loading；目標 JavaScript 始終停用。字型完成或失敗的 fallback 才記錄，5 秒逾時維持 capture 失敗診斷。沒有改寫或正規化原始 computed-style 數值，詳 ADR0055。
 
