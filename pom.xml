@@ -99,4 +99,36 @@
       </plugins>
     </pluginManagement>
   </build>
+
+  <profiles>
+    <!-- Test coverage report (HC-003). Only `-Pcoverage` attaches the JaCoCo agent, so the launchers'
+         builds and a plain `mvn verify` are unchanged; each module writes target/site/jacoco/. No threshold. -->
+    <profile>
+      <id>coverage</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.jacoco</groupId>
+            <artifactId>jacoco-maven-plugin</artifactId>
+            <version>0.8.15</version>
+            <executions>
+              <execution>
+                <id>coverage-agent</id>
+                <goals>
+                  <goal>prepare-agent</goal>
+                </goals>
+              </execution>
+              <execution>
+                <id>coverage-report</id>
+                <phase>verify</phase>
+                <goals>
+                  <goal>report</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
 </project>

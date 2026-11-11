@@ -152,9 +152,10 @@ npm --prefix screentrace-viewer run format
 
 ### 依賴安全檢查
 
-GitHub Actions 的 `Security checks` 在 push、PR 與每週排程執行。分成三個獨立 job，其中一項失敗不會跳過其他項。
+GitHub Actions 的 `Security checks` 在 push、PR 與每週排程執行。分成四個獨立 job，其中一項失敗不會跳過其他項。
 
-- 建置與測試：viewer 建置、Java `mvn verify`、三引擎 E2E。
+- 建置與測試：viewer 建置、Java `mvn verify`（含 JaCoCo 覆蓋率報告，只報告、不設門檻）、三引擎 E2E。
+- Windows：在 Windows 上執行 Java `verify`，再用 `bin\screentrace.cmd analyze` 分析一個 fixture，確認報表產生且不含本機路徑。本機要產生覆蓋率報告時執行 `./mvnw verify -Pcoverage`，結果在各模組的 `target/site/jacoco/`。
 - Java 依賴掃描：`-DskipTests package` 後以 Dependency-Check 12.2.2 掃描；CVSS ≥ 7 或掃描錯誤仍會使檢查失敗。
 - Node：capture、viewer、screentrace-js 三個套件依 lockfile 安裝並執行測試，再各自執行 `npm audit --audit-level=high`。
 - NVD 資料使用官方公開 JSON 2.0 檔案，不需要 API Key；漏洞資料庫使用每日快取，並依掃描器版本隔離；升級掃描器時也要更新 workflow 的快取版本。
