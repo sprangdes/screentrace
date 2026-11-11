@@ -2,7 +2,7 @@ $ErrorActionPreference = 'Stop'
 
 $requiredJava = 17
 $requiredMaven = [Version]'3.9'
-$requiredNode = 18
+$requiredNode = 22
 $baseDir = Split-Path -Parent $PSScriptRoot
 
 function Refresh-ProcessPath {

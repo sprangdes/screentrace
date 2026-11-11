@@ -17,7 +17,7 @@
 | HC-005 | 中 | Struts／JSP 有部分標記用 regex 解析 | 待辦 |
 | HC-006 | 中 | 框架 adapter 的選擇寫死在 if 判斷裡，沒有共同介面 | 待辦 |
 | HC-002 | 低 | 26 處 `catch(Exception ignored){}` | 已重新評估，降為低 |
-| HC-007 | 低 | 沒有 Maven Wrapper；Node 套件沒宣告 `engines`；Playwright 版本綁住 CI 的作業系統版本 | 待辦 |
+| HC-007 | 低 | 沒有 Maven Wrapper；Node 套件沒宣告 `engines`；Playwright 版本綁住 CI 的作業系統版本 | 已完成（R43） |
 | HC-008 | 低 | ADR 128 份，缺一份現況摘要 | 待辦 |
 | HC-009 | 低 | `element-styles.json` 含本機絕對路徑（R39 比對時發現） | 已完成（R42） |
 
@@ -163,6 +163,8 @@ AGENTS.md §6 描述了 `AnalysisAdapter` 介面，但它只存在於文件。�
 - 沒有 Maven Wrapper（`mvnw`），本機和 CI 的 Maven 版本可能不同。
 - 三個 Node 套件都沒有宣告 `engines`：README 要求 Node 18+，CI 用的是 Node 22，兩者之間的版本沒有任何測試。
 - Playwright 固定在 1.55.1，導致 CI 只能用 `ubuntu-24.04`。
+
+**進度**：R43 WP114 已完成：Maven Wrapper 固定 Maven 3.9.11；Node.js 最低版本改為 22 並宣告 `engines`；Playwright 1.63.0，CI 改用 `ubuntu-26.04`，見 [ADR 0134](adr/0134-r43-toolchain-versions.md)。
 
 ## HC-008 [低] 文件維護成本
 

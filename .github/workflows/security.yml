@@ -17,7 +17,7 @@ concurrency:
 
 jobs:
   build-and-test:
-    runs-on: ubuntu-24.04  # Playwright 1.55.1 cannot install browsers on ubuntu-26.04 (the new ubuntu-latest)
+    runs-on: ubuntu-26.04  # Pinned; move it together with Playwright, whose browsers support a fixed set of OS releases (HC-007)
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
@@ -42,18 +42,18 @@ jobs:
         run: npm --prefix screentrace-capture ci
       - name: Install viewer test browsers
         run: npm exec --prefix screentrace-capture -- playwright install --with-deps chromium firefox webkit
-      # Java sources must match google-java-format (HC-001); run `mvn com.diffplug.spotless:spotless-maven-plugin:apply` to fix.
+      # Java sources must match google-java-format (HC-001); run `./mvnw com.diffplug.spotless:spotless-maven-plugin:apply` to fix.
       - name: Check Java formatting
-        run: mvn -B com.diffplug.spotless:spotless-maven-plugin:check
+        run: ./mvnw -B com.diffplug.spotless:spotless-maven-plugin:check
       - name: Build and test Java modules
-        run: mvn -B clean verify
+        run: ./mvnw -B clean verify
       - name: Test file viewer in all engines
         env:
           ST_BROWSERS: chromium,firefox,webkit
         run: node --test screentrace-viewer/test/*.e2e.mjs
 
   dependency-audit:
-    runs-on: ubuntu-24.04  # Playwright 1.55.1 cannot install browsers on ubuntu-26.04 (the new ubuntu-latest)
+    runs-on: ubuntu-26.04  # Pinned; move it together with Playwright, whose browsers support a fixed set of OS releases (HC-007)
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
@@ -88,7 +88,7 @@ jobs:
         run: |
           log="$RUNNER_TEMP/dependency-audit.log"
           audit() {
-            mvn -B -DskipTests package org.owasp:dependency-check-maven:aggregate -DdataDirectory="$DEPENDENCY_CHECK_DATA" "$@" 2>&1 | tee "$log"
+            ./mvnw -B -DskipTests package org.owasp:dependency-check-maven:aggregate -DdataDirectory="$DEPENDENCY_CHECK_DATA" "$@" 2>&1 | tee "$log"
           }
           vulnerable() {
             grep -q 'CVSS score greater than or equal to' "$log"
@@ -143,7 +143,7 @@ jobs:
           if-no-files-found: warn
 
   node-dependency-audit:
-    runs-on: ubuntu-24.04  # Playwright 1.55.1 cannot install browsers on ubuntu-26.04 (the new ubuntu-latest)
+    runs-on: ubuntu-26.04  # Pinned; move it together with Playwright, whose browsers support a fixed set of OS releases (HC-007)
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
