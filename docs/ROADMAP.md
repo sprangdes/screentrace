@@ -258,7 +258,7 @@
 - WP104：量測 reservio 完整分析各段耗時；React 預覽分析改為與 graph 分析同時執行（30.0 秒降為 25.0 秒，輸出逐位元組相同）；安全性檢查（XML、viewer 輸出、外部程序、動態執行）沒有需要修正的項目。預覽擷取改為平行處理列為下一段，見 [ADR 0125](adr/0125-r34-analysis-performance-security.md)。
 - 2026-11-06 完成於分支 `feature/r34-analysis-performance-security`（e19d7f0），2026-11-11 以 R37 之後的 main 為基底重新整理後合併。
 - 合併前補充：取消或逾時時連同 Node 的子孫程序一起結束，避免版本管理工具的 shim 留下孤兒 Node 程序，見 ADR 0125 R34-6。
-- 驗證：待 PR CI 完成後補入。
+- 驗證：Maven 582（573 通過、2 略過，另 OQ-041 的 7 個 Chromium 測試在 sandbox 內無法執行）；viewer 單元測試 148 個（sandbox 內 146 通過，OQ-047 的 2 個 Chromium 測試無法執行）；JS 測試 180 個；reservio 的分析產物與 main 逐位元組相同，完整分析由 33.0 秒降為 25.0 秒；PR CI run https://github.com/sprangdes/screentrace/actions/runs/43003704362 三個 job 全綠（含 E2E 與上述 7 個測試）。PR：https://github.com/sprangdes/screentrace/pull/85。
 
 ## R35 放大畫面時的關聯線整理
 
