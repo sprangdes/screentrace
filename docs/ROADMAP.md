@@ -302,3 +302,8 @@
 
 - WP113：capture 把分析目錄裡的樣式資源 URL 記成 `st-preview-file:<相對路徑>`，`element-styles.json` 與樣式 ID 不再隨輸出目錄改變；報表端還原後沿用原本的路徑邊界檢查，報表不變，見 [ADR 0133](adr/0133-r42-output-relative-style-resources.md)（HC-009）。
 - 驗證：capture 87 個測試、Maven 584（579 通過、5 略過）；同一專案輸出到兩個目錄，`element-styles.json` 與報表逐位元組相同，報表也與修改前相同。
+
+## R43 固定建置工具鏈版本
+
+- WP114：加入 Maven Wrapper（Maven 3.9.11，驗證 SHA-256），CI 改用 `./mvnw`；Node.js 最低版本改為 22 並在三個套件宣告 `engines`；Playwright 升到 1.63.0，CI 改用 `ubuntu-26.04`，見 [ADR 0134](adr/0134-r43-toolchain-versions.md)（HC-007）。
+- 驗證：capture 87、viewer 單元 148、JS 180 個測試全部通過；Maven 584（579 通過、5 略過）；viewer E2E（Chromium）117／118，未過的是 sandbox 的效能門檻。
