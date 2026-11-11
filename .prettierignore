@@ -1,0 +1,10 @@
+# Only the TypeScript / JavaScript sources of the Node packages are formatted (HC-001, ADR 0131).
+# Fixtures are target-project samples whose text and line numbers are part of the analysis results.
+**/node_modules/
+**/dist/
+**/fixtures/
+**/test/golden/
+**/*.json
+**/*.md
+**/*.html
+**/*.css

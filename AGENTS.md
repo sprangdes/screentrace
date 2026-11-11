@@ -279,7 +279,7 @@ Before implementing a task:
 6. Keep changes scoped to the requested task.
 7. Add tests for newly introduced parsing or graph behavior.
 8. Update documentation if the architecture or graph schema changes.
-9. Format Java changes with `mvn com.diffplug.spotless:spotless-maven-plugin:apply` (google-java-format, ADR 0130); CI rejects unformatted Java. TypeScript / JavaScript formatting is not enforced yet.
+9. Format Java changes with `mvn com.diffplug.spotless:spotless-maven-plugin:apply` (google-java-format, ADR 0130); CI rejects unformatted Java. Format TypeScript / JavaScript in `screentrace-js`, `screentrace-capture` and `screentrace-viewer` with `npm --prefix screentrace-viewer run format` (Prettier, ADR 0131); CI rejects unformatted sources.
 
 When requirements are ambiguous, prefer the smallest implementation that preserves extensibility.
 

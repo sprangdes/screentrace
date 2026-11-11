@@ -140,6 +140,12 @@ Java 原始碼與測試以 google-java-format 排版，CI 會檢查；修改 Jav
 mvn com.diffplug.spotless:spotless-maven-plugin:apply
 ```
 
+`screentrace-js`、`screentrace-capture`、`screentrace-viewer` 的 TypeScript／JavaScript 以 Prettier 排版，CI 也會檢查；修改後執行（需先在 `screentrace-viewer` 執行過 `npm ci`）：
+
+```bash
+npm --prefix screentrace-viewer run format
+```
+
 分析產物是執行結果，應維持在設定的分析結果根目錄，不應提交到 ScreenTrace 原始碼版本庫。
 
 ### 依賴安全檢查

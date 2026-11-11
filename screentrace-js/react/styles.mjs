@@ -6,8 +6,10 @@ import path from 'node:path';
  * the capture step uses the first one that exists and reports the rest as missing.
  */
 export function stylesheets(modules, entries) {
-  const result = [], seen = new Set(), visited = new Set();
-  const visit = file => {
+  const result = [],
+    seen = new Set(),
+    visited = new Set();
+  const visit = (file) => {
     const module = modules.get(file);
     if (!module || visited.has(file)) return;
     visited.add(file);
@@ -20,11 +22,21 @@ export function stylesheets(modules, entries) {
         const key = candidates.join('|');
         if (candidates.length && !seen.has(key)) {
           seen.add(key);
-          result.push({specifier, ...(packageName(specifier)?{package: packageName(specifier)}:{}), from: file, line: statement.loc?.start.line ?? 1, candidates});
+          result.push({
+            specifier,
+            ...(packageName(specifier) ? { package: packageName(specifier) } : {}),
+            from: file,
+            line: statement.loc?.start.line ?? 1,
+            candidates,
+          });
         }
         continue;
       }
-      const target = module.imports.size ? [...module.imports.values()].find(item => item.node && statement.specifiers.includes(item.node))?.file : null;
+      const target = module.imports.size
+        ? [...module.imports.values()].find(
+            (item) => item.node && statement.specifiers.includes(item.node),
+          )?.file
+        : null;
       if (target) visit(target);
       else if (specifier.startsWith('.')) visit(resolveRelative(modules, file, specifier));
     }
@@ -33,7 +45,12 @@ export function stylesheets(modules, entries) {
   return result;
 }
 
-function packageName(specifier){if(specifier.startsWith('.')||specifier.startsWith('/')||/^[a-z]+:/i.test(specifier))return null;const parts=specifier.split('/');return specifier.startsWith('@')?parts.slice(0,2).join('/'):parts[0];}
+function packageName(specifier) {
+  if (specifier.startsWith('.') || specifier.startsWith('/') || /^[a-z]+:/i.test(specifier))
+    return null;
+  const parts = specifier.split('/');
+  return specifier.startsWith('@') ? parts.slice(0, 2).join('/') : parts[0];
+}
 
 function cssCandidates(from, specifier) {
   if (specifier.startsWith('.')) {
@@ -43,13 +60,21 @@ function cssCandidates(from, specifier) {
   if (specifier.startsWith('/') || /^[a-z]+:/i.test(specifier)) return [];
   const candidates = [];
   for (let directory = path.posix.dirname(from); ; directory = path.posix.dirname(directory)) {
-    candidates.push(path.posix.normalize(path.posix.join(directory === '.' ? '' : directory, 'node_modules', specifier)));
+    candidates.push(
+      path.posix.normalize(
+        path.posix.join(directory === '.' ? '' : directory, 'node_modules', specifier),
+      ),
+    );
     if (directory === '.' || directory === '/' || directory === '') break;
   }
-  return candidates.filter(candidate => !candidate.startsWith('..'));
+  return candidates.filter((candidate) => !candidate.startsWith('..'));
 }
 
 function resolveRelative(modules, from, specifier) {
   const base = path.posix.normalize(path.posix.join(path.posix.dirname(from), specifier));
-  return ['', '.tsx', '.ts', '.jsx', '.js', '/index.tsx', '/index.ts', '/index.jsx', '/index.js'].map(suffix => base + suffix).find(file => modules.has(file)) ?? null;
+  return (
+    ['', '.tsx', '.ts', '.jsx', '.js', '/index.tsx', '/index.ts', '/index.jsx', '/index.js']
+      .map((suffix) => base + suffix)
+      .find((file) => modules.has(file)) ?? null
+  );
 }

@@ -35,6 +35,9 @@ jobs:
         run: |
           npm --prefix screentrace-viewer ci --ignore-scripts
           npm --prefix screentrace-viewer run build
+      # TypeScript / JavaScript must match Prettier (HC-001); run `npm --prefix screentrace-viewer run format` to fix.
+      - name: Check TypeScript and JavaScript formatting
+        run: npm --prefix screentrace-viewer run format:check
       - name: Install capture dependencies
         run: npm --prefix screentrace-capture ci
       - name: Install viewer test browsers
