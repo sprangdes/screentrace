@@ -196,9 +196,18 @@ final class PreviewCaptureReader {
         diagnostics(data.path("diagnostics")));
   }
 
+  /**
+   * Capture writes a resource under the analysis output as {@code st-preview-file:} plus its path
+   * relative to the output (HC-009), so element-styles.json holds no local path; older captures
+   * still hold absolute {@code file:} URLs. Both forms go through the same boundary check below.
+   */
+  private static final String OUTPUT_RELATIVE = "st-preview-file:";
+
   // Computed CSS URLs are browser-serialized URI tokens; target CSS is never evaluated here.
   private static final Pattern FILE_URI =
-      Pattern.compile("(?i)\"(file:/+[^\"]+)\"|'(file:/+[^']+)'|(file:/+[^\\s\"'()]+)");
+      Pattern.compile(
+          "(?i)\"((?:file:/+|st-preview-file:)[^\"]+)\"|'((?:file:/+|st-preview-file:)[^']+)'"
+              + "|((?:file:/+|st-preview-file:)[^\\s\"'()]+)");
 
   private Map<String, String> normalizeResources(Map<String, String> values, Path output)
       throws IOException {
@@ -214,7 +223,7 @@ final class PreviewCaptureReader {
               matcher.group(1) != null
                   ? matcher.group(1)
                   : matcher.group(2) != null ? matcher.group(2) : matcher.group(3);
-          URI uri = URI.create(raw);
+          URI uri = resourceUri(raw, output);
           URI location = new URI(uri.getScheme(), uri.getAuthority(), uri.getPath(), null, null);
           Path resource = Path.of(location);
           Path realResource = RealPaths.resolveAllowMissing(resource);
@@ -241,6 +250,20 @@ final class PreviewCaptureReader {
       result.put(entry.getKey(), text.toString());
     }
     return result;
+  }
+
+  /** Resolves an output-relative reference against the output; it may not name another root. */
+  private static URI resourceUri(String raw, Path output) {
+    if (!raw.regionMatches(true, 0, OUTPUT_RELATIVE, 0, OUTPUT_RELATIVE.length()))
+      return URI.create(raw);
+    URI relative = URI.create(raw.substring(OUTPUT_RELATIVE.length()));
+    if (relative.isAbsolute()
+        || relative.getRawAuthority() != null
+        || relative.getRawPath() == null
+        || relative.getRawPath().startsWith("/"))
+      throw new IllegalArgumentException("Output-relative resource is not a relative path");
+    String base = output.toAbsolutePath().toUri().toString();
+    return URI.create(base.endsWith("/") ? base : base + "/").resolve(relative);
   }
 
   private String styleHash(Map<String, String> values) throws IOException {

@@ -491,10 +491,20 @@ test('inline web-root background images stay inside copied preview assets', asyn
     const html = await readFile(path.join(f.output, 'static-preview/screen.html'), 'utf8');
     assert.match(html, /assets\/images\/pattern.svg/);
     const capture = await read(f);
-    for (const style of [...Object.values(capture.styles), ...Object.values(capture.defaults)])
-      for (const value of Object.values(style))
-        if (value.includes('file:'))
-          assert.ok(value.includes('/analysis/static-preview/assets/'), value);
+    const values = [...Object.values(capture.styles), ...Object.values(capture.defaults)].flatMap(
+      (style) => Object.values(style),
+    );
+    // HC-009: the capture records the image relative to the analysis output, never a local path.
+    assert.ok(
+      values.some((value) =>
+        value.includes('url("st-preview-file:static-preview/assets/images/pattern.svg")'),
+      ),
+    );
+    for (const value of values) {
+      assert.doesNotMatch(value, /file:\/\//, value);
+      if (value.includes('st-preview-file:'))
+        assert.ok(value.includes('st-preview-file:static-preview/assets/'), value);
+    }
   } finally {
     await rm(f.root, { recursive: true, force: true });
   }
