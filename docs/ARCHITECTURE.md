@@ -502,7 +502,7 @@ ReferenceResolver
 
 Do not over-engineer this before the first Struts pipeline works.
 
-Current implementation: no `AnalysisAdapter`／`ProjectContext`／`AnalysisContribution` interface or `StrutsConfigAdapter` class exists. Adapters are concrete classes exposing `ApplicationGraph analyze(ProjectInventory)` (`StrutsProjectAnalyzer`, `SpringProjectAnalyzer`). `ScreenTraceCli` selects them from scanner technology flags, rejects Struts 2 via `StrutsFrameworkDetector`, merges the graphs and runs `UrlGraphContribution.enrich` when both are present.
+Current implementation: no `AnalysisAdapter`／`ProjectContext`／`AnalysisContribution` interface or `StrutsConfigAdapter` class exists. Adapters are concrete classes exposing `ApplicationGraph analyze(ProjectInventory)` (`StrutsProjectAnalyzer`, `SpringProjectAnalyzer`); `StrutsProjectAnalyzer` only orders the analysis stages, which live in package-private `Struts*` classes of the same package (ADR 0132). `ScreenTraceCli` selects them from scanner technology flags, rejects Struts 2 via `StrutsFrameworkDetector`, merges the graphs and runs `UrlGraphContribution.enrich` when both are present.
 
 ---
 

@@ -292,3 +292,8 @@
 
 - WP111：以 Prettier 3.9.10 重新排版 `screentrace-js`、`screentrace-capture`、`screentrace-viewer` 的全部 TypeScript／JavaScript 原始碼與測試（234 個檔案，只改排版），CI 加上 TS／JS 格式檢查；`.git-blame-ignore-revs` 記錄排版 commit，見 [ADR 0131](adr/0131-r40-typescript-javascript-formatting.md)（HC-001 第二段）。
 - 驗證：234 個檔案排版前後壓縮後相同，`viewer.js` 逐位元組相同；JS 測試 180 個、viewer 單元測試 148 個、capture 測試 85 個全部通過；Maven 582（577 通過、5 略過）；排版前後的 CLI 分析 4 個 fixtures 專案，產物除來源路徑與 fingerprint 外相同。
+
+## R41 拆分 StrutsProjectAnalyzer
+
+- WP112：`StrutsProjectAnalyzer.java`（4,877 行、148 個成員）依功能拆成同一個 package 的 16 個檔案，只搬移不改邏輯；最大的檔案降為 587 行，`StrutsProjectAnalyzer` 剩下 75 行的分析流程，見 [ADR 0132](adr/0132-r41-split-struts-project-analyzer.md)（HC-001 第三段）。
+- 驗證：148 個成員搬移前後忽略空白相同（兩個方法參照改指新類別）；Maven 582（577 通過、5 略過）；拆分前後的 CLI 分析 11 個 fixtures 專案，197 個產物除來源路徑與 fingerprint 外相同。
