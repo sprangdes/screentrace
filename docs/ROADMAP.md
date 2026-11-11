@@ -273,3 +273,9 @@
 
 - WP108：打開畫面時，右側欄「呼叫的 API」改用與 API 頁相同、依方法上色的標籤，見 [ADR 0128](adr/0128-r37-panel-method-tags.md)。
 - 驗證：Maven 579（571 通過、1 略過，另 OQ-041 的 7 個 Chromium 測試在 sandbox 內無法執行）；viewer 單元測試 148 個（sandbox 內 146 通過，OQ-047 的 2 個 Chromium 測試無法執行）；JS 測試 180 個；PR CI run https://github.com/sprangdes/screentrace/actions/runs/42342297081 三個 job 全綠（含 E2E 與上述 7 個測試）。PR：https://github.com/sprangdes/screentrace/pull/82。
+
+## R38 程式健檢與 CI 測試範圍
+
+- 2026-11-11 全專案健檢的結果與待辦記錄在 [HEALTH_CHECK_20261111](HEALTH_CHECK_20261111.md)（HC-001～HC-008）。
+- WP109：CI 改為執行 `screentrace-capture/*.test.mjs` 的全部測試檔，補上從未執行的 7 個檔案；`screentrace-js` 相依套件移到 capture 測試之前安裝，見 [ADR 0129](adr/0129-r38-run-every-capture-test.md)（HC-003）。
+- 驗證：本機與 PR CI 的 capture 測試都是 19 個檔案、85 個測試全部通過（原本 CI 只跑 12 個檔案）；PR CI run https://github.com/sprangdes/screentrace/actions/runs/42987303105 三個 job 全綠。PR：https://github.com/sprangdes/screentrace/pull/84。
