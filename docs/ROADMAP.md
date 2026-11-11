@@ -286,4 +286,4 @@
 ## R39 Java 原始碼排版
 
 - WP110：以 Spotless + google-java-format 1.24.0 重新排版全部 Java 原始碼與測試（220 個檔案，只改排版），CI 加上 Java 格式檢查；`.git-blame-ignore-revs` 記錄排版 commit，見 [ADR 0130](adr/0130-r39-java-formatting.md)（HC-001 第一段）。
-- 驗證：待 PR CI 完成後補入。
+- 驗證：Maven 582（573 通過、2 略過，另 OQ-041 的 7 個 Chromium 測試在 sandbox 內無法執行），與排版前相同；viewer 單元測試 148 個；JS 測試 180 個；需求方以排版前後的 CLI 分析 9 個專案，產物除輸出路徑外相同；PR CI run https://github.com/sprangdes/screentrace/actions/runs/43020259005 三個 job 全綠（含「Check Java formatting」與 E2E）。PR：https://github.com/sprangdes/screentrace/pull/86。
