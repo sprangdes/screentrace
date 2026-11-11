@@ -18,7 +18,7 @@ ScreenTrace 會展開可解析的 JSP Tag、CSS 與本地資源，並以 Playwri
 ./bin/screentrace setup
 ```
 
-腳本會檢查並安裝 Java 17+、Maven 3.9+、Node.js 18+、Playwright 與 Chromium。缺少 Java、Maven 或 Node.js 時會透過 Homebrew 安裝；首次執行需要網路連線，Homebrew 可能要求輸入 macOS 管理者密碼。
+腳本會檢查並安裝 Java 17+、Maven 3.9+、Node.js 22+、Playwright 與 Chromium。缺少 Java、Maven 或 Node.js 時會透過 Homebrew 安裝；首次執行需要網路連線，Homebrew 可能要求輸入 macOS 管理者密碼。
 
 ### Windows
 
@@ -127,17 +127,19 @@ md 一律為 format_version 1，舊版 v2／v3 檔仍可開啟。格式、排序
 
 ## 開發與驗證
 
+開發與 CI 用 Maven Wrapper 固定 Maven 3.9.11（`./mvnw`，Windows 用 `mvnw.cmd`），第一次執行會下載並驗證 Maven；Node.js 需要 22 以上。
+
 ```bash
 npm --prefix screentrace-js ci --ignore-scripts
 npm --prefix screentrace-viewer ci --ignore-scripts
 npm --prefix screentrace-viewer run build
-mvn clean verify
+./mvnw clean verify
 ```
 
 Java 原始碼與測試以 google-java-format 排版，CI 會檢查；修改 Java 後執行下列指令重新排版（fixtures 與測試資源不在範圍內）：
 
 ```bash
-mvn com.diffplug.spotless:spotless-maven-plugin:apply
+./mvnw com.diffplug.spotless:spotless-maven-plugin:apply
 ```
 
 `screentrace-js`、`screentrace-capture`、`screentrace-viewer` 的 TypeScript／JavaScript 以 Prettier 排版，CI 也會檢查；修改後執行（需先在 `screentrace-viewer` 執行過 `npm ci`）：
@@ -161,8 +163,8 @@ GitHub Actions 的 `Security checks` 在 push、PR 與每週排程執行。分�
 本機可重跑：
 
 ```bash
-mvn clean verify
-mvn org.owasp:dependency-check-maven:aggregate -DdataDirectory=/tmp/screentrace-dependency-check-12.2.2
+./mvnw clean verify
+./mvnw org.owasp:dependency-check-maven:aggregate -DdataDirectory=/tmp/screentrace-dependency-check-12.2.2
 npm --prefix screentrace-js ci --ignore-scripts
 npm --prefix screentrace-js test
 npm --prefix screentrace-js audit --audit-level=high
@@ -203,7 +205,7 @@ node screentrace-capture/capture-static-jsp.mjs <target-project> <analysis-direc
 ```bash
 npm --prefix screentrace-viewer ci --ignore-scripts
 npm --prefix screentrace-viewer run build
-mvn clean verify
+./mvnw clean verify
 npm --prefix screentrace-viewer test
 node --test screentrace-viewer/test/*.e2e.mjs
 ```
@@ -237,7 +239,7 @@ manifest 的 library.name／version、元件 id／name／selector／category 最
 
 ```bash
 npm --prefix screentrace-viewer run build
-mvn verify
+./mvnw verify
 ST_BROWSERS=chromium,firefox,webkit node --test screentrace-viewer/test/*.e2e.mjs
 ```
 
