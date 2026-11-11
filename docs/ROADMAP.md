@@ -253,9 +253,12 @@
 - 驗證：viewer 單元測試 148 個（新增 1）、E2E 111 個（新增 2）、JS 測試 180 個、Maven 建置通過；reservio 的 `viewer-documents.json` 與修改前逐位元組相同。
 - 後續修正（PR #79，7adf7f0）：角色頁的步驟欄維持原本的純文字標題，見 ADR 0124 R33-5a。主要變更隨 PR #78 合併。
 
-## R34（未合併）
+## R34 分析效率與安全性（第一段）
 
-- WP104（分析效能與安全，ADR 0125）只存在於分支 `feature/r34-analysis-performance-security`（e19d7f0，2026-11-06），未合併到 main；因此 main 上沒有 R34 紀錄與 ADR 0125。
+- WP104：量測 reservio 完整分析各段耗時；React 預覽分析改為與 graph 分析同時執行（30.0 秒降為 25.0 秒，輸出逐位元組相同）；安全性檢查（XML、viewer 輸出、外部程序、動態執行）沒有需要修正的項目。預覽擷取改為平行處理列為下一段，見 [ADR 0125](adr/0125-r34-analysis-performance-security.md)。
+- 2026-11-06 完成於分支 `feature/r34-analysis-performance-security`（e19d7f0），2026-11-11 以 R37 之後的 main 為基底重新整理後合併。
+- 合併前補充：取消或逾時時連同 Node 的子孫程序一起結束，避免版本管理工具的 shim 留下孤兒 Node 程序，見 ADR 0125 R34-6。
+- 驗證：待 PR CI 完成後補入。
 
 ## R35 放大畫面時的關聯線整理
 

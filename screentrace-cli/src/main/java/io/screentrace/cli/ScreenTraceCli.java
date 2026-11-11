@@ -372,11 +372,13 @@ public final class ScreenTraceCli {
     if (personaSettings.isPresent()) inventory = inventory.withPersonas(personaSettings.get(), settings.personasLine());
     if (personaSettings.isPresent() && !inventory.technologies().contains("React"))
       LOGGER.warning("角色設定目前只支援 React 畫面；本專案未偵測到 React，已略過角色設定。");
+    // The React preview pass reads the same sources as the graph pass; it runs alongside it instead of after it.
+    try (var reactPreview = io.screentrace.parser.jsp.ReactGraphContribution.prefetchPreview(inventory)) {
     var graph = io.screentrace.core.GraphIntegrityValidator.requireAnalysis(io.screentrace.core.PersonaFlows.enrich(analyze(inventory)));
     var writer = new SingleHtmlAnalysisWriter();
     writer.prepare(graph, output);
     boolean reactScreens = graph.nodes().stream().anyMatch(n -> n.type() == ApplicationGraph.NodeType.SCREEN && "static-reconstruction".equals(n.attributes().get("rendering")));
-    if (reactScreens) io.screentrace.parser.jsp.ReactGraphContribution.writePreview(inventory, output);
+    if (reactScreens) io.screentrace.parser.jsp.ReactGraphContribution.writePreview(inventory, output, reactPreview);
     if (reactScreens || graph.application().technologies().contains("JSP") || graph.nodes().stream().anyMatch(n -> n.type() == ApplicationGraph.NodeType.SCREEN && n.attributes().getOrDefault("view", "").endsWith(".html"))) {
       renderStaticJsp(project.sourceDirectory(), output);
       packPreview(output);
@@ -389,6 +391,7 @@ public final class ScreenTraceCli {
     long contextPathHintCount=graph.diagnostics().stream().filter(d->"CONTEXT_PATH_HINT".equals(d.code())).mapToLong(d->d.evidence().size()).sum();
     return new AnalysisResult(report.path(), project.name(), graph.application().technologies(), endpoints,
         screens, components, output,contextPathHintCount,graph.application().personas().stream().map(p->{var f=p.flow();return "角色 "+p.name()+"：可達 "+f.reached().stream().filter(r->r.reach().equals("REACHABLE")).count()+"、可能 "+f.reached().stream().filter(r->r.reach().equals("POSSIBLE")).count()+"、未到達 "+f.unreached().size()+"、未判定導覽 "+f.unevaluatedNavigations();}).toList());
+    }
   }
 
   static String contextPathHintSummary(long count) {

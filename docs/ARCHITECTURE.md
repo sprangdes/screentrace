@@ -202,6 +202,10 @@ viewer 只讀 schema 2.4 的 `application.personas`，不重新判定。每個�
 
 `screen-panel.ts` 的「呼叫的 API」每一列使用 `api-page.ts` 匯出的 `methodBadge` 與 `pathCode`，與 API 頁的方法標籤共用同一個元件與樣式。見 [ADR 0128](adr/0128-r37-panel-method-tags.md)。
 
+### R34：React 預覽分析與 graph 分析同時執行
+
+CLI 在建立 graph 前以 `ReactGraphContribution.prefetchPreview` 在背景啟動 React 預覽分析（`markup=true`），`writePreview` 取用其結果；不需要預覽時關閉即中止。兩段的請求與原本相同，輸出不變。見 [ADR 0125](adr/0125-r34-analysis-performance-security.md)。
+
 ### R33：縮小總覽的區名與畫面提示
 
 總覽的區塊標籤（`.screen-group-label`）放在區塊框頂端加高的標題帶（`TITLE` 200），以 `scale(clamp(1, 0.4667 / --zoom, 2.4))` 反向放大，維持至少約 14px；縮小時第二行列出前 3 個畫面（`areaPreview`，依卡片位置排序）。連線只走區塊之間的間隔，不會經過標籤。縮小時滑過卡片顯示 `.card-tip`（名稱與網址），移動畫布時隱藏。只用 CSS 與 DOM，版面配置與 graph 不變。見 [ADR 0124](adr/0124-r33-overview-labels.md)。
