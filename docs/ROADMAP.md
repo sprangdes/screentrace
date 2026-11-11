@@ -287,3 +287,8 @@
 
 - WP110：以 Spotless + google-java-format 1.24.0 重新排版全部 Java 原始碼與測試（220 個檔案，只改排版），CI 加上 Java 格式檢查；`.git-blame-ignore-revs` 記錄排版 commit，見 [ADR 0130](adr/0130-r39-java-formatting.md)（HC-001 第一段）。
 - 驗證：Maven 582（573 通過、2 略過，另 OQ-041 的 7 個 Chromium 測試在 sandbox 內無法執行），與排版前相同；viewer 單元測試 148 個；JS 測試 180 個；需求方以排版前後的 CLI 分析 9 個專案，產物除輸出路徑外相同；PR CI run https://github.com/sprangdes/screentrace/actions/runs/43020259005 三個 job 全綠（含「Check Java formatting」與 E2E）。PR：https://github.com/sprangdes/screentrace/pull/86。
+
+## R40 TypeScript／JavaScript 原始碼排版
+
+- WP111：以 Prettier 3.9.10 重新排版 `screentrace-js`、`screentrace-capture`、`screentrace-viewer` 的全部 TypeScript／JavaScript 原始碼與測試（234 個檔案，只改排版），CI 加上 TS／JS 格式檢查；`.git-blame-ignore-revs` 記錄排版 commit，見 [ADR 0131](adr/0131-r40-typescript-javascript-formatting.md)（HC-001 第二段）。
+- 驗證：234 個檔案排版前後壓縮後相同，`viewer.js` 逐位元組相同；JS 測試 180 個、viewer 單元測試 148 個、capture 測試 85 個全部通過；Maven 582（577 通過、5 略過）；排版前後的 CLI 分析 4 個 fixtures 專案，產物除來源路徑與 fingerprint 外相同。
