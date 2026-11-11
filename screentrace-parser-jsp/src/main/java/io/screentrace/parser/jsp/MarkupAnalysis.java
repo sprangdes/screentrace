@@ -5,114 +5,295 @@ import io.screentrace.core.StableGraphIds;
 import java.util.*;
 
 /** Source-only markup contribution. Expressions and model bindings await adapter evidence. */
-public record MarkupAnalysis(List<Component> components, List<Event> events,
-                             List<ValidationRule> rules, List<Behavior> behaviors) {
+public record MarkupAnalysis(
+    List<Component> components,
+    List<Event> events,
+    List<ValidationRule> rules,
+    List<Behavior> behaviors) {
   public MarkupAnalysis {
-    components = List.copyOf(components); events = List.copyOf(events);
-    rules = rules.stream().sorted().toList(); behaviors = behaviors.stream().sorted().toList();
+    components = List.copyOf(components);
+    events = List.copyOf(events);
+    rules = rules.stream().sorted().toList();
+    behaviors = behaviors.stream().sorted().toList();
   }
-  public record Component(String id, ComponentKind kind, String tag, Map<String,String> attributes,
-                          SourceLocation source, String guard, boolean repeated, String formId,
-                          String model, String field, Confidence bindingStatus) {
-    public Component { attributes = Collections.unmodifiableMap(new TreeMap<>(attributes)); }
+
+  public record Component(
+      String id,
+      ComponentKind kind,
+      String tag,
+      Map<String, String> attributes,
+      SourceLocation source,
+      String guard,
+      boolean repeated,
+      String formId,
+      String model,
+      String field,
+      Confidence bindingStatus) {
+    public Component {
+      attributes = Collections.unmodifiableMap(new TreeMap<>(attributes));
+    }
   }
-  public record Event(String componentId, String event, String expression, SourceLocation source) { }
-  private record Scope(String tag, String guard, boolean repeated, String formId, String model, String nestedPath, String linkId) { }
-  private static final Set<String> VOID = Set.of("input", "img", "br", "hr", "meta", "link", "area", "base", "col", "embed", "param", "source", "track", "wbr");
-  private static final Set<String> CONDITIONS = Set.of("c:if", "c:when", "c:otherwise", "logic:present", "logic:notpresent", "logic:equal", "logic:notequal", "logic:empty", "logic:notempty", "logic:greaterthan", "logic:lessthan");
+
+  public record Event(String componentId, String event, String expression, SourceLocation source) {}
+
+  private record Scope(
+      String tag,
+      String guard,
+      boolean repeated,
+      String formId,
+      String model,
+      String nestedPath,
+      String linkId) {}
+
+  private static final Set<String> VOID =
+      Set.of(
+          "input", "img", "br", "hr", "meta", "link", "area", "base", "col", "embed", "param",
+          "source", "track", "wbr");
+  private static final Set<String> CONDITIONS =
+      Set.of(
+          "c:if",
+          "c:when",
+          "c:otherwise",
+          "logic:present",
+          "logic:notpresent",
+          "logic:equal",
+          "logic:notequal",
+          "logic:empty",
+          "logic:notempty",
+          "logic:greaterthan",
+          "logic:lessthan");
 
   public static MarkupAnalysis parse(String path, String text) {
-    List<Component> components = new ArrayList<>(); List<Event> events = new ArrayList<>();
-    List<ValidationRule> rules = new ArrayList<>(); List<Behavior> behaviors = new ArrayList<>();
-    List<Scope> stack = new ArrayList<>(); Map<String,Integer> occurrences = new HashMap<>();
+    List<Component> components = new ArrayList<>();
+    List<Event> events = new ArrayList<>();
+    List<ValidationRule> rules = new ArrayList<>();
+    List<Behavior> behaviors = new ArrayList<>();
+    List<Scope> stack = new ArrayList<>();
+    Map<String, Integer> occurrences = new HashMap<>();
     for (MarkupTag token : MarkupTag.scan(text)) {
       String tag = token.name().toLowerCase(Locale.ROOT);
       if (token.closing()) {
-        for (int i = stack.size()-1; i >= 0; i--) if (stack.get(i).tag().equals(tag)) { stack.subList(i,stack.size()).clear(); break; }
+        for (int i = stack.size() - 1; i >= 0; i--)
+          if (stack.get(i).tag().equals(tag)) {
+            stack.subList(i, stack.size()).clear();
+            break;
+          }
         continue;
       }
-      var attrs = token.attributes(); var source = new SourceLocation(path, token.line());
-      String guard = stack.stream().map(Scope::guard).filter(Objects::nonNull).reduce((a,b) -> a + " && " + b).orElse(null);
+      var attrs = token.attributes();
+      var source = new SourceLocation(path, token.line());
+      String guard =
+          stack.stream()
+              .map(Scope::guard)
+              .filter(Objects::nonNull)
+              .reduce((a, b) -> a + " && " + b)
+              .orElse(null);
       boolean repeated = stack.stream().anyMatch(Scope::repeated);
       String form = null, model = null, nestedPath = "";
       for (Scope scope : stack) {
-        if (scope.formId() != null) { form = scope.formId(); model = scope.model(); nestedPath = ""; }
-        if (scope.nestedPath() != null && !scope.nestedPath().isEmpty()) nestedPath += scope.nestedPath() + (scope.nestedPath().endsWith(".") ? "" : ".");
+        if (scope.formId() != null) {
+          form = scope.formId();
+          model = scope.model();
+          nestedPath = "";
+        }
+        if (scope.nestedPath() != null && !scope.nestedPath().isEmpty())
+          nestedPath += scope.nestedPath() + (scope.nestedPath().endsWith(".") ? "" : ".");
       }
       String condition = CONDITIONS.contains(tag) ? condition(token) : null;
       ComponentKind kind = kind(tag, attrs);
       if (kind != null) {
-        Map<String,String> identity = new TreeMap<>(attrs); identity.put("tag", tag);
+        Map<String, String> identity = new TreeMap<>(attrs);
+        identity.put("tag", tag);
         String occurrenceKey = kind + identity.toString();
-        String id = StableGraphIds.component(path, kind, identity, occurrences.merge(occurrenceKey,1,Integer::sum)-1);
-        if (kind == ComponentKind.FORM) { form = id; model = first(attrs,"modelattribute","commandname","name"); }
-        String field = first(attrs,"path","property","name");
-        if (tag.startsWith("form:") && attrs.containsKey("path") && field != null) field = nestedPath + field;
-        Map<String,String> componentAttrs=new TreeMap<>(attrs);if(kind==ComponentKind.BUTTON&&form==null)for(Scope scope:stack)if(scope.linkId()!=null)componentAttrs.put("parentLinkId",scope.linkId());
-        components.add(new Component(id,kind,tag,componentAttrs,source,guard,repeated,form,model,field,Confidence.UNRESOLVED));
-        for (var attribute : new TreeMap<>(attrs).entrySet()) if (attribute.getKey().startsWith("on") && attribute.getKey().length()>2) {
-          events.add(new Event(id,attribute.getKey().substring(2),attribute.getValue(),new SourceLocation(path,token.attributeLine(attribute.getKey()))));
+        String id =
+            StableGraphIds.component(
+                path, kind, identity, occurrences.merge(occurrenceKey, 1, Integer::sum) - 1);
+        if (kind == ComponentKind.FORM) {
+          form = id;
+          model = first(attrs, "modelattribute", "commandname", "name");
         }
-        for (String name : List.of("required","pattern","min","max","minlength","maxlength")) if (attrs.containsKey(name)) {
-          rule(rules,path,id,name,attrs.get(name),new SourceLocation(path,token.attributeLine(name)));
-        }
+        String field = first(attrs, "path", "property", "name");
+        if (tag.startsWith("form:") && attrs.containsKey("path") && field != null)
+          field = nestedPath + field;
+        Map<String, String> componentAttrs = new TreeMap<>(attrs);
+        if (kind == ComponentKind.BUTTON && form == null)
+          for (Scope scope : stack)
+            if (scope.linkId() != null) componentAttrs.put("parentLinkId", scope.linkId());
+        components.add(
+            new Component(
+                id,
+                kind,
+                tag,
+                componentAttrs,
+                source,
+                guard,
+                repeated,
+                form,
+                model,
+                field,
+                Confidence.UNRESOLVED));
+        for (var attribute : new TreeMap<>(attrs).entrySet())
+          if (attribute.getKey().startsWith("on") && attribute.getKey().length() > 2) {
+            events.add(
+                new Event(
+                    id,
+                    attribute.getKey().substring(2),
+                    attribute.getValue(),
+                    new SourceLocation(path, token.attributeLine(attribute.getKey()))));
+          }
+        for (String name : List.of("required", "pattern", "min", "max", "minlength", "maxlength"))
+          if (attrs.containsKey(name)) {
+            rule(
+                rules,
+                path,
+                id,
+                name,
+                attrs.get(name),
+                new SourceLocation(path, token.attributeLine(name)));
+          }
         String type = attrs.get("type");
-        if (Set.of("email","url","number","date").contains(Objects.toString(type,"").toLowerCase(Locale.ROOT))) rule(rules,path,id,type.toLowerCase(Locale.ROOT),type,new SourceLocation(path,token.attributeLine("type")));
+        if (Set.of("email", "url", "number", "date")
+            .contains(Objects.toString(type, "").toLowerCase(Locale.ROOT)))
+          rule(
+              rules,
+              path,
+              id,
+              type.toLowerCase(Locale.ROOT),
+              type,
+              new SourceLocation(path, token.attributeLine("type")));
       }
-      boolean selfClosing = token.end()>0 && text.charAt(token.end()-1)=='/';
+      boolean selfClosing = token.end() > 0 && text.charAt(token.end() - 1) == '/';
       if (!selfClosing && !VOID.contains(tag) && !tag.startsWith("@")) {
-        stack.add(new Scope(tag,condition,tag.equals("c:foreach") || tag.equals("logic:iterate"),kind==ComponentKind.FORM?form:null,kind==ComponentKind.FORM?model:null,tag.equals("spring:nestedpath")?attrs.get("path"):null,kind==ComponentKind.LINK?components.get(components.size()-1).id():null));
+        stack.add(
+            new Scope(
+                tag,
+                condition,
+                tag.equals("c:foreach") || tag.equals("logic:iterate"),
+                kind == ComponentKind.FORM ? form : null,
+                kind == ComponentKind.FORM ? model : null,
+                tag.equals("spring:nestedpath") ? attrs.get("path") : null,
+                kind == ComponentKind.LINK ? components.get(components.size() - 1).id() : null));
       }
     }
     for (Component component : components) {
-      if (!Set.of("modal","offcanvas").contains(Objects.toString(first(component.attributes(),"data-bs-toggle","data-toggle"),""))) continue;
-      String selector = first(component.attributes(),"data-bs-target","data-target","href");
-      List<Component> targets = components.stream().filter(c -> c.kind()==ComponentKind.MODAL && selector != null && selector.equals("#"+c.attributes().get("id"))).toList();
-      Confidence status = targets.size()==1?Confidence.CONFIRMED:targets.size()>1?Confidence.AMBIGUOUS:Confidence.UNRESOLVED;
-      behaviors.add(new Behavior(StableGraphIds.behavior(component.id(),"click",BehaviorType.OPEN_DIALOG,selector,0), component.id(),"click",BehaviorType.OPEN_DIALOG,
-          targets.size()==1?targets.get(0).id():null,component.guard(),null,selector,List.of(evidence(component.source(),status,"彈窗標記；候選："+targets.stream().map(Component::id).toList()))));
+      if (!Set.of("modal", "offcanvas")
+          .contains(
+              Objects.toString(first(component.attributes(), "data-bs-toggle", "data-toggle"), "")))
+        continue;
+      String selector = first(component.attributes(), "data-bs-target", "data-target", "href");
+      List<Component> targets =
+          components.stream()
+              .filter(
+                  c ->
+                      c.kind() == ComponentKind.MODAL
+                          && selector != null
+                          && selector.equals("#" + c.attributes().get("id")))
+              .toList();
+      Confidence status =
+          targets.size() == 1
+              ? Confidence.CONFIRMED
+              : targets.size() > 1 ? Confidence.AMBIGUOUS : Confidence.UNRESOLVED;
+      behaviors.add(
+          new Behavior(
+              StableGraphIds.behavior(
+                  component.id(), "click", BehaviorType.OPEN_DIALOG, selector, 0),
+              component.id(),
+              "click",
+              BehaviorType.OPEN_DIALOG,
+              targets.size() == 1 ? targets.get(0).id() : null,
+              component.guard(),
+              null,
+              selector,
+              List.of(
+                  evidence(
+                      component.source(),
+                      status,
+                      "彈窗標記；候選：" + targets.stream().map(Component::id).toList()))));
     }
-    return new MarkupAnalysis(components,events,rules,behaviors);
+    return new MarkupAnalysis(components, events, rules, behaviors);
   }
-  static boolean isConditional(String tag) { return CONDITIONS.contains(tag.toLowerCase(Locale.ROOT)); }
+
+  static boolean isConditional(String tag) {
+    return CONDITIONS.contains(tag.toLowerCase(Locale.ROOT));
+  }
+
   static String condition(MarkupTag tag) {
     if (tag.attribute("test") != null) return tag.attribute("test");
     return tag.name() + new TreeMap<>(tag.attributes());
   }
-  private static void rule(List<ValidationRule> rules,String path,String field,String kind,String value,SourceLocation source) {
-    Confidence status = dynamic(value)?Confidence.UNRESOLVED:Confidence.CONFIRMED;
-    rules.add(new ValidationRule(StableGraphIds.validation(path,field,kind,value,0),kind,List.of(field),null,ValidationLayer.MARKUP,
-        Map.of("value",value),List.of(evidence(source,status,"HTML5 屬性："+kind))));
+
+  private static void rule(
+      List<ValidationRule> rules,
+      String path,
+      String field,
+      String kind,
+      String value,
+      SourceLocation source) {
+    Confidence status = dynamic(value) ? Confidence.UNRESOLVED : Confidence.CONFIRMED;
+    rules.add(
+        new ValidationRule(
+            StableGraphIds.validation(path, field, kind, value, 0),
+            kind,
+            List.of(field),
+            null,
+            ValidationLayer.MARKUP,
+            Map.of("value", value),
+            List.of(evidence(source, status, "HTML5 屬性：" + kind))));
   }
-  static boolean dynamic(String value) { return value != null && (value.contains("${") || value.contains("#{") || value.contains("<%")); }
-  static AnalysisEvidence evidence(SourceLocation source,Confidence confidence,String detail) { return new AnalysisEvidence(source,"JspMarkupParser",ResolutionStatus.valueOf(confidence.name()),detail); }
-  private static String first(Map<String,String> attrs,String... keys) { for(String key:keys) if(attrs.containsKey(key)) return attrs.get(key); return null; }
-  public static ComponentKind kind(String tag, Map<String,String> attrs) {
-    if (tag.equals("dialog") || "dialog".equals(attrs.get("role")) || Arrays.asList(Objects.toString(attrs.get("class"),"").split("\\s+")).stream().anyMatch(c->Set.of("modal","offcanvas").contains(c))) return ComponentKind.MODAL;
-    String local = tag.contains(":")?tag.substring(tag.indexOf(':')+1):tag;
-    if (tag.contains(":") && !(tag.startsWith("html:")||tag.startsWith("html-el:")||tag.startsWith("form:"))) return attrs.keySet().stream().anyMatch(k->k.startsWith("on"))?ComponentKind.OTHER:null;
+
+  static boolean dynamic(String value) {
+    return value != null && (value.contains("${") || value.contains("#{") || value.contains("<%"));
+  }
+
+  static AnalysisEvidence evidence(SourceLocation source, Confidence confidence, String detail) {
+    return new AnalysisEvidence(
+        source, "JspMarkupParser", ResolutionStatus.valueOf(confidence.name()), detail);
+  }
+
+  private static String first(Map<String, String> attrs, String... keys) {
+    for (String key : keys) if (attrs.containsKey(key)) return attrs.get(key);
+    return null;
+  }
+
+  public static ComponentKind kind(String tag, Map<String, String> attrs) {
+    if (tag.equals("dialog")
+        || "dialog".equals(attrs.get("role"))
+        || Arrays.asList(Objects.toString(attrs.get("class"), "").split("\\s+")).stream()
+            .anyMatch(c -> Set.of("modal", "offcanvas").contains(c))) return ComponentKind.MODAL;
+    String local = tag.contains(":") ? tag.substring(tag.indexOf(':') + 1) : tag;
+    if (tag.contains(":")
+        && !(tag.startsWith("html:") || tag.startsWith("html-el:") || tag.startsWith("form:")))
+      return attrs.keySet().stream().anyMatch(k -> k.startsWith("on")) ? ComponentKind.OTHER : null;
     return switch (local) {
       case "form" -> ComponentKind.FORM;
-      case "a", "link" -> tag.equals("link")?null:ComponentKind.LINK;
-      case "button", "reset" -> "submit".equals(attrs.get("type"))?ComponentKind.SUBMIT:ComponentKind.BUTTON;
+      case "a", "link" -> tag.equals("link") ? null : ComponentKind.LINK;
+      case "button", "reset" ->
+          "submit".equals(attrs.get("type")) ? ComponentKind.SUBMIT : ComponentKind.BUTTON;
       case "submit", "cancel" -> ComponentKind.SUBMIT;
       case "text", "password", "input" -> inputKind(attrs);
       case "textarea" -> ComponentKind.TEXTAREA;
-      case "select" -> dynamic(attrs.get("multiple"))?ComponentKind.OTHER:
-          tag.contains(":")&&"false".equalsIgnoreCase(attrs.get("multiple"))?ComponentKind.SELECT:
-          attrs.containsKey("multiple")?ComponentKind.MULTI_SELECT:ComponentKind.SELECT;
+      case "select" ->
+          dynamic(attrs.get("multiple"))
+              ? ComponentKind.OTHER
+              : tag.contains(":") && "false".equalsIgnoreCase(attrs.get("multiple"))
+                  ? ComponentKind.SELECT
+                  : attrs.containsKey("multiple")
+                      ? ComponentKind.MULTI_SELECT
+                      : ComponentKind.SELECT;
       case "checkbox" -> ComponentKind.CHECKBOX;
       case "checkboxes", "multibox" -> ComponentKind.MULTI_SELECT;
       case "radio", "radiobutton", "radiobuttons" -> ComponentKind.RADIO;
       case "file" -> ComponentKind.FILE_INPUT;
       case "hidden" -> ComponentKind.OTHER;
       case "table" -> ComponentKind.TABLE;
-      default -> attrs.keySet().stream().anyMatch(k->k.startsWith("on"))?ComponentKind.OTHER:null;
+      default ->
+          attrs.keySet().stream().anyMatch(k -> k.startsWith("on")) ? ComponentKind.OTHER : null;
     };
   }
-  private static ComponentKind inputKind(Map<String,String> attrs) {
-    if(dynamic(attrs.get("type")))return ComponentKind.OTHER;
-    return switch(Objects.toString(attrs.get("type"),"text").toLowerCase(Locale.ROOT)) {
+
+  private static ComponentKind inputKind(Map<String, String> attrs) {
+    if (dynamic(attrs.get("type"))) return ComponentKind.OTHER;
+    return switch (Objects.toString(attrs.get("type"), "text").toLowerCase(Locale.ROOT)) {
       case "button", "reset" -> ComponentKind.BUTTON;
       case "submit", "image" -> ComponentKind.SUBMIT;
       case "checkbox" -> ComponentKind.CHECKBOX;

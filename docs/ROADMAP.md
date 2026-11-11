@@ -282,3 +282,8 @@
 - 2026-11-11 全專案健檢的結果與待辦記錄在 [HEALTH_CHECK_20261111](HEALTH_CHECK_20261111.md)（HC-001～HC-008）。
 - WP109：CI 改為執行 `screentrace-capture/*.test.mjs` 的全部測試檔，補上從未執行的 7 個檔案；`screentrace-js` 相依套件移到 capture 測試之前安裝，見 [ADR 0129](adr/0129-r38-run-every-capture-test.md)（HC-003）。
 - 驗證：本機與 PR CI 的 capture 測試都是 19 個檔案、85 個測試全部通過（原本 CI 只跑 12 個檔案）；PR CI run https://github.com/sprangdes/screentrace/actions/runs/42987303105 三個 job 全綠。PR：https://github.com/sprangdes/screentrace/pull/84。
+
+## R39 Java 原始碼排版
+
+- WP110：以 Spotless + google-java-format 1.24.0 重新排版全部 Java 原始碼與測試（220 個檔案，只改排版），CI 加上 Java 格式檢查；`.git-blame-ignore-revs` 記錄排版 commit，見 [ADR 0130](adr/0130-r39-java-formatting.md)（HC-001 第一段）。
+- 驗證：Maven 582（573 通過、2 略過，另 OQ-041 的 7 個 Chromium 測試在 sandbox 內無法執行），與排版前相同；viewer 單元測試 148 個；JS 測試 180 個；需求方以排版前後的 CLI 分析 9 個專案，產物除輸出路徑外相同；PR CI run https://github.com/sprangdes/screentrace/actions/runs/43020259005 三個 job 全綠（含「Check Java formatting」與 E2E）。PR：https://github.com/sprangdes/screentrace/pull/86。

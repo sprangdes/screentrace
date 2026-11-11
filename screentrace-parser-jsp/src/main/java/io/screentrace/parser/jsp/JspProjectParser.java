@@ -5,7 +5,6 @@ import io.screentrace.core.ApplicationGraph.Diagnostic;
 import io.screentrace.core.ApplicationGraph.SourceLocation;
 import io.screentrace.scanner.SafeProjectFiles;
 import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -20,20 +19,22 @@ import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
 
 /**
- * Parses JSP, JSPF, and Tiles metadata without applying Struts or Spring routing rules.
- * The parser intentionally returns literal targets only; expression-backed targets remain unresolved.
+ * Parses JSP, JSPF, and Tiles metadata without applying Struts or Spring routing rules. The parser
+ * intentionally returns literal targets only; expression-backed targets remain unresolved.
  */
 public final class JspProjectParser {
   private static final String PARSER = "JspProjectParser";
   public static final String CURRENT_VIEW_TARGET = "<current-view>";
   private static final Pattern JSP_COMMENT = Pattern.compile("(?s)<%--.*?--%>");
-  private static final Pattern JSTL_URL = Pattern.compile("(?is)<c:url\\b[^>]*?\\bvalue\\s*=\\s*(['\"])(.*?)\\1[^>]*/>");
+  private static final Pattern JSTL_URL =
+      Pattern.compile("(?is)<c:url\\b[^>]*?\\bvalue\\s*=\\s*(['\"])(.*?)\\1[^>]*/>");
 
   public JspAnalysis analyze(Path root, List<Path> files) throws IOException {
-    return analyze(root,files,(bundle,key)->null);
+    return analyze(root, files, (bundle, key) -> null);
   }
 
-  public JspAnalysis analyze(Path root, List<Path> files, StaticMessageResolver messages) throws IOException {
+  public JspAnalysis analyze(Path root, List<Path> files, StaticMessageResolver messages)
+      throws IOException {
     List<JspAnalysis.View> views = new ArrayList<>();
     List<JspAnalysis.Interaction> interactions = new ArrayList<>();
     List<JspAnalysis.Include> includes = new ArrayList<>();
@@ -41,52 +42,102 @@ public final class JspProjectParser {
     List<Diagnostic> diagnostics = new ArrayList<>();
     Map<String, MarkupAnalysis> markup = new java.util.TreeMap<>();
     StrutsMenus menus = StrutsMenus.load(root, files);
-    for (Path file : files.stream().sorted(java.util.Comparator.comparing(p->relative(root,p))).toList()) {
+    for (Path file :
+        files.stream().sorted(java.util.Comparator.comparing(p -> relative(root, p))).toList()) {
       String name = file.getFileName().toString();
       try {
-        if (name.endsWith(".jsp") || name.endsWith(".jspf") || name.endsWith(".html") || name.endsWith(".htm")) {
-          parseJsp(root, file, views, interactions, includes, diagnostics, markup,messages,menus);
-        } else if (name.endsWith(".xml") && SafeProjectFiles.readUtf8Limited(root, file, SafeProjectFiles.MAX_XML_FILE_BYTES).contains("tiles-definitions")) {
+        if (name.endsWith(".jsp")
+            || name.endsWith(".jspf")
+            || name.endsWith(".html")
+            || name.endsWith(".htm")) {
+          parseJsp(root, file, views, interactions, includes, diagnostics, markup, messages, menus);
+        } else if (name.endsWith(".xml")
+            && SafeProjectFiles.readUtf8Limited(root, file, SafeProjectFiles.MAX_XML_FILE_BYTES)
+                .contains("tiles-definitions")) {
           parseTiles(root, file, tilesDefinitions, diagnostics);
         }
       } catch (IOException | SecurityException exception) {
-        diagnostics.add(unresolved("Source file was skipped: " + exception.getMessage(), new SourceLocation(relative(root, file), 1)));
+        diagnostics.add(
+            unresolved(
+                "Source file was skipped: " + exception.getMessage(),
+                new SourceLocation(relative(root, file), 1)));
       }
     }
-    tilesDefinitions=resolveTiles(tilesDefinitions,diagnostics);
-    return new JspAnalysis(views, expandIncludedInteractions(root, interactions, includes, diagnostics), includes, tilesDefinitions, diagnostics, markup);
+    tilesDefinitions = resolveTiles(tilesDefinitions, diagnostics);
+    return new JspAnalysis(
+        views,
+        expandIncludedInteractions(root, interactions, includes, diagnostics),
+        includes,
+        tilesDefinitions,
+        diagnostics,
+        markup);
   }
 
   static boolean directivesOnly(String text) {
     return text.replaceAll("(?s)<%--.*?--%>", "").replaceAll("(?s)<%@.*?%>", "").isBlank();
   }
 
-  @FunctionalInterface public interface StaticMessageResolver { String resolve(String bundle,String key); }
+  @FunctionalInterface
+  public interface StaticMessageResolver {
+    String resolve(String bundle, String key);
+  }
 
-  private static void parseJsp(Path root, Path file, List<JspAnalysis.View> views,
-                               List<JspAnalysis.Interaction> interactions, List<JspAnalysis.Include> includes,
-                               List<Diagnostic> diagnostics, Map<String, MarkupAnalysis> markup,StaticMessageResolver messages,StrutsMenus menus) throws IOException {
+  private static void parseJsp(
+      Path root,
+      Path file,
+      List<JspAnalysis.View> views,
+      List<JspAnalysis.Interaction> interactions,
+      List<JspAnalysis.Include> includes,
+      List<Diagnostic> diagnostics,
+      Map<String, MarkupAnalysis> markup,
+      StaticMessageResolver messages,
+      StrutsMenus menus)
+      throws IOException {
     String raw = SafeProjectFiles.readUtf8Limited(root, file, SafeProjectFiles.MAX_JSP_FILE_BYTES);
     boolean directivesOnly = directivesOnly(raw);
     String text = menus.expand(raw);
     text = ThymeleafMarkup.normalize(text);
     String relative = relative(root, file);
-    JspTagFileExpander.Result tagExpansion=new JspTagFileExpander().expand(root,relative,text);
-    text=tagExpansion.text();
-    for(String diagnostic:tagExpansion.diagnostics()) {
-      String code=diagnostic.startsWith("JSP_TAG_CYCLE")?"JSP_TAG_CYCLE":diagnostic.startsWith("JSP_TAG_DEPTH_LIMIT")?"JSP_TAG_DEPTH_LIMIT":"JSP_TAG_UNRESOLVED";
-      diagnostics.add(new Diagnostic("JSP 標籤檔展開受限："+diagnostic,Confidence.UNRESOLVED,new SourceLocation(relative,1),code,List.of()));
+    JspTagFileExpander.Result tagExpansion = new JspTagFileExpander().expand(root, relative, text);
+    text = tagExpansion.text();
+    for (String diagnostic : tagExpansion.diagnostics()) {
+      String code =
+          diagnostic.startsWith("JSP_TAG_CYCLE")
+              ? "JSP_TAG_CYCLE"
+              : diagnostic.startsWith("JSP_TAG_DEPTH_LIMIT")
+                  ? "JSP_TAG_DEPTH_LIMIT"
+                  : "JSP_TAG_UNRESOLVED";
+      diagnostics.add(
+          new Diagnostic(
+              "JSP 標籤檔展開受限：" + diagnostic,
+              Confidence.UNRESOLVED,
+              new SourceLocation(relative, 1),
+              code,
+              List.of()));
     }
-    markup.put(relative, withAnchors(StaticComponentNames.annotate(MarkupAnalysis.parse(relative, text),text,messages),text,tagExpansion.anchors()));
-    // A .jsp holding only directives (oussamazoghlami/SpringStrutsHibernate pages/tiles/includes.jsp: five taglib lines)
+    markup.put(
+        relative,
+        withAnchors(
+            StaticComponentNames.annotate(MarkupAnalysis.parse(relative, text), text, messages),
+            text,
+            tagExpansion.anchors()));
+    // A .jsp holding only directives (oussamazoghlami/SpringStrutsHibernate
+    // pages/tiles/includes.jsp: five taglib lines)
     // renders nothing; like a .jspf it is included for its declarations, never a screen of its own.
-    JspAnalysis.ViewKind kind = relative.endsWith(".jspf") || relative.endsWith(".jsp") && directivesOnly ? JspAnalysis.ViewKind.JSPF : relative.endsWith(".jsp") ? JspAnalysis.ViewKind.JSP : JspAnalysis.ViewKind.HTML;
-    views.add(new JspAnalysis.View(relative, kind, new SourceLocation(relative, 1),messageTitle(text,messages)));
-    UrlVariableResolver urls = new UrlVariableResolver(relative,text,includedWrites(root,relative,text,new java.util.HashSet<>()));
+    JspAnalysis.ViewKind kind =
+        relative.endsWith(".jspf") || relative.endsWith(".jsp") && directivesOnly
+            ? JspAnalysis.ViewKind.JSPF
+            : relative.endsWith(".jsp") ? JspAnalysis.ViewKind.JSP : JspAnalysis.ViewKind.HTML;
+    views.add(
+        new JspAnalysis.View(
+            relative, kind, new SourceLocation(relative, 1), messageTitle(text, messages)));
+    UrlVariableResolver urls =
+        new UrlVariableResolver(
+            relative, text, includedWrites(root, relative, text, new java.util.HashSet<>()));
     UrlVariableResolver.Resolution activeFormResolution = null;
-    Map<Integer,String> guards=markupGuards(text);
-    Map<Integer,Boolean> repeats=markupRepeats(text);
-    Map<String,Integer> componentOccurrences = new HashMap<>();
+    Map<Integer, String> guards = markupGuards(text);
+    Map<Integer, Boolean> repeats = markupRepeats(text);
+    Map<String, Integer> componentOccurrences = new HashMap<>();
     String activeFormTarget = null;
     String activeFormMethod = null;
     boolean activeFormSubmitsCurrentView = false;
@@ -102,144 +153,360 @@ public final class JspProjectParser {
         }
         continue;
       }
-      var componentKind=MarkupAnalysis.kind(tagName,tag.attributes());
-      String componentId=null;
-      if(componentKind!=null) {
-        var identity=new java.util.TreeMap<>(tag.attributes());identity.put("tag",tagName);
-        String key=componentKind+identity.toString();
-        componentId=io.screentrace.core.StableGraphIds.component(relative,componentKind,identity,componentOccurrences.merge(key,1,Integer::sum)-1);
+      var componentKind = MarkupAnalysis.kind(tagName, tag.attributes());
+      String componentId = null;
+      if (componentKind != null) {
+        var identity = new java.util.TreeMap<>(tag.attributes());
+        identity.put("tag", tagName);
+        String key = componentKind + identity.toString();
+        componentId =
+            io.screentrace.core.StableGraphIds.component(
+                relative,
+                componentKind,
+                identity,
+                componentOccurrences.merge(key, 1, Integer::sum) - 1);
       }
       int interactionStart = interactions.size();
       UrlVariableResolver.Resolution resolution = null;
       switch (tagName) {
-        case "spring:url", "c:url" -> { }
-        case "c:import", "jsp:include", "@include", "tiles:insert", "tiles:put", "tiles:insertdefinition", "tiles:insertattribute" -> {
-          String includeTarget=target(tag,"page","file","definition","value","template","url");
-          boolean inferredImport=false;
-          if(tagName.equals("c:import")&&literal(includeTarget)&&!includeTarget.startsWith("/")&&resolveInclude(root,relative,includeTarget)==null){
-            List<Path> candidates=new ArrayList<>();Path parent=file.getParent().getParent();
-            while(parent!=null&&parent.startsWith(root)){Path candidate=parent.resolve(includeTarget).normalize();if(SafeProjectFiles.isSafeRegularFile(root,candidate))candidates.add(candidate);parent=parent.getParent();}
-            if(candidates.size()==1){includeTarget=file.getParent().relativize(candidates.get(0)).toString().replace('\\','/');inferredImport=true;
-              diagnostics.add(new Diagnostic("c:import 相對目標依唯一上層模板基準定位；原文="+tag.attribute("url")+"；目標="+includeTarget,Confidence.INFERRED,source,"JSP_IMPORT_BASE_INFERRED",List.of()));}
+        case "spring:url", "c:url" -> {}
+        case "c:import",
+            "jsp:include",
+            "@include",
+            "tiles:insert",
+            "tiles:put",
+            "tiles:insertdefinition",
+            "tiles:insertattribute" -> {
+          String includeTarget =
+              target(tag, "page", "file", "definition", "value", "template", "url");
+          boolean inferredImport = false;
+          if (tagName.equals("c:import")
+              && literal(includeTarget)
+              && !includeTarget.startsWith("/")
+              && resolveInclude(root, relative, includeTarget) == null) {
+            List<Path> candidates = new ArrayList<>();
+            Path parent = file.getParent().getParent();
+            while (parent != null && parent.startsWith(root)) {
+              Path candidate = parent.resolve(includeTarget).normalize();
+              if (SafeProjectFiles.isSafeRegularFile(root, candidate)) candidates.add(candidate);
+              parent = parent.getParent();
+            }
+            if (candidates.size() == 1) {
+              includeTarget =
+                  file.getParent().relativize(candidates.get(0)).toString().replace('\\', '/');
+              inferredImport = true;
+              diagnostics.add(
+                  new Diagnostic(
+                      "c:import 相對目標依唯一上層模板基準定位；原文="
+                          + tag.attribute("url")
+                          + "；目標="
+                          + includeTarget,
+                      Confidence.INFERRED,
+                      source,
+                      "JSP_IMPORT_BASE_INFERRED",
+                      List.of()));
+            }
           }
-          int before=includes.size();include(relative,includeTarget,source,includes,diagnostics);
-          if(includes.size()>before) {var item=includes.get(before);includes.set(before,new JspAnalysis.Include(item.sourceViewPath(),item.targetPath(),item.source(),inferredImport?Confidence.INFERRED:item.confidence(),guards.get(tag.end()),repeats.getOrDefault(tag.end(),false)));}
+          int before = includes.size();
+          include(relative, includeTarget, source, includes, diagnostics);
+          if (includes.size() > before) {
+            var item = includes.get(before);
+            includes.set(
+                before,
+                new JspAnalysis.Include(
+                    item.sourceViewPath(),
+                    item.targetPath(),
+                    item.source(),
+                    inferredImport ? Confidence.INFERRED : item.confidence(),
+                    guards.get(tag.end()),
+                    repeats.getOrDefault(tag.end(), false)));
+          }
         }
         case "form", "html:form", "form:form" -> {
-          activeFormResolution = urls.resolve(target(tag, "action"),tag);
+          activeFormResolution = urls.resolve(target(tag, "action"), tag);
           resolution = activeFormResolution;
           activeFormTarget = resolution.value();
           activeFormMethod = method(tag);
           activeFormSubmitsCurrentView = activeFormTarget == null;
-          interaction(relative, JspAnalysis.InteractionType.FORM_SUBMIT, tag, activeFormTarget, activeFormMethod, source,
-              activeFormSubmitsCurrentView, interactions, diagnostics);
+          interaction(
+              relative,
+              JspAnalysis.InteractionType.FORM_SUBMIT,
+              tag,
+              activeFormTarget,
+              activeFormMethod,
+              source,
+              activeFormSubmitsCurrentView,
+              interactions,
+              diagnostics);
         }
         case "a", "html:link" -> {
-          if(java.util.Set.of("modal","offcanvas").contains(Objects.toString(target(tag,"data-bs-toggle","data-toggle"),""))&&"#".equals(tag.attribute("href")))break;
-          resolution = urls.resolve(target(tag,"href","page","action"),tag);
+          if (java.util.Set.of("modal", "offcanvas")
+                  .contains(Objects.toString(target(tag, "data-bs-toggle", "data-toggle"), ""))
+              && "#".equals(tag.attribute("href"))) break;
+          resolution = urls.resolve(target(tag, "href", "page", "action"), tag);
           String resolved = resolution.value();
-          interaction(relative, linkType(tag, resolved), interactionLabel(tag, text), resolved, "GET", source,
-              false, interactions, diagnostics);
+          interaction(
+              relative,
+              linkType(tag, resolved),
+              interactionLabel(tag, text),
+              resolved,
+              "GET",
+              source,
+              false,
+              interactions,
+              diagnostics);
         }
         case "button", "input", "html:submit", "html:button", "form:button" -> {
-          resolution = urls.resolve(target(tag,"formaction","action"),tag);
+          resolution = urls.resolve(target(tag, "formaction", "action"), tag);
           String action = resolution.value();
-          if (action == null && submitsForm(tag) && activeFormTarget != null) { action = activeFormTarget; resolution = activeFormResolution; }
-          boolean submitsCurrentView = action == null && submitsForm(tag) && activeFormSubmitsCurrentView;
+          if (action == null && submitsForm(tag) && activeFormTarget != null) {
+            action = activeFormTarget;
+            resolution = activeFormResolution;
+          }
+          boolean submitsCurrentView =
+              action == null && submitsForm(tag) && activeFormSubmitsCurrentView;
           String label = interactionLabel(tag, text);
           String submitterMethod = tag.attribute("formmethod");
-          String requestMethod = submitsForm(tag) && submitterMethod != null && !submitterMethod.isBlank() ? submitterMethod.trim().toUpperCase(Locale.ROOT) : activeFormMethod;
-          interaction(relative, submitsForm(tag) ? JspAnalysis.InteractionType.FORM_SUBMIT : JspAnalysis.InteractionType.UNKNOWN,
-              label, action, requestMethod, source,
-              submitsCurrentView, interactions, diagnostics);
+          String requestMethod =
+              submitsForm(tag) && submitterMethod != null && !submitterMethod.isBlank()
+                  ? submitterMethod.trim().toUpperCase(Locale.ROOT)
+                  : activeFormMethod;
+          interaction(
+              relative,
+              submitsForm(tag)
+                  ? JspAnalysis.InteractionType.FORM_SUBMIT
+                  : JspAnalysis.InteractionType.UNKNOWN,
+              label,
+              action,
+              requestMethod,
+              source,
+              submitsCurrentView,
+              interactions,
+              diagnostics);
         }
-        default -> { }
+        default -> {}
       }
-      if(resolution != null) for(int i=interactionStart;i<interactions.size();i++) {
-        var item=interactions.get(i);
-        String template=tag.attribute("th:href");if(template==null)template=tag.attribute("th:action");
-        var confidence=(template!=null||resolution.definitions().stream().anyMatch(e->e.resolution()==io.screentrace.core.ApplicationGraph.ResolutionStatus.INFERRED))&&Objects.toString(item.target(),"").contains("{")&&item.confidence()!=Confidence.UNRESOLVED?Confidence.INFERRED:item.confidence();
-        var proof=new ArrayList<>(resolution.definitions());
-        if(template!=null)proof.add(new io.screentrace.core.ApplicationGraph.AnalysisEvidence(source,"ThymeleafMarkup",confidence.resolutionStatus(),"模板 URL="+template+"；路徑="+item.target()));
-        interactions.set(i,new JspAnalysis.Interaction(item.viewPath(),item.type(),item.label(),item.target(),item.httpMethod(),item.source(),confidence,item.submitsCurrentView(),template!=null?template:resolution.originalExpression(),proof,componentId));
-      }
+      if (resolution != null)
+        for (int i = interactionStart; i < interactions.size(); i++) {
+          var item = interactions.get(i);
+          String template = tag.attribute("th:href");
+          if (template == null) template = tag.attribute("th:action");
+          var confidence =
+              (template != null
+                          || resolution.definitions().stream()
+                              .anyMatch(
+                                  e ->
+                                      e.resolution()
+                                          == io.screentrace.core.ApplicationGraph.ResolutionStatus
+                                              .INFERRED))
+                      && Objects.toString(item.target(), "").contains("{")
+                      && item.confidence() != Confidence.UNRESOLVED
+                  ? Confidence.INFERRED
+                  : item.confidence();
+          var proof = new ArrayList<>(resolution.definitions());
+          if (template != null)
+            proof.add(
+                new io.screentrace.core.ApplicationGraph.AnalysisEvidence(
+                    source,
+                    "ThymeleafMarkup",
+                    confidence.resolutionStatus(),
+                    "模板 URL=" + template + "；路徑=" + item.target()));
+          interactions.set(
+              i,
+              new JspAnalysis.Interaction(
+                  item.viewPath(),
+                  item.type(),
+                  item.label(),
+                  item.target(),
+                  item.httpMethod(),
+                  item.source(),
+                  confidence,
+                  item.submitsCurrentView(),
+                  template != null ? template : resolution.originalExpression(),
+                  proof,
+                  componentId));
+        }
     }
-    for(int i=0;i<interactions.size();i++) {
-      JspAnalysis.Interaction item=interactions.get(i);
-      List<io.screentrace.core.ApplicationGraph.AnalysisEvidence> tagEvidence=tagExpansion.definitionEvidence().get(item.source().line());
-      if(item.viewPath().equals(relative)&&tagEvidence!=null&&!tagEvidence.isEmpty()) {
-        List<io.screentrace.core.ApplicationGraph.AnalysisEvidence> proof=new ArrayList<>(item.definitionEvidence());proof.addAll(tagEvidence);
-        interactions.set(i,new JspAnalysis.Interaction(item.viewPath(),item.type(),item.label(),item.target(),item.httpMethod(),item.source(),item.confidence(),item.submitsCurrentView(),item.originalExpression(),proof.stream().distinct().toList(),item.componentId()));
+    for (int i = 0; i < interactions.size(); i++) {
+      JspAnalysis.Interaction item = interactions.get(i);
+      List<io.screentrace.core.ApplicationGraph.AnalysisEvidence> tagEvidence =
+          tagExpansion.definitionEvidence().get(item.source().line());
+      if (item.viewPath().equals(relative) && tagEvidence != null && !tagEvidence.isEmpty()) {
+        List<io.screentrace.core.ApplicationGraph.AnalysisEvidence> proof =
+            new ArrayList<>(item.definitionEvidence());
+        proof.addAll(tagEvidence);
+        interactions.set(
+            i,
+            new JspAnalysis.Interaction(
+                item.viewPath(),
+                item.type(),
+                item.label(),
+                item.target(),
+                item.httpMethod(),
+                item.source(),
+                item.confidence(),
+                item.submitsCurrentView(),
+                item.originalExpression(),
+                proof.stream().distinct().toList(),
+                item.componentId()));
       }
     }
   }
 
-  private static String messageTitle(String source,StaticMessageResolver messages) {
-    Matcher title=Pattern.compile("(?is)<title\\b[^>]*>(.*?)</title\\s*>").matcher(source);if(!title.find()||!Pattern.compile("(?i)<(?:bean|s):message\\b").matcher(title.group(1)).find()||MarkupAnalysis.dynamic(title.group(1)))return null;
-    Matcher tag=Pattern.compile("(?is)<(?:bean|s):message\\b([^>]*?)/?\\s*>").matcher(title.group(1));StringBuffer resolved=new StringBuffer();boolean found=false;
-    while(tag.find()){Map<String,String> attributes=new HashMap<>();Matcher attr=Pattern.compile("([\\w:-]+)\\s*=\\s*([\\x27\\x22])(.*?)\\2").matcher(tag.group(1));while(attr.find())attributes.put(attr.group(1),attr.group(3));String key=attributes.get("key"),value=key==null?null:messages.resolve(attributes.get("bundle"),key);if(value==null)value="（訊息 key："+Objects.toString(key,"未提供")+"）";tag.appendReplacement(resolved,Matcher.quoteReplacement(value));found=true;}tag.appendTail(resolved);
-    if(!found)return null;String label=resolved.toString().replaceAll("(?s)<[^>]*>","").replaceAll("\\s+"," ").strip();return label.isBlank()?null:label;
-  }
-
-  private static MarkupAnalysis withAnchors(MarkupAnalysis markup,String text,Map<Integer,String> anchors) {
-    List<MarkupAnalysis.Component> components=new ArrayList<>();int index=0;
-    for(var token:MarkupTag.scan(text)) {
-      if(token.closing()||MarkupAnalysis.kind(token.name().toLowerCase(Locale.ROOT),token.attributes())==null)continue;
-      var c=markup.components().get(index++);var attrs=new java.util.TreeMap<>(c.attributes());
-      String anchor=anchors.get(token.start());if(anchor!=null)attrs.put("expansionAnchor",anchor);
-      components.add(new MarkupAnalysis.Component(c.id(),c.kind(),c.tag(),attrs,c.source(),c.guard(),c.repeated(),c.formId(),c.model(),c.field(),c.bindingStatus()));
+  private static String messageTitle(String source, StaticMessageResolver messages) {
+    Matcher title = Pattern.compile("(?is)<title\\b[^>]*>(.*?)</title\\s*>").matcher(source);
+    if (!title.find()
+        || !Pattern.compile("(?i)<(?:bean|s):message\\b").matcher(title.group(1)).find()
+        || MarkupAnalysis.dynamic(title.group(1))) return null;
+    Matcher tag =
+        Pattern.compile("(?is)<(?:bean|s):message\\b([^>]*?)/?\\s*>").matcher(title.group(1));
+    StringBuffer resolved = new StringBuffer();
+    boolean found = false;
+    while (tag.find()) {
+      Map<String, String> attributes = new HashMap<>();
+      Matcher attr =
+          Pattern.compile("([\\w:-]+)\\s*=\\s*([\\x27\\x22])(.*?)\\2").matcher(tag.group(1));
+      while (attr.find()) attributes.put(attr.group(1), attr.group(3));
+      String key = attributes.get("key"),
+          value = key == null ? null : messages.resolve(attributes.get("bundle"), key);
+      if (value == null) value = "（訊息 key：" + Objects.toString(key, "未提供") + "）";
+      tag.appendReplacement(resolved, Matcher.quoteReplacement(value));
+      found = true;
     }
-    return new MarkupAnalysis(components,markup.events(),markup.rules(),markup.behaviors());
+    tag.appendTail(resolved);
+    if (!found) return null;
+    String label =
+        resolved.toString().replaceAll("(?s)<[^>]*>", "").replaceAll("\\s+", " ").strip();
+    return label.isBlank() ? null : label;
   }
 
-  private static Map<Integer,Boolean> markupRepeats(String text) {
-    Map<Integer,Boolean> result=new HashMap<>();List<String> loops=new ArrayList<>();
-    for(MarkupTag tag:MarkupTag.scan(text)) {
-      String name=tag.name().toLowerCase(Locale.ROOT);
-      if(tag.closing()) {for(int i=loops.size()-1;i>=0;i--)if(loops.get(i).equals(name)){loops.subList(i,loops.size()).clear();break;}continue;}
-      result.put(tag.end(),!loops.isEmpty());
-      if(java.util.Set.of("c:foreach","logic:iterate").contains(name)&&text.charAt(tag.end()-1)!='/')loops.add(name);
+  private static MarkupAnalysis withAnchors(
+      MarkupAnalysis markup, String text, Map<Integer, String> anchors) {
+    List<MarkupAnalysis.Component> components = new ArrayList<>();
+    int index = 0;
+    for (var token : MarkupTag.scan(text)) {
+      if (token.closing()
+          || MarkupAnalysis.kind(token.name().toLowerCase(Locale.ROOT), token.attributes()) == null)
+        continue;
+      var c = markup.components().get(index++);
+      var attrs = new java.util.TreeMap<>(c.attributes());
+      String anchor = anchors.get(token.start());
+      if (anchor != null) attrs.put("expansionAnchor", anchor);
+      components.add(
+          new MarkupAnalysis.Component(
+              c.id(),
+              c.kind(),
+              c.tag(),
+              attrs,
+              c.source(),
+              c.guard(),
+              c.repeated(),
+              c.formId(),
+              c.model(),
+              c.field(),
+              c.bindingStatus()));
+    }
+    return new MarkupAnalysis(components, markup.events(), markup.rules(), markup.behaviors());
+  }
+
+  private static Map<Integer, Boolean> markupRepeats(String text) {
+    Map<Integer, Boolean> result = new HashMap<>();
+    List<String> loops = new ArrayList<>();
+    for (MarkupTag tag : MarkupTag.scan(text)) {
+      String name = tag.name().toLowerCase(Locale.ROOT);
+      if (tag.closing()) {
+        for (int i = loops.size() - 1; i >= 0; i--)
+          if (loops.get(i).equals(name)) {
+            loops.subList(i, loops.size()).clear();
+            break;
+          }
+        continue;
+      }
+      result.put(tag.end(), !loops.isEmpty());
+      if (java.util.Set.of("c:foreach", "logic:iterate").contains(name)
+          && text.charAt(tag.end() - 1) != '/') loops.add(name);
     }
     return result;
   }
 
-  private static Map<Integer,String> markupGuards(String text) {
-    Map<Integer,String> guards=new HashMap<>();List<MarkupTag> scopes=new ArrayList<>();
-    for(MarkupTag tag:MarkupTag.scan(text)) {
-      if(tag.closing()) {for(int i=scopes.size()-1;i>=0;i--) if(scopes.get(i).name().equalsIgnoreCase(tag.name())) {scopes.subList(i,scopes.size()).clear();break;}continue;}
-      String guard=scopes.stream().map(MarkupAnalysis::condition).reduce((a,b)->a+" && "+b).orElse(null);if(guard!=null)guards.put(tag.end(),guard);
-      if(MarkupAnalysis.isConditional(tag.name()) && text.charAt(tag.end()-1)!='/')scopes.add(tag);
+  private static Map<Integer, String> markupGuards(String text) {
+    Map<Integer, String> guards = new HashMap<>();
+    List<MarkupTag> scopes = new ArrayList<>();
+    for (MarkupTag tag : MarkupTag.scan(text)) {
+      if (tag.closing()) {
+        for (int i = scopes.size() - 1; i >= 0; i--)
+          if (scopes.get(i).name().equalsIgnoreCase(tag.name())) {
+            scopes.subList(i, scopes.size()).clear();
+            break;
+          }
+        continue;
+      }
+      String guard =
+          scopes.stream()
+              .map(MarkupAnalysis::condition)
+              .reduce((a, b) -> a + " && " + b)
+              .orElse(null);
+      if (guard != null) guards.put(tag.end(), guard);
+      if (MarkupAnalysis.isConditional(tag.name()) && text.charAt(tag.end() - 1) != '/')
+        scopes.add(tag);
     }
     return guards;
   }
 
-  static java.util.Set<String> includedWrites(Path root,String path,String text,java.util.Set<String> visited) {
-    java.util.Set<String> result=new java.util.HashSet<>();
-    if(!visited.add(path)||visited.size()>SafeProjectFiles.MAX_DIRECTORY_DEPTH) return java.util.Set.of("*");
-    for(MarkupTag tag:MarkupTag.scan(text)) if(!tag.closing() && java.util.Set.of("@include","jsp:include","c:import").contains(tag.name().toLowerCase(Locale.ROOT))) {
-      boolean imported=tag.name().equalsIgnoreCase("c:import");
-      String target=imported?tag.attribute("url"):target(tag,"file","page");
-      // An absolute external import is a separate HTTP request and cannot write this request's variables.
-      if(imported&&literal(target)&&tag.attribute("context")==null&&target.matches("(?i)^(https?:)?//.*")) continue;
-      if(imported&&literal(target)&&tag.attribute("context")==null)target=target.split("[?#]",2)[0];
-      else if(imported)target=null;
-      String child=literal(target)?resolveInclude(root,path,target):null;
-      if(child==null) {result.add("*");continue;}
-      try {
-        String included=SafeProjectFiles.readUtf8Limited(root,root.resolve(child),SafeProjectFiles.MAX_JSP_FILE_BYTES);
-        for(MarkupTag nested:MarkupTag.scan(included)) if(!nested.closing() && nested.attribute("var")!=null)
-          result.add(MarkupAnalysis.dynamic(nested.attribute("var"))?"*":nested.attribute("var"));
-        if(included.replaceAll("(?s)<%--.*?--%>","").matches("(?s).*<%(?!@).*")) result.add("*");
-        result.addAll(includedWrites(root,child,included,visited));
-      } catch(IOException|SecurityException error) {result.add("*");}
-    }
-    visited.remove(path);return result;
+  static java.util.Set<String> includedWrites(
+      Path root, String path, String text, java.util.Set<String> visited) {
+    java.util.Set<String> result = new java.util.HashSet<>();
+    if (!visited.add(path) || visited.size() > SafeProjectFiles.MAX_DIRECTORY_DEPTH)
+      return java.util.Set.of("*");
+    for (MarkupTag tag : MarkupTag.scan(text))
+      if (!tag.closing()
+          && java.util.Set.of("@include", "jsp:include", "c:import")
+              .contains(tag.name().toLowerCase(Locale.ROOT))) {
+        boolean imported = tag.name().equalsIgnoreCase("c:import");
+        String target = imported ? tag.attribute("url") : target(tag, "file", "page");
+        // An absolute external import is a separate HTTP request and cannot write this request's
+        // variables.
+        if (imported
+            && literal(target)
+            && tag.attribute("context") == null
+            && target.matches("(?i)^(https?:)?//.*")) continue;
+        if (imported && literal(target) && tag.attribute("context") == null)
+          target = target.split("[?#]", 2)[0];
+        else if (imported) target = null;
+        String child = literal(target) ? resolveInclude(root, path, target) : null;
+        if (child == null) {
+          result.add("*");
+          continue;
+        }
+        try {
+          String included =
+              SafeProjectFiles.readUtf8Limited(
+                  root, root.resolve(child), SafeProjectFiles.MAX_JSP_FILE_BYTES);
+          for (MarkupTag nested : MarkupTag.scan(included))
+            if (!nested.closing() && nested.attribute("var") != null)
+              result.add(
+                  MarkupAnalysis.dynamic(nested.attribute("var")) ? "*" : nested.attribute("var"));
+          if (included.replaceAll("(?s)<%--.*?--%>", "").matches("(?s).*<%(?!@).*"))
+            result.add("*");
+          result.addAll(includedWrites(root, child, included, visited));
+        } catch (IOException | SecurityException error) {
+          result.add("*");
+        }
+      }
+    visited.remove(path);
+    return result;
   }
 
-  private static void include(String sourcePath, String target, SourceLocation source, List<JspAnalysis.Include> includes,
-                              List<Diagnostic> diagnostics) {
-    if (literal(target)) includes.add(new JspAnalysis.Include(sourcePath, target, source, Confidence.CONFIRMED));
-    else if (target != null) diagnostics.add(unresolved("JSP include cannot be resolved statically: " + target, source));
+  private static void include(
+      String sourcePath,
+      String target,
+      SourceLocation source,
+      List<JspAnalysis.Include> includes,
+      List<Diagnostic> diagnostics) {
+    if (literal(target))
+      includes.add(new JspAnalysis.Include(sourcePath, target, source, Confidence.CONFIRMED));
+    else if (target != null)
+      diagnostics.add(unresolved("JSP include cannot be resolved statically: " + target, source));
   }
 
   /** Removes JSP-only syntax and converts literal c:url tags before markup tokenization. */
@@ -252,34 +519,71 @@ public final class JspProjectParser {
     if ("#".equals(target)) return JspAnalysis.InteractionType.PLACEHOLDER;
     if (target.startsWith("#")) {
       String slide = tag.attribute("data-slide");
-      return slide == null || slide.isBlank() ? JspAnalysis.InteractionType.ANCHOR : JspAnalysis.InteractionType.UI_STATE_CHANGE;
+      return slide == null || slide.isBlank()
+          ? JspAnalysis.InteractionType.ANCHOR
+          : JspAnalysis.InteractionType.UI_STATE_CHANGE;
     }
     return JspAnalysis.InteractionType.NAVIGATION;
   }
 
-  /** Projects interactions declared by statically included fragments onto each rendered JSP screen. */
-  private static List<JspAnalysis.Interaction> expandIncludedInteractions(Path root, List<JspAnalysis.Interaction> interactions,
-      List<JspAnalysis.Include> includes, List<Diagnostic> diagnostics) {
+  /**
+   * Projects interactions declared by statically included fragments onto each rendered JSP screen.
+   */
+  private static List<JspAnalysis.Interaction> expandIncludedInteractions(
+      Path root,
+      List<JspAnalysis.Interaction> interactions,
+      List<JspAnalysis.Include> includes,
+      List<Diagnostic> diagnostics) {
     Map<String, List<JspAnalysis.Interaction>> byView = new HashMap<>();
-    interactions.forEach(item -> byView.computeIfAbsent(item.viewPath(), ignored -> new ArrayList<>()).add(item));
+    interactions.forEach(
+        item -> byView.computeIfAbsent(item.viewPath(), ignored -> new ArrayList<>()).add(item));
     Map<String, List<String>> included = new HashMap<>();
     for (JspAnalysis.Include include : includes) {
       String resolved = resolveInclude(root, include.sourceViewPath(), include.targetPath());
-      if (resolved == null && (include.targetPath().contains("/") || include.targetPath().endsWith(".jsp") || include.targetPath().endsWith(".jspf"))) diagnostics.add(unresolved("JSP include cannot be found: " + include.targetPath(), include.source()));
-      else if(resolved!=null) included.computeIfAbsent(include.sourceViewPath(), ignored -> new ArrayList<>()).add(resolved);
+      if (resolved == null
+          && (include.targetPath().contains("/")
+              || include.targetPath().endsWith(".jsp")
+              || include.targetPath().endsWith(".jspf")))
+        diagnostics.add(
+            unresolved("JSP include cannot be found: " + include.targetPath(), include.source()));
+      else if (resolved != null)
+        included
+            .computeIfAbsent(include.sourceViewPath(), ignored -> new ArrayList<>())
+            .add(resolved);
     }
     List<JspAnalysis.Interaction> expanded = new ArrayList<>(interactions);
-    java.util.stream.Stream.concat(byView.keySet().stream(),included.keySet().stream()).distinct().filter(path -> path.endsWith(".jsp")).forEach(view -> collectIncluded(view, view, included, byView,
-        new java.util.HashSet<>(), expanded));
+    java.util.stream.Stream.concat(byView.keySet().stream(), included.keySet().stream())
+        .distinct()
+        .filter(path -> path.endsWith(".jsp"))
+        .forEach(
+            view ->
+                collectIncluded(view, view, included, byView, new java.util.HashSet<>(), expanded));
     return expanded;
   }
 
-  private static void collectIncluded(String screen, String current, Map<String, List<String>> included,
-      Map<String, List<JspAnalysis.Interaction>> byView, java.util.Set<String> stack, List<JspAnalysis.Interaction> result) {
+  private static void collectIncluded(
+      String screen,
+      String current,
+      Map<String, List<String>> included,
+      Map<String, List<JspAnalysis.Interaction>> byView,
+      java.util.Set<String> stack,
+      List<JspAnalysis.Interaction> result) {
     if (!stack.add(current)) return;
     for (String child : included.getOrDefault(current, List.of())) {
-      for (JspAnalysis.Interaction item : byView.getOrDefault(child, List.of())) result.add(new JspAnalysis.Interaction(screen,
-          item.type(), item.label(), item.target(), item.httpMethod(), item.source(), item.confidence(), item.submitsCurrentView(),item.originalExpression(),item.definitionEvidence(),item.componentId()));
+      for (JspAnalysis.Interaction item : byView.getOrDefault(child, List.of()))
+        result.add(
+            new JspAnalysis.Interaction(
+                screen,
+                item.type(),
+                item.label(),
+                item.target(),
+                item.httpMethod(),
+                item.source(),
+                item.confidence(),
+                item.submitsCurrentView(),
+                item.originalExpression(),
+                item.definitionEvidence(),
+                item.componentId()));
       collectIncluded(screen, child, included, byView, stack, result);
     }
     stack.remove(current);
@@ -287,7 +591,10 @@ public final class JspProjectParser {
 
   private static String resolveInclude(Path root, String sourceView, String target) {
     Path source = root.resolve(sourceView).getParent();
-    Path candidate = target.startsWith("/") ? root.resolve("src/main/webapp" + target) : source.resolve(target).normalize();
+    Path candidate =
+        target.startsWith("/")
+            ? root.resolve("src/main/webapp" + target)
+            : source.resolve(target).normalize();
     if (SafeProjectFiles.isSafeRegularFile(root, candidate)) return relative(root, candidate);
     if (target.startsWith("/")) {
       candidate = root.resolve(target.substring(1));
@@ -296,27 +603,62 @@ public final class JspProjectParser {
     return null;
   }
 
-  private static void interaction(String viewPath, JspAnalysis.InteractionType type, MarkupTag tag, String target,
-                                  String method, SourceLocation source, List<JspAnalysis.Interaction> interactions,
-                                  List<Diagnostic> diagnostics) {
-    interaction(viewPath, type, label(tag), target, method, source, false, interactions, diagnostics);
+  private static void interaction(
+      String viewPath,
+      JspAnalysis.InteractionType type,
+      MarkupTag tag,
+      String target,
+      String method,
+      SourceLocation source,
+      List<JspAnalysis.Interaction> interactions,
+      List<Diagnostic> diagnostics) {
+    interaction(
+        viewPath, type, label(tag), target, method, source, false, interactions, diagnostics);
   }
 
-  private static void interaction(String viewPath, JspAnalysis.InteractionType type, MarkupTag tag, String target,
-                                  String method, SourceLocation source, boolean submitsCurrentView,
-                                  List<JspAnalysis.Interaction> interactions, List<Diagnostic> diagnostics) {
-    interaction(viewPath, type, label(tag), target, method, source, submitsCurrentView, interactions, diagnostics);
+  private static void interaction(
+      String viewPath,
+      JspAnalysis.InteractionType type,
+      MarkupTag tag,
+      String target,
+      String method,
+      SourceLocation source,
+      boolean submitsCurrentView,
+      List<JspAnalysis.Interaction> interactions,
+      List<Diagnostic> diagnostics) {
+    interaction(
+        viewPath,
+        type,
+        label(tag),
+        target,
+        method,
+        source,
+        submitsCurrentView,
+        interactions,
+        diagnostics);
   }
 
-  private static void interaction(String viewPath, JspAnalysis.InteractionType type, String label, String target,
-                                  String method, SourceLocation source, boolean submitsCurrentView,
-                                  List<JspAnalysis.Interaction> interactions, List<Diagnostic> diagnostics) {
+  private static void interaction(
+      String viewPath,
+      JspAnalysis.InteractionType type,
+      String label,
+      String target,
+      String method,
+      SourceLocation source,
+      boolean submitsCurrentView,
+      List<JspAnalysis.Interaction> interactions,
+      List<Diagnostic> diagnostics) {
     if (target == null && !submitsCurrentView) return;
     String resolved = submitsCurrentView ? CURRENT_VIEW_TARGET : target;
-    Confidence confidence = submitsCurrentView ? Confidence.INFERRED : literal(resolved) ? Confidence.CONFIRMED : Confidence.UNRESOLVED;
-    interactions.add(new JspAnalysis.Interaction(viewPath, type, label, resolved, method, source, confidence,
-        submitsCurrentView));
-    if (confidence == Confidence.UNRESOLVED) diagnostics.add(unresolved("JSP target cannot be resolved statically: " + target, source));
+    Confidence confidence =
+        submitsCurrentView
+            ? Confidence.INFERRED
+            : literal(resolved) ? Confidence.CONFIRMED : Confidence.UNRESOLVED;
+    interactions.add(
+        new JspAnalysis.Interaction(
+            viewPath, type, label, resolved, method, source, confidence, submitsCurrentView));
+    if (confidence == Confidence.UNRESOLVED)
+      diagnostics.add(unresolved("JSP target cannot be resolved statically: " + target, source));
   }
 
   private static String target(MarkupTag tag, String... names) {
@@ -339,11 +681,12 @@ public final class JspProjectParser {
   }
 
   private static boolean submitsForm(MarkupTag tag) {
-    String name=tag.name().toLowerCase(Locale.ROOT),type=tag.attribute("type");
-    if(name.equals("html:submit")||name.equals("html:cancel"))return true;
-    if(name.equals("html:button")||name.equals("html:reset"))return false;
-    if(name.equals("input"))return type!=null&&(type.equalsIgnoreCase("submit")||type.equalsIgnoreCase("image"));
-    return type==null||type.isBlank()||type.equalsIgnoreCase("submit");
+    String name = tag.name().toLowerCase(Locale.ROOT), type = tag.attribute("type");
+    if (name.equals("html:submit") || name.equals("html:cancel")) return true;
+    if (name.equals("html:button") || name.equals("html:reset")) return false;
+    if (name.equals("input"))
+      return type != null && (type.equalsIgnoreCase("submit") || type.equalsIgnoreCase("image"));
+    return type == null || type.isBlank() || type.equalsIgnoreCase("submit");
   }
 
   private static String interactionLabel(MarkupTag tag, String source) {
@@ -361,65 +704,139 @@ public final class JspProjectParser {
     return value != null && !value.contains("${") && !value.contains("<%") && !value.contains("#{");
   }
 
-  private static void parseTiles(Path root, Path file, List<JspAnalysis.TilesDefinition> definitions,
-                                 List<Diagnostic> diagnostics) {
+  private static void parseTiles(
+      Path root,
+      Path file,
+      List<JspAnalysis.TilesDefinition> definitions,
+      List<Diagnostic> diagnostics) {
     String relative = relative(root, file);
     try {
-      String text=SafeProjectFiles.readUtf8Limited(root,file,SafeProjectFiles.MAX_XML_FILE_BYTES);
+      String text =
+          SafeProjectFiles.readUtf8Limited(root, file, SafeProjectFiles.MAX_XML_FILE_BYTES);
       Document document = SafeProjectFiles.parseXml(text, false);
-      List<MarkupTag> sourceTags=MarkupTag.scan(text).stream().filter(t->!t.closing()&&t.name().equals("definition")).toList();
+      List<MarkupTag> sourceTags =
+          MarkupTag.scan(text).stream()
+              .filter(t -> !t.closing() && t.name().equals("definition"))
+              .toList();
       NodeList nodes = document.getElementsByTagName("definition");
       for (int index = 0; index < nodes.getLength(); index++) {
         Element definition = (Element) nodes.item(index);
         List<JspAnalysis.TilesAttribute> attributes = new ArrayList<>();
         for (String putTag : List.of("put", "put-attribute")) {
           NodeList attributeNodes = definition.getElementsByTagName(putTag);
-          for (int attributeIndex = 0; attributeIndex < attributeNodes.getLength(); attributeIndex++) {
+          for (int attributeIndex = 0;
+              attributeIndex < attributeNodes.getLength();
+              attributeIndex++) {
             Element attribute = (Element) attributeNodes.item(attributeIndex);
-            attributes.add(new JspAnalysis.TilesAttribute(attribute.getAttribute("name"), attribute.getAttribute("value")));
+            attributes.add(
+                new JspAnalysis.TilesAttribute(
+                    attribute.getAttribute("name"), attribute.getAttribute("value")));
           }
         }
-        // Tiles 2/3 <put-list-attribute><add-attribute value/>, Tiles 1 <putList><add value/>: e.g. a layout's stylesheets.
-        for (String[] listTags : List.of(new String[] {"put-list-attribute", "add-attribute"}, new String[] {"putList", "add"})) {
+        // Tiles 2/3 <put-list-attribute><add-attribute value/>, Tiles 1 <putList><add value/>: e.g.
+        // a layout's stylesheets.
+        for (String[] listTags :
+            List.of(
+                new String[] {"put-list-attribute", "add-attribute"},
+                new String[] {"putList", "add"})) {
           NodeList lists = definition.getElementsByTagName(listTags[0]);
           for (int listIndex = 0; listIndex < lists.getLength(); listIndex++) {
             Element list = (Element) lists.item(listIndex);
             List<String> values = new ArrayList<>();
-            for (org.w3c.dom.Node child = list.getFirstChild(); child != null; child = child.getNextSibling())
+            for (org.w3c.dom.Node child = list.getFirstChild();
+                child != null;
+                child = child.getNextSibling())
               if (child instanceof Element item && item.getTagName().equals(listTags[1]))
-                values.add(item.hasAttribute("value") ? item.getAttribute("value") : item.getTextContent().trim());
+                values.add(
+                    item.hasAttribute("value")
+                        ? item.getAttribute("value")
+                        : item.getTextContent().trim());
             attributes.add(new JspAnalysis.TilesAttribute(list.getAttribute("name"), "", values));
           }
         }
         String template = definition.getAttribute("template");
         if (template.isBlank()) template = definition.getAttribute("path");
-        definitions.add(new JspAnalysis.TilesDefinition(definition.getAttribute("name"), template,
-            attributes, new SourceLocation(relative, index<sourceTags.size()?sourceTags.get(index).line():1),definition.getAttribute("extends")));
+        definitions.add(
+            new JspAnalysis.TilesDefinition(
+                definition.getAttribute("name"),
+                template,
+                attributes,
+                new SourceLocation(
+                    relative, index < sourceTags.size() ? sourceTags.get(index).line() : 1),
+                definition.getAttribute("extends")));
       }
     } catch (Exception exception) {
-      diagnostics.add(unresolved("Unable to parse Tiles configuration: " + exception.getMessage(), new SourceLocation(relative, 1)));
+      diagnostics.add(
+          unresolved(
+              "Unable to parse Tiles configuration: " + exception.getMessage(),
+              new SourceLocation(relative, 1)));
     }
   }
 
-  private static List<JspAnalysis.TilesDefinition> resolveTiles(List<JspAnalysis.TilesDefinition> input,List<Diagnostic> diagnostics) {
-    Map<String,JspAnalysis.TilesDefinition> definitions=new java.util.TreeMap<>(),resolved=new java.util.TreeMap<>();java.util.Set<String> duplicates=new java.util.HashSet<>();
-    for(var definition:input) {if(definitions.putIfAbsent(definition.name(),definition)!=null) {duplicates.add(definition.name());diagnostics.add(new Diagnostic("Tiles 定義重複："+definition.name(),Confidence.AMBIGUOUS,definition.source(),"TILES_AMBIGUOUS",List.of(new io.screentrace.core.ApplicationGraph.AnalysisEvidence(definition.source(),PARSER,io.screentrace.core.ApplicationGraph.ResolutionStatus.AMBIGUOUS,null))));}}
+  private static List<JspAnalysis.TilesDefinition> resolveTiles(
+      List<JspAnalysis.TilesDefinition> input, List<Diagnostic> diagnostics) {
+    Map<String, JspAnalysis.TilesDefinition> definitions = new java.util.TreeMap<>(),
+        resolved = new java.util.TreeMap<>();
+    java.util.Set<String> duplicates = new java.util.HashSet<>();
+    for (var definition : input) {
+      if (definitions.putIfAbsent(definition.name(), definition) != null) {
+        duplicates.add(definition.name());
+        diagnostics.add(
+            new Diagnostic(
+                "Tiles 定義重複：" + definition.name(),
+                Confidence.AMBIGUOUS,
+                definition.source(),
+                "TILES_AMBIGUOUS",
+                List.of(
+                    new io.screentrace.core.ApplicationGraph.AnalysisEvidence(
+                        definition.source(),
+                        PARSER,
+                        io.screentrace.core.ApplicationGraph.ResolutionStatus.AMBIGUOUS,
+                        null))));
+      }
+    }
     duplicates.forEach(definitions::remove);
-    for(String name:definitions.keySet()) resolveTile(name,definitions,resolved,new java.util.HashSet<>(),diagnostics);
+    for (String name : definitions.keySet())
+      resolveTile(name, definitions, resolved, new java.util.HashSet<>(), diagnostics);
     return List.copyOf(resolved.values());
   }
-  private static JspAnalysis.TilesDefinition resolveTile(String name,Map<String,JspAnalysis.TilesDefinition> definitions,Map<String,JspAnalysis.TilesDefinition> resolved,java.util.Set<String> stack,List<Diagnostic> diagnostics) {
-    if(resolved.containsKey(name))return resolved.get(name);var current=definitions.get(name);
-    if(current==null)return null;
-    if(!stack.add(name)) {diagnostics.add(unresolved("Tiles 繼承循環："+name,current.source()));return null;}
-    Map<String,JspAnalysis.TilesAttribute> attrs=new java.util.TreeMap<>();String template=current.template();
-    if(!current.parent().isBlank()) {
-      var parent=resolveTile(current.parent(),definitions,resolved,stack,diagnostics);
-      if(parent==null) {diagnostics.add(unresolved("Tiles 父定義未解析："+current.parent(),current.source()));stack.remove(name);return null;}
-      parent.attributes().forEach(a->attrs.put(a.name(),a));if(template.isBlank())template=parent.template();
+
+  private static JspAnalysis.TilesDefinition resolveTile(
+      String name,
+      Map<String, JspAnalysis.TilesDefinition> definitions,
+      Map<String, JspAnalysis.TilesDefinition> resolved,
+      java.util.Set<String> stack,
+      List<Diagnostic> diagnostics) {
+    if (resolved.containsKey(name)) return resolved.get(name);
+    var current = definitions.get(name);
+    if (current == null) return null;
+    if (!stack.add(name)) {
+      diagnostics.add(unresolved("Tiles 繼承循環：" + name, current.source()));
+      return null;
     }
-    current.attributes().forEach(a->attrs.put(a.name(),a));
-    var result=new JspAnalysis.TilesDefinition(current.name(),template,List.copyOf(attrs.values()),current.source(),current.parent());resolved.put(name,result);stack.remove(name);return result;
+    Map<String, JspAnalysis.TilesAttribute> attrs = new java.util.TreeMap<>();
+    String template = current.template();
+    if (!current.parent().isBlank()) {
+      var parent = resolveTile(current.parent(), definitions, resolved, stack, diagnostics);
+      if (parent == null) {
+        diagnostics.add(unresolved("Tiles 父定義未解析：" + current.parent(), current.source()));
+        stack.remove(name);
+        return null;
+      }
+      parent.attributes().forEach(a -> attrs.put(a.name(), a));
+      if (template.isBlank()) template = parent.template();
+    }
+    current.attributes().forEach(a -> attrs.put(a.name(), a));
+    var result =
+        new JspAnalysis.TilesDefinition(
+            current.name(),
+            template,
+            List.copyOf(attrs.values()),
+            current.source(),
+            current.parent());
+    resolved.put(name, result);
+    stack.remove(name);
+    return result;
   }
 
   private static Diagnostic unresolved(String message, SourceLocation source) {

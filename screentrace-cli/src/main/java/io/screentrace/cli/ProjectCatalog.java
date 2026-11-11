@@ -1,21 +1,23 @@
 package io.screentrace.cli;
 
+import io.screentrace.scanner.RealPaths;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Stream;
-import io.screentrace.scanner.RealPaths;
 
 /** Finds direct-child projects and their independently stored analysis outputs. */
 final class ProjectCatalog {
-  record Project(String name, Path sourceDirectory, Path analysisDirectory) { }
+  record Project(String name, Path sourceDirectory, Path analysisDirectory) {}
 
   List<Project> allProjects(WorkspaceSettings settings) throws IOException {
-    if (!Files.isDirectory(settings.projectRoot())) throw new IOException("Project root does not exist: " + settings.projectRoot());
+    if (!Files.isDirectory(settings.projectRoot()))
+      throw new IOException("Project root does not exist: " + settings.projectRoot());
     try (Stream<Path> children = Files.list(settings.projectRoot())) {
-      return children.filter(path -> Files.isDirectory(path) && !Files.isSymbolicLink(path))
+      return children
+          .filter(path -> Files.isDirectory(path) && !Files.isSymbolicLink(path))
           .filter(path -> !path.getFileName().toString().startsWith("."))
           .filter(path -> !sameRealPath(path, settings.outputRoot()))
           .map(path -> project(path, settings.outputRoot()))
@@ -27,18 +29,32 @@ final class ProjectCatalog {
   List<Project> analyzedProjects(WorkspaceSettings settings) throws IOException {
     if (!Files.isDirectory(settings.outputRoot())) return List.of();
     try (Stream<Path> children = Files.list(settings.outputRoot())) {
-      return children.filter(path -> Files.isDirectory(path) && !Files.isSymbolicLink(path))
+      return children
+          .filter(path -> Files.isDirectory(path) && !Files.isSymbolicLink(path))
           .filter(this::hasCompleteAnalysis)
-          .map(path -> new Project(path.getFileName().toString(), settings.projectRoot().resolve(path.getFileName()), path))
+          .map(
+              path ->
+                  new Project(
+                      path.getFileName().toString(),
+                      settings.projectRoot().resolve(path.getFileName()),
+                      path))
           .sorted(Comparator.comparing(Project::name, String.CASE_INSENSITIVE_ORDER))
           .toList();
     }
   }
 
   Project named(List<Project> projects, String name) {
-    return projects.stream().filter(project -> project.name().equals(name)).findFirst()
-        .orElseThrow(() -> new IllegalArgumentException("找不到專案：" + name + "。可用的專案："
-            + projects.stream().map(Project::name).toList() + "；要分析其他資料夾，請改用 `screentrace analyze <專案路徑>`。"));
+    return projects.stream()
+        .filter(project -> project.name().equals(name))
+        .findFirst()
+        .orElseThrow(
+            () ->
+                new IllegalArgumentException(
+                    "找不到專案："
+                        + name
+                        + "。可用的專案："
+                        + projects.stream().map(Project::name).toList()
+                        + "；要分析其他資料夾，請改用 `screentrace analyze <專案路徑>`。"));
   }
 
   private Project project(Path source, Path outputRoot) {
@@ -50,7 +66,8 @@ final class ProjectCatalog {
     return regular(analysis.resolve("application-graph.json"))
         && regular(analysis.resolve("prototype-model.json"))
         && regular(analysis.resolve("preview-model.json"))
-        && (regular(analysis.resolve("report/screentrace-report.html")) || regular(analysis.resolve("report/index.html")));
+        && (regular(analysis.resolve("report/screentrace-report.html"))
+            || regular(analysis.resolve("report/index.html")));
   }
 
   private static boolean regular(Path path) {
@@ -58,7 +75,10 @@ final class ProjectCatalog {
   }
 
   private static boolean sameRealPath(Path left, Path right) {
-    try { return RealPaths.isSame(left, right); }
-    catch (IOException ignored) { return false; }
+    try {
+      return RealPaths.isSame(left, right);
+    } catch (IOException ignored) {
+      return false;
+    }
   }
 }

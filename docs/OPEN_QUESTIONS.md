@@ -476,3 +476,16 @@
   [INFO] BUILD FAILURE
   ```
 - 狀態：RESOLVED（2026-11-11）。Codex sandbox 不允許列出其他程序：`ProcessHandle.allProcesses()` 與 `Process.descendants()` 都經由 `getProcessPids0(0, …)`，在 sandbox 內丟出 `Operation not permitted`。v1.0 的測試靠列出程序並讀取命令列來找 Node，正式程式碼的 `descendants()` 也沒有保護，在這種環境下會讓每次 JavaScript 分析在結束時丟出例外。決定（ADR 0125 R34-6）：正式程式碼在列出子孫程序失敗時仍結束直接子程序；測試改由兩個腳本自行寫入 PID、以 PID 查詢，並在無法列出程序的環境略過（JUnit assumption），由 PR CI 驗證；兩個腳本 60 秒後自行結束，失敗的測試不會再讓 Maven 等待。R34 指示 v1.1 把 OQ-050 與 WP104 一起提交。
+
+## OQ-051 — WP110 套用 patch 後設定檢查輸出不符
+
+- 指令：`grep -c "spotless-maven-plugin" pom.xml`
+- 預期輸出：`1`；實際輸出：`3`。
+- 指令 `grep -n "spotless-maven-plugin" pom.xml` 輸出：
+  ```text
+  77:             CI runs `mvn com.diffplug.spotless:spotless-maven-plugin:check`, and
+  78:             `mvn com.diffplug.spotless:spotless-maven-plugin:apply` reformats. Fixtures and test resources are excluded. -->
+  81:          <artifactId>spotless-maven-plugin</artifactId>
+  ```
+- 同次執行的 `grep -c "Check Java formatting" .github/workflows/security.yml` 輸出 `1`；`npm --prefix screentrace-viewer run build` 輸出 `tsc --noEmit && node build.mjs`，結束狀態為 `0`。
+- 狀態：RESOLVED（2026-11-11）。`pom.xml` 中 Spotless 設定上方的註解也寫了兩次 `spotless-maven-plugin`（呼叫指令的說明），所以正確輸出是 `3`；R39 指示 v1.0 的檢查寫錯，patch 本身正確。決定：R39 指示 v1.1 改以 `grep -c "<artifactId>spotless-maven-plugin</artifactId>" pom.xml`（輸出 `1`）檢查，從 v1.0 停止時的工作樹繼續，並把 OQ-051 與 WP110 一起提交。

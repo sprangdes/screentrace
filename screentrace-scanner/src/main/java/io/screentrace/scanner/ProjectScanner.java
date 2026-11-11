@@ -15,7 +15,8 @@ import java.util.TreeSet;
 /** Locates source artifacts without interpreting a framework. */
 public final class ProjectScanner {
   private static final String POM_FILE = "pom.xml";
-  private static final Set<String> IGNORED_DIRECTORIES = Set.of("target", "build", "node_modules", ".git", ".screentrace");
+  private static final Set<String> IGNORED_DIRECTORIES =
+      Set.of("target", "build", "node_modules", ".git", ".screentrace");
 
   public ProjectInventory scan(Path project) throws IOException {
     Path root = project.toRealPath();
@@ -23,64 +24,98 @@ public final class ProjectScanner {
     List<String> diagnostics = new ArrayList<>();
     long[] bytes = {0};
     int[] visited = {0};
-    Files.walkFileTree(root, new SimpleFileVisitor<>() {
-      @Override public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) {
-        if (++visited[0] > SafeProjectFiles.MAX_PROJECT_FILES) {
-          diagnostics.add("Maximum project entry count exceeded; remaining paths skipped");
-          return FileVisitResult.TERMINATE;
-        }
-        Path relative = root.relativize(dir);
-        if(!dir.equals(root)&&dir.getFileName().toString().startsWith("workspace:")){diagnostics.add("Reserved workspace evidence directory skipped");return FileVisitResult.SKIP_SUBTREE;}
-        if (relative.getNameCount() > SafeProjectFiles.MAX_DIRECTORY_DEPTH) {
-          diagnostics.add("Maximum project directory depth exceeded; skipped " + relative);
-          return FileVisitResult.SKIP_SUBTREE;
-        }
-        if (!dir.equals(root) && ignored(relative)) return FileVisitResult.SKIP_SUBTREE;
-        return FileVisitResult.CONTINUE;
-      }
+    Files.walkFileTree(
+        root,
+        new SimpleFileVisitor<>() {
+          @Override
+          public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) {
+            if (++visited[0] > SafeProjectFiles.MAX_PROJECT_FILES) {
+              diagnostics.add("Maximum project entry count exceeded; remaining paths skipped");
+              return FileVisitResult.TERMINATE;
+            }
+            Path relative = root.relativize(dir);
+            if (!dir.equals(root) && dir.getFileName().toString().startsWith("workspace:")) {
+              diagnostics.add("Reserved workspace evidence directory skipped");
+              return FileVisitResult.SKIP_SUBTREE;
+            }
+            if (relative.getNameCount() > SafeProjectFiles.MAX_DIRECTORY_DEPTH) {
+              diagnostics.add("Maximum project directory depth exceeded; skipped " + relative);
+              return FileVisitResult.SKIP_SUBTREE;
+            }
+            if (!dir.equals(root) && ignored(relative)) return FileVisitResult.SKIP_SUBTREE;
+            return FileVisitResult.CONTINUE;
+          }
 
-      @Override public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) {
-        if (++visited[0] > SafeProjectFiles.MAX_PROJECT_FILES) {
-          diagnostics.add("Maximum project entry count exceeded; remaining paths skipped");
-          return FileVisitResult.TERMINATE;
-        }
-        if(file.getFileName().toString().startsWith("workspace:")){diagnostics.add("Reserved workspace evidence name skipped");return FileVisitResult.CONTINUE;}
-        if (attrs.isSymbolicLink() || !attrs.isRegularFile()) {
-          if (attrs.isSymbolicLink()) diagnostics.add("Symbolic link skipped: " + root.relativize(file));
-          return FileVisitResult.CONTINUE;
-        }
-        if (files.size() >= SafeProjectFiles.MAX_PROJECT_FILES) {
-          diagnostics.add("Maximum project file count exceeded; remaining files skipped");
-          return FileVisitResult.TERMINATE;
-        }
-        if (attrs.size() > SafeProjectFiles.MAX_SOURCE_FILE_BYTES) {
-          diagnostics.add("Source file exceeds 8 MiB and was skipped: " + root.relativize(file));
-          return FileVisitResult.CONTINUE;
-        }
-        if (bytes[0] + attrs.size() > SafeProjectFiles.MAX_PROJECT_TOTAL_BYTES) {
-          diagnostics.add("Maximum analyzed source bytes exceeded; remaining files skipped");
-          return FileVisitResult.TERMINATE;
-        }
-        bytes[0] += attrs.size();
-        files.add(file);
-        return FileVisitResult.CONTINUE;
-      }
+          @Override
+          public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) {
+            if (++visited[0] > SafeProjectFiles.MAX_PROJECT_FILES) {
+              diagnostics.add("Maximum project entry count exceeded; remaining paths skipped");
+              return FileVisitResult.TERMINATE;
+            }
+            if (file.getFileName().toString().startsWith("workspace:")) {
+              diagnostics.add("Reserved workspace evidence name skipped");
+              return FileVisitResult.CONTINUE;
+            }
+            if (attrs.isSymbolicLink() || !attrs.isRegularFile()) {
+              if (attrs.isSymbolicLink())
+                diagnostics.add("Symbolic link skipped: " + root.relativize(file));
+              return FileVisitResult.CONTINUE;
+            }
+            if (files.size() >= SafeProjectFiles.MAX_PROJECT_FILES) {
+              diagnostics.add("Maximum project file count exceeded; remaining files skipped");
+              return FileVisitResult.TERMINATE;
+            }
+            if (attrs.size() > SafeProjectFiles.MAX_SOURCE_FILE_BYTES) {
+              diagnostics.add(
+                  "Source file exceeds 8 MiB and was skipped: " + root.relativize(file));
+              return FileVisitResult.CONTINUE;
+            }
+            if (bytes[0] + attrs.size() > SafeProjectFiles.MAX_PROJECT_TOTAL_BYTES) {
+              diagnostics.add("Maximum analyzed source bytes exceeded; remaining files skipped");
+              return FileVisitResult.TERMINATE;
+            }
+            bytes[0] += attrs.size();
+            files.add(file);
+            return FileVisitResult.CONTINUE;
+          }
 
-      @Override public FileVisitResult visitFileFailed(Path file, IOException error) {
-        diagnostics.add("Unable to inspect source path: " + root.relativize(file));
-        return FileVisitResult.CONTINUE;
-      }
-    });
-    String configured=configuredWebRoot(root);
-    if(configured!=null)files.removeIf(file->{String relative=root.relativize(file).toString().replace('\\','/');
-      boolean other=List.of("WebRoot/","WebContent/","webapp/","web/","src/main/webapp/").stream().anyMatch(relative::startsWith)&&!relative.startsWith(configured+"/");
-      if(other)diagnostics.add("Inactive web source excluded by nbproject/project.properties: "+relative);return other;
-    });
+          @Override
+          public FileVisitResult visitFileFailed(Path file, IOException error) {
+            diagnostics.add("Unable to inspect source path: " + root.relativize(file));
+            return FileVisitResult.CONTINUE;
+          }
+        });
+    String configured = configuredWebRoot(root);
+    if (configured != null)
+      files.removeIf(
+          file -> {
+            String relative = root.relativize(file).toString().replace('\\', '/');
+            boolean other =
+                List.of("WebRoot/", "WebContent/", "webapp/", "web/", "src/main/webapp/").stream()
+                        .anyMatch(relative::startsWith)
+                    && !relative.startsWith(configured + "/");
+            if (other)
+              diagnostics.add(
+                  "Inactive web source excluded by nbproject/project.properties: " + relative);
+            return other;
+          });
     int javadoc = 0;
-    for (var iterator = files.iterator(); iterator.hasNext(); ) if (generatedJavadoc(iterator.next())) { iterator.remove(); javadoc++; }
+    for (var iterator = files.iterator(); iterator.hasNext(); )
+      if (generatedJavadoc(iterator.next())) {
+        iterator.remove();
+        javadoc++;
+      }
     if (javadoc > 0) diagnostics.add("Generated Javadoc HTML skipped: " + javadoc + " files");
     files.sort(Path::compareTo);
-    return new ProjectInventory(root, files, technologies(root, files), diagnostics, List.of(), ".", 1, webRootsFor(configured));
+    return new ProjectInventory(
+        root,
+        files,
+        technologies(root, files),
+        diagnostics,
+        List.of(),
+        ".",
+        1,
+        webRootsFor(configured));
   }
 
   /** javadoc stamps every page it writes; such API docs are never application screens. */
@@ -88,65 +123,113 @@ public final class ProjectScanner {
     String name = file.getFileName().toString().toLowerCase(java.util.Locale.ROOT);
     if (!name.endsWith(".html") && !name.endsWith(".htm")) return false;
     try (var input = Files.newInputStream(file, LinkOption.NOFOLLOW_LINKS)) {
-      return new String(input.readNBytes(4096), java.nio.charset.StandardCharsets.ISO_8859_1).contains("<!-- Generated by javadoc");
+      return new String(input.readNBytes(4096), java.nio.charset.StandardCharsets.ISO_8859_1)
+          .contains("<!-- Generated by javadoc");
     } catch (IOException | SecurityException ignored) {
       return false;
     }
   }
 
   private static String configuredWebRoot(Path root) {
-    Path file=root.resolve("nbproject/project.properties");
-    try{if(!SafeProjectFiles.isSafeRegularFile(root,file))return null;
-      var p=new java.util.Properties();p.load(new java.io.StringReader(SafeProjectFiles.readUtf8Limited(root,file,SafeProjectFiles.MAX_SOURCE_FILE_BYTES)));
-      String value=p.getProperty("web.docbase.dir");if(value==null||value.contains("${")||value.contains("\\")||value.startsWith("/")||java.util.Arrays.asList(value.split("/")).contains(".."))return null;
-      if(!Files.isDirectory(root.resolve(value))||Files.isSymbolicLink(root.resolve(value))||!root.resolve(value).toRealPath().startsWith(root))return null;
-      return value.replaceFirst("^\\./","").replaceFirst("/+$","");
-    }catch(Exception ignored){return null;}
+    Path file = root.resolve("nbproject/project.properties");
+    try {
+      if (!SafeProjectFiles.isSafeRegularFile(root, file)) return null;
+      var p = new java.util.Properties();
+      p.load(
+          new java.io.StringReader(
+              SafeProjectFiles.readUtf8Limited(
+                  root, file, SafeProjectFiles.MAX_SOURCE_FILE_BYTES)));
+      String value = p.getProperty("web.docbase.dir");
+      if (value == null
+          || value.contains("${")
+          || value.contains("\\")
+          || value.startsWith("/")
+          || java.util.Arrays.asList(value.split("/")).contains("..")) return null;
+      if (!Files.isDirectory(root.resolve(value))
+          || Files.isSymbolicLink(root.resolve(value))
+          || !root.resolve(value).toRealPath().startsWith(root)) return null;
+      return value.replaceFirst("^\\./", "").replaceFirst("/+$", "");
+    } catch (Exception ignored) {
+      return null;
+    }
   }
+
   private static List<String> webRootsFor(String configured) {
-    if(configured!=null)return List.of(configured+"/");
-    return List.of("src/main/webapp/","WebContent/","WebRoot/","webapp/","web/");
+    if (configured != null) return List.of(configured + "/");
+    return List.of("src/main/webapp/", "WebContent/", "WebRoot/", "webapp/", "web/");
   }
+
   private static List<String> technologies(Path root, List<Path> files) {
     Set<String> technologies = new TreeSet<>();
-    if (files.stream().anyMatch(path -> path.getFileName().toString().equals(POM_FILE))) technologies.add("Maven");
-    if (files.stream().anyMatch(path -> hasExtension(path, ".gradle") || hasExtension(path, ".gradle.kts"))) technologies.add("Gradle");
+    if (files.stream().anyMatch(path -> path.getFileName().toString().equals(POM_FILE)))
+      technologies.add("Maven");
+    if (files.stream()
+        .anyMatch(path -> hasExtension(path, ".gradle") || hasExtension(path, ".gradle.kts")))
+      technologies.add("Gradle");
     if (files.stream().anyMatch(path -> hasExtension(path, ".java"))) technologies.add("Java");
-    if (files.stream().anyMatch(path -> hasExtension(path, ".tsx") || hasExtension(path, ".jsx")) || dependsOnReact(root, files)) technologies.add("React");
+    if (files.stream().anyMatch(path -> hasExtension(path, ".tsx") || hasExtension(path, ".jsx"))
+        || dependsOnReact(root, files)) technologies.add("React");
     if (files.stream().anyMatch(path -> hasExtension(path, ".html"))) technologies.add("HTML");
-    boolean springBoot = files.stream().filter(path -> path.getFileName().toString().equals(POM_FILE)).anyMatch(path -> contains(root, path, "spring-boot"));
-    boolean springMvc = files.stream().filter(path -> path.getFileName().toString().equals(POM_FILE)).anyMatch(path -> contains(root, path, "spring-webmvc"));
-    boolean spring = files.stream().filter(path -> path.getFileName().toString().equals(POM_FILE)).anyMatch(path -> contains(root, path, "spring"))
-        || files.stream().filter(path -> hasExtension(path, ".xml")).anyMatch(path -> contains(root, path, "<beans"));
+    boolean springBoot =
+        files.stream()
+            .filter(path -> path.getFileName().toString().equals(POM_FILE))
+            .anyMatch(path -> contains(root, path, "spring-boot"));
+    boolean springMvc =
+        files.stream()
+            .filter(path -> path.getFileName().toString().equals(POM_FILE))
+            .anyMatch(path -> contains(root, path, "spring-webmvc"));
+    boolean spring =
+        files.stream()
+                .filter(path -> path.getFileName().toString().equals(POM_FILE))
+                .anyMatch(path -> contains(root, path, "spring"))
+            || files.stream()
+                .filter(path -> hasExtension(path, ".xml"))
+                .anyMatch(path -> contains(root, path, "<beans"));
     boolean struts = !strutsConfigFiles(root, files).isEmpty();
     if (springBoot) technologies.add("Spring Boot");
     if (springMvc) technologies.add("Spring MVC");
     if (spring) technologies.add("Spring");
     if (struts) technologies.add("Struts 1");
-    if (files.stream().anyMatch(path -> hasExtension(path, ".jsp") || hasExtension(path, ".jspf"))) technologies.add("JSP");
-    if (files.stream().filter(path -> hasExtension(path, ".xml")).anyMatch(path -> contains(root, path, "tiles-definitions"))) technologies.add("Tiles");
+    if (files.stream().anyMatch(path -> hasExtension(path, ".jsp") || hasExtension(path, ".jspf")))
+      technologies.add("JSP");
+    if (files.stream()
+        .filter(path -> hasExtension(path, ".xml"))
+        .anyMatch(path -> contains(root, path, "tiles-definitions"))) technologies.add("Tiles");
     return List.copyOf(technologies);
   }
 
   /**
-   * The Struts configs the ActionServlet loads: the files web.xml names in its config and config/<module> init-params,
-   * kept only when they really are struts-config documents. Without such a declaration Struts loads
-   * /WEB-INF/struts-config.xml by default, so the struts-config*.xml file-name rule applies.
+   * The Struts configs the ActionServlet loads: the files web.xml names in its config and
+   * config/<module> init-params, kept only when they really are struts-config documents. Without
+   * such a declaration Struts loads /WEB-INF/struts-config.xml by default, so the
+   * struts-config*.xml file-name rule applies.
    */
   static List<Path> strutsConfigFiles(Path root, List<Path> files) {
     List<Path> declared = declaredStrutsConfigFiles(root, files);
     if (!declared.isEmpty()) return declared;
-    return files.stream().filter(path -> path.getFileName().toString().startsWith("struts-config") && hasExtension(path, ".xml")).toList();
+    return files.stream()
+        .filter(
+            path ->
+                path.getFileName().toString().startsWith("struts-config")
+                    && hasExtension(path, ".xml"))
+        .toList();
   }
 
   private static List<Path> declaredStrutsConfigFiles(Path root, List<Path> files) {
     Set<Path> known = new java.util.HashSet<>(files);
     Set<Path> result = new TreeSet<>();
     for (Path webXml : files) {
-      if (!webXml.getFileName().toString().equals("web.xml") || webXml.getParent() == null || webXml.getParent().getParent() == null) continue;
+      if (!webXml.getFileName().toString().equals("web.xml")
+          || webXml.getParent() == null
+          || webXml.getParent().getParent() == null) continue;
       Path webRoot = webXml.getParent().getParent();
       try {
-        var params = SafeProjectFiles.parseXml(SafeProjectFiles.readUtf8Limited(root, webXml, SafeProjectFiles.MAX_XML_FILE_BYTES), false).getElementsByTagName("init-param");
+        var params =
+            SafeProjectFiles.parseXml(
+                    SafeProjectFiles.readUtf8Limited(
+                        root, webXml, SafeProjectFiles.MAX_XML_FILE_BYTES),
+                    false)
+                .getElementsByTagName("init-param");
         boolean defaultModule = false, modules = false;
         for (int i = 0; i < params.getLength(); i++) {
           var param = (org.w3c.dom.Element) params.item(i);
@@ -155,15 +238,20 @@ public final class ProjectScanner {
           if (names.getLength() == 0 || values.getLength() == 0) continue;
           String name = names.item(0).getTextContent().trim();
           if (!name.equals("config") && !name.startsWith("config/")) continue;
-          if (name.equals("config")) defaultModule = true; else modules = true;
+          if (name.equals("config")) defaultModule = true;
+          else modules = true;
           for (String value : values.item(0).getTextContent().split(",")) {
             String path = value.trim();
-            if (!path.startsWith("/") || java.util.Arrays.asList(path.split("/")).contains("..")) continue;
+            if (!path.startsWith("/") || java.util.Arrays.asList(path.split("/")).contains(".."))
+              continue;
             Path config = webRoot.resolve(path.substring(1)).normalize();
-            if (config.startsWith(webRoot) && known.contains(config) && contains(root, config, "<struts-config")) result.add(config);
+            if (config.startsWith(webRoot)
+                && known.contains(config)
+                && contains(root, config, "<struts-config")) result.add(config);
           }
         }
-        // Module configs alone leave the default module on Struts' built-in /WEB-INF/struts-config.xml.
+        // Module configs alone leave the default module on Struts' built-in
+        // /WEB-INF/struts-config.xml.
         Path implicit = webRoot.resolve("WEB-INF/struts-config.xml");
         if (modules && !defaultModule && known.contains(implicit)) result.add(implicit);
       } catch (IOException | SecurityException ignored) {
@@ -173,12 +261,19 @@ public final class ProjectScanner {
     return List.copyOf(result);
   }
 
-  /** Create React App and similar setups write JSX in .js files; a package.json depending on react proves the frontend. */
+  /**
+   * Create React App and similar setups write JSX in .js files; a package.json depending on react
+   * proves the frontend.
+   */
   private static boolean dependsOnReact(Path root, List<Path> files) {
     for (Path path : files) {
       if (!path.getFileName().toString().equals("package.json")) continue;
       try {
-        var manifest = new com.fasterxml.jackson.databind.ObjectMapper().readTree(SafeProjectFiles.readUtf8Limited(root, path, SafeProjectFiles.MAX_SOURCE_FILE_BYTES));
+        var manifest =
+            new com.fasterxml.jackson.databind.ObjectMapper()
+                .readTree(
+                    SafeProjectFiles.readUtf8Limited(
+                        root, path, SafeProjectFiles.MAX_SOURCE_FILE_BYTES));
         for (String section : List.of("dependencies", "devDependencies", "peerDependencies"))
           if (manifest != null && manifest.path(section).has("react")) return true;
       } catch (IOException | SecurityException ignored) {
@@ -192,29 +287,166 @@ public final class ProjectScanner {
     for (Path segment : path) if (IGNORED_DIRECTORIES.contains(segment.toString())) return true;
     return false;
   }
-  private static boolean hasExtension(Path path, String extension) { return path.toString().endsWith(extension); }
-  private static boolean contains(Path root, Path path, String text) {
-    try { return SafeProjectFiles.readUtf8Limited(root, path, Math.min(SafeProjectFiles.MAX_XML_FILE_BYTES, SafeProjectFiles.MAX_SOURCE_FILE_BYTES)).contains(text); }
-    catch (IOException | SecurityException ignored) { return false; }
+
+  private static boolean hasExtension(Path path, String extension) {
+    return path.toString().endsWith(extension);
   }
 
-  /** {@code webRoots} is resolved once from nbproject/project.properties when the inventory is built. */
-  public record ProjectInventory(Path root, List<Path> files, List<String> technologies, List<String> diagnostics,List<String> contextPaths,String contextSettingsFile,int contextSettingsLine,List<String> webRoots,List<PersonaSetting> personas,boolean personasConfigured,int personaSettingsLine) {
-    public ProjectInventory(Path root,List<Path> files,List<String> technologies,List<String> diagnostics,List<String> contextPaths,String contextSettingsFile,int contextSettingsLine,List<String> webRoots){this(root,files,technologies,diagnostics,contextPaths,contextSettingsFile,contextSettingsLine,webRoots,List.of(),false,1);}
-    public ProjectInventory(Path root,List<Path> files,List<String> technologies,List<String> diagnostics){this(root,files,technologies,diagnostics,List.of(),".",1);}
-    public ProjectInventory(Path root,List<Path> files,List<String> technologies,List<String> diagnostics,List<String> contextPaths,String contextSettingsFile,int contextSettingsLine){this(root,files,technologies,diagnostics,contextPaths,contextSettingsFile,contextSettingsLine,webRootsFor(configuredWebRoot(root)));}
-    public ProjectInventory withContextPaths(List<String> values,String source){return withContextPaths(values,1);}
-    public ProjectInventory withContextPaths(List<String> values,int line){return new ProjectInventory(root,files,technologies,diagnostics,values,"workspace:config.json",Math.max(1,line),webRoots,personas,personasConfigured,personaSettingsLine);
+  private static boolean contains(Path root, Path path, String text) {
+    try {
+      return SafeProjectFiles.readUtf8Limited(
+              root,
+              path,
+              Math.min(SafeProjectFiles.MAX_XML_FILE_BYTES, SafeProjectFiles.MAX_SOURCE_FILE_BYTES))
+          .contains(text);
+    } catch (IOException | SecurityException ignored) {
+      return false;
     }
-    public ProjectInventory withPersonas(List<PersonaSetting> values,int line){return new ProjectInventory(root,files,technologies,diagnostics,contextPaths,contextSettingsFile,contextSettingsLine,webRoots,values,true,Math.max(1,line));}
-    public ProjectInventory(Path root, List<Path> files, List<String> technologies) { this(root, files, technologies, List.of()); }
-    public ProjectInventory { files = List.copyOf(files); technologies = List.copyOf(technologies); diagnostics = List.copyOf(diagnostics); contextPaths=List.copyOf(contextPaths); contextSettingsFile=contextPaths.isEmpty()?".":"workspace:config.json"; webRoots=List.copyOf(webRoots); personas=List.copyOf(personas); }
-    public List<Path> javaFiles() { return files.stream().filter(path -> hasExtension(path, ".java")).toList(); }
-    public List<Path> reactFiles() { return files.stream().filter(path -> hasExtension(path, ".tsx") || hasExtension(path, ".jsx")).toList(); }
-    public List<Path> jspFiles() { return files.stream().filter(path -> hasExtension(path, ".jsp")).toList(); }
-    public List<Path> jspFragmentFiles() { return files.stream().filter(path -> hasExtension(path, ".jspf")).toList(); }
-    public List<Path> tilesConfigFiles() { return files.stream().filter(path -> hasExtension(path, ".xml") && contains(root, path, "tiles-definitions")).toList(); }
-    public List<Path> strutsConfigFiles() { return ProjectScanner.strutsConfigFiles(root, files); }
-    public List<Path> springXmlFiles() { return files.stream().filter(path -> hasExtension(path, ".xml") && contains(root, path, "<beans")).toList(); }
+  }
+
+  /**
+   * {@code webRoots} is resolved once from nbproject/project.properties when the inventory is
+   * built.
+   */
+  public record ProjectInventory(
+      Path root,
+      List<Path> files,
+      List<String> technologies,
+      List<String> diagnostics,
+      List<String> contextPaths,
+      String contextSettingsFile,
+      int contextSettingsLine,
+      List<String> webRoots,
+      List<PersonaSetting> personas,
+      boolean personasConfigured,
+      int personaSettingsLine) {
+    public ProjectInventory(
+        Path root,
+        List<Path> files,
+        List<String> technologies,
+        List<String> diagnostics,
+        List<String> contextPaths,
+        String contextSettingsFile,
+        int contextSettingsLine,
+        List<String> webRoots) {
+      this(
+          root,
+          files,
+          technologies,
+          diagnostics,
+          contextPaths,
+          contextSettingsFile,
+          contextSettingsLine,
+          webRoots,
+          List.of(),
+          false,
+          1);
+    }
+
+    public ProjectInventory(
+        Path root, List<Path> files, List<String> technologies, List<String> diagnostics) {
+      this(root, files, technologies, diagnostics, List.of(), ".", 1);
+    }
+
+    public ProjectInventory(
+        Path root,
+        List<Path> files,
+        List<String> technologies,
+        List<String> diagnostics,
+        List<String> contextPaths,
+        String contextSettingsFile,
+        int contextSettingsLine) {
+      this(
+          root,
+          files,
+          technologies,
+          diagnostics,
+          contextPaths,
+          contextSettingsFile,
+          contextSettingsLine,
+          webRootsFor(configuredWebRoot(root)));
+    }
+
+    public ProjectInventory withContextPaths(List<String> values, String source) {
+      return withContextPaths(values, 1);
+    }
+
+    public ProjectInventory withContextPaths(List<String> values, int line) {
+      return new ProjectInventory(
+          root,
+          files,
+          technologies,
+          diagnostics,
+          values,
+          "workspace:config.json",
+          Math.max(1, line),
+          webRoots,
+          personas,
+          personasConfigured,
+          personaSettingsLine);
+    }
+
+    public ProjectInventory withPersonas(List<PersonaSetting> values, int line) {
+      return new ProjectInventory(
+          root,
+          files,
+          technologies,
+          diagnostics,
+          contextPaths,
+          contextSettingsFile,
+          contextSettingsLine,
+          webRoots,
+          values,
+          true,
+          Math.max(1, line));
+    }
+
+    public ProjectInventory(Path root, List<Path> files, List<String> technologies) {
+      this(root, files, technologies, List.of());
+    }
+
+    public ProjectInventory {
+      files = List.copyOf(files);
+      technologies = List.copyOf(technologies);
+      diagnostics = List.copyOf(diagnostics);
+      contextPaths = List.copyOf(contextPaths);
+      contextSettingsFile = contextPaths.isEmpty() ? "." : "workspace:config.json";
+      webRoots = List.copyOf(webRoots);
+      personas = List.copyOf(personas);
+    }
+
+    public List<Path> javaFiles() {
+      return files.stream().filter(path -> hasExtension(path, ".java")).toList();
+    }
+
+    public List<Path> reactFiles() {
+      return files.stream()
+          .filter(path -> hasExtension(path, ".tsx") || hasExtension(path, ".jsx"))
+          .toList();
+    }
+
+    public List<Path> jspFiles() {
+      return files.stream().filter(path -> hasExtension(path, ".jsp")).toList();
+    }
+
+    public List<Path> jspFragmentFiles() {
+      return files.stream().filter(path -> hasExtension(path, ".jspf")).toList();
+    }
+
+    public List<Path> tilesConfigFiles() {
+      return files.stream()
+          .filter(path -> hasExtension(path, ".xml") && contains(root, path, "tiles-definitions"))
+          .toList();
+    }
+
+    public List<Path> strutsConfigFiles() {
+      return ProjectScanner.strutsConfigFiles(root, files);
+    }
+
+    public List<Path> springXmlFiles() {
+      return files.stream()
+          .filter(path -> hasExtension(path, ".xml") && contains(root, path, "<beans"))
+          .toList();
+    }
   }
 }

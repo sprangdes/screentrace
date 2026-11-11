@@ -8,23 +8,45 @@ import java.util.Map;
 import org.junit.jupiter.api.Test;
 
 class ApplicationGraphTest {
-  @Test void stableIdAndJsonContract() throws Exception {
+  @Test
+  void stableIdAndJsonContract() throws Exception {
     String id = ApplicationGraph.id(ApplicationGraph.NodeType.SCREEN, "a");
     assertEquals(id, ApplicationGraph.id(ApplicationGraph.NodeType.SCREEN, "a"));
-    var graph = new ApplicationGraph(new ApplicationGraph.Application("sample", "/sample", List.of("Java")), List.of(new ApplicationGraph.GraphNode(id, ApplicationGraph.NodeType.SCREEN, "a", Map.of(), null, ApplicationGraph.Confidence.CONFIRMED)), List.of(), List.of());
+    var graph =
+        new ApplicationGraph(
+            new ApplicationGraph.Application("sample", "/sample", List.of("Java")),
+            List.of(
+                new ApplicationGraph.GraphNode(
+                    id,
+                    ApplicationGraph.NodeType.SCREEN,
+                    "a",
+                    Map.of(),
+                    null,
+                    ApplicationGraph.Confidence.CONFIRMED)),
+            List.of(),
+            List.of());
     String serialized = new ObjectMapper().writeValueAsString(graph);
     assertTrue(serialized.contains("CONFIRMED"));
     assertTrue(serialized.contains("\"schemaVersion\":\"2.1\""));
   }
 
-  @Test void deserializesAnEmptyGraphWhoseEmptyListsWereOmitted() {
+  @Test
+  void deserializesAnEmptyGraphWhoseEmptyListsWereOmitted() {
     ObjectMapper json = new ObjectMapper();
-    var graph = new ApplicationGraph(new ApplicationGraph.Application("sample", "/sample", List.of()), List.of(), List.of(), List.of());
-    assertDoesNotThrow(() -> json.readValue(json.writeValueAsString(graph), ApplicationGraph.class));
+    var graph =
+        new ApplicationGraph(
+            new ApplicationGraph.Application("sample", "/sample", List.of()),
+            List.of(),
+            List.of(),
+            List.of());
+    assertDoesNotThrow(
+        () -> json.readValue(json.writeValueAsString(graph), ApplicationGraph.class));
   }
 
-  @Test void upgradesSchemaOneJsonWithoutLosingLegacyTraceability() throws Exception {
-    String schemaOne = """
+  @Test
+  void upgradesSchemaOneJsonWithoutLosingLegacyTraceability() throws Exception {
+    String schemaOne =
+        """
         {"application":{"name":"sample","path":"/sample","technologies":["Spring MVC"]},
          "nodes":[{"id":"screen:login","type":"SCREEN","name":"Login",
                    "attributes":{"route":"/login"},"source":{"file":"login.jsp","line":4},
@@ -39,8 +61,10 @@ class ApplicationGraphTest {
     assertDoesNotThrow(() -> GraphIntegrityValidator.validate(graph));
   }
 
-  @Test void retainsExplicitSchemaOneCompatibilityVersion() throws Exception {
-    String schemaOne = """
+  @Test
+  void retainsExplicitSchemaOneCompatibilityVersion() throws Exception {
+    String schemaOne =
+        """
         {"schemaVersion":"1.0","application":{"name":"sample","path":"/sample","technologies":[]},
          "nodes":[],"relationships":[],"diagnostics":[]}
         """;

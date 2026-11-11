@@ -9,7 +9,7 @@ import java.util.Deque;
 
 /** Canonical path operations shared by project, report, and workspace boundaries. */
 public final class RealPaths {
-  private RealPaths() { }
+  private RealPaths() {}
 
   /** Resolves existing ancestors with toRealPath and preserves not-yet-created path segments. */
   public static Path resolveAllowMissing(Path path) throws IOException {

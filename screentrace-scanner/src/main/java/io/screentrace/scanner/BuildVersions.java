@@ -16,30 +16,39 @@ import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.xml.sax.InputSource;
 
-/** Declared dependency versions read from the project's Maven POMs; nothing is downloaded or resolved remotely. */
+/**
+ * Declared dependency versions read from the project's Maven POMs; nothing is downloaded or
+ * resolved remotely.
+ */
 public final class BuildVersions {
   /** A version and the POM that declares it. */
-  public record Declared(String version, String file, int majorVersion) { }
+  public record Declared(String version, String file, int majorVersion) {}
 
-  private BuildVersions() { }
+  private BuildVersions() {}
 
   /**
-   * The single version every POM agrees on for a dependency or parent artifact, with ${property} references resolved
-   * from the project's own POM properties. Empty when absent, unresolvable or conflicting.
+   * The single version every POM agrees on for a dependency or parent artifact, with ${property}
+   * references resolved from the project's own POM properties. Empty when absent, unresolvable or
+   * conflicting.
    */
-  public static Optional<Declared> of(ProjectScanner.ProjectInventory inventory, String artifactId) {
+  public static Optional<Declared> of(
+      ProjectScanner.ProjectInventory inventory, String artifactId) {
     Map<String, String> properties = new HashMap<>();
     List<Document> poms = new ArrayList<>();
     List<String> files = new ArrayList<>();
     for (Path file : inventory.files()) {
       if (!file.getFileName().toString().equals("pom.xml")) continue;
       try {
-        Document pom = parse(SafeProjectFiles.readUtf8Limited(inventory.root(), file, SafeProjectFiles.MAX_XML_FILE_BYTES));
+        Document pom =
+            parse(
+                SafeProjectFiles.readUtf8Limited(
+                    inventory.root(), file, SafeProjectFiles.MAX_XML_FILE_BYTES));
         poms.add(pom);
         files.add(inventory.root().relativize(file).toString().replace('\\', '/'));
         for (Element block : children(pom.getDocumentElement(), "properties"))
           for (Node child = block.getFirstChild(); child != null; child = child.getNextSibling())
-            if (child instanceof Element property) properties.putIfAbsent(property.getTagName(), property.getTextContent().trim());
+            if (child instanceof Element property)
+              properties.putIfAbsent(property.getTagName(), property.getTextContent().trim());
       } catch (IOException | RuntimeException ignored) {
         // An unreadable POM declares nothing.
       }
@@ -48,7 +57,8 @@ public final class BuildVersions {
     String declaredIn = null;
     for (int i = 0; i < poms.size(); i++) {
       for (Element artifact : elements(poms.get(i), "artifactId")) {
-        if (!artifact.getTextContent().trim().equals(artifactId) || !(artifact.getParentNode() instanceof Element owner)) continue;
+        if (!artifact.getTextContent().trim().equals(artifactId)
+            || !(artifact.getParentNode() instanceof Element owner)) continue;
         if (!List.of("dependency", "parent", "plugin").contains(owner.getTagName())) continue;
         List<Element> version = children(owner, "version");
         if (version.isEmpty()) continue;
@@ -61,7 +71,8 @@ public final class BuildVersions {
     if (versions.size() != 1) return Optional.empty();
     String version = versions.first();
     try {
-      return Optional.of(new Declared(version, declaredIn, Integer.parseInt(version.split("[.-]", 2)[0])));
+      return Optional.of(
+          new Declared(version, declaredIn, Integer.parseInt(version.split("[.-]", 2)[0])));
     } catch (NumberFormatException notNumeric) {
       return Optional.empty();
     }
@@ -88,7 +99,8 @@ public final class BuildVersions {
   private static List<Element> children(Element parent, String name) {
     List<Element> result = new ArrayList<>();
     for (Node child = parent.getFirstChild(); child != null; child = child.getNextSibling())
-      if (child instanceof Element element && element.getTagName().equals(name)) result.add(element);
+      if (child instanceof Element element && element.getTagName().equals(name))
+        result.add(element);
     return result;
   }
 
@@ -104,11 +116,23 @@ public final class BuildVersions {
       factory.setAttribute(XMLConstants.ACCESS_EXTERNAL_SCHEMA, "");
       factory.setExpandEntityReferences(false);
       var builder = factory.newDocumentBuilder();
-      builder.setErrorHandler(new org.xml.sax.ErrorHandler() {
-        @Override public void warning(org.xml.sax.SAXParseException exception) { }
-        @Override public void error(org.xml.sax.SAXParseException exception) throws org.xml.sax.SAXParseException { throw exception; }
-        @Override public void fatalError(org.xml.sax.SAXParseException exception) throws org.xml.sax.SAXParseException { throw exception; }
-      });
+      builder.setErrorHandler(
+          new org.xml.sax.ErrorHandler() {
+            @Override
+            public void warning(org.xml.sax.SAXParseException exception) {}
+
+            @Override
+            public void error(org.xml.sax.SAXParseException exception)
+                throws org.xml.sax.SAXParseException {
+              throw exception;
+            }
+
+            @Override
+            public void fatalError(org.xml.sax.SAXParseException exception)
+                throws org.xml.sax.SAXParseException {
+              throw exception;
+            }
+          });
       return builder.parse(new InputSource(new StringReader(xml)));
     } catch (javax.xml.parsers.ParserConfigurationException | org.xml.sax.SAXException error) {
       throw new IOException("POM could not be parsed safely", error);

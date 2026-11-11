@@ -1,6 +1,7 @@
 package io.screentrace.adapter.struts;
 
 import static org.junit.jupiter.api.Assertions.*;
+
 import io.screentrace.core.ApplicationGraph;
 import io.screentrace.core.ApplicationGraph.*;
 import io.screentrace.scanner.ProjectScanner;
@@ -8,9 +9,13 @@ import java.nio.file.*;
 import java.util.*;
 import org.junit.jupiter.api.Test;
 
-/** Exception handler IDs come from config file, scope, exception type and key; blank lines or comments above them never change them. */
+/**
+ * Exception handler IDs come from config file, scope, exception type and key; blank lines or
+ * comments above them never change them.
+ */
 class StrutsExceptionHandlerIdTest {
-  private static final String CONFIG = """
+  private static final String CONFIG =
+      """
       <struts-config>%s
         <global-exceptions>
           <exception key="error" type="sample.Failure" path="/WEB-INF/jsp/home.jsp"/>
@@ -28,19 +33,26 @@ class StrutsExceptionHandlerIdTest {
     Path jsp = root.resolve("src/main/webapp/WEB-INF/jsp/home.jsp");
     Files.createDirectories(jsp.getParent());
     Files.writeString(jsp, "<p>home</p>");
-    Files.writeString(root.resolve("src/main/webapp/WEB-INF/struts-config.xml"), CONFIG.formatted(prefix));
+    Files.writeString(
+        root.resolve("src/main/webapp/WEB-INF/struts-config.xml"), CONFIG.formatted(prefix));
     ApplicationGraph graph = new StrutsProjectAnalyzer().analyze(new ProjectScanner().scan(root));
-    return graph.nodes().stream().filter(n -> n.type() == NodeType.HANDLER && "例外處理".equals(n.name())).map(GraphNode::id).sorted().toList();
+    return graph.nodes().stream()
+        .filter(n -> n.type() == NodeType.HANDLER && "例外處理".equals(n.name()))
+        .map(GraphNode::id)
+        .sorted()
+        .toList();
   }
 
-  @Test void blankLinesAndCommentsAboveExceptionsKeepTheirIds() throws Exception {
+  @Test
+  void blankLinesAndCommentsAboveExceptionsKeepTheirIds() throws Exception {
     var before = exceptionHandlers("");
     var after = exceptionHandlers("\n\n        <!-- moved down by a comment -->\n");
     assertEquals(3, before.size(), before.toString());
     assertEquals(before, after);
   }
 
-  @Test void scopeAndExceptionTypeKeepSameKeyMappingsApart() throws Exception {
+  @Test
+  void scopeAndExceptionTypeKeepSameKeyMappingsApart() throws Exception {
     var ids = exceptionHandlers("");
     assertEquals(3, new HashSet<>(ids).size(), ids.toString());
   }

@@ -39,6 +39,9 @@ jobs:
         run: npm --prefix screentrace-capture ci
       - name: Install viewer test browsers
         run: npm exec --prefix screentrace-capture -- playwright install --with-deps chromium firefox webkit
+      # Java sources must match google-java-format (HC-001); run `mvn com.diffplug.spotless:spotless-maven-plugin:apply` to fix.
+      - name: Check Java formatting
+        run: mvn -B com.diffplug.spotless:spotless-maven-plugin:check
       - name: Build and test Java modules
         run: mvn -B clean verify
       - name: Test file viewer in all engines

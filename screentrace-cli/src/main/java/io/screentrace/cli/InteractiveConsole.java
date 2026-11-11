@@ -54,8 +54,14 @@ final class InteractiveConsole implements AutoCloseable {
     }
   }
 
-  <T> T select(String title, List<T> options, Function<T, String> label, char shortcut, String exitHint,
-      int separatorBefore) throws IOException {
+  <T> T select(
+      String title,
+      List<T> options,
+      Function<T, String> label,
+      char shortcut,
+      String exitHint,
+      int separatorBefore)
+      throws IOException {
     if (options.isEmpty()) throw new IllegalArgumentException("沒有可操作的專案。");
     if (!supportsInPlaceRedraw()) {
       return selectByNumber(title, options, label, shortcut, exitHint, separatorBefore);
@@ -69,7 +75,8 @@ final class InteractiveConsole implements AutoCloseable {
       renderMenu(menu, false);
       while (true) {
         MenuKey key = readMenuKey(keys, shortcut);
-        if (key == MenuKey.CANCEL || key == MenuKey.SHORTCUT) throw new SelectionCancelledException();
+        if (key == MenuKey.CANCEL || key == MenuKey.SHORTCUT)
+          throw new SelectionCancelledException();
         if (key == MenuKey.ACCEPT) return options.get(selected);
         int next = selected;
         if (key == MenuKey.UP) next = (selected + options.size() - 1) % options.size();
@@ -136,16 +143,25 @@ final class InteractiveConsole implements AutoCloseable {
     }
   }
 
-  void showAnalysisComplete(String project, List<String> technologies, long endpoints, long screens, long components,
-      Path output,long contextPathHintCount) {
-    List<String> details = new java.util.ArrayList<>(List.of(
-        "專案：" + project,
-        "技術：" + String.join(", ", technologies),
-        "Endpoints：" + endpoints,
-        "Screens：" + screens,
-        "Components：" + components,
-        "輸出：" + output));
-    String hint=ScreenTraceCli.contextPathHintSummary(contextPathHintCount);if(hint!=null)details.add(hint);
+  void showAnalysisComplete(
+      String project,
+      List<String> technologies,
+      long endpoints,
+      long screens,
+      long components,
+      Path output,
+      long contextPathHintCount) {
+    List<String> details =
+        new java.util.ArrayList<>(
+            List.of(
+                "專案：" + project,
+                "技術：" + String.join(", ", technologies),
+                "Endpoints：" + endpoints,
+                "Screens：" + screens,
+                "Components：" + components,
+                "輸出：" + output));
+    String hint = ScreenTraceCli.contextPathHintSummary(contextPathHintCount);
+    if (hint != null) details.add(hint);
     showCompletionPanel("分析完成", details);
   }
 
@@ -175,20 +191,38 @@ final class InteractiveConsole implements AutoCloseable {
   }
 
   private boolean supportsInPlaceRedraw() {
-    return supportsInPlaceRedraw(terminal.getType(), terminal.getWidth(), terminal.getHeight(),
+    return supportsInPlaceRedraw(
+        terminal.getType(),
+        terminal.getWidth(),
+        terminal.getHeight(),
         terminal.getStringCapability(Capability.cursor_up) != null,
         terminal.getStringCapability(Capability.clr_eol) != null,
         terminal.getStringCapability(Capability.clr_eos) != null);
   }
 
-  static boolean supportsInPlaceRedraw(String terminalType, int width, int height, boolean cursorUp,
-      boolean clearLine, boolean clearBelow) {
-    return width > 0 && height > 0 && !Terminal.TYPE_DUMB.equals(terminalType)
-        && !Terminal.TYPE_DUMB_COLOR.equals(terminalType) && cursorUp && clearLine && clearBelow;
+  static boolean supportsInPlaceRedraw(
+      String terminalType,
+      int width,
+      int height,
+      boolean cursorUp,
+      boolean clearLine,
+      boolean clearBelow) {
+    return width > 0
+        && height > 0
+        && !Terminal.TYPE_DUMB.equals(terminalType)
+        && !Terminal.TYPE_DUMB_COLOR.equals(terminalType)
+        && cursorUp
+        && clearLine
+        && clearBelow;
   }
 
-  private <T> T selectByNumber(String title, List<T> options, Function<T, String> label, char shortcut,
-      String exitHint, int separatorBefore) {
+  private <T> T selectByNumber(
+      String title,
+      List<T> options,
+      Function<T, String> label,
+      char shortcut,
+      String exitHint,
+      int separatorBefore) {
     terminal.writer().println("ScreenTrace");
     terminal.writer().println();
     terminal.writer().println(title);
@@ -211,8 +245,13 @@ final class InteractiveConsole implements AutoCloseable {
     }
   }
 
-  private <T> List<String> menuLines(String title, List<T> options, Function<T, String> label, int selected,
-      String exitHint, int separatorBefore) {
+  private <T> List<String> menuLines(
+      String title,
+      List<T> options,
+      Function<T, String> label,
+      int selected,
+      String exitHint,
+      int separatorBefore) {
     List<String> output = new java.util.ArrayList<>();
     List<String> choices = new java.util.ArrayList<>();
     for (int index = 0; index < options.size(); index++) {
@@ -220,7 +259,10 @@ final class InteractiveConsole implements AutoCloseable {
       choices.add((index == selected ? "❯ " : "  ") + label.apply(options.get(index)));
     }
     String instructions = "↑ / ↓ 選擇 · Enter 確認 · " + exitHint;
-    int width = Math.max(terminalWidth("ScreenTrace"), Math.max(terminalWidth(title), terminalWidth(instructions)));
+    int width =
+        Math.max(
+            terminalWidth("ScreenTrace"),
+            Math.max(terminalWidth(title), terminalWidth(instructions)));
     for (String choice : choices) width = Math.max(width, terminalWidth(choice));
     width += 4;
 
@@ -296,7 +338,7 @@ final class InteractiveConsole implements AutoCloseable {
     List<String> lines = new java.util.ArrayList<>();
     StringBuilder current = new StringBuilder();
     int currentWidth = 0;
-    for (int offset = 0; offset < text.length();) {
+    for (int offset = 0; offset < text.length(); ) {
       int codePoint = text.codePointAt(offset);
       String character = new String(Character.toChars(codePoint));
       int characterWidth = terminalWidth(character);
@@ -332,7 +374,14 @@ final class InteractiveConsole implements AutoCloseable {
     }
   }
 
-  private enum MenuKey { UP, DOWN, ACCEPT, CANCEL, SHORTCUT, IGNORE }
+  private enum MenuKey {
+    UP,
+    DOWN,
+    ACCEPT,
+    CANCEL,
+    SHORTCUT,
+    IGNORE
+  }
 
   @Override
   public void close() throws IOException {

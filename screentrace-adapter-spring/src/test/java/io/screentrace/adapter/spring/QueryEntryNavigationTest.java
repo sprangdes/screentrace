@@ -1,5 +1,7 @@
 package io.screentrace.adapter.spring;
 
+import static org.junit.jupiter.api.Assertions.*;
+
 import io.screentrace.core.ApplicationGraph;
 import io.screentrace.core.ApplicationGraph.*;
 import io.screentrace.scanner.ProjectScanner;
@@ -7,13 +9,16 @@ import java.nio.file.*;
 import java.util.*;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
-import static org.junit.jupiter.api.Assertions.*;
 
-/** CR-007: navigate(), a native anchor and a location assignment keep their query for query-entry selection, as Link does. */
+/**
+ * CR-007: navigate(), a native anchor and a location assignment keep their query for query-entry
+ * selection, as Link does.
+ */
 class QueryEntryNavigationTest {
- @TempDir Path root;
+  @TempDir Path root;
 
- private static final String APP = """
+  private static final String APP =
+      """
    import {createContext,useContext,useState} from 'react';import {createRoot} from 'react-dom/client';import {Routes,Route,Link,Navigate,useLocation,useNavigate} from 'react-router-dom';
    const Session=createContext(null);
    function Provider({children}){const [subject,store]=useState(null);return <Session.Provider value={{subject,store}}>{children}</Session.Provider>;}
@@ -33,28 +38,65 @@ class QueryEntryNavigationTest {
    createRoot(document.getElementById('root')).render(<Provider><App/></Provider>);
    """;
 
- private static Set<String> targetsOf(ApplicationGraph graph, String screenId, String label) {
-  Map<String, GraphNode> nodes = new HashMap<>();
-  graph.nodes().forEach(n -> nodes.put(n.id(), n));
-  Set<String> owned = new HashSet<>();
-  graph.relationships().stream().filter(e -> e.type() == EdgeType.CONTAINS && e.from().equals(screenId)).forEach(e -> owned.add(e.to()));
-  String component = owned.stream().filter(id -> label.equals(nodes.get(id).name())).findFirst().orElseThrow(() -> new AssertionError("no " + label + " in " + screenId));
-  Set<String> targets = new TreeSet<>();
-  graph.relationships().stream().filter(e -> e.type() == EdgeType.NAVIGATES_TO && e.from().equals(component)).forEach(e -> targets.add(e.to()));
-  return targets;
- }
+  private static Set<String> targetsOf(ApplicationGraph graph, String screenId, String label) {
+    Map<String, GraphNode> nodes = new HashMap<>();
+    graph.nodes().forEach(n -> nodes.put(n.id(), n));
+    Set<String> owned = new HashSet<>();
+    graph.relationships().stream()
+        .filter(e -> e.type() == EdgeType.CONTAINS && e.from().equals(screenId))
+        .forEach(e -> owned.add(e.to()));
+    String component =
+        owned.stream()
+            .filter(id -> label.equals(nodes.get(id).name()))
+            .findFirst()
+            .orElseThrow(() -> new AssertionError("no " + label + " in " + screenId));
+    Set<String> targets = new TreeSet<>();
+    graph.relationships().stream()
+        .filter(e -> e.type() == EdgeType.NAVIGATES_TO && e.from().equals(component))
+        .forEach(e -> targets.add(e.to()));
+    return targets;
+  }
 
- @Test void everyNavigationFormSelectsTheVariantByItsQuery() throws Exception {
-  Files.writeString(root.resolve("App.tsx"), APP);
-  ApplicationGraph graph = new SpringBootAnalyzer().analyze(new ProjectScanner().scan(root));
-  List<GraphNode> signIn = graph.nodes().stream().filter(n -> n.type() == NodeType.SCREEN && "/signin".equals(n.attributes().get("route"))).toList();
-  assertEquals(2, signIn.size(), signIn.toString());
-  String plain = signIn.stream().filter(n -> !n.attributes().containsKey("entryQuery")).findFirst().orElseThrow().id();
-  String query = signIn.stream().filter(n -> n.attributes().containsKey("entryQuery")).findFirst().orElseThrow().id();
-  String elsewhere = graph.nodes().stream().filter(n -> n.type() == NodeType.SCREEN && "/elsewhere".equals(n.attributes().get("route"))).findFirst().orElseThrow().id();
-  Map<String, Set<String>> actual = new TreeMap<>(), expected = new TreeMap<>();
-  for (String label : List.of("Link callback", "Button callback", "Anchor callback", "Location callback")) { actual.put(label, targetsOf(graph, elsewhere, label)); expected.put(label, Set.of(query)); }
-  for (String label : List.of("Button plain", "Anchor other query")) { actual.put(label, targetsOf(graph, elsewhere, label)); expected.put(label, Set.of(plain)); }
-  assertEquals(expected, actual);
- }
+  @Test
+  void everyNavigationFormSelectsTheVariantByItsQuery() throws Exception {
+    Files.writeString(root.resolve("App.tsx"), APP);
+    ApplicationGraph graph = new SpringBootAnalyzer().analyze(new ProjectScanner().scan(root));
+    List<GraphNode> signIn =
+        graph.nodes().stream()
+            .filter(
+                n -> n.type() == NodeType.SCREEN && "/signin".equals(n.attributes().get("route")))
+            .toList();
+    assertEquals(2, signIn.size(), signIn.toString());
+    String plain =
+        signIn.stream()
+            .filter(n -> !n.attributes().containsKey("entryQuery"))
+            .findFirst()
+            .orElseThrow()
+            .id();
+    String query =
+        signIn.stream()
+            .filter(n -> n.attributes().containsKey("entryQuery"))
+            .findFirst()
+            .orElseThrow()
+            .id();
+    String elsewhere =
+        graph.nodes().stream()
+            .filter(
+                n ->
+                    n.type() == NodeType.SCREEN && "/elsewhere".equals(n.attributes().get("route")))
+            .findFirst()
+            .orElseThrow()
+            .id();
+    Map<String, Set<String>> actual = new TreeMap<>(), expected = new TreeMap<>();
+    for (String label :
+        List.of("Link callback", "Button callback", "Anchor callback", "Location callback")) {
+      actual.put(label, targetsOf(graph, elsewhere, label));
+      expected.put(label, Set.of(query));
+    }
+    for (String label : List.of("Button plain", "Anchor other query")) {
+      actual.put(label, targetsOf(graph, elsewhere, label));
+      expected.put(label, Set.of(plain));
+    }
+    assertEquals(expected, actual);
+  }
 }
