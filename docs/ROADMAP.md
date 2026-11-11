@@ -297,3 +297,8 @@
 
 - WP112：`StrutsProjectAnalyzer.java`（4,877 行、148 個成員）依功能拆成同一個 package 的 16 個檔案，只搬移不改邏輯；最大的檔案降為 587 行，`StrutsProjectAnalyzer` 剩下 75 行的分析流程，見 [ADR 0132](adr/0132-r41-split-struts-project-analyzer.md)（HC-001 第三段）。
 - 驗證：148 個成員搬移前後忽略空白相同（兩個方法參照改指新類別）；Maven 582（577 通過、5 略過）；拆分前後的 CLI 分析 11 個 fixtures 專案，197 個產物除來源路徑與 fingerprint 外相同。
+
+## R42 擷取樣式不含本機路徑
+
+- WP113：capture 把分析目錄裡的樣式資源 URL 記成 `st-preview-file:<相對路徑>`，`element-styles.json` 與樣式 ID 不再隨輸出目錄改變；報表端還原後沿用原本的路徑邊界檢查，報表不變，見 [ADR 0133](adr/0133-r42-output-relative-style-resources.md)（HC-009）。
+- 驗證：capture 87 個測試、Maven 584（579 通過、5 略過）；同一專案輸出到兩個目錄，`element-styles.json` 與報表逐位元組相同，報表也與修改前相同。

@@ -19,7 +19,7 @@
 | HC-002 | 低 | 26 處 `catch(Exception ignored){}` | 已重新評估，降為低 |
 | HC-007 | 低 | 沒有 Maven Wrapper；Node 套件沒宣告 `engines`；Playwright 版本綁住 CI 的作業系統版本 | 待辦 |
 | HC-008 | 低 | ADR 128 份，缺一份現況摘要 | 待辦 |
-| HC-009 | 低 | `element-styles.json` 含本機絕對路徑（R39 比對時發現） | 待辦 |
+| HC-009 | 低 | `element-styles.json` 含本機絕對路徑（R39 比對時發現） | 已完成（R42） |
 
 ## HC-001 [高] 程式碼過度壓縮，沒有格式化與 lint 工具
 
@@ -171,3 +171,5 @@ AGENTS.md §6 描述了 `AnalysisAdapter` 介面，但它只存在於文件。�
 ## HC-009 [低] 分析產物含本機絕對路徑
 
 R39 比對格式化前後的產物時發現：`static-preview/element-styles.json` 的 `background-image` 會寫入擷取當時的本機絕對路徑（例如 `url("file:///Users/<帳號>/…/analyze/<專案>/static-preview/assets/…")`），樣式 ID 是內容的雜湊，因此同一個專案輸出到不同目錄時，樣式 ID 也不同。單一 HTML 報表與 `viewer-documents.json` 不受影響（兩個目錄的結果逐位元組相同），所以本機路徑不會出現在交給需求方的報表裡。建議擷取時把這類 URL 改寫成相對於分析目錄的路徑。
+
+**進度**：R42 WP113 已完成，capture 改記 `st-preview-file:<相對路徑>`，報表端沿用原本的邊界檢查，見 [ADR 0133](adr/0133-r42-output-relative-style-resources.md)。
