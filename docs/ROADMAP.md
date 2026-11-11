@@ -312,3 +312,8 @@
 
 - WP115：`screentrace-js/react/analyzer.mjs`（3,878 行、64 個頂層宣告）依功能拆成 9 個模組，只搬移不改邏輯；`analyzer.mjs` 剩 366 行，最大的是 `screen-renderer.mjs`（1,908 行），見 [ADR 0135](adr/0135-r44-split-react-analyzer.md)（HC-001 第四段）。
 - 驗證：64 個宣告逐字相同；JS 180、capture 87 個測試全部通過；Maven 584（579 通過、5 略過）；拆分前後分析 React 測試專案 r19，27 個產物完全相同。
+
+## R45 CI 加上 Windows 與測試覆蓋率
+
+- WP116：根目錄 pom 加 `coverage` profile（JaCoCo 0.8.15，只報告不設門檻），CI 把各模組覆蓋率寫進 job summary 並上傳報告；新增 `windows` job，在 Windows 上執行完整 Java 測試，並以 `bin\screentrace.cmd analyze` 分析一個 fixture，見 [ADR 0136](adr/0136-r45-windows-ci-and-coverage.md)（HC-003）。
+- 驗證：本機 `-Pcoverage` 下 Maven 584（579 通過、5 略過），覆蓋率 summary 正確產生；Windows job 的結果以 PR 的 CI 為準。
