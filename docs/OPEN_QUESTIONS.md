@@ -454,3 +454,25 @@
   R  screentrace-viewer/test/r22-persona-comparison.e2e.mjs -> screentrace-viewer/test/r23-persona-page.e2e.mjs
   ```
 - 狀態：RESOLVED（2026-11-04）。git 的重新命名偵測把內容相近的刪除與新增檔案顯示為 R，屬預期行為；指示 v1.0 漏列此情況。決定：R23 指示 v1.1 第 3.3 節改列 R 狀態，並把 OQ-049 與 WP93 一起提交。
+
+## OQ-050 — WP104 套用 patch 後 Maven 驗證錯誤
+
+- 指令：`mvn -B clean verify`
+- 現象：`screentrace-parser-jsp` 的 `NodeProcessTreeTest.interruptingAnAnalysisStopsTheRealNodeBehindAShim` 發生錯誤，後續模組未執行；錯誤訊息不是指定例外的 `the real Node process starts behind the shim`。
+- 輸出：
+  ```text
+  Tests run: 1, Failures: 0, Errors: 1, Skipped: 0 -- in io.screentrace.parser.jsp.NodeProcessTreeTest
+  java.lang.RuntimeException: Operation not permitted
+      at java.base/java.lang.ProcessHandleImpl.getProcessPids0(Native Method)
+      at java.base/java.lang.ProcessHandleImpl.children(ProcessHandleImpl.java:456)
+      at java.base/java.lang.ProcessHandle.allProcesses(ProcessHandle.java:199)
+      at io.screentrace.parser.jsp.NodeProcessTreeTest.interruptingAnAnalysisStopsTheRealNodeBehindAShim(NodeProcessTreeTest.java:50)
+  [ERROR] Tests run: 120, Failures: 0, Errors: 1, Skipped: 0
+  [INFO] screentrace-parser-jsp ............................. FAILURE
+  [INFO] screentrace-adapter-spring ......................... SKIPPED
+  [INFO] screentrace-adapter-struts ......................... SKIPPED
+  [INFO] screentrace-report ................................. SKIPPED
+  [INFO] screentrace-cli .................................... SKIPPED
+  [INFO] BUILD FAILURE
+  ```
+- 狀態：RESOLVED（2026-11-11）。Codex sandbox 不允許列出其他程序：`ProcessHandle.allProcesses()` 與 `Process.descendants()` 都經由 `getProcessPids0(0, …)`，在 sandbox 內丟出 `Operation not permitted`。v1.0 的測試靠列出程序並讀取命令列來找 Node，正式程式碼的 `descendants()` 也沒有保護，在這種環境下會讓每次 JavaScript 分析在結束時丟出例外。決定（ADR 0125 R34-6）：正式程式碼在列出子孫程序失敗時仍結束直接子程序；測試改由兩個腳本自行寫入 PID、以 PID 查詢，並在無法列出程序的環境略過（JUnit assumption），由 PR CI 驗證；兩個腳本 60 秒後自行結束，失敗的測試不會再讓 Maven 等待。R34 指示 v1.1 把 OQ-050 與 WP104 一起提交。

@@ -73,12 +73,44 @@ public final class ReactGraphContribution {
      * stylesheets the bundle imports. The capture step turns it into static documents and screenshots.
      */
     public static void writePreview(ProjectInventory inventory, Path output) throws IOException, InterruptedException {
+        writePreview(inventory, output, PreviewPrefetch.NONE);
+    }
+
+    /**
+     * The preview pass started in the background before the graph is analyzed. Both passes read the same sources, so
+     * running this one alongside the graph pass instead of after it shortens an analysis by one whole pass, with the
+     * same result. Closing it stops a pass whose preview turned out not to be needed.
+     */
+    public record PreviewPrefetch(ProjectInventory inventory, java.util.concurrent.Future<JsonNode> result) implements AutoCloseable {
+        public static final PreviewPrefetch NONE = new PreviewPrefetch(null, null);
+        @Override public void close() { if (result != null) result.cancel(true); }
+    }
+
+    public static PreviewPrefetch prefetchPreview(ProjectInventory inventory) {
+        if (!applies(inventory)) return PreviewPrefetch.NONE;
+        var executor = java.util.concurrent.Executors.newSingleThreadExecutor(task -> {
+            var thread = new Thread(task, "react-preview-pass");
+            thread.setDaemon(true);
+            return thread;
+        });
+        try {
+            return new PreviewPrefetch(inventory, executor.submit(() -> analyze(inventory, true, new ArrayList<>())));
+        } finally {
+            executor.shutdown();
+        }
+    }
+
+    public static void writePreview(ProjectInventory inventory, Path output, PreviewPrefetch prefetch) throws IOException, InterruptedException {
         if (!applies(inventory)) return;
         JsonNode result;
         try {
-            result = analyze(inventory, true, new ArrayList<>());
+            result = prefetch.result() != null && prefetch.inventory() == inventory ? prefetch.result().get() : analyze(inventory, true, new ArrayList<>());
         } catch (InterruptedException error) {
             throw error;
+        } catch (java.util.concurrent.ExecutionException error) {
+            Throwable cause = error.getCause() == null ? error : error.getCause();
+            if (cause instanceof InterruptedException interrupted) throw interrupted;
+            throw new IOException("React 靜態預覽重建失敗：" + cause.getMessage(), cause);
         } catch (Exception error) {
             throw new IOException("React 靜態預覽重建失敗：" + error.getMessage(), error);
         }

@@ -102,7 +102,12 @@ public final class JavaScriptGraphContribution {
     try {
       var output=executor.submit(()->process.getInputStream().readAllBytes());try(var input=process.getOutputStream()){JSON.writeValue(input,request);}
       byte[] bytes=output.get(60,TimeUnit.SECONDS);if(!process.waitFor(5,TimeUnit.SECONDS)||process.exitValue()!=0)throw new IOException("AST 工具退出失敗");return JSON.readTree(bytes);
-    }finally{process.destroyForcibly();executor.shutdownNow();}
+    }finally{
+      // `node` may be a version-manager shim (Volta, asdf) that runs the real Node as its child; stop the whole tree,
+      // children first, so a cancelled or timed-out analysis leaves no Node process behind. A system that does not
+      // let us list processes (some sandboxes) still gets the direct child stopped.
+      try{process.descendants().forEach(ProcessHandle::destroyForcibly);}catch(RuntimeException listingNotPermitted){}
+      process.destroyForcibly();executor.shutdownNow();}
   }
   private static SourceLocation source(JsonNode item){return new SourceLocation(item.path("source").path("file").asText("."),item.path("source").path("line").asInt(1));}
   private static Confidence confidence(JsonNode item){return Confidence.valueOf(item.path("status").asText("UNRESOLVED"));}
