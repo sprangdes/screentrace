@@ -1020,7 +1020,10 @@ try {
       if (!previewV2 && elementCount > 50_000)
         throw new Error(`Rendered page element limit exceeded: ${elementCount}`);
       if (previewV2) {
-        const captured = await collectElementStyles(page, context, graph, screen.id, styleOptions);
+        const captured = await collectElementStyles(page, context, graph, screen.id, {
+          ...styleOptions,
+          outputUrl: pathToFileURL(output).href,
+        });
         Object.assign(styleCapture.styles, captured.styles);
         Object.assign(styleCapture.defaults, captured.defaults);
         styleCapture.diagnostics.push(...captured.diagnostics);

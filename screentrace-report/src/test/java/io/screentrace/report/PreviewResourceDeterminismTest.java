@@ -213,6 +213,46 @@ class PreviewResourceDeterminismTest {
   }
 
   @Test
+  void outputRelativeResourcesProduceTheSameReportAsAbsoluteFileUrls() throws Exception {
+    Path output = temp.resolve("output (relative)");
+    Path capture = fixture(output);
+    String original = Files.readString(capture),
+        inside = output.resolve("static-preview/assets/image.svg").toUri().toString();
+    var writer = new SingleHtmlAnalysisWriter();
+    byte[] absolute = Files.readAllBytes(writer.generate(graph(), output).path());
+    Files.writeString(
+        capture, original.replace(inside, "st-preview-file:static-preview/assets/image.svg"));
+    assertArrayEquals(absolute, Files.readAllBytes(writer.generate(graph(), output).path()));
+  }
+
+  @Test
+  void outputRelativeResourcesOutsideTheOutputAreRejectedWithoutLeakingTheirPaths()
+      throws Exception {
+    Path output = temp.resolve("output");
+    Path capture = fixture(output);
+    Files.writeString(temp.resolve("secret.svg"), "<svg/>");
+    String original = Files.readString(capture),
+        inside = output.resolve("static-preview/assets/image.svg").toUri().toString();
+    for (String unsafe :
+        List.of(
+            "st-preview-file:../secret.svg",
+            "st-preview-file:%2e%2e/secret.svg",
+            "st-preview-file:static-preview/../../secret.svg",
+            "st-preview-file:/Users/private/image.svg",
+            "st-preview-file://host/share/image.svg",
+            "st-preview-file:file:///Users/private/image.svg",
+            "st-preview-file:bad%ZZ/image.svg")) {
+      Files.writeString(capture, original.replace(inside, unsafe));
+      var error =
+          assertThrows(
+              java.io.IOException.class,
+              () -> new SingleHtmlAnalysisWriter().generate(graph(), output));
+      assertFalse(error.getMessage().contains(unsafe));
+      assertFalse(Files.exists(output.resolve("report/screentrace-report.html")));
+    }
+  }
+
+  @Test
   void quotedResourceUrisSupportParenthesesInTheActualOutputRoot() throws Exception {
     Path first = temp.resolve("output (one)"), second = temp.resolve("output (two)");
     fixture(first);

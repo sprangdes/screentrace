@@ -14,6 +14,25 @@ export function captureOptions(args) {
     maxStyleBytes: read('style-byte-limit', 16 * 1024 * 1024),
   };
 }
+/**
+ * Rewrites computed-style URLs under the analysis output (outputUrl, a file: URL of that folder) to
+ * `st-preview-file:` plus the output-relative part, so element-styles.json and its style IDs hold
+ * no local path (HC-009). Only an exact prefix at the start of a URL token is rewritten; anything
+ * else stays as captured. The report still resolves every reference against the output and rejects
+ * one that leaves it, so this is not a security boundary.
+ */
+export function portableResourceUrls(values, outputUrl) {
+  if (!outputUrl) return values;
+  const prefix = outputUrl.endsWith('/') ? outputUrl : outputUrl + '/';
+  const escaped = prefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const token = new RegExp(`(^|["'(\\s])${escaped}`, 'g');
+  return Object.fromEntries(
+    Object.entries(values).map(([key, value]) => [
+      key,
+      value.replace(token, (_, before) => before + 'st-preview-file:'),
+    ]),
+  );
+}
 /** Only component-unmapped operables; no inference of target behavior here. */
 export function unmappedReason(element, nodes = []) {
   if (
@@ -204,7 +223,10 @@ export async function collectElementStyles(
     const defaultId = `${namespace}:${element.tag}`,
       base = defaults[defaultId],
       delta = sorted(
-        Object.fromEntries(Object.entries(css).filter(([key, value]) => base[key] !== value)),
+        portableResourceUrls(
+          Object.fromEntries(Object.entries(css).filter(([key, value]) => base[key] !== value)),
+          options.outputUrl,
+        ),
       );
     const styleId = 'style:' + createHash('sha256').update(JSON.stringify(delta)).digest('hex');
     styles[styleId] = delta;
