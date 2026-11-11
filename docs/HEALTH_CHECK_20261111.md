@@ -11,7 +11,7 @@
 
 | 編號 | 優先 | 項目 | 狀態 |
 |---|---|---|---|
-| HC-001 | 高 | 程式碼過度壓縮，沒有格式化與 lint 工具 | 待決定做法 |
+| HC-001 | 高 | 程式碼過度壓縮，沒有格式化與 lint 工具 | Java 已完成（R39）；TS/JS 待辦 |
 | HC-003 | 高 | CI 沒跑到 7 個 capture 測試檔；只在 Linux 上測；沒有覆蓋率 | 測試已補進 CI；Windows 與覆蓋率待辦 |
 | HC-004 | 中 | 預覽擷取逐一畫面執行；R34 的 5 秒改善沒合併；Java 原始檔重複解析 | 待辦 |
 | HC-005 | 中 | Struts／JSP 有部分標記用 regex 解析 | 待辦 |
@@ -19,6 +19,7 @@
 | HC-002 | 低 | 26 處 `catch(Exception ignored){}` | 已重新評估，降為低 |
 | HC-007 | 低 | 沒有 Maven Wrapper；Node 套件沒宣告 `engines`；Playwright 版本綁住 CI 的作業系統版本 | 待辦 |
 | HC-008 | 低 | ADR 128 份，缺一份現況摘要 | 待辦 |
+| HC-009 | 低 | `element-styles.json` 含本機絕對路徑（R39 比對時發現） | 待辦 |
 
 ## HC-001 [高] 程式碼過度壓縮，沒有格式化與 lint 工具
 
@@ -49,6 +50,11 @@
 3. 再分批拆分 `StrutsProjectAnalyzer` 與 `react/analyzer.mjs`。
 
 **需要先決定**：格式化會改到幾乎每一個檔案，所有還沒合併的分支（包括 `feature/r34-analysis-performance-security`）之後都會大量衝突。要先處理掉這些分支，再挑時間一次做完。
+
+**進度**
+
+- R34（PR #85）與 R38（PR #84）合併後，R39 WP110 以 Spotless + google-java-format 1.24.0 重新排版全部 Java 原始碼與測試（220 個檔案），CI 加上格式檢查，見 [ADR 0130](adr/0130-r39-java-formatting.md)。
+- 待辦：TS/JS（`screentrace-js`、`screentrace-capture`、`screentrace-viewer`）的格式化；拆分 `StrutsProjectAnalyzer` 與 `react/analyzer.mjs`。
 
 ## HC-002 [低] 26 處吞掉例外
 
@@ -159,3 +165,7 @@ AGENTS.md §6 描述了 `AnalysisAdapter` 介面，但它只存在於文件。�
 ## HC-008 [低] 文件維護成本
 
 目前 `docs/adr/` 有 128 份 ADR，ROADMAP 也常有同一個 WP 驗證多次的紀錄，新人要讀很多份才知道現況。建議定期整理一份「目前有效的決策」摘要，並標出哪些 ADR 已被取代。
+
+## HC-009 [低] 分析產物含本機絕對路徑
+
+R39 比對格式化前後的產物時發現：`static-preview/element-styles.json` 的 `background-image` 會寫入擷取當時的本機絕對路徑（例如 `url("file:///Users/<帳號>/…/analyze/<專案>/static-preview/assets/…")`），樣式 ID 是內容的雜湊，因此同一個專案輸出到不同目錄時，樣式 ID 也不同。單一 HTML 報表與 `viewer-documents.json` 不受影響（兩個目錄的結果逐位元組相同），所以本機路徑不會出現在交給需求方的報表裡。建議擷取時把這類 URL 改寫成相對於分析目錄的路徑。

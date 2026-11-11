@@ -6,9 +6,13 @@ import io.screentrace.core.ApplicationGraph.SourceLocation;
 import java.util.List;
 
 /** Framework-neutral, deterministic contribution extracted from JSP-family source artifacts. */
-public record JspAnalysis(List<View> views, List<Interaction> interactions, List<Include> includes,
-                          List<TilesDefinition> tilesDefinitions, List<Diagnostic> diagnostics,
-                          java.util.Map<String, MarkupAnalysis> markup) {
+public record JspAnalysis(
+    List<View> views,
+    List<Interaction> interactions,
+    List<Include> includes,
+    List<TilesDefinition> tilesDefinitions,
+    List<Diagnostic> diagnostics,
+    java.util.Map<String, MarkupAnalysis> markup) {
   public JspAnalysis {
     views = List.copyOf(views);
     interactions = List.copyOf(interactions);
@@ -18,59 +22,153 @@ public record JspAnalysis(List<View> views, List<Interaction> interactions, List
     markup = java.util.Collections.unmodifiableMap(new java.util.TreeMap<>(markup));
   }
 
-  public JspAnalysis(List<View> views, List<Interaction> interactions, List<Include> includes,
-                     List<TilesDefinition> tilesDefinitions, List<Diagnostic> diagnostics) {
+  public JspAnalysis(
+      List<View> views,
+      List<Interaction> interactions,
+      List<Include> includes,
+      List<TilesDefinition> tilesDefinitions,
+      List<Diagnostic> diagnostics) {
     this(views, interactions, includes, tilesDefinitions, diagnostics, java.util.Map.of());
   }
 
-  public record View(String path, ViewKind kind, SourceLocation source,String displayName) {
-    public View(String path,ViewKind kind,SourceLocation source){this(path,kind,source,null);}
-  }
-
-  public enum ViewKind { JSP, JSPF, HTML }
-
-  public record Interaction(String viewPath, InteractionType type, String label, String target,
-                            String httpMethod, SourceLocation source, Confidence confidence,
-                            boolean submitsCurrentView, String originalExpression,
-                            List<io.screentrace.core.ApplicationGraph.AnalysisEvidence> definitionEvidence, String componentId) {
-    public Interaction(String viewPath, InteractionType type, String label, String target,
-                       String httpMethod, SourceLocation source, Confidence confidence, boolean submitsCurrentView,
-                       String originalExpression, List<io.screentrace.core.ApplicationGraph.AnalysisEvidence> definitionEvidence) {
-      this(viewPath,type,label,target,httpMethod,source,confidence,submitsCurrentView,originalExpression,definitionEvidence,null);
-    }
-    public Interaction { definitionEvidence = List.copyOf(definitionEvidence); }
-    public Interaction(String viewPath, InteractionType type, String label, String target,
-                       String httpMethod, SourceLocation source, Confidence confidence, boolean submitsCurrentView) {
-      this(viewPath,type,label,target,httpMethod,source,confidence,submitsCurrentView,target,List.of());
+  public record View(String path, ViewKind kind, SourceLocation source, String displayName) {
+    public View(String path, ViewKind kind, SourceLocation source) {
+      this(path, kind, source, null);
     }
   }
 
-  /** Semantic interaction classification; presentation markup is retained separately by consumers. */
+  public enum ViewKind {
+    JSP,
+    JSPF,
+    HTML
+  }
+
+  public record Interaction(
+      String viewPath,
+      InteractionType type,
+      String label,
+      String target,
+      String httpMethod,
+      SourceLocation source,
+      Confidence confidence,
+      boolean submitsCurrentView,
+      String originalExpression,
+      List<io.screentrace.core.ApplicationGraph.AnalysisEvidence> definitionEvidence,
+      String componentId) {
+    public Interaction(
+        String viewPath,
+        InteractionType type,
+        String label,
+        String target,
+        String httpMethod,
+        SourceLocation source,
+        Confidence confidence,
+        boolean submitsCurrentView,
+        String originalExpression,
+        List<io.screentrace.core.ApplicationGraph.AnalysisEvidence> definitionEvidence) {
+      this(
+          viewPath,
+          type,
+          label,
+          target,
+          httpMethod,
+          source,
+          confidence,
+          submitsCurrentView,
+          originalExpression,
+          definitionEvidence,
+          null);
+    }
+
+    public Interaction {
+      definitionEvidence = List.copyOf(definitionEvidence);
+    }
+
+    public Interaction(
+        String viewPath,
+        InteractionType type,
+        String label,
+        String target,
+        String httpMethod,
+        SourceLocation source,
+        Confidence confidence,
+        boolean submitsCurrentView) {
+      this(
+          viewPath,
+          type,
+          label,
+          target,
+          httpMethod,
+          source,
+          confidence,
+          submitsCurrentView,
+          target,
+          List.of());
+    }
+  }
+
+  /**
+   * Semantic interaction classification; presentation markup is retained separately by consumers.
+   */
   public enum InteractionType {
-    NAVIGATION, UI_STATE_CHANGE, API_TRIGGER, FORM_SUBMIT, PLACEHOLDER, ANCHOR, UNKNOWN
+    NAVIGATION,
+    UI_STATE_CHANGE,
+    API_TRIGGER,
+    FORM_SUBMIT,
+    PLACEHOLDER,
+    ANCHOR,
+    UNKNOWN
   }
 
-  public record Include(String sourceViewPath, String targetPath, SourceLocation source,
-                        Confidence confidence, String guard, boolean repeated) {
-    public Include(String sourceViewPath,String targetPath,SourceLocation source,Confidence confidence,String guard) {
-      this(sourceViewPath,targetPath,source,confidence,guard,false);
+  public record Include(
+      String sourceViewPath,
+      String targetPath,
+      SourceLocation source,
+      Confidence confidence,
+      String guard,
+      boolean repeated) {
+    public Include(
+        String sourceViewPath,
+        String targetPath,
+        SourceLocation source,
+        Confidence confidence,
+        String guard) {
+      this(sourceViewPath, targetPath, source, confidence, guard, false);
     }
-    public Include(String sourceViewPath,String targetPath,SourceLocation source,Confidence confidence) {
-      this(sourceViewPath,targetPath,source,confidence,null);
+
+    public Include(
+        String sourceViewPath, String targetPath, SourceLocation source, Confidence confidence) {
+      this(sourceViewPath, targetPath, source, confidence, null);
     }
   }
 
-  public record TilesDefinition(String name, String template, List<TilesAttribute> attributes,
-                                SourceLocation source, String parent) {
-    public TilesDefinition { attributes = List.copyOf(attributes); }
-    public TilesDefinition(String name,String template,List<TilesAttribute> attributes,SourceLocation source) {
-      this(name,template,attributes,source,"");
+  public record TilesDefinition(
+      String name,
+      String template,
+      List<TilesAttribute> attributes,
+      SourceLocation source,
+      String parent) {
+    public TilesDefinition {
+      attributes = List.copyOf(attributes);
+    }
+
+    public TilesDefinition(
+        String name, String template, List<TilesAttribute> attributes, SourceLocation source) {
+      this(name, template, attributes, source, "");
     }
   }
 
-  /** A put attribute; {@code list} holds the values of a put-list-attribute / putList, otherwise null. */
+  /**
+   * A put attribute; {@code list} holds the values of a put-list-attribute / putList, otherwise
+   * null.
+   */
   public record TilesAttribute(String name, String value, List<String> list) {
-    public TilesAttribute { list = list == null ? null : List.copyOf(list); }
-    public TilesAttribute(String name, String value) { this(name, value, null); }
+    public TilesAttribute {
+      list = list == null ? null : List.copyOf(list);
+    }
+
+    public TilesAttribute(String name, String value) {
+      this(name, value, null);
+    }
   }
 }

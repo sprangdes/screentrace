@@ -1,7 +1,7 @@
 package io.screentrace.parser.jsp;
 
-import java.util.ArrayList;
 import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -12,12 +12,19 @@ public final class MarkupTag {
   private final String name;
   private final Map<String, String> attributes;
   private final int line;
-  private final Map<String,Integer> attributeLines;
+  private final Map<String, Integer> attributeLines;
   private final int end;
   private final int start;
   private final boolean closing;
 
-  private MarkupTag(String name, Map<String, String> attributes, int line, int start, int end, boolean closing, Map<String,Integer> attributeLines) {
+  private MarkupTag(
+      String name,
+      Map<String, String> attributes,
+      int line,
+      int start,
+      int end,
+      boolean closing,
+      Map<String, Integer> attributeLines) {
     this.name = name;
     this.attributes = attributes;
     this.line = line;
@@ -28,21 +35,30 @@ public final class MarkupTag {
   }
 
   public static List<MarkupTag> scan(String source) {
-    return scan(source,false);
+    return scan(source, false);
   }
 
-  static List<MarkupTag> scanForAnchors(String source) {return scan(source,true);}
+  static List<MarkupTag> scanForAnchors(String source) {
+    return scan(source, true);
+  }
 
-  private static List<MarkupTag> scan(String source,boolean anchors) {
-    List<MarkupTag> tags = new ArrayList<>();ArrayDeque<String> exampleContainers=new ArrayDeque<>();
+  private static List<MarkupTag> scan(String source, boolean anchors) {
+    List<MarkupTag> tags = new ArrayList<>();
+    ArrayDeque<String> exampleContainers = new ArrayDeque<>();
     int line = 1, lineCursor = 0;
     for (int start = 0; start < source.length(); start++) {
-      if ((source.startsWith("${",start) || source.startsWith("#{",start))) {
-        int close=endOfExpression(source,start+2);if(close<0)break;start=close;continue;
+      if ((source.startsWith("${", start) || source.startsWith("#{", start))) {
+        int close = endOfExpression(source, start + 2);
+        if (close < 0) break;
+        start = close;
+        continue;
       }
-      if(source.charAt(start)!='<')continue;
-      if(anchors && source.startsWith("<![CDATA[",start)) {
-        int close=source.indexOf("]]>",start+9);if(close<0)break;start=close+2;continue;
+      if (source.charAt(start) != '<') continue;
+      if (anchors && source.startsWith("<![CDATA[", start)) {
+        int close = source.indexOf("]]>", start + 9);
+        if (close < 0) break;
+        start = close + 2;
+        continue;
       }
       if (source.startsWith("<!--", start) || source.startsWith("<%--", start)) {
         String delimiter = source.startsWith("<!--", start) ? "-->" : "--%>";
@@ -62,20 +78,29 @@ public final class MarkupTag {
       while (lineCursor < start) if (source.charAt(lineCursor++) == '\n') line++;
       String body = source.substring(start + 1, end).trim();
       MarkupTag tag = parse(body, line, start, end);
-      boolean outsideExample=exampleContainers.isEmpty();
+      boolean outsideExample = exampleContainers.isEmpty();
       if (tag != null) {
-        String name=tag.name().toLowerCase(Locale.ROOT);boolean example=name.equals("pre")||name.equals("code");
-        if(outsideExample) {tags.add(tag);if(example&&!tag.closing())exampleContainers.push(name);}
-        else if(example) {
-          if(tag.closing()) {
-            while(!exampleContainers.isEmpty())if(exampleContainers.pop().equals(name))break;
-            if(exampleContainers.isEmpty())tags.add(tag);
+        String name = tag.name().toLowerCase(Locale.ROOT);
+        boolean example = name.equals("pre") || name.equals("code");
+        if (outsideExample) {
+          tags.add(tag);
+          if (example && !tag.closing()) exampleContainers.push(name);
+        } else if (example) {
+          if (tag.closing()) {
+            while (!exampleContainers.isEmpty()) if (exampleContainers.pop().equals(name)) break;
+            if (exampleContainers.isEmpty()) tags.add(tag);
           } else exampleContainers.push(name);
         }
       }
       start = end;
-      if (outsideExample&&tag != null && !tag.closing() && (tag.name().equalsIgnoreCase("script") || tag.name().equalsIgnoreCase("style"))) {
-        int close = source.toLowerCase(Locale.ROOT).indexOf("</" + tag.name().toLowerCase(Locale.ROOT), end + 1);
+      if (outsideExample
+          && tag != null
+          && !tag.closing()
+          && (tag.name().equalsIgnoreCase("script") || tag.name().equalsIgnoreCase("style"))) {
+        int close =
+            source
+                .toLowerCase(Locale.ROOT)
+                .indexOf("</" + tag.name().toLowerCase(Locale.ROOT), end + 1);
         if (close < 0) break;
         start = close - 1;
       }
@@ -83,23 +108,49 @@ public final class MarkupTag {
     return tags;
   }
 
-  public String name() { return name; }
-  public int line() { return line; }
-  public int attributeLine(String name) { return attributeLines.getOrDefault(name.toLowerCase(Locale.ROOT),line); }
-  public int end() { return end; }
-  public int start() { return start; }
-  public boolean closing() { return closing; }
-  public Map<String, String> attributes() { return Map.copyOf(attributes); }
-  public String attribute(String name) { return attributes.get(name.toLowerCase(Locale.ROOT)); }
+  public String name() {
+    return name;
+  }
 
-  private static int endOfExpression(String source,int start) {
-    int depth=1;char quote=0;
-    for(int i=start;i<source.length();i++) {
-      char value=source.charAt(i);
-      if(quote!=0) {if(value=='\\')i++;else if(value==quote)quote=0;}
-      else if(value=='\''||value=='"')quote=value;
-      else if(value=='{')depth++;
-      else if(value=='}'&&--depth==0)return i;
+  public int line() {
+    return line;
+  }
+
+  public int attributeLine(String name) {
+    return attributeLines.getOrDefault(name.toLowerCase(Locale.ROOT), line);
+  }
+
+  public int end() {
+    return end;
+  }
+
+  public int start() {
+    return start;
+  }
+
+  public boolean closing() {
+    return closing;
+  }
+
+  public Map<String, String> attributes() {
+    return Map.copyOf(attributes);
+  }
+
+  public String attribute(String name) {
+    return attributes.get(name.toLowerCase(Locale.ROOT));
+  }
+
+  private static int endOfExpression(String source, int start) {
+    int depth = 1;
+    char quote = 0;
+    for (int i = start; i < source.length(); i++) {
+      char value = source.charAt(i);
+      if (quote != 0) {
+        if (value == '\\') i++;
+        else if (value == quote) quote = 0;
+      } else if (value == '\'' || value == '"') quote = value;
+      else if (value == '{') depth++;
+      else if (value == '}' && --depth == 0) return i;
     }
     return -1;
   }
@@ -111,7 +162,10 @@ public final class MarkupTag {
       if (quote != 0) {
         if (current == '<' && (source.startsWith("<%", index) || source.startsWith("<", index))) {
           int nested = nestedEnd(source, index);
-          if (nested >= 0) { index = nested; continue; }
+          if (nested >= 0) {
+            index = nested;
+            continue;
+          }
         }
         if (current == quote) quote = 0;
       } else if (current == '\'' || current == '"') quote = current;
@@ -137,26 +191,44 @@ public final class MarkupTag {
     boolean closing = body.startsWith("/");
     if (closing) body = body.substring(1).trim();
     int split = 0;
-    while (split < body.length() && !Character.isWhitespace(body.charAt(split)) && body.charAt(split) != '/') split++;
+    while (split < body.length()
+        && !Character.isWhitespace(body.charAt(split))
+        && body.charAt(split) != '/') split++;
     String name = body.substring(0, split);
-    Map<String,Integer> locations=new LinkedHashMap<>();
-    int attributeBase=line+(int)body.substring(0,split).chars().filter(c->c=='\n').count();
-    return new MarkupTag(name, attributes(body.substring(split),attributeBase,locations), line, start, end, closing,locations);
+    Map<String, Integer> locations = new LinkedHashMap<>();
+    int attributeBase =
+        line + (int) body.substring(0, split).chars().filter(c -> c == '\n').count();
+    return new MarkupTag(
+        name,
+        attributes(body.substring(split), attributeBase, locations),
+        line,
+        start,
+        end,
+        closing,
+        locations);
   }
 
-  private static Map<String, String> attributes(String body, int baseLine, Map<String,Integer> locations) {
+  private static Map<String, String> attributes(
+      String body, int baseLine, Map<String, Integer> locations) {
     Map<String, String> values = new LinkedHashMap<>();
-    int lineCursor=0,currentLine=baseLine;
-    for (int index = 0; index < body.length();) {
-      while (index < body.length() && (Character.isWhitespace(body.charAt(index)) || body.charAt(index) == '/')) index++;
+    int lineCursor = 0, currentLine = baseLine;
+    for (int index = 0; index < body.length(); ) {
+      while (index < body.length()
+          && (Character.isWhitespace(body.charAt(index)) || body.charAt(index) == '/')) index++;
       int nameStart = index;
-      while (index < body.length() && !Character.isWhitespace(body.charAt(index)) && body.charAt(index) != '=' && body.charAt(index) != '/') index++;
+      while (index < body.length()
+          && !Character.isWhitespace(body.charAt(index))
+          && body.charAt(index) != '='
+          && body.charAt(index) != '/') index++;
       if (nameStart == index) break;
       String name = body.substring(nameStart, index).toLowerCase(Locale.ROOT);
-      while(lineCursor<nameStart) if(body.charAt(lineCursor++)=='\n')currentLine++;
-      locations.put(name,currentLine);
+      while (lineCursor < nameStart) if (body.charAt(lineCursor++) == '\n') currentLine++;
+      locations.put(name, currentLine);
       while (index < body.length() && Character.isWhitespace(body.charAt(index))) index++;
-      if (index >= body.length() || body.charAt(index) != '=') { values.put(name, ""); continue; }
+      if (index >= body.length() || body.charAt(index) != '=') {
+        values.put(name, "");
+        continue;
+      }
       index++;
       while (index < body.length() && Character.isWhitespace(body.charAt(index))) index++;
       if (index >= body.length()) break;
@@ -168,7 +240,10 @@ public final class MarkupTag {
         while (index < body.length() && body.charAt(index) != quote) {
           if (body.charAt(index) == '<') {
             int nested = nestedEnd(body, index);
-            if (nested >= 0) { index = nested + 1; continue; }
+            if (nested >= 0) {
+              index = nested + 1;
+              continue;
+            }
           }
           index++;
         }
@@ -183,5 +258,4 @@ public final class MarkupTag {
     }
     return values;
   }
-
 }

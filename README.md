@@ -134,6 +134,12 @@ npm --prefix screentrace-viewer run build
 mvn clean verify
 ```
 
+Java 原始碼與測試以 google-java-format 排版，CI 會檢查；修改 Java 後執行下列指令重新排版（fixtures 與測試資源不在範圍內）：
+
+```bash
+mvn com.diffplug.spotless:spotless-maven-plugin:apply
+```
+
 分析產物是執行結果，應維持在設定的分析結果根目錄，不應提交到 ScreenTrace 原始碼版本庫。
 
 ### 依賴安全檢查

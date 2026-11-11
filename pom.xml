@@ -73,6 +73,25 @@
             </formats>
           </configuration>
         </plugin>
+        <!-- Source formatting (HC-001). Not bound to any lifecycle phase, so `mvn verify` never downloads it;
+             CI runs `mvn com.diffplug.spotless:spotless-maven-plugin:check`, and
+             `mvn com.diffplug.spotless:spotless-maven-plugin:apply` reformats. Fixtures and test resources are excluded. -->
+        <plugin>
+          <groupId>com.diffplug.spotless</groupId>
+          <artifactId>spotless-maven-plugin</artifactId>
+          <version>2.43.0</version>
+          <configuration>
+            <java>
+              <includes>
+                <include>src/main/java/**/*.java</include>
+                <include>src/test/java/**/*.java</include>
+              </includes>
+              <googleJavaFormat>
+                <version>1.24.0</version>
+              </googleJavaFormat>
+            </java>
+          </configuration>
+        </plugin>
         <plugin>
           <artifactId>maven-surefire-plugin</artifactId>
           <version>3.2.5</version>
