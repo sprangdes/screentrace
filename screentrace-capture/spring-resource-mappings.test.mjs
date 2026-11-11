@@ -15,33 +15,55 @@ async function fixture(xml) {
 }
 
 test('discovers a servlet-webapp mvc:resources mapping', async () => {
-  const { root, webRoot } = await fixture('<mvc:resources mapping="/resources/**" location="/WEB-INF/resources/"/>');
+  const { root, webRoot } = await fixture(
+    '<mvc:resources mapping="/resources/**" location="/WEB-INF/resources/"/>',
+  );
   const mappings = await discoverSpringResourceMappings(root, webRoot, readFile);
-  assert.deepEqual(mappings, [{ urlPrefix: '/resources/', assetKey: 'resources', sourceDir: path.join(webRoot, 'WEB-INF/resources') }]);
+  assert.deepEqual(mappings, [
+    {
+      urlPrefix: '/resources/',
+      assetKey: 'resources',
+      sourceDir: path.join(webRoot, 'WEB-INF/resources'),
+    },
+  ]);
 });
 
 test('supports reversed attributes and multiple mappings', async () => {
-  const { root, webRoot } = await fixture('<mvc:resources location="/WEB-INF/assets/" mapping="/assets/**"/>');
+  const { root, webRoot } = await fixture(
+    '<mvc:resources location="/WEB-INF/assets/" mapping="/assets/**"/>',
+  );
   const mappings = await discoverSpringResourceMappings(root, webRoot, readFile);
-  assert.deepEqual(mappings, [{ urlPrefix: '/assets/', assetKey: 'assets', sourceDir: path.join(webRoot, 'WEB-INF/assets') }]);
+  assert.deepEqual(mappings, [
+    { urlPrefix: '/assets/', assetKey: 'assets', sourceDir: path.join(webRoot, 'WEB-INF/assets') },
+  ]);
 });
 
 test('keeps supported servlet and classpath locations from a comma-separated mapping', async () => {
-  const { root, webRoot } = await fixture('<mvc:resources mapping="/static/**" location="/WEB-INF/static/, classpath:/static/"/>');
+  const { root, webRoot } = await fixture(
+    '<mvc:resources mapping="/static/**" location="/WEB-INF/static/, classpath:/static/"/>',
+  );
   const mappings = await discoverSpringResourceMappings(root, webRoot, readFile);
   assert.deepEqual(mappings, [
     { urlPrefix: '/static/', assetKey: 'static', sourceDir: path.join(webRoot, 'WEB-INF/static') },
-    { urlPrefix: '/static/', assetKey: 'static', sourceDir: path.join(root, 'src/main/resources/static') }
+    {
+      urlPrefix: '/static/',
+      assetKey: 'static',
+      sourceDir: path.join(root, 'src/main/resources/static'),
+    },
   ]);
 });
 
 test('rejects locations that escape the analyzed project', async () => {
-  const { root, webRoot } = await fixture('<mvc:resources mapping="/assets/**" location="/WEB-INF/../../../../../../tmp"/>');
+  const { root, webRoot } = await fixture(
+    '<mvc:resources mapping="/assets/**" location="/WEB-INF/../../../../../../tmp"/>',
+  );
   assert.deepEqual(await discoverSpringResourceMappings(root, webRoot, readFile), []);
 });
 
 test('rejects a resource location symlinked outside the project', async () => {
-  const { root, webRoot } = await fixture('<mvc:resources mapping="/assets/**" location="/linked/"/>');
+  const { root, webRoot } = await fixture(
+    '<mvc:resources mapping="/assets/**" location="/linked/"/>',
+  );
   const outside = await mkdtemp(path.join(os.tmpdir(), 'screentrace-resource-outside-'));
   await symlink(outside, path.join(webRoot, 'linked'));
   assert.deepEqual(await discoverSpringResourceMappings(root, webRoot, readFile), []);

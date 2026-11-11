@@ -1,2 +1,15 @@
-import test from 'node:test';import {checkRoutes} from './overview-routes.mjs';import assert from 'node:assert/strict';import {ownModule} from './module.mjs';import {flowFixture} from './wp23-fixture.mjs';
-test('WP24 enlarged cards keep every cyclic and self-loop route in the gutters',async()=>{const map=await ownModule('map'),m=await ownModule('overview'),ids=['a','b','c','d','e','f'],edges=ids.flatMap(from=>ids.map(to=>[from,to])),index=map.indexGraph(flowFixture(ids,edges).graph),layout=m.flowLayout(index);checkRoutes(layout);assert.ok(layout.routes.length===index.relations.length);});
+import test from 'node:test';
+import { checkRoutes } from './overview-routes.mjs';
+import assert from 'node:assert/strict';
+import { ownModule } from './module.mjs';
+import { flowFixture } from './wp23-fixture.mjs';
+test('WP24 enlarged cards keep every cyclic and self-loop route in the gutters', async () => {
+  const map = await ownModule('map'),
+    m = await ownModule('overview'),
+    ids = ['a', 'b', 'c', 'd', 'e', 'f'],
+    edges = ids.flatMap((from) => ids.map((to) => [from, to])),
+    index = map.indexGraph(flowFixture(ids, edges).graph),
+    layout = m.flowLayout(index);
+  checkRoutes(layout);
+  assert.ok(layout.routes.length === index.relations.length);
+});
