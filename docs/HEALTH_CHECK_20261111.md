@@ -109,7 +109,7 @@ Java 主程式有 26 處 `catch(Exception ignored){}`，依用途分成四類：
 - 加一個 Windows runner，至少跑 CLI 的路徑處理測試與一次完整分析。
 - 加上 JaCoCo 覆蓋率報告，先只產出報告、不設門檻。
 
-**進度**：R45 WP116 加上 Windows job 與 JaCoCo 覆蓋率報告，見 [ADR 0136](adr/0136-r45-windows-ci-and-coverage.md)。
+**進度**：R45 WP116 加上 Windows job 與 JaCoCo 覆蓋率報告；Windows job 第一次執行就找到 5 個 Windows 產品問題並已修正，見 [ADR 0136](adr/0136-r45-windows-ci-and-coverage.md)。
 
 ## HC-004 [中] 分析效能
 

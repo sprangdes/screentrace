@@ -20,4 +20,14 @@
 ## 後果
 
 - 本機（Linux）以 `-Pcoverage` 執行：Maven 584 個測試 579 通過、5 個依作業系統條件略過，與不加 profile 時相同。各模組行覆蓋率：adapter-spring 90.0%、adapter-struts 89.1%、core 82.0%、report 80.5%、scanner 76.9%、cli 70.7%、parser-jsp 55.0%。
-- Windows job 無法在開發 sandbox 執行，第一次結果以 PR 的 CI 為準；若 Windows 上有測試失敗，代表找到了真正的 Windows 問題，會在同一輪修正，不會略過測試。
+- Windows job 第一次執行時，前後找到並在本輪修正的問題（沒有略過任何測試）：
+  - 產品問題（Windows 使用者會遇到）：
+    1. `JspProjectParser.resolveInclude` 把 `<c:import url="https://…">` 或帶查詢字串的目標直接交給 `Path.resolve`；Windows 不接受 `:`、`?`，整個分析中斷。現在與 Linux 一樣視為找不到檔案。
+    2. `SpringMvcAnalyzer`、`SpringBootAnalyzer`、`ApiContractExtractor` 以 `Path.toString()` 產生畫面 ID 與來源位置，Windows 上是 `\`，與 JSP 元件的 `/` 對不上，圖驗證失敗。現在統一為 `/`（Struts adapter 原本就如此）。
+    3. 互動選單用 JLine 預設的 shell 式解析讀取答案，`\` 被當成跳脫字元、`'` 被當成未結束的引號：輸入的 Windows 路徑失去分隔符號。現在不解析跳脫與引號。
+    4. `UrlGraphContribution` 的家目錄遮蔽只比對 `user.home` 字串；`user.home` 是 symlink 或 8.3 短檔名時，真實路徑留在圖裡。現在連真實路徑一起遮蔽（任何平台都可能發生）。
+    5. `bin\screentrace.ps1` 在 `$ErrorActionPreference = 'Stop'` 下讀取 `java -version 2>&1`，Windows PowerShell 把 stderr 轉成錯誤紀錄而中止，啟動器在分析前就失敗。版本偵測改以函式內的 `Continue` 讀取文字。
+  - 測試本身不跨平台（只改測試）：Windows 不允許檔名含 `:`；golden 比對受平台換行影響；`/dev/null`；在任何平台模擬 macOS 指令卻寫死 `/` 路徑；Java 17 在 Windows 以平台編碼輸出到管線，中文變成 `?`。
+  - 第 3、4 項新增的測試在 Linux 上也能重現（修正前失敗、修正後通過）。
+- 驗證：PR CI 四個 job（含 `windows`）全部通過；Linux 上 Maven 測試數為 586（新增 2 個）。
+- 程式中仍有約 80 處把字串轉成 `Path`，沒有逐一人工審查；之後由 Windows CI 的測試把關。
