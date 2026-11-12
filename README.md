@@ -199,7 +199,7 @@ WAR context path 可在 `~/.screentrace/config.json` 加入 `contextPaths`，鍵
 node screentrace-capture/capture-static-jsp.mjs <target-project> <analysis-directory> --preview-v2
 ```
 
-每畫面的警告上限可用 `--style-element-limit=50000`、`--style-byte-limit=16777216` 調整；超量產生診斷，完整元素／樣式保留。安全路徑、來源檔大小與截圖硬限制仍生效，失敗明確標記。預設舊 capture 入口保留為歷史工具；正式 CLI 使用完整模式並執行 pack-preview 靜態封裝；不執行目標 JSP、Java 或 JavaScript。契約與限制見 [ADR 0018](docs/adr/0018-complete-reconstructed-preview.md)。
+每畫面的警告上限可用 `--style-element-limit=50000`、`--style-byte-limit=16777216` 調整；同時擷取的頁數可用 `--capture-concurrency=4`（1～32）調整，結果依畫面順序合併，與逐一擷取相同（[ADR 0138](docs/adr/0138-r47-concurrent-preview-capture.md)）；超量產生診斷，完整元素／樣式保留。安全路徑、來源檔大小與截圖硬限制仍生效，失敗明確標記。預設舊 capture 入口保留為歷史工具；正式 CLI 使用完整模式並執行 pack-preview 靜態封裝；不執行目標 JSP、Java 或 JavaScript。契約與限制見 [ADR 0018](docs/adr/0018-complete-reconstructed-preview.md)。
 
 ### 單檔檢視器建置
 
