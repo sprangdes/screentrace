@@ -6,6 +6,7 @@ import io.screentrace.core.ApplicationGraph.GraphNode;
 import io.screentrace.core.ApplicationGraph.Relationship;
 import io.screentrace.core.PrototypeModel;
 import java.util.ArrayList;
+import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -39,12 +40,13 @@ final class PrototypeModelGenerator {
   private static List<PrototypeModel.PrototypeComponent> components(
       ApplicationGraph graph, Map<String, PrototypeModel.PrototypeScreen> screens) {
     Map<String, GraphNode> nodesById = nodesById(graph);
+    Map<EdgeType, Map<String, Relationship>> firstFrom = firstRelationshipFrom(graph);
     List<PrototypeModel.PrototypeComponent> components = new ArrayList<>();
     int index = 0;
     for (Relationship contains : graph.relationships()) {
       GraphNode component = componentFor(contains, screens, nodesById);
       if (component != null) {
-        components.add(component(graph, screens, contains, component, index));
+        components.add(component(firstFrom, screens, contains, component, index));
         index++;
       }
     }
@@ -62,13 +64,13 @@ final class PrototypeModelGenerator {
   }
 
   private static PrototypeModel.PrototypeComponent component(
-      ApplicationGraph graph,
+      Map<EdgeType, Map<String, Relationship>> firstFrom,
       Map<String, PrototypeModel.PrototypeScreen> screens,
       Relationship contains,
       GraphNode component,
       int index) {
-    Relationship navigation = relationshipFrom(graph, EdgeType.NAVIGATES_TO, component.id());
-    Relationship request = relationshipFrom(graph, EdgeType.TRIGGERS, component.id());
+    Relationship navigation = relationshipFrom(firstFrom, EdgeType.NAVIGATES_TO, component.id());
+    Relationship request = relationshipFrom(firstFrom, EdgeType.TRIGGERS, component.id());
     PrototypeModel.PrototypeScreen owner = screens.get(contains.from());
     return new PrototypeModel.PrototypeComponent(
         "prototype:" + component.id(),
@@ -94,11 +96,19 @@ final class PrototypeModelGenerator {
     return nodes;
   }
 
-  private static Relationship relationshipFrom(ApplicationGraph graph, EdgeType type, String id) {
-    return graph.relationships().stream()
-        .filter(relationship -> relationship.type() == type && relationship.from().equals(id))
-        .findFirst()
-        .orElse(null);
+  /** The first relationship of each type from each node, in graph order (HC-004). */
+  static Map<EdgeType, Map<String, Relationship>> firstRelationshipFrom(ApplicationGraph graph) {
+    Map<EdgeType, Map<String, Relationship>> first = new EnumMap<>(EdgeType.class);
+    for (Relationship relationship : graph.relationships())
+      first
+          .computeIfAbsent(relationship.type(), type -> new HashMap<>())
+          .putIfAbsent(relationship.from(), relationship);
+    return first;
+  }
+
+  private static Relationship relationshipFrom(
+      Map<EdgeType, Map<String, Relationship>> firstFrom, EdgeType type, String id) {
+    return firstFrom.getOrDefault(type, Map.of()).get(id);
   }
 
   private static String targetScreen(

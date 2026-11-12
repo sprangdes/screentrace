@@ -41,9 +41,11 @@ final class JspTagFileExpander {
             0,
             bookmarks);
     Map<Integer, List<AnalysisEvidence>> byLine = new TreeMap<>();
-    for (MarkupTag tag : MarkupTag.scan(text)) {
+    List<MarkupTag> pageTags = MarkupTag.scan(text);
+    Map<String, String> pagePrefixes = prefixes(pageTags);
+    for (MarkupTag tag : pageTags) {
       if (tag.closing()) continue;
-      String file = tagFile(root, pagePath, text, tag.name());
+      String file = tagFile(root, pagePath, pagePrefixes, tag.name());
       if (file == null) continue;
       byLine.put(tag.line(), expanded.definitions().stream().distinct().toList());
     }
@@ -60,9 +62,9 @@ final class JspTagFileExpander {
       Map<String, String> inheritedPrefixes,
       int lineOffset,
       AnchorBookmarks bookmarks) {
-    Map<String, String> prefixes = new HashMap<>(inheritedPrefixes);
-    prefixes.putAll(prefixes(text));
     List<MarkupTag> tags = MarkupTag.scan(text);
+    Map<String, String> prefixes = new HashMap<>(inheritedPrefixes);
+    prefixes.putAll(prefixes(tags));
     StringBuilder out = new StringBuilder();
     List<AnalysisEvidence> evidence = new ArrayList<>();
     List<String> diagnostics = new ArrayList<>();
@@ -214,26 +216,25 @@ final class JspTagFileExpander {
   }
 
   private static int definitionLine(Path root, String sourcePath, String text) {
-    for (MarkupTag tag : MarkupTag.scan(text))
+    List<MarkupTag> tags = MarkupTag.scan(text);
+    Map<String, String> prefixes = prefixes(tags);
+    for (MarkupTag tag : tags)
       if (!tag.closing()
           && (MarkupAnalysis.kind(tag.name().toLowerCase(Locale.ROOT), tag.attributes()) != null
-              || tagFile(root, sourcePath, text, tag.name()) != null)) return tag.line();
+              || tagFile(root, sourcePath, prefixes, tag.name()) != null)) return tag.line();
     return 1;
   }
 
-  private static Map<String, String> prefixes(String text) {
+  /** Taglib prefixes declared with a tagdir; the caller scans the page once (HC-004). */
+  private static Map<String, String> prefixes(List<MarkupTag> tags) {
     Map<String, String> result = new HashMap<>();
-    for (MarkupTag tag : MarkupTag.scan(text))
+    for (MarkupTag tag : tags)
       if ((tag.name().equalsIgnoreCase("@taglib")
               || tag.name().equals("@") && tag.attribute("taglib") != null)
           && tag.attribute("prefix") != null
           && tag.attribute("tagdir") != null)
         result.put(tag.attribute("prefix"), tag.attribute("tagdir"));
     return result;
-  }
-
-  private static String tagFile(Path root, String sourcePath, String text, String tagName) {
-    return tagFile(root, sourcePath, prefixes(text), tagName);
   }
 
   private static String tagFile(

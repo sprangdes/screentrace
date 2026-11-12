@@ -13,7 +13,7 @@ public final class MarkupGraphContribution {
   public static ApplicationGraph enrich(ApplicationGraph graph, JspAnalysis jsp) {
     Map<String, GraphNode> nodes = new TreeMap<>();
     graph.nodes().forEach(n -> nodes.put(n.id(), n));
-    Map<String, Relationship> edges = new TreeMap<>();
+    RelationshipsByFrom edges = new RelationshipsByFrom();
     graph.relationships().forEach(e -> edges.put(e.id(), e));
     Map<String, Behavior> behaviors = new TreeMap<>();
     graph.behaviors().forEach(b -> behaviors.put(b.id(), b));
@@ -178,13 +178,12 @@ public final class MarkupGraphContribution {
                 ? BehaviorType.SUBMIT_FORM
                 : BehaviorType.NAVIGATE;
         List<Relationship> results =
-            edges.values().stream()
+            edges.from(trigger).stream()
                 .filter(
                     e ->
-                        e.from().equals(trigger)
-                            && (e.type() == EdgeType.TRIGGERS
-                                || (type == BehaviorType.NAVIGATE
-                                    && e.type() == EdgeType.NAVIGATES_TO)))
+                        (e.type() == EdgeType.TRIGGERS
+                            || (type == BehaviorType.NAVIGATE
+                                && e.type() == EdgeType.NAVIGATES_TO)))
                 .toList();
         List<String> endpoints =
             results.stream()
@@ -235,8 +234,8 @@ public final class MarkupGraphContribution {
       for (var c : markup.components())
         if (c.field() != null && isModelField(c) && c.formId() != null) {
           List<GraphNode> models =
-              edges.values().stream()
-                  .filter(e -> e.type() == EdgeType.BINDS_TO && e.from().equals(c.formId()))
+              edges.from(c.formId()).stream()
+                  .filter(e -> e.type() == EdgeType.BINDS_TO)
                   .map(e -> nodes.get(e.to()))
                   .filter(Objects::nonNull)
                   .filter(n -> n.type() == NodeType.FORM_MODEL)
@@ -394,7 +393,7 @@ public final class MarkupGraphContribution {
       boolean repeated,
       JspAnalysis jsp,
       Map<String, GraphNode> nodes,
-      Map<String, Relationship> edges,
+      RelationshipsByFrom edges,
       Map<String, Behavior> behaviors,
       Map<String, ValidationRule> rules,
       Set<String> stack) {
@@ -536,13 +535,9 @@ public final class MarkupGraphContribution {
     return false;
   }
 
-  private static boolean ownedBy(String screen, String component, Map<String, Relationship> edges) {
-    return edges.values().stream()
-        .anyMatch(
-            e ->
-                e.type() == EdgeType.CONTAINS
-                    && e.from().equals(screen)
-                    && e.to().equals(component));
+  private static boolean ownedBy(String screen, String component, RelationshipsByFrom edges) {
+    return edges.from(screen).stream()
+        .anyMatch(e -> e.type() == EdgeType.CONTAINS && e.to().equals(component));
   }
 
   private static String resolve(String source, String target, JspAnalysis jsp) {
@@ -573,7 +568,7 @@ public final class MarkupGraphContribution {
   }
 
   private static void putEdge(
-      Map<String, Relationship> edges,
+      RelationshipsByFrom edges,
       EdgeType type,
       String from,
       String to,
@@ -582,9 +577,7 @@ public final class MarkupGraphContribution {
       List<AnalysisEvidence> proof) {
     String id = ApplicationGraph.id(NodeType.COMPONENT, type + ":" + from + ":" + to);
     var existing =
-        edges.values().stream()
-            .filter(e -> e.type() == type && e.from().equals(from) && e.to().equals(to))
-            .findFirst();
+        edges.from(from).stream().filter(e -> e.type() == type && e.to().equals(to)).findFirst();
     if (existing.isPresent()) {
       id = existing.get().id();
       List<AnalysisEvidence> merged = new ArrayList<>(existing.get().evidence());

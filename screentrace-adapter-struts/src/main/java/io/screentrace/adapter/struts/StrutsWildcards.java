@@ -79,6 +79,10 @@ final class StrutsWildcards {
   }
 
   static WildcardMatch wildcardMatch(String pattern, String path, Mapping mapping) {
+    // Without '*' or '\\' the pattern below quotes every character, so it matches only itself;
+    // compare directly instead of compiling a regex for every mapping on every lookup (HC-004).
+    if (pattern.indexOf('*') < 0 && pattern.indexOf('\\') < 0)
+      return pattern.equals(path) ? new WildcardMatch(mapping, path, List.of()) : null;
     StringBuilder regex = new StringBuilder("^");
     int captures = 0;
     for (int i = 0; i < pattern.length(); i++) {

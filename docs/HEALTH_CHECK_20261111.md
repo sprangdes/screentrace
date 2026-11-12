@@ -13,7 +13,7 @@
 |---|---|---|---|
 | HC-001 | 高 | 程式碼過度壓縮，沒有格式化與 lint 工具 | 排版（R39、R40）與拆分大型檔案（R41、R44）已完成；lint 規則待辦 |
 | HC-003 | 高 | CI 沒跑到 7 個 capture 測試檔；只在 Linux 上測；沒有覆蓋率 | 測試已補進 CI（R38）；Windows 與覆蓋率已加入（R45） |
-| HC-004 | 中 | 預覽擷取逐一畫面執行；R34 的 5 秒改善沒合併；Java 原始檔重複解析 | 預覽擷取已完成（R47）；Java 線性搜尋熱點待辦（R48） |
+| HC-004 | 中 | 預覽擷取逐一畫面執行；R34 的 5 秒改善沒合併；Java 原始檔重複解析 | 已完成（R47 預覽擷取、R48 Java 線性搜尋）；120 秒擷取上限待決定 |
 | HC-005 | 中 | Struts／JSP 有部分標記用 regex 解析 | 已完成（R46）；`c:url` 前處理待辦 |
 | HC-006 | 中 | 框架 adapter 的選擇寫死在 if 判斷裡，沒有共同介面 | 刻意延後：等需要第三種框架時再做 |
 | HC-002 | 低 | 26 處 `catch(Exception ignored){}` | 已重新評估，降為低 |
@@ -137,6 +137,7 @@ Java 主程式有 26 處 `catch(Exception ignored){}`，依用途分成四類：
 - 修改前的量測：80 個畫面的合成 Struts 專案，預覽擷取要 170 秒，超過 CLI 的 120 秒上限，所有畫面都沒有預覽。其中 106 秒是把完整的 computed style 傳回 Node。
 - 已完成：樣式只傳回和預設值不同的屬性；同時開 4 個 page 擷取，結果依畫面順序合併。同一專案的擷取降為 48.7 秒，CLI 完整分析 91.3 秒且預覽完整；15 個 fixtures 的產物不變。
 - 重新評估：JFR 取樣中 JavaParser 只占 Java 端約 1.4%，重複解析不是瓶頸。Java 端 35 秒主要花在線性搜尋：`PrototypeModelGenerator.relationshipFrom`（約 29%）、`JspTagFileExpander` 每個 tag 重新掃描整頁的 taglib 宣告（約 15%）、`MarkupGraphContribution.putEdge` 與 `UrlGraphContribution`。改為處理這些熱點（R48）。
+- R48 WP119 已完成：上述熱點改用索引，合成專案的 Java 分析與報表由 35 秒降為 13.2 秒，產物不變；不建立跨模組的解析快取，見 [ADR 0139](adr/0139-r48-index-graph-lookups.md)。
 - 待辦：CLI 的預覽擷取上限固定 120 秒，畫面再多時仍可能整段逾時；是否依畫面數放寬，之後再決定。
 
 ## HC-005 [中] 部分標記用 regex 解析
