@@ -11,7 +11,15 @@ class ReservedEvidenceNameTest {
 
   @Test
   void reservedTargetNamesCannotImpersonateWorkspaceEvidence() throws Exception {
-    var file = root.resolve("workspace:config.json");
+    Path file;
+    try {
+      file = root.resolve("workspace:config.json");
+    } catch (InvalidPathException reservedByFilesystem) {
+      // Windows does not allow ':' in a file name, so no target file can carry the reserved
+      // prefix; the scanner's own check only matters where the file system accepts the name.
+      assertEquals("workspace:config.json", reservedByFilesystem.getInput());
+      return;
+    }
     Files.writeString(file, "{} ");
     assertThrows(
         java.io.IOException.class, () -> SafeProjectFiles.readUtf8Limited(root, file, 1024));
