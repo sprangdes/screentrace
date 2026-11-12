@@ -314,7 +314,9 @@ export function simplify(items, { canonical = false } = {}) {
     try {
       const f = formula(parse(item.text), item.truth, item.text);
       if (f.op === 'or') collect(f);
-    } catch {}
+    } catch {
+      // Text that is not an expression has no alternatives to collect.
+    }
   }
   for (const leaf of unique(leaves)) {
     const expression = leaf.raw ?? leaf.text,
@@ -339,7 +341,9 @@ export function simplify(items, { canonical = false } = {}) {
       let node;
       try {
         node = parse(item.text);
-      } catch {}
+      } catch {
+        // Text that is not an expression is kept as one condition below.
+      }
       if (node?.type === 'LogicalExpression' && node.operator === '||')
         next.push(
           ...reduceUnder(

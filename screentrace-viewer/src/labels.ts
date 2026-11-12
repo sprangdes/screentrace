@@ -195,7 +195,7 @@ const destinationsFor = (index: Index) => {
 };
 function documentContexts(
   index: Index,
-  screenId: string,
+  _screenId: string,
   document: Document | undefined,
   dynamicContent: boolean,
   targets: Map<string, Set<string>>,
@@ -317,7 +317,7 @@ function makeLabels(
   // Same-named buttons are numbered in the order they appear on the page; ones the preview does not show come last.
   const position = previewPositions(sourceFor(index).previewElements, screenId),
     order = nodes
-      .map((node, i) => i)
+      .map((_node, i) => i)
       .sort((a, b) => {
         const p = position.get(nodes[a].id),
           q = position.get(nodes[b].id);
@@ -443,8 +443,7 @@ export function previewRecordLabel(
   screenId: string,
   record: LabelPreviewRecord,
 ): string {
-  const source = sourceFor(index),
-    contexts = ensureScreenContexts(index, screenId),
+  const contexts = ensureScreenContexts(index, screenId),
     id = previewRecordId(record),
     tag = record.tag || 'div',
     kind =

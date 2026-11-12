@@ -11,7 +11,7 @@ const NAVIGATION_SEMANTIC_ATTRIBUTES = [
   'httpMethod',
 ] as const;
 export function navigationIdentity(
-  index: Index,
+  _index: Index,
   node: Node | undefined,
   to: string,
 ): string | undefined {

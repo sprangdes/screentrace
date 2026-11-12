@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { ownModule } from './module.mjs';
-import { fixture, node } from './fixture.mjs';
+import { node } from './fixture.mjs';
 import { flowFixture } from './wp23-fixture.mjs';
 export { checkRoutes as checkClear } from './overview-routes.mjs';
 import { checkRoutes } from './overview-routes.mjs';

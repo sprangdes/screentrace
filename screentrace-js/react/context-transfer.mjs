@@ -1,5 +1,5 @@
 import { parseExpression } from '@babel/parser';
-import { children, FUNCTIONS, text, line } from './modules.mjs';
+import { children, FUNCTIONS, line } from './modules.mjs';
 import { unwrap, externalName } from './values.mjs';
 import { atoms, unique, reduceUnder, simplify } from './audience.mjs';
 

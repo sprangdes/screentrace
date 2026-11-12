@@ -24,7 +24,7 @@ export function calleeName(node) {
 function splitSelector(selector) {
   if (typeof selector !== 'string' || selector.includes('${') || selector.includes('#{'))
     return null;
-  const parts = selector.trim().match(/(?:\[[^\]]*\]|[^\s\[])+/g);
+  const parts = selector.trim().match(/(?:\[[^\]]*\]|[^\s[])+/g);
   return parts?.length ? parts : null;
 }
 function matches(part, node) {

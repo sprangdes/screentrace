@@ -1004,10 +1004,8 @@ export function canvas(index: Index, payload: Payload, options: CanvasOptions): 
     lines.setAttribute('height', String(h));
     // Lines leave toward each destination and arrive from each source, in the directions the overview draws them.
     const relations = focusLines(index, id),
-      known = relations.filter((r) => !r.unresolved && r.to !== id),
       loops = relations.filter((r) => r.to === id),
       stubs = relations.filter((r) => r.unresolved);
-    const incoming = partitionNavigation(index).flows.filter((r) => r.to === id && r.from !== id);
     type Kind = 'known' | 'incoming' | 'loop' | 'unresolved';
     type Segment = {
       relation: FocusRelation;

@@ -107,7 +107,9 @@ if (previewV2) {
       webRoot = path.join(target, candidate);
       found = true;
       break;
-    } catch {}
+    } catch {
+      // Not a directory of the project: try the next web root name.
+    }
   }
   // A Maven submodule (oussamazoghlami/SpringStrutsHibernate: StrutsSpringExample/src/main/webapp) has no top-level web root;
   // when every screen view lies under one nested web root, that is the application's.
@@ -117,7 +119,9 @@ if (previewV2) {
       try {
         await resolveExistingDirectoryWithin(target, path.join(target, nested));
         webRoot = path.join(target, nested);
-      } catch {}
+      } catch {
+        // The nested web root is unusable; keep the default.
+      }
   }
 }
 const tagRoot = path.join(webRoot, 'WEB-INF/tags');

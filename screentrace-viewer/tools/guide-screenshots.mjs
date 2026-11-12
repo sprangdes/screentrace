@@ -6,7 +6,6 @@ import { fileURLToPath } from 'node:url';
 import { chromium } from '../../screentrace-capture/node_modules/playwright/index.mjs';
 import { simulationFixture } from '../test/wp26-fixture.mjs';
 import { fileFixture, node } from '../test/fixture.mjs';
-import { setDecision } from '../test/decision-controls.mjs';
 import { canonicalPng } from './png-canonical.mjs';
 
 const root = fileURLToPath(new URL('../../', import.meta.url));
@@ -39,7 +38,9 @@ export async function waitForGuideScreenshotReady(page) {
     for (const frame of document.querySelectorAll('iframe'))
       try {
         reset(frame.contentDocument);
-      } catch {}
+      } catch {
+        // A cross-origin frame cannot be reset; it keeps its state.
+      }
   });
   await page.waitForFunction(() => {
     const atOrigin = (doc) =>
@@ -208,7 +209,9 @@ async function main() {
     await context.addInitScript(() => {
       try {
         localStorage.clear();
-      } catch {}
+      } catch {
+        // Storage may be unavailable; nothing to clear then.
+      }
     });
     const page = await context.newPage(),
       requests = [];

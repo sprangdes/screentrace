@@ -109,7 +109,6 @@ export function setDecisionNote(
   noteArg?: DecisionNote,
 ): ReviewState {
   const notes = notesOf(state),
-    target = scope === 'screen' ? 'screens' : 'components',
     component = scope === 'component' ? (componentOrNote as string) : undefined,
     input = (scope === 'screen' ? componentOrNote : noteArg) as DecisionNote,
     clean = sanitizeDecisionNote(input),

@@ -1,3 +1,5 @@
+// Bundles injected into the page by addScriptTag (globalName) below.
+/* global inert, preview, simulation, coverage */
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { chromium } from '../../screentrace-capture/node_modules/playwright/index.mjs';

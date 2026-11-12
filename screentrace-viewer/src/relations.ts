@@ -1,5 +1,5 @@
 import { Index, Relation } from './map';
-import { Payload, Behavior } from './contracts';
+import { Payload } from './contracts';
 import { element, text } from './text';
 import { rootTrigger } from './usage';
 import { componentLabelsForScreen } from './labels';

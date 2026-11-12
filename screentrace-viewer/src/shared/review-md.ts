@@ -5,7 +5,6 @@ import { indexGraph } from '../map';
 import { screenBehaviors, rootTrigger } from '../usage';
 import {
   ReviewState,
-  emptyReview,
   validateReview,
   screenDecision,
   componentDecision,
@@ -14,7 +13,6 @@ import {
   deriveApiUsage,
   OverrideRecord,
   DecisionNote,
-  ReasonCode,
 } from './review';
 import { jsfLimitation } from '../unsupported-framework';
 export const fixedInstructions = `1. \`REMOVE\`:該畫面 / 元件不得遷移到新系統。

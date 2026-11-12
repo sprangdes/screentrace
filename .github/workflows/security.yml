@@ -38,6 +38,10 @@ jobs:
       # TypeScript / JavaScript must match Prettier (HC-001); run `npm --prefix screentrace-viewer run format` to fix.
       - name: Check TypeScript and JavaScript formatting
         run: npm --prefix screentrace-viewer run format:check
+      # JavaScript must pass ESLint's recommended rules (HC-001, ADR 0140); TypeScript is checked by
+      # `tsc` in the viewer build above (strict, noUnusedLocals, noUnusedParameters).
+      - name: Lint JavaScript
+        run: npm --prefix screentrace-viewer run lint
       - name: Install capture dependencies
         run: npm --prefix screentrace-capture ci
       - name: Install viewer test browsers

@@ -1,4 +1,4 @@
-import { parseModules, diagnostic, line } from './modules.mjs';
+import { parseModules, diagnostic } from './modules.mjs';
 import { Evaluator } from './values.mjs';
 import { atoms, unique, combinations, contradicts, simplify } from './audience.mjs';
 import { contextTransfers } from './context-transfer.mjs';
