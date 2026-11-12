@@ -489,13 +489,13 @@ final class StrutsControls {
   static String selectOptionValues(String source, MarkupTag select) {
     int end = source.toLowerCase(Locale.ROOT).indexOf("</select", select.end());
     if (end < 0) return "";
-    Matcher options =
-        Pattern.compile("(?is)<option\\b([^>]*)>").matcher(source.substring(select.end(), end));
     Set<String> values = new TreeSet<>();
-    while (options.find()) {
-      Matcher value =
-          Pattern.compile("(?is)\\bvalue\\s*=\\s*(['\"])(.*?)\\1").matcher(options.group(1));
-      if (value.find() && StrutsSources.literal(value.group(2))) values.add(value.group(2));
+    for (MarkupTag option : MarkupTag.scan(source.substring(select.end() + 1, end))) {
+      String value = option.attribute("value");
+      if (!option.closing()
+          && option.name().equalsIgnoreCase("option")
+          && value != null
+          && StrutsSources.literal(value)) values.add(value);
     }
     return String.join("\u001f", values);
   }
