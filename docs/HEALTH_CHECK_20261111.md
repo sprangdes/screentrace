@@ -18,7 +18,7 @@
 | HC-006 | 中 | 框架 adapter 的選擇寫死在 if 判斷裡，沒有共同介面 | 刻意延後：等需要第三種框架時再做 |
 | HC-002 | 低 | 26 處 `catch(Exception ignored){}` | 已完成（R50） |
 | HC-007 | 低 | 沒有 Maven Wrapper；Node 套件沒宣告 `engines`；Playwright 版本綁住 CI 的作業系統版本 | 已完成（R43） |
-| HC-008 | 低 | ADR 128 份，缺一份現況摘要 | 待辦 |
+| HC-008 | 低 | ADR 128 份，缺一份現況摘要 | 已完成（R51） |
 | HC-009 | 低 | `element-styles.json` 含本機絕對路徑（R39 比對時發現） | 已完成（R42） |
 
 ## HC-001 [高] 程式碼過度壓縮，沒有格式化與 lint 工具
@@ -186,6 +186,8 @@ AGENTS.md §6 描述了 `AnalysisAdapter` 介面，但它只存在於文件。�
 ## HC-008 [低] 文件維護成本
 
 目前 `docs/adr/` 有 128 份 ADR，ROADMAP 也常有同一個 WP 驗證多次的紀錄，新人要讀很多份才知道現況。建議定期整理一份「目前有效的決策」摘要，並標出哪些 ADR 已被取代。
+
+**進度**：R51 WP122 新增 [ADR 索引](adr/README.md)，依主題說明現況並標出被取代的 ADR；ROADMAP 是逐輪的歷史紀錄，不整理。見 [ADR 0142](adr/0142-r51-adr-index.md)。
 
 ## HC-009 [低] 分析產物含本機絕對路徑
 

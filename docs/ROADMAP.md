@@ -353,3 +353,8 @@
   見 [ADR 0141](adr/0141-r50-explained-catch-blocks.md)（HC-002）。
 - 驗證：15 個 fixtures 與 80 畫面合成專案的產物逐位元組相同；`EmptyCatchGuardTest` 在修改前失敗；Maven 599（594 通過、5 略過）。
 
+## R51 ADR 索引與現況摘要
+
+- WP122：新增 [`docs/adr/README.md`](adr/README.md)，依 12 個主題列出全部 142 份 ADR，每組先說明現況；只依明確證據標出「已被取代」（1 份）與「部分被取代」（26 份），各 ADR 內文不改；AGENTS.md 的流程加上先讀索引、新增 ADR 時更新索引，見 [ADR 0142](adr/0142-r51-adr-index.md)（HC-008）。
+- 驗證：141 份既有 ADR 與 ADR 0142 各出現一次；只改文件。
+

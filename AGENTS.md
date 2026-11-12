@@ -274,7 +274,7 @@ Before implementing a task:
    Read `docs/CODEX_INSTRUCTIONS.md` and `docs/REQUIREMENTS.md` when present; milestones M1–M4 in those instructions are complete; later work runs as rounds (R*) recorded in `docs/ROADMAP.md` with decisions in `docs/adr/`, and the stop conditions in CODEX_INSTRUCTIONS §0.3 still apply.
 2. Read `docs/PRODUCT_SPEC.md`.
 3. Read `docs/ARCHITECTURE.md`.
-4. Check `docs/ROADMAP.md` for the latest round and its status.
+4. Check `docs/ROADMAP.md` for the latest round and its status, and `docs/adr/README.md` for the current decisions by topic and which ADRs are superseded (ADR 0142); add each new ADR there.
 5. Inspect existing code before creating new abstractions.
 6. Keep changes scoped to the requested task.
 7. Add tests for newly introduced parsing or graph behavior.
