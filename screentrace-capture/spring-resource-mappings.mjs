@@ -1,16 +1,6 @@
-import { access, readdir } from 'node:fs/promises';
-import { constants } from 'node:fs';
+import { readdir } from 'node:fs/promises';
 import path from 'node:path';
 import { resolveExistingDirectoryWithin, resolveExistingFileWithin } from './safe-files.mjs';
-
-async function exists(directory) {
-  try {
-    await access(directory, constants.R_OK);
-    return true;
-  } catch {
-    return false;
-  }
-}
 
 function attributes(source) {
   const values = {};

@@ -26,7 +26,12 @@ export function endpointGroup(node: Node, index?: Index): EndpointGroup {
   }
   return 'API';
 }
-export function endpointAction(index: Index, node: Node, type: string, triggerId?: string): string {
+export function endpointAction(
+  index: Index,
+  node: Node,
+  type: string,
+  _triggerId?: string,
+): string {
   const path = node.attributes.path || node.attributes.route || node.name,
     method = node.attributes.httpMethod || node.attributes.method || 'ANY';
   if (type === 'SUBMIT_FORM') return `送出表單 → ${path}`;

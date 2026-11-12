@@ -328,9 +328,9 @@ export class Evaluator {
           case '!==':
             return lit(left.v !== right.v);
           case '==':
-            return lit(left.v == right.v); // eslint-disable-line eqeqeq
+            return lit(left.v == right.v);
           case '!=':
-            return lit(left.v != right.v); // eslint-disable-line eqeqeq
+            return lit(left.v != right.v);
           case '+':
             if (left.routerPathname || right.routerPathname) return unknown();
             return (typeof left.v === 'string' || typeof right.v === 'string') &&

@@ -337,3 +337,8 @@
 - 量測（sandbox，4 核心）：80 個畫面的合成專案，Java 分析與報表由 35 秒降為 13.2 秒，CLI 完整分析由 91.3 秒降為 78.4 秒；15 個 fixtures 在量測誤差內。
 - 驗證：15 個 fixtures 的 277 個產物、合成專案的全部產物都與修改前逐位元組相同；新增 4 個測試；Maven 598（593 通過、5 略過）。
 
+## R49 Lint 規則
+
+- WP120：JavaScript 以 ESLint 10.14.0 的建議規則檢查（`npm --prefix screentrace-viewer run lint`，CI 新增「Lint JavaScript」）；TypeScript 因 typescript-eslint 尚未支援 TypeScript 7，改在 `tsconfig.json` 開啟 `noUnusedLocals`、`noUnusedParameters`，由 viewer 建置的 `tsc` 檢查。修正 46 筆 JS 與 11 筆 TS 結果，都不改變行為；15 個空的 `catch` 加上說明。Java 的 lint 留待之後，見 [ADR 0140](adr/0140-r49-lint-rules.md)（HC-001 最後一段）。
+- 驗證：報表除內嵌的 `viewer.js` 外與修改前逐位元組相同，其他產物不變；JS 180、capture 93、viewer 單元 148、受影響的 e2e 15 個、Maven 598（593 通過、5 略過）。
+

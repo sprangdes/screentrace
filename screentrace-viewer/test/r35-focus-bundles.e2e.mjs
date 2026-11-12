@@ -188,7 +188,7 @@ test('R36 every margin label on a side has the same width and every line ends at
   try {
     const { page, errors } = await open(browser);
     await focus(page, 's5');
-    const box = await layerBox(page);
+    await layerBox(page);
     const labels = await page.locator('.focus-bundle').evaluateAll((n) => {
       const c = document.querySelector('.canvas').getBoundingClientRect();
       return n.map((x) => {

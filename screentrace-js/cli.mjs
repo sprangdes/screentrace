@@ -1,4 +1,3 @@
-import { parseSource } from './parser.mjs';
 import { analyze } from './analyzer.mjs';
 import { analyzeReact } from './react/analyzer.mjs';
 let input = '';

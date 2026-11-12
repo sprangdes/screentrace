@@ -1,5 +1,4 @@
 import path from 'node:path';
-import { readdir } from 'node:fs/promises';
 import { readUtf8Limited, resolveExistingFileWithin } from './safe-files.mjs';
 
 const attrs = (source) =>
@@ -48,7 +47,9 @@ export async function loadStrutsMessageCatalog(projectRoot, webRoot) {
       path.join(webRoot, 'WEB-INF/web.xml'),
       4 * 1024 * 1024,
     );
-  } catch {}
+  } catch {
+    // No readable web.xml: only the default struts-config.xml is read.
+  }
   const configs = new Set([path.join(webRoot, 'WEB-INF/struts-config.xml')]);
   for (const match of webXml.matchAll(
     /<param-name>\s*config(?:\/[^<]*)?\s*<\/param-name>\s*<param-value>\s*([^<]+)\s*<\/param-value>/gi,
@@ -68,7 +69,9 @@ export async function loadStrutsMessageCatalog(projectRoot, webRoot) {
           parameter = (item.parameter || '').replaceAll('.', '/');
         if (parameter) resources.push({ key: item.key || '', parameter });
       }
-    } catch {}
+    } catch {
+      // A missing or unreadable config declares no message resources.
+    }
   const bundles = new Map();
   for (const resource of resources) {
     if (bundles.has(resource.parameter)) continue;
@@ -92,7 +95,9 @@ export async function loadStrutsMessageCatalog(projectRoot, webRoot) {
           ),
         );
         break;
-      } catch {}
+      } catch {
+        // Try the next location of the bundle; none found leaves it empty.
+      }
     bundles.set(resource.parameter, values);
   }
   return {

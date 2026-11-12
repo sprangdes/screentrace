@@ -3,7 +3,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { chromium } from '../../screentrace-capture/node_modules/playwright/index.mjs';
-import { fileFixture, fixture, node } from './fixture.mjs';
+import { fileFixture, fixture } from './fixture.mjs';
 import { startReviewDownload } from './review-export.mjs';
 
 test('JSF analysis limit appears on the affected screen and Markdown §7 only', async () => {

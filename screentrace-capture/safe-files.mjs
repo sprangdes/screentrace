@@ -123,6 +123,7 @@ export async function readAnalysisGraph(output, maxBytes = MAX_ANALYSIS_GRAPH_BY
     if (/byte limit/.test(error.message))
       throw new Error(
         `application-graph.json exceeds the ${maxBytes}-byte preview budget; static previews were not rendered`,
+        { cause: error },
       );
     throw error;
   }

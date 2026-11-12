@@ -29,7 +29,7 @@ export function parseModules(files) {
   const modules = new Map(),
     diagnostics = [];
   for (const { file, code } of [...files].sort((a, b) => a.file.localeCompare(b.file))) {
-    let ast = null;
+    let ast;
     try {
       ast = parse(code, {
         sourceType: 'module',

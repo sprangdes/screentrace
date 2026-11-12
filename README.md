@@ -148,6 +148,12 @@ Java 原始碼與測試以 google-java-format 排版，CI 會檢查；修改 Jav
 npm --prefix screentrace-viewer run format
 ```
 
+JavaScript 另以 ESLint 的建議規則檢查，TypeScript 由 viewer 建置時的 `tsc` 檢查（含沒用到的變數與參數），CI 都會執行（[ADR 0140](docs/adr/0140-r49-lint-rules.md)）：
+
+```bash
+npm --prefix screentrace-viewer run lint
+```
+
 分析產物是執行結果，應維持在設定的分析結果根目錄，不應提交到 ScreenTrace 原始碼版本庫。
 
 ### 依賴安全檢查

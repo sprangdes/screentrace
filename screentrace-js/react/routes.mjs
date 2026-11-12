@@ -147,13 +147,6 @@ function findQueryEntry(audience, module) {
 function isRouter(value, name) {
   return value.t === 'external' && ROUTER.has(value.specifier) && externalName(value) === name;
 }
-function isReact(value, name) {
-  return (
-    value.t === 'external' &&
-    REACT.has(value.specifier) &&
-    (externalName(value) === name || externalName(value) === 'React.' + name)
-  );
-}
 /** Route declarations from `<Route>` trees and router object arrays, with the layouts that wrap them. */
 function findRoutes(modules, evaluator, diagnostics) {
   const routes = [];

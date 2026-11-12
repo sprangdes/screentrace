@@ -74,8 +74,9 @@ test('R18 pointing at a card draws its outgoing lines blue and its incoming line
     await page.mouse.move(
       ...Object.values(await centre(page.locator(`.screen-card[data-screen="${id}"]`))),
     );
-    const states = await page.locator('.relations > .relation .relation-line').evaluateAll(
-      (lines, id) =>
+    const states = await page
+      .locator('.relations > .relation .relation-line')
+      .evaluateAll((lines) =>
         lines.map((l) => ({
           from: l.dataset.from,
           to: l.dataset.to,
@@ -84,8 +85,7 @@ test('R18 pointing at a card draws its outgoing lines blue and its incoming line
           marker: getComputedStyle(l).markerEnd,
           stroke: getComputedStyle(l).stroke,
         })),
-      id,
-    );
+      );
     for (const s of states) {
       if (s.from === id) {
         assert.ok(s.out);

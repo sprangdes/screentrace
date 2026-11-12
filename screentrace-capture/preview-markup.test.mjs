@@ -18,7 +18,7 @@ test('comments script text and quoted angle brackets cannot invent condition tag
   );
   assert.equal((html.match(/data-st-conditional/g) || []).length, 1);
   assert.match(html, /title="a > b"/);
-  assert.doesNotMatch(html, /data-st-condition="[^\"]*fake/);
+  assert.doesNotMatch(html, /data-st-condition="[^"]*fake/);
 });
 test('target reserved attributes cannot spoof the generated guard', () => {
   const html = annotateConditions(

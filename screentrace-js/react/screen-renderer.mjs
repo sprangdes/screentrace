@@ -305,7 +305,6 @@ class ScreenRenderer {
         domain = left;
       } else if (right.t === 'state-domain') {
         domain = right;
-        left = right;
         right = this.evaluator.evaluate(node.left, scope);
       }
       if (!domain || right.t !== 'lit') return null;
@@ -663,7 +662,7 @@ class ScreenRenderer {
     const scope = frame.scope;
     if (!scope) return null;
     const branches = returnBranches(frame.fn.node.body, scope, this.evaluator);
-    let chosen = null;
+    let chosen;
     const compatible = branches.filter(
       (branch) =>
         !contradicts([
@@ -820,8 +819,8 @@ class ScreenRenderer {
       const visit = (node) => {
         if (!node?.type || (node !== fn && FUNCTIONS.has(node.type))) return;
         if (node.type === 'CallExpression' || node.type === 'OptionalCallExpression') {
-          const callee = this.evaluator.evaluate(node.callee, scope),
-            setter = node.callee.type === 'Identifier' ? setterByName.get(node.callee.name) : null;
+          const setter =
+            node.callee.type === 'Identifier' ? setterByName.get(node.callee.name) : null;
           if (setter) {
             const arg = node.arguments[0];
             if (arg?.type === 'Identifier') {
@@ -844,7 +843,6 @@ class ScreenRenderer {
       };
       visit(fn.body);
     }
-    const setterReads = new Set();
     const isEvent = (node) => {
       for (let p = parents.get(node); p; p = parents.get(p))
         if (p.type === 'JSXAttribute' && /^on[A-Z]/.test(p.name?.name ?? '')) return true;
@@ -948,7 +946,7 @@ class ScreenRenderer {
       for (const child of children(node)) visit(child, node);
     };
     visit(body);
-    for (const [setter, record] of states) {
+    for (const [, record] of states) {
       const value = unknown.has(record)
         ? { t: 'unknown' }
         : { t: 'state-domain', values: record.values };
@@ -1347,9 +1345,8 @@ class ScreenRenderer {
       }
       case 'SwitchStatement': {
         const discriminant = this.evaluator.evaluate(node.discriminant, scope);
-        let start = -1;
         if (discriminant.t === 'lit') {
-          start = node.cases.findIndex(
+          let start = node.cases.findIndex(
             (item) =>
               item.test &&
               this.evaluator.evaluate(item.test, scope).v === discriminant.v &&

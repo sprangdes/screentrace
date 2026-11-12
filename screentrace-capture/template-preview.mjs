@@ -87,7 +87,9 @@ export function templatePreview(source, screen, nodes, relationships = []) {
   let bindings = [];
   try {
     bindings = JSON.parse(screen.attributes?.simulationBindings || '[]');
-  } catch {}
+  } catch {
+    // Unreadable bindings: render without simulated values.
+  }
   const stack = [],
     frames = [];
   const submittedKeys = new Set();
@@ -99,7 +101,9 @@ export function templatePreview(source, screen, nodes, relationships = []) {
           if (item.version === 1)
             for (const key of Object.keys(item.fields || {}))
               if (/^[A-Za-z_][\w]*\.[A-Za-z_][\w]*$/.test(key)) submittedKeys.add(key);
-        } catch {}
+        } catch {
+          // Evidence detail is not the expected JSON: it proves no keys.
+        }
   const feedbackKeys = new Set();
   for (const n of [
     ...nodes.filter((n) => n.id === screen.id),
@@ -109,7 +113,9 @@ export function templatePreview(source, screen, nodes, relationships = []) {
       if (e.parser === 'SpringModelFeedback' && ['CONFIRMED', 'INFERRED'].includes(e.resolution))
         try {
           for (const key of Object.keys(JSON.parse(e.detail).values || {})) feedbackKeys.add(key);
-        } catch {}
+        } catch {
+          // Evidence detail is not the expected JSON: it proves no keys.
+        }
   return markupTokens(source)
     .map((t) => {
       if (!t.name) {
@@ -388,7 +394,9 @@ export async function offlineDisclosureState(page, graph, screenId) {
             a.inputSelector.length < 512
           )
             actions.push({ selector: a.selector, inputSelector: a.inputSelector });
-        } catch {}
+        } catch {
+          // Evidence detail is not the expected JSON: no disclosure action.
+        }
   }
   return page.evaluate((actions) => {
     const explicitDisplay = (node, rules) =>
@@ -396,7 +404,9 @@ export async function offlineDisclosureState(page, graph, screenId) {
         if (rule.selectorText && rule.style?.getPropertyValue('display'))
           try {
             if (node.matches(rule.selectorText)) return true;
-          } catch {}
+          } catch {
+            // An invalid selector cannot match; check the nested rules next.
+          }
         try {
           return rule.cssRules && explicitDisplay(node, rule.cssRules);
         } catch {
@@ -430,7 +440,9 @@ export async function offlineDisclosureState(page, graph, screenId) {
         menu.hidden = true;
         menu.setAttribute('data-st-offline-affordance', 'closed-disclosure');
         count++;
-      } catch {}
+      } catch {
+        // An invalid selector leaves the disclosure as captured.
+      }
     return count;
   }, actions);
 }
