@@ -45,12 +45,71 @@ jobs:
       # Java sources must match google-java-format (HC-001); run `./mvnw com.diffplug.spotless:spotless-maven-plugin:apply` to fix.
       - name: Check Java formatting
         run: ./mvnw -B com.diffplug.spotless:spotless-maven-plugin:check
+      # -Pcoverage adds a JaCoCo report per module (HC-003); it is reported, not enforced.
       - name: Build and test Java modules
-        run: ./mvnw -B clean verify
+        run: ./mvnw -B clean verify -Pcoverage
+      - name: Summarize Java test coverage
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo "### Java test coverage (each module's own tests)"
+            echo "| Module | Lines | Branches |"
+            echo "|---|---:|---:|"
+            for csv in */target/site/jacoco/jacoco.csv; do
+              [ -f "$csv" ] || continue
+              awk -F, -v m="${csv%%/*}" 'NR > 1 { bm += $6; bc += $7; lm += $8; lc += $9 }
+                END { printf "| %s | %.1f%% (%d/%d) | %.1f%% |\n", m, 100 * lc / (lm + lc), lc, lm + lc, (bm + bc) ? 100 * bc / (bm + bc) : 0 }' "$csv"
+            done
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload Java coverage reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: java-coverage
+          path: '*/target/site/jacoco/'
+          if-no-files-found: warn
       - name: Test file viewer in all engines
         env:
           ST_BROWSERS: chromium,firefox,webkit
         run: node --test screentrace-viewer/test/*.e2e.mjs
+
+  # The Windows launcher and Windows paths (drive letters, backslashes, case-insensitive names) had no CI (HC-003).
+  windows:
+    runs-on: windows-2025
+    timeout-minutes: 60
+    steps:
+      # Fixtures and golden files are compared byte for byte, so keep their line endings as committed.
+      - name: Keep line endings unchanged
+        run: git config --global core.autocrlf false
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install Node dependencies and build the viewer
+        run: |
+          npm --prefix screentrace-js ci --ignore-scripts
+          npm --prefix screentrace-viewer ci --ignore-scripts
+          npm --prefix screentrace-viewer run build
+          npm --prefix screentrace-capture ci
+          npm exec --prefix screentrace-capture -- playwright install chromium
+      - name: Build and test Java modules
+        run: .\mvnw.cmd -B clean verify
+      - name: Analyze a fixture with the Windows launcher
+        run: |
+          Copy-Item -Recurse fixtures\struts "$env:RUNNER_TEMP\struts"
+          .\bin\screentrace.cmd analyze "$env:RUNNER_TEMP\struts"
+          if ($LASTEXITCODE -ne 0) { throw "Analysis exited with $LASTEXITCODE" }
+          $report = 'analyze\struts\report\screentrace-report.html'
+          if (-not (Test-Path $report)) { throw 'The report was not written' }
+          foreach ($local in @($env:RUNNER_TEMP, $env:RUNNER_TEMP.Replace('\', '\\'), $env:RUNNER_TEMP.Replace('\', '/'))) {
+            if (Select-String -Path $report -SimpleMatch -Quiet $local) { throw 'The report contains a local path' }
+          }
 
   dependency-audit:
     runs-on: ubuntu-26.04  # Pinned; move it together with Playwright, whose browsers support a fixed set of OS releases (HC-007)

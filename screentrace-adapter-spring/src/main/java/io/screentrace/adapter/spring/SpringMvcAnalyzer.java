@@ -144,7 +144,7 @@ public final class SpringMvcAnalyzer {
   }
 
   private static void addJspScreen(Path file, State state) {
-    String relative = state.root.relativize(file).toString();
+    String relative = state.root.relativize(file).toString().replace('\\', '/');
     SourceLocation source = new SourceLocation(relative, 1);
     String id = ApplicationGraph.id(NodeType.SCREEN, relative);
     Map<String, String> attributes = new TreeMap<>();
@@ -213,7 +213,7 @@ public final class SpringMvcAnalyzer {
   }
 
   private static void parseController(Path file, State state, ParsedJavaUnits units) {
-    String relative = state.root.relativize(file).toString();
+    String relative = state.root.relativize(file).toString().replace('\\', '/');
     try {
       for (ClassOrInterfaceDeclaration type :
           units.parse(file).findAll(ClassOrInterfaceDeclaration.class)) {
@@ -589,7 +589,7 @@ public final class SpringMvcAnalyzer {
                     List.of(
                         new ApplicationGraph.AnalysisEvidence(
                             new SourceLocation(
-                                inventory.root().relativize(file).toString(),
+                                inventory.root().relativize(file).toString().replace('\\', '/'),
                                 method.getBegin().orElseThrow().line),
                             "SpringViewResolver",
                             ApplicationGraph.ResolutionStatus.INFERRED,
@@ -604,7 +604,8 @@ public final class SpringMvcAnalyzer {
             new Diagnostic(
                 "Java view resolver 設定無法證明",
                 Confidence.UNRESOLVED,
-                new SourceLocation(inventory.root().relativize(file).toString(), 1),
+                new SourceLocation(
+                    inventory.root().relativize(file).toString().replace('\\', '/'), 1),
                 "SPRING_VIEW_RESOLVER_UNRESOLVED",
                 List.of()));
       }
@@ -628,7 +629,8 @@ public final class SpringMvcAnalyzer {
               new Diagnostic(
                   "View resolver 設定無法讀取",
                   Confidence.UNRESOLVED,
-                  new SourceLocation(inventory.root().relativize(file).toString(), 1)));
+                  new SourceLocation(
+                      inventory.root().relativize(file).toString().replace('\\', '/'), 1)));
         }
   }
 

@@ -312,3 +312,9 @@
 
 - WP115：`screentrace-js/react/analyzer.mjs`（3,878 行、64 個頂層宣告）依功能拆成 9 個模組，只搬移不改邏輯；`analyzer.mjs` 剩 366 行，最大的是 `screen-renderer.mjs`（1,908 行），見 [ADR 0135](adr/0135-r44-split-react-analyzer.md)（HC-001 第四段）。
 - 驗證：64 個宣告逐字相同；JS 180、capture 87 個測試全部通過；Maven 584（579 通過、5 略過）；拆分前後分析 React 測試專案 r19，27 個產物完全相同。
+
+## R45 CI 加上 Windows 與測試覆蓋率
+
+- WP116：根目錄 pom 加 `coverage` profile（JaCoCo 0.8.15，只報告不設門檻），CI 把各模組覆蓋率寫進 job summary 並上傳報告；新增 `windows` job，在 Windows 上執行完整 Java 測試，並以 `bin\screentrace.cmd analyze` 分析一個 fixture，見 [ADR 0136](adr/0136-r45-windows-ci-and-coverage.md)（HC-003）。
+- Windows job 第一次執行找到並修正 5 個 Windows 使用者會遇到的問題：外部或帶查詢字串的 `c:import` 讓分析中斷、Spring 畫面 ID 使用 `\` 導致圖驗證失敗、互動選單吃掉輸入路徑的 `\` 與 `'`、家目錄遮蔽漏掉真實路徑、`screentrace.ps1` 讀取 `java -version` 時中止；另有 5 類只與測試寫法有關的平台差異，詳見 ADR 0136。
+- 驗證：PR CI 四個 job（含 Windows 完整 Java 測試與 `bin\screentrace.cmd analyze`）全部通過；Linux 上 Maven 586 個測試（新增 2 個）。

@@ -87,7 +87,7 @@ public class ApiContractExtractor {
 
   private void index(Path root, Path file) {
     try {
-      String relative = root.relativize(file).toString();
+      String relative = root.relativize(file).toString().replace('\\', '/');
       var unit =
           JavaSources.parse(
               SafeProjectFiles.readUtf8Limited(root, file, SafeProjectFiles.MAX_SOURCE_FILE_BYTES));

@@ -5,6 +5,7 @@ import io.screentrace.core.ApplicationGraph.Diagnostic;
 import io.screentrace.core.ApplicationGraph.SourceLocation;
 import io.screentrace.scanner.SafeProjectFiles;
 import java.io.IOException;
+import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -590,15 +591,20 @@ public final class JspProjectParser {
   }
 
   private static String resolveInclude(Path root, String sourceView, String target) {
-    Path source = root.resolve(sourceView).getParent();
-    Path candidate =
-        target.startsWith("/")
-            ? root.resolve("src/main/webapp" + target)
-            : source.resolve(target).normalize();
-    if (SafeProjectFiles.isSafeRegularFile(root, candidate)) return relative(root, candidate);
-    if (target.startsWith("/")) {
-      candidate = root.resolve(target.substring(1));
+    try {
+      Path source = root.resolve(sourceView).getParent();
+      Path candidate =
+          target.startsWith("/")
+              ? root.resolve("src/main/webapp" + target)
+              : source.resolve(target).normalize();
       if (SafeProjectFiles.isSafeRegularFile(root, candidate)) return relative(root, candidate);
+      if (target.startsWith("/")) {
+        candidate = root.resolve(target.substring(1));
+        if (SafeProjectFiles.isSafeRegularFile(root, candidate)) return relative(root, candidate);
+      }
+    } catch (InvalidPathException notAFilePath) {
+      // A URL or query string ("https://…", "page.jsp?tab=1") names no project file. Linux accepts
+      // such names and finds no file; Windows rejects ':' and '?', so treat both the same way.
     }
     return null;
   }

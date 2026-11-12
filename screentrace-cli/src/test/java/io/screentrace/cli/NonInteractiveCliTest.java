@@ -11,6 +11,18 @@ import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Test;
 
 class NonInteractiveCliTest {
+  /** The platform's empty device, so the CLI sees closed standard input. */
+  /**
+   * The output is read as UTF-8. Java 17 writes piped output in the platform charset (Cp1252 on an
+   * English Windows), which turns the Chinese messages into '?'.
+   */
+  private static final java.util.List<String> UTF8_OUTPUT =
+      java.util.List.of(
+          "-Dfile.encoding=UTF-8", "-Dsun.stdout.encoding=UTF-8", "-Dsun.stderr.encoding=UTF-8");
+
+  private static final File NO_INPUT =
+      new File(System.getProperty("os.name").startsWith("Windows") ? "NUL" : "/dev/null");
+
   private static final String SETUP_MESSAGE =
       "尚未設定專案根目錄。可直接執行 `./bin/screentrace <專案路徑>` 分析單一專案，或在終端機執行 `./bin/screentrace config` 設定專案根目錄";
 
@@ -354,6 +366,7 @@ class NonInteractiveCliTest {
     args.add("-Duser.home=" + home);
     args.add("-Dscreentrace.home=" + screenTrace);
     args.add("-Djava.awt.headless=true");
+    args.addAll(UTF8_OUTPUT);
     String jsModule = System.getProperty("screentrace.js.module");
     if (jsModule != null) args.add("-Dscreentrace.js.module=" + jsModule);
     args.add("-cp");
@@ -364,7 +377,7 @@ class NonInteractiveCliTest {
         new ProcessBuilder(args)
             .directory(workingDirectory.toFile())
             .redirectErrorStream(true)
-            .redirectInput(new File("/dev/null"))
+            .redirectInput(NO_INPUT)
             .start();
     var output =
         CompletableFuture.supplyAsync(
@@ -390,16 +403,14 @@ class NonInteractiveCliTest {
     args.add(Path.of(System.getProperty("java.home"), "bin", "java").toString());
     args.add("-Duser.home=" + home);
     args.add("-Djava.awt.headless=true");
+    args.addAll(UTF8_OUTPUT);
     args.add("-cp");
     args.add(classpath);
     args.add(ScreenTraceCli.class.getName());
     args.add(command);
     args.add(project);
     Process process =
-        new ProcessBuilder(args)
-            .redirectErrorStream(true)
-            .redirectInput(new File("/dev/null"))
-            .start();
+        new ProcessBuilder(args).redirectErrorStream(true).redirectInput(NO_INPUT).start();
     var output =
         CompletableFuture.supplyAsync(
             () -> {
@@ -452,13 +463,14 @@ class NonInteractiveCliTest {
     args.add(Path.of(System.getProperty("java.home"), "bin", "java").toString());
     args.add("-Duser.home=" + home);
     args.add("-Djava.awt.headless=true");
+    args.addAll(UTF8_OUTPUT);
     args.add("-cp");
     args.add(classpath);
     args.add(ScreenTraceCli.class.getName());
     args.add(command);
     if (configured) args.add("demo");
     ProcessBuilder builder = new ProcessBuilder(args).redirectErrorStream(true);
-    if (!leaveInputOpen) builder.redirectInput(new File("/dev/null"));
+    if (!leaveInputOpen) builder.redirectInput(NO_INPUT);
     Process process = builder.start();
     if (!leaveInputOpen) process.getOutputStream().close();
     var output =

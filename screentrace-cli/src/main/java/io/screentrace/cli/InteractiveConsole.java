@@ -11,6 +11,7 @@ import org.jline.reader.EndOfFileException;
 import org.jline.reader.LineReader;
 import org.jline.reader.LineReaderBuilder;
 import org.jline.reader.UserInterruptException;
+import org.jline.reader.impl.DefaultParser;
 import org.jline.terminal.Attributes;
 import org.jline.terminal.Terminal;
 import org.jline.terminal.TerminalBuilder;
@@ -28,7 +29,13 @@ final class InteractiveConsole implements AutoCloseable {
 
   InteractiveConsole(Terminal terminal) {
     this.terminal = terminal;
-    lines = LineReaderBuilder.builder().terminal(terminal).build();
+    // Answers are paths and plain text, not shell words: '\\' separates Windows folders and a
+    // folder may contain a quote, so neither may be read as an escape or an unclosed quote.
+    lines =
+        LineReaderBuilder.builder()
+            .terminal(terminal)
+            .parser(new DefaultParser().escapeChars(new char[0]).quoteChars(new char[0]))
+            .build();
   }
 
   Path existingDirectory(String prompt, Path defaultValue) {

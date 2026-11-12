@@ -15,6 +15,8 @@ class ContributionGoldenTest {
         new ObjectMapper()
                 .writerWithDefaultPrettyPrinter()
                 .writeValueAsString(MarkupAnalysis.parse("views/order.jsp", source))
+                // The pretty printer ends lines with the platform separator; the golden uses \n.
+                .replace(System.lineSeparator(), "\n")
             + "\n";
     assertEquals(Files.readString(Path.of("src/test/resources/wp3/components.json")), actual);
   }

@@ -12,7 +12,7 @@
 | 編號 | 優先 | 項目 | 狀態 |
 |---|---|---|---|
 | HC-001 | 高 | 程式碼過度壓縮，沒有格式化與 lint 工具 | 排版（R39、R40）與拆分大型檔案（R41、R44）已完成；lint 規則待辦 |
-| HC-003 | 高 | CI 沒跑到 7 個 capture 測試檔；只在 Linux 上測；沒有覆蓋率 | 測試已補進 CI；Windows 與覆蓋率待辦 |
+| HC-003 | 高 | CI 沒跑到 7 個 capture 測試檔；只在 Linux 上測；沒有覆蓋率 | 測試已補進 CI（R38）；Windows 與覆蓋率已加入（R45） |
 | HC-004 | 中 | 預覽擷取逐一畫面執行；R34 的 5 秒改善沒合併；Java 原始檔重複解析 | 待辦 |
 | HC-005 | 中 | Struts／JSP 有部分標記用 regex 解析 | 待辦 |
 | HC-006 | 中 | 框架 adapter 的選擇寫死在 if 判斷裡，沒有共同介面 | 待辦 |
@@ -108,6 +108,8 @@ Java 主程式有 26 處 `catch(Exception ignored){}`，依用途分成四類：
 
 - 加一個 Windows runner，至少跑 CLI 的路徑處理測試與一次完整分析。
 - 加上 JaCoCo 覆蓋率報告，先只產出報告、不設門檻。
+
+**進度**：R45 WP116 加上 Windows job 與 JaCoCo 覆蓋率報告；Windows job 第一次執行就找到 5 個 Windows 產品問題並已修正，見 [ADR 0136](adr/0136-r45-windows-ci-and-coverage.md)。
 
 ## HC-004 [中] 分析效能
 

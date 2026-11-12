@@ -596,35 +596,63 @@ public final class UrlGraphContribution {
 
   /** The same user.home redaction hidePrivateLocations applies to every graph string. */
   public static String hidePrivateLocation(String text) {
-    String home = System.getProperty("user.home", "");
-    if (home.length() < 2) return text;
-    return text.replace(home, "[home]").replace(home.replace('\\', '/'), "[home]");
+    for (String home : homeForms()) text = text.replace(home, "[home]");
+    return text;
   }
 
   public static ApplicationGraph hidePrivateLocations(ApplicationGraph graph) {
-    String home = System.getProperty("user.home", "");
-    if (home.length() < 2) return graph;
+    List<String> homes = homeForms();
+    if (homes.isEmpty()) return graph;
     try {
-      return JSON.treeToValue(redact(JSON.valueToTree(graph), home), ApplicationGraph.class);
+      return JSON.treeToValue(redact(JSON.valueToTree(graph), homes), ApplicationGraph.class);
     } catch (Exception error) {
       throw new IllegalStateException("圖隱私處理失敗", error);
     }
   }
 
-  private static JsonNode redact(JsonNode node, String home) {
-    if (node.isTextual())
-      return com.fasterxml.jackson.databind.node.TextNode.valueOf(
-          node.asText().replace(home, "[home]").replace(home.replace('\\', '/'), "[home]"));
+  /**
+   * user.home as configured and as its real path, each with '\\' and '/', longest first. Recorded
+   * source paths are real paths, which differ from user.home when it is a symbolic link or a
+   * Windows 8.3 short name.
+   */
+  private static List<String> homeForms() {
+    String home = System.getProperty("user.home", "");
+    if (home.length() < 2) return List.of();
+    Set<String> forms = new LinkedHashSet<>();
+    forms.add(home);
+    try {
+      forms.add(java.nio.file.Path.of(home).toRealPath().toString());
+    } catch (java.io.IOException
+        | java.nio.file.InvalidPathException
+        | SecurityException unavailable) {
+      // A home that cannot be resolved is still redacted as configured.
+    }
+    for (String form : List.copyOf(forms)) forms.add(form.replace('\\', '/'));
+    List<String> ordered = new ArrayList<>(forms);
+    ordered.sort(Comparator.comparingInt(String::length).reversed());
+    return ordered;
+  }
+
+  private static JsonNode redact(JsonNode node, List<String> homes) {
+    if (node.isTextual()) {
+      String text = node.asText();
+      for (String home : homes) text = text.replace(home, "[home]");
+      return com.fasterxml.jackson.databind.node.TextNode.valueOf(text);
+    }
     if (node.isArray()) {
       var array = JSON.createArrayNode();
-      node.forEach(n -> array.add(redact(n, home)));
+      node.forEach(n -> array.add(redact(n, homes)));
       return array;
     }
     if (node.isObject()) {
       var object = JSON.createObjectNode();
       node.fields()
           .forEachRemaining(
-              e -> object.set(e.getKey().replace(home, "[home]"), redact(e.getValue(), home)));
+              e -> {
+                String key = e.getKey();
+                for (String home : homes) key = key.replace(home, "[home]");
+                object.set(key, redact(e.getValue(), homes));
+              });
       return object;
     }
     return node;
