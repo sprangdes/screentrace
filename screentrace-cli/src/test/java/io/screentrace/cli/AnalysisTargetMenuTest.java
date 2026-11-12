@@ -54,6 +54,25 @@ class AnalysisTargetMenuTest {
     }
   }
 
+  @Test
+  void aTypedPathKeepsItsBackslashes() throws Exception {
+    // A typed path must reach the CLI unchanged: '\\' separates Windows folders, and Linux allows
+    // it inside a folder name, so the line reader must not treat it as an escape character, nor a
+    // quote as an
+    // unclosed string.
+    String name = java.io.File.separatorChar == '\\' ? "O'Brien" : "O'Brien\\slash";
+    Path other = Files.createDirectory(temp.resolve(name));
+    assertEquals(true, other.toString().contains("\\"), other.toString());
+    var input = new ByteArrayInputStream((other + "\n").getBytes(StandardCharsets.UTF_8));
+    Terminal terminal =
+        new DumbTerminal(
+            "test", Terminal.TYPE_DUMB, input, new ByteArrayOutputStream(), StandardCharsets.UTF_8);
+    try (InteractiveConsole console = new InteractiveConsole(terminal)) {
+      assertEquals(
+          other, ScreenTraceCli.selectAnalysisTarget(console, List.of()).sourceDirectory());
+    }
+  }
+
   private List<ProjectCatalog.Project> projects(String... names) throws Exception {
     List<ProjectCatalog.Project> projects = new java.util.ArrayList<>();
     for (String name : names)
