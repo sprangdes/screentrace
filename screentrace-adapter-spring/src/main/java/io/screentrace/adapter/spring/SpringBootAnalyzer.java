@@ -80,7 +80,7 @@ public final class SpringBootAnalyzer {
 
   private void parseController(Path root, Path file, AnalysisState state) {
     try {
-      String relative = root.relativize(file).toString();
+      String relative = root.relativize(file).toString().replace('\\', '/');
       for (ClassOrInterfaceDeclaration type :
           io.screentrace.parser.jsp.JavaSources.parse(
                   SafeProjectFiles.readUtf8Limited(
@@ -93,7 +93,7 @@ public final class SpringBootAnalyzer {
           new Diagnostic(
               "Unable to parse Java source: " + exception.getMessage(),
               Confidence.UNRESOLVED,
-              new SourceLocation(root.relativize(file).toString(), 1)));
+              new SourceLocation(root.relativize(file).toString().replace('\\', '/'), 1)));
     }
   }
 
