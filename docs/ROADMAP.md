@@ -358,3 +358,8 @@
 - WP122：新增 [`docs/adr/README.md`](adr/README.md)，依 12 個主題列出全部 142 份 ADR，每組先說明現況；只依明確證據標出「已被取代」（1 份）與「部分被取代」（26 份），各 ADR 內文不改；AGENTS.md 的流程加上先讀索引、新增 ADR 時更新索引，見 [ADR 0142](adr/0142-r51-adr-index.md)（HC-008）。
 - 驗證：141 份既有 ADR 與 ADR 0142 各出現一次；只改文件。
 
+## R52 預覽擷取上限與 Java lint 的決定
+
+- WP123：CLI 等待預覽擷取的上限由固定 120 秒改為 120 秒加每個畫面 2 秒，最多 30 分鐘；Java 不導入 Error Prone，見 [ADR 0143](adr/0143-r52-capture-timeout-and-java-lint.md)（HC-004、HC-001）。另新增工作階段紀錄 [SESSION_20261112_R47-R52](SESSION_20261112_R47-R52.md)。
+- 驗證：新增 `CaptureTimeoutTest`；15 個 fixtures 的產物不變；Maven 600（595 通過、5 略過）。
+

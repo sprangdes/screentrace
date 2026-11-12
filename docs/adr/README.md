@@ -111,7 +111,7 @@ JSP、JSPF、tag file、Tiles 與有限的 Thymeleaf 以 `MarkupTag` 等 parser 
 
 ## 預覽擷取與封裝
 
-`screentrace-capture` 以 Playwright Chromium 重建靜態預覽，不執行目標腳本；擷取同時開多個 page、依畫面順序合併（R47），樣式只記和預設值不同的屬性，資源以相對於分析目錄的路徑記錄（R42）；封裝只保留 `packStandaloneDocuments`（R31）。
+`screentrace-capture` 以 Playwright Chromium 重建靜態預覽，不執行目標腳本；擷取同時開多個 page、依畫面順序合併（R47），CLI 等待上限依畫面數放寬（R52），樣式只記和預設值不同的屬性，資源以相對於分析目錄的路徑記錄（R42）；封裝只保留 `packStandaloneDocuments`（R31）。
 
 | ADR | 決定 | 狀態 |
 |---|---|---|
@@ -217,7 +217,7 @@ JSP、JSPF、tag file、Tiles 與有限的 Thymeleaf 以 `MarkupTag` 等 parser 
 
 ## 建置、品質與效能（健檢 HC）
 
-Java 以 google-java-format、TS／JS 以 Prettier 排版，JS 以 ESLint、TS 以 tsc 檢查，CI 都會擋；工具鏈版本固定（Maven Wrapper、Node 22、Playwright 1.63.0），CI 含 Windows 與覆蓋率。主程式不得有沒說明的空 `catch`（R50）。
+Java 以 google-java-format、TS／JS 以 Prettier 排版，JS 以 ESLint、TS 以 tsc 檢查，CI 都會擋；工具鏈版本固定（Maven Wrapper、Node 22、Playwright 1.63.0），CI 含 Windows 與覆蓋率。主程式不得有沒說明的空 `catch`（R50）；Java 不導入 Error Prone（R52）。
 
 | ADR | 決定 | 狀態 |
 |---|---|---|
@@ -231,3 +231,4 @@ Java 以 google-java-format、TS／JS 以 Prettier 排版，JS 以 ESLint、TS �
 | [0140](0140-r49-lint-rules.md) | R49 JavaScript 以 ESLint、TypeScript 以 tsc 檢查 | 有效 |
 | [0141](0141-r50-explained-catch-blocks.md) | R50 每個被吞掉的例外都要說明或縮小型別 | 有效 |
 | [0142](0142-r51-adr-index.md) | R51 ADR 索引與現況摘要 | 有效 |
+| [0143](0143-r52-capture-timeout-and-java-lint.md) | R52 預覽擷取上限依畫面數放寬，Java 不導入 Error Prone | 有效 |
