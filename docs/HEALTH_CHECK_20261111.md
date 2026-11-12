@@ -14,8 +14,8 @@
 | HC-001 | 高 | 程式碼過度壓縮，沒有格式化與 lint 工具 | 排版（R39、R40）與拆分大型檔案（R41、R44）已完成；lint 規則待辦 |
 | HC-003 | 高 | CI 沒跑到 7 個 capture 測試檔；只在 Linux 上測；沒有覆蓋率 | 測試已補進 CI（R38）；Windows 與覆蓋率已加入（R45） |
 | HC-004 | 中 | 預覽擷取逐一畫面執行；R34 的 5 秒改善沒合併；Java 原始檔重複解析 | 待辦 |
-| HC-005 | 中 | Struts／JSP 有部分標記用 regex 解析 | 待辦 |
-| HC-006 | 中 | 框架 adapter 的選擇寫死在 if 判斷裡，沒有共同介面 | 待辦 |
+| HC-005 | 中 | Struts／JSP 有部分標記用 regex 解析 | 已完成（R46）；`c:url` 前處理待辦 |
+| HC-006 | 中 | 框架 adapter 的選擇寫死在 if 判斷裡，沒有共同介面 | 刻意延後：等需要第三種框架時再做 |
 | HC-002 | 低 | 26 處 `catch(Exception ignored){}` | 已重新評估，降為低 |
 | HC-007 | 低 | 沒有 Maven Wrapper；Node 套件沒宣告 `engines`；Playwright 版本綁住 CI 的作業系統版本 | 已完成（R43） |
 | HC-008 | 低 | ADR 128 份，缺一份現況摘要 | 待辦 |
@@ -146,6 +146,8 @@ AGENTS.md 要求不要以 regex 作為解析結構化語言的主要手段。reg
 **建議做法**
 
 逐一確認；用於 XML 的改用 `StrutsSources.xml`，用於 JSP／HTML 標記的改用 `MarkupTag.scan`，並用 fixture 驗證結果不變。
+
+**進度**：R46 WP117 把 7 處讀結構的 regex 改用 parser，fixture 產物不變，見 [ADR 0137](adr/0137-r46-parse-markup-instead-of-regex.md)。`JspProjectParser` 的 `c:url` 前處理仍用 regex 改寫原始碼，留待之後。
 
 ## HC-006 [中] 擴充架構與文件不一致
 
