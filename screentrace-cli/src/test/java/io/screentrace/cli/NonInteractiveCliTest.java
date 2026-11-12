@@ -11,6 +11,10 @@ import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Test;
 
 class NonInteractiveCliTest {
+  /** The platform's empty device, so the CLI sees closed standard input. */
+  private static final File NO_INPUT =
+      new File(System.getProperty("os.name").startsWith("Windows") ? "NUL" : "/dev/null");
+
   private static final String SETUP_MESSAGE =
       "尚未設定專案根目錄。可直接執行 `./bin/screentrace <專案路徑>` 分析單一專案，或在終端機執行 `./bin/screentrace config` 設定專案根目錄";
 
@@ -364,7 +368,7 @@ class NonInteractiveCliTest {
         new ProcessBuilder(args)
             .directory(workingDirectory.toFile())
             .redirectErrorStream(true)
-            .redirectInput(new File("/dev/null"))
+            .redirectInput(NO_INPUT)
             .start();
     var output =
         CompletableFuture.supplyAsync(
@@ -396,10 +400,7 @@ class NonInteractiveCliTest {
     args.add(command);
     args.add(project);
     Process process =
-        new ProcessBuilder(args)
-            .redirectErrorStream(true)
-            .redirectInput(new File("/dev/null"))
-            .start();
+        new ProcessBuilder(args).redirectErrorStream(true).redirectInput(NO_INPUT).start();
     var output =
         CompletableFuture.supplyAsync(
             () -> {
@@ -458,7 +459,7 @@ class NonInteractiveCliTest {
     args.add(command);
     if (configured) args.add("demo");
     ProcessBuilder builder = new ProcessBuilder(args).redirectErrorStream(true);
-    if (!leaveInputOpen) builder.redirectInput(new File("/dev/null"));
+    if (!leaveInputOpen) builder.redirectInput(NO_INPUT);
     Process process = builder.start();
     if (!leaveInputOpen) process.getOutputStream().close();
     var output =

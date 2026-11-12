@@ -51,7 +51,8 @@ class ReportBrowserTest {
     Path report = Path.of("/out/my report; rm -rf ~/screentrace-report.html");
     var chrome = new ReportBrowser.Choice(Kind.CHROME, Path.of("/Applications/Google Chrome.app"));
     assertEquals(
-        List.of("open", "-a", "/Applications/Google Chrome.app", report.toString()),
+        List.of(
+            "open", "-a", Path.of("/Applications/Google Chrome.app").toString(), report.toString()),
         ReportBrowser.command(chrome, report, true));
     var edge = new ReportBrowser.Choice(Kind.EDGE, Path.of("C:/Edge/msedge.exe"));
     assertEquals(
@@ -121,7 +122,9 @@ class ReportBrowserTest {
   @Test
   void otherBrowsersOpenWithTheDownloadHint() {
     var run = open("firefox", only(Kind.CHROME, Kind.FIREFOX), true, true);
-    assertTrue(run.launched.get(0).contains("/apps/Firefox.app"), run.launched.toString());
+    assertTrue(
+        run.launched.get(0).contains(Path.of("/apps/Firefox.app").toString()),
+        run.launched.toString());
     assertTrue(run.messages.get(0).contains("不支援自動存檔，請用『下載 md』保存"), run.messages.toString());
   }
 
