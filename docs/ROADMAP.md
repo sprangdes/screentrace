@@ -323,3 +323,11 @@
 
 - WP117：Struts adapter、`JspProjectParser`、`SpringMvcAnalyzer` 中 7 處用 regex 讀 XML 或 JSP／HTML 結構的地方，改用 XML parser 與 `MarkupTag`；`MarkupTag` 新增 `contents` 與 `replaceTags`。只處理字串的 regex 保留，`c:url` 前處理留待之後，見 [ADR 0137](adr/0137-r46-parse-markup-instead-of-regex.md)（HC-005）。
 - 驗證：15 個 fixtures 專案的 277 個產物除來源路徑與 fingerprint 外相同；新增 8 個測試，其中 5 個在修改前會失敗（註解內容被當真、屬性值含 `>`、巢狀 `<value>`）；Maven 594（589 通過、5 略過）。
+
+## R47 預覽擷取的效能
+
+- WP118：預覽擷取改成同時開多個 page（`--capture-concurrency`，預設 4），每個畫面的結果依畫面順序合併；JSP 重建仍一次一個畫面，檔名相同的畫面依序處理。`collectElementStyles` 在頁面內只保留和預設值不同的樣式屬性，不再傳回完整的 computed style，見 [ADR 0138](adr/0138-r47-concurrent-preview-capture.md)（HC-004）。
+- 量測（sandbox，4 核心）：80 個畫面的合成專案單獨擷取由 170 秒降為 48.7 秒；CLI 完整分析由 163 秒（預覽超過 120 秒上限、全部失敗）降為 91.3 秒且預覽完整；15 個 fixtures 合計由 40.2 秒降為 38.4 秒。
+- 驗證：15 個 fixtures 的 277 個產物逐位元組相同；合成專案以修改前、concurrency 1 與 4 擷取的預覽與截圖逐位元組相同；新增 `capture-pool.test.mjs` 6 個測試，其中「無效參數會中止擷取」在修改前的版本會失敗；capture 93、Maven 594（589 通過、5 略過）。
+- 另附上一個工作階段的紀錄 [SESSION_20261112](SESSION_20261112.md)。
+

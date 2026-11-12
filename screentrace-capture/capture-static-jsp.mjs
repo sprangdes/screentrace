@@ -13,6 +13,7 @@ import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { chromium } from 'playwright';
 import { collectElementStyles, thumbnailDataUri, captureOptions } from './element-styles.mjs';
+import { captureConcurrency, exclusive, outputChains, runChains } from './capture-pool.mjs';
 import {
   annotateConditions,
   annotateSource,
@@ -956,6 +957,189 @@ if (!previewV2 && allScreens.length > 500)
     `Maximum of 500 screens reached; skipped ${allScreens.length - 500} screens.`,
   );
 const screens = previewV2 ? allScreens : allScreens.slice(0, 500);
+const concurrency = captureConcurrency(extraArgs);
+const renderExclusive = exclusive();
+/** Captures one screen on its own page into `r`; results are merged in screen order below. */
+async function captureScreen(screen, page, context, r) {
+  try {
+    const rendered = await renderExclusive(() => renderJsp(screen));
+    if (!rendered) {
+      if (previewV2) {
+        const diagnostic = {
+          code: 'PREVIEW_SOURCE_UNAVAILABLE',
+          screenId: screen.id,
+          message: '缺少可重建的畫面來源',
+        };
+        r.styleDiagnostics.push(diagnostic);
+        r.styleScreen = {
+          rendering: { mode: 'skipped', diagnostic: diagnostic.message },
+          elements: [],
+          diagnostics: [diagnostic],
+        };
+      }
+      return;
+    }
+    r.manifest = `static-preview/${path.basename(rendered.htmlFile)}`;
+    r.reconstruction = {
+      view: screen.attributes?.view,
+      assets: rendered.assets,
+      dynamicExpressions: rendered.dynamicExpressions,
+      rendering: { mode: 'reconstructed' },
+    };
+    await openStaticSnapshot(page, pathToFileURL(rendered.htmlFile).href);
+    if (previewV2) {
+      const disclosures = await offlineDisclosureState(page, graph, screen.id);
+      const icons = await offlineIconAffordances(page);
+      if (disclosures)
+        captureDiagnostics.push(
+          'OFFLINE_DISCLOSURE_STATE: ' + screen.id + '; count=' + disclosures,
+        );
+      if (icons || disclosures) {
+        await writeOutput(rendered.htmlFile, await page.content());
+        if (icons)
+          captureDiagnostics.push('OFFLINE_ICON_AFFORDANCE: ' + screen.id + '; count=' + icons);
+      }
+    }
+    const elementCount = await page.locator('*').count();
+    if (!previewV2 && elementCount > 50_000)
+      throw new Error(`Rendered page element limit exceeded: ${elementCount}`);
+    if (previewV2) {
+      const captured = await collectElementStyles(page, context, graph, screen.id, {
+        ...styleOptions,
+        outputUrl: pathToFileURL(output).href,
+      });
+      r.styles = captured.styles;
+      r.defaults = captured.defaults;
+      r.styleDiagnostics.push(...captured.diagnostics);
+      r.styleScreen = {
+        elements: captured.elements,
+        diagnostics: captured.diagnostics,
+        ...r.reconstruction,
+      };
+    }
+    const items = await page
+      .locator('a[href], button, input[type="submit"], input[type="button"], form[action]')
+      .evaluateAll((items) =>
+        items
+          .map((item, index) => {
+            const box = item.getBoundingClientRect(),
+              style = getComputedStyle(item);
+            const form = item.tagName === 'FORM' ? item : item.closest('form');
+            const target =
+              item.getAttribute('href') ||
+              item.getAttribute('formaction') ||
+              form?.getAttribute('action') ||
+              null;
+            const css = Object.fromEntries(
+              [
+                'display',
+                'position',
+                'width',
+                'height',
+                'padding',
+                'margin',
+                'color',
+                'backgroundColor',
+                'border',
+                'borderRadius',
+                'boxShadow',
+                'fontFamily',
+                'fontSize',
+                'fontWeight',
+                'lineHeight',
+                'textAlign',
+                'cursor',
+                'opacity',
+              ].map((property) => [property, style[property]]),
+            );
+            return {
+              id: `static-component-${index}`,
+              type: item.tagName === 'A' ? 'LINK' : item.tagName === 'FORM' ? 'FORM' : 'BUTTON',
+              label: (
+                item.getAttribute('aria-label') ||
+                item.getAttribute('value') ||
+                item.textContent ||
+                item.id ||
+                ''
+              )
+                .replace(/\s+/g, ' ')
+                .trim(),
+              target,
+              source: 'STATIC_RENDERED',
+              visible:
+                style.visibility !== 'hidden' &&
+                style.display !== 'none' &&
+                box.width > 0 &&
+                box.height > 0,
+              bounds: {
+                x: box.left + window.scrollX,
+                y: box.top + window.scrollY,
+                width: box.width,
+                height: box.height,
+              },
+              css,
+            };
+          })
+          .filter((item) => item.visible && item.label),
+      );
+    for (const item of items) {
+      const endpoint = endpointByPath.get(item.target);
+      const handler = endpoint && handlerByEndpoint.get(endpoint.id);
+      const targetScreenId = handler && screenByHandler.get(handler);
+      if (targetScreenId) item.targetScreenId = targetScreenId;
+    }
+    const dimensions = await page.evaluate(() => ({
+      width: document.documentElement.scrollWidth,
+      height: document.documentElement.scrollHeight,
+    }));
+    const width = Math.min(4096, Math.max(1, dimensions.width));
+    const height = Math.min(16384, Math.max(1, dimensions.height), Math.floor(16_000_000 / width));
+    r.interactions = { width, height, items };
+    const file = `static-${screen.id.replace(/[^a-z0-9-]/gi, '_')}.png`;
+    const screenshot = await page.screenshot({
+      timeout: 5_000,
+      clip: { x: 0, y: 0, width, height },
+      animations: 'disabled',
+    });
+    await writeBufferWithin(output, path.join(screenshotRootReal, file), screenshot);
+    r.screenshots = `screenshots/${file}`;
+    if (previewV2) {
+      r.styleScreen.thumbnail = await thumbnailDataUri(context, screenshot, width, height);
+      r.styleScreen.width = width;
+      r.styleScreen.height = height;
+      if (width < dimensions.width || height < dimensions.height) {
+        const diagnostic = {
+          code: 'SCREENSHOT_DIMENSION_LIMIT',
+          screenId: screen.id,
+          message: '預覽截圖超過安全尺寸，元素與樣式完整保留',
+          actual: `${dimensions.width}x${dimensions.height}`,
+          limit: `${width}x${height}`,
+        };
+        r.styleDiagnostics.push(diagnostic);
+        r.styleScreen.diagnostics.push(diagnostic);
+      }
+    }
+  } catch (error) {
+    r.reconstruction = {
+      view: screen.attributes?.view,
+      rendering: { mode: 'skipped', diagnostic: String(error?.message || error) },
+    };
+    if (previewV2) {
+      const diagnostic = {
+        code: 'PREVIEW_CAPTURE_FAILED',
+        screenId: screen.id,
+        message: '預覽擷取失敗，未宣稱資料完整',
+      };
+      r.styleDiagnostics.push(diagnostic);
+      r.styleScreen = {
+        ...(r.styleScreen || {}),
+        ...r.reconstruction,
+        diagnostics: [diagnostic],
+      };
+    }
+  }
+}
+const results = new Map(screens.map((screen) => [screen, { styleDiagnostics: [] }]));
 const browser = await chromium.launch({ headless: true });
 try {
   const context = await browser.newContext({
@@ -973,199 +1157,33 @@ try {
       return route.abort('blockedbyclient');
     }
   });
-  const page = await context.newPage();
-  page.setDefaultNavigationTimeout(5_000);
-  page.setDefaultTimeout(3_000);
-  for (const screen of screens) {
-    try {
-      const rendered = await renderJsp(screen);
-      if (!rendered) {
-        if (previewV2) {
-          const diagnostic = {
-            code: 'PREVIEW_SOURCE_UNAVAILABLE',
-            screenId: screen.id,
-            message: '缺少可重建的畫面來源',
-          };
-          styleCapture.diagnostics.push(diagnostic);
-          styleCapture.screens[screen.id] = {
-            rendering: { mode: 'skipped', diagnostic: diagnostic.message },
-            elements: [],
-            diagnostics: [diagnostic],
-          };
-        }
-        continue;
-      }
-      manifest[screen.id] = `static-preview/${path.basename(rendered.htmlFile)}`;
-      reconstruction[screen.id] = {
-        view: screen.attributes?.view,
-        assets: rendered.assets,
-        dynamicExpressions: rendered.dynamicExpressions,
-        rendering: { mode: 'reconstructed' },
-      };
-      await openStaticSnapshot(page, pathToFileURL(rendered.htmlFile).href);
-      if (previewV2) {
-        const disclosures = await offlineDisclosureState(page, graph, screen.id);
-        const icons = await offlineIconAffordances(page);
-        if (disclosures)
-          captureDiagnostics.push(
-            'OFFLINE_DISCLOSURE_STATE: ' + screen.id + '; count=' + disclosures,
-          );
-        if (icons || disclosures) {
-          await writeOutput(rendered.htmlFile, await page.content());
-          if (icons)
-            captureDiagnostics.push('OFFLINE_ICON_AFFORDANCE: ' + screen.id + '; count=' + icons);
-        }
-      }
-      const elementCount = await page.locator('*').count();
-      if (!previewV2 && elementCount > 50_000)
-        throw new Error(`Rendered page element limit exceeded: ${elementCount}`);
-      if (previewV2) {
-        const captured = await collectElementStyles(page, context, graph, screen.id, {
-          ...styleOptions,
-          outputUrl: pathToFileURL(output).href,
-        });
-        Object.assign(styleCapture.styles, captured.styles);
-        Object.assign(styleCapture.defaults, captured.defaults);
-        styleCapture.diagnostics.push(...captured.diagnostics);
-        styleCapture.screens[screen.id] = {
-          elements: captured.elements,
-          diagnostics: captured.diagnostics,
-          ...reconstruction[screen.id],
-        };
-      }
-      const items = await page
-        .locator('a[href], button, input[type="submit"], input[type="button"], form[action]')
-        .evaluateAll((items) =>
-          items
-            .map((item, index) => {
-              const box = item.getBoundingClientRect(),
-                style = getComputedStyle(item);
-              const form = item.tagName === 'FORM' ? item : item.closest('form');
-              const target =
-                item.getAttribute('href') ||
-                item.getAttribute('formaction') ||
-                form?.getAttribute('action') ||
-                null;
-              const css = Object.fromEntries(
-                [
-                  'display',
-                  'position',
-                  'width',
-                  'height',
-                  'padding',
-                  'margin',
-                  'color',
-                  'backgroundColor',
-                  'border',
-                  'borderRadius',
-                  'boxShadow',
-                  'fontFamily',
-                  'fontSize',
-                  'fontWeight',
-                  'lineHeight',
-                  'textAlign',
-                  'cursor',
-                  'opacity',
-                ].map((property) => [property, style[property]]),
-              );
-              return {
-                id: `static-component-${index}`,
-                type: item.tagName === 'A' ? 'LINK' : item.tagName === 'FORM' ? 'FORM' : 'BUTTON',
-                label: (
-                  item.getAttribute('aria-label') ||
-                  item.getAttribute('value') ||
-                  item.textContent ||
-                  item.id ||
-                  ''
-                )
-                  .replace(/\s+/g, ' ')
-                  .trim(),
-                target,
-                source: 'STATIC_RENDERED',
-                visible:
-                  style.visibility !== 'hidden' &&
-                  style.display !== 'none' &&
-                  box.width > 0 &&
-                  box.height > 0,
-                bounds: {
-                  x: box.left + window.scrollX,
-                  y: box.top + window.scrollY,
-                  width: box.width,
-                  height: box.height,
-                },
-                css,
-              };
-            })
-            .filter((item) => item.visible && item.label),
-        );
-      for (const item of items) {
-        const endpoint = endpointByPath.get(item.target);
-        const handler = endpoint && handlerByEndpoint.get(endpoint.id);
-        const targetScreenId = handler && screenByHandler.get(handler);
-        if (targetScreenId) item.targetScreenId = targetScreenId;
-      }
-      const dimensions = await page.evaluate(() => ({
-        width: document.documentElement.scrollWidth,
-        height: document.documentElement.scrollHeight,
-      }));
-      const width = Math.min(4096, Math.max(1, dimensions.width));
-      const height = Math.min(
-        16384,
-        Math.max(1, dimensions.height),
-        Math.floor(16_000_000 / width),
-      );
-      interactions[screen.id] = { width, height, items };
-      const file = `static-${screen.id.replace(/[^a-z0-9-]/gi, '_')}.png`;
-      const screenshot = await page.screenshot({
-        timeout: 5_000,
-        clip: { x: 0, y: 0, width, height },
-        animations: 'disabled',
-      });
-      await writeBufferWithin(output, path.join(screenshotRootReal, file), screenshot);
-      screenshots[screen.id] = `screenshots/${file}`;
-      if (previewV2) {
-        styleCapture.screens[screen.id].thumbnail = await thumbnailDataUri(
-          context,
-          screenshot,
-          width,
-          height,
-        );
-        styleCapture.screens[screen.id].width = width;
-        styleCapture.screens[screen.id].height = height;
-        if (width < dimensions.width || height < dimensions.height) {
-          const diagnostic = {
-            code: 'SCREENSHOT_DIMENSION_LIMIT',
-            screenId: screen.id,
-            message: '預覽截圖超過安全尺寸，元素與樣式完整保留',
-            actual: `${dimensions.width}x${dimensions.height}`,
-            limit: `${width}x${height}`,
-          };
-          styleCapture.diagnostics.push(diagnostic);
-          styleCapture.screens[screen.id].diagnostics.push(diagnostic);
-        }
-      }
-    } catch (error) {
-      reconstruction[screen.id] = {
-        view: screen.attributes?.view,
-        rendering: { mode: 'skipped', diagnostic: String(error?.message || error) },
-      };
-      if (previewV2) {
-        const diagnostic = {
-          code: 'PREVIEW_CAPTURE_FAILED',
-          screenId: screen.id,
-          message: '預覽擷取失敗，未宣稱資料完整',
-        };
-        styleCapture.diagnostics.push(diagnostic);
-        styleCapture.screens[screen.id] = {
-          ...(styleCapture.screens[screen.id] || {}),
-          ...reconstruction[screen.id],
-          diagnostics: [diagnostic],
-        };
-      }
-    }
+  const pages = [];
+  for (let slot = 0; slot < Math.min(concurrency, screens.length); slot++) {
+    const page = await context.newPage();
+    page.setDefaultNavigationTimeout(5_000);
+    page.setDefaultTimeout(3_000);
+    pages.push(page);
   }
+  // Screens whose preview or screenshot file names coincide stay in one chain, in screen order.
+  const chains = outputChains(screens, (screen) => screen.id.replace(/[^a-z0-9-]/gi, '_'));
+  await runChains(chains, pages.length, (screen, slot) =>
+    captureScreen(screen, pages[slot], context, results.get(screen)),
+  );
 } finally {
   await browser.close();
+}
+for (const screen of screens) {
+  const r = results.get(screen);
+  if ('manifest' in r) manifest[screen.id] = r.manifest;
+  if ('reconstruction' in r) reconstruction[screen.id] = r.reconstruction;
+  if ('styles' in r) {
+    Object.assign(styleCapture.styles, r.styles);
+    Object.assign(styleCapture.defaults, r.defaults);
+  }
+  styleCapture.diagnostics.push(...r.styleDiagnostics);
+  if ('styleScreen' in r) styleCapture.screens[screen.id] = r.styleScreen;
+  if ('interactions' in r) interactions[screen.id] = r.interactions;
+  if ('screenshots' in r) screenshots[screen.id] = r.screenshots;
 }
 await writeOutput(path.join(htmlRoot, 'manifest.json'), JSON.stringify(manifest, null, 2));
 await writeOutput(
