@@ -12,6 +12,14 @@ import org.junit.jupiter.api.Test;
 
 class NonInteractiveCliTest {
   /** The platform's empty device, so the CLI sees closed standard input. */
+  /**
+   * The output is read as UTF-8. Java 17 writes piped output in the platform charset (Cp1252 on an
+   * English Windows), which turns the Chinese messages into '?'.
+   */
+  private static final java.util.List<String> UTF8_OUTPUT =
+      java.util.List.of(
+          "-Dfile.encoding=UTF-8", "-Dsun.stdout.encoding=UTF-8", "-Dsun.stderr.encoding=UTF-8");
+
   private static final File NO_INPUT =
       new File(System.getProperty("os.name").startsWith("Windows") ? "NUL" : "/dev/null");
 
@@ -358,6 +366,7 @@ class NonInteractiveCliTest {
     args.add("-Duser.home=" + home);
     args.add("-Dscreentrace.home=" + screenTrace);
     args.add("-Djava.awt.headless=true");
+    args.addAll(UTF8_OUTPUT);
     String jsModule = System.getProperty("screentrace.js.module");
     if (jsModule != null) args.add("-Dscreentrace.js.module=" + jsModule);
     args.add("-cp");
@@ -394,6 +403,7 @@ class NonInteractiveCliTest {
     args.add(Path.of(System.getProperty("java.home"), "bin", "java").toString());
     args.add("-Duser.home=" + home);
     args.add("-Djava.awt.headless=true");
+    args.addAll(UTF8_OUTPUT);
     args.add("-cp");
     args.add(classpath);
     args.add(ScreenTraceCli.class.getName());
@@ -453,6 +463,7 @@ class NonInteractiveCliTest {
     args.add(Path.of(System.getProperty("java.home"), "bin", "java").toString());
     args.add("-Duser.home=" + home);
     args.add("-Djava.awt.headless=true");
+    args.addAll(UTF8_OUTPUT);
     args.add("-cp");
     args.add(classpath);
     args.add(ScreenTraceCli.class.getName());
