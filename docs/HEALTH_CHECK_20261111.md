@@ -11,9 +11,9 @@
 
 | 編號 | 優先 | 項目 | 狀態 |
 |---|---|---|---|
-| HC-001 | 高 | 程式碼過度壓縮，沒有格式化與 lint 工具 | 已完成：排版（R39、R40）、拆分大型檔案（R41、R44）、JS／TS lint（R49）；Java lint 待評估 |
+| HC-001 | 高 | 程式碼過度壓縮，沒有格式化與 lint 工具 | 已完成：排版（R39、R40）、拆分大型檔案（R41、R44）、JS／TS lint（R49）；Java 不導入 Error Prone（R52） |
 | HC-003 | 高 | CI 沒跑到 7 個 capture 測試檔；只在 Linux 上測；沒有覆蓋率 | 測試已補進 CI（R38）；Windows 與覆蓋率已加入（R45） |
-| HC-004 | 中 | 預覽擷取逐一畫面執行；R34 的 5 秒改善沒合併；Java 原始檔重複解析 | 已完成（R47 預覽擷取、R48 Java 線性搜尋）；120 秒擷取上限待決定 |
+| HC-004 | 中 | 預覽擷取逐一畫面執行；R34 的 5 秒改善沒合併；Java 原始檔重複解析 | 已完成（R47 預覽擷取、R48 Java 線性搜尋、R52 擷取上限依畫面數放寬） |
 | HC-005 | 中 | Struts／JSP 有部分標記用 regex 解析 | 已完成（R46）；`c:url` 前處理待辦 |
 | HC-006 | 中 | 框架 adapter 的選擇寫死在 if 判斷裡，沒有共同介面 | 刻意延後：等需要第三種框架時再做 |
 | HC-002 | 低 | 26 處 `catch(Exception ignored){}` | 已完成（R50） |
@@ -58,7 +58,7 @@
 - R41 WP112 把 `StrutsProjectAnalyzer.java` 依功能拆成 16 個檔案（只搬移），見 [ADR 0132](adr/0132-r41-split-struts-project-analyzer.md)。
 - R44 WP115 把 `react/analyzer.mjs` 依功能拆成 9 個模組（只搬移），見 [ADR 0135](adr/0135-r44-split-react-analyzer.md)；`ScreenRenderer` 類別仍有 1,867 行。
 - R49 WP120：JavaScript 以 ESLint 建議規則檢查，TypeScript 由 `tsc` 檢查沒用到的變數與參數（typescript-eslint 尚未支援 TypeScript 7），CI 都會執行；既有的 57 筆結果已修正，見 [ADR 0140](adr/0140-r49-lint-rules.md)。
-- 待評估：Java lint。`javac -Xlint:all` 有 79 個警告，大多是泛型 varargs 與 deprecated API 的雜訊；是否導入 Error Prone 之後再決定。明確寫出的 TypeScript `any`（6 處）等 typescript-eslint 支援 TypeScript 7 後再處理。
+- Java lint：`javac -Xlint:all` 有 79 個警告，大多是泛型 varargs 與 deprecated API 的雜訊。R52 決定不導入 Error Prone，見 [ADR 0143](adr/0143-r52-capture-timeout-and-java-lint.md)。明確寫出的 TypeScript `any`（6 處）等 typescript-eslint 支援 TypeScript 7 後再處理。
 
 ## HC-002 [低] 26 處吞掉例外
 
@@ -141,7 +141,7 @@ Java 主程式有 26 處 `catch(Exception ignored){}`，依用途分成四類：
 - 已完成：樣式只傳回和預設值不同的屬性；同時開 4 個 page 擷取，結果依畫面順序合併。同一專案的擷取降為 48.7 秒，CLI 完整分析 91.3 秒且預覽完整；15 個 fixtures 的產物不變。
 - 重新評估：JFR 取樣中 JavaParser 只占 Java 端約 1.4%，重複解析不是瓶頸。Java 端 35 秒主要花在線性搜尋：`PrototypeModelGenerator.relationshipFrom`（約 29%）、`JspTagFileExpander` 每個 tag 重新掃描整頁的 taglib 宣告（約 15%）、`MarkupGraphContribution.putEdge` 與 `UrlGraphContribution`。改為處理這些熱點（R48）。
 - R48 WP119 已完成：上述熱點改用索引，合成專案的 Java 分析與報表由 35 秒降為 13.2 秒，產物不變；不建立跨模組的解析快取，見 [ADR 0139](adr/0139-r48-index-graph-lookups.md)。
-- 待辦：CLI 的預覽擷取上限固定 120 秒，畫面再多時仍可能整段逾時；是否依畫面數放寬，之後再決定。
+- R52 WP123 已完成：CLI 的預覽擷取上限改為 120 秒加每個畫面 2 秒，最多 30 分鐘，見 [ADR 0143](adr/0143-r52-capture-timeout-and-java-lint.md)。
 
 ## HC-005 [中] 部分標記用 regex 解析
 

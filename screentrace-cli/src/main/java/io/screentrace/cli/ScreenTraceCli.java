@@ -573,7 +573,12 @@ public final class ScreenTraceCli {
                   n ->
                       n.type() == ApplicationGraph.NodeType.SCREEN
                           && n.attributes().getOrDefault("view", "").endsWith(".html"))) {
-        renderStaticJsp(project.sourceDirectory(), output);
+        renderStaticJsp(
+            project.sourceDirectory(),
+            output,
+            graph.nodes().stream()
+                .filter(n -> n.type() == ApplicationGraph.NodeType.SCREEN)
+                .count());
         packPreview(output);
       }
       var report =
@@ -672,7 +677,15 @@ public final class ScreenTraceCli {
   }
 
   @SuppressWarnings("java:S4036")
-  private static void renderStaticJsp(Path target, Path output)
+  /**
+   * Seconds the preview capture may take: 120 plus 2 per screen, at most 30 minutes (HC-004, ADR
+   * 0143). A fixed limit dropped every preview of a large project once it was exceeded.
+   */
+  static long captureTimeoutSeconds(long screens) {
+    return Math.min(1_800, 120 + 2 * Math.max(0, screens));
+  }
+
+  private static void renderStaticJsp(Path target, Path output, long screens)
       throws IOException, InterruptedException {
     Process process =
         new ProcessBuilder(
@@ -683,10 +696,11 @@ public final class ScreenTraceCli {
                 "--preview-v2")
             .inheritIO()
             .start();
-    if (!process.waitFor(120, TimeUnit.SECONDS)) {
+    long timeout = captureTimeoutSeconds(screens);
+    if (!process.waitFor(timeout, TimeUnit.SECONDS)) {
       process.destroy();
       if (!process.waitFor(2, TimeUnit.SECONDS)) process.destroyForcibly();
-      LOGGER.warning("JSP 靜態預覽逾時；未取得預覽的畫面將明確標記。");
+      LOGGER.warning("JSP 靜態預覽超過 " + timeout + " 秒而逾時；未取得預覽的畫面將明確標記。");
     } else if (process.exitValue() != 0) LOGGER.warning("無法建立 JSP 靜態預覽；未取得預覽的畫面將明確標記。");
   }
 
