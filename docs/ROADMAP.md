@@ -318,3 +318,8 @@
 - WP116：根目錄 pom 加 `coverage` profile（JaCoCo 0.8.15，只報告不設門檻），CI 把各模組覆蓋率寫進 job summary 並上傳報告；新增 `windows` job，在 Windows 上執行完整 Java 測試，並以 `bin\screentrace.cmd analyze` 分析一個 fixture，見 [ADR 0136](adr/0136-r45-windows-ci-and-coverage.md)（HC-003）。
 - Windows job 第一次執行找到並修正 5 個 Windows 使用者會遇到的問題：外部或帶查詢字串的 `c:import` 讓分析中斷、Spring 畫面 ID 使用 `\` 導致圖驗證失敗、互動選單吃掉輸入路徑的 `\` 與 `'`、家目錄遮蔽漏掉真實路徑、`screentrace.ps1` 讀取 `java -version` 時中止；另有 5 類只與測試寫法有關的平台差異，詳見 ADR 0136。
 - 驗證：PR CI 四個 job（含 Windows 完整 Java 測試與 `bin\screentrace.cmd analyze`）全部通過；Linux 上 Maven 586 個測試（新增 2 個）。
+
+## R46 以 parser 讀取 XML 與 JSP 結構
+
+- WP117：Struts adapter、`JspProjectParser`、`SpringMvcAnalyzer` 中 7 處用 regex 讀 XML 或 JSP／HTML 結構的地方，改用 XML parser 與 `MarkupTag`；`MarkupTag` 新增 `contents` 與 `replaceTags`。只處理字串的 regex 保留，`c:url` 前處理留待之後，見 [ADR 0137](adr/0137-r46-parse-markup-instead-of-regex.md)（HC-005）。
+- 驗證：15 個 fixtures 專案的 277 個產物除來源路徑與 fingerprint 外相同；新增 8 個測試，其中 5 個在修改前會失敗（註解內容被當真、屬性值含 `>`、巢狀 `<value>`）；Maven 594（589 通過、5 略過）。

@@ -30,8 +30,6 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
@@ -131,11 +129,18 @@ public final class SpringMvcAnalyzer {
             SafeProjectFiles.readUtf8Limited(
                 inventory.root(), file, SafeProjectFiles.MAX_XML_FILE_BYTES);
         if (!xml.contains("SimpleMappingExceptionResolver")) continue;
-        Matcher value =
-            Pattern.compile(
-                    "<property\\s+name=[\\\"']defaultErrorView[\\\"']\\s+value=[\\\"']([^\\\"']+)")
-                .matcher(xml);
-        if (value.find()) state.defaultExceptionView = value.group(1);
+        // The resolver bean's own property, as a value attribute or a nested <value>.
+        NodeList beans = SafeProjectFiles.parseXml(xml, false).getElementsByTagName("bean");
+        for (int index = 0; index < beans.getLength(); index++) {
+          Element bean = (Element) beans.item(index);
+          String view = property(bean, "defaultErrorView");
+          if (bean.getAttribute("class").endsWith("SimpleMappingExceptionResolver")
+              && view != null
+              && !view.isBlank()) {
+            state.defaultExceptionView = view;
+            break;
+          }
+        }
       } catch (IOException ignored) {
         // A missing optional MVC configuration is represented by the normal unresolved diagnostic
         // path.
@@ -192,20 +197,31 @@ public final class SpringMvcAnalyzer {
           SafeProjectFiles.readUtf8Limited(
               state.root, file, SafeProjectFiles.MAX_SOURCE_FILE_BYTES);
       List<String> items = new ArrayList<>();
-      Matcher fields =
-          Pattern.compile(
-                  "<(?:form:)?(?:input|password|textarea|select)\\b[^>]*(?:path|name)=[\\\"']([^\\\"']+)",
-                  Pattern.CASE_INSENSITIVE)
-              .matcher(source);
-      while (fields.find() && items.size() < 8) items.add("FIELD:" + fields.group(1));
-      Matcher buttons =
-          Pattern.compile(
-                  "<(?:button|input)\\b[^>]*(?:value=[\\\"']([^\\\"']+)|type=[\\\"']submit[\\\"'])[^>]*>([^<]*)",
-                  Pattern.CASE_INSENSITIVE)
-              .matcher(source);
-      while (buttons.find() && items.size() < 12)
-        items.add(
-            "ACTION:" + (buttons.group(1) == null ? buttons.group(2).strip() : buttons.group(1)));
+      List<io.screentrace.parser.jsp.MarkupTag> tags =
+          io.screentrace.parser.jsp.MarkupTag.scan(source).stream()
+              .filter(tag -> !tag.closing())
+              .toList();
+      for (var tag : tags) {
+        if (items.size() >= 8) break;
+        String name = tag.name().toLowerCase(java.util.Locale.ROOT).replaceFirst("^form:", "");
+        String field =
+            tag.attribute("path") != null ? tag.attribute("path") : tag.attribute("name");
+        if (Set.of("input", "password", "textarea", "select").contains(name)
+            && field != null
+            && !field.isEmpty()) items.add("FIELD:" + field);
+      }
+      for (var tag : tags) {
+        if (items.size() >= 12) break;
+        String name = tag.name().toLowerCase(java.util.Locale.ROOT), value = tag.attribute("value");
+        if (!name.equals("button") && !name.equals("input")) continue;
+        if (value != null && !value.isEmpty()) items.add("ACTION:" + value);
+        else if ("submit".equalsIgnoreCase(tag.attribute("type"))) {
+          int next = source.indexOf('<', tag.end() + 1);
+          items.add(
+              "ACTION:"
+                  + source.substring(tag.end() + 1, next < 0 ? source.length() : next).strip());
+        }
+      }
       return String.join("|", items);
     } catch (IOException ignored) {
       return "";

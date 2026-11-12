@@ -38,6 +38,48 @@ public final class MarkupTag {
     return scan(source, false);
   }
 
+  /**
+   * The markup between each opening {@code <name>} and the first closing {@code </name>} after it,
+   * in source order. Tags inside comments, scriptlets and EL do not count.
+   */
+  public static List<String> contents(String source, String name) {
+    List<String> result = new ArrayList<>();
+    List<MarkupTag> tags = scan(source);
+    for (int open = 0; open < tags.size(); open++) {
+      MarkupTag start = tags.get(open);
+      if (start.closing() || !start.name().equalsIgnoreCase(name)) continue;
+      for (int close = open + 1; close < tags.size(); close++) {
+        MarkupTag end = tags.get(close);
+        if (end.closing() && end.name().equalsIgnoreCase(name)) {
+          result.add(source.substring(start.end() + 1, end.start()));
+          open = close;
+          break;
+        }
+      }
+    }
+    return result;
+  }
+
+  /**
+   * Replaces every opening or self-closing tag that {@code which} accepts with the text {@code
+   * replacement} gives it; null when {@code replacement} gives null for any of them.
+   */
+  public static String replaceTags(
+      String markup,
+      java.util.function.Predicate<MarkupTag> which,
+      java.util.function.Function<MarkupTag, String> replacement) {
+    StringBuilder result = new StringBuilder();
+    int copied = 0;
+    for (MarkupTag tag : scan(markup)) {
+      if (tag.closing() || !which.test(tag)) continue;
+      String text = replacement.apply(tag);
+      if (text == null) return null;
+      result.append(markup, copied, tag.start()).append(text);
+      copied = tag.end() + 1;
+    }
+    return result.append(markup.substring(copied)).toString();
+  }
+
   static List<MarkupTag> scanForAnchors(String source) {
     return scan(source, true);
   }

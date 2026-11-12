@@ -219,13 +219,13 @@ final class StrutsTiles {
   static String staticTileTitle(String value, State state) {
     if (value == null || value.isBlank()) return null;
     String candidate = value.strip();
-    Matcher message = Pattern.compile("(?is)^<(?:bean|s):message\\b([^>]*)/?>$").matcher(candidate);
-    if (message.matches()) {
-      Map<String, String> attributes = tagAttributes(message.group(1));
-      String key = attributes.get("key");
-      if (key == null) return null;
-      String resolved = resolveMessage(state, attributes.get("bundle"), key);
-      return resolved.startsWith("（訊息 key：") ? null : cleanScreenName(resolved);
+    List<MarkupTag> tags = MarkupTag.scan(candidate);
+    if (tags.size() == 1
+        && isMessageTag(tags.get(0))
+        && tags.get(0).start() == 0
+        && tags.get(0).end() == candidate.length() - 1) {
+      String resolved = message(tags.get(0), state);
+      return resolved == null ? null : cleanScreenName(resolved);
     }
     if (candidate.matches("(?s).*\\$\\{|.*#\\{|.*<%.*")) return null;
     Set<String> translations = state.messages.get(candidate);
@@ -263,20 +263,17 @@ final class StrutsTiles {
     try {
       String source =
           SafeProjectFiles.readUtf8Limited(
-                  state.inventory.root(),
-                  state.inventory.root().resolve(path),
-                  SafeProjectFiles.MAX_JSP_FILE_BYTES)
-              .replaceAll("(?s)<%--.*?--%>", "")
-              .replaceAll("(?s)<!--.*?-->", "")
-              .replaceAll("(?s)<%(?!@).*?%>", "");
-      Matcher title = Pattern.compile("(?is)<title\\b[^>]*>(.*?)</title\\s*>").matcher(source);
-      if (title.find()) {
-        String name = staticMarkupLabel(title.group(1), state);
+              state.inventory.root(),
+              state.inventory.root().resolve(path),
+              SafeProjectFiles.MAX_JSP_FILE_BYTES);
+      // The first <title>, then each <h1>; MarkupTag skips tags inside comments and scriptlets.
+      List<String> titles = MarkupTag.contents(source, "title");
+      if (!titles.isEmpty()) {
+        String name = staticMarkupLabel(withoutCommentsAndScriptlets(titles.get(0)), state);
         if (name != null) return name;
       }
-      Matcher heading = Pattern.compile("(?is)<h1\\b[^>]*>(.*?)</h1\\s*>").matcher(source);
-      while (heading.find()) {
-        String name = staticMarkupLabel(heading.group(1), state);
+      for (String heading : MarkupTag.contents(source, "h1")) {
+        String name = staticMarkupLabel(withoutCommentsAndScriptlets(heading), state);
         if (name != null) return name;
       }
     } catch (IOException | SecurityException ignored) {
@@ -285,21 +282,18 @@ final class StrutsTiles {
   }
 
   static String staticMarkupLabel(String markup, State state) {
-    if (markup.matches("(?is).*<(?:c:choose|c:when|c:if|c:forEach)\\b.*")
+    if (MarkupTag.scan(markup).stream()
+            .anyMatch(
+                tag ->
+                    !tag.closing()
+                        && Set.of("c:choose", "c:when", "c:if", "c:foreach")
+                            .contains(tag.name().toLowerCase(Locale.ROOT)))
         || markup.matches("(?s).*\\$\\{|.*#\\{|.*<%.*")) return null;
-    Matcher message = Pattern.compile("(?is)<(bean|s):message\\b([^>]*)/?>").matcher(markup);
-    StringBuffer resolved = new StringBuffer();
-    while (message.find()) {
-      Map<String, String> attributes = tagAttributes(message.group(2));
-      String key = attributes.get("key"),
-          label = key == null ? null : resolveMessage(state, attributes.get("bundle"), key);
-      if (label == null || label.startsWith("（訊息 key：")) return null;
-      message.appendReplacement(resolved, Matcher.quoteReplacement(label));
-    }
-    message.appendTail(resolved);
+    String resolved =
+        MarkupTag.replaceTags(markup, StrutsTiles::isMessageTag, tag -> message(tag, state));
+    if (resolved == null) return null;
     String label =
         resolved
-            .toString()
             .replaceAll("(?is)<[^>]*>", " ")
             .replaceAll("&amp;", "&")
             .replaceAll("&lt;", "<")
@@ -309,12 +303,25 @@ final class StrutsTiles {
     return cleanScreenName(label);
   }
 
-  static Map<String, String> tagAttributes(String source) {
-    Map<String, String> result = new TreeMap<>();
-    Matcher attribute = Pattern.compile("([\\w:-]+)\\s*=\\s*(['\"])(.*?)\\2").matcher(source);
-    while (attribute.find())
-      result.put(attribute.group(1).toLowerCase(Locale.ROOT), attribute.group(3));
-    return result;
+  static boolean isMessageTag(MarkupTag tag) {
+    String name = tag.name().toLowerCase(Locale.ROOT);
+    return name.equals("bean:message") || name.equals("s:message");
+  }
+
+  /** The resolved text of a bean:message / s:message tag; null when its key is not found. */
+  static String message(MarkupTag tag, State state) {
+    String key = tag.attribute("key");
+    if (key == null) return null;
+    String resolved = resolveMessage(state, tag.attribute("bundle"), key);
+    return resolved.startsWith("（訊息 key：") ? null : resolved;
+  }
+
+  /** Comments and scriptlets inside an element's text are not part of its static label. */
+  static String withoutCommentsAndScriptlets(String markup) {
+    return markup
+        .replaceAll("(?s)<%--.*?--%>", "")
+        .replaceAll("(?s)<!--.*?-->", "")
+        .replaceAll("(?s)<%(?!@).*?%>", "");
   }
 
   static String cleanScreenName(String value) {

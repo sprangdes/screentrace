@@ -29,20 +29,19 @@ final class StrutsServletMappings {
     for (Path file : state.inventory.files())
       if (file.getFileName().toString().equalsIgnoreCase("web.xml"))
         try {
-          String source =
-              SafeProjectFiles.readUtf8Limited(
-                  state.inventory.root(), file, SafeProjectFiles.MAX_XML_FILE_BYTES);
-          Matcher servlet =
-              Pattern.compile("(?is)<servlet-class>\\s*[^<]*FacesServlet\\s*</servlet-class>")
-                  .matcher(source);
-          if (servlet.find())
-            state.diagnostics.add(
-                new Diagnostic(
-                    "偵測到 JSF FacesServlet；本階段不分析 JSF 元件",
-                    Confidence.UNRESOLVED,
-                    new SourceLocation(relative(state, file), lineAt(source, servlet.start())),
-                    "UNSUPPORTED_COMPONENT_FRAMEWORK",
-                    List.of()));
+          // Parsed as XML, so a FacesServlet that is only mentioned in a comment does not count.
+          StrutsSources.elements(readXml(file, state), "servlet-class").stream()
+              .filter(servlet -> servlet.getTextContent().strip().endsWith("FacesServlet"))
+              .findFirst()
+              .ifPresent(
+                  servlet ->
+                      state.diagnostics.add(
+                          new Diagnostic(
+                              "偵測到 JSF FacesServlet；本階段不分析 JSF 元件",
+                              Confidence.UNRESOLVED,
+                              new SourceLocation(relative(state, file), sourceLine(servlet)),
+                              "UNSUPPORTED_COMPONENT_FRAMEWORK",
+                              List.of())));
         } catch (Exception ignored) {
         }
     for (GraphNode screen : new ArrayList<>(state.nodes.values()))
@@ -60,36 +59,45 @@ final class StrutsServletMappings {
             String source =
                 SafeProjectFiles.readUtf8Limited(
                     state.inventory.root(), file, SafeProjectFiles.MAX_JSP_FILE_BYTES);
+            // Tokenized as markup, so commented-out directives and tags inside scriptlets or EL do
+            // not count.
+            List<MarkupTag> tags = MarkupTag.scan(source);
             Map<String, String> prefixes = new TreeMap<>();
-            Matcher declarations =
-                Pattern.compile(
-                        "(?is)<%@\\s*taglib\\b([^%]*)%>|xmlns:([\\w-]+)\\s*=\\s*['\"]([^'\"]+)['\"]")
-                    .matcher(source);
-            while (declarations.find()) {
-              if (declarations.group(1) != null) {
-                Matcher prefix =
-                    Pattern.compile("(?i)prefix\\s*=\\s*['\"]([^'\"]+)['\"]")
-                        .matcher(declarations.group(1));
-                Matcher uri =
-                    Pattern.compile("(?i)uri\\s*=\\s*['\"]([^'\"]+)['\"]")
-                        .matcher(declarations.group(1));
-                if (prefix.find() && uri.find()) prefixes.put(prefix.group(1), uri.group(1));
-              } else prefixes.put(declarations.group(2), declarations.group(3));
+            for (MarkupTag declaration : tags) {
+              if (declaration.closing()) continue;
+              if (declaration.name().equalsIgnoreCase("@taglib")) {
+                String prefix = declaration.attribute("prefix"), uri = declaration.attribute("uri");
+                if (prefix != null && uri != null) prefixes.put(prefix, uri);
+              }
+              declaration.attributes().entrySet().stream()
+                  .filter(entry -> entry.getKey().startsWith("xmlns:"))
+                  .forEach(
+                      entry ->
+                          prefixes.put(
+                              entry.getKey().substring("xmlns:".length()), entry.getValue()));
             }
             Set<String> jsfPrefixes = new TreeSet<>();
             prefixes.forEach(
                 (prefix, uri) -> {
                   if (uri.toLowerCase(Locale.ROOT).contains("jsf/html")
-                      || uri.toLowerCase(Locale.ROOT).contains("jsf/core")) jsfPrefixes.add(prefix);
+                      || uri.toLowerCase(Locale.ROOT).contains("jsf/core"))
+                    jsfPrefixes.add(prefix.toLowerCase(Locale.ROOT));
                 });
             if (jsfPrefixes.isEmpty()) continue;
-            Matcher tag =
-                Pattern.compile(
-                        "(?i)<("
-                            + String.join("|", jsfPrefixes.stream().map(Pattern::quote).toList())
-                            + "):[\\w-]+\\b")
-                    .matcher(source);
-            if (!tag.find()) continue;
+            MarkupTag tag =
+                tags.stream()
+                    .filter(candidate -> !candidate.closing())
+                    .filter(
+                        candidate -> {
+                          String name = candidate.name().toLowerCase(Locale.ROOT);
+                          int colon = name.indexOf(':');
+                          return colon > 0
+                              && colon < name.length() - 1
+                              && jsfPrefixes.contains(name.substring(0, colon));
+                        })
+                    .findFirst()
+                    .orElse(null);
+            if (tag == null) continue;
             GraphNode current = state.nodes.get(screen.id());
             if (current != null
                 && !"JSF".equals(current.attributes().get("unsupportedComponentFramework"))) {
@@ -106,7 +114,7 @@ final class StrutsServletMappings {
                       current.confidence(),
                       current.evidence()));
             }
-            SourceLocation sourceLocation = new SourceLocation(path, lineAt(source, tag.start()));
+            SourceLocation sourceLocation = new SourceLocation(path, tag.line());
             if (state.diagnostics.stream()
                 .noneMatch(
                     item ->
@@ -123,7 +131,7 @@ final class StrutsServletMappings {
                               sourceLocation,
                               PARSER,
                               ResolutionStatus.UNRESOLVED,
-                              "畫面=" + screen.name() + "；JSF 標籤=" + tag.group()))));
+                              "畫面=" + screen.name() + "；JSF 標籤=<" + tag.name()))));
           } catch (Exception ignored) {
           }
         }
