@@ -26,7 +26,7 @@ public final class UrlGraphContribution {
             inventory);
     Map<String, GraphNode> nodes = new TreeMap<>();
     graph.nodes().forEach(n -> nodes.put(n.id(), n));
-    Map<String, Relationship> edges = new TreeMap<>();
+    RelationshipsByFrom edges = new RelationshipsByFrom();
     graph.relationships().forEach(e -> edges.put(e.id(), e));
     Map<String, Behavior> behaviors = new TreeMap<>();
     graph.behaviors().forEach(b -> behaviors.put(b.id(), b));
@@ -80,8 +80,8 @@ public final class UrlGraphContribution {
       if ("true".equals(trigger.attributes().get("strutsInheritedFormAction"))
           && !trigger.attributes().containsKey("requestAlternatives")) continue;
       boolean strutsRouteAlreadyProven =
-          edges.values().stream()
-              .filter(edge -> edge.type() == EdgeType.TRIGGERS && edge.from().equals(b.triggerId()))
+          edges.from(b.triggerId()).stream()
+              .filter(edge -> edge.type() == EdgeType.TRIGGERS)
               .map(edge -> nodes.get(edge.to()))
               .filter(Objects::nonNull)
               .anyMatch(
@@ -147,8 +147,7 @@ public final class UrlGraphContribution {
       // the ambiguity-keeping matcher.
       if (b.type() == BehaviorType.NAVIGATE
           && raw == null
-          && edges.values().stream()
-              .anyMatch(e -> e.type() == EdgeType.TRIGGERS && e.from().equals(b.triggerId())))
+          && edges.from(b.triggerId()).stream().anyMatch(e -> e.type() == EdgeType.TRIGGERS))
         continue;
       if (b.type() == BehaviorType.NAVIGATE && raw == null) {
         raw =

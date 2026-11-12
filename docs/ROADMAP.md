@@ -331,3 +331,9 @@
 - 驗證：15 個 fixtures 的 277 個產物逐位元組相同；合成專案以修改前、concurrency 1 與 4 擷取的預覽與截圖逐位元組相同；新增 `capture-pool.test.mjs` 6 個測試，其中「無效參數會中止擷取」在修改前的版本會失敗；capture 93、Maven 594（589 通過、5 略過）。
 - 另附上一個工作階段的紀錄 [SESSION_20261112](SESSION_20261112.md)。
 
+## R48 Java 分析以索引取代線性搜尋
+
+- WP119：`PrototypeModelGenerator`、`MarkupGraphContribution`、`UrlGraphContribution` 改用依起點建立的關聯索引（新增 `RelationshipsByFrom`），`JspTagFileExpander` 每段文字只掃描一次 taglib 宣告，`StrutsWildcards` 遇到沒有萬用字元的 route 時直接比對字串；不建立跨模組的 Java 解析快取，見 [ADR 0139](adr/0139-r48-index-graph-lookups.md)（HC-004）。
+- 量測（sandbox，4 核心）：80 個畫面的合成專案，Java 分析與報表由 35 秒降為 13.2 秒，CLI 完整分析由 91.3 秒降為 78.4 秒；15 個 fixtures 在量測誤差內。
+- 驗證：15 個 fixtures 的 277 個產物、合成專案的全部產物都與修改前逐位元組相同；新增 4 個測試；Maven 598（593 通過、5 略過）。
+
