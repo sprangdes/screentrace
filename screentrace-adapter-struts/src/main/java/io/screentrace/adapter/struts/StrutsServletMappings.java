@@ -42,7 +42,9 @@ final class StrutsServletMappings {
                               new SourceLocation(relative(state, file), sourceLine(servlet)),
                               "UNSUPPORTED_COMPONENT_FRAMEWORK",
                               List.of())));
-        } catch (Exception ignored) {
+        } catch (Exception unread) {
+          // readFacesServletMappings reports an unreadable web.xml; it only adds no JSF warning
+          // here.
         }
     for (GraphNode screen : new ArrayList<>(state.nodes.values()))
       if (screen.type() == NodeType.SCREEN) {
@@ -132,7 +134,8 @@ final class StrutsServletMappings {
                               PARSER,
                               ResolutionStatus.UNRESOLVED,
                               "畫面=" + screen.name() + "；JSF 標籤=<" + tag.name()))));
-          } catch (Exception ignored) {
+          } catch (Exception unread) {
+            // JspProjectParser reports an unreadable page; it only adds no JSF warning here.
           }
         }
       }

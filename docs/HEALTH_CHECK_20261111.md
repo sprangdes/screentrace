@@ -16,7 +16,7 @@
 | HC-004 | 中 | 預覽擷取逐一畫面執行；R34 的 5 秒改善沒合併；Java 原始檔重複解析 | 已完成（R47 預覽擷取、R48 Java 線性搜尋）；120 秒擷取上限待決定 |
 | HC-005 | 中 | Struts／JSP 有部分標記用 regex 解析 | 已完成（R46）；`c:url` 前處理待辦 |
 | HC-006 | 中 | 框架 adapter 的選擇寫死在 if 判斷裡，沒有共同介面 | 刻意延後：等需要第三種框架時再做 |
-| HC-002 | 低 | 26 處 `catch(Exception ignored){}` | 已重新評估，降為低 |
+| HC-002 | 低 | 26 處 `catch(Exception ignored){}` | 已完成（R50） |
 | HC-007 | 低 | 沒有 Maven Wrapper；Node 套件沒宣告 `engines`；Playwright 版本綁住 CI 的作業系統版本 | 已完成（R43） |
 | HC-008 | 低 | ADR 128 份，缺一份現況摘要 | 待辦 |
 | HC-009 | 低 | `element-styles.json` 含本機絕對路徑（R39 比對時發現） | 已完成（R42） |
@@ -77,7 +77,9 @@ Java 主程式有 26 處 `catch(Exception ignored){}`，依用途分成四類：
 
 健檢初稿估計這些地方會默默漏掉關聯，重新逐處確認後，主要失敗都已經有其他診斷涵蓋，因此降為低優先。
 
-**建議做法**
+**進度**：R50 WP121 已完成。共 27 處（另找到 `JavaScriptGraphContribution` 一處 `RuntimeException`）：A、D、E 類改接實際的例外型別；讀檔失敗加註解，說明由誰報錯；序列化失敗改拋 `IllegalStateException`；`EmptyCatchGuardTest` 禁止沒有說明的空 `catch`。見 [ADR 0141](adr/0141-r50-explained-catch-blocks.md)。
+
+**建議做法**（原始建議）
 
 日後格式化（HC-001）時順手處理：第二類讀檔失敗改為產生診斷，或至少在程式碼裡註明由哪個主流程負責報錯；第四類改成只接住實際會丟的例外型別（例如 `JsonProcessingException`、`IllegalArgumentException`），不再用 `Exception`。
 

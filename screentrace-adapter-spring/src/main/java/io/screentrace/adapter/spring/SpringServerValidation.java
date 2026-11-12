@@ -1,5 +1,6 @@
 package io.screentrace.adapter.spring;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.javaparser.JavaParser;
 import com.github.javaparser.ast.*;
@@ -509,7 +510,8 @@ final class SpringServerValidation {
       try {
         for (var value : new ObjectMapper().readTree(old.parameters().get("endpointIds")))
           endpoints.add(value.asText());
-      } catch (Exception ignored) {
+      } catch (JsonProcessingException | IllegalArgumentException notJson) {
+        // Without readable endpoint IDs the earlier rule adds none.
       }
     }
     var params = new TreeMap<>(parameters);

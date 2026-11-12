@@ -419,6 +419,7 @@ public final class JavaScriptGraphContribution {
       try {
         process.descendants().forEach(ProcessHandle::destroyForcibly);
       } catch (RuntimeException listingNotPermitted) {
+        // Listing processes is not permitted here; the direct child is still stopped below.
       }
       process.destroyForcibly();
       executor.shutdownNow();

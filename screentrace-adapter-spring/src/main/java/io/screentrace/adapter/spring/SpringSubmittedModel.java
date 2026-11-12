@@ -1,11 +1,13 @@
 package io.screentrace.adapter.spring;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.javaparser.ast.body.*;
 import com.github.javaparser.ast.expr.*;
 import io.screentrace.core.ApplicationGraph;
 import io.screentrace.core.ApplicationGraph.*;
 import io.screentrace.scanner.ProjectScanner.ProjectInventory;
+import java.io.IOException;
 import java.util.*;
 
 /**
@@ -27,7 +29,9 @@ final class SpringSubmittedModel {
           types.computeIfAbsent(t.getNameAsString(), k -> new ArrayList<>()).add(t);
           files.put(t, inventory.root().relativize(file).toString().replace('\\', '/'));
         }
-      } catch (Exception ignored) {
+      } catch (IOException | RuntimeException unparsed) {
+        // The main Spring pass reports an unreadable or unparseable source; its types are skipped
+        // here.
       }
     Map<String, List<AnalysisEvidence>> contributions = new HashMap<>();
     for (var handler : graph.nodes())
@@ -140,8 +144,11 @@ final class SpringSubmittedModel {
                   fields.put(model + "." + name, name);
                 }
             if (fields.isEmpty() || fields.size() > 64) continue;
+            // Evidence cites both declarations; one without a source position cannot be cited.
+            if (parameter.getBegin().isEmpty() || entity.getBegin().isEmpty()) continue;
+            String detail;
             try {
-              String detail =
+              detail =
                   new ObjectMapper()
                       .writeValueAsString(
                           new TreeMap<>(
@@ -152,23 +159,23 @@ final class SpringSubmittedModel {
                                   fields,
                                   "scope",
                                   "submitted-binding-demo")));
-              var evidence =
-                  List.of(
-                      new AnalysisEvidence(
-                          new SourceLocation(
-                              files.get(owner), parameter.getBegin().orElseThrow().line),
-                          "SpringSubmittedModel",
-                          ResolutionStatus.INFERRED,
-                          detail),
-                      new AnalysisEvidence(
-                          new SourceLocation(
-                              files.get(entity), entity.getBegin().orElseThrow().line),
-                          "SpringSubmittedModel",
-                          ResolutionStatus.INFERRED,
-                          "直接表單綁定；僅回放輸入字串，不模擬服務、資料庫、巢狀關聯或計算結果"));
-              contributions.put(handler.id(), evidence);
-            } catch (Exception ignored) {
+            } catch (JsonProcessingException error) {
+              // Only maps of strings and numbers are written; failing is a bug.
+              throw new IllegalStateException("Cannot serialize submitted fields", error);
             }
+            contributions.put(
+                handler.id(),
+                List.of(
+                    new AnalysisEvidence(
+                        new SourceLocation(files.get(owner), parameter.getBegin().get().line),
+                        "SpringSubmittedModel",
+                        ResolutionStatus.INFERRED,
+                        detail),
+                    new AnalysisEvidence(
+                        new SourceLocation(files.get(entity), entity.getBegin().get().line),
+                        "SpringSubmittedModel",
+                        ResolutionStatus.INFERRED,
+                        "直接表單綁定；僅回放輸入字串，不模擬服務、資料庫、巢狀關聯或計算結果")));
           }
       }
     List<Relationship> edges = new ArrayList<>();

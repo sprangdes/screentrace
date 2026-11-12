@@ -578,9 +578,11 @@ public final class ScriptSources {
       for (String base : requestDirectories)
         try {
           String path = java.net.URI.create(base).resolve(raw).normalize().getPath();
-          if (path.startsWith("/") && !Arrays.asList(path.split("/")).contains(".."))
-            targets.add(path);
-        } catch (Exception ignored) {
+          if (path != null
+              && path.startsWith("/")
+              && !Arrays.asList(path.split("/")).contains("..")) targets.add(path);
+        } catch (IllegalArgumentException invalid) {
+          // A path that is not a valid URI against this base gives no target.
         }
     for (String clean : targets) {
       for (var file : inventory.files()) {

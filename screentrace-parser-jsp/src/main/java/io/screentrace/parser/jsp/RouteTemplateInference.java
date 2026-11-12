@@ -1,5 +1,6 @@
 package io.screentrace.parser.jsp;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import io.screentrace.core.ApplicationGraph;
 import io.screentrace.core.ApplicationGraph.*;
 import io.screentrace.scanner.ProjectScanner.ProjectInventory;
@@ -379,7 +380,8 @@ public final class RouteTemplateInference {
           try {
             var j = new com.fasterxml.jackson.databind.ObjectMapper().readTree(e.detail());
             if (j.has("url") && !j.path("url").isNull()) return j.path("url").asText();
-          } catch (Exception ignored) {
+          } catch (JsonProcessingException | IllegalArgumentException notJson) {
+            // Evidence detail that is not JSON names no URL.
           }
     String raw =
         trigger.attributes().getOrDefault("originalExpression", trigger.attributes().get("target"));
@@ -415,7 +417,8 @@ public final class RouteTemplateInference {
                   .toList();
           return definitions.size() == 1 ? definitions.get(0) : null;
         }
-      } catch (Exception ignored) {
+      } catch (Exception unread) {
+        // JspProjectParser reports an unreadable page; the URL variable stays unresolved.
       }
       return null;
     }
@@ -434,7 +437,8 @@ public final class RouteTemplateInference {
         try {
           var j = new com.fasterxml.jackson.databind.ObjectMapper().readTree(e.detail());
           if (j.hasNonNull("method")) return j.path("method").asText().toUpperCase(Locale.ROOT);
-        } catch (Exception ignored) {
+        } catch (JsonProcessingException | IllegalArgumentException notJson) {
+          // Evidence detail that is not JSON names no method.
         }
     return "UNKNOWN";
   }

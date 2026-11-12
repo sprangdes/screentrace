@@ -85,7 +85,9 @@ final class StrutsTiles {
               String target = first(tag, "definition", "name", "page", "value");
               if (resolved.containsKey(target)) referencedDefinitions.add(target);
             }
-        } catch (Exception ignored) {
+        } catch (Exception unread) {
+          // JspProjectParser reports an unreadable page; it only references no Tiles definition
+          // here.
         }
     for (String name : resolved.keySet())
       if (!referencedDefinitions.contains(name)) state.tilePageDefinitions.add(name);
@@ -276,7 +278,8 @@ final class StrutsTiles {
         String name = staticMarkupLabel(withoutCommentsAndScriptlets(heading), state);
         if (name != null) return name;
       }
-    } catch (IOException | SecurityException ignored) {
+    } catch (IOException | SecurityException unread) {
+      // JspProjectParser reports an unreadable page; it only gives no page name here.
     }
     return null;
   }

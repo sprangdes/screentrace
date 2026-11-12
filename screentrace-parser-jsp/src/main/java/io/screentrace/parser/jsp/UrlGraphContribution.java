@@ -1,5 +1,6 @@
 package io.screentrace.parser.jsp;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.*;
 import io.screentrace.core.*;
 import io.screentrace.core.ApplicationGraph.*;
@@ -113,7 +114,8 @@ public final class UrlGraphContribution {
               source = e.source();
               break;
             }
-          } catch (Exception ignored) {
+          } catch (JsonProcessingException | IllegalArgumentException notJson) {
+            // Evidence detail that is not JSON names no URL.
           }
         if (raw == null && b.targetId() != null) {
           var target = nodes.get(b.targetId());

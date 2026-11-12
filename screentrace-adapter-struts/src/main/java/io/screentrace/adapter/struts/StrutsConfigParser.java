@@ -456,7 +456,9 @@ final class StrutsConfigParser {
                 .matcher(name);
         if (library.matches())
           versions.putIfAbsent(library.group(1), new SourceLocation(relative, 1));
-      } catch (Exception ignored) {
+      } catch (Exception unread) {
+        // A build file that cannot be read gives no version evidence; the version is only
+        // described.
       }
     if (versions.size() != 1)
       return new StrutsVersionEvidence(

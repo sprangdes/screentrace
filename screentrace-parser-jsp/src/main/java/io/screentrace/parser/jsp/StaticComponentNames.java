@@ -204,7 +204,8 @@ final class StaticComponentNames {
                   entity.startsWith("#x") ? 16 : 10);
           if (Character.isValidCodePoint(point) && !(point >= 0xd800 && point <= 0xdfff))
             decoded = new String(Character.toChars(point));
-        } catch (NumberFormatException ignored) {
+        } catch (NumberFormatException notNumeric) {
+          // Not a numeric character reference: the entity stays as written.
         }
       m.appendReplacement(out, Matcher.quoteReplacement(decoded));
     }

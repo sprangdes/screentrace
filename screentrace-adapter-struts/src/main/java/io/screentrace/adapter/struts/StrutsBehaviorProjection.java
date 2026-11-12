@@ -6,6 +6,7 @@ import static io.screentrace.adapter.struts.StrutsGraphSupport.*;
 import static io.screentrace.adapter.struts.StrutsProjectAnalyzer.*;
 import static io.screentrace.adapter.struts.StrutsServletMappings.*;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.github.javaparser.ast.body.MethodDeclaration;
 import io.screentrace.adapter.struts.StrutsModel.Mapping;
 import io.screentrace.adapter.struts.StrutsModel.State;
@@ -44,7 +45,8 @@ final class StrutsBehaviorProjection {
               raw = item.get("url").asText();
               break;
             }
-          } catch (Exception ignored) {
+          } catch (JsonProcessingException | IllegalArgumentException notJson) {
+            // Evidence detail that is not JSON names no URL.
           }
       if (raw == null && nodes.containsKey(b.triggerId()))
         raw = nodes.get(b.triggerId()).attributes().get("target");
@@ -70,7 +72,8 @@ final class StrutsBehaviorProjection {
         if (bases.size() == 1)
           try {
             path = java.net.URI.create(bases.get(0)).resolve(path).toString();
-          } catch (Exception ignored) {
+          } catch (IllegalArgumentException invalid) {
+            // A path that is not a valid URI stays unresolved.
           }
       }
       var mappings = state.routes.getOrDefault(path, List.of());

@@ -119,7 +119,9 @@ final class ActionContracts {
                                     ? Confidence.INFERRED
                                     : Confidence.UNRESOLVED));
                     }
-              } catch (Exception ignored) {
+              } catch (Exception unread) {
+                // StrutsConfigParser reports an unreadable config; it only adds no view contract
+                // here.
               }
           for (var edge : graph.relationships())
             if (Set.of(EdgeType.FORWARDS_TO, EdgeType.RENDERS).contains(edge.type())

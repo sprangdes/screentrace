@@ -6,6 +6,7 @@ import com.github.javaparser.ast.expr.*;
 import io.screentrace.core.*;
 import io.screentrace.core.ApplicationGraph.*;
 import io.screentrace.scanner.ProjectScanner.ProjectInventory;
+import java.io.IOException;
 import java.util.*;
 
 /** Source-configured filter entry points, not an authentication implementation. */
@@ -27,7 +28,9 @@ final class SpringSecurityProcessors {
         String path = inventory.root().relativize(file).toString().replace('\\', '/');
         for (var t : unit.getTypes())
           if (t instanceof ClassOrInterfaceDeclaration c) types.add(new Type(c, path));
-      } catch (Exception ignored) {
+      } catch (IOException | RuntimeException unparsed) {
+        // The main Spring pass reports an unreadable or unparseable source; its types are skipped
+        // here.
       }
     Map<String, GraphNode> nodes = new TreeMap<>();
     graph.nodes().forEach(n -> nodes.put(n.id(), n));
