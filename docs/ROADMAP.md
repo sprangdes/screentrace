@@ -342,3 +342,14 @@
 - WP120：JavaScript 以 ESLint 10.14.0 的建議規則檢查（`npm --prefix screentrace-viewer run lint`，CI 新增「Lint JavaScript」）；TypeScript 因 typescript-eslint 尚未支援 TypeScript 7，改在 `tsconfig.json` 開啟 `noUnusedLocals`、`noUnusedParameters`，由 viewer 建置的 `tsc` 檢查。修正 46 筆 JS 與 11 筆 TS 結果，都不改變行為；15 個空的 `catch` 加上說明。Java 的 lint 留待之後，見 [ADR 0140](adr/0140-r49-lint-rules.md)（HC-001 最後一段）。
 - 驗證：報表除內嵌的 `viewer.js` 外與修改前逐位元組相同，其他產物不變；JS 180、capture 93、viewer 單元 148、受影響的 e2e 15 個、Maven 598（593 通過、5 略過）。
 
+## R50 說明或縮小被吞掉的例外
+
+- WP121：Java 主程式 27 處空的 `catch`（健檢記 26 處，另找到 1 處）依來源處理：
+  - Java 解析、evidence JSON、URI 解析改接實際會丟的例外型別。
+  - 讀檔失敗加註解，說明由哪個主流程報錯。
+  - 序列化記憶體中的資料失敗時改拋 `IllegalStateException`。
+  - 新增 `EmptyCatchGuardTest`，禁止沒有說明的空 `catch`。
+
+  見 [ADR 0141](adr/0141-r50-explained-catch-blocks.md)（HC-002）。
+- 驗證：15 個 fixtures 與 80 畫面合成專案的產物逐位元組相同；`EmptyCatchGuardTest` 在修改前失敗；Maven 599（594 通過、5 略過）。
+

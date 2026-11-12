@@ -1,5 +1,6 @@
 package io.screentrace.parser.jsp;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.screentrace.core.ApplicationGraph;
 import io.screentrace.core.ApplicationGraph.*;
@@ -249,7 +250,9 @@ public final class ThymeleafFragments {
       var attrs = new TreeMap<>(n.attributes());
       try {
         attrs.put("templateFragments", json.writeValueAsString(items));
-      } catch (Exception ignored) {
+      } catch (JsonProcessingException error) {
+        // Only maps, lists and records of strings and numbers are written; failing is a bug.
+        throw new IllegalStateException("Cannot serialize template fragments", error);
       }
       nodes.put(
           n.id(),

@@ -1,5 +1,6 @@
 package io.screentrace.adapter.spring;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.javaparser.ast.*;
 import com.github.javaparser.ast.body.*;
@@ -194,7 +195,9 @@ final class SpringDataSimulation {
       try {
         if (handlerContracts.size() == 1)
           attrs.put("simulationData", JSON.writeValueAsString(handlerContracts.get(0)));
-      } catch (Exception ignored) {
+      } catch (JsonProcessingException error) {
+        // Only maps, lists and records of strings and numbers are written; failing is a bug.
+        throw new IllegalStateException("Cannot serialize simulation data", error);
       }
       nodes.add(
           new GraphNode(
@@ -238,7 +241,9 @@ final class SpringDataSimulation {
       var attrs = new TreeMap<>(node.attributes());
       try {
         attrs.put("simulationBindings", JSON.writeValueAsString(bindings));
-      } catch (Exception ignored) {
+      } catch (JsonProcessingException error) {
+        // Only maps, lists and records of strings and numbers are written; failing is a bug.
+        throw new IllegalStateException("Cannot serialize simulation bindings", error);
       }
       result.add(
           new GraphNode(

@@ -59,7 +59,8 @@ final class ConditionalUrlTargets {
           nodes.put(
               n.id(),
               new GraphNode(n.id(), n.type(), n.name(), attrs, n.source(), n.confidence(), proof));
-        } catch (Exception ignored) {
+        } catch (Exception unread) {
+          // JspProjectParser reports an unreadable page; the form keeps its single target.
         }
     for (var n : graph.nodes())
       if (n.type() == NodeType.COMPONENT && n.attributes().get("formId") != null) {

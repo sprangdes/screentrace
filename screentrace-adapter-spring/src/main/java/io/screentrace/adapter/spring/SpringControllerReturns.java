@@ -1,5 +1,6 @@
 package io.screentrace.adapter.spring;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.github.javaparser.ast.Node;
 import com.github.javaparser.ast.body.*;
 import com.github.javaparser.ast.expr.*;
@@ -230,7 +231,9 @@ final class SpringControllerReturns {
                   new com.fasterxml.jackson.databind.ObjectMapper()
                       .writeValueAsString(
                           new TreeMap<>(Map.of("version", 1, "values", Map.of(key, value))))));
-        } catch (Exception ignored) {
+        } catch (JsonProcessingException error) {
+          // Only maps, lists and records of strings and numbers are written; failing is a bug.
+          throw new IllegalStateException("Cannot serialize model feedback", error);
         }
       }
     return result;

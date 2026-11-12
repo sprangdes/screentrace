@@ -1,5 +1,6 @@
 package io.screentrace.adapter.spring;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.javaparser.ast.*;
 import com.github.javaparser.ast.body.*;
@@ -8,6 +9,7 @@ import com.github.javaparser.ast.stmt.*;
 import io.screentrace.core.ApplicationGraph;
 import io.screentrace.core.ApplicationGraph.*;
 import io.screentrace.scanner.ProjectScanner.ProjectInventory;
+import java.io.IOException;
 import java.util.*;
 
 /**
@@ -54,7 +56,9 @@ final class SpringDtoSimulation {
             types
                 .computeIfAbsent(c.getNameAsString(), k -> new ArrayList<>())
                 .add(new Type(c, path));
-      } catch (Exception ignored) {
+      } catch (IOException | RuntimeException unparsed) {
+        // The main Spring pass reports an unreadable or unparseable source; its types are skipped
+        // here.
       }
     Map<String, Operation> operations = new TreeMap<>();
     for (var entries : types.values())
@@ -208,7 +212,9 @@ final class SpringDtoSimulation {
       try {
         if (contracts.size() == 1)
           attrs.put("simulationData", json.writeValueAsString(contracts.get(0)));
-      } catch (Exception ignored) {
+      } catch (JsonProcessingException error) {
+        // Only maps, lists and records of strings and numbers are written; failing is a bug.
+        throw new IllegalStateException("Cannot serialize simulation data", error);
       }
       reads.put(
           handler.id(),
@@ -249,7 +255,9 @@ final class SpringDtoSimulation {
       try {
         attrs.put(
             "simulationBindings", json.writeValueAsString(bindings.stream().distinct().toList()));
-      } catch (Exception ignored) {
+      } catch (JsonProcessingException error) {
+        // Only maps, lists and records of strings and numbers are written; failing is a bug.
+        throw new IllegalStateException("Cannot serialize simulation bindings", error);
       }
       nodes.add(
           new GraphNode(
