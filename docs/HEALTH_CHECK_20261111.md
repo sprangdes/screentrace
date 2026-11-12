@@ -11,7 +11,7 @@
 
 | 編號 | 優先 | 項目 | 狀態 |
 |---|---|---|---|
-| HC-001 | 高 | 程式碼過度壓縮，沒有格式化與 lint 工具 | Java（R39）與 TS/JS（R40）排版、拆分 `StrutsProjectAnalyzer`（R41）已完成；`react/analyzer.mjs` 待辦 |
+| HC-001 | 高 | 程式碼過度壓縮，沒有格式化與 lint 工具 | 排版（R39、R40）與拆分大型檔案（R41、R44）已完成；lint 規則待辦 |
 | HC-003 | 高 | CI 沒跑到 7 個 capture 測試檔；只在 Linux 上測；沒有覆蓋率 | 測試已補進 CI；Windows 與覆蓋率待辦 |
 | HC-004 | 中 | 預覽擷取逐一畫面執行；R34 的 5 秒改善沒合併；Java 原始檔重複解析 | 待辦 |
 | HC-005 | 中 | Struts／JSP 有部分標記用 regex 解析 | 待辦 |
@@ -56,7 +56,8 @@
 - R34（PR #85）與 R38（PR #84）合併後，R39 WP110 以 Spotless + google-java-format 1.24.0 重新排版全部 Java 原始碼與測試（220 個檔案），CI 加上格式檢查，見 [ADR 0130](adr/0130-r39-java-formatting.md)。
 - R40 WP111 以 Prettier 3.9.10 重新排版三個 Node 套件的 TypeScript／JavaScript（234 個檔案），CI 加上格式檢查，見 [ADR 0131](adr/0131-r40-typescript-javascript-formatting.md)。
 - R41 WP112 把 `StrutsProjectAnalyzer.java` 依功能拆成 16 個檔案（只搬移），見 [ADR 0132](adr/0132-r41-split-struts-project-analyzer.md)。
-- 待辦：拆分 `react/analyzer.mjs`；ESLint 等 lint 規則。
+- R44 WP115 把 `react/analyzer.mjs` 依功能拆成 9 個模組（只搬移），見 [ADR 0135](adr/0135-r44-split-react-analyzer.md)；`ScreenRenderer` 類別仍有 1,867 行。
+- 待辦：ESLint 等 lint 規則。
 
 ## HC-002 [低] 26 處吞掉例外
 
