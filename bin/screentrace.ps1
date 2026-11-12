@@ -16,9 +16,13 @@ function Command-Exists([string]$name) {
   return $null -ne (Get-Command $name -ErrorAction SilentlyContinue)
 }
 
+# Windows PowerShell turns a native command's redirected stderr into error records, which stop the
+# script under $ErrorActionPreference = 'Stop'; `java -version` always writes to stderr. Version probes
+# therefore run with a function-local 'Continue' and read the output as text.
 function Get-JavaMajorVersion {
+  $ErrorActionPreference = 'Continue'
   if (-not (Command-Exists 'java')) { return 0 }
-  $line = (& java -version 2>&1 | Select-Object -First 1)
+  $line = (& java -version 2>&1 | Select-Object -First 1 | ForEach-Object { "$_" })
   if ($line -match 'version "([^"]+)"') {
     $version = $Matches[1]
     if ($version.StartsWith('1.')) { $version = $version.Substring(2) }
@@ -28,15 +32,17 @@ function Get-JavaMajorVersion {
 }
 
 function Get-MavenVersion {
+  $ErrorActionPreference = 'Continue'
   if (-not (Command-Exists 'mvn')) { return [Version]'0.0' }
-  $line = (& mvn -version 2>$null | Select-Object -First 1)
+  $line = (& mvn -version 2>$null | Select-Object -First 1 | ForEach-Object { "$_" })
   if ($line -match 'Apache Maven ([0-9]+(?:\.[0-9]+){1,3})') { return [Version]$Matches[1] }
   return [Version]'0.0'
 }
 
 function Get-NodeMajorVersion {
+  $ErrorActionPreference = 'Continue'
   if (-not (Command-Exists 'node')) { return 0 }
-  $version = (& node --version 2>$null)
+  $version = (& node --version 2>$null | Select-Object -First 1 | ForEach-Object { "$_" })
   if ($version -match '^v?([0-9]+)') { return [int]$Matches[1] }
   return 0
 }
@@ -86,7 +92,9 @@ function Ensure-BrowserRenderer {
       & npm ci --no-fund
       if ($LASTEXITCODE -ne 0) { throw 'Unable to install the ScreenTrace browser renderer.' }
     }
-    $installed = & npx playwright install --list 2>$null
+    $ErrorActionPreference = 'Continue'
+    $installed = & npx playwright install --list 2>$null | ForEach-Object { "$_" }
+    $ErrorActionPreference = 'Stop'
     if (($installed -join "`n") -notmatch 'chromium') {
       Write-Host 'Installing Chromium for JSP previews...'
       & npx playwright install chromium
