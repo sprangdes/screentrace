@@ -92,3 +92,17 @@ test('mappings with dot segments or inside comments never name an asset folder (
     ['static'],
   );
 });
+
+test('discovers mappings in a WebContent web root outside src/main (RV-512)', async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'screentrace-resources-'));
+  const webRoot = path.join(root, 'WebContent');
+  await mkdir(path.join(webRoot, 'WEB-INF/spring'), { recursive: true });
+  await mkdir(path.join(webRoot, 'static'), { recursive: true });
+  await writeFile(
+    path.join(webRoot, 'WEB-INF/spring/dispatcher-servlet.xml'),
+    '<mvc:resources mapping="/static/**" location="/static/"/>',
+  );
+  assert.deepEqual(await discoverSpringResourceMappings(root, webRoot, readFile), [
+    { urlPrefix: '/static/', assetKey: 'static', sourceDir: path.join(webRoot, 'static') },
+  ]);
+});

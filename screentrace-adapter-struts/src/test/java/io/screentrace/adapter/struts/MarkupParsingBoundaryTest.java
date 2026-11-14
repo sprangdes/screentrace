@@ -160,4 +160,33 @@ class MarkupParsingBoundaryTest {
     ApplicationGraph graph = analyze();
     assertTrue(graph.nodes().stream().anyMatch(node -> node.type() == NodeType.SCREEN));
   }
+
+  @Test
+  void webRootLayoutResolvesHtmlScreensIncludesAndRelativeLinks() throws Exception {
+    // RV-317: Struts used to know only src/main/webapp, WebContent and web.
+    file("WebRoot/WEB-INF/web.xml", "<web-app>" + WEB_XML_ACTION + "</web-app>");
+    file(
+        "WebRoot/WEB-INF/struts-config.xml",
+        "<struts-config><action-mappings><action path='/home' type='sample.HomeAction' forward='/pages/home.jsp'/><action path='/list' type='sample.ListAction' forward='/pages/home.jsp'/></action-mappings></struts-config>");
+    file("WebRoot/common/menu.jsp", "<a href='/app/list.do'>Menu list</a>");
+    file(
+        "WebRoot/pages/home.jsp",
+        "<%@ include file=\"/common/menu.jsp\" %>\n<a href='../list.do'>Relative list</a>");
+    file("WebRoot/help.html", "<html><body><h1>Help</h1></body></html>");
+    ApplicationGraph graph = analyze();
+    GraphNode help =
+        graph.nodes().stream()
+            .filter(
+                n ->
+                    n.type() == NodeType.SCREEN && "/help.html".equals(n.attributes().get("route")))
+            .findFirst()
+            .orElseThrow(() -> new AssertionError(graph.nodes().toString()));
+    assertEquals("WebRoot/help.html", help.attributes().get("view"));
+    GraphNode relative =
+        graph.nodes().stream()
+            .filter(n -> n.type() == NodeType.COMPONENT && n.name().equals("Relative list"))
+            .findFirst()
+            .orElseThrow();
+    assertEquals("/list.do", relative.attributes().get("target"), relative.attributes().toString());
+  }
 }

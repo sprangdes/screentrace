@@ -547,7 +547,8 @@ public final class MarkupGraphContribution {
     if (jsp.tilesDefinitions().stream().anyMatch(d -> d.name().equals(target))) return target;
     List<String> candidates =
         target.startsWith("/")
-            ? List.of("src/main/webapp" + target, target.substring(1))
+            ? io.screentrace.scanner.WebRoots.candidates(
+                io.screentrace.scanner.WebRoots.DEFAULTS, source, target)
             : List.of(
                 Path.of(source).getParent() == null
                     ? target

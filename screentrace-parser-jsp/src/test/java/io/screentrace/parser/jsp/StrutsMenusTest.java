@@ -87,4 +87,23 @@ class StrutsMenusTest {
     String page = TAGLIB + "<menu:displayMenu name=\"m\"/>";
     assertEquals(page, menus.expand(page));
   }
+
+  @Test
+  void configUnderAWebInfSubfolderResolvesAgainstTheWebRoot() throws Exception {
+    // RV-425: WEB-INF/config/struts-config.xml used to resolve /WEB-INF/... under WEB-INF/WEB-INF.
+    Path webInf = root.resolve("WebContent/WEB-INF");
+    Files.createDirectories(webInf.resolve("config"));
+    Files.writeString(
+        webInf.resolve("config/struts-config.xml"),
+        "<struts-config><plug-in className=\"net.sf.navigator.menu.MenuPlugIn\"/></struts-config>");
+    Files.writeString(webInf.resolve("menu-config.xml"), MENUS);
+    StrutsMenus menus;
+    try (var walk = Files.walk(root)) {
+      menus = StrutsMenus.load(root, walk.filter(Files::isRegularFile).toList());
+    }
+    assertTrue(
+        menus
+            .expand(TAGLIB + "<menu:displayMenu name=\"adminCustomer\"/>")
+            .contains("AddCustomer.do"));
+  }
 }

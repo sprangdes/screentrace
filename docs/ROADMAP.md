@@ -368,3 +368,8 @@
 
 - WP124：依 [CODE_REVIEW_20261114](CODE_REVIEW_20261114.md) 修正 P1。9 項成立並修正；RV-006 無法重現，判定不成立；RV-009 實際影響比記錄的小，記錄已更正。CLI 的用法與元件庫錯誤改以 exit status 回報、每次分析先清除舊預覽、Struts 2 偵測遇到無法解析的檔案時改掃描原始位元組，見 [ADR 0144](adr/0144-r53-code-review-p1-fixes.md)。
 - 驗證：每項修正都新增測試並確認修改前失敗（RV-001 啟動腳本除外）；JS 181、capture 94、viewer 單元 149、Maven 全數通過；viewer e2e 117/118，唯一失敗為效能測試在 sandbox 負載下逾時，單獨執行時修改前後都通過。
+
+## R54 共用 web root 規則
+
+- WP125：新增 `WebRoots`，JSP parser、Struts adapter、struts-menu 與 capture 的 `mvc:resources` 探索改用同一套 web root 規則；context 絕對路徑先在引用檔所在的 web root 下找，再退到專案根目錄，不改找其他 web root 的同名檔，見 [ADR 0145](adr/0145-r54-shared-web-roots.md)（RV-317、RV-401、RV-425、RV-512）。Spring adapter 的寫死位置待後續。
+- 驗證：新增 5 組測試，都已確認在修改前失敗；JS 181、capture 95、viewer 單元 149、Maven 全數通過。

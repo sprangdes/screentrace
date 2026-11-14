@@ -4,6 +4,7 @@ import io.screentrace.core.ApplicationGraph.Confidence;
 import io.screentrace.core.ApplicationGraph.Diagnostic;
 import io.screentrace.core.ApplicationGraph.SourceLocation;
 import io.screentrace.scanner.SafeProjectFiles;
+import io.screentrace.scanner.WebRoots;
 import java.io.IOException;
 import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
@@ -586,16 +587,18 @@ public final class JspProjectParser {
 
   private static String resolveInclude(Path root, String sourceView, String target) {
     try {
-      Path source = root.resolve(sourceView).getParent();
-      Path candidate =
-          target.startsWith("/")
-              ? root.resolve("src/main/webapp" + target)
-              : source.resolve(target).normalize();
-      if (SafeProjectFiles.isSafeRegularFile(root, candidate)) return relative(root, candidate);
       if (target.startsWith("/")) {
-        candidate = root.resolve(target.substring(1));
-        if (SafeProjectFiles.isSafeRegularFile(root, candidate)) return relative(root, candidate);
+        // Under the web root of the including file, not always src/main/webapp (RV-401), then the
+        // project root.
+        for (String path : WebRoots.candidates(WebRoots.of(root), sourceView, target)) {
+          Path candidate = root.resolve(path).normalize();
+          if (SafeProjectFiles.isSafeRegularFile(root, candidate)) return relative(root, candidate);
+        }
+        return null;
       }
+      Path source = root.resolve(sourceView).getParent();
+      Path candidate = source.resolve(target).normalize();
+      if (SafeProjectFiles.isSafeRegularFile(root, candidate)) return relative(root, candidate);
     } catch (InvalidPathException notAFilePath) {
       // A URL or query string ("https://…", "page.jsp?tab=1") names no project file. Linux accepts
       // such names and finds no file; Windows rejects ':' and '?', so treat both the same way.

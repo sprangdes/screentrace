@@ -154,9 +154,14 @@ public final class ProjectScanner {
     }
   }
 
+  /** Web-root prefixes for a project, honouring nbproject/project.properties. */
+  static List<String> webRoots(Path root) {
+    return webRootsFor(configuredWebRoot(root));
+  }
+
   private static List<String> webRootsFor(String configured) {
     if (configured != null) return List.of(configured + "/");
-    return List.of("src/main/webapp/", "WebContent/", "WebRoot/", "webapp/", "web/");
+    return WebRoots.DEFAULTS;
   }
 
   private static List<String> technologies(Path root, List<Path> files) {

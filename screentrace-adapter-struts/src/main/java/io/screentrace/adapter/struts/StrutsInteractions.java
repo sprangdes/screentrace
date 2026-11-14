@@ -62,7 +62,8 @@ final class StrutsInteractions {
               String target = raw;
               if (target != null && tag.attribute("action") != null)
                 target = normalizeStrutsAction(target, module, state);
-              else if (target != null) target = resolveRelativeJspUrl(path, target);
+              else if (target != null)
+                target = resolveRelativeJspUrl(path, target, state.inventory.webRoots());
               if (target != null)
                 loadCallsByView
                     .computeIfAbsent(path, ignored -> new ArrayList<>())
@@ -130,7 +131,7 @@ final class StrutsInteractions {
                           || name.equals("form:form"))
                       ? normalizeStrutsAction(action, moduleValue, state)
                       : action != null && !action.startsWith("/") && !action.contains(":")
-                          ? resolveRelativeJspUrl(path, action)
+                          ? resolveRelativeJspUrl(path, action, state.inventory.webRoots())
                           : action;
               if (action != null) {
                 target = action;
@@ -152,7 +153,8 @@ final class StrutsInteractions {
                   && !target.startsWith("/")
                   && !target.startsWith("#")
                   && !target.matches("(?is)^[a-z][a-z0-9+.-]*:.*")
-                  && tag.attribute("action") == null) target = resolveRelativeJspUrl(path, target);
+                  && tag.attribute("action") == null)
+                target = resolveRelativeJspUrl(path, target, state.inventory.webRoots());
               if (target != null && target.toLowerCase(Locale.ROOT).endsWith(".faces")) {
                 String facesTarget = normalizeFacesPath(target, state);
                 if (facesTarget != null && !facesTarget.equals(target)) {
@@ -218,7 +220,8 @@ final class StrutsInteractions {
                   && !target.startsWith("/")
                   && !target.startsWith("#")
                   && !target.matches("(?is)^[a-z][a-z0-9+.-]*:.*")
-                  && tag.attribute("action") == null) target = resolveRelativeJspUrl(path, target);
+                  && tag.attribute("action") == null)
+                target = resolveRelativeJspUrl(path, target, state.inventory.webRoots());
               attrs.put("target", target);
             }
             if (kind == ComponentKind.FORM) formGroup = id;
@@ -388,7 +391,9 @@ final class StrutsInteractions {
     Set<SourceLocation> actionIncludes = new HashSet<>();
     for (JspAnalysis.Include include : jsp.includes()) {
       String module = moduleFor(include.sourceViewPath(), state);
-      String target = resolveRelativeJspUrl(include.sourceViewPath(), include.targetPath());
+      String target =
+          resolveRelativeJspUrl(
+              include.sourceViewPath(), include.targetPath(), state.inventory.webRoots());
       if (target == null) continue;
       String path = target.split("[?#]", 2)[0];
       String logical = logicalPath(path, module, state);
@@ -461,14 +466,16 @@ final class StrutsInteractions {
       if (include.sourceViewPath().equals(view) && StrutsSources.literal(include.targetPath())) {
         String child =
             include.targetPath().startsWith("/")
-                ? "src/main/webapp" + include.targetPath()
+                ? io.screentrace.scanner.WebRoots.candidates(
+                        state.inventory.webRoots(), view, include.targetPath())
+                    .get(0)
                 : besideFile(view, include.targetPath());
         if (!sources.add(child)) continue;
         collectIncludeSources(child, jsp, state, seen, sources);
       }
   }
 
-  static String resolveRelativeJspUrl(String jspPath, String raw) {
+  static String resolveRelativeJspUrl(String jspPath, String raw, List<String> roots) {
     if (raw == null || !StrutsSources.literal(raw)) return raw;
     String suffix = "";
     int boundary = raw.length();
@@ -479,9 +486,8 @@ final class StrutsInteractions {
     String path = raw.substring(0, boundary);
     if (path.isBlank()) return raw;
     String normalized = besideFile(jspPath, path);
-    for (String webRoot : List.of("src/main/webapp/", "WebContent/", "web/"))
-      if (normalized.startsWith(webRoot))
-        return "/" + normalized.substring(webRoot.length()) + suffix;
+    String webRoot = io.screentrace.scanner.WebRoots.rootOf(roots, normalized);
+    if (webRoot != null) return "/" + normalized.substring(webRoot.length()) + suffix;
     return normalized.startsWith("/") ? normalized + suffix : raw;
   }
 

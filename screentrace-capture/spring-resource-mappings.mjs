@@ -77,7 +77,13 @@ function pathWithin(root, candidate) {
 /** Discovers servlet-webapp and classpath locations exposed by Spring MVC resource mappings. */
 export async function discoverSpringResourceMappings(target, webRoot, readFile) {
   const mappings = [];
-  for (const file of await files(path.join(target, 'src/main'), target)) {
+  // Dispatcher XML lives under src/main in Maven projects and under WEB-INF of the web root in
+  // WebContent / WebRoot / web layouts (RV-512); a file reachable from both is read once.
+  const configs = new Set([
+    ...(await files(path.join(target, 'src/main'), target)),
+    ...(await files(webRoot, target)),
+  ]);
+  for (const file of [...configs].sort()) {
     let xml;
     try {
       xml = await readFile(file, 'utf8');

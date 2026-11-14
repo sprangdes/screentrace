@@ -45,10 +45,11 @@ final class StrutsGraphSupport {
     return null;
   }
 
-  static void indexView(Map<String, String> index, String path, String id) {
+  static void indexView(Map<String, String> index, String path, String id, List<String> roots) {
     index.put(path, id);
-    for (String root : List.of("src/main/webapp/", "WebContent/", "web/"))
-      if (path.startsWith(root)) index.put("/" + path.substring(root.length()), id);
+    // The context path of a view is relative to its own web root (RV-317).
+    String root = io.screentrace.scanner.WebRoots.rootOf(roots, path);
+    if (root != null) index.put("/" + path.substring(root.length()), id);
     int marker = path.indexOf("/WEB-INF/");
     if (marker >= 0) index.put(path.substring(marker), id);
   }

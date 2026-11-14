@@ -4,6 +4,7 @@ import io.screentrace.core.ApplicationGraph.AnalysisEvidence;
 import io.screentrace.core.ApplicationGraph.ResolutionStatus;
 import io.screentrace.core.ApplicationGraph.SourceLocation;
 import io.screentrace.scanner.SafeProjectFiles;
+import io.screentrace.scanner.WebRoots;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.*;
@@ -248,9 +249,8 @@ final class JspTagFileExpander {
     String name = tagName.substring(colon + 1);
     List<Path> candidates = new ArrayList<>();
     if (tagdir.startsWith("/")) {
-      candidates.add(
-          root.resolve("src/main/webapp").resolve(tagdir.substring(1)).resolve(name + ".tag"));
-      candidates.add(root.resolve(tagdir.substring(1)).resolve(name + ".tag"));
+      for (String path : WebRoots.candidates(WebRoots.of(root), sourcePath, tagdir))
+        candidates.add(root.resolve(path).resolve(name + ".tag"));
     } else {
       Path parent = root.resolve(sourcePath).getParent();
       if (parent != null) candidates.add(parent.resolve(tagdir).resolve(name + ".tag"));

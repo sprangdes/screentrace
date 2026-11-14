@@ -164,7 +164,7 @@ P1 處理結果見各項「狀態」（R53，[ADR 0144](adr/0144-r53-code-review
 - **RV-314** `StrutsServletMappings.java:251`：ActionServlet mapping 只讀排序第一個 web.xml，可能取到 `docs/sample/web.xml`。
 - **RV-315** `StrutsControls.java:469`：任何同時有 `prefix` 與 `page` 參數的連結都被改寫成 SwitchAction 路徑（分頁連結誤判）。
 - **RV-316** `StrutsControls.java:348`：MappingDispatchAction 產生不存在的 `?save=save` 請求參數。
-- **RV-317** `StrutsInteractions.java:464`、`StrutsGraphSupport.java:48`：多處寫死 `src/main/webapp`／`WebContent`／`web`，未使用 `inventory.webRoots()`。
+- **RV-317** `StrutsInteractions.java:464`、`StrutsGraphSupport.java:48`：多處寫死 `src/main/webapp`／`WebContent`／`web`，未使用 `inventory.webRoots()`。 **狀態：已修正（R54，見 ADR 0145）。**
 - **RV-318** `StrutsMessages.java:45`：`endsWith(param + ".properties")` 無路徑邊界，`Messages` 也比對到 `AdminMessages.properties`。
 - **RV-319** `StrutsServletMappings.java:439`：route 已含前綴／後綴時不再加上，prefix mapping 的公開 URL 錯誤並產生假 DUPLICATE_ROUTE。
 - **RV-320** `StrutsConfigParser.java:387`：未列於 `config/<module>` 的設定檔以子字串猜模組，且忽略預設 `config` 參數。
@@ -175,7 +175,7 @@ P1 處理結果見各項「狀態」（R53，[ADR 0144](adr/0144-r53-code-review
 
 ## P2 — parser-jsp
 
-- **RV-401** `JspProjectParser.java:592`、`MarkupGraphContribution.java:548`、`JspTagFileExpander.java:252`：絕對 include 與 tagdir 寫死 `src/main/webapp`，WebContent／WebRoot 專案的 include 與自訂標籤全部無法解析（主要目標的舊專案受影響最大）。
+- **RV-401** `JspProjectParser.java:592`、`MarkupGraphContribution.java:548`、`JspTagFileExpander.java:252`：絕對 include 與 tagdir 寫死 `src/main/webapp`，WebContent／WebRoot 專案的 include 與自訂標籤全部無法解析（主要目標的舊專案受影響最大）。 **狀態：已修正（R54，見 ADR 0145）。**
 - **RV-402** `ScriptSources.java:97`：以預設語言層級的 JavaParser 解析，任一 record／switch expression 失敗就設全域 `unknownDefinitions`，關閉整個專案的 EL 值解析。
 - **RV-403** `ScriptSources.java:131`：任何 `map.put(key, v)`（key 非字面值）都設 `unknownDefinitions`，幾乎所有專案都會觸發，`<c:set var>` 值永遠不會傳給 JS 分析器。
 - **RV-404** `ThymeleafFragments.java:106`：fragment 檔不存在時例外跳出整個檔案的迴圈，後續合法的 `th:replace` 全部略過。
@@ -199,7 +199,7 @@ P1 處理結果見各項「狀態」（R53，[ADR 0144](adr/0144-r53-code-review
 - **RV-422** `JspProjectParser.java:567`：菱形 include 讓 fragment 的互動被加入兩次。
 - **RV-423** `JspProjectParser.java:697`：標籤文字搜尋 `"</" + tag` 區分大小寫且無邊界，`</a` 也比對到 `</abbr>`。
 - **RV-424** `ThymeleafMarkup.java:151`、`StrutsMenus.java:358`：URL 被 HTML escape 成 `&amp;` 後未解碼，graph 中保留 `&amp;`。
-- **RV-425** `StrutsMenus.java:266`：假設 struts-config 位於 `WEB-INF/` 下一層，`WEB-INF/config/` 時找不到 menu 設定。
+- **RV-425** `StrutsMenus.java:266`：假設 struts-config 位於 `WEB-INF/` 下一層，`WEB-INF/config/` 時找不到 menu 設定。 **狀態：已修正（R54）：以 `WEB-INF` 的上層為 web root。**
 - **RV-426** `MarkupAnalysis.java:265`：不認 Struts `nested:` taglib。
 - **RV-427** `JspProjectParser.java:537`：include 路徑含 query string 時未去除，判為找不到。
 - **RV-428** `ScriptSources.java:157`：結束標籤不比對名稱就 pop scope，stray `</div>` 提前結束 `c:if` 範圍。
@@ -217,7 +217,7 @@ P1 處理結果見各項「狀態」（R53，[ADR 0144](adr/0144-r53-code-review
 - **RV-509** `capture-static-jsp.mjs:301`：`rewriteCssUrls` 以 UTF-8 讀寫所有 CSS，刻意保留原樣的 Big5／GBK 檔被破壞；assetKey 為空時重寫兩次。
 - **RV-510** `capture-static-jsp.mjs:821`：CSP meta 用 `/<head([^>]*)>/i` 插入，會比對到 `<header>`；且在補上 `<head>` 之前執行，片段頁面沒有 CSP。
 - **RV-511** `react-preview.mjs:68`：超大或無法讀取的 CSS 拋例外中止整個擷取，而非產生 `REACT_STYLESHEET_MISSING`。
-- **RV-512** `spring-resource-mappings.mjs:75`：只掃 `target/src/main`，WebContent 等 web root 下的 dispatcher XML 找不到。
+- **RV-512** `spring-resource-mappings.mjs:75`：只掃 `target/src/main`，WebContent 等 web root 下的 dispatcher XML 找不到。 **狀態：已修正（R54）：同時掃描 web root。**
 - **RV-513** `react/markup.mjs:103`：屬性 denylist 區分大小寫、`xlink:href` 未檢查 scheme；字串 `style` 繞過 `url(` 過濾。React 預覽文件無 CSP。
 - **RV-514** `analyzer.mjs:1366`：解構或預設值參數未綁定，取到外層同名變數並產生 CONFIRMED 的錯誤導覽。
 - **RV-515** `template-fragments.mjs:156`：`startLine` 未驗證，0 或負值拋 RangeError，畫面標為擷取失敗。
@@ -276,7 +276,7 @@ P1 處理結果見各項「狀態」（R53，[ADR 0144](adr/0144-r53-code-review
 
 幾個問題在多個模組重複出現，集中修正比逐項修更有效：
 
-1. **web root 寫死**：RV-317、RV-401、RV-512、RV-425。全部改用 `inventory.webRoots()`，在 capture 端也傳入同一份清單。
+1. **web root 寫死**（R54 已處理，Spring adapter 的寫死位置待後續）：RV-317、RV-401、RV-512、RV-425。全部改用 `inventory.webRoots()`，在 capture 端也傳入同一份清單。
 2. **Java 解析器設定不一致與重複解析**：RV-201、RV-402、RV-701。統一走 `JavaSources.parse` 與 `ParsedJavaUnits` 快取。
 3. **單點失敗擴大為整體失敗**：RV-007、RV-217、RV-220、RV-404、RV-414、RV-421、RV-511、RV-602。錯誤應侷限在單一檔案／單一項目並留下診斷。
 4. **預覽輸出生命週期**：RV-005、RV-103、RV-104、RV-105。擷取前清空、逐步寫 manifest、結束整棵程序樹、封裝逾時不中止報告。
