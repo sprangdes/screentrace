@@ -68,3 +68,27 @@ test('rejects a resource location symlinked outside the project', async () => {
   await symlink(outside, path.join(webRoot, 'linked'));
   assert.deepEqual(await discoverSpringResourceMappings(root, webRoot, readFile), []);
 });
+
+test('mappings with dot segments or inside comments never name an asset folder (RV-011)', async () => {
+  for (const mapping of [
+    '/../../**',
+    '/static/../../x/**',
+    '/./x/**',
+    '/a\\..\\b/**',
+    '/a//b/**',
+  ]) {
+    const { root, webRoot } = await fixture(
+      `<mvc:resources mapping="${mapping}" location="/WEB-INF/static/"/>`,
+    );
+    await mkdir(path.join(webRoot, 'WEB-INF/static'), { recursive: true });
+    assert.deepEqual(await discoverSpringResourceMappings(root, webRoot, readFile), [], mapping);
+  }
+  const { root, webRoot } = await fixture(
+    '<!-- <mvc:resources mapping="/old/**" location="/WEB-INF/static/"/> --><mvc:resources mapping="/static/**" location="/WEB-INF/static/"/>',
+  );
+  await mkdir(path.join(webRoot, 'WEB-INF/static'), { recursive: true });
+  assert.deepEqual(
+    (await discoverSpringResourceMappings(root, webRoot, readFile)).map((m) => m.assetKey),
+    ['static'],
+  );
+});

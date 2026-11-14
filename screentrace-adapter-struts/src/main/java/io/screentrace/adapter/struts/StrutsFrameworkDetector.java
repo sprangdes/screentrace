@@ -3,6 +3,10 @@ package io.screentrace.adapter.struts;
 import io.screentrace.core.ApplicationGraph.*;
 import io.screentrace.scanner.ProjectScanner.ProjectInventory;
 import io.screentrace.scanner.SafeProjectFiles;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
 
@@ -76,6 +80,9 @@ public final class StrutsFrameworkDetector {
         } else if ((name.endsWith(".gradle") || name.endsWith(".gradle.kts"))
             && text.contains("struts2-core")) return Optional.of(rejection(inventory, file, 1));
       } catch (Exception error) {
+        // Every Struts 2 signal checked above contains "struts2", so a file that cannot be read or
+        // parsed, but whose bytes never contain it, cannot be one (RV-007). Otherwise stay closed.
+        if (!mayMentionStrutsTwo(inventory.root(), file)) continue;
         return Optional.of(
             StrutsSources.diagnostic(
                 "框架偵測未完成：" + error.getMessage(),
@@ -84,6 +91,30 @@ public final class StrutsFrameworkDetector {
                 "FRAMEWORK_DETECTION_UNRESOLVED"));
       }
     return Optional.empty();
+  }
+
+  private static final String STRUTS_TWO = "struts2";
+
+  /** True unless the whole file was read and the ASCII bytes of "struts2" do not occur in it. */
+  static boolean mayMentionStrutsTwo(Path root, Path file) {
+    try (InputStream input =
+        Files.newInputStream(SafeProjectFiles.requireExistingRegularFileWithin(root, file))) {
+      // Each chunk is searched together with the bytes kept from the previous one, so a match
+      // that spans a chunk boundary is still found.
+      String tail = "";
+      byte[] buffer = new byte[64 * 1024];
+      int read;
+      while ((read = input.read(buffer)) > 0) {
+        String window =
+            tail
+                + new String(buffer, 0, read, StandardCharsets.ISO_8859_1).toLowerCase(Locale.ROOT);
+        if (window.contains("struts2")) return true;
+        tail = window.substring(Math.max(0, window.length() - (STRUTS_TWO.length() - 1)));
+      }
+      return false;
+    } catch (IOException | RuntimeException error) {
+      return true;
+    }
   }
 
   private static Diagnostic rejection(ProjectInventory inventory, Path file, int line) {

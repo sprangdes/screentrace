@@ -69,8 +69,12 @@ class ComponentLibraryTest {
         IllegalArgumentException.class,
         () -> LibraryCommands.run(new String[] {"library", "bad"}, temp));
     var out =
-        LibraryCommands.run(
-            new String[] {"library", "validate", "/Users/private/absent.json"}, temp);
+        assertThrows(
+                LibraryCommands.FailedException.class,
+                () ->
+                    LibraryCommands.run(
+                        new String[] {"library", "validate", "/Users/private/absent.json"}, temp))
+            .getMessage();
     assertFalse(out.contains("/Users/private"));
     assertTrue(out.contains("失敗"));
   }
@@ -114,12 +118,14 @@ class ComponentLibraryTest {
     Path source = temp.resolve("manifest.json"), link = temp.resolve("link.json");
     Files.write(source, sample());
     Files.createSymbolicLink(link, source);
-    String validate =
-        LibraryCommands.run(new String[] {"library", "validate", link.toString()}, temp);
-    assertTrue(validate.contains("失敗"));
-    String imported =
-        LibraryCommands.run(new String[] {"library", "import", link.toString()}, temp);
-    assertTrue(imported.contains("失敗"));
+    for (String action : new String[] {"validate", "import"})
+      assertTrue(
+          assertThrows(
+                  LibraryCommands.FailedException.class,
+                  () ->
+                      LibraryCommands.run(new String[] {"library", action, link.toString()}, temp))
+              .getMessage()
+              .contains("失敗"));
     assertEquals("", new LibraryStore(temp).list());
   }
 

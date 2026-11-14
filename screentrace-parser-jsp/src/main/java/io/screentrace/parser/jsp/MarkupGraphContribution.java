@@ -86,7 +86,9 @@ public final class MarkupGraphContribution {
         if (view != null) roots.add(view);
         if ("true".equals(screen.attributes().get("tilesDefinition"))) {
           roots.clear();
-          roots.add(screen.name());
+          // The display name can come from a title put or the body JSP; the definition name is the
+          // key that tilesDefinitions and includes use (RV-009).
+          roots.add(screen.attributes().getOrDefault("tilesDefinitionName", screen.name()));
         }
         if (roots.isEmpty())
           collectGraphIncludes(screen.id(), graph, nodes, roots, new HashSet<>());

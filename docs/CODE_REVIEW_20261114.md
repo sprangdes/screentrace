@@ -26,6 +26,8 @@
 
 P3 依主題合併為 18 組（RV-701～710 效能、RV-801～808 重複程式碼與死碼），每組涵蓋多個位置。
 
+P1 處理結果見各項「狀態」（R53，[ADR 0144](adr/0144-r53-code-review-p1-fixes.md)）：9 項修正、RV-006 不成立、RV-009 降為 P2 性質。
+
 建議修正順序：先處理 P1（RV-001～RV-011），再處理同一主題的 P2 群組（見文末「跨模組主題」），P3 依效能量測結果挑選。
 
 ---
@@ -36,56 +38,67 @@ P3 依主題合併為 18 組（RV-701～710 效能、RV-801～808 重複程式�
 
 位置：`bin/screentrace:6,54,63`。`required_node=22`，`ensure_runtime` 卻 `brew install node@18` 並把它放到 PATH 最前面；之後 `needs_node` 必然失敗，macOS 上自動 setup 永遠無法完成。
 建議：改為 `node@22`，並讓版本號由 `required_node` 推導。
+狀態：已修正（R53）。
 
 ### RV-002 ［已核對］`RelationshipsByFrom` 的索引在 `removeIf` 後殘留已刪除的邊
 
 位置：`screentrace-parser-jsp/.../UrlGraphContribution.java:341`、`RelationshipsByFrom.java:14`。類別只覆寫 `put`，`entrySet().removeIf` 繞過 `byFrom` 索引；後續 `edges.from(trigger)`（`:84`、`:152`）仍回傳已刪除的 TRIGGERS 邊，對應 behavior 被 `continue` 跳過而永遠不解析。
 建議：覆寫 `remove`／`entrySet` 或提供 `removeIf` 同步索引；或改為組合（has-a）而非繼承 `TreeMap`。
+狀態：已修正（R53）：覆寫 `remove`／`clear`，`from()` 過濾已不在 map 中的關聯。
 
 ### RV-003 ［已核對］`workflow-gates.mjs` 對無大括號的 `if (n==1) stmt;` 拋 TypeError，整個 JS 分析中止
 
 位置：`screentrace-js/workflow-gates.mjs:148`。`remaining[0].consequent.body` 在 consequent 為 ExpressionStatement 時是 `undefined`，下一行 `remaining.length` 拋錯，`cli.mjs` 不回傳任何 behavior。
 建議：consequent 為 BlockStatement 才取 `.body`，否則包成 `[consequent]`。
+狀態：已修正（R53）。
 
 ### RV-004 ［已核對］viewer 重新載入時，舊的 `:library-transfer` 暫存蓋掉之後的所有決策
 
 位置：`screentrace-viewer/src/shared/review.ts:388,413-415`。`loadReview` 優先讀 `:library-transfer`，但 `saveReview` 只在 state 有 `manifest_sha256` 或 orphans 時才更新該鍵；`main.ts` 用 `withoutRetiredFields` 清掉這兩個欄位後，transfer 鍵永遠停在舊快照。曾用舊版報告做過元件庫覆寫的使用者，每次重新整理都會遺失新決策。
 建議：沒有 transfer 資料時刪除該鍵；或載入時比較時間戳／版本，取較新者。
+狀態：已修正（R53）：transfer 鍵存在時，每次儲存都一併更新。
 
 ### RV-005 重新分析沿用上一次的 `static-preview/` 等輸出
 
 位置：`screentrace-cli/.../ScreenTraceCli.java:559,700`。分析前未清除 `static-preview/`、`viewer-documents.json`、`react-preview.json`；擷取逾時、失敗或本次不需擷取時，`packPreview` 與 `PreviewCaptureReader` 會讀到舊檔。結果是 `Preview component does not belong to its screen` 使整次分析失敗，或報告靜默顯示舊原始碼的預覽。
 建議：擷取前清空預覽輸出目錄，或在 manifest 記錄 graph 指紋並於讀取時比對。
+狀態：已修正（R53）：寫完分析圖後、產生預覽前刪除 `static-preview/`、`screenshots/`、`viewer-documents.json`。
 
 ### RV-006 Spring `ModelAndView` 多路徑產生重複 FORWARDS_TO 邊 id，整次分析失敗
 
 位置：`screentrace-adapter-spring/.../SpringControllerFlow.java:39`（`addApiRedirects` `:192` 同理）。`m.setViewName(...)` 前有不影響 view 的 `if` 時，`SpringControllerReturns` 回傳兩個除 guard 外完全相同的 Target，邊 id 重複，`GraphIntegrityValidator.requireAnalysis` 拋 `Duplicate or blank relationship`。
 建議：`assignedPaths` 依 (value, source) 去重，或 `edges.add` 前以 id 去重。
+狀態：**不成立**：以 `if`／`if-else`／連續 `if`／`switch` 接 `setViewName`、一般 view 與 `redirect:` 共 8 種寫法重現，邊 id 都不重複，FORWARDS_TO／RENDERS 各 1 條；路徑在上游已去重。
 
 ### RV-007 Struts 框架偵測遇到任一檔案讀取／解析失敗就中止整個分析
 
 位置：`screentrace-adapter-struts/.../StrutsFrameworkDetector.java:78`。單一超過 8 MB 的 XML/Java（測試資料、WSDL）或格式錯誤的 `pom.xml` 會回傳 `FRAMEWORK_DETECTION_UNRESOLVED`，CLI 視為不支援的框架並拋 `UnsupportedFrameworkException`；連純 Spring 專案也會被擋。
 建議：與 `javaTypes` 一致，把讀取失敗降為非致命診斷，只在證據互相矛盾時才判定 unresolved。
+狀態：已修正（R53）。**更正**：掃描器已略過超過 8 MiB 的檔案、讀取不會因編碼失敗，實際觸發點是格式錯誤的 XML（例如 `pom.xml`）。修法：無法解析的檔案改掃描原始位元組，不含 `struts2` 即略過，含有時維持停止分析。
 
 ### RV-008 Struts 根目錄的 JSP 觸發 NPE
 
 位置：`screentrace-adapter-struts/.../StrutsInteractions.java:487`（`collectIncludeSources` 同理）。`Path.of(jspPath).getParent()` 對根目錄檔案回傳 `null`，NPE 不在 catch 範圍內，`analyze()` 整體失敗。
 建議：`getParent()` 為 null 時以空路徑解析。
+狀態：已修正（R53）。
 
 ### RV-009 Tiles 畫面以顯示名稱當作 Tiles definition 名稱，畫面內元件全部遺失
 
 位置：`screentrace-parser-jsp/.../MarkupGraphContribution.java:89`。投影根用 `screen.name()`，但 Struts adapter 把它設成 title put／body JSP／人性化名稱；真正的 definition 名稱在 `tilesDefinitionName` 屬性。結果 roots 被換成不存在的名稱，畫面沒有任何 CONTAINS 邊，原本的 view root 也被移除。
 建議：改讀 `tilesDefinitionName` 屬性。
+狀態：已修正（R53）。**更正**：Struts adapter 本身已建立 CONTAINS 邊，元件不會消失；遺失的是標記投影的證據（JspMarkupParser）、guard 與 repeated 資訊，實際應屬 P2。
 
 ### RV-010 `ScreenTraceCli` 的 `library` 子命令與用法錯誤一律以例外或 exit 0 結束
 
 位置：`ScreenTraceCli.java:64,771`。`library import` 寫入失敗時在 stdout 印錯誤訊息但 exit 0；`IllegalArgumentException`（無效 manifest、參數錯誤、`Command.parse` 的 Usage）未被 `runReportingRefusals` 捕捉，直接印 stack trace。腳本與 CI 會把失敗當成功。
 建議：統一捕捉並回傳非 0（用法錯誤 exit 2）。
+狀態：已修正（R53）：用法錯誤與無效 `library` 指令 exit 2，`library` 讀寫失敗 exit 1，皆只印一行訊息。
 
 ### RV-011 `spring-resource-mappings.mjs` 的 `mapping` 未過濾 `..`，資源可寫出 `static-preview/assets` 之外
 
 位置：`screentrace-capture/spring-resource-mappings.mjs:97`。`<mvc:resources mapping="/../../**">` 會把專案檔複製到輸出根目錄，可能覆蓋 `application-graph.json`；更多層的 `..` 讓 `assertOutputPathWithin` 拋錯而整個預覽失敗。註解掉的 `<mvc:resources>` 也會被比對到。
 建議：assetKey 正規化後拒絕含 `..` 的值並發出診斷；解析前先移除 XML 註解。
+狀態：已修正（R53）：含 `.`、`..`、空段或反斜線的 mapping 不採用，並先移除 XML 註解。
 
 ---
 

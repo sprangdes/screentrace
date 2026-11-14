@@ -38,3 +38,17 @@ test('changed loop, extra effects and shadowed document never acquire the workfl
   ])
     assert.ok(!run(code).behaviors.some((b) => b.operation === 'workflowGate'));
 });
+test('unbraced single-selection destination is analyzed like the braced form (RV-003)', () => {
+  const result = run(
+    source.replace(
+      "if(count==1){window.self.location='edit.do?command=edit&id='+document.getElementsByName('rows')[j].value;}",
+      "if(count==1)window.self.location='edit.do?command=edit&id='+document.getElementsByName('rows')[j].value;",
+    ),
+  );
+  assert.ok(result.behaviors.some((b) => b.operation === 'workflowGate'));
+  assert.ok(
+    result.behaviors.some(
+      (b) => b.type === 'NAVIGATE' && b.url === 'edit.do?command=edit&id={input1}',
+    ),
+  );
+});

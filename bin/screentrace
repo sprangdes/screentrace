@@ -51,7 +51,7 @@ ensure_runtime() {
   local formulae=()
   needs_java || formulae+=(openjdk@17)
   needs_maven || formulae+=(maven)
-  needs_node || formulae+=(node@18)
+  needs_node || formulae+=("node@${required_node}")
   ((${#formulae[@]} == 0)) && return
 
   if ! command -v brew >/dev/null 2>&1; then
@@ -60,7 +60,7 @@ ensure_runtime() {
   fi
   echo "Installing ScreenTrace runtime: ${formulae[*]}"
   brew install "${formulae[@]}"
-  export PATH="$(brew --prefix openjdk@17)/bin:$(brew --prefix node@18)/bin:$PATH"
+  export PATH="$(brew --prefix openjdk@17)/bin:$(brew --prefix "node@${required_node}")/bin:$PATH"
 
   if ! needs_java || ! needs_maven || ! needs_node; then
     echo "Unable to prepare Java ${required_java}+, Maven ${required_maven}+, and Node.js ${required_node}+ automatically." >&2

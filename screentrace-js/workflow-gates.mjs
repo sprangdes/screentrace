@@ -145,7 +145,11 @@ export function workflowGate(fn, { trimProven, domReference }) {
     !remaining[0].alternate &&
     same(remaining[0].test, shape(`if(${countName}==1){}`)[0].test)
   )
-    remaining = remaining[0].consequent.body;
+    // `if (count==1) stmt;` without braces is the same single destination as the braced form.
+    remaining =
+      remaining[0].consequent.type === 'BlockStatement'
+        ? remaining[0].consequent.body
+        : [remaining[0].consequent];
   // Only a complete single destination is eligible; no arbitrary statements or effects are dropped.
   if (
     remaining.length !== 1 ||

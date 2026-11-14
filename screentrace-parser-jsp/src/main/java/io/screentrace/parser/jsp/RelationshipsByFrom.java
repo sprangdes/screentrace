@@ -3,6 +3,7 @@ package io.screentrace.parser.jsp;
 import io.screentrace.core.ApplicationGraph.Relationship;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
@@ -26,9 +27,34 @@ final class RelationshipsByFrom extends TreeMap<String, Relationship> {
     return previous;
   }
 
-  /** Relationships whose source is {@code from}, in ID order. */
+  @Override
+  public Relationship remove(Object id) {
+    Relationship previous = super.remove(id);
+    if (previous != null) {
+      var bucket = byFrom.get(previous.from());
+      bucket.remove(id);
+      if (bucket.isEmpty()) byFrom.remove(previous.from());
+    }
+    return previous;
+  }
+
+  @Override
+  public void clear() {
+    super.clear();
+    byFrom.clear();
+  }
+
+  /**
+   * Relationships whose source is {@code from}, in ID order. Removals through the map's views
+   * ({@code entrySet().removeIf}, iterators) bypass {@link #remove}, so each indexed entry is
+   * checked against the map and stale ones are left out (RV-002).
+   */
   Collection<Relationship> from(String from) {
     var bucket = byFrom.get(from);
-    return bucket == null ? java.util.List.of() : bucket.values();
+    if (bucket == null) return List.of();
+    return bucket.entrySet().stream()
+        .filter(entry -> super.get(entry.getKey()) == entry.getValue())
+        .map(Map.Entry::getValue)
+        .toList();
   }
 }

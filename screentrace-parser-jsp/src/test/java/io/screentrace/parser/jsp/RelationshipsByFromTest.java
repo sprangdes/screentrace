@@ -40,4 +40,22 @@ class RelationshipsByFromTest {
     assertTrue(edges.from(null).isEmpty());
     assertEquals(List.of("c", "e", "k", "m"), List.copyOf(edges.keySet()));
   }
+
+  @Test
+  void removalsThroughMapViewsAreNotReturnedByLookups() {
+    var edges = new RelationshipsByFrom();
+    edges.put("a1", edge("a1", EdgeType.TRIGGERS, "a", "x"));
+    edges.put("a2", edge("a2", EdgeType.CALLS, "a", "y"));
+    edges.put("b1", edge("b1", EdgeType.TRIGGERS, "b", "x"));
+    edges.entrySet().removeIf(entry -> entry.getKey().equals("a1"));
+    assertEquals(List.of("a2"), edges.from("a").stream().map(Relationship::id).toList());
+    edges.keySet().remove("a2");
+    assertTrue(edges.from("a").isEmpty());
+    edges.remove("b1");
+    assertTrue(edges.from("b").isEmpty());
+    edges.put("a1", edge("a1", EdgeType.TRIGGERS, "a", "z"));
+    assertEquals(List.of("a1"), edges.from("a").stream().map(Relationship::id).toList());
+    edges.clear();
+    assertTrue(edges.from("a").isEmpty());
+  }
 }

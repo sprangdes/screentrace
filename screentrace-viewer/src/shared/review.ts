@@ -411,8 +411,15 @@ export function saveReview(
     if (!storage) throw Error();
     const encoded = JSON.stringify(state);
     storage.setItem(storageKey(state), encoded);
-    if (state.manifest_sha256 || state.orphan_component_overrides?.length)
-      storage.setItem(baseKey(state) + ':library-transfer', encoded);
+    const transfer = baseKey(state) + ':library-transfer';
+    // loadReview reads the transfer key first, so an existing one must follow every later save;
+    // otherwise a snapshot from an earlier library session would replace newer decisions.
+    if (
+      state.manifest_sha256 ||
+      state.orphan_component_overrides?.length ||
+      storage.getItem(transfer) !== null
+    )
+      storage.setItem(transfer, encoded);
   } catch {
     return '暫存失敗；目前決策仍保留在此頁面';
   }

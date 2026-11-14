@@ -363,3 +363,8 @@
 - WP123：CLI 等待預覽擷取的上限由固定 120 秒改為 120 秒加每個畫面 2 秒，最多 30 分鐘；Java 不導入 Error Prone，見 [ADR 0143](adr/0143-r52-capture-timeout-and-java-lint.md)（HC-004、HC-001）。另新增工作階段紀錄 [SESSION_20261112_R47-R52](SESSION_20261112_R47-R52.md)。
 - 驗證：新增 `CaptureTimeoutTest`；15 個 fixtures 的產物不變；Maven 600（595 通過、5 略過）。
 
+
+## R53 修正 code review 的 P1 項目
+
+- WP124：依 [CODE_REVIEW_20261114](CODE_REVIEW_20261114.md) 修正 P1。9 項成立並修正；RV-006 無法重現，判定不成立；RV-009 實際影響比記錄的小，記錄已更正。CLI 的用法與元件庫錯誤改以 exit status 回報、每次分析先清除舊預覽、Struts 2 偵測遇到無法解析的檔案時改掃描原始位元組，見 [ADR 0144](adr/0144-r53-code-review-p1-fixes.md)。
+- 驗證：每項修正都新增測試並確認修改前失敗（RV-001 啟動腳本除外）；JS 181、capture 94、viewer 單元 149、Maven 全數通過；viewer e2e 117/118，唯一失敗為效能測試在 sandbox 負載下逾時，單獨執行時修改前後都通過。

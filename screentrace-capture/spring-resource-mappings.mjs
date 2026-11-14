@@ -35,7 +35,10 @@ async function files(root, projectRoot, depth = 0, budget = { count: 0 }) {
 
 function mappingPrefix(mapping) {
   const value = mapping.replace(/\/\*\*.*$/, '').replace(/^\/+|\/+$/g, '');
-  return value ? `/${value}/` : null;
+  // The prefix also names the asset folder, so a dot segment or backslash could leave it (RV-011).
+  if (!value || value.includes('\\') || value.split('/').some((s) => s === '..' || s === '.' || !s))
+    return null;
+  return `/${value}/`;
 }
 
 function sourceDirectory(target, webRoot, location) {
@@ -81,6 +84,8 @@ export async function discoverSpringResourceMappings(target, webRoot, readFile) 
     } catch {
       continue;
     }
+    // Commented-out mappings are not configuration.
+    xml = xml.replace(/<!--[\s\S]*?(?:-->|$)/g, '');
     for (const tag of xml.matchAll(/<mvc:resources\b([^>]*?)\/?>/gi)) {
       const values = attributes(tag[1]);
       const prefix = values.mapping && mappingPrefix(values.mapping);

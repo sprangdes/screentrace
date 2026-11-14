@@ -38,6 +38,21 @@ public final class ScreenTraceCli {
     } catch (OutputOwnershipException | UnsupportedFrameworkException refused) {
       error.println(refused.getMessage());
       return 2;
+    } catch (CommandRefusedException refused) {
+      error.println(refused.getMessage());
+      return refused.status;
+    }
+  }
+
+  /**
+   * Bad usage (status 2) or a failed library command (status 1), reported without a stack trace.
+   */
+  static final class CommandRefusedException extends RuntimeException {
+    final int status;
+
+    CommandRefusedException(String message, int status, Throwable cause) {
+      super(message, cause);
+      this.status = status;
     }
   }
 
@@ -61,10 +76,23 @@ public final class ScreenTraceCli {
 
   static int run(String[] args) throws IOException, InterruptedException {
     if (args.length > 0 && args[0].equals("library")) {
-      System.out.println(LibraryCommands.run(args, WorkspaceSettings.defaultFile().getParent()));
+      String result;
+      try {
+        result = LibraryCommands.run(args, WorkspaceSettings.defaultFile().getParent());
+      } catch (IllegalArgumentException invalid) {
+        throw new CommandRefusedException(invalid.getMessage(), 2, invalid);
+      } catch (LibraryCommands.FailedException failed) {
+        throw new CommandRefusedException(failed.getMessage(), 1, failed);
+      }
+      System.out.println(result);
       return 0;
     }
-    Command command = Command.parse(args);
+    Command command;
+    try {
+      command = Command.parse(args);
+    } catch (IllegalArgumentException usage) {
+      throw new CommandRefusedException(usage.getMessage(), 2, usage);
+    }
     if (command.action() == Action.PATH) return analyzePath(command.projectName(), true);
     // `analyze <path>` analyzes that folder like `screentrace <path>`, but only prints the report
     // path.
@@ -557,6 +585,9 @@ public final class ScreenTraceCli {
               io.screentrace.core.PersonaFlows.enrich(analyze(inventory)));
       var writer = new SingleHtmlAnalysisWriter();
       writer.prepare(graph, output);
+      // The report loads whichever preview files exist, so files from an earlier run must not
+      // survive a capture that fails, times out or is not needed this time (RV-005).
+      clearPreviewOutputs(output);
       boolean reactScreens =
           graph.nodes().stream()
               .anyMatch(
@@ -702,6 +733,41 @@ public final class ScreenTraceCli {
       if (!process.waitFor(2, TimeUnit.SECONDS)) process.destroyForcibly();
       LOGGER.warning("JSP 靜態預覽超過 " + timeout + " 秒而逾時；未取得預覽的畫面將明確標記。");
     } else if (process.exitValue() != 0) LOGGER.warning("無法建立 JSP 靜態預覽；未取得預覽的畫面將明確標記。");
+  }
+
+  /** Preview files a run writes; each run starts without them. */
+  static final List<String> PREVIEW_OUTPUTS =
+      List.of("static-preview", "screenshots", "viewer-documents.json");
+
+  /** Removes earlier preview outputs; a symbolic link among them is refused, never followed. */
+  static void clearPreviewOutputs(Path output) throws IOException {
+    for (String name : PREVIEW_OUTPUTS) {
+      Path target = SafeProjectFiles.requireWritePathWithin(output, output.resolve(name));
+      if (!Files.exists(target, java.nio.file.LinkOption.NOFOLLOW_LINKS)) continue;
+      if (!Files.isDirectory(target, java.nio.file.LinkOption.NOFOLLOW_LINKS)) {
+        Files.delete(target);
+        continue;
+      }
+      Files.walkFileTree(
+          target,
+          new java.nio.file.SimpleFileVisitor<>() {
+            @Override
+            public java.nio.file.FileVisitResult visitFile(
+                Path file, java.nio.file.attribute.BasicFileAttributes attributes)
+                throws IOException {
+              Files.delete(file);
+              return java.nio.file.FileVisitResult.CONTINUE;
+            }
+
+            @Override
+            public java.nio.file.FileVisitResult postVisitDirectory(
+                Path directory, IOException error) throws IOException {
+              if (error != null) throw error;
+              Files.delete(directory);
+              return java.nio.file.FileVisitResult.CONTINUE;
+            }
+          });
+    }
   }
 
   private static Path captureTool(String name) throws IOException {

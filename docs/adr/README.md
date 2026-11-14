@@ -232,3 +232,4 @@ Java 以 google-java-format、TS／JS 以 Prettier 排版，JS 以 ESLint、TS �
 | [0141](0141-r50-explained-catch-blocks.md) | R50 每個被吞掉的例外都要說明或縮小型別 | 有效 |
 | [0142](0142-r51-adr-index.md) | R51 ADR 索引與現況摘要 | 有效 |
 | [0143](0143-r52-capture-timeout-and-java-lint.md) | R52 預覽擷取上限依畫面數放寬，Java 不導入 Error Prone | 有效 |
+| [0144](0144-r53-code-review-p1-fixes.md) | R53 修正 2026-11-14 code review 的 P1 項目（CLI exit status、清除舊預覽、Struts 2 偵測） | 有效 |

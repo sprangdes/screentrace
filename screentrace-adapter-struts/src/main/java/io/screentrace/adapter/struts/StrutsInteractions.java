@@ -462,12 +462,7 @@ final class StrutsInteractions {
         String child =
             include.targetPath().startsWith("/")
                 ? "src/main/webapp" + include.targetPath()
-                : Path.of(view)
-                    .getParent()
-                    .resolve(include.targetPath())
-                    .normalize()
-                    .toString()
-                    .replace('\\', '/');
+                : besideFile(view, include.targetPath());
         if (!sources.add(child)) continue;
         collectIncludeSources(child, jsp, state, seen, sources);
       }
@@ -483,12 +478,20 @@ final class StrutsInteractions {
     suffix = raw.substring(boundary);
     String path = raw.substring(0, boundary);
     if (path.isBlank()) return raw;
-    String normalized =
-        Path.of(jspPath).getParent().resolve(path).normalize().toString().replace('\\', '/');
+    String normalized = besideFile(jspPath, path);
     for (String webRoot : List.of("src/main/webapp/", "WebContent/", "web/"))
       if (normalized.startsWith(webRoot))
         return "/" + normalized.substring(webRoot.length()) + suffix;
     return normalized.startsWith("/") ? normalized + suffix : raw;
+  }
+
+  /** {@code relative} resolved next to {@code file}; a file at the project root has no parent. */
+  static String besideFile(String file, String relative) {
+    Path parent = Path.of(file).getParent();
+    return (parent == null ? Path.of(relative) : parent.resolve(relative))
+        .normalize()
+        .toString()
+        .replace('\\', '/');
   }
 
   static String switchActionTarget(String target) {
