@@ -1,7 +1,6 @@
 package io.screentrace.adapter.spring;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.javaparser.JavaParser;
 import com.github.javaparser.ast.*;
 import com.github.javaparser.ast.body.*;
@@ -18,6 +17,10 @@ import java.util.*;
  * execution.
  */
 final class SpringServerValidation {
+  /** Default-configured and thread-safe; one per class instead of one per call (RV-705). */
+  private static final com.fasterxml.jackson.databind.ObjectMapper SHARED_JSON =
+      new com.fasterxml.jackson.databind.ObjectMapper();
+
   private record Type(String name, Node node, String file, CompilationUnit unit) {}
 
   private static final Set<String> CONSTRAINTS =
@@ -87,11 +90,15 @@ final class SpringServerValidation {
         diagnostic(new SourceLocation(relative, 1), "SERVER_VALIDATION_SOURCE", "檢核來源無法安全讀取");
       }
     }
+    // HANDLED_BY edges by endpoint, in graph order, instead of a scan per endpoint (RV-702).
+    Map<String, List<Relationship>> handledBy = new HashMap<>();
+    for (var edge : graph.relationships())
+      if (edge.type() == EdgeType.HANDLED_BY)
+        handledBy.computeIfAbsent(edge.from(), ignored -> new ArrayList<>()).add(edge);
     for (var endpoint : graph.nodes())
       if (endpoint.type() == NodeType.ENDPOINT) {
         var handlers =
-            graph.relationships().stream()
-                .filter(e -> e.type() == EdgeType.HANDLED_BY && e.from().equals(endpoint.id()))
+            handledBy.getOrDefault(endpoint.id(), List.of()).stream()
                 .map(e -> nodes.get(e.to()))
                 .filter(Objects::nonNull)
                 .toList();
@@ -508,7 +515,7 @@ final class SpringServerValidation {
       fields.addAll(old.fields());
       evidence.addAll(old.evidence());
       try {
-        for (var value : new ObjectMapper().readTree(old.parameters().get("endpointIds")))
+        for (var value : SHARED_JSON.readTree(old.parameters().get("endpointIds")))
           endpoints.add(value.asText());
       } catch (JsonProcessingException | IllegalArgumentException notJson) {
         // Without readable endpoint IDs the earlier rule adds none.
@@ -530,7 +537,7 @@ final class SpringServerValidation {
 
   private static String json(Object value) {
     try {
-      return new ObjectMapper().writeValueAsString(value);
+      return SHARED_JSON.writeValueAsString(value);
     } catch (Exception error) {
       throw new IllegalStateException(error);
     }

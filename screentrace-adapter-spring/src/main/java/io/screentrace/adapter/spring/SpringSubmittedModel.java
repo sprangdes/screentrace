@@ -1,7 +1,6 @@
 package io.screentrace.adapter.spring;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.javaparser.ast.body.*;
 import com.github.javaparser.ast.expr.*;
 import io.screentrace.core.ApplicationGraph;
@@ -15,6 +14,10 @@ import java.util.*;
  * results, nested relations, generated identifiers and calculated values are excluded.
  */
 final class SpringSubmittedModel {
+  /** Default-configured and thread-safe; one per class instead of one per call (RV-705). */
+  private static final com.fasterxml.jackson.databind.ObjectMapper SHARED_JSON =
+      new com.fasterxml.jackson.databind.ObjectMapper();
+
   static ApplicationGraph enrich(ApplicationGraph graph, ProjectInventory inventory) {
     return enrich(graph, inventory, new ParsedJavaUnits(inventory.root()));
   }
@@ -149,16 +152,10 @@ final class SpringSubmittedModel {
             String detail;
             try {
               detail =
-                  new ObjectMapper()
-                      .writeValueAsString(
-                          new TreeMap<>(
-                              Map.of(
-                                  "version",
-                                  1,
-                                  "fields",
-                                  fields,
-                                  "scope",
-                                  "submitted-binding-demo")));
+                  SHARED_JSON.writeValueAsString(
+                      new TreeMap<>(
+                          Map.of(
+                              "version", 1, "fields", fields, "scope", "submitted-binding-demo")));
             } catch (JsonProcessingException error) {
               // Only maps of strings and numbers are written; failing is a bug.
               throw new IllegalStateException("Cannot serialize submitted fields", error);

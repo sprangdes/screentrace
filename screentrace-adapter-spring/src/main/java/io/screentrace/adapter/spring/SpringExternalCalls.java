@@ -17,6 +17,10 @@ import org.w3c.dom.Element;
  * Only proven public + CSRF-exempt paths without screen callers receive a presentation annotation.
  */
 final class SpringExternalCalls {
+  /** Default-configured and thread-safe; one per class instead of one per call (RV-705). */
+  private static final com.fasterxml.jackson.databind.ObjectMapper SHARED_JSON =
+      new com.fasterxml.jackson.databind.ObjectMapper();
+
   private static final String HTTP =
       "org.springframework.security.config.annotation.web.builders.HttpSecurity";
   private static final String SECURITY = "http://www.springframework.org/schema/security";
@@ -137,7 +141,7 @@ final class SpringExternalCalls {
       data.put("kind", kind);
       data.put("pattern", rule.pattern());
       if (rule.method() != null) data.put("method", rule.method());
-      detail = new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(data);
+      detail = SHARED_JSON.writeValueAsString(data);
     } catch (Exception impossible) {
       throw new IllegalStateException(impossible);
     }

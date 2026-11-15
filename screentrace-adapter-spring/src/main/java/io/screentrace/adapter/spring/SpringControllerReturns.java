@@ -10,6 +10,10 @@ import java.util.*;
 
 /** Inert return-expression classification; no target methods or expressions are evaluated. */
 final class SpringControllerReturns {
+  /** Default-configured and thread-safe; one per class instead of one per call (RV-705). */
+  private static final com.fasterxml.jackson.databind.ObjectMapper SHARED_JSON =
+      new com.fasterxml.jackson.databind.ObjectMapper();
+
   enum Kind {
     VIEW,
     REDIRECT,
@@ -244,9 +248,8 @@ final class SpringControllerReturns {
                   new SourceLocation(file, call.getBegin().orElseThrow().line),
                   "SpringModelFeedback",
                   ResolutionStatus.INFERRED,
-                  new com.fasterxml.jackson.databind.ObjectMapper()
-                      .writeValueAsString(
-                          new TreeMap<>(Map.of("version", 1, "values", Map.of(key, value))))));
+                  SHARED_JSON.writeValueAsString(
+                      new TreeMap<>(Map.of("version", 1, "values", Map.of(key, value))))));
         } catch (JsonProcessingException error) {
           // Only maps, lists and records of strings and numbers are written; failing is a bug.
           throw new IllegalStateException("Cannot serialize model feedback", error);

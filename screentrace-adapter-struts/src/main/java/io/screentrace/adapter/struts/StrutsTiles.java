@@ -19,6 +19,10 @@ import org.w3c.dom.*;
 
 /** Tiles definitions, Tiles screens and their names. */
 final class StrutsTiles {
+  /** Default-configured and thread-safe; one per class instead of one per call (RV-705). */
+  private static final com.fasterxml.jackson.databind.ObjectMapper SHARED_JSON =
+      new com.fasterxml.jackson.databind.ObjectMapper();
+
   private StrutsTiles() {}
 
   static void readTiles(State state) {
@@ -545,8 +549,7 @@ final class StrutsTiles {
    */
   static String tilesAttributesJson(Tile tile, State state) {
     try {
-      return new com.fasterxml.jackson.databind.ObjectMapper()
-          .writeValueAsString(tilesContext(tile, state, new HashSet<>()));
+      return SHARED_JSON.writeValueAsString(tilesContext(tile, state, new HashSet<>()));
     } catch (com.fasterxml.jackson.core.JsonProcessingException error) {
       throw new UncheckedIOException(error);
     }

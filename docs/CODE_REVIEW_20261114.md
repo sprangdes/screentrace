@@ -30,9 +30,9 @@ P1 處理結果見各項「狀態」（R53，[ADR 0144](adr/0144-r53-code-review
 
 建議修正順序：先處理 P1（RV-001～RV-011），再處理同一主題的 P2 群組（見文末「跨模組主題」），P3 依效能量測結果挑選。
 
-## 修正進度（2026-11-15，至 R73）
+## 修正進度（2026-11-15，至 R74）
 
-各項的處理結果寫在該項的「狀態」；每輪的內容與驗證見 [ROADMAP](ROADMAP.md) R53～R73。
+各項的處理結果寫在該項的「狀態」；每輪的內容與驗證見 [ROADMAP](ROADMAP.md) R53～R74。
 
 | 範圍 | 處理輪次 | 結果 |
 |---|---|---|
@@ -43,12 +43,12 @@ P1 處理結果見各項「狀態」（R53，[ADR 0144](adr/0144-r53-code-review
 | parser-jsp RV-401～428 | R54、R55、R57、R68、R72 | 全部修正 |
 | js／capture RV-501～522 | R54、R55、R57、R69 | 全部修正 |
 | viewer RV-601～612 | R53（RV-004）、R55（RV-602）、R56（RV-612）、R70 | 全部修正 |
-| P3 效能 RV-701～710 | R56、R61、R62、R73（RV-702、703、706 部分） | RV-701、704、705、707～710 未處理（量測中佔比低） |
+| P3 效能 RV-701～710 | R56、R61、R62、R73、R74 | RV-705 修正；RV-702、703、706、709 部分處理；RV-701、704、707、708、710 未處理（量測中佔比低或未出現） |
 | P3 重複程式碼與死碼 RV-801～808 | R65（RV-808）、R71 | 全部修正 |
 
 接下來依序處理：
 
-1. 效能項目依量測結果挑選。R73 量測（300 個 action 的 Struts 合成專案）後剩下的熱點：`StrutsScreens.screenForView` 的後綴掃描（約 5%，要正確快取需追蹤 `viewIds` 的變動）、`UrlGraphContribution.redact` 的整圖 JSON 轉換、`JavaScriptGraphContribution`；Spring 與 React 專案尚未量測。
+1. 效能項目依量測結果挑選。R74 量測（Struts 300 個 action、Spring MVC 300 個 controller）後，Java 端剩下的時間分散在 JSP 解析（`MarkupTag.scan`，RV-707）、`hidePrivateLocations` 的整圖 JSON 轉換與 JS 結果投影，單項都不到一成；React 專案與 viewer（RV-710）尚未量測。另見 RV-119。
 
 每輪的做法：
 
@@ -283,17 +283,19 @@ P1 處理結果見各項「狀態」（R53，[ADR 0144](adr/0144-r53-code-review
 
 - **RV-118 ［已核對，已修正（R62）］** `PreviewCaptureReader.java:28`：`element-styles.json` 有 32 MiB 讀取上限，超過時拋例外，CLI 完全沒有報表。300 個畫面的合成專案就產生 70 MB。改為略過元素樣式並在報表中說明（ADR 0149）；R63 再將擷取檔改為精簡 JSON、上限提高為 256 MiB，該專案的報表已含完整元素樣式（ADR 0150）。
 
+- **RV-119 ［R74 量測時發現，未處理］** `SpringControllerFlow.project`：條件重導串成長鏈時（合成專案中 40 個 controller 的 `if (q != null) return "redirect:/c{i+1}/…"` 首尾相連），每個連到鏈上任一端點的元件都會對鏈上每個畫面建立 NAVIGATES_TO，且每條邊帶著整條鏈的證據；40 個 controller、每頁 10 列的專案產生 28,811 條導覽邊、圖 250 MB，80 個 controller 時 3.4 GB heap 不足。真實專案少有這種長鏈，但沒有上限；應考慮限制展開深度或只保留首站並以診斷說明。
+
 ## P3 — 效能
 
 - **RV-701** 重複解析 Java 原始碼：Spring（`SpringExternalLoginFlow`、`SpringExternalCalls`、`SpringSecurityRedirects`、`SpringServerValidation`、`SpringBootAnalyzer` 各自解析，未共用 `ParsedJavaUnits`）、Struts（偵測器跑兩次 + `javaTypes` + `ActionContracts`）、parser-jsp（`ScriptSources.collect` 跑兩次、`JspProjectParser.analyze` 為取 include 重跑、`UrlResolution.context` 多處重算）。
-- **RV-702** 線性去重與 O(E²) 掃描：`SpringMvcAnalyzer:1412` addNode／edge、`SpringControllerFlow:531`、`SpringFormBindings:207`、`RouteTemplateInference:134`、`UrlGraphContribution:213`、`StrutsValidation:73`（五層巢狀）、`StrutsInteractions:175`、`ApiUsage:276`、`PreviewCaptureReader:219`、viewer `usage.ts:40`、`contracts.ts:152`。 **狀態：部分處理（R62）：以合成專案量測後，修正 `StrutsScreens.screenForView`、`MarkupGraphContribution`、`StrutsInteractions` 三個實際熱點，以及 R61 的 `SpringControllerFlow.project()`、R56 的 `ApiUsage`；其餘位置在量測中佔比低，未處理。 R73 再修正 `StrutsBehaviorProjection.retainActionAndInlineEventEvidence`（每個 mapping 掃描全部行為）。**
+- **RV-702** 線性去重與 O(E²) 掃描：`SpringMvcAnalyzer:1412` addNode／edge、`SpringControllerFlow:531`、`SpringFormBindings:207`、`RouteTemplateInference:134`、`UrlGraphContribution:213`、`StrutsValidation:73`（五層巢狀）、`StrutsInteractions:175`、`ApiUsage:276`、`PreviewCaptureReader:219`、viewer `usage.ts:40`、`contracts.ts:152`。 **狀態：部分處理（R62）：以合成專案量測後，修正 `StrutsScreens.screenForView`、`MarkupGraphContribution`、`StrutsInteractions` 三個實際熱點，以及 R61 的 `SpringControllerFlow.project()`、R56 的 `ApiUsage`；其餘位置在量測中佔比低，未處理。 R73 再修正 `StrutsBehaviorProjection.retainActionAndInlineEventEvidence`（每個 mapping 掃描全部行為）。 R74 以 Spring MVC 合成專案量測後再修正：`SpringMvcAnalyzer` 的 addNode／edge 改用 id 索引（原本 300 個 controller 超過 10 分鐘仍在去重）、`endpointsFor` 有完全相同路徑時直接回傳、`SpringFormBindings`、`SpringServerValidation`、`RouteTemplateInference`、`UrlGraphContribution` 的請求邊移除、`UrlResolution` 的端點比對都改用索引。**
 - **RV-703** 重複讀取設定檔：`StrutsInteractions:100` 每個 tag 重讀 web.xml、`ActionContracts:100` 每個端點重新解析 struts-config、`StrutsServletMappings:49` 共用 layout 每個畫面重讀、`ProjectScanner:173` 與 `ProjectInventory` 多次讀取 XML。 **狀態：部分處理（R73）：** 以 300 個 action 的合成專案量測，`ActionContracts` 每個 handler 重新解析 struts-config 並三次掃描全部關係，佔 Struts 分析約 89% 取樣；改為每個設定檔解析一次並依 action path 建索引、關係依來源分組。`StrutsConfigParser.moduleFor` 每個 tag 重讀所有 web.xml，改為依 path 快取。其餘位置（`StrutsServletMappings`、`ProjectScanner`）在量測中佔比低，未處理。
 - **RV-704** `StrutsTiles:367`：`isTilesLayoutPath` 每次呼叫重算所有 tile 範本。
-- **RV-705** 每次呼叫建立 `ObjectMapper`：`SpringControllerReturns:231`、`SpringServerValidation`、`SpringSubmittedModel`、`SpringExternalCalls`、`SpringMvcAnalyzer.tilesAttributesJson`、`RouteTemplateInference:342,381,438`。
-- **RV-706** 熱路徑重複編譯 regex：`StaticComponentNames:185,161`、`JspTagFileExpander:190`、`UrlGraphContribution:439`、`UrlResolution:475`（每組 path×endpoint 編譯一次）。 **狀態：部分處理（R73）：** `UrlGraphContribution.redactHome` 對圖中每個字串都編譯 regex，佔分析約 20% 取樣；字串不含家目錄時直接略過。其餘位置未處理。
+- **RV-705** 每次呼叫建立 `ObjectMapper`：`SpringControllerReturns:231`、`SpringServerValidation`、`SpringSubmittedModel`、`SpringExternalCalls`、`SpringMvcAnalyzer.tilesAttributesJson`、`RouteTemplateInference:342,381,438`。 **狀態：已修正（R74）：** 分析流程中每次呼叫建立的 `ObjectMapper` 改為每個類別一個常數（Spring 5 個類別、`StrutsTiles`、`RouteTemplateInference`）；CLI 設定檔讀取只執行一次，未改。
+- **RV-706** 熱路徑重複編譯 regex：`StaticComponentNames:185,161`、`JspTagFileExpander:190`、`UrlGraphContribution:439`、`UrlResolution:475`（每組 path×endpoint 編譯一次）。 **狀態：部分處理（R73）：** `UrlGraphContribution.redactHome` 對圖中每個字串都編譯 regex，佔分析約 20% 取樣；字串不含家目錄時直接略過。其餘位置未處 R74 再修正 `UrlResolution.match`（端點樣板快取、字面端點不再編 regex）與 `SpringMvcAnalyzer.pathScore`。**
 - **RV-707** 同一份 JSP 被 `MarkupTag.scan` 約 9 次（`JspProjectParser:145`）；`ThymeleafMarkup.normalize` 重跑（`ScriptSources:213`）；`JspProjectParser:330` 每個檔案重走所有已收集互動；`ScriptSources:244,588` 每個 tag 走全部定義／全部檔案。
 - **RV-708** `SpringWebFlowContribution:197`：每個 transition 重新掃描整份 flow XML。
-- **RV-709** JS／capture：`analyzer.mjs:132` 每個 unit 最多解析 4 次；`analyzer.mjs:351` trace 合併二次方；`preview-markup.mjs:178`、`template-preview.mjs:168` 每個 token 掃全部節點；`element-styles.mjs:177` 每個畫面重算預設樣式；`pack-preview.mjs:215` cache 命中前仍先讀檔。
+- **RV-709** JS／capture：`analyzer.mjs:132` 每個 unit 最多解析 4 次；`analyzer.mjs:351` trace 合併二次方；`preview-markup.mjs:178`、`template-preview.mjs:168` 每個 token 掃全部節點；`element-styles.mjs:177` 每個畫面重算預設樣式；`pack-preview.mjs:215` cache 命中前仍先讀檔。 **狀態：部分處理（R74）：** 量測顯示 `analyzer.mjs` 為每個 unit 過濾整份 DOM，佔 Node 端約 95%；改為依 `ownerFile`／`screenId` 建索引並快取（100 個 controller 的專案 32 秒 → 2 秒）。其餘位置在量測中佔比低，未處理。
 - **RV-710** viewer：`screen-panel.ts:186` 每次點擊重建 graph index 4～6 次；`preview.ts:22` CSS 解析未 memo；`map.ts:307` 每次按鍵重掃所有證據；`simulation-data.ts:270` 每列重複比對範本。
 
 ## P3 — 重複程式碼與死碼

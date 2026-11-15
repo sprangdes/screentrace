@@ -124,6 +124,35 @@ export function analyze(request) {
       }
       calendars.set(unit.screenId, list);
     }
+  // The DOM a unit sees: everything when it names no owner file, otherwise the elements of its
+  // owner file or its screen, in document order. Filtering the whole DOM for every unit was the
+  // largest cost on big projects (RV-709); units of the same file and screen share one list.
+  const domIndex = (key) => {
+    const index = new Map();
+    dom.forEach((d, i) => {
+      const value = d[key];
+      if (!index.has(value)) index.set(value, []);
+      index.get(value).push(i);
+    });
+    return index;
+  };
+  const domByOwner = domIndex('ownerFile'),
+    domByScreen = domIndex('screenId'),
+    domCache = new Map();
+  const domFor = (unit) => {
+    if (!unit.ownerFile) return dom;
+    const key = JSON.stringify([unit.ownerFile, unit.screenId]);
+    let result = domCache.get(key);
+    if (!result) {
+      const positions = new Set([
+        ...(domByOwner.get(unit.ownerFile) ?? []),
+        ...(domByScreen.get(unit.screenId) ?? []),
+      ]);
+      result = [...positions].sort((a, b) => a - b).map((i) => dom[i]);
+      domCache.set(key, result);
+    }
+    return result;
+  };
   const provenTrim = trimHelpers(expanded.sources);
   for (const unit of expanded.sources) {
     const library = identifyLibrary(unit.file, unit.code);
@@ -135,9 +164,7 @@ export function analyze(request) {
     diagnostics.push(...parsed.diagnostics);
     if (!parsed.ast) continue;
     const code = unit.code,
-      unitDom = dom.filter(
-        (d) => !unit.ownerFile || d.ownerFile === unit.ownerFile || d.screenId === unit.screenId,
-      );
+      unitDom = domFor(unit);
     const source = (n) => ({
       file: unit.file,
       line: (unit.line ?? 1) + (n?.loc?.start.line ?? 1) - 1,

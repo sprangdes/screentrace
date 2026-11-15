@@ -336,18 +336,14 @@ public final class UrlGraphContribution {
                         "原始 URL=" + Objects.toString(raw, "UNRESOLVED")))));
       // Rebuild only request edges; unmatched frontend descriptions still retain their caller.
       final String previous = b.targetId(), requestUrl = raw, requestMethod = method;
-      edges
-          .entrySet()
-          .removeIf(
-              entry -> {
-                var edge = entry.getValue();
-                return edge.from().equals(b.triggerId())
-                    && Set.of(EdgeType.CALLS, EdgeType.TRIGGERS).contains(edge.type())
-                    && (resolved.candidates().contains(edge.to())
-                        || Objects.equals(previous, edge.to())
-                        || !resolved.candidates().isEmpty()
-                            && frontendRequest(nodes.get(edge.to()), requestUrl, requestMethod));
-              });
+      // Only the trigger's own edges can match; look them up instead of scanning all (RV-702).
+      for (var edge : edges.from(b.triggerId()))
+        if ((edge.type() == EdgeType.CALLS || edge.type() == EdgeType.TRIGGERS)
+            && (resolved.candidates().contains(edge.to())
+                || Objects.equals(previous, edge.to())
+                || !resolved.candidates().isEmpty()
+                    && frontendRequest(nodes.get(edge.to()), requestUrl, requestMethod)))
+          edges.remove(edge.id());
       String target =
           resolved.candidates().size() == 1
               ? resolved.candidates().get(0)

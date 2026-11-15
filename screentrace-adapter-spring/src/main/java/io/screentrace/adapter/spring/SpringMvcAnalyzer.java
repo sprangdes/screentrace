@@ -41,6 +41,10 @@ import org.w3c.dom.NodeList;
 
 /** Static analysis for annotation-based, server-rendered Spring MVC applications. */
 public final class SpringMvcAnalyzer {
+  /** Default-configured and thread-safe; one per class instead of one per call (RV-705). */
+  private static final com.fasterxml.jackson.databind.ObjectMapper SHARED_JSON =
+      new com.fasterxml.jackson.databind.ObjectMapper();
+
   public ApplicationGraph analyze(ProjectInventory inventory) throws IOException {
     State state = new State(inventory.root(), inventory.javaFiles());
     ParsedJavaUnits units = new ParsedJavaUnits(inventory.root());
@@ -73,6 +77,8 @@ public final class SpringMvcAnalyzer {
         state.diagnostics,
         state.returnTargets,
         io.screentrace.parser.jsp.UrlResolution.context(inventory, List.of()));
+    // resolve() appends to the edge list directly.
+    state.indexEdges();
     foldUnroutedTileBodies(state);
     addJspInteractions(jsp, state);
     addJspIncludes(jsp, state);
@@ -332,14 +338,13 @@ public final class SpringMvcAnalyzer {
     var unknownReturns =
         returns.stream().filter(t -> t.kind() == SpringControllerReturns.Kind.UNKNOWN).toList();
     if (!unknownReturns.isEmpty()) {
-      var old =
-          state.nodes.stream().filter(n -> n.id().equals(handlerId)).findFirst().orElseThrow();
+      var old = Objects.requireNonNull(state.nodeById.get(handlerId));
       var attrs = new TreeMap<>(old.attributes());
       attrs.put("unresolvedReturnCount", Integer.toString(unknownReturns.size()));
       var proof = new ArrayList<>(old.evidence());
       unknownReturns.forEach(t -> proof.addAll(t.evidence()));
       state.nodes.remove(old);
-      state.nodes.add(
+      state.addNodeLast(
           new GraphNode(
               old.id(), old.type(), old.name(), attrs, old.source(), old.confidence(), proof));
     }
@@ -409,8 +414,8 @@ public final class SpringMvcAnalyzer {
                         + ":"
                         + target.expression()
                         + SpringControllerReturns.branchKey(target));
-            if (state.edges.stream().noneMatch(e -> e.id().equals(returnId)))
-              state.edges.add(
+            if (!state.edgeIndex.containsKey(returnId))
+              state.addEdge(
                   new Relationship(
                       returnId,
                       EdgeType.RENDERS,
@@ -985,8 +990,7 @@ public final class SpringMvcAnalyzer {
       Map<String, JspAnalysis.TilesDefinition> byName,
       JspAnalysis jsp) {
     try {
-      return new com.fasterxml.jackson.databind.ObjectMapper()
-          .writeValueAsString(tilesContext(definition, byName, jsp, new HashSet<>()));
+      return SHARED_JSON.writeValueAsString(tilesContext(definition, byName, jsp, new HashSet<>()));
     } catch (com.fasterxml.jackson.core.JsonProcessingException error) {
       throw new java.io.UncheckedIOException(error);
     }
@@ -1034,15 +1038,14 @@ public final class SpringMvcAnalyzer {
     for (var entry : state.tileOwnersByView.entrySet()) {
       String bodyScreen = state.screensByView.get(entry.getKey());
       if (bodyScreen == null || entry.getValue().contains(bodyScreen)) continue;
-      if (state.nodes.stream()
-          .noneMatch(
-              n ->
-                  n.id().equals(bodyScreen)
-                      && n.type() == NodeType.SCREEN
-                      && !"true".equals(n.attributes().get("tilesDefinition")))) continue;
+      GraphNode body = state.nodeById.get(bodyScreen);
+      if (body == null
+          || body.type() != NodeType.SCREEN
+          || "true".equals(body.attributes().get("tilesDefinition"))) continue;
       if (state.edges.stream()
           .anyMatch(e -> e.to().equals(bodyScreen) || e.from().equals(bodyScreen))) continue;
       state.nodes.removeIf(n -> n.id().equals(bodyScreen));
+      state.nodeById.remove(bodyScreen);
       String owner = entry.getValue().iterator().next();
       // Several definitions fill the same body; its interactions follow the first one here, and
       // the choice is reported instead of made silently (RV-209).
@@ -1119,14 +1122,12 @@ public final class SpringMvcAnalyzer {
       String next = state.screensByView.get(interaction.target());
       // A template's logical name is a view resolver key, never proof of a public URL.
       String direct = next;
-      if (next != null
-          && state.nodes.stream()
-              .anyMatch(
-                  n ->
-                      n.id().equals(direct)
-                          && n.attributes()
-                              .getOrDefault("view", "")
-                              .transform(view -> templateRoot(view) != null))) next = null;
+      GraphNode directNode = next == null ? null : state.nodeById.get(direct);
+      if (directNode != null
+          && directNode
+              .attributes()
+              .getOrDefault("view", "")
+              .transform(view -> templateRoot(view) != null)) next = null;
       if (next != null)
         edge(state, EdgeType.NAVIGATES_TO, id, next, Confidence.CONFIRMED, interaction.source());
     }
@@ -1190,11 +1191,7 @@ public final class SpringMvcAnalyzer {
           new ArrayList<>(interaction.definitionEvidence());
       routes.forEach(
           route -> {
-            GraphNode endpoint =
-                state.nodes.stream()
-                    .filter(n -> n.id().equals(route.id()))
-                    .findFirst()
-                    .orElse(null);
+            GraphNode endpoint = state.nodeById.get(route.id());
             if (endpoint != null)
               proof.add(
                   new ApplicationGraph.AnalysisEvidence(
@@ -1228,11 +1225,7 @@ public final class SpringMvcAnalyzer {
     String parent = slash <= 0 ? "" : route.substring(0, slash);
     String resolved = normalizedRequestPath(parent + "/" + raw);
     if (resolved == null) return unresolvedRelative(interaction, state, routes, "相對路徑超出應用程式根目錄");
-    GraphNode endpoint =
-        state.nodes.stream()
-            .filter(n -> n.id().equals(routes.get(0).id()))
-            .findFirst()
-            .orElse(null);
+    GraphNode endpoint = state.nodeById.get(routes.get(0).id());
     List<ApplicationGraph.AnalysisEvidence> proof =
         new ArrayList<>(interaction.definitionEvidence());
     proof.add(
@@ -1271,8 +1264,7 @@ public final class SpringMvcAnalyzer {
         new ArrayList<>(interaction.definitionEvidence());
     routes.forEach(
         route -> {
-          GraphNode endpoint =
-              state.nodes.stream().filter(n -> n.id().equals(route.id())).findFirst().orElse(null);
+          GraphNode endpoint = state.nodeById.get(route.id());
           if (endpoint != null)
             proof.add(
                 new ApplicationGraph.AnalysisEvidence(
@@ -1333,6 +1325,10 @@ public final class SpringMvcAnalyzer {
         interaction.submitsCurrentView()
             ? state.endpointsByScreen.getOrDefault(screenId, List.of())
             : state.endpoints;
+    if (!interaction.submitsCurrentView()) {
+      List<EndpointMatch> exact = exactEndpoints(interaction, state);
+      if (exact != null) return exact;
+    }
     int best = 0;
     List<EndpointMatch> matches = new ArrayList<>();
     for (EndpointReference endpoint : candidates) {
@@ -1355,6 +1351,31 @@ public final class SpringMvcAnalyzer {
     return matches;
   }
 
+  /**
+   * The endpoints whose path equals the request path, or null when none do. An equal path scores
+   * 1000 and any other path at most 100 + 10 per segment, so below 90 segments the equal ones are
+   * exactly the best matches and the full scoring scan can be skipped (RV-702).
+   */
+  private static List<EndpointMatch> exactEndpoints(
+      JspAnalysis.Interaction interaction, State state) {
+    String target = QUERY_OR_FRAGMENT.matcher(interaction.target()).replaceFirst("");
+    if (target.isEmpty() || segments(target).length >= 90) return null;
+    if (state.endpointsIndexed != state.endpoints.size()) {
+      state.endpointsByPath.clear();
+      for (EndpointReference endpoint : state.endpoints)
+        state
+            .endpointsByPath
+            .computeIfAbsent(endpoint.path(), ignored -> new ArrayList<>())
+            .add(endpoint);
+      state.endpointsIndexed = state.endpoints.size();
+    }
+    List<EndpointMatch> matches = new ArrayList<>();
+    for (EndpointReference endpoint : state.endpointsByPath.getOrDefault(target, List.of()))
+      if (methodMatches(interaction.httpMethod(), endpoint.httpMethod()))
+        matches.add(new EndpointMatch(endpoint.id(), Confidence.CONFIRMED));
+    return matches.isEmpty() ? null : matches;
+  }
+
   private static boolean methodMatches(String requested, String actual) {
     return requested == null
         || requested.equals("ANY")
@@ -1362,9 +1383,13 @@ public final class SpringMvcAnalyzer {
         || requested.equals(actual);
   }
 
+  // pathScore runs for every interaction against every endpoint (RV-706).
+  private static final java.util.regex.Pattern QUERY_OR_FRAGMENT =
+      java.util.regex.Pattern.compile("[?#].*$");
+
   private static int pathScore(String target, String endpoint) {
     // Query strings and fragments never take part in Spring request mapping.
-    target = target.replaceFirst("[?#].*$", "");
+    target = QUERY_OR_FRAGMENT.matcher(target).replaceFirst("");
     if (target.isEmpty()) return 0;
     if (target.equals(endpoint)) return 1_000;
     String[] targetSegments = segments(target);
@@ -1384,7 +1409,7 @@ public final class SpringMvcAnalyzer {
   }
 
   private static String[] segments(String path) {
-    return path.replaceFirst("^/", "").split("/");
+    return (path.startsWith("/") ? path.substring(1) : path).split("/");
   }
 
   private static boolean dynamicSegment(String segment) {
@@ -1510,7 +1535,7 @@ public final class SpringMvcAnalyzer {
   }
 
   private static void addNode(State state, GraphNode node) {
-    if (state.nodes.stream().noneMatch(n -> n.id().equals(node.id()))) {
+    if (!state.nodeById.containsKey(node.id())) {
       List<ApplicationGraph.AnalysisEvidence> proof =
           node.evidence().stream()
               .map(
@@ -1520,7 +1545,7 @@ public final class SpringMvcAnalyzer {
                               e.source(), "SpringMvcAnalyzer", e.resolution(), e.detail())
                           : e)
               .toList();
-      state.nodes.add(
+      state.addNodeLast(
           new GraphNode(
               node.id(),
               node.type(),
@@ -1543,9 +1568,9 @@ public final class SpringMvcAnalyzer {
     var proof =
         new ApplicationGraph.AnalysisEvidence(
             source, "SpringMvcAnalyzer", confidence.resolutionStatus(), null);
-    for (int index = 0; index < state.edges.size(); index++) {
+    Integer index = state.edgeIndex.get(id);
+    if (index != null) {
       Relationship existing = state.edges.get(index);
-      if (!existing.id().equals(id)) continue;
       // A proof for an edge first recorded as inferred upgrades it, keeping both pieces of
       // evidence (RV-206); a weaker proof never downgrades an existing edge.
       if (confidence == Confidence.CONFIRMED && existing.confidence() != Confidence.CONFIRMED) {
@@ -1558,7 +1583,7 @@ public final class SpringMvcAnalyzer {
       }
       return;
     }
-    state.edges.add(new Relationship(id, type, from, to, confidence, source, List.of(proof)));
+    state.addEdge(new Relationship(id, type, from, to, confidence, source, List.of(proof)));
   }
 
   private static final class State {
@@ -1566,11 +1591,34 @@ public final class SpringMvcAnalyzer {
     private final List<String> webRoots;
     private final List<GraphNode> nodes = new ArrayList<>();
     private final List<Relationship> edges = new ArrayList<>();
+    // Id lookups for nodes and edges, kept with the lists: deduplicating by scanning them made a
+    // 300-controller project take more than ten minutes (RV-702). Edges are only appended.
+    private final Map<String, GraphNode> nodeById = new HashMap<>();
+    private final Map<String, Integer> edgeIndex = new HashMap<>();
+
+    private void addNodeLast(GraphNode node) {
+      nodes.add(node);
+      nodeById.put(node.id(), node);
+    }
+
+    private void indexEdges() {
+      for (int index = 0; index < edges.size(); index++)
+        edgeIndex.putIfAbsent(edges.get(index).id(), index);
+    }
+
+    private void addEdge(Relationship edge) {
+      edgeIndex.putIfAbsent(edge.id(), edges.size());
+      edges.add(edge);
+    }
+
     private final List<Diagnostic> diagnostics = new ArrayList<>();
     private final List<ApplicationGraph.ApiContract> apiContracts = new ArrayList<>();
     private final ApiContractExtractor contracts;
     private final List<EndpointReference> endpoints = new ArrayList<>();
     private final Map<String, List<EndpointReference>> endpointsByScreen = new HashMap<>();
+    // endpoints by path, rebuilt when endpoints were added since (they are only appended).
+    private final Map<String, List<EndpointReference>> endpointsByPath = new HashMap<>();
+    private int endpointsIndexed = -1;
     private final Map<String, List<String>> screensByEndpoint = new HashMap<>();
     private final Map<String, String> screensByView = new HashMap<>();
     private final Map<String, String> fragmentsByPath = new HashMap<>();

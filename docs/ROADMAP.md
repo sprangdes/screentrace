@@ -477,3 +477,9 @@
 - WP144：以 300 個 action 的 Struts 合成專案（依 ADR 0149 的描述重建：每頁 40 列表格、表單、前後頁連結，每個 Action 20 個 dispatch 方法）配合 JFR 量測：`ActionContracts` 改為每個 struts-config 解析一次、依 action path 建索引，關係依來源分組（RV-703）；`StrutsConfigParser.moduleFor` 依 path 快取（RV-703）；`redactHome` 在字串不含家目錄時略過 regex（RV-706）；`StrutsBehaviorProjection` 的表單送出依目標 path 建索引（RV-702）。
 - 量測（sandbox，只計 Java 分析）：同一合成專案由 100 秒降為 32 秒（R72 為基準）。
 - 驗證：合成專案與 14 個 fixture 的圖逐位元組相同；Maven 全數通過。純效能修改，未新增測試。
+
+## R74 Spring MVC 與 JS 分析器的效能熱點
+
+- WP145：新增 Spring MVC 合成專案（每個 controller 10 組 GET／POST mapping、3 個 JSP、表單與表格連結、inline script）以 JFR 與 Node `--cpu-prof` 量測：`SpringMvcAnalyzer` 的 addNode／edge 改用 id 索引，`endpointsFor` 有完全相同路徑時直接回傳；`SpringFormBindings`、`SpringServerValidation`、`RouteTemplateInference`、`UrlGraphContribution` 的請求邊移除與 `UrlResolution` 的端點比對改用索引（RV-702）；分析流程中的 `ObjectMapper` 改為常數（RV-705）；`UrlResolution.match` 快取端點樣板、`pathScore` 不再每次編譯 regex（RV-706）；`analyzer.mjs` 不再為每個 unit 過濾整份 DOM（RV-709）。量測中發現條件重導長鏈會讓導覽邊與證據呈平方成長，記為 RV-119，未處理。
+- 量測（sandbox，只計分析）：40 個 controller（含 40 層重導鏈）76 秒 → 16 秒；300 個 controller 由超過 10 分鐘降為 96 秒；Node 端（100 個 controller）32 秒 → 2 秒；Struts 300 個 action 維持約 33 秒。
+- 驗證：14 個 fixture、Struts 合成專案與 40 個 controller 的 Spring 合成專案（與 R73 比對），以及 100、300 個 controller 的專案（與本輪第一版比對），圖都逐位元組相同；Maven、JS 191、capture 103 全數通過。純效能修改，未新增測試。

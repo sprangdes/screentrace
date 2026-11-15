@@ -14,6 +14,10 @@ import java.util.regex.Pattern;
  * status.
  */
 public final class RouteTemplateInference {
+  /** Default-configured and thread-safe; one per class instead of one per call (RV-705). */
+  private static final com.fasterxml.jackson.databind.ObjectMapper SHARED_JSON =
+      new com.fasterxml.jackson.databind.ObjectMapper();
+
   private RouteTemplateInference() {}
 
   public static ApplicationGraph enrich(ApplicationGraph graph, ProjectInventory inventory) {
@@ -40,6 +44,12 @@ public final class RouteTemplateInference {
                         && n.attributes().containsKey("path")
                         && !("javascript-request".equals(n.attributes().get("origin"))))
             .toList();
+    // Behaviors by trigger; the loop below only adds behaviors for the component it is on, so the
+    // index built here stays complete for every later component (RV-702).
+    Map<String, List<Behavior>> byTrigger = new HashMap<>();
+    for (Behavior b : behaviors.values())
+      if (b.triggerId() != null)
+        byTrigger.computeIfAbsent(b.triggerId(), ignored -> new ArrayList<>()).add(b);
     for (GraphNode component :
         nodes.values().stream()
             .filter(
@@ -50,19 +60,17 @@ public final class RouteTemplateInference {
       // A resolved full-page load (React native link) already proves where the link goes; it needs
       // no placeholder navigation.
       boolean exists =
-          behaviors.values().stream()
+          byTrigger.getOrDefault(component.id(), List.of()).stream()
               .anyMatch(
                   b ->
-                      component.id().equals(b.triggerId())
-                          && (Set.of(BehaviorType.NAVIGATE, BehaviorType.SUBMIT_FORM)
-                                  .contains(b.type())
-                              || b.type() == BehaviorType.CALL_API
-                                  && b.targetId() != null
-                                  && b.evidence().stream()
-                                      .anyMatch(
-                                          e ->
-                                              e.detail() != null
-                                                  && e.detail().contains("\"fullPage\":true"))));
+                      (Set.of(BehaviorType.NAVIGATE, BehaviorType.SUBMIT_FORM).contains(b.type())
+                          || b.type() == BehaviorType.CALL_API
+                              && b.targetId() != null
+                              && b.evidence().stream()
+                                  .anyMatch(
+                                      e ->
+                                          e.detail() != null
+                                              && e.detail().contains("\"fullPage\":true"))));
       if (!exists && component.attributes().get("target") != null) {
         BehaviorType type =
             "LINK".equals(component.attributes().get("kind"))
@@ -333,7 +341,7 @@ public final class RouteTemplateInference {
         continue;
       }
       try {
-        var json = new com.fasterxml.jackson.databind.ObjectMapper().readTree(item.detail());
+        var json = SHARED_JSON.readTree(item.detail());
         if (!json.isObject() || !json.hasNonNull("url")) {
           result.add(item);
           continue;
@@ -372,7 +380,7 @@ public final class RouteTemplateInference {
       for (AnalysisEvidence e : b.evidence())
         if (e.detail() != null)
           try {
-            var j = new com.fasterxml.jackson.databind.ObjectMapper().readTree(e.detail());
+            var j = SHARED_JSON.readTree(e.detail());
             if (j.has("url") && !j.path("url").isNull()) return j.path("url").asText();
           } catch (JsonProcessingException | IllegalArgumentException notJson) {
             // Evidence detail that is not JSON names no URL.
@@ -429,7 +437,7 @@ public final class RouteTemplateInference {
     for (AnalysisEvidence e : b.evidence())
       if (e.detail() != null)
         try {
-          var j = new com.fasterxml.jackson.databind.ObjectMapper().readTree(e.detail());
+          var j = SHARED_JSON.readTree(e.detail());
           if (j.hasNonNull("method")) return j.path("method").asText().toUpperCase(Locale.ROOT);
         } catch (JsonProcessingException | IllegalArgumentException notJson) {
           // Evidence detail that is not JSON names no method.
