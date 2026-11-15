@@ -173,7 +173,13 @@ final class StrutsConfigParser {
         PendingForward target =
             new PendingForward(id, module, exception.getAttribute("path"), source);
         state.pendingForwards.add(target);
-        state.exceptionForwards.add(target);
+        // An <exception> inside an <action> applies to that action only (RV-301).
+        if (scope.equals("global")) state.exceptionForwards.add(target);
+        else
+          state
+              .actionExceptionForwards
+              .computeIfAbsent(scope.substring("action:".length()), k -> new ArrayList<>())
+              .add(target);
       }
       for (Element action : StrutsSources.elements(document, "action")) {
         String route = module + action.getAttribute("path");

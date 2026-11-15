@@ -24,7 +24,9 @@ import io.screentrace.scanner.ProjectScanner.ProjectInventory;
 import io.screentrace.scanner.SafeProjectFiles;
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -772,6 +774,12 @@ public final class SpringMvcAnalyzer {
     } else {
       String screenId = screenForView(view, source, state);
       edge(state, EdgeType.RENDERS, handlerId, screenId, Confidence.CONFIRMED, source);
+      // Like annotation and view-controller routes, so forms without an action and relative links
+      // on this screen know the route that opens it (RV-207).
+      state
+          .endpointsByScreen
+          .computeIfAbsent(screenId, ignored -> new ArrayList<>())
+          .add(new EndpointReference(endpointId, path, "ANY", "MVC_SCREEN"));
       state
           .screensByEndpoint
           .computeIfAbsent(endpointId, ignored -> new ArrayList<>())
@@ -1115,6 +1123,33 @@ public final class SpringMvcAnalyzer {
     }
   }
 
+  /**
+   * The request path with "." and ".." segments applied and repeated slashes collapsed, keeping any
+   * query or fragment; null when ".." would leave the application root (RV-208).
+   */
+  static String normalizedRequestPath(String path) {
+    int boundary = path.length();
+    for (char mark : new char[] {'?', '#'}) {
+      int index = path.indexOf(mark);
+      if (index >= 0) boundary = Math.min(boundary, index);
+    }
+    String suffix = path.substring(boundary);
+    Deque<String> segments = new ArrayDeque<>();
+    String[] parts = path.substring(0, boundary).split("/", -1);
+    for (int index = 0; index < parts.length; index++) {
+      String part = parts[index];
+      boolean last = index == parts.length - 1;
+      if (part.equals("..")) {
+        if (segments.isEmpty()) return null;
+        segments.removeLast();
+        if (last) segments.addLast("");
+      } else if (part.equals(".")) {
+        if (last) segments.addLast("");
+      } else if (!part.isEmpty() || last) segments.addLast(part);
+    }
+    return "/" + String.join("/", segments) + suffix;
+  }
+
   private static JspAnalysis.Interaction resolveRelativeJspTarget(
       JspAnalysis.Interaction interaction, State state) {
     String raw = interaction.target();
@@ -1182,7 +1217,8 @@ public final class SpringMvcAnalyzer {
     String route = routes.get(0).path();
     int slash = route.lastIndexOf('/');
     String parent = slash <= 0 ? "" : route.substring(0, slash);
-    String resolved = (parent + "/" + raw).replaceAll("/{2,}", "/");
+    String resolved = normalizedRequestPath(parent + "/" + raw);
+    if (resolved == null) return unresolvedRelative(interaction, state, routes, "相對路徑超出應用程式根目錄");
     GraphNode endpoint =
         state.nodes.stream()
             .filter(n -> n.id().equals(routes.get(0).id()))
@@ -1500,18 +1536,25 @@ public final class SpringMvcAnalyzer {
       Confidence confidence,
       SourceLocation source) {
     String id = ApplicationGraph.id(NodeType.COMPONENT, type + ":" + from + ":" + to);
-    if (state.edges.stream().noneMatch(e -> e.id().equals(id)))
-      state.edges.add(
-          new Relationship(
-              id,
-              type,
-              from,
-              to,
-              confidence,
-              source,
-              List.of(
-                  new ApplicationGraph.AnalysisEvidence(
-                      source, "SpringMvcAnalyzer", confidence.resolutionStatus(), null))));
+    var proof =
+        new ApplicationGraph.AnalysisEvidence(
+            source, "SpringMvcAnalyzer", confidence.resolutionStatus(), null);
+    for (int index = 0; index < state.edges.size(); index++) {
+      Relationship existing = state.edges.get(index);
+      if (!existing.id().equals(id)) continue;
+      // A proof for an edge first recorded as inferred upgrades it, keeping both pieces of
+      // evidence (RV-206); a weaker proof never downgrades an existing edge.
+      if (confidence == Confidence.CONFIRMED && existing.confidence() != Confidence.CONFIRMED) {
+        List<ApplicationGraph.AnalysisEvidence> evidence = new ArrayList<>(existing.evidence());
+        evidence.add(proof);
+        state.edges.set(
+            index,
+            new Relationship(
+                id, type, from, to, confidence, existing.source(), List.copyOf(evidence)));
+      }
+      return;
+    }
+    state.edges.add(new Relationship(id, type, from, to, confidence, source, List.of(proof)));
   }
 
   private static final class State {

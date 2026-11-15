@@ -113,6 +113,10 @@ final class StrutsModel {
     final List<PendingForward> pendingForwards = new ArrayList<>(),
         exceptionForwards = new ArrayList<>();
     final Map<String, List<PendingForward>> actionForwardTargets = new TreeMap<>();
+
+    /** Exception forwards declared inside one {@code <action>}, by that action's route. */
+    final Map<String, List<PendingForward>> actionExceptionForwards = new TreeMap<>();
+
     final Map<String, Map<String, WildcardMatch>> wildcardMatches = new TreeMap<>();
     final Map<String, ServletMappingResolution> servletMappings = new TreeMap<>();
     final Map<String, List<FacesSuffixMapping>> facesMappings = new TreeMap<>();

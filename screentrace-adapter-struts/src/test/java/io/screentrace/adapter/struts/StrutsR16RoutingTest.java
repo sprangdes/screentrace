@@ -894,4 +894,40 @@ class StrutsR16RoutingTest {
           path + " " + graph.relationships());
     }
   }
+
+  @Test
+  void exceptionForwardInsideAnActionOnlyLeavesThatAction() throws Exception {
+    // RV-301: an <exception> nested in one action was walked from every action of the module.
+    actionServlet("*.do", "/WEB-INF/struts-config.xml");
+    config(
+        "<action path=\"/a\" type=\"sample.A\"><exception type=\"java.lang.Exception\" key=\"e\" path=\"/error.do\"/><forward name=\"ok\" path=\"/WEB-INF/a.jsp\"/></action>"
+            + "<action path=\"/b\" type=\"sample.B\"><forward name=\"ok\" path=\"/WEB-INF/b.jsp\"/></action>"
+            + "<action path=\"/c\" type=\"sample.C\"><forward name=\"ok\" path=\"/WEB-INF/c.jsp\"/></action>"
+            + "<action path=\"/error\" type=\"sample.Error\"><forward name=\"ok\" path=\"/WEB-INF/error.jsp\"/></action>");
+    for (String page : List.of("a", "b", "c", "error"))
+      file("src/main/webapp/WEB-INF/" + page + ".jsp", "<h1>" + page + "</h1>");
+    var graph = analyze();
+    var error =
+        graph.nodes().stream()
+            .filter(
+                n ->
+                    n.type() == NodeType.ENDPOINT && "/error.do".equals(n.attributes().get("path")))
+            .findFirst()
+            .orElseThrow();
+    var callers =
+        graph.relationships().stream()
+            .filter(e -> e.type() == EdgeType.CALLS && e.to().equals(error.id()))
+            .map(
+                e ->
+                    graph.nodes().stream()
+                        .filter(n -> n.id().equals(e.from()))
+                        .findFirst()
+                        .orElseThrow()
+                        .name())
+            .toList();
+    assertTrue(
+        callers.stream()
+            .noneMatch(name -> name.startsWith("sample.B") || name.startsWith("sample.C")),
+        callers.toString());
+  }
 }

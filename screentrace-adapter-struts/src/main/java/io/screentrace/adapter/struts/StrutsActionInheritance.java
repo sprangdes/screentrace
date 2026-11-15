@@ -39,17 +39,20 @@ final class StrutsActionInheritance {
               new LinkedHashSet<>(List.of(origin.route())),
               1,
               state);
+        List<PendingForward> exceptions = new ArrayList<>();
         for (PendingForward exception : state.exceptionForwards)
-          if (exception.module().equals(origin.module()))
-            walkActionForward(
-                origin,
-                sourceEndpoint,
-                exception.target(),
-                exception.source(),
-                List.of(origin),
-                new LinkedHashSet<>(List.of(origin.route())),
-                1,
-                state);
+          if (exception.module().equals(origin.module())) exceptions.add(exception);
+        exceptions.addAll(state.actionExceptionForwards.getOrDefault(base.route(), List.of()));
+        for (PendingForward exception : exceptions)
+          walkActionForward(
+              origin,
+              sourceEndpoint,
+              exception.target(),
+              exception.source(),
+              List.of(origin),
+              new LinkedHashSet<>(List.of(origin.route())),
+              1,
+              state);
       }
     }
   }

@@ -129,9 +129,9 @@ P1 處理結果見各項「狀態」（R53，[ADR 0144](adr/0144-r53-code-review
 - **RV-203** `SpringSecurityProcessors.java:350`：同一 XML 多個 `<http>` 的 form-login handler 共用 id，互相覆寫，各登入端點指向對方的目的地。 **狀態：已修正（R60）：handler id 加入處理網址。**
 - **RV-204** `SpringSecurityRedirects.java:21`：先讀檔再檢查副檔名，所有 jar／圖片都被讀取；超過 8 MB 產生無關的 `SPRING_SECURITY_PARSE` 診斷。
 - **RV-205** `SpringMvcAnalyzer.java:668`：`BeanNameUrlHandlerMapping` 只認 `id` 以 `/` 開頭，常見的 `name="/x.htm"` 寫法不產生端點。 **狀態：已修正（R60）：`name` 屬性的 `/` 開頭名稱也建立路由，value-ref 可用名稱找 bean。**
-- **RV-206** `SpringControllerFlow.java:551`：`project()` 以相同 id 公式產生 NAVIGATES_TO，`put` 覆蓋既有 CONFIRMED 邊而降為 INFERRED。
-- **RV-207** `SpringMvcAnalyzer.java:745`：XML controller 只記 `screensByEndpoint`，沒記 `endpointsByScreen`，無 action 的 form 與相對連結無法解析。
-- **RV-208** `SpringMvcAnalyzer.java:1151`：相對 URL 只做字串串接，未正規化 `..`／`.`。
+- **RV-206** `SpringControllerFlow.java:551`：`project()` 以相同 id 公式產生 NAVIGATES_TO，`put` 覆蓋既有 CONFIRMED 邊而降為 INFERRED。 **狀態：已修正（R61）：實際降級發生在 analyzer 本身先記 INFERRED、再略過同 id 的 CONFIRMED；`edge()` 遇到較強證明時升級，`project()` 也不再覆寫 CONFIRMED。**
+- **RV-207** `SpringMvcAnalyzer.java:745`：XML controller 只記 `screensByEndpoint`，沒記 `endpointsByScreen`，無 action 的 form 與相對連結無法解析。 **狀態：已修正（R61）。**
+- **RV-208** `SpringMvcAnalyzer.java:1151`：相對 URL 只做字串串接，未正規化 `..`／`.`。 **狀態：已修正（R61）：導覽邊原本已由其他流程補上，錯的是元件的 `target` 屬性（`/users/../home`）；現在正規化，超出根目錄時標為 unresolved。**
 - **RV-209** `SpringMvcAnalyzer.java:1005`：多個 Tiles definition 共用 body JSP 時，靜默摺疊到字母序第一個，未發 AMBIGUOUS 診斷。
 - **RV-210** `SpringMvcAnalyzer.java:446`：含 `throw` 且 view 無法解析的 handler，在未設定例外 resolver 時完全沒有診斷。
 - **RV-211** `SpringSecurityProcessors.java:177`：Java config 的 formLogin／logout 新增端點後，未清除先前的 `URL_UNRESOLVED`／`URL_METHOD_MISMATCH` 診斷。
@@ -148,7 +148,7 @@ P1 處理結果見各項「狀態」（R53，[ADR 0144](adr/0144-r53-code-review
 
 ## P2 — adapter-struts
 
-- **RV-301** `StrutsActionInheritance.java:42`：action 內的 `<exception>` 被當成模組內所有 action 的出口，產生大量錯誤 CALLS 邊。
+- **RV-301** `StrutsActionInheritance.java:42`：action 內的 `<exception>` 被當成模組內所有 action 的出口，產生大量錯誤 CALLS 邊。 **狀態：已修正（R61）。**
 - **RV-302** `StrutsBehaviorProjection.java:174`：`forward()` 寫入 state 的診斷與既有節點更新沒有回寫到回傳的 graph。
 - **RV-303** `StrutsConfigParser.java:255`：`inputForward="true"` 只查 global forwards，未先查 action 本地 forward。
 - **RV-304** `StrutsForwards.java:351`：模組相對 forward 指向 action 時未加模組前綴，且 fallback 把 query string 一起當 key。

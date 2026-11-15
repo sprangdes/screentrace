@@ -403,3 +403,8 @@
 
 - WP131：`method = {GET, POST}` 改為每個方法各一個端點（RV-202，[ADR 0148](adr/0148-r60-one-endpoint-per-request-method.md)）；同一 XML 中多個 `<http>` 的登入／登出處理各自獨立（RV-203）；`<bean name="/x.htm">` 建立路由、SimpleUrlHandlerMapping 可用 bean 名稱找 controller（RV-205）；Spring Boot controller 取每個字面值回傳畫面，不含 lambda 內的 return（RV-213）；宣告時給字面值且不再指派的 `String` 區域變數可解析為畫面（RV-214 部分）。
 - 驗證：`SpringRound60Test` 新增 6 個測試，都已確認在修改前失敗；Maven 全數通過。
+
+## R61 Spring／Struts 導覽精度
+
+- WP132：已證明的導覽不再被推論結果降級（`SpringMvcAnalyzer.edge()` 遇到較強證明時升級，`SpringControllerFlow.project()` 保留 CONFIRMED，並改以索引查詢 HANDLED_BY／RENDERS／FORWARDS_TO）（RV-206）；XML controller 的路由也記到畫面上，無 action 的表單與相對連結可以解析（RV-207）；JSP 相對 URL 套用 `.`／`..` 正規化，超出根目錄時標為 unresolved（RV-208）；Struts `<action>` 內的 `<exception>` 只從該 action 出發（RV-301）。不改變對外契約，未新增 ADR。
+- 驗證：新增 6 個測試，整合測試都已確認在修改前失敗；Maven 全數通過。
