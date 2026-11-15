@@ -345,9 +345,12 @@ final class SpringSecurityProcessors {
     // method, 4.0+ (CSRF on by default) POST.
     String method = login || version.map(v -> v.majorVersion() >= 4).orElse(false) ? "POST" : "ANY";
     String endpoint = StableGraphIds.endpoint(method, path),
+        // Each <http> block has its own processing URL; keyed by file alone, several blocks in one
+        // file shared a handler and each login reported the other's destination (RV-203).
         handler =
             ApplicationGraph.id(
-                NodeType.HANDLER, source.file() + ":xml:" + (login ? "form-login" : "logout"));
+                NodeType.HANDLER,
+                source.file() + ":xml:" + (login ? "form-login" : "logout") + ":" + path);
     if (nodes.containsKey(endpoint)) return;
     List<AnalysisEvidence> proof =
         List.of(

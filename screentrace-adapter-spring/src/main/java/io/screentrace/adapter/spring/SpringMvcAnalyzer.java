@@ -3,7 +3,10 @@ package io.screentrace.adapter.spring;
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
 import com.github.javaparser.ast.body.MethodDeclaration;
 import com.github.javaparser.ast.expr.AnnotationExpr;
+import com.github.javaparser.ast.expr.ArrayInitializerExpr;
 import com.github.javaparser.ast.expr.Expression;
+import com.github.javaparser.ast.expr.FieldAccessExpr;
+import com.github.javaparser.ast.expr.NameExpr;
 import com.github.javaparser.ast.expr.NormalAnnotationExpr;
 import io.screentrace.core.ApplicationGraph;
 import io.screentrace.core.ApplicationGraph.Confidence;
@@ -349,110 +352,111 @@ public final class SpringMvcAnalyzer {
       if (target.kind() == SpringControllerReturns.Kind.UNKNOWN)
         SpringControllerFlow.unresolved(state.diagnostics, target, "無法證明常值或未改寫的回傳物件");
       else if (target.kind() != SpringControllerReturns.Kind.VIEW)
-        state.returnTargets.add(
-            new SpringControllerFlow.Pending(handlerId, httpMethod(mapping), target));
+        for (String httpMethod : httpMethods(mapping))
+          state.returnTargets.add(new SpringControllerFlow.Pending(handlerId, httpMethod, target));
     }
-    for (String base : bases)
-      for (String child : children) {
-        String path = join(base, child);
-        String endpointId =
-            ApplicationGraph.id(
-                NodeType.ENDPOINT, httpMethod(mapping) + " " + path + ":" + handlerId);
-        addNode(
-            state,
-            new GraphNode(
-                endpointId,
-                NodeType.ENDPOINT,
-                httpMethod(mapping) + " " + path,
-                Map.of(
-                    "httpMethod",
-                    httpMethod(mapping),
-                    "path",
-                    path,
-                    "category",
-                    rest
-                        ? "REST_API"
-                        : !views.isEmpty()
-                                && views.stream().allMatch(view -> view.startsWith("redirect:"))
-                            ? "REDIRECT"
-                            : "MVC_SCREEN"),
-                source,
-                Confidence.CONFIRMED));
-        state.endpointByPath.putIfAbsent(path, endpointId);
-        EndpointReference endpoint =
-            new EndpointReference(
-                endpointId, path, httpMethod(mapping), rest ? "REST_API" : "MVC_SCREEN");
-        state.endpoints.add(endpoint);
-        edge(state, EdgeType.HANDLED_BY, endpointId, handlerId, Confidence.CONFIRMED, source);
-        state.apiContracts.add(
-            state.contracts.contract(endpointId, method, mapping, source, views));
-        for (var target :
-            returns.stream().filter(t -> t.kind() == SpringControllerReturns.Kind.VIEW).toList()) {
-          String view = target.value();
-          String screenId = screenForView(view, target.source(), state);
-          Confidence confidence =
-              resolvedScreenId(view, state) != null
-                      && !target.evidence().stream()
-                          .anyMatch(
-                              e ->
-                                  e.parser().equals("SpringControllerReturns")
-                                      && e.resolution()
-                                          == ApplicationGraph.ResolutionStatus.INFERRED)
-                  ? Confidence.CONFIRMED
-                  : Confidence.INFERRED;
-          String returnId =
-              ApplicationGraph.id(
-                  NodeType.COMPONENT,
-                  "RENDERS:"
-                      + handlerId
-                      + ":"
-                      + screenId
-                      + ":"
-                      + target.source().line()
-                      + ":"
-                      + target.expression()
-                      + SpringControllerReturns.branchKey(target));
-          if (state.edges.stream().noneMatch(e -> e.id().equals(returnId)))
-            state.edges.add(
-                new Relationship(
-                    returnId,
-                    EdgeType.RENDERS,
-                    handlerId,
-                    screenId,
-                    confidence,
-                    target.source(),
-                    viewEvidence(target, view, screenId, state)));
-          state
-              .endpointsByScreen
-              .computeIfAbsent(screenId, ignored -> new ArrayList<>())
-              .add(endpoint);
-          state
-              .screensByEndpoint
-              .computeIfAbsent(endpointId, ignored -> new ArrayList<>())
-              .add(screenId);
+    for (String httpMethod : httpMethods(mapping))
+      for (String base : bases)
+        for (String child : children) {
+          String path = join(base, child);
+          String endpointId =
+              ApplicationGraph.id(NodeType.ENDPOINT, httpMethod + " " + path + ":" + handlerId);
+          addNode(
+              state,
+              new GraphNode(
+                  endpointId,
+                  NodeType.ENDPOINT,
+                  httpMethod + " " + path,
+                  Map.of(
+                      "httpMethod",
+                      httpMethod,
+                      "path",
+                      path,
+                      "category",
+                      rest
+                          ? "REST_API"
+                          : !views.isEmpty()
+                                  && views.stream().allMatch(view -> view.startsWith("redirect:"))
+                              ? "REDIRECT"
+                              : "MVC_SCREEN"),
+                  source,
+                  Confidence.CONFIRMED));
+          state.endpointByPath.putIfAbsent(path, endpointId);
+          EndpointReference endpoint =
+              new EndpointReference(endpointId, path, httpMethod, rest ? "REST_API" : "MVC_SCREEN");
+          state.endpoints.add(endpoint);
+          edge(state, EdgeType.HANDLED_BY, endpointId, handlerId, Confidence.CONFIRMED, source);
+          state.apiContracts.add(
+              state.contracts.contract(endpointId, method, mapping, source, views));
+          for (var target :
+              returns.stream()
+                  .filter(t -> t.kind() == SpringControllerReturns.Kind.VIEW)
+                  .toList()) {
+            String view = target.value();
+            String screenId = screenForView(view, target.source(), state);
+            Confidence confidence =
+                resolvedScreenId(view, state) != null
+                        && !target.evidence().stream()
+                            .anyMatch(
+                                e ->
+                                    e.parser().equals("SpringControllerReturns")
+                                        && e.resolution()
+                                            == ApplicationGraph.ResolutionStatus.INFERRED)
+                    ? Confidence.CONFIRMED
+                    : Confidence.INFERRED;
+            String returnId =
+                ApplicationGraph.id(
+                    NodeType.COMPONENT,
+                    "RENDERS:"
+                        + handlerId
+                        + ":"
+                        + screenId
+                        + ":"
+                        + target.source().line()
+                        + ":"
+                        + target.expression()
+                        + SpringControllerReturns.branchKey(target));
+            if (state.edges.stream().noneMatch(e -> e.id().equals(returnId)))
+              state.edges.add(
+                  new Relationship(
+                      returnId,
+                      EdgeType.RENDERS,
+                      handlerId,
+                      screenId,
+                      confidence,
+                      target.source(),
+                      viewEvidence(target, view, screenId, state)));
+            state
+                .endpointsByScreen
+                .computeIfAbsent(screenId, ignored -> new ArrayList<>())
+                .add(endpoint);
+            state
+                .screensByEndpoint
+                .computeIfAbsent(endpointId, ignored -> new ArrayList<>())
+                .add(screenId);
+          }
+          if (!rest
+              && views.isEmpty()
+              && throwsException(method)
+              && state.defaultExceptionView != null) {
+            String screenId = screenForView(state.defaultExceptionView, source, state);
+            edge(state, EdgeType.RENDERS, handlerId, screenId, Confidence.CONFIRMED, source);
+            state
+                .endpointsByScreen
+                .computeIfAbsent(screenId, ignored -> new ArrayList<>())
+                .add(endpoint);
+            state
+                .screensByEndpoint
+                .computeIfAbsent(endpointId, ignored -> new ArrayList<>())
+                .add(screenId);
+          }
+          if (!rest && views.isEmpty() && !throwsException(method))
+            state.diagnostics.add(
+                new Diagnostic(
+                    "Handler return view cannot be resolved statically: " + handlerName,
+                    Confidence.UNRESOLVED,
+                    source));
         }
-        if (!rest
-            && views.isEmpty()
-            && throwsException(method)
-            && state.defaultExceptionView != null) {
-          String screenId = screenForView(state.defaultExceptionView, source, state);
-          edge(state, EdgeType.RENDERS, handlerId, screenId, Confidence.CONFIRMED, source);
-          state
-              .endpointsByScreen
-              .computeIfAbsent(screenId, ignored -> new ArrayList<>())
-              .add(endpoint);
-          state
-              .screensByEndpoint
-              .computeIfAbsent(endpointId, ignored -> new ArrayList<>())
-              .add(screenId);
-        }
-        if (!rest && views.isEmpty() && !throwsException(method))
-          state.diagnostics.add(
-              new Diagnostic(
-                  "Handler return view cannot be resolved statically: " + handlerName,
-                  Confidence.UNRESOLVED,
-                  source));
-      }
   }
 
   private static List<ApplicationGraph.AnalysisEvidence> viewEvidence(
@@ -526,7 +530,10 @@ public final class SpringMvcAnalyzer {
     for (int index = 0; index < nodes.getLength(); index++) {
       Element bean = (Element) nodes.item(index);
       String id = bean.getAttribute("id");
-      beans.put(id.isBlank() ? "__anonymous_" + index : id, bean);
+      List<String> names = beanNames(bean);
+      // A bean declared only by name is found by its first name, as Spring does (RV-205).
+      beans.put(
+          !id.isBlank() ? id : !names.isEmpty() ? names.get(0) : "__anonymous_" + index, bean);
     }
     return beans;
   }
@@ -663,13 +670,26 @@ public final class SpringMvcAnalyzer {
     }
   }
 
+  /** The bean's name attribute split as Spring splits it (comma, semicolon or whitespace). */
+  private static List<String> beanNames(Element bean) {
+    return java.util.Arrays.stream(bean.getAttribute("name").split("[,;\\s]+"))
+        .filter(name -> !name.isBlank())
+        .toList();
+  }
+
   private static Map<String, String> xmlRoutes(Map<String, Element> beans) {
     Map<String, String> routes = new TreeMap<>();
-    for (Element bean : beans.values()) {
+    for (var entry : beans.entrySet()) {
+      Element bean = entry.getValue();
       if (bean.getAttribute("class").contains("SimpleUrlHandlerMapping"))
         routes.putAll(urlMap(bean));
-      if (bean.getAttribute("id").startsWith("/") && isXmlController(bean))
-        routes.put(bean.getAttribute("id"), bean.getAttribute("id"));
+      if (!isXmlController(bean)) continue;
+      // BeanNameUrlHandlerMapping maps the id and every name that starts with '/'; the usual form
+      // is name="/welcome.htm" (RV-205).
+      List<String> urls = new ArrayList<>();
+      urls.add(bean.getAttribute("id"));
+      urls.addAll(beanNames(bean));
+      for (String url : urls) if (url.startsWith("/")) routes.put(url, entry.getKey());
     }
     return routes;
   }
@@ -698,6 +718,13 @@ public final class SpringMvcAnalyzer {
   private static void addXmlController(
       String path, String beanId, Map<String, Element> beans, String relative, State state) {
     Element bean = beans.get(beanId);
+    // A value-ref may name a bean by one of its names rather than its id.
+    if (bean == null)
+      bean =
+          beans.values().stream()
+              .filter(candidate -> beanNames(candidate).contains(beanId))
+              .findFirst()
+              .orElse(null);
     if (bean == null || !isXmlController(bean)) {
       state.diagnostics.add(
           new Diagnostic(
@@ -1374,27 +1401,46 @@ public final class SpringMvcAnalyzer {
         .orElse(null);
   }
 
-  private static String httpMethod(AnnotationExpr mapping) {
+  /**
+   * Each HTTP method a mapping accepts, in declaration order; "ANY" when none is declared. {@code
+   * method = {GET, POST}} gives two methods instead of the text "{ GET, POST }" (RV-202).
+   */
+  static List<String> httpMethods(AnnotationExpr mapping) {
     if (!mapping.getNameAsString().equals("RequestMapping"))
-      return Map.of(
-              "GetMapping",
-              "GET",
-              "PostMapping",
-              "POST",
-              "PutMapping",
-              "PUT",
-              "DeleteMapping",
-              "DELETE",
-              "PatchMapping",
-              "PATCH")
-          .getOrDefault(mapping.getNameAsString(), "ANY");
-    if (mapping instanceof NormalAnnotationExpr normal)
-      return normal.getPairs().stream()
-          .filter(p -> p.getNameAsString().equals("method"))
-          .map(p -> p.getValue().toString().replace("RequestMethod.", ""))
-          .findFirst()
-          .orElse("ANY");
-    return "ANY";
+      return List.of(
+          Map.of(
+                  "GetMapping",
+                  "GET",
+                  "PostMapping",
+                  "POST",
+                  "PutMapping",
+                  "PUT",
+                  "DeleteMapping",
+                  "DELETE",
+                  "PatchMapping",
+                  "PATCH")
+              .getOrDefault(mapping.getNameAsString(), "ANY"));
+    if (!(mapping instanceof NormalAnnotationExpr normal)) return List.of("ANY");
+    var value =
+        normal.getPairs().stream()
+            .filter(p -> p.getNameAsString().equals("method"))
+            .map(p -> p.getValue())
+            .findFirst();
+    if (value.isEmpty()) return List.of("ANY");
+    List<Expression> items =
+        value.get() instanceof ArrayInitializerExpr array
+            ? array.getValues()
+            : List.of(value.get());
+    List<String> methods = new ArrayList<>();
+    for (Expression item : items) {
+      String name =
+          item instanceof FieldAccessExpr field
+              ? field.getNameAsString()
+              : item instanceof NameExpr simple ? simple.getNameAsString() : null;
+      if (name == null || !name.matches("[A-Z]+")) return List.of("ANY");
+      if (!methods.contains(name)) methods.add(name);
+    }
+    return methods.isEmpty() ? List.of("ANY") : List.copyOf(methods);
   }
 
   private static Map<String, String> viewConstants(ClassOrInterfaceDeclaration type) {

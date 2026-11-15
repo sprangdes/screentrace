@@ -31,6 +31,7 @@ final class SpringControllerReturns {
     for (var parameter : method.getParameters()) constants.remove(parameter.getNameAsString());
     for (var variable : method.findAll(VariableDeclarator.class))
       constants.remove(variable.getNameAsString());
+    constants.putAll(finalLiteralLocals(method));
     List<Target> targets = new ArrayList<>();
     for (ReturnStmt statement : method.findAll(ReturnStmt.class)) {
       if (!belongsTo(statement, method) || statement.getExpression().isEmpty()) continue;
@@ -371,6 +372,31 @@ final class SpringControllerReturns {
     if (value.startsWith("redirect:")) return new Value(Kind.REDIRECT, value.substring(9));
     if (value.startsWith("forward:")) return new Value(Kind.FORWARD, value.substring(8));
     return new Value(Kind.VIEW, value);
+  }
+
+  /**
+   * Local {@code String} variables that are declared once with a string literal and never assigned
+   * again: {@code String view = "home"; return view;} returns "home" on every path (RV-214).
+   */
+  private static Map<String, String> finalLiteralLocals(MethodDeclaration method) {
+    Map<String, String> result = new HashMap<>();
+    Set<String> parameters = new HashSet<>();
+    method.getParameters().forEach(p -> parameters.add(p.getNameAsString()));
+    var declarations = method.findAll(VariableDeclarator.class);
+    for (var variable : declarations) {
+      String name = variable.getNameAsString();
+      if (parameters.contains(name)
+          || !variable.getType().asString().equals("String")
+          || variable.getInitializer().filter(Expression::isStringLiteralExpr).isEmpty()
+          || declarations.stream().filter(v -> v.getNameAsString().equals(name)).count() != 1
+          || method.findAll(AssignExpr.class).stream()
+              .anyMatch(
+                  a ->
+                      a.getTarget().isNameExpr()
+                          && a.getTarget().asNameExpr().getNameAsString().equals(name))) continue;
+      result.put(name, variable.getInitializer().get().asStringLiteralExpr().asString());
+    }
+    return result;
   }
 
   private static Expression unwrap(Expression expression) {

@@ -128,7 +128,6 @@ public final class SpringBootAnalyzer {
       AnnotationExpr mapping,
       ControllerContext controller,
       AnalysisState state) {
-    String httpMethod = httpMethod(mapping);
     SourceLocation source =
         new SourceLocation(
             controller.relative(), method.getBegin().map(position -> position.line).orElse(1));
@@ -155,29 +154,33 @@ public final class SpringBootAnalyzer {
             source,
             Confidence.CONFIRMED));
 
-    String result = returnLiteral(method);
-    boolean redirect = result != null && result.startsWith("redirect:");
-    EndpointContext endpoint =
-        new EndpointContext(
-            handlerId,
-            httpMethod,
-            controller.rest()
-                || annotation(method, "ResponseBody") != null
-                || method.getType().isClassOrInterfaceType()
-                    && method
-                        .getType()
-                        .asClassOrInterfaceType()
-                        .getNameAsString()
-                        .equals("ResponseEntity")
-                || (annotation(method, "ResponseStatus") != null
-                        || annotation(controller.declaration(), "ResponseStatus") != null)
-                    && method.getType().isVoidType(),
-            redirect,
-            result,
-            source);
-    for (String base : controller.bases()) {
-      for (String child : methodPaths) {
-        addEndpoint(state, join(base, child), endpoint, method, mapping);
+    List<String> results = returnLiterals(method);
+    boolean redirect =
+        !results.isEmpty() && results.stream().allMatch(value -> value.startsWith("redirect:"));
+    // One endpoint per declared method, as in SpringMvcAnalyzer (RV-202).
+    for (String httpMethod : SpringMvcAnalyzer.httpMethods(mapping)) {
+      EndpointContext endpoint =
+          new EndpointContext(
+              handlerId,
+              httpMethod,
+              controller.rest()
+                  || annotation(method, "ResponseBody") != null
+                  || method.getType().isClassOrInterfaceType()
+                      && method
+                          .getType()
+                          .asClassOrInterfaceType()
+                          .getNameAsString()
+                          .equals("ResponseEntity")
+                  || (annotation(method, "ResponseStatus") != null
+                          || annotation(controller.declaration(), "ResponseStatus") != null)
+                      && method.getType().isVoidType(),
+              redirect,
+              results,
+              source);
+      for (String base : controller.bases()) {
+        for (String child : methodPaths) {
+          addEndpoint(state, join(base, child), endpoint, method, mapping);
+        }
       }
     }
   }
@@ -213,15 +216,16 @@ public final class SpringBootAnalyzer {
     if (endpoint.rest())
       state.apiContracts.add(
           state.contracts.contract(endpointId, method, mapping, endpoint.source(), List.of()));
-    if (endpoint.rendersScreen()) {
-      edge(
-          state.edges,
-          EdgeType.RENDERS,
-          endpoint.handlerId(),
-          screen(endpoint.result(), state.nodes, endpoint.source()),
-          Confidence.CONFIRMED,
-          endpoint.source());
-    }
+    if (!endpoint.rest())
+      for (String view : endpoint.results())
+        if (!view.startsWith("redirect:") && !view.startsWith("forward:"))
+          edge(
+              state.edges,
+              EdgeType.RENDERS,
+              endpoint.handlerId(),
+              screen(view, state.nodes, endpoint.source()),
+              Confidence.CONFIRMED,
+              endpoint.source());
   }
 
   private static boolean isController(ClassOrInterfaceDeclaration type) {
@@ -299,25 +303,6 @@ public final class SpringBootAnalyzer {
         .orElse(null);
   }
 
-  private static String httpMethod(AnnotationExpr mapping) {
-    if (!REQUEST_MAPPING.equals(mapping.getNameAsString())) {
-      return Map.of(
-              "GetMapping",
-              "GET",
-              "PostMapping",
-              "POST",
-              "PutMapping",
-              "PUT",
-              "DeleteMapping",
-              "DELETE",
-              "PatchMapping",
-              "PATCH")
-          .getOrDefault(mapping.getNameAsString(), "ANY");
-    }
-    String configured = named(mapping, "method");
-    return configured == null ? "ANY" : configured.replace("RequestMethod.", "");
-  }
-
   private static String named(AnnotationExpr annotation, String name) {
     if (annotation instanceof NormalAnnotationExpr normal) {
       return normal.getPairs().stream()
@@ -339,8 +324,24 @@ public final class SpringBootAnalyzer {
     return path.startsWith(ROUTE_SEPARATOR) ? path : ROUTE_SEPARATOR + path;
   }
 
-  private static String returnLiteral(MethodDeclaration method) {
+  /**
+   * Every string literal the method itself returns, in source order: each branch's view, not only
+   * the first, and never a return inside a lambda or a nested class body (RV-213).
+   */
+  private static List<String> returnLiterals(MethodDeclaration method) {
     return method.findAll(com.github.javaparser.ast.stmt.ReturnStmt.class).stream()
+        .filter(
+            returnStatement ->
+                returnStatement
+                    .findAncestor(
+                        n ->
+                            n == method
+                                || n instanceof com.github.javaparser.ast.expr.LambdaExpr
+                                || n instanceof com.github.javaparser.ast.expr.ObjectCreationExpr
+                                || n instanceof ClassOrInterfaceDeclaration,
+                        com.github.javaparser.ast.Node.class)
+                    .map(n -> n == method)
+                    .orElse(false))
         .map(
             returnStatement ->
                 returnStatement
@@ -349,8 +350,8 @@ public final class SpringBootAnalyzer {
                     .map(expression -> expression.asStringLiteralExpr().asString())
                     .orElse(null))
         .filter(Objects::nonNull)
-        .findFirst()
-        .orElse(null);
+        .distinct()
+        .toList();
   }
 
   private static int line(String text, int offset) {
@@ -382,17 +383,13 @@ public final class SpringBootAnalyzer {
       String httpMethod,
       boolean rest,
       boolean redirect,
-      String result,
+      List<String> results,
       SourceLocation source) {
     private String category() {
       if (rest) {
         return "REST_API";
       }
       return redirect ? "REDIRECT" : "MVC_SCREEN";
-    }
-
-    private boolean rendersScreen() {
-      return !rest && result != null && !redirect;
     }
   }
 }

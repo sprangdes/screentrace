@@ -398,3 +398,8 @@
 
 - WP130：welcome-file 指向 action 時補上前導 `/` 再比對路由（RV-305）；`<logic:forward name>` 以 global forward 解析目標（RV-306）；Struts 版本只採用 Struts 1 本身的 Maven artifact（`org.apache.struts` 群組中的非 Struts 2 artifact、`struts` 群組或無群組的已知 artifact）與 jar 名稱，`struts-menu`、`spring-webmvc-struts` 不再造成版本衝突（RV-311）；Tiles 標題中任何位置出現 EL 或 scriptlet 都視為動態，改用 body 標題命名（RV-312）。不改變對外契約，未新增 ADR。
 - 驗證：新增 4 個測試，都已確認在修改前失敗；Maven 全數通過。
+
+## R60 Spring mapping 與回傳畫面的精度
+
+- WP131：`method = {GET, POST}` 改為每個方法各一個端點（RV-202，[ADR 0148](adr/0148-r60-one-endpoint-per-request-method.md)）；同一 XML 中多個 `<http>` 的登入／登出處理各自獨立（RV-203）；`<bean name="/x.htm">` 建立路由、SimpleUrlHandlerMapping 可用 bean 名稱找 controller（RV-205）；Spring Boot controller 取每個字面值回傳畫面，不含 lambda 內的 return（RV-213）；宣告時給字面值且不再指派的 `String` 區域變數可解析為畫面（RV-214 部分）。
+- 驗證：`SpringRound60Test` 新增 6 個測試，都已確認在修改前失敗；Maven 全數通過。
