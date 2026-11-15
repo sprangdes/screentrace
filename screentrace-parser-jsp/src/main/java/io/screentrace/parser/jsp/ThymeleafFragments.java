@@ -17,19 +17,23 @@ public final class ThymeleafFragments {
 
   private static List<String> arguments(String value) {
     List<String> result = new ArrayList<>();
-    int begin = 0;
+    int begin = 0, depth = 0;
     char quote = 0;
     for (int i = 0; i < value.length(); i++) {
       char c = value.charAt(i);
       if (quote != 0) {
         if (c == quote) quote = 0;
       } else if (c == '\'' || c == '"') quote = c;
-      else if (c == ',') {
+      // Commas inside ${...} or (...) belong to that argument (RV-406).
+      else if (c == '{' || c == '(') depth++;
+      else if (c == '}' || c == ')') {
+        if (--depth < 0) return null;
+      } else if (c == ',' && depth == 0) {
         result.add(value.substring(begin, i).strip());
         begin = i + 1;
-      } else if ("{}()".indexOf(c) >= 0) return List.of();
+      }
     }
-    if (quote != 0) return List.of();
+    if (quote != 0 || depth != 0) return null;
     if (!value.isBlank()) result.add(value.substring(begin).strip());
     return result;
   }
@@ -42,13 +46,14 @@ public final class ThymeleafFragments {
     if (split < 1) return null;
     String template = text.substring(0, split).strip(), part = text.substring(split + 2).strip();
     var matcher =
-        java.util.regex.Pattern.compile("([A-Za-z_][A-Za-z0-9_-]*)\\((.*)\\)").matcher(part);
+        java.util.regex.Pattern.compile("([A-Za-z_][A-Za-z0-9_-]*)(?:\\((.*)\\))?").matcher(part);
     if (!template.matches("[A-Za-z0-9_/-]+")
         || template.contains("..")
         || template.startsWith("/")
         || !matcher.matches()) return null;
-    List<String> args = arguments(matcher.group(2));
-    if (args.size() > 32) return null;
+    // "header" without parentheses calls a fragment with no parameters (RV-405).
+    List<String> args = matcher.group(2) == null ? List.of() : arguments(matcher.group(2));
+    if (args == null || args.size() > 32) return null;
     return new Call(template, matcher.group(1), args, guard);
   }
 
@@ -82,8 +87,17 @@ public final class ThymeleafFragments {
             SafeProjectFiles.readUtf8Limited(
                 inventory.root(), file, SafeProjectFiles.MAX_JSP_FILE_BYTES);
         for (var tag : MarkupTag.scan(source))
-          if (!tag.closing() && tag.attribute("th:replace") != null) {
-            String expression = tag.attribute("th:replace");
+          // th:insert and th:include bring the same fragment components into the screen (RV-405).
+          if (!tag.closing()
+              && (tag.attribute("th:replace") != null
+                  || tag.attribute("th:insert") != null
+                  || tag.attribute("th:include") != null)) {
+            String expression =
+                tag.attribute("th:replace") != null
+                    ? tag.attribute("th:replace")
+                    : tag.attribute("th:insert") != null
+                        ? tag.attribute("th:insert")
+                        : tag.attribute("th:include");
             var alternatives = calls(expression);
             if (alternatives.isEmpty()) {
               diagnostics.add(
@@ -128,18 +142,22 @@ public final class ThymeleafFragments {
                           t ->
                               !t.closing()
                                   && t.attribute("th:fragment") != null
-                                  && t.attribute("th:fragment")
-                                      .strip()
-                                      .startsWith(call.fragment + "("))
+                                  && (t.attribute("th:fragment").strip().equals(call.fragment)
+                                      || t.attribute("th:fragment")
+                                          .strip()
+                                          .startsWith(call.fragment + "(")))
                       .toList();
               if (definitions.size() != 1) continue;
               var definition = definitions.get(0);
               String signature = definition.attribute("th:fragment").strip();
-              if (!signature.endsWith(")")) continue;
+              if (signature.contains("(") && !signature.endsWith(")")) continue;
               var parameters =
-                  arguments(
-                      signature.substring(signature.indexOf('(') + 1, signature.length() - 1));
-              if (parameters.size() != call.arguments.size()
+                  signature.contains("(")
+                      ? arguments(
+                          signature.substring(signature.indexOf('(') + 1, signature.length() - 1))
+                      : List.<String>of();
+              if (parameters == null
+                  || parameters.size() != call.arguments.size()
                   || parameters.stream().anyMatch(p -> !p.matches("[A-Za-z_][A-Za-z0-9_]*")))
                 continue;
               int depth = 0, end = -1;

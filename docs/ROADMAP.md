@@ -445,3 +445,8 @@
 
 - WP138：處理 RV-302～324 中尚未修正的 17 項，包括：dispatch 投影的診斷回到輸出（RV-302）；`inputForward` 先查 action 自己的 forward（RV-303）；模組內 forward 加上模組前綴、不含 query（RV-304）；dispatch 解析結果寫回元件（RV-307）；dispatch 端點依 servlet mapping 決定 PROVEN 與 confidence、不覆蓋既有節點（RV-308）；forward 繼承也能找到父類別的 dispatch 方法（RV-309）；DelegatingActionProxy 用 Spring 解析後的類別（RV-310）；web root 的 web.xml 優先（RV-314）；只有 SwitchAction 才改寫 prefix／page（RV-315）；MappingDispatchAction 不再產生假的請求參數（RV-316）；訊息檔與 Tiles 路徑比對加上路徑邊界（RV-318、RV-322）；別名去重（RV-319）；設定檔不依資料夾猜模組（RV-320）；讀取 ValidatorPlugIn `pathnames` 列出的檔案（RV-321）；Tiles `put` 的 `content` 與內容（RV-322）；`extends` 的證據與偵測規則一致（RV-323）；未對應路由的行為用解析後目標（RV-324）。不改變對外契約，未新增 ADR。
 - 驗證：`StrutsRound67Test` 新增 9 個測試，整合測試 8 個都已確認在修改前失敗；13 個 fixture 中只有 `wp10/struts1`、`wp10/struts1-spring` 改變：元件多了 `dispatchMethod`（RV-307），`/mapping.do?save=save` 改為 `/mapping.do` 由 `save()` 處理（RV-316）；Maven 全數通過。
+
+## R68 parser-jsp 的其餘項目
+
+- WP139：處理 RV-402～428 中 18 項：Java 解析層級一致（RV-402）；一般 `Map.put` 不再關閉 EL 值解析（RV-403）；Thymeleaf 無參數片段、`th:insert`／`th:include`、含 `${…}` 的參數（RV-405、RV-406）；選單展開保留行號（RV-408）；HttpSession、Principal 等框架參數不列入請求欄位（RV-411）；家目錄遮蔽只比對完整路徑（RV-412）；AngularJS 取最內層 controller、支援 `data-ng-controller`（RV-413）；JS 分析器逾時依來源數放寬（RV-415）；Tiles `put` 的 `content` 與內容（RV-417）；不分大小寫的結束標籤搜尋不再複製整份原始碼（RV-418）；`mvc:resources` 行號（RV-419）；React 重複路由去重（RV-420）；菱形 include 只加一次（RV-422）；連結文字讀到自己的結束標籤且不分大小寫（RV-423）；Struts `nested:` taglib（RV-426）；include 去除 query（RV-427）；結束標籤依名稱關閉範圍（RV-428）。RV-407、RV-410 試作後撤回，RV-409、RV-416 未處理，原因記在 review 文件。不改變對外契約，未新增 ADR。
+- 驗證：新增 11 個測試，整合測試都已確認在修改前失敗（RV-418、419、420、426、428 未加專屬測試）；13 個 fixture 的圖全部與修改前相同；Maven 全數通過。

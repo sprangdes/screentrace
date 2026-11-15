@@ -21,6 +21,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /** Extracts only controller-declared API contracts; it never executes application code. */
 public class ApiContractExtractor {
@@ -205,14 +206,38 @@ public class ApiContractExtractor {
     return value;
   }
 
+  /** Framework-supplied arguments that are not part of the request (RV-411). */
+  private static final Set<String> INFRASTRUCTURE =
+      Set.of(
+          "BindingResult",
+          "Errors",
+          "Model",
+          "ModelMap",
+          "ExtendedModelMap",
+          "RedirectAttributes",
+          "WebRequest",
+          "NativeWebRequest",
+          "HttpServletRequest",
+          "HttpServletResponse",
+          "HttpSession",
+          "Principal",
+          "Authentication",
+          "Locale",
+          "TimeZone",
+          "ZoneId",
+          "SessionStatus",
+          "UriComponentsBuilder",
+          "Pageable",
+          "Sort",
+          "InputStream",
+          "OutputStream",
+          "Reader",
+          "Writer");
+
   private static boolean infrastructureParameter(String type) {
-    return type.equals("BindingResult")
-        || type.equals("Model")
-        || type.equals("ModelMap")
-        || type.startsWith("Map<")
-        || type.equals("WebRequest")
-        || type.equals("HttpServletRequest")
-        || type.equals("HttpServletResponse");
+    String simple = type.replaceAll("<.*>", "");
+    simple = simple.substring(simple.lastIndexOf('.') + 1);
+    return type.startsWith("Map<") || INFRASTRUCTURE.contains(simple);
   }
 
   private static String simpleType(String type) {

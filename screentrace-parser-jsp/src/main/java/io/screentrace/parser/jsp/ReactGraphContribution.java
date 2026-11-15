@@ -713,8 +713,14 @@ public final class ReactGraphContribution {
                       ApplicationGraph.ResolutionStatus.INFERRED,
                       json(detail)));
         }
+        // The same route listed twice is one destination, not an ambiguity (RV-420).
         List<String> targets = new ArrayList<>();
-        effect.path("targetRoutes").forEach(item -> targets.add(item.asText()));
+        effect
+            .path("targetRoutes")
+            .forEach(
+                item -> {
+                  if (!targets.contains(item.asText())) targets.add(item.asText());
+                });
         List<String> candidateIds = null;
         if (effect.has("targetScreens")) {
           candidateIds = new ArrayList<>();

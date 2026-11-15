@@ -416,7 +416,8 @@ public final class JavaScriptGraphContribution {
       try (var input = process.getOutputStream()) {
         JSON.writeValue(input, request);
       }
-      byte[] bytes = output.get(60, TimeUnit.SECONDS);
+      byte[] bytes =
+          output.get(analyzerTimeoutSeconds(JSON.valueToTree(request)), TimeUnit.SECONDS);
       if (!process.waitFor(5, TimeUnit.SECONDS) || process.exitValue() != 0)
         throw new IOException("AST 工具退出失敗");
       return JSON.readTree(bytes);
@@ -477,5 +478,15 @@ public final class JavaScriptGraphContribution {
         source,
         code,
         proof(source, Confidence.UNRESOLVED, message));
+  }
+
+  /**
+   * Seconds the Node analyzer may take: 60 plus one per two source units, at most 10 minutes, or
+   * {@code -Dscreentrace.js.timeoutSeconds}. A fixed 60 seconds dropped every JS behavior or React
+   * screen of a large project (RV-415).
+   */
+  static long analyzerTimeoutSeconds(JsonNode request) {
+    long scaled = Math.min(600, 60 + request.path("sources").size() / 2);
+    return Long.getLong("screentrace.js.timeoutSeconds", scaled);
   }
 }

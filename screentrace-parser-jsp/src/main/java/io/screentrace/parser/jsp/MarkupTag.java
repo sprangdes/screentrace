@@ -139,10 +139,7 @@ public final class MarkupTag {
           && tag != null
           && !tag.closing()
           && (tag.name().equalsIgnoreCase("script") || tag.name().equalsIgnoreCase("style"))) {
-        int close =
-            source
-                .toLowerCase(Locale.ROOT)
-                .indexOf("</" + tag.name().toLowerCase(Locale.ROOT), end + 1);
+        int close = indexOfIgnoreCase(source, "</" + tag.name(), end + 1);
         if (close < 0) break;
         start = close - 1;
       }
@@ -311,5 +308,16 @@ public final class MarkupTag {
       values.put(name, body.substring(valueStart, valueEnd));
     }
     return values;
+  }
+
+  /**
+   * Like {@code source.toLowerCase().indexOf(needle.toLowerCase(), from)} without copying the
+   * source for each call, and with indexes that always match the original text: lowercasing can
+   * change a string's length (Turkish 'İ'), which shifted them (RV-418).
+   */
+  public static int indexOfIgnoreCase(String source, String needle, int from) {
+    for (int i = Math.max(0, from); i <= source.length() - needle.length(); i++)
+      if (source.regionMatches(true, i, needle, 0, needle.length())) return i;
+    return -1;
   }
 }

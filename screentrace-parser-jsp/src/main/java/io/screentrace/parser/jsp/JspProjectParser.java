@@ -566,6 +566,9 @@ public final class JspProjectParser {
       List<JspAnalysis.Interaction> result) {
     if (!stack.add(current)) return;
     for (String child : included.getOrDefault(current, List.of())) {
+      // A fragment reached through two includes (a diamond) is added once (RV-422); the set is
+      // kept for the whole screen, which also stops cycles.
+      if (stack.contains(child)) continue;
       for (JspAnalysis.Interaction item : byView.getOrDefault(child, List.of()))
         result.add(
             new JspAnalysis.Interaction(
@@ -582,10 +585,12 @@ public final class JspProjectParser {
                 item.componentId()));
       collectIncluded(screen, child, included, byView, stack, result);
     }
-    stack.remove(current);
   }
 
   private static String resolveInclude(Path root, String sourceView, String target) {
+    // "tabs.jsp?tab=1" includes tabs.jsp; the query only sets request parameters (RV-427).
+    target = target.split("[?#]", 2)[0];
+    if (target.isEmpty()) return null;
     try {
       if (target.startsWith("/")) {
         // Under the web root of the including file, not always src/main/webapp (RV-401), then the
@@ -694,11 +699,13 @@ public final class JspProjectParser {
 
   private static String interactionLabel(MarkupTag tag, String source) {
     String fallback = label(tag);
-    if (!fallback.equals("button") && !fallback.equals("a")) return fallback;
+    if (!fallback.equalsIgnoreCase("button") && !fallback.equalsIgnoreCase("a")) return fallback;
     String tagName = tag.name().toLowerCase(Locale.ROOT);
     if (!tagName.equals("button") && !tagName.equals("a")) return fallback;
-    int close = source.indexOf("</" + tagName, tag.end());
-    if (close < 0) return fallback;
+    // The matching end tag, in any letter case; "</a" must not match "</abbr>" (RV-423).
+    var end = java.util.regex.Pattern.compile("(?i)</" + tagName + "\\s*>").matcher(source);
+    if (!end.find(tag.end())) return fallback;
+    int close = end.start();
     String text = source.substring(tag.end() + 1, close).replaceAll("<[^>]+>", "").strip();
     return text.isBlank() ? fallback : text;
   }
@@ -731,9 +738,14 @@ public final class JspProjectParser {
               attributeIndex < attributeNodes.getLength();
               attributeIndex++) {
             Element attribute = (Element) attributeNodes.item(attributeIndex);
-            attributes.add(
-                new JspAnalysis.TilesAttribute(
-                    attribute.getAttribute("name"), attribute.getAttribute("value")));
+            // Tiles 1 `content` and an element body give the value too (RV-417).
+            String value =
+                !attribute.getAttribute("value").isEmpty()
+                    ? attribute.getAttribute("value")
+                    : !attribute.getAttribute("content").isEmpty()
+                        ? attribute.getAttribute("content")
+                        : attribute.getTextContent().trim();
+            attributes.add(new JspAnalysis.TilesAttribute(attribute.getAttribute("name"), value));
           }
         }
         // Tiles 2/3 <put-list-attribute><add-attribute value/>, Tiles 1 <putList><add value/>: e.g.

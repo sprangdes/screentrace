@@ -597,7 +597,19 @@ public final class UrlGraphContribution {
 
   /** The same user.home redaction hidePrivateLocations applies to every graph string. */
   public static String hidePrivateLocation(String text) {
-    for (String home : homeForms()) text = text.replace(home, "[home]");
+    return redactHome(text, homeForms());
+  }
+
+  /**
+   * Replaces each home path that ends at a path boundary; "/root" must not turn "/rootCategory"
+   * into "[home]Category" (RV-412).
+   */
+  static String redactHome(String text, List<String> homes) {
+    for (String home : homes)
+      text =
+          text.replaceAll(
+              java.util.regex.Pattern.quote(home) + "(?=[/\\\\\"'\\s]|$)",
+              java.util.regex.Matcher.quoteReplacement("[home]"));
     return text;
   }
 
@@ -637,7 +649,7 @@ public final class UrlGraphContribution {
   private static JsonNode redact(JsonNode node, List<String> homes) {
     if (node.isTextual()) {
       String text = node.asText();
-      for (String home : homes) text = text.replace(home, "[home]");
+      text = redactHome(text, homes);
       return com.fasterxml.jackson.databind.node.TextNode.valueOf(text);
     }
     if (node.isArray()) {

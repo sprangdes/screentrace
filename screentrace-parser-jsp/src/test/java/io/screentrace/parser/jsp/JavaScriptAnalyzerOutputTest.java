@@ -37,4 +37,16 @@ class JavaScriptAnalyzerOutputTest {
     assertFalse(ReactGraphContribution.absoluteRoute("orders"));
     assertFalse(ReactGraphContribution.absoluteRoute(null));
   }
+
+  @Test
+  void analyzerTimeoutGrowsWithTheNumberOfSources() throws Exception {
+    // RV-415
+    assertEquals(60, JavaScriptGraphContribution.analyzerTimeoutSeconds(JSON.readTree("{}")));
+    var many = JSON.createObjectNode();
+    var sources = many.putArray("sources");
+    for (int i = 0; i < 400; i++) sources.addObject();
+    assertEquals(260, JavaScriptGraphContribution.analyzerTimeoutSeconds(many));
+    for (int i = 0; i < 2000; i++) sources.addObject();
+    assertEquals(600, JavaScriptGraphContribution.analyzerTimeoutSeconds(many));
+  }
 }

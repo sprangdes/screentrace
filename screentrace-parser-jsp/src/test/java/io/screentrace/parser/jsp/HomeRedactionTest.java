@@ -32,4 +32,15 @@ class HomeRedactionTest {
       System.setProperty("user.home", previous);
     }
   }
+
+  @Test
+  void onlyWholePathPrefixesAreRedacted() {
+    // RV-412
+    var homes = java.util.List.of("/root");
+    assertEquals("[home]/x", UrlGraphContribution.redactHome("/root/x", homes));
+    assertEquals("[home]", UrlGraphContribution.redactHome("/root", homes));
+    assertEquals(
+        "/rootCategory/list", UrlGraphContribution.redactHome("/rootCategory/list", homes));
+    assertEquals("C:[home]\\a", UrlGraphContribution.redactHome("C:/root\\a", homes));
+  }
 }

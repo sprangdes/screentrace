@@ -106,4 +106,16 @@ class StrutsMenusTest {
             .expand(TAGLIB + "<menu:displayMenu name=\"adminCustomer\"/>")
             .contains("AddCustomer.do"));
   }
+
+  @Test
+  void aMultiLineDisplayMenuKeepsLaterLineNumbers() throws Exception {
+    // RV-408
+    var menus =
+        load(
+            "<plug-in className=\"net.sf.navigator.menu.MenuPlugIn\"/>", "WEB-INF/menu-config.xml");
+    String page = TAGLIB + "\n<menu:displayMenu\n   name=\"adminCustomer\"/>\n<p>after</p>";
+    String expanded = menus.expand(page);
+    assertEquals(page.lines().count(), expanded.lines().count(), expanded);
+    assertEquals("<p>after</p>", expanded.lines().toList().get(3));
+  }
 }

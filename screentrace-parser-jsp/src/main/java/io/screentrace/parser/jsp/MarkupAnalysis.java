@@ -262,7 +262,10 @@ public record MarkupAnalysis(
             .anyMatch(c -> Set.of("modal", "offcanvas").contains(c))) return ComponentKind.MODAL;
     String local = tag.contains(":") ? tag.substring(tag.indexOf(':') + 1) : tag;
     if (tag.contains(":")
-        && !(tag.startsWith("html:") || tag.startsWith("html-el:") || tag.startsWith("form:")))
+        && !(tag.startsWith("html:")
+            || tag.startsWith("html-el:")
+            || tag.startsWith("nested:") // Struts nested taglib (RV-426)
+            || tag.startsWith("form:")))
       return attrs.keySet().stream().anyMatch(k -> k.startsWith("on")) ? ComponentKind.OTHER : null;
     return switch (local) {
       case "form" -> ComponentKind.FORM;

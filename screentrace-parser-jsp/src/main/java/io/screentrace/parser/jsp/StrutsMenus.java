@@ -156,6 +156,15 @@ public final class StrutsMenus {
               .append(escape(item.title()))
               .append("</a>");
       }
+      // Keep the tag's line breaks so every later line number stays where it was (RV-408).
+      out.append(
+          "\n"
+              .repeat(
+                  (int)
+                      text.substring(tag.start(), tag.end() + 1)
+                          .chars()
+                          .filter(c -> c == '\n')
+                          .count()));
       cursor = tag.end() + 1;
     }
     return out.append(text.substring(cursor)).toString();
