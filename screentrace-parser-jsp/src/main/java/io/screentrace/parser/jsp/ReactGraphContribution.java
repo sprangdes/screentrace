@@ -60,6 +60,11 @@ public final class ReactGraphContribution {
     return inventory.technologies().contains("React");
   }
 
+  /** True for a route the graph can name a screen by: "/" or "/x...". */
+  static boolean absoluteRoute(String route) {
+    return route != null && route.startsWith("/");
+  }
+
   public static ApplicationGraph enrich(ApplicationGraph graph, ProjectInventory inventory) {
     if (!applies(inventory)) return graph;
     var builder = new Builder(graph, inventory.personasConfigured(), inventory.personas());
@@ -254,7 +259,7 @@ public final class ReactGraphContribution {
   }
 
   private static Confidence confidence(JsonNode item) {
-    return Confidence.valueOf(item.path("status").asText("UNRESOLVED"));
+    return JavaScriptGraphContribution.confidence(item);
   }
 
   private static List<AnalysisEvidence> proof(
@@ -343,6 +348,12 @@ public final class ReactGraphContribution {
       String route = screen.path("route").asText();
       String routeFile = screen.path("file").asText();
       var source = new SourceLocation(routeFile, Math.max(1, screen.path("line").asInt(1)));
+      // A route that is not an absolute path names no screen; it is reported on its own instead
+      // of ending the whole React contribution (RV-421).
+      if (!absoluteRoute(route)) {
+        diagnostic(source, "REACT_ROUTE_UNRESOLVED", "React 路由不是絕對路徑：" + route);
+        return;
+      }
       String id = screenId(screen);
       screen
           .path("personas")

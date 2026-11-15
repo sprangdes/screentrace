@@ -102,11 +102,25 @@ public final class ThymeleafFragments {
                     : owner.substring(0, owner.lastIndexOf('/') + 1);
             for (var call : alternatives) {
               String target = base + call.template + ".html";
-              String text =
-                  SafeProjectFiles.readUtf8Limited(
-                      inventory.root(),
-                      inventory.root().resolve(target),
-                      SafeProjectFiles.MAX_JSP_FILE_BYTES);
+              String text;
+              try {
+                text =
+                    SafeProjectFiles.readUtf8Limited(
+                        inventory.root(),
+                        inventory.root().resolve(target),
+                        SafeProjectFiles.MAX_JSP_FILE_BYTES);
+              } catch (java.io.IOException | SecurityException missing) {
+                // A missing template affects this call only; the file's other calls still resolve
+                // (RV-404).
+                diagnostics.add(
+                    new Diagnostic(
+                        "模板片段來源不存在或無法讀取：" + call.template,
+                        Confidence.UNRESOLVED,
+                        new SourceLocation(owner, tag.line()),
+                        "TEMPLATE_FRAGMENT_UNRESOLVED",
+                        List.of()));
+                continue;
+              }
               var tags = MarkupTag.scan(text);
               var definitions =
                   tags.stream()

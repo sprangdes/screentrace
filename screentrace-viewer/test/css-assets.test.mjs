@@ -91,3 +91,26 @@ test('formal CSS imports preserve native layer/supports/media qualifiers instead
   assert.match(resolved, /@import url\("data:text\/css;base64,/);
   assert.doesNotMatch(resolved, /st-asset-sha256:/);
 });
+test('a CSS import cycle empties only the repeating reference and other screens still preview (RV-602)', async () => {
+  const m = await ownModule('preview');
+  const a = 'a'.repeat(64),
+    b = 'b'.repeat(64),
+    css = (text) => 'data:text/css;base64,' + Buffer.from(text).toString('base64');
+  const html = m.previewDocument(
+    {
+      graph: { schemaVersion: '2.2' },
+      documents: {
+        plain: '<html><body>Plain</body></html>',
+        styled: `<html><head><link rel="stylesheet" href="st-asset-sha256:${a}"></head><body>S</body></html>`,
+      },
+      manifest: {
+        assets: {
+          [a]: css(`@import url(st-asset-sha256:${b});.a{color:red}`),
+          [b]: css(`@import url(st-asset-sha256:${a});.b{color:blue}`),
+        },
+      },
+    },
+    'plain',
+  );
+  assert.match(html, /Plain/);
+});

@@ -30,7 +30,7 @@ final class SpringExternalCalls {
 
   static ApplicationGraph enrich(ApplicationGraph graph, ProjectInventory inventory) {
     List<Chain> chains = new ArrayList<>();
-    boolean invalid = false;
+    List<Diagnostic> unread = new ArrayList<>();
     for (var path : inventory.files()) {
       String name = path.getFileName().toString(),
           file = inventory.root().relativize(path).toString().replace('\\', '/');
@@ -47,10 +47,34 @@ final class SpringExternalCalls {
           javaChains(JavaSources.parse(code), file, chains);
         else if (name.endsWith(".xml") && code.contains(SECURITY)) xmlChains(code, file, chains);
       } catch (Exception error) {
-        invalid = true;
+        // A file that cannot hold a security chain does not matter (RV-217). One that might hold a
+        // second chain leaves the single-chain proof open, so no endpoint is marked, and the
+        // report says which file stopped it.
+        String marker = name.endsWith(".java") ? "SecurityFilterChain" : SECURITY;
+        if (SafeProjectFiles.mayContainAscii(inventory.root(), path, marker))
+          unread.add(
+              new Diagnostic(
+                  "Spring Security 設定無法讀取或解析，未判定外部呼叫端點：" + file,
+                  Confidence.UNRESOLVED,
+                  new SourceLocation(file, 1),
+                  "EXTERNAL_CALL_UNRESOLVED",
+                  List.of()));
       }
     }
-    if (invalid || chains.size() != 1) return graph;
+    if (!unread.isEmpty()) {
+      List<Diagnostic> diagnostics = new ArrayList<>(graph.diagnostics());
+      diagnostics.addAll(unread);
+      return new ApplicationGraph(
+          graph.application(),
+          graph.nodes(),
+          graph.relationships(),
+          diagnostics,
+          graph.apiContracts(),
+          graph.schemaVersion(),
+          graph.behaviors(),
+          graph.validationRules());
+    }
+    if (chains.size() != 1) return graph;
     Chain chain = chains.get(0);
     var usage = ApiUsage.derive(graph);
     List<GraphNode> nodes = new ArrayList<>();

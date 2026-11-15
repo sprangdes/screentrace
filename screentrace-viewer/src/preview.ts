@@ -22,10 +22,15 @@ export function previewDocument(
         )
           assets.set(hash, value);
     const original = new Map(assets),
+      resolved = new Map<string, string>(),
       resolve = (hash: string, seen = new Set<string>()): string => {
         const value = original.get(hash) || 'data:,';
         if (!value.startsWith('data:text/css;base64,')) return value;
-        if (seen.has(hash)) throw Error('CSS 資源循環');
+        // An import cycle leaves only the repeating reference empty; it used to throw and stop
+        // every screen's preview (RV-602).
+        if (seen.has(hash)) return 'data:,';
+        const done = resolved.get(hash);
+        if (done) return done;
         const next = new Set(seen);
         next.add(hash);
         let css = new TextDecoder().decode(
@@ -38,7 +43,9 @@ export function previewDocument(
         let binary = '';
         for (let i = 0; i < bytes.length; i += 8192)
           binary += String.fromCharCode(...bytes.subarray(i, i + 8192));
-        return 'data:text/css;base64,' + btoa(binary);
+        const result = 'data:text/css;base64,' + btoa(binary);
+        if (!seen.size) resolved.set(hash, result);
+        return result;
       };
     for (const hash of original.keys()) assets.set(hash, resolve(hash));
     assetCache.set(payload, assets);

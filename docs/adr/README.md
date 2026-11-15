@@ -234,3 +234,4 @@ Java 以 google-java-format、TS／JS 以 Prettier 排版，JS 以 ESLint、TS �
 | [0143](0143-r52-capture-timeout-and-java-lint.md) | R52 預覽擷取上限依畫面數放寬，Java 不導入 Error Prone | 有效 |
 | [0144](0144-r53-code-review-p1-fixes.md) | R53 修正 2026-11-14 code review 的 P1 項目（CLI exit status、清除舊預覽、Struts 2 偵測） | 有效 |
 | [0145](0145-r54-shared-web-roots.md) | R54 context 絕對路徑依引用檔所在的 web root 解析（共用 `WebRoots`） | 有效 |
+| [0146](0146-r55-contain-single-item-failures.md) | R55 單一檔案或項目出錯只影響它自己 | 有效 |

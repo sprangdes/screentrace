@@ -128,6 +128,32 @@ class R18EndpointPolicyTest {
   }
 
   @Test
+  void unreadableFileOnlyBlocksTheProofWhenItMayHoldSecurityConfiguration() throws Exception {
+    // RV-217: one oversized unrelated XML used to drop every externalCall without a word.
+    project();
+    security(".requestMatchers(\"/integration/**\").permitAll()", "\"/integration/**\"");
+    String big = "<data>" + "<row>value</row>".repeat(300_000) + "</data>";
+    write("src/main/resources/data/export.xml", big);
+    var g = graph();
+    assertEquals(
+        "webhook", endpoint(g, "/integration/deliver/{key}").attributes().get("externalCall"));
+    assertTrue(
+        g.diagnostics().stream().noneMatch(d -> d.code().equals("EXTERNAL_CALL_UNRESOLVED")));
+    write(
+        "src/main/resources/data/export.xml",
+        "<beans xmlns:s=\"http://www.springframework.org/schema/security\">" + big + "</beans>");
+    g = graph();
+    assertNull(endpoint(g, "/integration/deliver/{key}").attributes().get("externalCall"));
+    assertTrue(
+        g.diagnostics().stream()
+            .anyMatch(
+                d ->
+                    d.code().equals("EXTERNAL_CALL_UNRESOLVED")
+                        && d.source().file().equals("src/main/resources/data/export.xml")),
+        g.diagnostics().toString());
+  }
+
+  @Test
   void multipleProvidersOrWrongHttpMethodDoNotProveExternalCall() throws Exception {
     project();
     security(

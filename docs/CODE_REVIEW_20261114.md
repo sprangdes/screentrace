@@ -140,10 +140,10 @@ P1 處理結果見各項「狀態」（R53，[ADR 0144](adr/0144-r53-code-review
 - **RV-214** `SpringControllerReturns.java:455`：未重新指派的 `String view = "home"; return view;` 判為 UNKNOWN。
 - **RV-215** `SpringMvcAnalyzer.java:217`：`jspPreview` 不看 input type，hidden `_csrf` 與 text 預設值被當成 ACTION 按鈕。
 - **RV-216** `SpringProjectAnalyzer.java:159`：只認根目錄的 `src/main/resources/templates/`，多模組 Thymeleaf 專案被導到 SpringBootAnalyzer 而遺失伺服器端畫面。
-- **RV-217** `SpringExternalCalls.java:53`：任一 Java／XML 讀取或解析失敗就整個略過 externalCall 標註，且無診斷。
+- **RV-217** `SpringExternalCalls.java:53`：任一 Java／XML 讀取或解析失敗就整個略過 externalCall 標註，且無診斷。 **狀態：已修正（R55）：只有可能含 security 設定的檔案讀不到時才停止推論，並回報 `EXTERNAL_CALL_UNRESOLVED`。**
 - **RV-218** `SpringFormBindings.java:104`：FORM_MODEL 欄位包含 static 欄位（`serialVersionUID`）。
 - **RV-219** `SpringMvcAnalyzer.java:641`：properties view resolver 要求 prefix 與 suffix 都設定（Spring 預設空字串）；且讀入 test resources 的設定。
-- **RV-220** `SpringWebFlowContribution.java:76`：registry 中一個 flow 失敗就中斷整個迴圈，其他 flow 全部遺失且保留部分寫入結果。
+- **RV-220** `SpringWebFlowContribution.java:76`：registry 中一個 flow 失敗就中斷整個迴圈，其他 flow 全部遺失且保留部分寫入結果。 **狀態：已修正（R55）：每個 flow 各自成功或撤回。**
 - **RV-221** `SpringControllerReturns.java:152`：`branchKey`（影響邊 id）與 `fullPage` 旗標是從中文證據文字字串比對取出，改寫文案就會改變 id。
 
 ## P2 — adapter-struts
@@ -178,7 +178,7 @@ P1 處理結果見各項「狀態」（R53，[ADR 0144](adr/0144-r53-code-review
 - **RV-401** `JspProjectParser.java:592`、`MarkupGraphContribution.java:548`、`JspTagFileExpander.java:252`：絕對 include 與 tagdir 寫死 `src/main/webapp`，WebContent／WebRoot 專案的 include 與自訂標籤全部無法解析（主要目標的舊專案受影響最大）。 **狀態：已修正（R54，見 ADR 0145）。**
 - **RV-402** `ScriptSources.java:97`：以預設語言層級的 JavaParser 解析，任一 record／switch expression 失敗就設全域 `unknownDefinitions`，關閉整個專案的 EL 值解析。
 - **RV-403** `ScriptSources.java:131`：任何 `map.put(key, v)`（key 非字面值）都設 `unknownDefinitions`，幾乎所有專案都會觸發，`<c:set var>` 值永遠不會傳給 JS 分析器。
-- **RV-404** `ThymeleafFragments.java:106`：fragment 檔不存在時例外跳出整個檔案的迴圈，後續合法的 `th:replace` 全部略過。
+- **RV-404** `ThymeleafFragments.java:106`：fragment 檔不存在時例外跳出整個檔案的迴圈，後續合法的 `th:replace` 全部略過。 **狀態：已修正（R55）。**
 - **RV-405** `ThymeleafFragments.java:45`：只支援 `name(args)` 形式與 `th:replace`；最常見的無參數 `:: header` 與 `th:insert`／`th:include` 全部 unresolved 或被忽略。
 - **RV-406** `ThymeleafFragments.java:30`：參數含 `${...}` 就回傳空清單，呼叫被無診斷地略過，或誤配到零參數 fragment。
 - **RV-407** `JspTagFileExpander.java:50`：每一行都對應到頁面上所有展開過的 tag file 證據，追溯性錯誤。
@@ -188,14 +188,14 @@ P1 處理結果見各項「狀態」（R53，[ADR 0144](adr/0144-r53-code-review
 - **RV-411** `ApiContractExtractor.java:58`：HttpSession、Principal、Locale、Pageable 等被記為 QUERY 欄位並覆寫 `bodyType`。
 - **RV-412** `UrlGraphContribution.java:640`：`user.home` 遮蔽沒有路徑邊界，以 root 執行時 `/rootCategory/list` 變成 `[home]Category/list`。
 - **RV-413** `ScriptSources.java:527`：AngularJS 取最外層 `ng-controller`，且忽略 `data-ng-controller`。
-- **RV-414** `JavaScriptGraphContribution.java:260`：`valueOf` 失敗會丟棄迴圈內其餘所有 behavior 與診斷。
+- **RV-414** `JavaScriptGraphContribution.java:260`：`valueOf` 失敗會丟棄迴圈內其餘所有 behavior 與診斷。 **狀態：已修正（R55）。**
 - **RV-415** `JavaScriptGraphContribution.java:409`：Node AST 分析器固定 60 秒逾時，大專案 JS／React 畫面全部遺失。
 - **RV-416** `JspProjectParser.java:821`：parent 無法解析（含重複定義被移除）的 Tiles definition 整個消失。
 - **RV-417** `JspProjectParser.java:733`：`put`／`put-attribute` 只讀 `value`，忽略 body content 與 `content=`。
 - **RV-418** `MarkupTag.java:145`（`ScriptSources:484`）：每個 script／style 都重新 `toLowerCase` 整份原始碼；土耳其 `İ` 使長度改變、索引錯位。
 - **RV-419** `ScriptSources.java:668`：每個 `mvc:resources` 的行號都取檔案中第一個 "mapping"。
 - **RV-420** `ReactGraphContribution.java:776`：`targetRoutes` 候選畫面未去重，同一畫面被判為 AMBIGUOUS。
-- **RV-421** `ReactGraphContribution.java:414`：空 route 時 `substring(1)` 拋例外，整個 React 貢獻中止。
+- **RV-421** `ReactGraphContribution.java:414`：空 route 時 `substring(1)` 拋例外，整個 React 貢獻中止。 **狀態：已修正（R55）。**
 - **RV-422** `JspProjectParser.java:567`：菱形 include 讓 fragment 的互動被加入兩次。
 - **RV-423** `JspProjectParser.java:697`：標籤文字搜尋 `"</" + tag` 區分大小寫且無邊界，`</a` 也比對到 `</abbr>`。
 - **RV-424** `ThymeleafMarkup.java:151`、`StrutsMenus.java:358`：URL 被 HTML escape 成 `&amp;` 後未解碼，graph 中保留 `&amp;`。
@@ -216,7 +216,7 @@ P1 處理結果見各項「狀態」（R53，[ADR 0144](adr/0144-r53-code-review
 - **RV-508** `analyzer.mjs:1382`：validator 名稱檢查用 `call.name`（CallExpression 沒有），`var validateForm = function(){}` 寫法的規則被略過。
 - **RV-509** `capture-static-jsp.mjs:301`：`rewriteCssUrls` 以 UTF-8 讀寫所有 CSS，刻意保留原樣的 Big5／GBK 檔被破壞；assetKey 為空時重寫兩次。
 - **RV-510** `capture-static-jsp.mjs:821`：CSP meta 用 `/<head([^>]*)>/i` 插入，會比對到 `<header>`；且在補上 `<head>` 之前執行，片段頁面沒有 CSP。
-- **RV-511** `react-preview.mjs:68`：超大或無法讀取的 CSS 拋例外中止整個擷取，而非產生 `REACT_STYLESHEET_MISSING`。
+- **RV-511** `react-preview.mjs:68`：超大或無法讀取的 CSS 拋例外中止整個擷取，而非產生 `REACT_STYLESHEET_MISSING`。 **狀態：已修正（R55）。**
 - **RV-512** `spring-resource-mappings.mjs:75`：只掃 `target/src/main`，WebContent 等 web root 下的 dispatcher XML 找不到。 **狀態：已修正（R54）：同時掃描 web root。**
 - **RV-513** `react/markup.mjs:103`：屬性 denylist 區分大小寫、`xlink:href` 未檢查 scheme；字串 `style` 繞過 `url(` 過濾。React 預覽文件無 CSP。
 - **RV-514** `analyzer.mjs:1366`：解構或預設值參數未綁定，取到外層同名變數並產生 CONFIRMED 的錯誤導覽。
@@ -232,7 +232,7 @@ P1 處理結果見各項「狀態」（R53，[ADR 0144](adr/0144-r53-code-review
 ## P2 — viewer
 
 - **RV-601** `inert-document.ts:21`：詞法惰性化與 DOMParser 解析不一致（`<!-->`、`--!>`、raw-text 元素結尾、`\v`／NBSP 空白），可讓 `<img src>` 保持有效；目前僅靠 iframe CSP 擋住請求。
-- **RV-602** `preview.ts:43`：CSS 資源循環 import 時拋例外，且在設定 cache 前，任何畫面的預覽都無法顯示。
+- **RV-602** `preview.ts:43`：CSS 資源循環 import 時拋例外，且在設定 cache 前，任何畫面的預覽都無法顯示。 **狀態：已修正（R55）。**
 - **RV-603** `main.ts:1515`：啟動時記住的進度檔 handle 在 IndexedDB 回應後 `resume()`，覆蓋使用者在這之前做的決策。
 - **RV-604** `main.ts:594`：`choose()` 直接 `writeNow()`，未串接 `writing` 也未清除 timer，可能並行寫入。
 - **RV-605** `relations.ts:146`：tooltip 顯示全部觸發元件後又顯示「其餘 N 個」，沒有截斷。
@@ -278,7 +278,7 @@ P1 處理結果見各項「狀態」（R53，[ADR 0144](adr/0144-r53-code-review
 
 1. **web root 寫死**（R54 已處理，Spring adapter 的寫死位置待後續）：RV-317、RV-401、RV-512、RV-425。全部改用 `inventory.webRoots()`，在 capture 端也傳入同一份清單。
 2. **Java 解析器設定不一致與重複解析**：RV-201、RV-402、RV-701。統一走 `JavaSources.parse` 與 `ParsedJavaUnits` 快取。
-3. **單點失敗擴大為整體失敗**：RV-007、RV-217、RV-220、RV-404、RV-414、RV-421、RV-511、RV-602。錯誤應侷限在單一檔案／單一項目並留下診斷。
+3. **單點失敗擴大為整體失敗**（R53、R55 已處理）：RV-007、RV-217、RV-220、RV-404、RV-414、RV-421、RV-511、RV-602。錯誤應侷限在單一檔案／單一項目並留下診斷。
 4. **預覽輸出生命週期**：RV-005、RV-103、RV-104、RV-105。擷取前清空、逐步寫 manifest、結束整棵程序樹、封裝逾時不中止報告。
 5. **HTML 實體與 URL 編碼**：RV-313、RV-424、RV-521、RV-522。在 `MarkupTag` 取屬性時統一解碼一次。
 6. **API 呼叫者重複計算**：RV-110 與 RV-612 在 Java 與 TypeScript 各有一份相同邏輯，應一起修並以同一組 fixture 驗證。

@@ -210,6 +210,17 @@ public final class JavaScriptGraphContribution {
           rules.putIfAbsent(rule.id(), rule);
         }
         for (var item : result.path("behaviors")) {
+          // An analyzer type this version does not know is reported for that behavior only; it
+          // used to discard every later behavior, rule and diagnostic (RV-414).
+          var type = behaviorType(item);
+          if (type == null) {
+            diagnostics.add(
+                diagnostic(
+                    source(item),
+                    "JS_BEHAVIOR_UNSUPPORTED",
+                    "不支援的 JavaScript 行為類型：" + item.path("type").asText()));
+            continue;
+          }
           String trigger = nullable(item, "triggerId");
           if (trigger != null && !nodes.containsKey(trigger)) {
             var declaration =
@@ -257,7 +268,6 @@ public final class JavaScriptGraphContribution {
             diagnostics.add(diagnostic(source(item), "JS_TRIGGER_UNRESOLVED", item.toString()));
             continue;
           }
-          var type = BehaviorType.valueOf(item.path("type").asText());
           var source = source(item);
           var confidence = confidence(item);
           String target = nullable(item, "targetId");
@@ -431,8 +441,22 @@ public final class JavaScriptGraphContribution {
         item.path("source").path("file").asText("."), item.path("source").path("line").asInt(1));
   }
 
-  private static Confidence confidence(JsonNode item) {
-    return Confidence.valueOf(item.path("status").asText("UNRESOLVED"));
+  /** The analyzer's status; an unknown value is treated as UNRESOLVED, never as proof. */
+  static Confidence confidence(JsonNode item) {
+    try {
+      return Confidence.valueOf(item.path("status").asText("UNRESOLVED"));
+    } catch (IllegalArgumentException unknown) {
+      return Confidence.UNRESOLVED;
+    }
+  }
+
+  /** The analyzer's behavior type, or null when this version does not know it. */
+  static BehaviorType behaviorType(JsonNode item) {
+    try {
+      return BehaviorType.valueOf(item.path("type").asText());
+    } catch (IllegalArgumentException unknown) {
+      return null;
+    }
   }
 
   private static String nullable(JsonNode item, String key) {

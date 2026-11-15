@@ -373,3 +373,8 @@
 
 - WP125：新增 `WebRoots`，JSP parser、Struts adapter、struts-menu 與 capture 的 `mvc:resources` 探索改用同一套 web root 規則；context 絕對路徑先在引用檔所在的 web root 下找，再退到專案根目錄，不改找其他 web root 的同名檔，見 [ADR 0145](adr/0145-r54-shared-web-roots.md)（RV-317、RV-401、RV-425、RV-512）。Spring adapter 的寫死位置待後續。
 - 驗證：新增 5 組測試，都已確認在修改前失敗；JS 181、capture 95、viewer 單元 149、Maven 全數通過。
+
+## R55 單一檔案或項目出錯只影響它自己
+
+- WP126：Spring Web Flow、Thymeleaf 片段、JavaScript／React 分析輸出、React 預覽樣式表與 viewer CSS 資源，錯誤只影響出錯的那一項並留下診斷；Spring Security 外部呼叫的推論維持 fail closed，但只在讀不到的檔案可能含 security 設定時才停止，並指出是哪個檔案，見 [ADR 0146](adr/0146-r55-contain-single-item-failures.md)（RV-217、RV-220、RV-404、RV-414、RV-421、RV-511、RV-602）。
+- 驗證：每項都新增測試；JS 181、capture 96、viewer 單元 150、viewer e2e 118、Maven 全數通過。
