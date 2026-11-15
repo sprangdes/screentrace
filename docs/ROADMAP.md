@@ -483,3 +483,9 @@
 - WP145：新增 Spring MVC 合成專案（每個 controller 10 組 GET／POST mapping、3 個 JSP、表單與表格連結、inline script）以 JFR 與 Node `--cpu-prof` 量測：`SpringMvcAnalyzer` 的 addNode／edge 改用 id 索引，`endpointsFor` 有完全相同路徑時直接回傳；`SpringFormBindings`、`SpringServerValidation`、`RouteTemplateInference`、`UrlGraphContribution` 的請求邊移除與 `UrlResolution` 的端點比對改用索引（RV-702）；分析流程中的 `ObjectMapper` 改為常數（RV-705）；`UrlResolution.match` 快取端點樣板、`pathScore` 不再每次編譯 regex（RV-706）；`analyzer.mjs` 不再為每個 unit 過濾整份 DOM（RV-709）。量測中發現條件重導長鏈會讓導覽邊與證據呈平方成長，記為 RV-119，未處理。
 - 量測（sandbox，只計分析）：40 個 controller（含 40 層重導鏈）76 秒 → 16 秒；300 個 controller 由超過 10 分鐘降為 96 秒；Node 端（100 個 controller）32 秒 → 2 秒；Struts 300 個 action 維持約 33 秒。
 - 驗證：14 個 fixture、Struts 合成專案與 40 個 controller 的 Spring 合成專案（與 R73 比對），以及 100、300 個 controller 的專案（與本輪第一版比對），圖都逐位元組相同；Maven、JS 191、capture 103 全數通過。純效能修改，未新增測試。
+
+## R75 React 與 viewer 的量測、私人路徑遮蔽
+
+- WP146：以 300 頁的 Spring Boot＋React 合成專案量測：分析 16 秒，Node 端 7 秒來自每個畫面重走含全部路由的 App 元件，佔比不高，未修改；以同一張圖（7,500 個節點）在 Chromium 量測 viewer：載入 1.8 秒、開啟畫面面板 2.1 秒（聚焦動畫每幀強制版面計算）、搜尋輸入 250 ms，RV-710 列出的 `indexGraph` 重建合計約 90 ms，未修改。`hidePrivateLocations` 先單獨遮蔽 application，再以串流序列化確認其餘內容不含家目錄時直接回傳，不再把整張圖轉成 JSON 樹（RV-706）。更正 RV-119：重導展開有 10 層上限，是常數倍膨脹。
+- 量測（只計分析）：Spring MVC 40 個 controller 16 → 8 秒、100 個 23 秒（R74 為 32 秒）、React 300 頁 16 → 13 秒、Struts 300 個 action 35 → 31 秒；80 個 controller 的專案在 3.4 GB 預設 heap 下由記憶體不足改為 35 秒完成。
+- 驗證：`HomeRedactionTest` 新增 1 個測試（application 與節點中的家目錄都會遮蔽）；14 個 fixture 與 4 個合成專案的圖逐位元組相同；Maven 全數通過。

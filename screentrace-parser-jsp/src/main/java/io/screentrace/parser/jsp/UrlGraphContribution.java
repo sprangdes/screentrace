@@ -608,10 +608,73 @@ public final class UrlGraphContribution {
     List<String> homes = homeForms();
     if (homes.isEmpty()) return graph;
     try {
+      // Source paths are project-relative, so the home path is rarely anywhere; a streaming scan
+      // finds that out without building a JSON tree of the whole graph, which took a fifth of the
+      // analysis time and most of its memory on large projects (RV-706).
+      // The application holds the project's absolute path, which usually is under the home.
+      Application application =
+          JSON.treeToValue(redact(JSON.valueToTree(graph.application()), homes), Application.class);
+      if (!mentionsAny(
+          homes,
+          graph.nodes(),
+          graph.relationships(),
+          graph.diagnostics(),
+          graph.apiContracts(),
+          graph.schemaVersion(),
+          graph.behaviors(),
+          graph.validationRules()))
+        return new ApplicationGraph(
+            application,
+            graph.nodes(),
+            graph.relationships(),
+            graph.diagnostics(),
+            graph.apiContracts(),
+            graph.schemaVersion(),
+            graph.behaviors(),
+            graph.validationRules());
       return JSON.treeToValue(redact(JSON.valueToTree(graph), homes), ApplicationGraph.class);
     } catch (Exception error) {
       throw new IllegalStateException("圖隱私處理失敗", error);
     }
+  }
+
+  /** Whether the JSON of any of the values contains any of the texts, as JSON writes them. */
+  private static boolean mentionsAny(List<String> texts, Object... values)
+      throws java.io.IOException {
+    List<String> needles = new ArrayList<>();
+    for (String text : texts) {
+      String quoted = JSON.writeValueAsString(text);
+      needles.add(quoted.substring(1, quoted.length() - 1));
+    }
+    int keep = needles.stream().mapToInt(String::length).max().orElse(1) - 1;
+    StringBuilder window = new StringBuilder();
+    boolean[] found = {false};
+    try (java.io.Writer scan =
+        new java.io.Writer() {
+          @Override
+          public void write(char[] buffer, int offset, int length) {
+            if (found[0]) return;
+            window.append(buffer, offset, length);
+            for (String needle : needles)
+              if (window.indexOf(needle) >= 0) {
+                found[0] = true;
+                return;
+              }
+            if (window.length() > keep) window.delete(0, window.length() - keep);
+          }
+
+          @Override
+          public void flush() {}
+
+          @Override
+          public void close() {}
+        }) {
+      for (Object value : values) {
+        JSON.writer().without(SerializationFeature.CLOSE_CLOSEABLE).writeValue(scan, value);
+        if (found[0]) return true;
+      }
+    }
+    return found[0];
   }
 
   /**
