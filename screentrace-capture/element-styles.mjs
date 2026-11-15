@@ -68,8 +68,10 @@ function componentLinks(elements, graph, screenId) {
       .filter((e) => e.type === 'CONTAINS' && e.from === screenId)
       .map((e) => e.to),
   );
+  // A component without a source (synthesized or merged) cannot be matched by file and line; it is
+  // skipped instead of failing the screen (RV-516).
   const nodes = graph.nodes
-    .filter((n) => n.type === 'COMPONENT' && owned.has(n.id))
+    .filter((n) => n.type === 'COMPONENT' && owned.has(n.id) && n.source?.file)
     .sort(
       (a, b) =>
         a.source.file.localeCompare(b.source.file, 'en') ||

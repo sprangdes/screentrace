@@ -8,7 +8,7 @@ import {
   offlineDisclosureState,
 } from './template-preview.mjs';
 import { metadataValue } from './expansion-anchor.mjs';
-import { lstat, mkdir, readdir } from 'node:fs/promises';
+import { lstat, mkdir, readdir, realpath } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { chromium } from 'playwright';
@@ -186,12 +186,23 @@ const conventionalAssetMappings = [
   assetKey,
   sourceDir,
 }));
+// Source files are reached through real paths; a symlinked project or output folder must compare
+// and relativize real paths only (RV-504).
+const realOrSelf = async (file) => {
+  try {
+    return await realpath(file);
+  } catch {
+    return path.resolve(file);
+  }
+};
 const resourceMappings = deduplicateMappings([
   ...conventionalAssetMappings,
   ...(await discoverSpringResourceMappings(target, webRoot, (file) =>
     readUtf8Limited(projectRoot, file, 4 * 1024 * 1024),
   )),
 ]);
+for (const mapping of resourceMappings) mapping.sourceDirReal = await realOrSelf(mapping.sourceDir);
+const outputReal = await realOrSelf(output);
 async function resourceEncodings(file) {
   const consumers = [];
   for (const ref of graph.nodes.filter((n) => n.attributes?.kind === 'STATIC_RESOURCE_REFERENCE')) {
@@ -208,7 +219,8 @@ async function resourceEncodings(file) {
         urls.some((url) => {
           const mapping = mappingFor(url);
           return (
-            mapping && path.resolve(mapping.sourceDir, url.slice(mapping.urlPrefix.length)) === file
+            mapping &&
+            path.resolve(mapping.sourceDirReal, url.slice(mapping.urlPrefix.length)) === file
           );
         })
       )
@@ -218,6 +230,7 @@ async function resourceEncodings(file) {
   return [...new Set(consumers)];
 }
 async function copyAssets() {
+  let copied = false;
   for (const mapping of resourceMappings)
     if (await exists(mapping.sourceDir, projectRoot, 'directory')) {
       const source = await resolveExistingDirectoryWithin(projectRoot, mapping.sourceDir);
@@ -226,8 +239,12 @@ async function copyAssets() {
         path.join(htmlRootReal, 'assets', mapping.assetKey),
       );
       await copyDirectory(source, destination, 0);
-      await rewriteCssUrls(destination);
+      copied = true;
     }
+  // Once over the whole assets folder: a mapping with an empty asset key copies into the folder
+  // itself, and rewriting per mapping rewrote the other mappings' stylesheets again (RV-509).
+  if (copied)
+    await rewriteCssUrls(await assertOutputPathWithin(output, path.join(htmlRootReal, 'assets')));
 }
 async function copyDirectory(source, destination, depth) {
   if (depth > 64) {
@@ -301,24 +318,29 @@ async function rewriteCssUrls(directory) {
     const file = await assertOutputPathWithin(output, path.join(directory, entry.name));
     if (entry.isSymbolicLink()) continue;
     if (entry.isDirectory()) await rewriteCssUrls(file);
-    else if (entry.isFile() && entry.name.endsWith('.css'))
+    else if (entry.isFile() && entry.name.endsWith('.css')) {
+      // Rewrite byte for byte: a stylesheet left in its own encoding (Big5, GBK) stays intact,
+      // and only the ASCII url(...) references change (RV-509).
+      const fileDir = await realOrSelf(path.dirname(file));
+      const css = (await readBufferLimited(output, file, 8 * 1024 * 1024)).toString('latin1');
       await writeOutput(
         file,
-        (await readUtf8Limited(output, file, 8 * 1024 * 1024)).replace(
-          /url\(\s*(["']?)(\/[^)'"\s]+)(\1)\s*\)/g,
-          (_, quote, url, closingQuote) => {
+        Buffer.from(
+          css.replace(/url\(\s*(["']?)(\/[^)'"\s]+)(\1)\s*\)/g, (_, quote, url, closingQuote) => {
             const mapping = mappingFor(url);
             if (!mapping) return `url(${quote}${UNRESOLVED_ASSET}${closingQuote})`;
             const destination = path.join(
-              htmlRoot,
+              htmlRootReal,
               'assets',
               mapping.assetKey,
               url.substring(mapping.urlPrefix.length),
             );
-            return `url(${quote}${path.relative(path.dirname(file), destination).replaceAll(path.sep, '/')}${closingQuote})`;
-          },
+            return `url(${quote}${path.relative(fileDir, destination).replaceAll(path.sep, '/')}${closingQuote})`;
+          }),
+          'latin1',
         ),
       );
+    }
   }
 }
 await copyAssets();
@@ -641,10 +663,11 @@ async function expandTag(
   template = previewV2
     ? template.replace(/\$\{([^}]+)}/g, (raw, key) => values[key.trim()] ?? raw)
     : replaceExpressions(template, values);
-  template = template.replace(/<jsp:doBody\b[^>]*\/>/g, body || '');
+  // Function replacers: page text such as jQuery's $('…') must not be read as $' patterns (RV-501).
+  template = template.replace(/<jsp:doBody\b[^>]*\/>/g, () => body || '');
   template = template.replace(
     /<jsp:invoke\s+fragment=["']customScript["']\s*\/>/g,
-    slots.customScript || '',
+    () => slots.customScript || '',
   );
   return expandTags(template, slots, depth + 1, [...tagStack, file]);
 }
@@ -825,12 +848,12 @@ function htmlControls(source) {
     )
     .replace(/@import\s+(?:url\()?\s*["']?[^;)]*(?:https?:|file:)[^;)]*;?/gi, '')
     .replace(/url\(\s*["']?(?:https?:|file:)[^)]*\)/gi, 'none')
-    .replace(
-      /<head([^>]*)>/i,
-      "<head$1><meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'none'; img-src file: data:; style-src file: 'unsafe-inline'; font-src file:; script-src 'none'; connect-src 'none'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'\">",
-    )
     .replace(/\s+(?:items|modelAttribute|names)=["'][^"']*["']/g, '');
 }
+const CSP_META =
+  "<meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'none'; img-src file: data:; style-src file: 'unsafe-inline'; font-src file:; script-src 'none'; connect-src 'none'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'\">";
+/** The document's own <head> start tag; `<header>` is not one (RV-510). */
+const HEAD_TAG = /<head(\s[^>]*)?>/i;
 function dynamicExpressions(source) {
   return [...source.matchAll(/\$\{[^}]+}/g)].map((match) => match[0]);
 }
@@ -841,9 +864,10 @@ if (reactPreview) captureDiagnostics.push(...reactPreview.diagnostics.map((item)
 async function renderReact(screen) {
   let source = reactPreview?.document(screen.id);
   if (!source) return null;
+  // React previews get the same CSP as JSP ones (RV-513).
   source = source.replace(
-    /<head([^>]*)>/i,
-    '<head$1><style data-st-preview-freeze>' + snapshotMotionCss + '</style>',
+    HEAD_TAG,
+    (head) => head + CSP_META + '<style data-st-preview-freeze>' + snapshotMotionCss + '</style>',
   );
   const htmlFile = await assertOutputPathWithin(
     output,
@@ -933,14 +957,16 @@ async function renderJsp(screen) {
   source = source
     .replace(/<html\b[^>]*>\s*<html\b[^>]*>/gi, '<html>')
     .replace(/<\/head>\s*<head\b[^>]*>/gi, '');
+  // Every document, a fragment page included, gets a head and the CSP inside it (RV-510).
+  if (!HEAD_TAG.test(source)) source = source.replace(/<html\b[^>]*>/i, '$&<head></head>');
+  source = source.replace(HEAD_TAG, (head) => head + CSP_META);
   source = source
     .replace(/<script\b[\s\S]*?<\/script\s*>/gi, '')
     .replace(/\son[a-z]+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, '');
   if (previewV2) {
-    if (!/<head[\s>]/i.test(source)) source = source.replace(/<html\b[^>]*>/i, '$&<head></head>');
     source = source.replace(
-      /<head([^>]*)>/i,
-      '<head$1><style data-st-preview-freeze>' + snapshotMotionCss + '</style>',
+      HEAD_TAG,
+      (head) => head + '<style data-st-preview-freeze>' + snapshotMotionCss + '</style>',
     );
   }
   const htmlFile = await assertOutputPathWithin(
@@ -1019,7 +1045,7 @@ async function captureScreen(screen, page, context, r) {
     if (previewV2) {
       const captured = await collectElementStyles(page, context, graph, screen.id, {
         ...styleOptions,
-        outputUrl: pathToFileURL(output).href,
+        outputUrl: pathToFileURL(outputReal).href,
       });
       r.styles = captured.styles;
       r.defaults = captured.defaults;

@@ -450,3 +450,8 @@
 
 - WP139：處理 RV-402～428 中 18 項：Java 解析層級一致（RV-402）；一般 `Map.put` 不再關閉 EL 值解析（RV-403）；Thymeleaf 無參數片段、`th:insert`／`th:include`、含 `${…}` 的參數（RV-405、RV-406）；選單展開保留行號（RV-408）；HttpSession、Principal 等框架參數不列入請求欄位（RV-411）；家目錄遮蔽只比對完整路徑（RV-412）；AngularJS 取最內層 controller、支援 `data-ng-controller`（RV-413）；JS 分析器逾時依來源數放寬（RV-415）；Tiles `put` 的 `content` 與內容（RV-417）；不分大小寫的結束標籤搜尋不再複製整份原始碼（RV-418）；`mvc:resources` 行號（RV-419）；React 重複路由去重（RV-420）；菱形 include 只加一次（RV-422）；連結文字讀到自己的結束標籤且不分大小寫（RV-423）；Struts `nested:` taglib（RV-426）；include 去除 query（RV-427）；結束標籤依名稱關閉範圍（RV-428）。RV-407、RV-410 試作後撤回，RV-409、RV-416 未處理，原因記在 review 文件。不改變對外契約，未新增 ADR。
 - 驗證：新增 11 個測試，整合測試都已確認在修改前失敗（RV-418、419、420、426、428 未加專屬測試）；13 個 fixture 的圖全部與修改前相同；Maven 全數通過。
+
+## R69 capture 與 JS 分析器的其餘項目
+
+- WP140：處理 RV-501～520 中尚未修正的 18 項：預覽替換不再展開 `$'`、`$&`（RV-501）；訊息檔解碼 `\uXXXX`、跳脫字元與行接續（RV-502）；`config` init-param 逗號清單（RV-503）；專案或輸出位於 symlink 下時一律以 realpath 比對（RV-504）；只有 axios 的請求方法算 API 呼叫，`axios.request` 讀 config（RV-505）；behavior／rule 的 id 依「檔案＋畫面」計數，同一 JSP 兩段相同 inline script 不再互相覆蓋（RV-506）；`$(window).load(fn)`（RV-507）；`var validateX = function(){}` 的驗證規則（RV-508）；CSS 以位元組改寫、全部複製後只改寫一次（RV-509）；CSP meta 不會插進 `<header>`，React 預覽也加上 CSP（RV-510、RV-513）；React 標記的屬性 denylist 不分大小寫、檢查 `xlink:href` 等 URL 屬性、拒絕含 `url(` 的字串 style（RV-513）；解構與預設值參數遮蔽外層變數（RV-514）；片段 `startLine` 驗證（RV-515）；無 `source` 的元件（RV-516）；數字相加維持數字（RV-517）；只有 DOM 事件名稱的 `on*` 指派才是事件綁定（RV-518）；JSP 遮罩跳過 regex literal（RV-519）；未關閉的 `<!--` 延伸到檔尾（RV-520）。不改變對外契約，未新增 ADR。
+- 驗證：JS 新增 10 個、capture 新增 4 個測試，都已確認在修改前失敗（RV-501、504、509、510、516 未加自動測試）；13 個 fixture 的圖全部與修改前相同（RV-506 第一版以檔案計數時 wp10 兩組 fixture 的 id 改變，改為依檔案＋畫面計數）；JS 191、capture 103、Maven 全數通過。

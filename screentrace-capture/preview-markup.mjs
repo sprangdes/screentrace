@@ -33,9 +33,15 @@ export function markupTokens(source) {
       line += text.split('\n').length - 1;
     }
     let end;
-    if (source.startsWith('<!--', start)) end = source.indexOf('-->', start + 4) + 3;
-    else if (source.startsWith('<%--', start)) end = source.indexOf('--%>', start + 4) + 4;
-    else if (source.startsWith('<%', start)) end = source.indexOf('%>', start + 2) + 2;
+    // An unclosed comment or scriptlet runs to the end of the file; indexOf's -1 used to give a
+    // two-character token and re-enter the comment (RV-520).
+    const closeAt = (marker, from) => {
+      const at = source.indexOf(marker, from);
+      return at < 0 ? source.length : at + marker.length;
+    };
+    if (source.startsWith('<!--', start)) end = closeAt('-->', start + 4);
+    else if (source.startsWith('<%--', start)) end = closeAt('--%>', start + 4);
+    else if (source.startsWith('<%', start)) end = closeAt('%>', start + 2);
     else {
       let quote = null,
         index = start + 1;

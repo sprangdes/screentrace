@@ -195,11 +195,11 @@ export function resolveValue(
       b = recur(node.right);
     if (a.tainted || b.tainted) return unknown(text(node, code), true);
     if (!a.known && !b.known) return unknown(text(node, code));
+    const numeric = a.type === 'number' && b.type === 'number';
     return {
-      value:
-        a.type === 'number' && b.type === 'number'
-          ? String(Number(a.value) + Number(b.value))
-          : a.value + b.value,
+      value: numeric ? String(Number(a.value) + Number(b.value)) : a.value + b.value,
+      // The sum keeps its number type, so 1 + 2 + 3 is 6, not '33' (RV-517).
+      ...(numeric ? { type: 'number' } : {}),
       status: a.status === 'CONFIRMED' && b.status === 'CONFIRMED' ? 'CONFIRMED' : 'INFERRED',
       known: true,
       tainted: false,

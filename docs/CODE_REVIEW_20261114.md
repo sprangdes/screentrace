@@ -206,26 +206,26 @@ P1 處理結果見各項「狀態」（R53，[ADR 0144](adr/0144-r53-code-review
 
 ## P2 — js／capture
 
-- **RV-501** `capture-static-jsp.mjs:638,641`：`String.replace` 以原始碼當替換字串，jQuery 的 `$'`、`$&` 被展開，預覽中重複出現版面內容。
-- **RV-502** `struts-messages.mjs:22`：不解碼 `\uXXXX`、不處理行接續、以 UTF-8 讀取 ISO-8859-1 檔；native2ascii 產生的訊息檔顯示成原始跳脫字元。
-- **RV-503** `struts-messages.mjs:58`：`config` init-param 為逗號分隔清單時被當成單一路徑。
-- **RV-504** `capture-static-jsp.mjs:307,1013,205`：lexical 路徑與 realpath 混用；輸出或專案位於 symlink 下（macOS `/tmp`）時，CSS 資源被擋、`element-styles.json` 洩漏本機絕對路徑（HC-009 回歸）、CSS 編碼永遠無法解析。
-- **RV-505** `analyzer.mjs:1077`：所有 `axios.*` 都當成 HTTP 請求，`axios.create` 產生 method `CREATE` 的假端點。
-- **RV-506** `analyzer.mjs:1584`：`occurrences` 每個 unit 重設，同檔案兩段 inline script 的相同 behavior 產生相同 id 而互相覆蓋。
-- **RV-507** `analyzer.mjs:1082`：不認 jQuery < 3 的 `$(window).load(fn)`，handler 內容不分析。
-- **RV-508** `analyzer.mjs:1382`：validator 名稱檢查用 `call.name`（CallExpression 沒有），`var validateForm = function(){}` 寫法的規則被略過。
-- **RV-509** `capture-static-jsp.mjs:301`：`rewriteCssUrls` 以 UTF-8 讀寫所有 CSS，刻意保留原樣的 Big5／GBK 檔被破壞；assetKey 為空時重寫兩次。
-- **RV-510** `capture-static-jsp.mjs:821`：CSP meta 用 `/<head([^>]*)>/i` 插入，會比對到 `<header>`；且在補上 `<head>` 之前執行，片段頁面沒有 CSP。
+- **RV-501** `capture-static-jsp.mjs:638,641`：`String.replace` 以原始碼當替換字串，jQuery 的 `$'`、`$&` 被展開，預覽中重複出現版面內容。 **狀態：已修正（R69，未加自動測試）。**
+- **RV-502** `struts-messages.mjs:22`：不解碼 `\uXXXX`、不處理行接續、以 UTF-8 讀取 ISO-8859-1 檔；native2ascii 產生的訊息檔顯示成原始跳脫字元。 **狀態：已修正（R69）。**
+- **RV-503** `struts-messages.mjs:58`：`config` init-param 為逗號分隔清單時被當成單一路徑。 **狀態：已修正（R69）。**
+- **RV-504** `capture-static-jsp.mjs:307,1013,205`：lexical 路徑與 realpath 混用；輸出或專案位於 symlink 下（macOS `/tmp`）時，CSS 資源被擋、`element-styles.json` 洩漏本機絕對路徑（HC-009 回歸）、CSS 編碼永遠無法解析。 **狀態：已修正（R69，未加自動測試）。**
+- **RV-505** `analyzer.mjs:1077`：所有 `axios.*` 都當成 HTTP 請求，`axios.create` 產生 method `CREATE` 的假端點。 **狀態：已修正（R69）。**
+- **RV-506** `analyzer.mjs:1584`：`occurrences` 每個 unit 重設，同檔案兩段 inline script 的相同 behavior 產生相同 id 而互相覆蓋。 **狀態：已修正（R69；計數範圍為「檔案＋畫面」，共用的 script 檔在各畫面保持相同 id）。**
+- **RV-507** `analyzer.mjs:1082`：不認 jQuery < 3 的 `$(window).load(fn)`，handler 內容不分析。 **狀態：已修正（R69）。**
+- **RV-508** `analyzer.mjs:1382`：validator 名稱檢查用 `call.name`（CallExpression 沒有），`var validateForm = function(){}` 寫法的規則被略過。 **狀態：已修正（R69）。**
+- **RV-509** `capture-static-jsp.mjs:301`：`rewriteCssUrls` 以 UTF-8 讀寫所有 CSS，刻意保留原樣的 Big5／GBK 檔被破壞；assetKey 為空時重寫兩次。 **狀態：已修正（R69；CSS 改為全部複製後只重寫一次，未加自動測試）。**
+- **RV-510** `capture-static-jsp.mjs:821`：CSP meta 用 `/<head([^>]*)>/i` 插入，會比對到 `<header>`；且在補上 `<head>` 之前執行，片段頁面沒有 CSP。 **狀態：已修正（R69，未加自動測試）。**
 - **RV-511** `react-preview.mjs:68`：超大或無法讀取的 CSS 拋例外中止整個擷取，而非產生 `REACT_STYLESHEET_MISSING`。 **狀態：已修正（R55）。**
 - **RV-512** `spring-resource-mappings.mjs:75`：只掃 `target/src/main`，WebContent 等 web root 下的 dispatcher XML 找不到。 **狀態：已修正（R54）：同時掃描 web root。**
-- **RV-513** `react/markup.mjs:103`：屬性 denylist 區分大小寫、`xlink:href` 未檢查 scheme；字串 `style` 繞過 `url(` 過濾。React 預覽文件無 CSP。
-- **RV-514** `analyzer.mjs:1366`：解構或預設值參數未綁定，取到外層同名變數並產生 CONFIRMED 的錯誤導覽。
-- **RV-515** `template-fragments.mjs:156`：`startLine` 未驗證，0 或負值拋 RangeError，畫面標為擷取失敗。
-- **RV-516** `element-styles.mjs:75`：COMPONENT 無 `source` 時 TypeError。
-- **RV-517** `values.mjs:200`：`+` 結果未帶 type，`1 + 2 + 3` 變成字串串接 `'33'` 並標 CONFIRMED。
-- **RV-518** `bindings.mjs:223`：任何以 `on` 開頭的成員指派（`user.online`、`arr[one]`）都當成事件綁定。
-- **RV-519** `parser.mjs:46`：regex literal 內的引號讓 JSP `${}` 遮罩錯位，降級為 loose parser。
-- **RV-520** `preview-markup.mjs:36`：未關閉的 `<!--` 在檔案開頭時只產生兩字元 token，註解內標籤變成真的標記。
+- **RV-513** `react/markup.mjs:103`：屬性 denylist 區分大小寫、`xlink:href` 未檢查 scheme；字串 `style` 繞過 `url(` 過濾。React 預覽文件無 CSP。 **狀態：已修正（R69）。**
+- **RV-514** `analyzer.mjs:1366`：解構或預設值參數未綁定，取到外層同名變數並產生 CONFIRMED 的錯誤導覽。 **狀態：已修正（R69）。**
+- **RV-515** `template-fragments.mjs:156`：`startLine` 未驗證，0 或負值拋 RangeError，畫面標為擷取失敗。 **狀態：已修正（R69）。**
+- **RV-516** `element-styles.mjs:75`：COMPONENT 無 `source` 時 TypeError。 **狀態：已修正（R69，未加自動測試）。**
+- **RV-517** `values.mjs:200`：`+` 結果未帶 type，`1 + 2 + 3` 變成字串串接 `'33'` 並標 CONFIRMED。 **狀態：已修正（R69）。**
+- **RV-518** `bindings.mjs:223`：任何以 `on` 開頭的成員指派（`user.online`、`arr[one]`）都當成事件綁定。 **狀態：已修正（R69）。**
+- **RV-519** `parser.mjs:46`：regex literal 內的引號讓 JSP `${}` 遮罩錯位，降級為 loose parser。 **狀態：已修正（R69）。**
+- **RV-520** `preview-markup.mjs:36`：未關閉的 `<!--` 在檔案開頭時只產生兩字元 token，註解內標籤變成真的標記。 **狀態：已修正（R69）。**
 - **RV-521** `pack-preview.mjs:272`：style 屬性 HTML 解碼兩次。 **狀態：已修正（R57）。**
 - **RV-522** `capture-static-jsp.mjs:749`：未解碼 `url.pathname`，含空白或中文的資源檔找不到。 **狀態：已修正（R57，未加自動測試）。**
 
