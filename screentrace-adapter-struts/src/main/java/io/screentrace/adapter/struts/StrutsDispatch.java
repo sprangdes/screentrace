@@ -5,6 +5,7 @@ import com.github.javaparser.ast.expr.*;
 import com.github.javaparser.ast.stmt.*;
 import io.screentrace.adapter.struts.StrutsModel.Mapping;
 import io.screentrace.adapter.struts.StrutsModel.State;
+import io.screentrace.parser.jsp.MarkupTag;
 import java.util.*;
 
 /** DispatchAction family detection and dispatch method resolution. */
@@ -54,7 +55,8 @@ final class StrutsDispatch {
   static String dispatchValue(String target, String parameter) {
     if (parameter == null || parameter.isBlank() || !target.contains("?")) return null;
     String found = null;
-    for (String pair : target.substring(target.indexOf('?') + 1).split("&")) {
+    for (String pair :
+        MarkupTag.decodeAmpersands(target.substring(target.indexOf('?') + 1)).split("&")) {
       String[] parts = pair.split("=", 2);
       if (parts.length == 2 && parts[0].equals(parameter)) {
         if (found != null || !parts[1].matches("[A-Za-z_][A-Za-z0-9_]*")) return null;

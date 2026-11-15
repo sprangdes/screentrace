@@ -23,6 +23,7 @@ import io.screentrace.adapter.struts.StrutsModel.WildcardResolution;
 import io.screentrace.core.*;
 import io.screentrace.core.ApplicationGraph.*;
 import io.screentrace.parser.jsp.*;
+import io.screentrace.parser.jsp.MarkupTag;
 import java.util.*;
 import java.util.regex.*;
 
@@ -461,7 +462,7 @@ final class StrutsControls {
     String query = target.contains("?") ? target.substring(target.indexOf('?') + 1) : "";
     if (!query.isBlank()) {
       Map<String, String> values = new TreeMap<>();
-      for (String pair : query.split("&")) {
+      for (String pair : MarkupTag.decodeAmpersands(query).split("&")) {
         String[] parts = pair.split("=", 2);
         if (parts.length == 2) values.put(parts[0], parts[1]);
       }
@@ -539,7 +540,9 @@ final class StrutsControls {
   static Set<String> requestParameters(Control control, List<Control> peers, String name) {
     if (name == null || name.isBlank()) return Set.of();
     if (control.target().contains("?"))
-      for (String pair : control.target().substring(control.target().indexOf('?') + 1).split("&")) {
+      for (String pair :
+          MarkupTag.decodeAmpersands(control.target().substring(control.target().indexOf('?') + 1))
+              .split("&")) {
         String[] values = pair.split("=", 2);
         if (values.length == 2 && values[0].equals(name) && StrutsSources.literal(values[1]))
           return Set.of(values[1]);

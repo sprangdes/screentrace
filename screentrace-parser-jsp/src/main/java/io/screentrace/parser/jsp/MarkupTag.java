@@ -182,6 +182,18 @@ public final class MarkupTag {
     return attributes.get(name.toLowerCase(Locale.ROOT));
   }
 
+  private static final java.util.regex.Pattern AMPERSAND =
+      java.util.regex.Pattern.compile("(?i)&(?:amp|#38|#x26);");
+
+  /**
+   * A URL as the browser reads it from an attribute: {@code &amp;} (and its numeric forms) become
+   * {@code &}. Only the ampersand is decoded, because it is the one reference that changes how a
+   * query string splits (RV-313, RV-424); other text keeps its source form.
+   */
+  public static String decodeAmpersands(String value) {
+    return value == null ? null : AMPERSAND.matcher(value).replaceAll("&");
+  }
+
   private static int endOfExpression(String source, int start) {
     int depth = 1;
     char quote = 0;

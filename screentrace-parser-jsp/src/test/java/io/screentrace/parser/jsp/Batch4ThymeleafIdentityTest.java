@@ -73,4 +73,17 @@ class Batch4ThymeleafIdentityTest {
             .anyMatch(
                 n -> n.confidence() == io.screentrace.core.ApplicationGraph.Confidence.UNRESOLVED));
   }
+
+  @Test
+  void thymeleafQueryParametersBecomeAPlainUrlTarget() throws Exception {
+    // RV-424: the projected markup escapes '&', which used to stay in the interaction target.
+    Path r = Files.createTempDirectory("thymeleaf-query");
+    Files.writeString(
+        r.resolve("page.html"), "<a th:href=\"@{/orders(page=1,size=10)}\">Orders</a>");
+    var inventory = new ProjectScanner().scan(r);
+    var markup = new JspProjectParser().analyze(inventory.root(), inventory.files());
+    assertTrue(
+        markup.interactions().stream().anyMatch(i -> "/orders?page=1&size=10".equals(i.target())),
+        markup.interactions().toString());
+  }
 }

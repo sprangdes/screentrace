@@ -652,7 +652,7 @@ public final class JspProjectParser {
       List<JspAnalysis.Interaction> interactions,
       List<Diagnostic> diagnostics) {
     if (target == null && !submitsCurrentView) return;
-    String resolved = submitsCurrentView ? CURRENT_VIEW_TARGET : target;
+    String resolved = submitsCurrentView ? CURRENT_VIEW_TARGET : MarkupTag.decodeAmpersands(target);
     Confidence confidence =
         submitsCurrentView
             ? Confidence.INFERRED

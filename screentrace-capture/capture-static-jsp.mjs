@@ -746,7 +746,9 @@ async function projectRequestAssets(source, screen) {
         result += token.text;
         continue;
       }
-      candidate = path.join(htmlRootReal, 'assets', url.pathname);
+      // The URL parser percent-encodes spaces and non-ASCII names; files on disk use the decoded
+      // name (RV-522).
+      candidate = path.join(htmlRootReal, 'assets', decodeURIComponent(url.pathname));
       if (!(await exists(candidate, htmlRootReal))) {
         result += token.text;
         continue;

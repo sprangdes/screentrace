@@ -383,3 +383,8 @@
 
 - WP127：`ApiUsage.java` 與 viewer 的 `usage.ts` 先算出每個 CALL_API 行為所屬的觸發元件（沿 `parentId` 往上找），同一觸發元件到同一端點的 CALLS／TRIGGERS 邊不再另算一個呼叫者；兩邊規則相同，並以一次集合查詢取代每條邊掃描全部行為（RV-110、RV-612，RV-702 的一部分）。不改變對外契約，未新增 ADR。
 - 驗證：Java 與 viewer 各新增 1 個測試，都已確認在修改前失敗；viewer 單元 151、Maven 全數通過。
+
+## R57 URL 中的 `&amp;` 與資源檔名編碼
+
+- WP128：interaction target 與 Struts 的 query string 切分先把 `&amp;` 換回 `&`；`pack-preview` 不再重複解碼已處理的屬性；capture 以解碼後的路徑尋找資源檔，見 [ADR 0147](adr/0147-r57-decode-ampersands-in-urls.md)（RV-313、RV-424、RV-521、RV-522）。
+- 驗證：新增 3 個測試，都已確認在修改前失敗（RV-522 未加自動測試）；JS 181、capture 97、Maven 全數通過。

@@ -503,7 +503,7 @@ final class StrutsInteractions {
   static String switchActionTarget(String target) {
     String query = target.contains("?") ? target.substring(target.indexOf('?') + 1) : "";
     Map<String, String> values = new TreeMap<>();
-    for (String pair : query.split("&")) {
+    for (String pair : MarkupTag.decodeAmpersands(query).split("&")) {
       String[] parts = pair.split("=", 2);
       if (parts.length == 2) values.put(parts[0], parts[1]);
     }

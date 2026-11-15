@@ -160,7 +160,7 @@ P1 處理結果見各項「狀態」（R53，[ADR 0144](adr/0144-r53-code-review
 - **RV-310** `ActionContracts.java:37`、`StrutsWildcards.java:146`：用 XML 原始 `type` 而非 Spring 解析後的 `actionType`，`DelegatingActionProxy` 找不到實際類別；`effectiveType` 的 fallback 是死碼。
 - **RV-311** `StrutsConfigParser.java:492`：任何 `struts-` 開頭的 artifact／jar（spring-webmvc-struts、struts-menu）都算 Struts 版本，造成版本衝突而所有 wildcard 變 AMBIGUOUS。
 - **RV-312** `StrutsTiles.java:232,294`：`(?s).*\$\{|.*#\{|.*<%.*` 搭配 `matches()` 只偵測以 `${` 結尾的字串，含 EL 的標題被當成靜態。
-- **RV-313** `StrutsDispatch.java:57`（`StrutsControls` 同理）：query string 未解碼 `&amp;`，XHTML 寫法的 dispatch 參數找不到。
+- **RV-313** `StrutsDispatch.java:57`（`StrutsControls` 同理）：query string 未解碼 `&amp;`，XHTML 寫法的 dispatch 參數找不到。 **狀態：已修正（R57）。**
 - **RV-314** `StrutsServletMappings.java:251`：ActionServlet mapping 只讀排序第一個 web.xml，可能取到 `docs/sample/web.xml`。
 - **RV-315** `StrutsControls.java:469`：任何同時有 `prefix` 與 `page` 參數的連結都被改寫成 SwitchAction 路徑（分頁連結誤判）。
 - **RV-316** `StrutsControls.java:348`：MappingDispatchAction 產生不存在的 `?save=save` 請求參數。
@@ -198,7 +198,7 @@ P1 處理結果見各項「狀態」（R53，[ADR 0144](adr/0144-r53-code-review
 - **RV-421** `ReactGraphContribution.java:414`：空 route 時 `substring(1)` 拋例外，整個 React 貢獻中止。 **狀態：已修正（R55）。**
 - **RV-422** `JspProjectParser.java:567`：菱形 include 讓 fragment 的互動被加入兩次。
 - **RV-423** `JspProjectParser.java:697`：標籤文字搜尋 `"</" + tag` 區分大小寫且無邊界，`</a` 也比對到 `</abbr>`。
-- **RV-424** `ThymeleafMarkup.java:151`、`StrutsMenus.java:358`：URL 被 HTML escape 成 `&amp;` 後未解碼，graph 中保留 `&amp;`。
+- **RV-424** `ThymeleafMarkup.java:151`、`StrutsMenus.java:358`：URL 被 HTML escape 成 `&amp;` 後未解碼，graph 中保留 `&amp;`。 **狀態：已修正（R57）：interaction target 解碼 `&amp;`。**
 - **RV-425** `StrutsMenus.java:266`：假設 struts-config 位於 `WEB-INF/` 下一層，`WEB-INF/config/` 時找不到 menu 設定。 **狀態：已修正（R54）：以 `WEB-INF` 的上層為 web root。**
 - **RV-426** `MarkupAnalysis.java:265`：不認 Struts `nested:` taglib。
 - **RV-427** `JspProjectParser.java:537`：include 路徑含 query string 時未去除，判為找不到。
@@ -226,8 +226,8 @@ P1 處理結果見各項「狀態」（R53，[ADR 0144](adr/0144-r53-code-review
 - **RV-518** `bindings.mjs:223`：任何以 `on` 開頭的成員指派（`user.online`、`arr[one]`）都當成事件綁定。
 - **RV-519** `parser.mjs:46`：regex literal 內的引號讓 JSP `${}` 遮罩錯位，降級為 loose parser。
 - **RV-520** `preview-markup.mjs:36`：未關閉的 `<!--` 在檔案開頭時只產生兩字元 token，註解內標籤變成真的標記。
-- **RV-521** `pack-preview.mjs:272`：style 屬性 HTML 解碼兩次。
-- **RV-522** `capture-static-jsp.mjs:749`：未解碼 `url.pathname`，含空白或中文的資源檔找不到。
+- **RV-521** `pack-preview.mjs:272`：style 屬性 HTML 解碼兩次。 **狀態：已修正（R57）。**
+- **RV-522** `capture-static-jsp.mjs:749`：未解碼 `url.pathname`，含空白或中文的資源檔找不到。 **狀態：已修正（R57，未加自動測試）。**
 
 ## P2 — viewer
 
@@ -280,6 +280,6 @@ P1 處理結果見各項「狀態」（R53，[ADR 0144](adr/0144-r53-code-review
 2. **Java 解析器設定不一致與重複解析**：RV-201、RV-402、RV-701。統一走 `JavaSources.parse` 與 `ParsedJavaUnits` 快取。
 3. **單點失敗擴大為整體失敗**（R53、R55 已處理）：RV-007、RV-217、RV-220、RV-404、RV-414、RV-421、RV-511、RV-602。錯誤應侷限在單一檔案／單一項目並留下診斷。
 4. **預覽輸出生命週期**：RV-005、RV-103、RV-104、RV-105。擷取前清空、逐步寫 manifest、結束整棵程序樹、封裝逾時不中止報告。
-5. **HTML 實體與 URL 編碼**：RV-313、RV-424、RV-521、RV-522。在 `MarkupTag` 取屬性時統一解碼一次。
+5. **HTML 實體與 URL 編碼**（R57 已處理；未採用在 `MarkupTag` 全面解碼，見 ADR 0147）：RV-313、RV-424、RV-521、RV-522。在 `MarkupTag` 取屬性時統一解碼一次。
 6. **API 呼叫者重複計算**（R56 已處理）：RV-110 與 RV-612 在 Java 與 TypeScript 各有一份相同邏輯，應一起修並以同一組 fixture 驗證。
 7. **路徑比對缺少邊界**：RV-318、RV-322、RV-412、RV-423。
