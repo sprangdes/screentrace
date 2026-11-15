@@ -87,9 +87,24 @@ public final class SingleHtmlAnalysisWriter {
                   List.of(),
                   previewState(reactPreview, node.id())));
     PreviewModel preview = new PreviewModel("2", screens, List.of());
-    if (Files.exists(
-        output.resolve("static-preview/element-styles.json"), LinkOption.NOFOLLOW_LINKS))
-      preview = new PreviewCaptureReader().read(graph, preview, output);
+    Path styles = output.resolve("static-preview/element-styles.json");
+    Map<String, Object> stylesSkipped = null;
+    if (Files.exists(styles, LinkOption.NOFOLLOW_LINKS)) {
+      // A very large capture used to stop the whole report; the report is still produced, with
+      // previews but without per-element styles, and says why.
+      if (Files.size(styles) > PreviewCaptureReader.MAX_STYLE_BYTES)
+        stylesSkipped =
+            Map.of(
+                "code",
+                "PREVIEW_STYLES_TOO_LARGE",
+                "message",
+                "元素樣式資料 "
+                    + Files.size(styles)
+                    + " bytes 超過 "
+                    + PreviewCaptureReader.MAX_STYLE_BYTES
+                    + " bytes 上限，預覽不含元素樣式與元件標示");
+      else preview = new PreviewCaptureReader().read(graph, preview, output);
+    }
     if (Files.exists(output.resolve("viewer-documents.json"), LinkOption.NOFOLLOW_LINKS)) {
       var packed = read(output, "viewer-documents.json");
       if (!"2.2".equals(packed.path("schemaVersion").asText()))
@@ -107,6 +122,14 @@ public final class SingleHtmlAnalysisWriter {
               });
       manifest.put("assets", json.convertValue(packed.path("assets"), Map.class));
       manifest.put("diagnostics", json.convertValue(packed.path("diagnostics"), List.class));
+    }
+    if (stylesSkipped != null) {
+      List<Object> diagnostics = new ArrayList<>();
+      if (manifest.get("diagnostics") instanceof List<?> existing) diagnostics.addAll(existing);
+      diagnostics.add(stylesSkipped);
+      manifest.put("diagnostics", diagnostics);
+      java.util.logging.Logger.getLogger(SingleHtmlAnalysisWriter.class.getName())
+          .warning(String.valueOf(stylesSkipped.get("message")));
     }
     write(output, "preview-model.json", preview);
     return new SingleHtmlReportGenerator()

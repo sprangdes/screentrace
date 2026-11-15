@@ -100,15 +100,7 @@ final class StrutsScreens {
         return isTilesLayoutPath(viewPath, state) ? null : ensureJspScreen(viewPath, state);
     }
     if (!resolvedPath.startsWith("/")) return null;
-    List<String> matches =
-        state.nodes.values().stream()
-            .filter(
-                node ->
-                    node.type() == NodeType.SCREEN
-                        && node.attributes().getOrDefault("view", "").endsWith(resolvedPath))
-            .map(GraphNode::id)
-            .distinct()
-            .toList();
+    List<String> matches = state.nodes.screensWithViewEndingIn(resolvedPath);
     if (matches.size() == 1) return matches.get(0);
     if (matches.size() > 1)
       diagnostic(state, "forward JSP 路徑對應多個畫面：" + resolvedPath, source, "STRUTS_FORWARD_AMBIGUOUS");

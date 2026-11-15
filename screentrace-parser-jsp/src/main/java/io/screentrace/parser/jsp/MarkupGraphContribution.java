@@ -158,23 +158,21 @@ public final class MarkupGraphContribution {
                         status,
                         "彈窗候選：" + candidates.stream().map(GraphNode::id).toList()))));
       }
+    // Triggers that already have a navigation, submit or unknown behavior; kept current as this
+    // loop adds behaviors, so each interaction no longer scans every behavior (RV-702).
+    Set<BehaviorType> navigationTypes =
+        Set.of(BehaviorType.NAVIGATE, BehaviorType.SUBMIT_FORM, BehaviorType.UNKNOWN);
+    Set<String> navigating = new HashSet<>();
+    for (Behavior b : behaviors.values())
+      if (b.triggerId() != null && navigationTypes.contains(b.type()))
+        navigating.add(b.triggerId());
     for (var interaction : jsp.interactions())
       if (interaction.componentId() != null
           && nodes.containsKey(interaction.componentId())
           && Set.of(JspAnalysis.InteractionType.NAVIGATION, JspAnalysis.InteractionType.FORM_SUBMIT)
               .contains(interaction.type())) {
         String trigger = interaction.componentId();
-        boolean existing =
-            behaviors.values().stream()
-                .anyMatch(
-                    b ->
-                        trigger.equals(b.triggerId())
-                            && Set.of(
-                                    BehaviorType.NAVIGATE,
-                                    BehaviorType.SUBMIT_FORM,
-                                    BehaviorType.UNKNOWN)
-                                .contains(b.type()));
-        if (existing) continue;
+        if (navigating.contains(trigger)) continue;
         BehaviorType type =
             interaction.type() == JspAnalysis.InteractionType.FORM_SUBMIT
                 ? BehaviorType.SUBMIT_FORM
@@ -218,6 +216,7 @@ public final class MarkupGraphContribution {
         String event = type == BehaviorType.SUBMIT_FORM ? "submit" : "click",
             expression = interaction.originalExpression();
         String id = StableGraphIds.behavior(trigger, event, type, expression, 0);
+        navigating.add(trigger);
         behaviors.put(
             id,
             new Behavior(

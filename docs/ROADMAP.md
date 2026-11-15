@@ -408,3 +408,9 @@
 
 - WP132：已證明的導覽不再被推論結果降級（`SpringMvcAnalyzer.edge()` 遇到較強證明時升級，`SpringControllerFlow.project()` 保留 CONFIRMED，並改以索引查詢 HANDLED_BY／RENDERS／FORWARDS_TO）（RV-206）；XML controller 的路由也記到畫面上，無 action 的表單與相對連結可以解析（RV-207）；JSP 相對 URL 套用 `.`／`..` 正規化，超出根目錄時標為 unresolved（RV-208）；Struts `<action>` 內的 `<exception>` 只從該 action 出發（RV-301）。不改變對外契約，未新增 ADR。
 - 驗證：新增 6 個測試，整合測試都已確認在修改前失敗；Maven 全數通過。
+
+## R62 實測熱點與過大的預覽擷取
+
+- WP133：以 300 個 action 的合成專案量測後，`StrutsScreens.screenForView`、`MarkupGraphContribution`、`StrutsInteractions` 的線性搜尋改用索引（新增 `NodesByViewName`）；`element-styles.json` 超過 32 MiB 時報表照常產出、不含元素樣式並加上 `PREVIEW_STYLES_TOO_LARGE` 診斷（新發現 RV-118），見 [ADR 0149](adr/0149-r62-hotspots-and-oversized-capture.md)（RV-702 部分）。
+- 量測：Java 分析 37.7 秒 → 18.5 秒；完整 CLI 由無報表變為 186 秒完成。
+- 驗證：合成專案與 14 個 fixture 的圖與 prototype 產物逐位元組相同；新增 2 個測試；Maven 全數通過。

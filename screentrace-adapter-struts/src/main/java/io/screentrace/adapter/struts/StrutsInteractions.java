@@ -25,6 +25,11 @@ final class StrutsInteractions {
   private StrutsInteractions() {}
 
   static void addInteractions(JspAnalysis jsp, State state) throws IOException {
+    // The first interaction of each component, looked up per tag instead of scanning them all.
+    Map<String, JspAnalysis.Interaction> interactionByComponent = new HashMap<>();
+    for (var interaction : jsp.interactions())
+      if (interaction.componentId() != null)
+        interactionByComponent.putIfAbsent(interaction.componentId(), interaction);
     Map<String, List<Control>> byView = new TreeMap<>();
     Map<String, List<ScreenLoadCall>> loadCallsByView = new TreeMap<>();
     var menus =
@@ -176,8 +181,7 @@ final class StrutsInteractions {
             int occurrence = occurrences.merge(occurrenceKey, 1, Integer::sum) - 1;
             String id =
                 StableGraphIds.component(path, kind, identityAttributes(tag, name), occurrence);
-            var resolved =
-                jsp.interactions().stream().filter(i -> id.equals(i.componentId())).findFirst();
+            var resolved = Optional.ofNullable(interactionByComponent.get(id));
             if (resolved.isPresent() && !resolved.get().submitsCurrentView()) {
               target = resolved.get().target();
               if (resolved.get().originalExpression() != null)

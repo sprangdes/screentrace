@@ -84,7 +84,7 @@ final class StrutsModel {
   static final class State {
     final ProjectInventory inventory;
     final StrutsVersionEvidence strutsVersion;
-    final Map<String, GraphNode> nodes = new TreeMap<>();
+    final NodesByViewName nodes = new NodesByViewName();
     final Map<String, Relationship> edges = new TreeMap<>();
     final List<Diagnostic> diagnostics = new ArrayList<>();
     final Map<String, Behavior> behaviors = new TreeMap<>();

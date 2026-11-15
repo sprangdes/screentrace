@@ -246,10 +246,14 @@ P1 處理結果見各項「狀態」（R53，[ADR 0144](adr/0144-r53-code-review
 
 ---
 
+## 後續發現
+
+- **RV-118 ［已核對，已修正（R62）］** `PreviewCaptureReader.java:28`：`element-styles.json` 有 32 MiB 讀取上限，超過時拋例外，CLI 完全沒有報表。300 個畫面的合成專案就產生 70 MB。改為略過元素樣式並在報表中說明（ADR 0149）。
+
 ## P3 — 效能
 
 - **RV-701** 重複解析 Java 原始碼：Spring（`SpringExternalLoginFlow`、`SpringExternalCalls`、`SpringSecurityRedirects`、`SpringServerValidation`、`SpringBootAnalyzer` 各自解析，未共用 `ParsedJavaUnits`）、Struts（偵測器跑兩次 + `javaTypes` + `ActionContracts`）、parser-jsp（`ScriptSources.collect` 跑兩次、`JspProjectParser.analyze` 為取 include 重跑、`UrlResolution.context` 多處重算）。
-- **RV-702** 線性去重與 O(E²) 掃描：`SpringMvcAnalyzer:1412` addNode／edge、`SpringControllerFlow:531`、`SpringFormBindings:207`、`RouteTemplateInference:134`、`UrlGraphContribution:213`、`StrutsValidation:73`（五層巢狀）、`StrutsInteractions:175`、`ApiUsage:276`、`PreviewCaptureReader:219`、viewer `usage.ts:40`、`contracts.ts:152`。
+- **RV-702** 線性去重與 O(E²) 掃描：`SpringMvcAnalyzer:1412` addNode／edge、`SpringControllerFlow:531`、`SpringFormBindings:207`、`RouteTemplateInference:134`、`UrlGraphContribution:213`、`StrutsValidation:73`（五層巢狀）、`StrutsInteractions:175`、`ApiUsage:276`、`PreviewCaptureReader:219`、viewer `usage.ts:40`、`contracts.ts:152`。 **狀態：部分處理（R62）：以合成專案量測後，修正 `StrutsScreens.screenForView`、`MarkupGraphContribution`、`StrutsInteractions` 三個實際熱點，以及 R61 的 `SpringControllerFlow.project()`、R56 的 `ApiUsage`；其餘位置在量測中佔比低，未處理。**
 - **RV-703** 重複讀取設定檔：`StrutsInteractions:100` 每個 tag 重讀 web.xml、`ActionContracts:100` 每個端點重新解析 struts-config、`StrutsServletMappings:49` 共用 layout 每個畫面重讀、`ProjectScanner:173` 與 `ProjectInventory` 多次讀取 XML。
 - **RV-704** `StrutsTiles:367`：`isTilesLayoutPath` 每次呼叫重算所有 tile 範本。
 - **RV-705** 每次呼叫建立 `ObjectMapper`：`SpringControllerReturns:231`、`SpringServerValidation`、`SpringSubmittedModel`、`SpringExternalCalls`、`SpringMvcAnalyzer.tilesAttributesJson`、`RouteTemplateInference:342,381,438`。

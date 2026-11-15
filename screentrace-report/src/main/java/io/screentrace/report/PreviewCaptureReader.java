@@ -19,6 +19,9 @@ import java.util.regex.Pattern;
 
 /** Reads the WP6 contract without dropping unmatched elements or overflowing style data. */
 final class PreviewCaptureReader {
+  /** Largest element-styles.json read into memory; larger captures are reported, not read. */
+  static final long MAX_STYLE_BYTES = 32L * 1024 * 1024;
+
   private final ObjectMapper json = new ObjectMapper();
 
   PreviewModel read(ApplicationGraph graph, PreviewModel baseline, Path output) throws IOException {
@@ -26,7 +29,7 @@ final class PreviewCaptureReader {
     var data =
         json.readTree(
             SafeProjectFiles.readUtf8Limited(
-                output, output.resolve("static-preview/element-styles.json"), 32L * 1024 * 1024));
+                output, output.resolve("static-preview/element-styles.json"), MAX_STYLE_BYTES));
     if (!"2".equals(data.path("version").asText())
         || !"2.2".equals(data.path("schemaVersion").asText()))
       throw new IOException("Preview capture requires version 2 / schema 2.2");

@@ -237,3 +237,4 @@ Java 以 google-java-format、TS／JS 以 Prettier 排版，JS 以 ESLint、TS �
 | [0146](0146-r55-contain-single-item-failures.md) | R55 單一檔案或項目出錯只影響它自己 | 有效 |
 | [0147](0147-r57-decode-ampersands-in-urls.md) | R57 URL 中的 `&amp;` 在使用處解碼一次 | 有效 |
 | [0148](0148-r60-one-endpoint-per-request-method.md) | R60 多個 HTTP 方法的 mapping 每個方法各建一個端點 | 有效 |
+| [0149](0149-r62-hotspots-and-oversized-capture.md) | R62 三個熱點改用索引；過大的元素樣式不再讓報表失敗 | 有效 |
