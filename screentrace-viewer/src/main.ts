@@ -12,7 +12,7 @@ import { prototypeViewer } from './prototype';
 import { PrototypeHistory } from './prototype-history';
 import { apiPage } from './api-page';
 import { screenPanel } from './screen-panel';
-import { decisionLabel } from './review-ui';
+import { placeBadge, decisionLabel } from './review-ui';
 import { previewDocument, previewSelector } from './preview';
 import { generateMarkdown, importMarkdown, markdownSizeWarning } from './shared/review-md';
 import {
@@ -411,7 +411,11 @@ try {
         }, 400);
       }, STATUS_SHOWN_MS);
   };
+  // Counts every change to the decisions, so a remembered file opened later can tell
+  // whether the person decided something in the meantime.
+  let edits = 0;
   const persist = () => {
+    edits++;
     if (saveReview(storage, reviewState)) say('⚠ 無法暫存在瀏覽器，請下載 md', 'error');
   };
 
@@ -596,29 +600,42 @@ try {
       const handle = await chooseSaveFile(suggestedName);
       await grant(handle);
       await remember(handle);
-      await writeNow();
+      // Queue behind any write in progress, and drop a pending one: this write covers it.
+      clearTimeout(writeTimer);
+      await (writing = writing.then(writeNow));
       if (fileState === 'saved') say(`已設定進度檔：${handle.name}`);
     } catch (error) {
       if (!isCancel(error)) say(`無法設定進度檔：${String(error)}`, 'error');
     }
   };
-  const load = async (handle: FileHandle) => {
+  /** Read `handle` into the page; with `since`, give up (returning false) when a decision
+   * was made after that edit count, so the person's newer choices are not overwritten. */
+  const load = async (handle: FileHandle, since?: number) => {
     await grant(handle);
     const file = await handle.getFile();
     if (file.size > 64 * 1024 * 1024) throw Error('檔案超過 64 MiB 安全上限');
-    const text = await file.text();
-    if (text.trim()) applyImported(await importMarkdown(text, mdPayload));
+    const text = await file.text(),
+      imported = text.trim() ? await importMarkdown(text, mdPayload) : undefined;
+    if (since !== undefined && edits !== since) return false;
+    if (imported) applyImported(imported);
     await remember(handle);
     fileState = 'saved';
     renderFile();
     render();
+    return true;
   };
-  const resume = async () => {
+  const resume = async (since?: number) => {
     const handle = fileHandle;
     if (!handle) return;
     try {
-      await load(handle);
-      say(`已載入上次進度：${handle.name}`);
+      if (await load(handle, since)) say(`已載入上次進度：${handle.name}`);
+      else {
+        // Decided before the remembered file arrived: keep those decisions and let the
+        // person choose whether the file replaces them.
+        fileState = 'pending';
+        renderFile();
+        saveMenu.open = true;
+      }
     } catch (error) {
       fileState = 'pending';
       renderFile();
@@ -1072,8 +1089,7 @@ try {
       badge.dataset.reviewBadge = record.graphComponentId;
       badge.textContent = decisionLabel(effective);
       badge.style.cssText = `display:inline-block;background:${color};color:white;font:600 11px system-ui;padding:2px 5px;border-radius:4px;pointer-events:none;`;
-      if (node.localName === 'input') node.insertAdjacentElement('afterend', badge);
-      else node.append(badge);
+      placeBadge(node, badge);
     }
   };
   // Building a preview inlines its images and takes long enough to stall the zoom, so it is prepared as soon as
@@ -1511,7 +1527,8 @@ try {
 
   if (!storage) say('⚠ 無法暫存在瀏覽器，請下載 md', 'error');
   renderFile();
-  if (fileState === 'none')
+  if (fileState === 'none') {
+    const startEdits = edits;
     handleStore()
       .load(fileKey)
       .then(async (handle) => {
@@ -1519,7 +1536,11 @@ try {
         fileHandle = handle;
         fileState = 'pending';
         renderFile();
-        if ((await handle.queryPermission({ mode: 'readwrite' })) === 'granted') await resume();
+        if (
+          edits === startEdits &&
+          (await handle.queryPermission({ mode: 'readwrite' })) === 'granted'
+        )
+          await resume(startEdits);
         else {
           saveMenu.open = true;
         }
@@ -1527,6 +1548,7 @@ try {
       .catch(() => {
         /* no remembered file */
       });
+  }
   render();
   root.replaceChildren(shell);
   root.dataset.ready = 'true';

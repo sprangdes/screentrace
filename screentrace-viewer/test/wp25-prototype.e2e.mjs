@@ -144,3 +144,26 @@ test('WP25 review annotations exist before a delayed iframe load callback', asyn
     await browser.close();
   }
 });
+
+test('RV-611 a page sized by the viewport does not enlarge the frame without end', async () => {
+  const browser = await chromium.launch();
+  try {
+    const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+    page.setDefaultTimeout(4000);
+    const data = prototypeFixture();
+    data.documents.a =
+      '<html><head><style>body{min-height:100vh;margin:8px}</style></head><body><main>Short page</main></body></html>';
+    delete data.preview.screens[0].height;
+    await page.goto(await fileFixture(data));
+    await openScreen(page, 'a');
+    await page.locator('.preview[aria-busy="false"]').waitFor();
+    const frameHeight = () => page.locator('iframe').evaluate((f) => parseFloat(f.style.height));
+    await page.waitForTimeout(500);
+    const first = await frameHeight();
+    await page.waitForTimeout(500);
+    assert.equal(await frameHeight(), first);
+    assert.ok(first < 1000, String(first));
+  } finally {
+    await browser.close();
+  }
+});

@@ -757,7 +757,8 @@ export async function importMarkdown(
   let end = at + 1;
   while (end < lines.length && lines[end] !== '```') end++;
   if (end === lines.length) throw Error('附錄區塊未完整結束');
-  if (lines.slice(end + 1).join('\n') !== '')
+  // Editors often add empty lines at the end of a file; anything else after the block is refused.
+  if (lines.slice(end + 1).some((line) => line !== ''))
     throw Error('review state 必須為文件最後區塊，之後不得有內容');
   const raw = lines.slice(at + 1, end).join('\n');
   if (new TextEncoder().encode(raw).length > (options.maxJsonBytes ?? MAX_STATE_JSON_BYTES))

@@ -199,6 +199,12 @@ test('JSON import preserves unknown IDs, rejects prototype data and trailing con
   assert.equal(restored.state.fingerprint, changed.fingerprint);
   assert.equal(restored.state.screenDecisions.a, 'KEEP');
   await assert.rejects(m.importMarkdown(out + '\n ', data), /最後/);
+  // RV-610: empty lines an editor adds at the end are not content.
+  assert.equal((await m.importMarkdown(out + '\n\n', data)).state.screenDecisions.a, 'KEEP');
+  assert.equal(
+    (await m.importMarkdown(out.replaceAll('\n', '\r\n') + '\r\n', data)).state.screenDecisions.a,
+    'KEEP',
+  );
   const prefix = out.split('```json screentrace-review-state\n')[0];
   const bad = {
     format_version: 1,

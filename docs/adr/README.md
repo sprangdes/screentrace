@@ -181,13 +181,14 @@ JSP、JSPF、tag file、Tiles 與有限的 Thymeleaf 以 `MarkupTag` 等 parser 
 |---|---|---|
 | [0004](0004-screen-scoped-component-decisions.md) | 元件決策依畫面與元件複合鍵保存 | 有效 |
 | [0022](0022-review-md-data-isolation.md) | review md 的專案資料隔離（OQ-007） | 有效 |
-| [0023](0023-review-md-machine-state.md) | review md 機器狀態的完整性與隔離 | 有效 |
+| [0023](0023-review-md-machine-state.md) | review md 機器狀態的完整性與隔離 | 部分被取代：附錄區塊之後可以有空行，見 [0153](0153-r70-review-md-trailing-empty-lines.md) |
 | [0024](0024-md-expression-redaction.md) | md 的運算式內容邊界 | 有效 |
 | [0025](0025-retire-json-review-export.md) | 歷史 JSON review 匯出退場 | 有效 |
 | [0026](0026-review-md-unicode-and-code-span.md) | Review md 隱形字元隔離與 code span 忠實度 | 有效 |
 | [0062](0062-confirmation-dashboard-workflow.md) | 以既有決策模型擴充確認工作流 | 部分被取代：介面於 R17 重寫或移除，見 [0084](0084-r17-two-page-report-and-retired-tests.md) |
 | [0069](0069-r14-wp47-decision-notes-and-md-v3.md) | R14 WP47 決策原因、備註與 Markdown v3 | 部分被取代：決策原因與備註已退場（[0084](0084-r17-two-page-report-and-retired-tests.md)），md 改為 v1（[0086](0086-r17-progress-file-autosave-and-md-v1.md)） |
 | [0086](0086-r17-progress-file-autosave-and-md-v1.md) | R17 進度檔自動存檔與 md v1 | 有效 |
+| [0153](0153-r70-review-md-trailing-empty-lines.md) | R70 review md 的附錄區塊之後允許空行 | 有效 |
 
 ## 元件庫
 

@@ -30,9 +30,9 @@ P1 處理結果見各項「狀態」（R53，[ADR 0144](adr/0144-r53-code-review
 
 建議修正順序：先處理 P1（RV-001～RV-011），再處理同一主題的 P2 群組（見文末「跨模組主題」），P3 依效能量測結果挑選。
 
-## 修正進度（2026-11-15，至 R69 `21584e7`）
+## 修正進度（2026-11-15，至 R70）
 
-各項的處理結果寫在該項的「狀態」；每輪的內容與驗證見 [ROADMAP](ROADMAP.md) R53～R69。
+各項的處理結果寫在該項的「狀態」；每輪的內容與驗證見 [ROADMAP](ROADMAP.md) R53～R70。
 
 | 範圍 | 處理輪次 | 結果 |
 |---|---|---|
@@ -42,16 +42,15 @@ P1 處理結果見各項「狀態」（R53，[ADR 0144](adr/0144-r53-code-review
 | adapter-struts RV-301～324 | R54、R57、R59、R61、R67 | 全部修正 |
 | parser-jsp RV-401～428 | R54、R55、R57、R68 | 除 RV-407、409、410、416 外全部修正 |
 | js／capture RV-501～522 | R54、R55、R57、R69 | 全部修正 |
-| viewer RV-601～612 | R53（RV-004）、R55（RV-602）、R56（RV-612） | RV-601、603～611 未處理 |
+| viewer RV-601～612 | R53（RV-004）、R55（RV-602）、R56（RV-612）、R70 | 全部修正 |
 | P3 效能 RV-701～710 | R56、R61、R62（RV-702 部分） | RV-701、703～710 未處理 |
 | P3 重複程式碼與死碼 RV-801～808 | R65（RV-808） | RV-801～807 未處理 |
 
 接下來依序處理：
 
-1. viewer RV-601、603～611。
-2. RV-801～807（重複程式碼與死碼）。
-3. parser-jsp 剩下的 RV-407、409、410、416（原因見各項狀態；RV-407、410 在 R68 試作後撤回）。
-4. RV-701、703～710 依量測結果挑選。
+1. RV-801～807（重複程式碼與死碼）。
+2. parser-jsp 剩下的 RV-407、409、410、416（原因見各項狀態；RV-407、410 在 R68 試作後撤回）。
+3. RV-701、703～710 依量測結果挑選。
 
 每輪的做法：
 
@@ -59,11 +58,12 @@ P1 處理結果見各項「狀態」（R53，[ADR 0144](adr/0144-r53-code-review
   - `./mvnw -o install`（Java 先跑 `./mvnw com.diffplug.spotless:spotless-maven-plugin:apply`）；
   - `(cd screentrace-js && npm test)`；
   - `node --test screentrace-capture/*.test.mjs`，要在 repo 根目錄執行；
-  - `(cd screentrace-viewer && npm test && npm run build)`；
+  - `(cd screentrace-viewer && npm run build && npm test)`；改到 viewer 或圖時再跑 `npm run e2e`（需先 `./mvnw install` 產生 wp10 fixture 報表；`performance.e2e.mjs` 以固定的 R5 時間為基準，在較慢的機器上會失敗）；
+  - 終端機 locale 不是 UTF-8 時，Maven 的 `PreviewResourceDeterminismTest` 會因中文檔名失敗，先設 `LANG=C.UTF-8`；
   - `npm --prefix screentrace-viewer run format`、`format:check`、`lint`。
 - 用 `git worktree` 建一份 HEAD 做基準，比對 13 個 fixture 輸出的 `application-graph.json`，有差異要能逐項解釋。
 - 更新本文件各項「狀態」與 ROADMAP 的 R 輪次；改變對外契約時新增 ADR，並登記在 `docs/adr/README.md`。
-- 每輪 commit 後推送到 `claude/jolly-hamilton-htyxgq`。
+- 每輪 commit 後推送到工作分支（R53～R69 在 `claude/jolly-hamilton-htyxgq`，R70 起在 `claude/cool-edison-ilyuip`）。
 
 ---
 
@@ -266,17 +266,17 @@ P1 處理結果見各項「狀態」（R53，[ADR 0144](adr/0144-r53-code-review
 
 ## P2 — viewer
 
-- **RV-601** `inert-document.ts:21`：詞法惰性化與 DOMParser 解析不一致（`<!-->`、`--!>`、raw-text 元素結尾、`\v`／NBSP 空白），可讓 `<img src>` 保持有效；目前僅靠 iframe CSP 擋住請求。
+- **RV-601** `inert-document.ts:21`：詞法惰性化與 DOMParser 解析不一致（`<!-->`、`--!>`、raw-text 元素結尾、`\v`／NBSP 空白），可讓 `<img src>` 保持有效；目前僅靠 iframe CSP 擋住請求。 **狀態：已修正（R70）：** 詞法階段改用 HTML 的 ASCII 空白、`<!-->`／`<!--->`／`--!>` 的註解結尾，raw-text 元素讀到對應結束標籤為止；解析後再對每個 fetching 屬性（不論詞法階段有無改名）套用同一份允許規則，兩者不一致時也不會留下有效的 `src`。實測 Chromium 的 DOMParser 文件解析時不發出請求。
 - **RV-602** `preview.ts:43`：CSS 資源循環 import 時拋例外，且在設定 cache 前，任何畫面的預覽都無法顯示。 **狀態：已修正（R55）。**
-- **RV-603** `main.ts:1515`：啟動時記住的進度檔 handle 在 IndexedDB 回應後 `resume()`，覆蓋使用者在這之前做的決策。
-- **RV-604** `main.ts:594`：`choose()` 直接 `writeNow()`，未串接 `writing` 也未清除 timer，可能並行寫入。
-- **RV-605** `relations.ts:146`：tooltip 顯示全部觸發元件後又顯示「其餘 N 個」，沒有截斷。
-- **RV-606** `labels.ts:398`：自寫 regex 不接受含 `:` 的標籤名，`html:form` 路徑成為無效 selector，Struts 元件失去文件標籤。應改用 `previewSelector`。
-- **RV-607** `names.ts:91`：同名畫面中有 entryQuery 時只處理那些畫面，其餘仍同名。
-- **RV-608** `personas.ts:124`：不確定路徑先標記 seen，之後確定路徑被跳過，依步驟順序產生不同結果。
-- **RV-609** `main.ts:1076`：決策徽章 append 到 `<select>`／`<textarea>`／`<img>` 內，無法顯示。
-- **RV-610** `shared/review-md.ts:760`：結尾多一個換行就拒絕匯入（編輯器常自動加入）。
-- **RV-611** `prototype.ts:120`：無擷取高度且頁面為 `min-height:100vh` + margin 時，ResizeObserver 無限放大 iframe。
+- **RV-603** `main.ts:1515`：啟動時記住的進度檔 handle 在 IndexedDB 回應後 `resume()`，覆蓋使用者在這之前做的決策。 **狀態：已修正（R70）：** 記錄決策變動次數；記住的進度檔回來時若使用者已做過決策，不自動載入，留在「繼續上次進度」由使用者選擇。
+- **RV-604** `main.ts:594`：`choose()` 直接 `writeNow()`，未串接 `writing` 也未清除 timer，可能並行寫入。 **狀態：已修正（R70）：** `choose()` 清除等待中的計時器並串在 `writing` 之後寫入。
+- **RV-605** `relations.ts:146`：tooltip 顯示全部觸發元件後又顯示「其餘 N 個」，沒有截斷。 **狀態：已修正（R70）。**
+- **RV-606** `labels.ts:398`：自寫 regex 不接受含 `:` 的標籤名，`html:form` 路徑成為無效 selector，Struts 元件失去文件標籤。應改用 `previewSelector`。 **狀態：已修正（R70）：** 改用 `previewSelector`。
+- **RV-607** `names.ts:91`：同名畫面中有 entryQuery 時只處理那些畫面，其餘仍同名。 **狀態：已修正（R70）：** 帶 query 的畫面加上 query 後，其餘同名畫面照常以路由、檔名等區分。
+- **RV-608** `personas.ts:124`：不確定路徑先標記 seen，之後確定路徑被跳過，依步驟順序產生不同結果。 **狀態：已修正（R70）：** 中間的網址入口記錄經過時是否確定，確定路徑再次經過時重新走訪。
+- **RV-609** `main.ts:1076`：決策徽章 append 到 `<select>`／`<textarea>`／`<img>` 內，無法顯示。 **狀態：已修正（R70）：** void 元素、表單控制項與嵌入媒體的徽章放在元素之後。
+- **RV-610** `shared/review-md.ts:760`：結尾多一個換行就拒絕匯入（編輯器常自動加入）。 **狀態：已修正（R70，[ADR 0153](adr/0153-r70-review-md-trailing-empty-lines.md)）：** 結束圍欄之後允許空行；只有空白字元的行仍拒絕。
+- **RV-611** `prototype.ts:120`：無擷取高度且頁面為 `min-height:100vh` + margin 時，ResizeObserver 無限放大 iframe。 **狀態：已修正（R70）：** 內容在框架長高後超出的高度與上次相同（由框架高度決定）時停止追蹤。
 - **RV-612** `usage.ts:41`：同 RV-110，巢狀 CALL_API 重複計算呼叫者。 **狀態：已修正（R56，同 RV-110）。**
 
 ---
