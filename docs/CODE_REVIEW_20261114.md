@@ -30,6 +30,41 @@ P1 處理結果見各項「狀態」（R53，[ADR 0144](adr/0144-r53-code-review
 
 建議修正順序：先處理 P1（RV-001～RV-011），再處理同一主題的 P2 群組（見文末「跨模組主題」），P3 依效能量測結果挑選。
 
+## 修正進度（2026-11-15，至 R69 `21584e7`）
+
+各項的處理結果寫在該項的「狀態」；每輪的內容與驗證見 [ROADMAP](ROADMAP.md) R53～R69。
+
+| 範圍 | 處理輪次 | 結果 |
+|---|---|---|
+| P1 RV-001～011 | R53 | 全部處理（RV-006 不成立） |
+| bin／cli／core／scanner／report RV-101～118、RV-808 | R56、R62、R63、R64、R65 | 全部修正 |
+| adapter-spring RV-201～221 | R55、R58、R60、R61、R66 | 全部處理；RV-214、RV-221 為部分修正（剩餘部分見各項狀態） |
+| adapter-struts RV-301～324 | R54、R57、R59、R61、R67 | 全部修正 |
+| parser-jsp RV-401～428 | R54、R55、R57、R68 | 除 RV-407、409、410、416 外全部修正 |
+| js／capture RV-501～522 | R54、R55、R57、R69 | 全部修正 |
+| viewer RV-601～612 | R53（RV-004）、R55（RV-602）、R56（RV-612） | RV-601、603～611 未處理 |
+| P3 效能 RV-701～710 | R56、R61、R62（RV-702 部分） | RV-701、703～710 未處理 |
+| P3 重複程式碼與死碼 RV-801～808 | R65（RV-808） | RV-801～807 未處理 |
+
+接下來依序處理：
+
+1. viewer RV-601、603～611。
+2. RV-801～807（重複程式碼與死碼）。
+3. parser-jsp 剩下的 RV-407、409、410、416（原因見各項狀態；RV-407、410 在 R68 試作後撤回）。
+4. RV-701、703～710 依量測結果挑選。
+
+每輪的做法：
+
+- 先寫測試，用 `git stash -q -- <修改的 main 檔>` 確認修改前會失敗，再跑全套：
+  - `./mvnw -o install`（Java 先跑 `./mvnw com.diffplug.spotless:spotless-maven-plugin:apply`）；
+  - `(cd screentrace-js && npm test)`；
+  - `node --test screentrace-capture/*.test.mjs`，要在 repo 根目錄執行；
+  - `(cd screentrace-viewer && npm test && npm run build)`；
+  - `npm --prefix screentrace-viewer run format`、`format:check`、`lint`。
+- 用 `git worktree` 建一份 HEAD 做基準，比對 13 個 fixture 輸出的 `application-graph.json`，有差異要能逐項解釋。
+- 更新本文件各項「狀態」與 ROADMAP 的 R 輪次；改變對外契約時新增 ADR，並登記在 `docs/adr/README.md`。
+- 每輪 commit 後推送到 `claude/jolly-hamilton-htyxgq`。
+
 ---
 
 ## P1
