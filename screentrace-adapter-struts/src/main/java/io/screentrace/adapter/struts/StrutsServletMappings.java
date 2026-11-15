@@ -237,10 +237,19 @@ final class StrutsServletMappings {
   }
 
   static void readServletMapping(State state) {
+    // The deployment descriptor of a web root comes first; a sample or documentation web.xml that
+    // happens to sort earlier is not the application's (RV-314).
     List<Path> webXmls =
         state.inventory.files().stream()
             .filter(file -> file.getFileName().toString().equals("web.xml"))
-            .sorted()
+            .sorted(
+                java.util.Comparator.comparing(
+                        (Path file) ->
+                            io.screentrace.scanner.WebRoots.rootOf(
+                                        state.inventory.webRoots(), relative(state, file))
+                                    == null
+                                || !relative(state, file).endsWith("WEB-INF/web.xml"))
+                    .thenComparing(java.util.Comparator.naturalOrder()))
             .toList();
     Document document = null;
     String webPath = ".";

@@ -149,29 +149,29 @@ P1 處理結果見各項「狀態」（R53，[ADR 0144](adr/0144-r53-code-review
 ## P2 — adapter-struts
 
 - **RV-301** `StrutsActionInheritance.java:42`：action 內的 `<exception>` 被當成模組內所有 action 的出口，產生大量錯誤 CALLS 邊。 **狀態：已修正（R61）。**
-- **RV-302** `StrutsBehaviorProjection.java:174`：`forward()` 寫入 state 的診斷與既有節點更新沒有回寫到回傳的 graph。
-- **RV-303** `StrutsConfigParser.java:255`：`inputForward="true"` 只查 global forwards，未先查 action 本地 forward。
-- **RV-304** `StrutsForwards.java:351`：模組相對 forward 指向 action 時未加模組前綴，且 fallback 把 query string 一起當 key。
+- **RV-302** `StrutsBehaviorProjection.java:174`：`forward()` 寫入 state 的診斷與既有節點更新沒有回寫到回傳的 graph。 **狀態：已修正（R67）：診斷回到輸出；既有節點的更新仍不回寫（避免以較舊狀態覆蓋）。**
+- **RV-303** `StrutsConfigParser.java:255`：`inputForward="true"` 只查 global forwards，未先查 action 本地 forward。 **狀態：已修正（R67）。**
+- **RV-304** `StrutsForwards.java:351`：模組相對 forward 指向 action 時未加模組前綴，且 fallback 把 query string 一起當 key。 **狀態：已修正（R67）。**
 - **RV-305** `StrutsScreens.java:165`：welcome-file 依規格沒有前導 `/`，`index.do` 永遠對不到路由。 **狀態：已修正（R59）：補上前導 `/` 再比對；端點路徑維持 action 的公開路徑。**
 - **RV-306** `StrutsInteractions.java:97`：`<logic:forward name="...">` 的 `name` 沒被讀取，典型 index.jsp 轉址沒有目標。 **狀態：已修正（R59）：以 `name` 查 global forward，原本的 forward／page／action／href 仍作為後備。**
-- **RV-307** `StrutsControls.java:346`：`dispatchMethod`／`dispatchMethodStatus` 寫在已複製完的 map 上，為死寫入。
-- **RV-308** `StrutsBehaviorProjection.java:137`：dispatch 端點寫死 `PROVEN`／`CONFIRMED`，並覆蓋既有 UNRESOLVED／AMBIGUOUS 節點與證據。
-- **RV-309** `StrutsActionInheritance.java:197`：dispatch 方法只查目的類別自身方法，繼承自抽象父類別或 LookupDispatchAction 的情況失敗。
-- **RV-310** `ActionContracts.java:37`、`StrutsWildcards.java:146`：用 XML 原始 `type` 而非 Spring 解析後的 `actionType`，`DelegatingActionProxy` 找不到實際類別；`effectiveType` 的 fallback 是死碼。
+- **RV-307** `StrutsControls.java:346`：`dispatchMethod`／`dispatchMethodStatus` 寫在已複製完的 map 上，為死寫入。 **狀態：已修正（R67）。**
+- **RV-308** `StrutsBehaviorProjection.java:137`：dispatch 端點寫死 `PROVEN`／`CONFIRMED`，並覆蓋既有 UNRESOLVED／AMBIGUOUS 節點與證據。 **狀態：已修正（R67）。**
+- **RV-309** `StrutsActionInheritance.java:197`：dispatch 方法只查目的類別自身方法，繼承自抽象父類別或 LookupDispatchAction 的情況失敗。 **狀態：已修正（R67）。**
+- **RV-310** `ActionContracts.java:37`、`StrutsWildcards.java:146`：用 XML 原始 `type` 而非 Spring 解析後的 `actionType`，`DelegatingActionProxy` 找不到實際類別；`effectiveType` 的 fallback 是死碼。 **狀態：已修正（R67）。**
 - **RV-311** `StrutsConfigParser.java:492`：任何 `struts-` 開頭的 artifact／jar（spring-webmvc-struts、struts-menu）都算 Struts 版本，造成版本衝突而所有 wildcard 變 AMBIGUOUS。 **狀態：已修正（R59）：只認 Struts 1 本身的 artifact 與 jar。**
 - **RV-312** `StrutsTiles.java:232,294`：`(?s).*\$\{|.*#\{|.*<%.*` 搭配 `matches()` 只偵測以 `${` 結尾的字串，含 EL 的標題被當成靜態。 **狀態：已修正（R59）。**
 - **RV-313** `StrutsDispatch.java:57`（`StrutsControls` 同理）：query string 未解碼 `&amp;`，XHTML 寫法的 dispatch 參數找不到。 **狀態：已修正（R57）。**
-- **RV-314** `StrutsServletMappings.java:251`：ActionServlet mapping 只讀排序第一個 web.xml，可能取到 `docs/sample/web.xml`。
-- **RV-315** `StrutsControls.java:469`：任何同時有 `prefix` 與 `page` 參數的連結都被改寫成 SwitchAction 路徑（分頁連結誤判）。
-- **RV-316** `StrutsControls.java:348`：MappingDispatchAction 產生不存在的 `?save=save` 請求參數。
+- **RV-314** `StrutsServletMappings.java:251`：ActionServlet mapping 只讀排序第一個 web.xml，可能取到 `docs/sample/web.xml`。 **狀態：已修正（R67）：web root 下的 `WEB-INF/web.xml` 優先。**
+- **RV-315** `StrutsControls.java:469`：任何同時有 `prefix` 與 `page` 參數的連結都被改寫成 SwitchAction 路徑（分頁連結誤判）。 **狀態：已修正（R67）。**
+- **RV-316** `StrutsControls.java:348`：MappingDispatchAction 產生不存在的 `?save=save` 請求參數。 **狀態：已修正（R67）。**
 - **RV-317** `StrutsInteractions.java:464`、`StrutsGraphSupport.java:48`：多處寫死 `src/main/webapp`／`WebContent`／`web`，未使用 `inventory.webRoots()`。 **狀態：已修正（R54，見 ADR 0145）。**
-- **RV-318** `StrutsMessages.java:45`：`endsWith(param + ".properties")` 無路徑邊界，`Messages` 也比對到 `AdminMessages.properties`。
-- **RV-319** `StrutsServletMappings.java:439`：route 已含前綴／後綴時不再加上，prefix mapping 的公開 URL 錯誤並產生假 DUPLICATE_ROUTE。
-- **RV-320** `StrutsConfigParser.java:387`：未列於 `config/<module>` 的設定檔以子字串猜模組，且忽略預設 `config` 參數。
-- **RV-321** `StrutsValidation.java:173`：只讀固定檔名，忽略 ValidatorPlugIn 的 `pathnames`。
-- **RV-322** `StrutsTiles.java:40,199`：`<put>` 只讀 `value`，忽略 Tiles 1 的 `content`；fallback 用 `endsWith` 無路徑邊界，`/body.jsp` 對到 `userbody.jsp`。
-- **RV-323** `StrutsActionInheritance.java:376`：證據迴圈與偵測迴圈的 `extends` 比對規則不同（無模組前綴），繼承範本缺少證據。
-- **RV-324** `StrutsControls.java:225`：未對應路由分支傳 `control` 而非 `contextual`，behavior id 與元件 target 不一致。
+- **RV-318** `StrutsMessages.java:45`：`endsWith(param + ".properties")` 無路徑邊界，`Messages` 也比對到 `AdminMessages.properties`。 **狀態：已修正（R67）。**
+- **RV-319** `StrutsServletMappings.java:439`：route 已含前綴／後綴時不再加上，prefix mapping 的公開 URL 錯誤並產生假 DUPLICATE_ROUTE。 **狀態：已修正（R67）：別名去重，不再產生假 DUPLICATE_ROUTE；`publicPath` 本身未改。**
+- **RV-320** `StrutsConfigParser.java:387`：未列於 `config/<module>` 的設定檔以子字串猜模組，且忽略預設 `config` 參數。 **狀態：已修正（R67）：設定檔不再依資料夾名稱猜模組；頁面仍依資料夾歸屬。**
+- **RV-321** `StrutsValidation.java:173`：只讀固定檔名，忽略 ValidatorPlugIn 的 `pathnames`。 **狀態：已修正（R67）。**
+- **RV-322** `StrutsTiles.java:40,199`：`<put>` 只讀 `value`，忽略 Tiles 1 的 `content`；fallback 用 `endsWith` 無路徑邊界，`/body.jsp` 對到 `userbody.jsp`。 **狀態：已修正（R67）。**
+- **RV-323** `StrutsActionInheritance.java:376`：證據迴圈與偵測迴圈的 `extends` 比對規則不同（無模組前綴），繼承範本缺少證據。 **狀態：已修正（R67）。**
+- **RV-324** `StrutsControls.java:225`：未對應路由分支傳 `control` 而非 `contextual`，behavior id 與元件 target 不一致。 **狀態：已修正（R67）。**
 
 ## P2 — parser-jsp
 

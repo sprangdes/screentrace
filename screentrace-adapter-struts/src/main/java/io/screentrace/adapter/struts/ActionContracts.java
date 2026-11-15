@@ -33,8 +33,15 @@ final class ActionContracts {
         List<String> bodyTypes = new ArrayList<>();
         boolean known = false;
         for (var handler : handlers) {
+          // A DelegatingActionProxy's real class is the Spring-resolved actionType (RV-310).
           String name =
-              handler.attributes().getOrDefault("class", handler.attributes().get("type"));
+              handler
+                  .attributes()
+                  .getOrDefault(
+                      "class",
+                      handler
+                          .attributes()
+                          .getOrDefault("actionType", handler.attributes().get("type")));
           var type = name == null ? null : types.get(name);
           String method = handler.attributes().getOrDefault("method", "execute");
           for (var declaration : graph.relationships())

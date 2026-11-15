@@ -128,8 +128,9 @@ final class StrutsWildcards {
           return result.toString();
         };
     Map<String, String> effectiveAttributes = new TreeMap<>();
-    effectiveActionAttributes(mapping, state, new LinkedHashSet<>())
-        .forEach((key, value) -> effectiveAttributes.put(key, substitute.apply(value)));
+    Map<String, String> rawAttributes =
+        effectiveActionAttributes(mapping, state, new LinkedHashSet<>());
+    rawAttributes.forEach((key, value) -> effectiveAttributes.put(key, substitute.apply(value)));
     Map<String, String> forwards = new TreeMap<>(), local = new TreeMap<>();
     Mapping parent = extendedMapping(mapping, state);
     if (parent != null) {
@@ -142,8 +143,12 @@ final class StrutsWildcards {
     local.replaceAll((key, value) -> substitute.apply(value));
     String
         effectiveType =
+            // The Spring-resolved class wins over the raw XML type, as for non-wildcard actions
+            // (RV-310); a type substituted by the wildcard still applies.
             Objects.toString(
-                effectiveAttributes.getOrDefault("type", effectiveAttributes.get("actionType")),
+                rawAttributes.getOrDefault("type", "").contains("{")
+                    ? effectiveAttributes.get("type")
+                    : mapping.type(),
                 mapping.type()),
         effectiveName = effectiveAttributes.get("name");
     String formId =

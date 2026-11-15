@@ -31,6 +31,7 @@ final class StrutsBehaviorProjection {
     var json = new com.fasterxml.jackson.databind.ObjectMapper();
     Set<String> previousNodes = new HashSet<>(state.nodes.keySet()),
         previousEdges = new HashSet<>(state.edges.keySet());
+    int previousDiagnostics = state.diagnostics.size();
     for (var b : graph.behaviors()) {
       if (!Set.of(BehaviorType.NAVIGATE, BehaviorType.SUBMIT_FORM).contains(b.type())) {
         behaviors.add(b);
@@ -107,7 +108,13 @@ final class StrutsBehaviorProjection {
               "StrutsDispatchResolution",
               ResolutionStatus.INFERRED,
               "來源 parameter=" + mapping.parameter() + "；字面方法=" + command + "；原文=" + raw));
-      nodes.put(
+      // The servlet mapping decides whether this public path is proven; a node another pass
+      // already built (possibly UNRESOLVED or AMBIGUOUS) keeps its own status and evidence
+      // (RV-308).
+      var servlet = state.servletMappings.get(mapping.module());
+      boolean proven =
+          servlet != null && servlet.status() == StrutsModel.ServletMappingStatus.PROVEN;
+      nodes.putIfAbsent(
           handler,
           new GraphNode(
               handler,
@@ -117,7 +124,7 @@ final class StrutsBehaviorProjection {
               source,
               Confidence.CONFIRMED,
               proof));
-      nodes.put(
+      nodes.putIfAbsent(
           endpoint,
           new GraphNode(
               endpoint,
@@ -135,9 +142,9 @@ final class StrutsBehaviorProjection {
                   "category",
                   "ACTION",
                   "servletMappingStatus",
-                  "PROVEN"),
+                  proven ? "PROVEN" : "UNRESOLVED"),
               mapping.source(),
-              Confidence.CONFIRMED,
+              proven ? Confidence.CONFIRMED : Confidence.INFERRED,
               proof));
       String handled =
           ApplicationGraph.id(NodeType.COMPONENT, "dispatch:" + endpoint + ":" + handler);
@@ -179,11 +186,17 @@ final class StrutsBehaviorProjection {
         (id, e) -> {
           if (!previousEdges.contains(id)) edges.putIfAbsent(id, e);
         });
+    // Diagnostics the dispatch projection raised (an unresolvable forward, for example) used to be
+    // dropped with the rest of the state (RV-302).
+    List<Diagnostic> diagnostics = new ArrayList<>(graph.diagnostics());
+    for (Diagnostic diagnostic :
+        state.diagnostics.subList(previousDiagnostics, state.diagnostics.size()))
+      if (!diagnostics.contains(diagnostic)) diagnostics.add(diagnostic);
     return new ApplicationGraph(
         graph.application(),
         List.copyOf(nodes.values()),
         List.copyOf(edges.values()),
-        graph.diagnostics(),
+        diagnostics,
         graph.apiContracts(),
         graph.schemaVersion(),
         behaviors,

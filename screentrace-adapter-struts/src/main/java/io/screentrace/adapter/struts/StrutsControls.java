@@ -223,11 +223,12 @@ final class StrutsControls {
             endpoint,
             Confidence.UNRESOLVED,
             control.source());
-        unresolvedBehavior(control, state);
+        // The resolved (request-relative) target, like every other unresolved branch (RV-324).
+        unresolvedBehavior(contextual, state);
         return;
       }
       diagnostic(state, "元件路由未解析：" + path, control.source(), "STRUTS_ROUTE_UNRESOLVED");
-      unresolvedBehavior(control, state);
+      unresolvedBehavior(contextual, state);
       return;
     }
     String endpoint =
@@ -346,21 +347,30 @@ final class StrutsControls {
           dispatchDetail = "分派到 " + method;
           controlAttributes.put("dispatchMethod", method);
           controlAttributes.put("dispatchMethodStatus", "方法存在");
-          endpoint = StableGraphIds.endpoint("ANY", path + "?" + mapping.parameter() + "=" + value);
+          // A MappingDispatchAction's method comes from the mapping, not from a request
+          // parameter, so its request is the plain path (RV-316).
+          boolean byMapping = mapping.family().equals("MappingDispatchAction");
+          String request = byMapping ? path : path + "?" + mapping.parameter() + "=" + value;
+          endpoint =
+              byMapping
+                  ? state.endpointIds.getOrDefault(path, StableGraphIds.endpoint("ANY", path))
+                  : StableGraphIds.endpoint("ANY", request);
           addNode(
               state,
               endpoint,
               NodeType.ENDPOINT,
-              "ANY " + path + "?" + mapping.parameter() + "=" + value,
-              Map.of(
-                  "httpMethod",
-                  "ANY",
-                  "path",
-                  path,
-                  "parameter",
-                  mapping.parameter(),
-                  "parameterValue",
-                  value),
+              "ANY " + request,
+              byMapping
+                  ? Map.of("httpMethod", "ANY", "path", path)
+                  : Map.of(
+                      "httpMethod",
+                      "ANY",
+                      "path",
+                      path,
+                      "parameter",
+                      mapping.parameter(),
+                      "parameterValue",
+                      value),
               control.source(),
               status);
           edge(state, EdgeType.HANDLED_BY, endpoint, handlerId, status, source);
@@ -377,6 +387,20 @@ final class StrutsControls {
                   state);
         }
       }
+      // Dispatch results recorded above belong on the component node, which was built before
+      // them (RV-307).
+      GraphNode current = state.nodes.get(control.id());
+      if (current != null && !current.attributes().equals(controlAttributes))
+        state.nodes.put(
+            control.id(),
+            new GraphNode(
+                current.id(),
+                current.type(),
+                current.name(),
+                controlAttributes,
+                current.source(),
+                current.confidence(),
+                current.evidence()));
       if ("LINK".equals(control.attributes().get("kind"))) {
         Set<String> destinations = new TreeSet<>();
         if ("SwitchAction".equals(mapping.type().substring(mapping.type().lastIndexOf('.') + 1))) {
@@ -467,11 +491,30 @@ final class StrutsControls {
         if (parts.length == 2) values.put(parts[0], parts[1]);
       }
       String prefix = values.get("prefix"), page = values.get("page");
-      if (prefix != null && page != null)
+      // Only a SwitchAction reads prefix and page; a search link with ?prefix=ab&page=2 is an
+      // ordinary request (RV-315).
+      if (prefix != null && page != null && targetsSwitchAction(target, state))
         return (prefix.endsWith("/") ? prefix.substring(0, prefix.length() - 1) : prefix)
             + (page.startsWith("/") ? page : "/" + page);
     }
     return target;
+  }
+
+  private static boolean targetsSwitchAction(String target, State state) {
+    String path = target.split("[?#]", 2)[0];
+    List<Mapping> mappings = state.routes.get(path);
+    if (mappings == null) {
+      String logical = logicalPath(path, "", state);
+      mappings = logical == null ? null : state.routes.get(logical);
+    }
+    return mappings != null
+        && mappings.stream()
+            .anyMatch(
+                m ->
+                    m.type() != null
+                        && m.type()
+                            .substring(m.type().lastIndexOf('.') + 1)
+                            .equals("SwitchAction"));
   }
 
   static boolean dispatchSubmit(Control control, State state) {

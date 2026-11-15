@@ -42,7 +42,7 @@ final class StrutsMessages {
               .filter(
                   file ->
                       file.toString().endsWith(".properties")
-                          && relative(state, file).endsWith(resource.parameter() + ".properties"))
+                          && bundleFile(relative(state, file), resource.parameter()))
               .sorted()
               .toList();
       Map<String, Set<String>> values = new TreeMap<>();
@@ -83,5 +83,17 @@ final class StrutsMessages {
     String value =
         selected == null ? null : state.messageBundles.getOrDefault(selected, Map.of()).get(key);
     return value == null ? "（訊息 key：" + key + "）" : value;
+  }
+
+  /**
+   * True when {@code relative} is the bundle {@code parameter} ("Messages" or "com.x.Messages")
+   * names, at a path-segment boundary: "AdminMessages.properties" is another bundle (RV-318).
+   */
+  static boolean bundleFile(String relative, String parameter) {
+    for (String name : List.of(parameter, parameter.replace('.', '/'))) {
+      String file = name + ".properties";
+      if (relative.equals(file) || relative.endsWith("/" + file)) return true;
+    }
+    return false;
   }
 }

@@ -258,7 +258,8 @@ final class StrutsConfigParser {
           forwardSources.put(item.getAttribute("name"), StrutsSources.source(path, item));
         }
         String input = action.getAttribute("input");
-        if (inputForward && !input.isBlank()) input = global.getOrDefault(input, input);
+        // Like ActionMapping.findForward: the action's own forwards first, then global (RV-303).
+        if (inputForward && !input.isBlank()) input = forwards.getOrDefault(input, input);
         Map<String, String> localForwards = new TreeMap<>();
         for (Element item : StrutsSources.elements(action, "forward"))
           localForwards.put(item.getAttribute("name"), item.getAttribute("path"));
@@ -291,9 +292,11 @@ final class StrutsConfigParser {
                   .toList();
           String primaryPath = publicPaths.get(0),
               endpointId = StableGraphIds.endpoint("ANY", route);
+          // A public path equal to the route is the same alias, not a second mapping (RV-319).
           List<String> aliases = new ArrayList<>();
           aliases.add(route);
-          aliases.addAll(publicPaths);
+          for (String publicPath : publicPaths)
+            if (!aliases.contains(publicPath)) aliases.add(publicPath);
           for (String alias : aliases) {
             List<Mapping> routeMappings =
                 state.routes.computeIfAbsent(alias, key -> new ArrayList<>());
@@ -389,6 +392,9 @@ final class StrutsConfigParser {
               "MODULE_CONFIG_UNRESOLVED");
         }
     String clean = path.replace('\\', '/');
+    // A config file belongs to a module only when web.xml lists it; one that is not listed is the
+    // default module's, whatever folder it sits in (RV-320). Pages are still placed by folder.
+    if (clean.endsWith(".xml")) return "";
     return modules.stream()
         .filter(module -> clean.contains(module + "/"))
         .max(Comparator.comparingInt(String::length))

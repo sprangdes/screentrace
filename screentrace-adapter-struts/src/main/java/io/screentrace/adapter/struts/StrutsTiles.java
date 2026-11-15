@@ -37,7 +37,14 @@ final class StrutsTiles {
           Map<String, String> puts = new TreeMap<>();
           for (String tag : List.of("put", "put-attribute"))
             for (Element item : StrutsSources.elements(definition, tag))
-              puts.put(item.getAttribute("name"), item.getAttribute("value"));
+              // Tiles 1 also writes the value as `content` or as the element body (RV-322).
+              puts.put(
+                  item.getAttribute("name"),
+                  !item.getAttribute("value").isEmpty()
+                      ? item.getAttribute("value")
+                      : !item.getAttribute("content").isEmpty()
+                          ? item.getAttribute("content")
+                          : item.getTextContent().trim());
           if (tiles.containsKey(name)) {
             diagnostic(
                 state,
@@ -196,7 +203,10 @@ final class StrutsTiles {
     String suffix = resolvedTarget.startsWith("/") ? resolvedTarget.substring(1) : resolvedTarget;
     List<String> paths =
         state.inventory.files().stream()
-            .filter(file -> relative(state, file).endsWith(suffix))
+            .filter(
+                file ->
+                    relative(state, file).equals(suffix)
+                        || relative(state, file).endsWith("/" + suffix))
             .map(file -> relative(state, file))
             .distinct()
             .toList();
