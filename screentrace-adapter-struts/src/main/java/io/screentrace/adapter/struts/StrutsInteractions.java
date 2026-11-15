@@ -94,6 +94,9 @@ final class StrutsInteractions {
                     ? ComponentKind.LINK
                     : kind(name, tag);
             if (kind == null) continue;
+            // The id keeps the context-free kind, as in the JSP parser.
+            ComponentKind idKind = kind;
+            kind = MarkupAnalysis.kindInContext(kind, name, tag.attributes(), formGroup != null);
             if (kind == ComponentKind.FORM) action = first(tag, "action");
             String target =
                 kind == ComponentKind.LINK
@@ -168,7 +171,7 @@ final class StrutsInteractions {
             String occurrenceKey = name + new TreeMap<>(tag.attributes());
             int occurrence = occurrences.merge(occurrenceKey, 1, Integer::sum) - 1;
             String id =
-                StableGraphIds.component(path, kind, identityAttributes(tag, name), occurrence);
+                StableGraphIds.component(path, idKind, identityAttributes(tag, name), occurrence);
             var resolved = Optional.ofNullable(interactionByComponent.get(id));
             if (resolved.isPresent() && !resolved.get().submitsCurrentView()) {
               target = resolved.get().target();

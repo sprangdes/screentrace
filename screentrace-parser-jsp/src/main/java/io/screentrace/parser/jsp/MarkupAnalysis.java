@@ -99,6 +99,7 @@ public record MarkupAnalysis(
       ComponentKind kind = kind(tag, attrs);
       if (kind != null) {
         String id = componentId(path, kind, tag, attrs, occurrences);
+        kind = kindInContext(kind, tag, attrs, form != null);
         if (kind == ComponentKind.FORM) {
           form = id;
           model = first(attrs, "modelattribute", "commandname", "name");
@@ -262,6 +263,23 @@ public record MarkupAnalysis(
     return null;
   }
 
+  /**
+   * The kind a component shows once its form is known: a {@code <button>} or {@code <form:button>}
+   * without a type submits its form, as the JSP parser's interactions already assume (RV-410).
+   * Component ids keep the kind from {@link #kind}, which needs no context, so every parser derives
+   * the same id.
+   */
+  public static ComponentKind kindInContext(
+      ComponentKind kind, String tag, Map<String, String> attrs, boolean insideForm) {
+    String type = attrs.get("type");
+    return kind == ComponentKind.BUTTON
+            && insideForm
+            && (tag.equals("button") || tag.equals("form:button"))
+            && (type == null || type.isBlank())
+        ? ComponentKind.SUBMIT
+        : kind;
+  }
+
   public static ComponentKind kind(String tag, Map<String, String> attrs) {
     if (tag.equals("dialog")
         || "dialog".equals(attrs.get("role"))
@@ -278,7 +296,9 @@ public record MarkupAnalysis(
       case "form" -> ComponentKind.FORM;
       case "a", "link" -> tag.equals("link") ? null : ComponentKind.LINK;
       case "button", "reset" ->
-          "submit".equals(attrs.get("type")) ? ComponentKind.SUBMIT : ComponentKind.BUTTON;
+          "submit".equalsIgnoreCase(Objects.toString(attrs.get("type"), "").strip())
+              ? ComponentKind.SUBMIT
+              : ComponentKind.BUTTON;
       case "submit", "cancel" -> ComponentKind.SUBMIT;
       case "text", "password", "input" -> inputKind(attrs);
       case "textarea" -> ComponentKind.TEXTAREA;

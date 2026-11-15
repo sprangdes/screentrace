@@ -466,3 +466,8 @@
 
 - WP142：處理 RV-801～807：Spring 的 controller／mapping／回應本體判斷與路徑接合共用 `SpringMappings`（RV-801）；Struts dispatch 端點的請求、屬性與 confidence 共用 `StrutsDispatch`，連結建立的端點補上 `category=ACTION`、`servletMappingStatus`（RV-802）；Struts 連結目標的判斷條件共用，`html:link action` 正規化 JSP parser 解析後的值，`moduleTarget`、`extendedMapping` 改用既有函式（RV-803）；parser-jsp 的元件 id、`literal()`、VOID 集合、`<current-view>`、javascript-request 修剪各只留一份（RV-804）；viewer 的端點方法／路徑、root trigger 回溯、排序比較器各只留一份（RV-805）；React 樣式改用 `resolveSpecifier`、POM 改用 `SafeProjectFiles.parseXml`（RV-806）；移除 RV-807 列出的死碼。不改變對外契約，未新增 ADR。
 - 驗證：`StrutsRound71Test` 新增 2 個測試，都已確認在修改前失敗；14 個 fixture（不含 Struts 2 拒絕案例）的圖只有 `wp10/struts1`、`wp10/struts1-spring` 改變：兩個 dispatch 端點多了 `category=ACTION` 與 `servletMappingStatus=PROVEN`（RV-802 的預期結果），其餘逐位元組相同；Maven、JS 191、capture 103、viewer 157、e2e 120／121（`performance.e2e.mjs` 同 R70）全數通過。
+
+## R72 parser-jsp 的其餘項目
+
+- WP143：處理 RV-407、409、410、416：tag file 展開依呼叫行記錄證據，每個呼叫只引用自己的 tag file（RV-407）；共用片段的 `conditional`／`repeated` 只在每個包含它的畫面都成立時才標在節點上，各畫面情境留在 CONTAINS 證據（RV-409，[ADR 0154](adr/0154-r72-shared-fragment-include-context.md)）；表單內無 type 的 `<button>`／`<form:button>` 顯示為 SUBMIT，id 仍用與情境無關的 kind，`type="SUBMIT"` 不分大小寫（RV-410）；parent 無法解析的 Tiles definition 保留自己宣告的內容（RV-416）。
+- 驗證：`ParserRound72Test` 新增 3 個、`StrutsRound72Test` 新增 1 個測試，都已確認在修改前失敗；以 R71 為基準比對 14 個 fixture：`spring-mvc-jsp` 表單內無 type 的 `<button formaction>` 由 BUTTON 改為 SUBMIT（其 `componentType` 本來就是 FORM_SUBMIT）；`r3/wp17`、`r3/wp20`、`r5/wp21`、`r7/anchors` 只移除錯配的 tag file 證據（共 126 筆），節點、關係與行為不變；其餘逐位元組相同；Maven 全數通過。

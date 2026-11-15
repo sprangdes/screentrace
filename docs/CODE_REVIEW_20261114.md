@@ -30,9 +30,9 @@ P1 處理結果見各項「狀態」（R53，[ADR 0144](adr/0144-r53-code-review
 
 建議修正順序：先處理 P1（RV-001～RV-011），再處理同一主題的 P2 群組（見文末「跨模組主題」），P3 依效能量測結果挑選。
 
-## 修正進度（2026-11-15，至 R71）
+## 修正進度（2026-11-15，至 R72）
 
-各項的處理結果寫在該項的「狀態」；每輪的內容與驗證見 [ROADMAP](ROADMAP.md) R53～R71。
+各項的處理結果寫在該項的「狀態」；每輪的內容與驗證見 [ROADMAP](ROADMAP.md) R53～R72。
 
 | 範圍 | 處理輪次 | 結果 |
 |---|---|---|
@@ -40,7 +40,7 @@ P1 處理結果見各項「狀態」（R53，[ADR 0144](adr/0144-r53-code-review
 | bin／cli／core／scanner／report RV-101～118、RV-808 | R56、R62、R63、R64、R65 | 全部修正 |
 | adapter-spring RV-201～221 | R55、R58、R60、R61、R66 | 全部處理；RV-214、RV-221 為部分修正（剩餘部分見各項狀態） |
 | adapter-struts RV-301～324 | R54、R57、R59、R61、R67 | 全部修正 |
-| parser-jsp RV-401～428 | R54、R55、R57、R68 | 除 RV-407、409、410、416 外全部修正 |
+| parser-jsp RV-401～428 | R54、R55、R57、R68、R72 | 全部修正 |
 | js／capture RV-501～522 | R54、R55、R57、R69 | 全部修正 |
 | viewer RV-601～612 | R53（RV-004）、R55（RV-602）、R56（RV-612）、R70 | 全部修正 |
 | P3 效能 RV-701～710 | R56、R61、R62（RV-702 部分） | RV-701、703～710 未處理 |
@@ -48,8 +48,7 @@ P1 處理結果見各項「狀態」（R53，[ADR 0144](adr/0144-r53-code-review
 
 接下來依序處理：
 
-1. parser-jsp 剩下的 RV-407、409、410、416（原因見各項狀態；RV-407、410 在 R68 試作後撤回）。
-2. RV-701、703～710 依量測結果挑選。
+1. RV-701、703～710 依量測結果挑選。
 
 每輪的做法：
 
@@ -215,16 +214,16 @@ P1 處理結果見各項「狀態」（R53，[ADR 0144](adr/0144-r53-code-review
 - **RV-404** `ThymeleafFragments.java:106`：fragment 檔不存在時例外跳出整個檔案的迴圈，後續合法的 `th:replace` 全部略過。 **狀態：已修正（R55）。**
 - **RV-405** `ThymeleafFragments.java:45`：只支援 `name(args)` 形式與 `th:replace`；最常見的無參數 `:: header` 與 `th:insert`／`th:include` 全部 unresolved 或被忽略。 **狀態：已修正（R68）：支援無參數呼叫與 `th:insert`／`th:include`。**
 - **RV-406** `ThymeleafFragments.java:30`：參數含 `${...}` 就回傳空清單，呼叫被無診斷地略過，或誤配到零參數 fragment。 **狀態：已修正（R68）。**
-- **RV-407** `JspTagFileExpander.java:50`：每一行都對應到頁面上所有展開過的 tag file 證據，追溯性錯誤。 **狀態：未修正：tag file 同時被直接呼叫與巢狀呼叫時，需要記錄展開樹才能精確對應，R68 試作後撤回。**
+- **RV-407** `JspTagFileExpander.java:50`：每一行都對應到頁面上所有展開過的 tag file 證據，追溯性錯誤。 **狀態：已修正（R72）：** 展開時依呼叫行記錄各自的證據：呼叫、定義與模板內的巢狀展開記在呼叫行，呼叫者 body 內的巢狀呼叫記在自己的行，不再把整頁的展開證據配給每一行。
 - **RV-408** `StrutsMenus.java:352`：跨行的 `displayMenu` 被替換成單行，之後所有行號偏移。 **狀態：已修正（R68）。**
-- **RV-409** `MarkupGraphContribution.java:430`：依某畫面 include 情境得出的 `conditional`／`repeated` 寫到共用元件節點，影響其他畫面。 **狀態：未修正：條件旗標需改記在 CONTAINS 邊而非共用節點，屬結構調整。**
-- **RV-410** `MarkupAnalysis.java:271`：無 type 的 `<button>`（HTML 預設 submit）與大寫 `SUBMIT` 被歸為 BUTTON，與 `submitsForm` 不一致。 **狀態：未修正：無 type 的 `<button>` 只在表單內才送出，分類時需要表單上下文，R68 試作後撤回。**
+- **RV-409** `MarkupGraphContribution.java:430`：依某畫面 include 情境得出的 `conditional`／`repeated` 寫到共用元件節點，影響其他畫面。 **狀態：已修正（R72，[ADR 0154](adr/0154-r72-shared-fragment-include-context.md)）：** 節點的旗標只在每個包含它的畫面都成立時設為 true；各畫面的情境仍在 CONTAINS 證據。
+- **RV-410** `MarkupAnalysis.java:271`：無 type 的 `<button>`（HTML 預設 submit）與大寫 `SUBMIT` 被歸為 BUTTON，與 `submitsForm` 不一致。 **狀態：已修正（R72）：** 元件 id 仍用與情境無關的 `kind()`，各 parser 的 id 不變；顯示的 kind 在表單內把無 type 的 `<button>`／`<form:button>` 改為 SUBMIT（`MarkupAnalysis.kindInContext`，標記分析與 Struts 共用）；`type="SUBMIT"` 不分大小寫。
 - **RV-411** `ApiContractExtractor.java:58`：HttpSession、Principal、Locale、Pageable 等被記為 QUERY 欄位並覆寫 `bodyType`。 **狀態：已修正（R68）。**
 - **RV-412** `UrlGraphContribution.java:640`：`user.home` 遮蔽沒有路徑邊界，以 root 執行時 `/rootCategory/list` 變成 `[home]Category/list`。 **狀態：已修正（R68）。**
 - **RV-413** `ScriptSources.java:527`：AngularJS 取最外層 `ng-controller`，且忽略 `data-ng-controller`。 **狀態：已修正（R68）。**
 - **RV-414** `JavaScriptGraphContribution.java:260`：`valueOf` 失敗會丟棄迴圈內其餘所有 behavior 與診斷。 **狀態：已修正（R55）。**
 - **RV-415** `JavaScriptGraphContribution.java:409`：Node AST 分析器固定 60 秒逾時，大專案 JS／React 畫面全部遺失。 **狀態：已修正（R68）：60 秒加每兩個來源 1 秒，最多 10 分鐘，可用 `-Dscreentrace.js.timeoutSeconds` 調整。**
-- **RV-416** `JspProjectParser.java:821`：parent 無法解析（含重複定義被移除）的 Tiles definition 整個消失。 **狀態：未處理。**
+- **RV-416** `JspProjectParser.java:821`：parent 無法解析（含重複定義被移除）的 Tiles definition 整個消失。 **狀態：已修正（R72）：** parent 無法解析（缺少、重複或循環）時保留定義自己宣告的 template 與屬性，並照常回報診斷。
 - **RV-417** `JspProjectParser.java:733`：`put`／`put-attribute` 只讀 `value`，忽略 body content 與 `content=`。 **狀態：已修正（R68）。**
 - **RV-418** `MarkupTag.java:145`（`ScriptSources:484`）：每個 script／style 都重新 `toLowerCase` 整份原始碼；土耳其 `İ` 使長度改變、索引錯位。 **狀態：已修正（R68，未加專屬測試）。**
 - **RV-419** `ScriptSources.java:668`：每個 `mvc:resources` 的行號都取檔案中第一個 "mapping"。 **狀態：已修正（R68，未加專屬測試）。**

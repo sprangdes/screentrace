@@ -79,6 +79,8 @@ public final class MarkupGraphContribution {
                 old == null ? Confidence.CONFIRMED : old.confidence(),
                 evidence.stream().distinct().toList()));
       }
+    // Per component: whether every screen includes it under a guard, and in a repetition.
+    Map<String, boolean[]> placements = new TreeMap<>();
     for (var screen : graph.nodes())
       if (screen.type() == NodeType.SCREEN) {
         Set<String> roots = new TreeSet<>();
@@ -94,8 +96,38 @@ public final class MarkupGraphContribution {
           collectGraphIncludes(screen.id(), graph, nodes, roots, new HashSet<>());
         for (String path : roots)
           project(
-              screen.id(), path, null, false, jsp, nodes, edges, behaviors, rules, new HashSet<>());
+              screen.id(),
+              path,
+              null,
+              false,
+              jsp,
+              nodes,
+              edges,
+              behaviors,
+              rules,
+              placements,
+              new HashSet<>());
       }
+    // A shared component is conditional or repeated only where every screen includes it that
+    // way; each screen's own context stays on its CONTAINS evidence (RV-409).
+    placements.forEach(
+        (id, placement) -> {
+          var old = nodes.get(id);
+          if (old == null || !placement[0] && !placement[1]) return;
+          var attrs = new TreeMap<>(old.attributes());
+          if (placement[0]) attrs.put("conditional", "true");
+          if (placement[1]) attrs.put("repeated", "true");
+          nodes.put(
+              id,
+              new GraphNode(
+                  old.id(),
+                  old.type(),
+                  old.name(),
+                  attrs,
+                  old.source(),
+                  old.confidence(),
+                  old.evidence()));
+        });
     for (var interaction : jsp.interactions())
       if (interaction.componentId() != null && nodes.containsKey(interaction.componentId())) {
         var node = nodes.get(interaction.componentId());
@@ -397,6 +429,7 @@ public final class MarkupGraphContribution {
       RelationshipsByFrom edges,
       Map<String, Behavior> behaviors,
       Map<String, ValidationRule> rules,
+      Map<String, boolean[]> placements,
       Set<String> stack) {
     if (!stack.add(path)) return;
     var definition = jsp.tilesDefinitions().stream().filter(d -> d.name().equals(path)).findFirst();
@@ -408,7 +441,18 @@ public final class MarkupGraphContribution {
       for (String reference : references) {
         String child = resolve(tile.source().file(), reference, jsp);
         if (child != null)
-          project(screen, child, guard, repeated, jsp, nodes, edges, behaviors, rules, stack);
+          project(
+              screen,
+              child,
+              guard,
+              repeated,
+              jsp,
+              nodes,
+              edges,
+              behaviors,
+              rules,
+              placements,
+              stack);
       }
     }
     var markup = jsp.markup().get(path);
@@ -425,22 +469,9 @@ public final class MarkupGraphContribution {
                         + "；repeated="
                         + (repeated || c.repeated())));
         putEdge(edges, EdgeType.CONTAINS, screen, c.id(), c.source(), "畫面元件來源", proof);
-        if (combined != null || repeated) {
-          var old = nodes.get(c.id());
-          var attrs = new TreeMap<>(old.attributes());
-          if (combined != null) attrs.put("conditional", "true");
-          if (repeated) attrs.put("repeated", "true");
-          nodes.put(
-              c.id(),
-              new GraphNode(
-                  old.id(),
-                  old.type(),
-                  old.name(),
-                  attrs,
-                  old.source(),
-                  old.confidence(),
-                  old.evidence()));
-        }
+        boolean[] placement = placements.computeIfAbsent(c.id(), id -> new boolean[] {true, true});
+        placement[0] &= combined != null;
+        placement[1] &= repeated;
       }
       for (var rule : markup.rules()) {
         rules.putIfAbsent(rule.id(), rule);
@@ -485,6 +516,7 @@ public final class MarkupGraphContribution {
             edges,
             behaviors,
             rules,
+            placements,
             stack);
       }
     stack.remove(path);

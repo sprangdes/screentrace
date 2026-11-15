@@ -67,6 +67,7 @@ JSP、JSPF、tag file、Tiles 與有限的 Thymeleaf 以 `MarkupTag` 等 parser 
 | [0046](0046-endpoint-presentation-groups.md) | WP22 頁面路由與 API 呈現 | 有效 |
 | [0067](0067-r14-static-route-inference-and-security.md) | R14 靜態路由推定與安全導向證據 | 有效 |
 | [0137](0137-r46-parse-markup-instead-of-regex.md) | R46 以 parser 讀取 XML 與 JSP 結構，取代 regex | 有效 |
+| [0154](0154-r72-shared-fragment-include-context.md) | R72 共用片段的 include 情境記在各畫面的 CONTAINS 證據，節點只標所有畫面共同的情境 | 有效 |
 
 ## JavaScript 與 React
 

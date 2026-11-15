@@ -813,13 +813,14 @@ public final class JspProjectParser {
     String template = current.template();
     if (!current.parent().isBlank()) {
       var parent = resolveTile(current.parent(), definitions, resolved, stack, diagnostics);
-      if (parent == null) {
+      // An unresolved parent (missing, duplicated or in a cycle) leaves the definition with
+      // what it declares itself; the diagnostic says what is missing (RV-416).
+      if (parent == null)
         diagnostics.add(unresolved("Tiles 父定義未解析：" + current.parent(), current.source()));
-        stack.remove(name);
-        return null;
+      else {
+        parent.attributes().forEach(a -> attrs.put(a.name(), a));
+        if (template.isBlank()) template = parent.template();
       }
-      parent.attributes().forEach(a -> attrs.put(a.name(), a));
-      if (template.isBlank()) template = parent.template();
     }
     current.attributes().forEach(a -> attrs.put(a.name(), a));
     var result =
