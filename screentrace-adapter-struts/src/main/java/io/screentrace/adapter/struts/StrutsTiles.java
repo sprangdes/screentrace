@@ -229,12 +229,20 @@ final class StrutsTiles {
       String resolved = message(tags.get(0), state);
       return resolved == null ? null : cleanScreenName(resolved);
     }
-    if (candidate.matches("(?s).*\\$\\{|.*#\\{|.*<%.*")) return null;
+    if (dynamic(candidate)) return null;
     Set<String> translations = state.messages.get(candidate);
     if (translations != null && translations.size() == 1)
       return cleanScreenName(translations.iterator().next());
     if (candidate.contains("<") || candidate.contains(">")) return null;
     return cleanScreenName(candidate);
+  }
+
+  /**
+   * True when the text holds EL, a deferred expression or a scriptlet anywhere; the former regex
+   * only matched text ending in "${" or "#{" (RV-312).
+   */
+  static boolean dynamic(String text) {
+    return text.contains("${") || text.contains("#{") || text.contains("<%");
   }
 
   static String tilePrimaryBodyPath(Tile tile, State state, Set<String> seen) {
@@ -291,7 +299,7 @@ final class StrutsTiles {
                     !tag.closing()
                         && Set.of("c:choose", "c:when", "c:if", "c:foreach")
                             .contains(tag.name().toLowerCase(Locale.ROOT)))
-        || markup.matches("(?s).*\\$\\{|.*#\\{|.*<%.*")) return null;
+        || dynamic(markup)) return null;
     String resolved =
         MarkupTag.replaceTags(markup, StrutsTiles::isMessageTag, tag -> message(tag, state));
     if (resolved == null) return null;

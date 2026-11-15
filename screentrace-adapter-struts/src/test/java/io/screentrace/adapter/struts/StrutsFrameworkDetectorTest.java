@@ -43,4 +43,20 @@ class StrutsFrameworkDetectorTest {
         StrutsFrameworkDetector.mayMentionStrutsTwo(root, file("c.txt", padding + "struts 2")));
     assertTrue(StrutsFrameworkDetector.mayMentionStrutsTwo(root, root.resolve("missing.txt")));
   }
+
+  @Test
+  void onlyStrutsOneArtifactsAndJarsAreVersionEvidence() throws Exception {
+    // RV-311: struts-menu and spring-webmvc-struts used to add conflicting "Struts versions".
+    file(
+        "pom.xml",
+        "<project><dependencies>"
+            + "<dependency><groupId>org.apache.struts</groupId><artifactId>struts-core</artifactId><version>1.3.10</version></dependency>"
+            + "<dependency><groupId>struts-menu</groupId><artifactId>struts-menu</artifactId><version>2.4.3</version></dependency>"
+            + "</dependencies></project>");
+    file("WebContent/WEB-INF/lib/spring-webmvc-struts-2.5.6.jar", "jar");
+    file("WebContent/WEB-INF/lib/struts-taglib-1.3.10.jar", "jar");
+    var evidence = StrutsConfigParser.detectStrutsVersion(new ProjectScanner().scan(root));
+    assertEquals("1.3.10", evidence.version(), evidence.description());
+    assertTrue(evidence.isVersion13());
+  }
 }

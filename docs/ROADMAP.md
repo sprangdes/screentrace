@@ -393,3 +393,8 @@
 
 - WP129：`SpringMvcAnalyzer` 的公開 JSP 別名、`WEB-INF/jsp|views` 簡稱、Tiles 範本路徑與 include 來源，以及 `SpringControllerFlow` 的公開畫面比對，都改用 `WebRoots`（ADR 0145 的同一規則）；Java 主程式中除了 scanner 本身的預設清單，已無寫死的 `src/main/webapp`。
 - 驗證：新增 `SpringWebRootLayoutTest` 並確認在修改前失敗；Maven 全數通過。
+
+## R59 Struts 舊專案的入口與版本判定
+
+- WP130：welcome-file 指向 action 時補上前導 `/` 再比對路由（RV-305）；`<logic:forward name>` 以 global forward 解析目標（RV-306）；Struts 版本只採用 Struts 1 本身的 Maven artifact（`org.apache.struts` 群組中的非 Struts 2 artifact、`struts` 群組或無群組的已知 artifact）與 jar 名稱，`struts-menu`、`spring-webmvc-struts` 不再造成版本衝突（RV-311）；Tiles 標題中任何位置出現 EL 或 scriptlet 都視為動態，改用 body 標題命名（RV-312）。不改變對外契約，未新增 ADR。
+- 驗證：新增 4 個測試，都已確認在修改前失敗；Maven 全數通過。

@@ -333,6 +333,62 @@ class StrutsR16RoutingTest {
   }
 
   @Test
+  void welcomeFileNamingAnActionWithoutLeadingSlashOpensItsScreen() throws Exception {
+    // RV-305: welcome-file values have no leading slash, so index.do never matched /index.
+    actionServlet("*.do", "/WEB-INF/struts-config.xml");
+    file(
+        "src/main/webapp/WEB-INF/web.xml",
+        Files.readString(root.resolve("src/main/webapp/WEB-INF/web.xml"))
+            .replace(
+                "</web-app>",
+                "<welcome-file-list><welcome-file>index.do</welcome-file></welcome-file-list></web-app>"));
+    config(
+        "<action path=\"/index\" type=\"sample.IndexAction\"><forward name=\"page\" path=\"/WEB-INF/home.jsp\"/></action>");
+    file("src/main/webapp/WEB-INF/home.jsp", "<h1>Home</h1>");
+    var graph = analyze();
+    assertTrue(
+        graph.diagnostics().stream()
+            .noneMatch(d -> d.code().equals("STRUTS_WELCOME_FILE_UNRESOLVED")),
+        graph.diagnostics().toString());
+    assertTrue(
+        graph.nodes().stream()
+            .anyMatch(
+                node ->
+                    node.type() == NodeType.ENDPOINT
+                        && "index.do".equals(node.attributes().get("welcomeFile"))
+                        && "/index.do".equals(node.attributes().get("path"))),
+        graph.nodes().toString());
+  }
+
+  @Test
+  void logicForwardNameTargetsTheGlobalForward() throws Exception {
+    // RV-306: <logic:forward name="..."> names a global forward; its target used to be null.
+    actionServlet("*.do", "/WEB-INF/struts-config.xml");
+    file(
+        "src/main/webapp/WEB-INF/struts-config.xml",
+        "<struts-config><global-forwards><forward name=\"welcome\" path=\"/Welcome.do\"/></global-forwards><action-mappings><action path=\"/Welcome\" type=\"sample.WelcomeAction\"><forward name=\"page\" path=\"/WEB-INF/welcome.jsp\"/></action></action-mappings></struts-config>");
+    file("src/main/webapp/index.jsp", "<logic:forward name=\"welcome\"/>");
+    file("src/main/webapp/WEB-INF/welcome.jsp", "<h1>Welcome</h1>");
+    var graph = analyze();
+    var welcome =
+        graph.nodes().stream()
+            .filter(
+                node ->
+                    node.type() == NodeType.SCREEN
+                        && node.attributes().getOrDefault("view", "").endsWith("welcome.jsp"))
+            .findFirst()
+            .orElseThrow();
+    assertTrue(
+        graph.relationships().stream()
+            .anyMatch(
+                edge -> edge.type() == EdgeType.NAVIGATES_TO && edge.to().equals(welcome.id())),
+        graph.nodes().stream()
+            .filter(node -> node.type() == NodeType.COMPONENT)
+            .toList()
+            .toString());
+  }
+
+  @Test
   void welcomeFileAndLogicRedirectForwardCreateProvableScreenEntrances() throws Exception {
     actionServlet("*.do", "/WEB-INF/struts-config.xml");
     file(

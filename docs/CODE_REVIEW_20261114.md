@@ -152,14 +152,14 @@ P1 處理結果見各項「狀態」（R53，[ADR 0144](adr/0144-r53-code-review
 - **RV-302** `StrutsBehaviorProjection.java:174`：`forward()` 寫入 state 的診斷與既有節點更新沒有回寫到回傳的 graph。
 - **RV-303** `StrutsConfigParser.java:255`：`inputForward="true"` 只查 global forwards，未先查 action 本地 forward。
 - **RV-304** `StrutsForwards.java:351`：模組相對 forward 指向 action 時未加模組前綴，且 fallback 把 query string 一起當 key。
-- **RV-305** `StrutsScreens.java:165`：welcome-file 依規格沒有前導 `/`，`index.do` 永遠對不到路由。
-- **RV-306** `StrutsInteractions.java:97`：`<logic:forward name="...">` 的 `name` 沒被讀取，典型 index.jsp 轉址沒有目標。
+- **RV-305** `StrutsScreens.java:165`：welcome-file 依規格沒有前導 `/`，`index.do` 永遠對不到路由。 **狀態：已修正（R59）：補上前導 `/` 再比對；端點路徑維持 action 的公開路徑。**
+- **RV-306** `StrutsInteractions.java:97`：`<logic:forward name="...">` 的 `name` 沒被讀取，典型 index.jsp 轉址沒有目標。 **狀態：已修正（R59）：以 `name` 查 global forward，原本的 forward／page／action／href 仍作為後備。**
 - **RV-307** `StrutsControls.java:346`：`dispatchMethod`／`dispatchMethodStatus` 寫在已複製完的 map 上，為死寫入。
 - **RV-308** `StrutsBehaviorProjection.java:137`：dispatch 端點寫死 `PROVEN`／`CONFIRMED`，並覆蓋既有 UNRESOLVED／AMBIGUOUS 節點與證據。
 - **RV-309** `StrutsActionInheritance.java:197`：dispatch 方法只查目的類別自身方法，繼承自抽象父類別或 LookupDispatchAction 的情況失敗。
 - **RV-310** `ActionContracts.java:37`、`StrutsWildcards.java:146`：用 XML 原始 `type` 而非 Spring 解析後的 `actionType`，`DelegatingActionProxy` 找不到實際類別；`effectiveType` 的 fallback 是死碼。
-- **RV-311** `StrutsConfigParser.java:492`：任何 `struts-` 開頭的 artifact／jar（spring-webmvc-struts、struts-menu）都算 Struts 版本，造成版本衝突而所有 wildcard 變 AMBIGUOUS。
-- **RV-312** `StrutsTiles.java:232,294`：`(?s).*\$\{|.*#\{|.*<%.*` 搭配 `matches()` 只偵測以 `${` 結尾的字串，含 EL 的標題被當成靜態。
+- **RV-311** `StrutsConfigParser.java:492`：任何 `struts-` 開頭的 artifact／jar（spring-webmvc-struts、struts-menu）都算 Struts 版本，造成版本衝突而所有 wildcard 變 AMBIGUOUS。 **狀態：已修正（R59）：只認 Struts 1 本身的 artifact 與 jar。**
+- **RV-312** `StrutsTiles.java:232,294`：`(?s).*\$\{|.*#\{|.*<%.*` 搭配 `matches()` 只偵測以 `${` 結尾的字串，含 EL 的標題被當成靜態。 **狀態：已修正（R59）。**
 - **RV-313** `StrutsDispatch.java:57`（`StrutsControls` 同理）：query string 未解碼 `&amp;`，XHTML 寫法的 dispatch 參數找不到。 **狀態：已修正（R57）。**
 - **RV-314** `StrutsServletMappings.java:251`：ActionServlet mapping 只讀排序第一個 web.xml，可能取到 `docs/sample/web.xml`。
 - **RV-315** `StrutsControls.java:469`：任何同時有 `prefix` 與 `page` 參數的連結都被改寫成 SwitchAction 路徑（分頁連結誤判）。

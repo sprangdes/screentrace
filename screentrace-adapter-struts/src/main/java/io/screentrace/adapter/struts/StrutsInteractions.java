@@ -94,15 +94,18 @@ final class StrutsInteractions {
                 kind == ComponentKind.LINK
                     ? first(tag, "href", "forward", "page", "action")
                     : first(tag, "formaction");
-            if (Set.of("logic:redirect", "logic:forward").contains(name))
+            if (name.equals("logic:redirect"))
               target = first(tag, "forward", "page", "action", "href");
+            // <logic:forward> has only `name`, the global forward to follow (RV-306).
+            boolean namesForward =
+                tag.attribute("forward") != null
+                    || (name.equals("logic:forward") && tag.attribute("name") != null);
+            if (name.equals("logic:forward"))
+              target = first(tag, "name", "forward", "page", "action", "href");
             boolean inheritedFormAction =
                 kind == ComponentKind.SUBMIT && target == null && action != null;
             String module = moduleFor(path, state);
-            if (target != null
-                && tag.attribute("forward") != null
-                && !target.startsWith("/")
-                && !target.contains("."))
+            if (target != null && namesForward && !target.startsWith("/") && !target.contains("."))
               target = state.globalForwards.getOrDefault(module + ":" + target, target);
             if (kind == ComponentKind.FORM) activeModule = tag.attribute("module");
             if (target == null && (kind == ComponentKind.FORM || kind == ComponentKind.SUBMIT))

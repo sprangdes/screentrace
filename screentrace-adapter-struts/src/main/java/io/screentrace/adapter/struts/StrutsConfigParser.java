@@ -451,9 +451,9 @@ final class StrutsConfigParser {
               versions.putIfAbsent(matcher.group(1), new SourceLocation(relative, line + 1));
           }
         }
-        var library =
-            java.util.regex.Pattern.compile("(?i).*struts-[a-z-]*?(\\d+\\.\\d+\\.\\d+).*\\.jar")
-                .matcher(name);
+        // Only Struts 1's own jars count; spring-webmvc-struts or struts-menu carry their own
+        // versions (RV-311).
+        var library = STRUTS_JAR.matcher(name);
         if (library.matches())
           versions.putIfAbsent(library.group(1), new SourceLocation(relative, 1));
       } catch (Exception unread) {
@@ -484,13 +484,34 @@ final class StrutsConfigParser {
         entry.getKey() + "（" + entry.getValue().file() + ":" + entry.getValue().line() + "）");
   }
 
+  /** Artifacts of Struts 1 itself; other "struts-*" libraries have unrelated versions. */
+  static final Set<String> STRUTS_ARTIFACTS =
+      Set.of(
+          "struts",
+          "struts-core",
+          "struts-taglib",
+          "struts-tiles",
+          "struts-extras",
+          "struts-el",
+          "struts-faces",
+          "struts-scripting");
+
+  private static final java.util.regex.Pattern STRUTS_JAR =
+      java.util.regex.Pattern.compile(
+          "(?i)(?:struts|struts-(?:core|taglib|tiles|extras|el|faces|scripting))-(\\d+\\.\\d+\\.\\d+)\\.jar");
+
   static void addMavenStrutsVersion(
       Element declaration, String file, Map<String, SourceLocation> versions) {
     String group = directText(declaration, "groupId"),
         artifact = directText(declaration, "artifactId"),
         version = directText(declaration, "version");
-    if (("org.apache.struts".equals(group) || artifact.startsWith("struts-"))
-        && version.matches("\\d+\\.\\d+\\.\\d+"))
+    // Struts' own group (not its Struts 2 artifacts), the legacy "struts" group, or a known
+    // Struts 1 artifact with no group; "struts-menu" and similar libraries do not count (RV-311).
+    boolean struts =
+        ("org.apache.struts".equals(group) && !artifact.startsWith("struts2"))
+            || ("struts".equals(group) && STRUTS_ARTIFACTS.contains(artifact))
+            || (group.isBlank() && STRUTS_ARTIFACTS.contains(artifact));
+    if (struts && version.matches("\\d+\\.\\d+\\.\\d+"))
       versions.putIfAbsent(version, new SourceLocation(file, sourceLine(declaration)));
   }
 }

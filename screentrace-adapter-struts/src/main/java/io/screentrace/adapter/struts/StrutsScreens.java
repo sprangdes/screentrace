@@ -169,7 +169,10 @@ final class StrutsScreens {
               var source = StrutsSources.source(path, welcome);
               String screenId, route = "/";
               if (value.endsWith(".do") || value.contains("/do/")) {
-                String normalized = logicalPath(value, "", state);
+                // Welcome files are context-relative and usually written without a leading slash
+                // ("index.do"); routes are keyed with one (RV-305).
+                String normalized =
+                    logicalPath(value.startsWith("/") ? value : "/" + value, "", state);
                 List<Mapping> routes =
                     normalized == null
                         ? List.of()
