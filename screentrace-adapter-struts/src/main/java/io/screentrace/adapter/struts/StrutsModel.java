@@ -108,6 +108,10 @@ final class StrutsModel {
     final Map<String, Set<String>> tilePageOwners = new TreeMap<>();
     final Map<String, List<Mapping>> routes = new TreeMap<>();
     final Map<String, String> endpointIds = new TreeMap<>(), globalForwards = new TreeMap<>();
+
+    /** {@link StrutsConfigParser#moduleFor} results by path. */
+    final Map<String, String> moduleByPath = new HashMap<>();
+
     final List<Mapping> actionMappings = new ArrayList<>();
     final List<PendingForward> pendingForwards = new ArrayList<>(),
         exceptionForwards = new ArrayList<>();

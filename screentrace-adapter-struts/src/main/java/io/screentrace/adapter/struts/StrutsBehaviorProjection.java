@@ -192,14 +192,19 @@ final class StrutsBehaviorProjection {
     graph.nodes().forEach(node -> nodes.put(node.id(), node));
     Map<String, Behavior> behaviors = new TreeMap<>();
     graph.behaviors().forEach(behavior -> behaviors.put(behavior.id(), behavior));
+    // Form submissions by the path they post to, so each mapping finds its own instead of
+    // scanning every behavior (RV-702).
+    Map<String, List<String>> submitsByPath = new HashMap<>();
+    for (Behavior behavior : behaviors.values()) {
+      GraphNode target = behavior.targetId() == null ? null : nodes.get(behavior.targetId());
+      String path = target == null ? null : target.attributes().get("path");
+      if (behavior.type() == BehaviorType.SUBMIT_FORM && path != null)
+        submitsByPath.computeIfAbsent(path, ignored -> new ArrayList<>()).add(behavior.id());
+    }
     for (Mapping mapping : state.actionMappings) {
       String publicRoute = publicPath(mapping.route(), mapping.module(), state);
-      for (var entry : new ArrayList<>(behaviors.entrySet())) {
-        Behavior behavior = entry.getValue();
-        GraphNode target = behavior.targetId() == null ? null : nodes.get(behavior.targetId());
-        if (behavior.type() != BehaviorType.SUBMIT_FORM
-            || target == null
-            || !publicRoute.equals(target.attributes().get("path"))) continue;
+      for (String id : submitsByPath.getOrDefault(publicRoute, List.of())) {
+        Behavior behavior = behaviors.get(id);
         List<AnalysisEvidence> proof = new ArrayList<>(behavior.evidence());
         proof.add(
             new AnalysisEvidence(
@@ -208,7 +213,7 @@ final class StrutsBehaviorProjection {
                 ResolutionStatus.CONFIRMED,
                 "Struts action mapping=" + mapping.route()));
         behaviors.put(
-            entry.getKey(),
+            id,
             new Behavior(
                 behavior.id(),
                 behavior.triggerId(),

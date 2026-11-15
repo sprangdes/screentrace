@@ -471,3 +471,9 @@
 
 - WP143：處理 RV-407、409、410、416：tag file 展開依呼叫行記錄證據，每個呼叫只引用自己的 tag file（RV-407）；共用片段的 `conditional`／`repeated` 只在每個包含它的畫面都成立時才標在節點上，各畫面情境留在 CONTAINS 證據（RV-409，[ADR 0154](adr/0154-r72-shared-fragment-include-context.md)）；表單內無 type 的 `<button>`／`<form:button>` 顯示為 SUBMIT，id 仍用與情境無關的 kind，`type="SUBMIT"` 不分大小寫（RV-410）；parent 無法解析的 Tiles definition 保留自己宣告的內容（RV-416）。
 - 驗證：`ParserRound72Test` 新增 3 個、`StrutsRound72Test` 新增 1 個測試，都已確認在修改前失敗；以 R71 為基準比對 14 個 fixture：`spring-mvc-jsp` 表單內無 type 的 `<button formaction>` 由 BUTTON 改為 SUBMIT（其 `componentType` 本來就是 FORM_SUBMIT）；`r3/wp17`、`r3/wp20`、`r5/wp21`、`r7/anchors` 只移除錯配的 tag file 證據（共 126 筆），節點、關係與行為不變；其餘逐位元組相同；Maven 全數通過。
+
+## R73 依量測處理效能熱點
+
+- WP144：以 300 個 action 的 Struts 合成專案（依 ADR 0149 的描述重建：每頁 40 列表格、表單、前後頁連結，每個 Action 20 個 dispatch 方法）配合 JFR 量測：`ActionContracts` 改為每個 struts-config 解析一次、依 action path 建索引，關係依來源分組（RV-703）；`StrutsConfigParser.moduleFor` 依 path 快取（RV-703）；`redactHome` 在字串不含家目錄時略過 regex（RV-706）；`StrutsBehaviorProjection` 的表單送出依目標 path 建索引（RV-702）。
+- 量測（sandbox，只計 Java 分析）：同一合成專案由 100 秒降為 32 秒（R72 為基準）。
+- 驗證：合成專案與 14 個 fixture 的圖逐位元組相同；Maven 全數通過。純效能修改，未新增測試。

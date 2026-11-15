@@ -599,10 +599,12 @@ public final class UrlGraphContribution {
    */
   static String redactHome(String text, List<String> homes) {
     for (String home : homes)
-      text =
-          text.replaceAll(
-              java.util.regex.Pattern.quote(home) + "(?=[/\\\\\"'\\s]|$)",
-              java.util.regex.Matcher.quoteReplacement("[home]"));
+      // Almost no value holds the home path; skip the regex for those (it is compiled per call).
+      if (text.contains(home))
+        text =
+            text.replaceAll(
+                java.util.regex.Pattern.quote(home) + "(?=[/\\\\\"'\\s]|$)",
+                java.util.regex.Matcher.quoteReplacement("[home]"));
     return text;
   }
 

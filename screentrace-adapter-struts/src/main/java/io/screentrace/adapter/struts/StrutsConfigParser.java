@@ -367,7 +367,19 @@ final class StrutsConfigParser {
     }
   }
 
+  /**
+   * The module a file belongs to. Called for every tag of every page, so each path is answered once
+   * instead of reading every web.xml again (RV-703).
+   */
   static String moduleFor(String path, State state) {
+    String known = state.moduleByPath.get(path);
+    if (known != null) return known;
+    String module = findModule(path, state);
+    state.moduleByPath.put(path, module);
+    return module;
+  }
+
+  private static String findModule(String path, State state) {
     List<String> modules = new ArrayList<>();
     for (Path file : state.inventory.files())
       if (file.getFileName().toString().equals("web.xml"))
