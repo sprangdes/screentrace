@@ -10,6 +10,10 @@ import java.util.*;
 
 /** Inert return-expression classification; no target methods or expressions are evaluated. */
 final class SpringControllerReturns {
+  /** Default-configured and thread-safe; one per class instead of one per call (RV-705). */
+  private static final com.fasterxml.jackson.databind.ObjectMapper SHARED_JSON =
+      new com.fasterxml.jackson.databind.ObjectMapper();
+
   enum Kind {
     VIEW,
     REDIRECT,
@@ -18,12 +22,27 @@ final class SpringControllerReturns {
     UNKNOWN
   }
 
+  /**
+   * One return target. {@code branch} identifies the assignment a branch-dependent target came from
+   * (":assign:line:column"), or "" — kept as data rather than read back from evidence text, which
+   * may be reworded (RV-221).
+   */
   record Target(
       Kind kind,
       String value,
       String expression,
       SourceLocation source,
-      List<AnalysisEvidence> evidence) {}
+      List<AnalysisEvidence> evidence,
+      String branch) {
+    Target(
+        Kind kind,
+        String value,
+        String expression,
+        SourceLocation source,
+        List<AnalysisEvidence> evidence) {
+      this(kind, value, expression, source, evidence, "");
+    }
+  }
 
   static List<Target> extract(
       MethodDeclaration method, String file, String className, Map<String, String> constants) {
@@ -31,6 +50,7 @@ final class SpringControllerReturns {
     for (var parameter : method.getParameters()) constants.remove(parameter.getNameAsString());
     for (var variable : method.findAll(VariableDeclarator.class))
       constants.remove(variable.getNameAsString());
+    constants.putAll(finalLiteralLocals(method));
     List<Target> targets = new ArrayList<>();
     for (ReturnStmt statement : method.findAll(ReturnStmt.class)) {
       if (!belongsTo(statement, method) || statement.getExpression().isEmpty()) continue;
@@ -97,7 +117,18 @@ final class SpringControllerReturns {
             if (path.value.kind() != Kind.UNKNOWN)
               pathEvidence.addAll(feedback(method, statement, file));
             targets.add(
-                new Target(path.value.kind(), path.value.value(), raw, source, pathEvidence));
+                new Target(
+                    path.value.kind(),
+                    path.value.value(),
+                    raw,
+                    source,
+                    pathEvidence,
+                    ":assign:"
+                        + proof.line()
+                        + ":"
+                        + (path.source == null
+                            ? 0
+                            : path.source.getBegin().map(p -> p.column).orElse(0))));
           }
           continue;
         }
@@ -150,16 +181,7 @@ final class SpringControllerReturns {
   }
 
   static String branchKey(Target target) {
-    return target.evidence().stream()
-        .filter(e -> e.detail() != null && e.detail().startsWith("分支內賦值來源；column="))
-        .map(
-            e ->
-                ":assign:"
-                    + e.source().line()
-                    + ":"
-                    + e.detail().substring(e.detail().indexOf("column=") + 7))
-        .findFirst()
-        .orElse("");
+    return target.branch();
   }
 
   private static List<AnalysisEvidence> feedback(
@@ -174,7 +196,6 @@ final class SpringControllerReturns {
         .filter(p -> Set.of("Model", "ModelMap").contains(p.getType().asString()))
         .forEach(p -> models.add(p.getNameAsString()));
     Node block = use.getParentNode().orElse(null);
-    Map<String, String> values = new TreeMap<>();
     List<AnalysisEvidence> result = new ArrayList<>();
     for (var call : method.findAll(MethodCallExpr.class))
       if (belongsTo(call, method)
@@ -221,16 +242,14 @@ final class SpringControllerReturns {
         }
         if (value == null) continue;
         if (!key.matches("[A-Za-z_][A-Za-z0-9_]*") || value.length() > 4000) continue;
-        values.put(key, value);
         try {
           result.add(
               new AnalysisEvidence(
                   new SourceLocation(file, call.getBegin().orElseThrow().line),
                   "SpringModelFeedback",
                   ResolutionStatus.INFERRED,
-                  new com.fasterxml.jackson.databind.ObjectMapper()
-                      .writeValueAsString(
-                          new TreeMap<>(Map.of("version", 1, "values", Map.of(key, value))))));
+                  SHARED_JSON.writeValueAsString(
+                      new TreeMap<>(Map.of("version", 1, "values", Map.of(key, value))))));
         } catch (JsonProcessingException error) {
           // Only maps, lists and records of strings and numbers are written; failing is a bug.
           throw new IllegalStateException("Cannot serialize model feedback", error);
@@ -371,6 +390,31 @@ final class SpringControllerReturns {
     if (value.startsWith("redirect:")) return new Value(Kind.REDIRECT, value.substring(9));
     if (value.startsWith("forward:")) return new Value(Kind.FORWARD, value.substring(8));
     return new Value(Kind.VIEW, value);
+  }
+
+  /**
+   * Local {@code String} variables that are declared once with a string literal and never assigned
+   * again: {@code String view = "home"; return view;} returns "home" on every path (RV-214).
+   */
+  private static Map<String, String> finalLiteralLocals(MethodDeclaration method) {
+    Map<String, String> result = new HashMap<>();
+    Set<String> parameters = new HashSet<>();
+    method.getParameters().forEach(p -> parameters.add(p.getNameAsString()));
+    var declarations = method.findAll(VariableDeclarator.class);
+    for (var variable : declarations) {
+      String name = variable.getNameAsString();
+      if (parameters.contains(name)
+          || !variable.getType().asString().equals("String")
+          || variable.getInitializer().filter(Expression::isStringLiteralExpr).isEmpty()
+          || declarations.stream().filter(v -> v.getNameAsString().equals(name)).count() != 1
+          || method.findAll(AssignExpr.class).stream()
+              .anyMatch(
+                  a ->
+                      a.getTarget().isNameExpr()
+                          && a.getTarget().asNameExpr().getNameAsString().equals(name))) continue;
+      result.put(name, variable.getInitializer().get().asStringLiteralExpr().asString());
+    }
+    return result;
   }
 
   private static Expression unwrap(Expression expression) {

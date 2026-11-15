@@ -69,3 +69,19 @@ test('legacy decisions migrate to selected-library digest key even without overr
   const normalized = r.validateReview(legacy, d.graph, d.fingerprint, a);
   assert.ok(r.storageKey(normalized).includes(a.sha256));
 });
+test('a stale library-transfer snapshot never replaces later decisions without a library (RV-004)', async () => {
+  const r = await ownModule('shared/review'),
+    d = mdFixture(),
+    a = await library('a'),
+    values = new Map(),
+    storage = { getItem: (k) => values.get(k) || null, setItem: (k, v) => values.set(k, v) };
+  let state = r.setScreen(r.emptyReview(d.graph, d.fingerprint), 'a', 'KEEP');
+  state = r.setOverride(state, d.graph, a, 'a', 'shared', 'sample-button');
+  r.saveReview(storage, state);
+  // A later report without a component library keeps reviewing the same analysis.
+  const { manifest_sha256, component_overrides, orphan_component_overrides, ...plain } =
+    r.loadReview(storage, d.graph, d.fingerprint).state;
+  assert.ok(manifest_sha256 || component_overrides || orphan_component_overrides);
+  r.saveReview(storage, r.setScreen(plain, 'a', 'REMOVE'));
+  assert.equal(r.loadReview(storage, d.graph, d.fingerprint).state.screenDecisions.a, 'REMOVE');
+});

@@ -23,21 +23,11 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
 import java.util.TreeMap;
 
 /** AST-based Spring mapping parser; React screens come from the shared React AST contribution. */
 public final class SpringBootAnalyzer {
   private static final String REQUEST_MAPPING = "RequestMapping";
-  private static final String ROUTE_SEPARATOR = "/";
-  private static final Set<String> MAPPINGS =
-      Set.of(
-          REQUEST_MAPPING,
-          "GetMapping",
-          "PostMapping",
-          "PutMapping",
-          "DeleteMapping",
-          "PatchMapping");
 
   public ApplicationGraph analyze(ProjectInventory inventory) throws IOException {
     AnalysisState state = new AnalysisState(inventory.root(), inventory.javaFiles());
@@ -99,11 +89,9 @@ public final class SpringBootAnalyzer {
 
   private void parseControllerType(
       ClassOrInterfaceDeclaration type, String relative, AnalysisState state) {
-    if (!isController(type)) {
+    if (!SpringMappings.isController(type)) {
       return;
     }
-    boolean rest =
-        annotation(type, "RestController") != null || annotation(type, "ResponseBody") != null;
     var declaredBases = SpringMappingPaths.of(annotation(type, REQUEST_MAPPING), type);
     SpringMappingPaths.report(
         declaredBases,
@@ -112,12 +100,12 @@ public final class SpringBootAnalyzer {
         state.diagnostics);
     List<String> bases = SpringMappingPaths.effective(declaredBases);
     for (MethodDeclaration method : type.getMethods()) {
-      java.util.Optional<AnnotationExpr> mapping = mapping(method);
+      java.util.Optional<AnnotationExpr> mapping = SpringMappings.mapping(method);
       if (mapping.isPresent()) {
         parseMapping(
             method,
             mapping.get(),
-            new ControllerContext(type.getNameAsString(), relative, bases, rest, type),
+            new ControllerContext(type.getNameAsString(), relative, bases, type),
             state);
       }
     }
@@ -128,7 +116,6 @@ public final class SpringBootAnalyzer {
       AnnotationExpr mapping,
       ControllerContext controller,
       AnalysisState state) {
-    String httpMethod = httpMethod(mapping);
     SourceLocation source =
         new SourceLocation(
             controller.relative(), method.getBegin().map(position -> position.line).orElse(1));
@@ -155,29 +142,23 @@ public final class SpringBootAnalyzer {
             source,
             Confidence.CONFIRMED));
 
-    String result = returnLiteral(method);
-    boolean redirect = result != null && result.startsWith("redirect:");
-    EndpointContext endpoint =
-        new EndpointContext(
-            handlerId,
-            httpMethod,
-            controller.rest()
-                || annotation(method, "ResponseBody") != null
-                || method.getType().isClassOrInterfaceType()
-                    && method
-                        .getType()
-                        .asClassOrInterfaceType()
-                        .getNameAsString()
-                        .equals("ResponseEntity")
-                || (annotation(method, "ResponseStatus") != null
-                        || annotation(controller.declaration(), "ResponseStatus") != null)
-                    && method.getType().isVoidType(),
-            redirect,
-            result,
-            source);
-    for (String base : controller.bases()) {
-      for (String child : methodPaths) {
-        addEndpoint(state, join(base, child), endpoint, method, mapping);
+    List<String> results = returnLiterals(method);
+    boolean redirect =
+        !results.isEmpty() && results.stream().allMatch(value -> value.startsWith("redirect:"));
+    // One endpoint per declared method, as in SpringMvcAnalyzer (RV-202).
+    for (String httpMethod : SpringMvcAnalyzer.httpMethods(mapping)) {
+      EndpointContext endpoint =
+          new EndpointContext(
+              handlerId,
+              httpMethod,
+              SpringMappings.respondsWithBody(controller.declaration(), method),
+              redirect,
+              results,
+              source);
+      for (String base : controller.bases()) {
+        for (String child : methodPaths) {
+          addEndpoint(state, SpringMappings.join(base, child), endpoint, method, mapping);
+        }
       }
     }
   }
@@ -213,25 +194,16 @@ public final class SpringBootAnalyzer {
     if (endpoint.rest())
       state.apiContracts.add(
           state.contracts.contract(endpointId, method, mapping, endpoint.source(), List.of()));
-    if (endpoint.rendersScreen()) {
-      edge(
-          state.edges,
-          EdgeType.RENDERS,
-          endpoint.handlerId(),
-          screen(endpoint.result(), state.nodes, endpoint.source()),
-          Confidence.CONFIRMED,
-          endpoint.source());
-    }
-  }
-
-  private static boolean isController(ClassOrInterfaceDeclaration type) {
-    return annotation(type, "Controller") != null || annotation(type, "RestController") != null;
-  }
-
-  private static java.util.Optional<AnnotationExpr> mapping(MethodDeclaration method) {
-    return method.getAnnotations().stream()
-        .filter(annotation -> MAPPINGS.contains(annotation.getNameAsString()))
-        .findFirst();
+    if (!endpoint.rest())
+      for (String view : endpoint.results())
+        if (!view.startsWith("redirect:") && !view.startsWith("forward:"))
+          edge(
+              state.edges,
+              EdgeType.RENDERS,
+              endpoint.handlerId(),
+              screen(view, state.nodes, endpoint.source()),
+              Confidence.CONFIRMED,
+              endpoint.source());
   }
 
   private static String screen(String view, List<GraphNode> nodes, SourceLocation source) {
@@ -299,25 +271,6 @@ public final class SpringBootAnalyzer {
         .orElse(null);
   }
 
-  private static String httpMethod(AnnotationExpr mapping) {
-    if (!REQUEST_MAPPING.equals(mapping.getNameAsString())) {
-      return Map.of(
-              "GetMapping",
-              "GET",
-              "PostMapping",
-              "POST",
-              "PutMapping",
-              "PUT",
-              "DeleteMapping",
-              "DELETE",
-              "PatchMapping",
-              "PATCH")
-          .getOrDefault(mapping.getNameAsString(), "ANY");
-    }
-    String configured = named(mapping, "method");
-    return configured == null ? "ANY" : configured.replace("RequestMethod.", "");
-  }
-
   private static String named(AnnotationExpr annotation, String name) {
     if (annotation instanceof NormalAnnotationExpr normal) {
       return normal.getPairs().stream()
@@ -329,18 +282,24 @@ public final class SpringBootAnalyzer {
     return null;
   }
 
-  private static String join(String base, String child) {
-    String path =
-        (child.isEmpty() ? base : base + ROUTE_SEPARATOR + child)
-            .replaceAll("/{2,}", ROUTE_SEPARATOR);
-    if (path.isEmpty()) {
-      return ROUTE_SEPARATOR;
-    }
-    return path.startsWith(ROUTE_SEPARATOR) ? path : ROUTE_SEPARATOR + path;
-  }
-
-  private static String returnLiteral(MethodDeclaration method) {
+  /**
+   * Every string literal the method itself returns, in source order: each branch's view, not only
+   * the first, and never a return inside a lambda or a nested class body (RV-213).
+   */
+  private static List<String> returnLiterals(MethodDeclaration method) {
     return method.findAll(com.github.javaparser.ast.stmt.ReturnStmt.class).stream()
+        .filter(
+            returnStatement ->
+                returnStatement
+                    .findAncestor(
+                        n ->
+                            n == method
+                                || n instanceof com.github.javaparser.ast.expr.LambdaExpr
+                                || n instanceof com.github.javaparser.ast.expr.ObjectCreationExpr
+                                || n instanceof ClassOrInterfaceDeclaration,
+                        com.github.javaparser.ast.Node.class)
+                    .map(n -> n == method)
+                    .orElse(false))
         .map(
             returnStatement ->
                 returnStatement
@@ -349,13 +308,8 @@ public final class SpringBootAnalyzer {
                     .map(expression -> expression.asStringLiteralExpr().asString())
                     .orElse(null))
         .filter(Objects::nonNull)
-        .findFirst()
-        .orElse(null);
-  }
-
-  private static int line(String text, int offset) {
-    return 1
-        + (int) text.substring(0, offset).chars().filter(character -> character == '\n').count();
+        .distinct()
+        .toList();
   }
 
   private static final class AnalysisState {
@@ -374,7 +328,6 @@ public final class SpringBootAnalyzer {
       String typeName,
       String relative,
       List<String> bases,
-      boolean rest,
       ClassOrInterfaceDeclaration declaration) {}
 
   private record EndpointContext(
@@ -382,17 +335,13 @@ public final class SpringBootAnalyzer {
       String httpMethod,
       boolean rest,
       boolean redirect,
-      String result,
+      List<String> results,
       SourceLocation source) {
     private String category() {
       if (rest) {
         return "REST_API";
       }
       return redirect ? "REDIRECT" : "MVC_SCREEN";
-    }
-
-    private boolean rendersScreen() {
-      return !rest && result != null && !redirect;
     }
   }
 }

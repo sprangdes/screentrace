@@ -27,7 +27,14 @@ export async function prepareReactPreview({ projectRoot, output, htmlRoot }) {
     links = [];
   for (const sheet of data.stylesheets ?? []) {
     const copied = await copyStylesheet(projectRoot, output, htmlRoot, sheet.candidates ?? []);
-    if (copied) links.push(copied);
+    if (copied?.href) links.push(copied.href);
+    else if (copied?.unreadable)
+      // One oversized or unreadable stylesheet is reported; it used to end the capture (RV-511).
+      diagnostics.push({
+        code: 'REACT_STYLESHEET_UNREADABLE',
+        message: `樣式表 ${sheet.specifier} 超過大小上限或無法讀取，預覽未套用`,
+        source: { file: sheet.from, line: sheet.line },
+      });
     else
       diagnostics.push({
         code: 'REACT_STYLESHEET_MISSING',
@@ -60,7 +67,12 @@ async function copyStylesheet(projectRoot, output, htmlRoot, candidates) {
     } catch {
       continue;
     }
-    const css = await readUtf8Limited(projectRoot, source, MAX_CSS_BYTES);
+    let css;
+    try {
+      css = await readUtf8Limited(projectRoot, source, MAX_CSS_BYTES);
+    } catch {
+      return { unreadable: relative };
+    }
     await write(output, path.join(htmlRoot, ASSET_DIRECTORY, relative), Buffer.from(css));
     for (const reference of localReferences(css)) {
       const target = safeRelative(path.posix.join(path.posix.dirname(relative), reference));
@@ -76,7 +88,7 @@ async function copyStylesheet(projectRoot, output, htmlRoot, candidates) {
         /* A missing font or image leaves that url() unresolved; pack-preview reports it. */
       }
     }
-    return `${ASSET_DIRECTORY}/${relative}`;
+    return { href: `${ASSET_DIRECTORY}/${relative}` };
   }
   return null;
 }

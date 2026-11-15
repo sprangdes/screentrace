@@ -117,3 +117,18 @@ test('R20 flow groups list steps in order, then unreached, then excluded', async
   assert.equal(p.reachText(view, 's3'), '不適用');
   assert.equal(p.factLabel({ text: 'me.business', truth: false }), 'me.business：否');
 });
+
+test('RV-608 a URL entry reached first on an uncertain step still passes on a certain path', async () => {
+  const p = await ownModule('personas'),
+    m = await ownModule('map');
+  const g = graph(),
+    member = g.application.personas[0];
+  member.flow.steps = [
+    { from: 's1', to: 'entry:a', kind: 'NAVIGATE', behaviorId: 'u', status: 'UNKNOWN' },
+    { from: 's1', to: 'entry:b', kind: 'NAVIGATE', behaviorId: 'c', status: 'APPLIES' },
+    { from: 'entry:b', to: 'entry:a', kind: 'FORWARDS', behaviorId: null, status: 'APPLIES' },
+    { from: 'entry:a', to: 's2', kind: 'RENDERS', behaviorId: null, status: 'APPLIES' },
+  ];
+  const view = p.personaView(m.indexGraph(g), member);
+  assert.equal(view.hops.get(p.lineKey('s1', 's2')), 'APPLIES');
+});

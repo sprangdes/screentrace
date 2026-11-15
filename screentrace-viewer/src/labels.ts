@@ -1,5 +1,6 @@
 import { Node } from './contracts';
 import { Index } from './map';
+import { previewSelector } from './preview';
 
 export const kindNames: Record<string, string> = {
   BUTTON: '按鈕',
@@ -393,10 +394,7 @@ export function initializeComponentLabels(
   for (const record of previewElements) {
     const document = documents.get(record.graphScreenId);
     if (!document) continue;
-    const selector = record.path
-        .split('>')
-        .map((part) => part.replace(/^([\w-]+)\[(\d+)\]$/, '$1:nth-of-type($2)'))
-        .join('>'),
+    const selector = previewSelector(record.path),
       id = record.graphComponentId || previewRecordId(record);
     try {
       const element = document.querySelector(selector);

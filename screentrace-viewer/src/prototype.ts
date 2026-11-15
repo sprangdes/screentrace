@@ -105,16 +105,23 @@ export function prototypeViewer(
   frame.addEventListener('load', () => {
     if (!frame.getAttribute('srcdoc') || !frame.contentDocument) return;
     const doc = frame.contentDocument;
+    let overflow: number | undefined;
     const measure = () => {
-      height = Math.max(
-        metadata?.height || 900,
-        doc.documentElement.scrollHeight,
-        doc.body?.scrollHeight || 0,
-      );
+      const content = Math.max(doc.documentElement.scrollHeight, doc.body?.scrollHeight || 0),
+        excess = content - doc.documentElement.clientHeight;
+      // Content that outgrows the frame by the same amount after the frame grew to fit it is
+      // sized by the frame (`min-height: 100vh` plus a margin): stop following it.
+      if (excess > 0 && excess === overflow) {
+        contentObserver?.disconnect();
+        return;
+      }
+      overflow = excess > 0 ? excess : undefined;
+      height = Math.max(metadata?.height || 900, content);
       resize();
     };
     // Pages sized in vh/dvh grow with the frame, so watching the content would enlarge it without end. With a
-    // captured height the content is measured once on load; the frame never chases its own resize.
+    // captured height the content is measured once on load; the frame never chases its own resize. Without one,
+    // the frame follows the content until the content only grows with the frame.
     measure();
     if (!metadata?.height) {
       contentObserver = new ResizeObserver(measure);

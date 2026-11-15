@@ -31,10 +31,7 @@ class UrlLinkingTest {
         web.resolve("WEB-INF/web.xml"),
         "<web-app><servlet-mapping><servlet-name>action</servlet-name><url-pattern>*.do</url-pattern></servlet-mapping></web-app>");
     return new StrutsProjectAnalyzer()
-        .analyze(
-            new ProjectScanner()
-                .scan(root)
-                .withContextPaths(List.of("/shop"), "/Users/private/.screentrace/config.json"));
+        .analyze(new ProjectScanner().scan(root).withContextPaths(List.of("/shop"), 1));
   }
 
   @Test

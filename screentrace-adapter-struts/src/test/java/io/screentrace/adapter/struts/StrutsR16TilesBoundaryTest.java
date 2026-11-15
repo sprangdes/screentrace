@@ -547,4 +547,23 @@ class StrutsR16TilesBoundaryTest {
                         && behavior.expression().contains("/tiles-layout-api")),
         graph.behaviors() + "\n" + graph.diagnostics());
   }
+
+  @Test
+  void titleWithElInTheMiddleIsNotTakenAsAStaticName() throws Exception {
+    // RV-312: "Edit ${user.name}" used to pass as static text and became "Edit".
+    file(
+        "tiles-defs.xml",
+        "<tiles-definitions><definition name='.editPage' path='/layout.jsp'><put name='title' value='Edit ${user.name} now'/><put name='body' value='/edit-body.jsp'/></definition></tiles-definitions>");
+    file(
+        "src/main/webapp/layout.jsp", "<html><body><tiles:insert attribute='body'/></body></html>");
+    file("src/main/webapp/edit-body.jsp", "<h1>Edit User</h1>");
+    var screen =
+        analyze().nodes().stream()
+            .filter(
+                node -> node.id().equals(ApplicationGraph.id(NodeType.SCREEN, "tiles:.editPage")))
+            .findFirst()
+            .orElseThrow();
+    assertEquals("Edit User", screen.name(), screen.attributes().toString());
+    assertEquals("body JSP", screen.attributes().get("screenNameSource"));
+  }
 }

@@ -253,8 +253,13 @@ final class SpringDtoSimulation {
       }
       var attrs = new TreeMap<>(screen.attributes());
       try {
+        // Bindings another simulation pass already wrote for this screen are kept (RV-212).
+        List<Object> merged = new ArrayList<>();
+        String existing = attrs.get("simulationBindings");
+        if (existing != null) merged.addAll(json.readValue(existing, List.class));
+        merged.addAll(bindings);
         attrs.put(
-            "simulationBindings", json.writeValueAsString(bindings.stream().distinct().toList()));
+            "simulationBindings", json.writeValueAsString(merged.stream().distinct().toList()));
       } catch (JsonProcessingException error) {
         // Only maps, lists and records of strings and numbers are written; failing is a bug.
         throw new IllegalStateException("Cannot serialize simulation bindings", error);

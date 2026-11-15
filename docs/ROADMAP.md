@@ -363,3 +363,129 @@
 - WP123：CLI 等待預覽擷取的上限由固定 120 秒改為 120 秒加每個畫面 2 秒，最多 30 分鐘；Java 不導入 Error Prone，見 [ADR 0143](adr/0143-r52-capture-timeout-and-java-lint.md)（HC-004、HC-001）。另新增工作階段紀錄 [SESSION_20261112_R47-R52](SESSION_20261112_R47-R52.md)。
 - 驗證：新增 `CaptureTimeoutTest`；15 個 fixtures 的產物不變；Maven 600（595 通過、5 略過）。
 
+
+## R53 修正 code review 的 P1 項目
+
+- WP124：依 [CODE_REVIEW_20261114](CODE_REVIEW_20261114.md) 修正 P1。9 項成立並修正；RV-006 無法重現，判定不成立；RV-009 實際影響比記錄的小，記錄已更正。CLI 的用法與元件庫錯誤改以 exit status 回報、每次分析先清除舊預覽、Struts 2 偵測遇到無法解析的檔案時改掃描原始位元組，見 [ADR 0144](adr/0144-r53-code-review-p1-fixes.md)。
+- 驗證：每項修正都新增測試並確認修改前失敗（RV-001 啟動腳本除外）；JS 181、capture 94、viewer 單元 149、Maven 全數通過；viewer e2e 117/118，唯一失敗為效能測試在 sandbox 負載下逾時，單獨執行時修改前後都通過。
+
+## R54 共用 web root 規則
+
+- WP125：新增 `WebRoots`，JSP parser、Struts adapter、struts-menu 與 capture 的 `mvc:resources` 探索改用同一套 web root 規則；context 絕對路徑先在引用檔所在的 web root 下找，再退到專案根目錄，不改找其他 web root 的同名檔，見 [ADR 0145](adr/0145-r54-shared-web-roots.md)（RV-317、RV-401、RV-425、RV-512）。Spring adapter 的寫死位置待後續。
+- 驗證：新增 5 組測試，都已確認在修改前失敗；JS 181、capture 95、viewer 單元 149、Maven 全數通過。
+
+## R55 單一檔案或項目出錯只影響它自己
+
+- WP126：Spring Web Flow、Thymeleaf 片段、JavaScript／React 分析輸出、React 預覽樣式表與 viewer CSS 資源，錯誤只影響出錯的那一項並留下診斷；Spring Security 外部呼叫的推論維持 fail closed，但只在讀不到的檔案可能含 security 設定時才停止，並指出是哪個檔案，見 [ADR 0146](adr/0146-r55-contain-single-item-failures.md)（RV-217、RV-220、RV-404、RV-414、RV-421、RV-511、RV-602）。
+- 驗證：每項都新增測試；JS 181、capture 96、viewer 單元 150、viewer e2e 118、Maven 全數通過。
+
+## R56 API 呼叫者不重複計算
+
+- WP127：`ApiUsage.java` 與 viewer 的 `usage.ts` 先算出每個 CALL_API 行為所屬的觸發元件（沿 `parentId` 往上找），同一觸發元件到同一端點的 CALLS／TRIGGERS 邊不再另算一個呼叫者；兩邊規則相同，並以一次集合查詢取代每條邊掃描全部行為（RV-110、RV-612，RV-702 的一部分）。不改變對外契約，未新增 ADR。
+- 驗證：Java 與 viewer 各新增 1 個測試，都已確認在修改前失敗；viewer 單元 151、Maven 全數通過。
+
+## R57 URL 中的 `&amp;` 與資源檔名編碼
+
+- WP128：interaction target 與 Struts 的 query string 切分先把 `&amp;` 換回 `&`；`pack-preview` 不再重複解碼已處理的屬性；capture 以解碼後的路徑尋找資源檔，見 [ADR 0147](adr/0147-r57-decode-ampersands-in-urls.md)（RV-313、RV-424、RV-521、RV-522）。
+- 驗證：新增 3 個測試，都已確認在修改前失敗（RV-522 未加自動測試）；JS 181、capture 97、Maven 全數通過。
+
+## R58 Spring adapter 改用共用 web root 規則
+
+- WP129：`SpringMvcAnalyzer` 的公開 JSP 別名、`WEB-INF/jsp|views` 簡稱、Tiles 範本路徑與 include 來源，以及 `SpringControllerFlow` 的公開畫面比對，都改用 `WebRoots`（ADR 0145 的同一規則）；Java 主程式中除了 scanner 本身的預設清單，已無寫死的 `src/main/webapp`。
+- 驗證：新增 `SpringWebRootLayoutTest` 並確認在修改前失敗；Maven 全數通過。
+
+## R59 Struts 舊專案的入口與版本判定
+
+- WP130：welcome-file 指向 action 時補上前導 `/` 再比對路由（RV-305）；`<logic:forward name>` 以 global forward 解析目標（RV-306）；Struts 版本只採用 Struts 1 本身的 Maven artifact（`org.apache.struts` 群組中的非 Struts 2 artifact、`struts` 群組或無群組的已知 artifact）與 jar 名稱，`struts-menu`、`spring-webmvc-struts` 不再造成版本衝突（RV-311）；Tiles 標題中任何位置出現 EL 或 scriptlet 都視為動態，改用 body 標題命名（RV-312）。不改變對外契約，未新增 ADR。
+- 驗證：新增 4 個測試，都已確認在修改前失敗；Maven 全數通過。
+
+## R60 Spring mapping 與回傳畫面的精度
+
+- WP131：`method = {GET, POST}` 改為每個方法各一個端點（RV-202，[ADR 0148](adr/0148-r60-one-endpoint-per-request-method.md)）；同一 XML 中多個 `<http>` 的登入／登出處理各自獨立（RV-203）；`<bean name="/x.htm">` 建立路由、SimpleUrlHandlerMapping 可用 bean 名稱找 controller（RV-205）；Spring Boot controller 取每個字面值回傳畫面，不含 lambda 內的 return（RV-213）；宣告時給字面值且不再指派的 `String` 區域變數可解析為畫面（RV-214 部分）。
+- 驗證：`SpringRound60Test` 新增 6 個測試，都已確認在修改前失敗；Maven 全數通過。
+
+## R61 Spring／Struts 導覽精度
+
+- WP132：已證明的導覽不再被推論結果降級（`SpringMvcAnalyzer.edge()` 遇到較強證明時升級，`SpringControllerFlow.project()` 保留 CONFIRMED，並改以索引查詢 HANDLED_BY／RENDERS／FORWARDS_TO）（RV-206）；XML controller 的路由也記到畫面上，無 action 的表單與相對連結可以解析（RV-207）；JSP 相對 URL 套用 `.`／`..` 正規化，超出根目錄時標為 unresolved（RV-208）；Struts `<action>` 內的 `<exception>` 只從該 action 出發（RV-301）。不改變對外契約，未新增 ADR。
+- 驗證：新增 6 個測試，整合測試都已確認在修改前失敗；Maven 全數通過。
+
+## R62 實測熱點與過大的預覽擷取
+
+- WP133：以 300 個 action 的合成專案量測後，`StrutsScreens.screenForView`、`MarkupGraphContribution`、`StrutsInteractions` 的線性搜尋改用索引（新增 `NodesByViewName`）；`element-styles.json` 超過 32 MiB 時報表照常產出、不含元素樣式並加上 `PREVIEW_STYLES_TOO_LARGE` 診斷（新發現 RV-118），見 [ADR 0149](adr/0149-r62-hotspots-and-oversized-capture.md)（RV-702 部分）。
+- 量測：Java 分析 37.7 秒 → 18.5 秒；完整 CLI 由無報表變為 186 秒完成。
+- 驗證：合成專案與 14 個 fixture 的圖與 prototype 產物逐位元組相同；新增 2 個測試；Maven 全數通過。
+
+## R63 元素樣式的大小與讀取
+
+- WP134：`element-styles.json` 改為精簡 JSON；報表直接解析位元組、上限提高為 256 MiB；`PreviewCaptureReader` 以每個畫面建立一次的索引取代逐元素全掃描，見 [ADR 0150](adr/0150-r63-element-styles-size-and-reading.md)。
+- 量測（300 個 action 的合成專案）：擷取檔 70 MB → 48.7 MB；報表步驟 140 秒 → 7.5 秒；完整 CLI 173 秒且報表含元素樣式。
+- 驗證：修改前後的報表與 `preview-model.json` 逐位元組相同；capture 97、Maven 全數通過。
+
+## R64 預覽擷取的截止時間
+
+- WP135：擷取腳本接受 `--deadline`，過了截止時間不再開始新畫面、已完成的畫面照常寫出，未擷取的畫面明確標記；CLI 以上限減去預留時間作為截止時間，最後手段改為結束整個子程序樹；`@SuppressWarnings` 移回 `renderStaticJsp`，見 [ADR 0151](adr/0151-r64-capture-deadline.md)（RV-104、RV-105、RV-106）。
+- 驗證：新增 3 個測試，capture 的 2 個已確認在修改前失敗；capture 99、Maven 全數通過。
+
+## R65 啟動腳本、CLI、core、scanner、report 的其餘項目
+
+- WP136：處理 RV-101～117 中尚未修正的 13 項與 RV-808：
+  - 啟動腳本：重建檢查略過 `analyze/` 輸出；Maven 版本只讀「Apache Maven」那一行。
+  - CLI：預覽封裝的上限依畫面數放寬，逾時或失敗時報表照常產出（不含預覽頁面）；互動提示展開 `~`、處理無效路徑與 Ctrl-D／Ctrl-C；選單寬度不超過終端機；`reg query` 的 5 秒上限確實生效；節點數只計算一次。
+  - core：合併保留雙方屬性與較強 confidence、evidence 去重、已解析的行為目標優先；驗證失敗統一為 `GraphValidationException`，null 欄位不再 NPE（[ADR 0152](adr/0152-r65-graph-merge-and-validation-errors.md)）。
+  - scanner：`target`／`build` 只在專案根目錄或建置檔旁略過；POM 屬性依模組解析。
+  - report：prototype 元件依畫面分欄排列，共用元件各畫面有獨立 ID；樣式 map 保留排序。
+- 驗證：新增 11 個測試，修正項目的測試都已確認在修改前失敗；13 個 fixture 中只有 `wp10/struts1-spring` 的圖改變（重複 evidence 移除、保留 Spring 的 `template` 屬性），prototype 位置依新規則改變；Maven 全數通過。
+
+## R66 Spring adapter 的其餘項目
+
+- WP137：處理 RV-201～221 中尚未修正的 11 項：驗證規則的 Java 解析層級與其他流程一致（RV-201）；Security 重導只讀 XML／Java（RV-204）；多個 Tiles definition 共用 body 時回報 `TILES_BODY_AMBIGUOUS`（RV-209）；會拋例外且無預設錯誤頁的 handler 也回報無法解析的回傳畫面（RV-210）；Java config 的登入／登出處理也清除過時的 URL 診斷（RV-211）；`simulationBindings` 合併而非覆寫（RV-212）；靜態預覽不列 hidden 欄位與非按鈕的 input 值（RV-215）；模組內的 Thymeleaf 範本目錄（RV-216）；表單模型不含 static 成員（RV-218）；只設 prefix 或 suffix 的 properties view resolver 生效、忽略 test resources（RV-219）；branch key 改為 `Target` 欄位（RV-221 部分）。不改變對外契約，未新增 ADR。
+- 驗證：`SpringRound66Test` 新增 5 個測試，都已確認在修改前失敗；13 個 fixture 中只有兩個 `wp10` Spring 專案的 `staticPreview` 少了 checkbox／radio 的值（RV-215 的預期結果）；Maven 全數通過。
+
+## R67 Struts adapter 的其餘項目
+
+- WP138：處理 RV-302～324 中尚未修正的 17 項，包括：dispatch 投影的診斷回到輸出（RV-302）；`inputForward` 先查 action 自己的 forward（RV-303）；模組內 forward 加上模組前綴、不含 query（RV-304）；dispatch 解析結果寫回元件（RV-307）；dispatch 端點依 servlet mapping 決定 PROVEN 與 confidence、不覆蓋既有節點（RV-308）；forward 繼承也能找到父類別的 dispatch 方法（RV-309）；DelegatingActionProxy 用 Spring 解析後的類別（RV-310）；web root 的 web.xml 優先（RV-314）；只有 SwitchAction 才改寫 prefix／page（RV-315）；MappingDispatchAction 不再產生假的請求參數（RV-316）；訊息檔與 Tiles 路徑比對加上路徑邊界（RV-318、RV-322）；別名去重（RV-319）；設定檔不依資料夾猜模組（RV-320）；讀取 ValidatorPlugIn `pathnames` 列出的檔案（RV-321）；Tiles `put` 的 `content` 與內容（RV-322）；`extends` 的證據與偵測規則一致（RV-323）；未對應路由的行為用解析後目標（RV-324）。不改變對外契約，未新增 ADR。
+- 驗證：`StrutsRound67Test` 新增 9 個測試，整合測試 8 個都已確認在修改前失敗；13 個 fixture 中只有 `wp10/struts1`、`wp10/struts1-spring` 改變：元件多了 `dispatchMethod`（RV-307），`/mapping.do?save=save` 改為 `/mapping.do` 由 `save()` 處理（RV-316）；Maven 全數通過。
+
+## R68 parser-jsp 的其餘項目
+
+- WP139：處理 RV-402～428 中 18 項：Java 解析層級一致（RV-402）；一般 `Map.put` 不再關閉 EL 值解析（RV-403）；Thymeleaf 無參數片段、`th:insert`／`th:include`、含 `${…}` 的參數（RV-405、RV-406）；選單展開保留行號（RV-408）；HttpSession、Principal 等框架參數不列入請求欄位（RV-411）；家目錄遮蔽只比對完整路徑（RV-412）；AngularJS 取最內層 controller、支援 `data-ng-controller`（RV-413）；JS 分析器逾時依來源數放寬（RV-415）；Tiles `put` 的 `content` 與內容（RV-417）；不分大小寫的結束標籤搜尋不再複製整份原始碼（RV-418）；`mvc:resources` 行號（RV-419）；React 重複路由去重（RV-420）；菱形 include 只加一次（RV-422）；連結文字讀到自己的結束標籤且不分大小寫（RV-423）；Struts `nested:` taglib（RV-426）；include 去除 query（RV-427）；結束標籤依名稱關閉範圍（RV-428）。RV-407、RV-410 試作後撤回，RV-409、RV-416 未處理，原因記在 review 文件。不改變對外契約，未新增 ADR。
+- 驗證：新增 11 個測試，整合測試都已確認在修改前失敗（RV-418、419、420、426、428 未加專屬測試）；13 個 fixture 的圖全部與修改前相同；Maven 全數通過。
+
+## R69 capture 與 JS 分析器的其餘項目
+
+- WP140：處理 RV-501～520 中尚未修正的 18 項：預覽替換不再展開 `$'`、`$&`（RV-501）；訊息檔解碼 `\uXXXX`、跳脫字元與行接續（RV-502）；`config` init-param 逗號清單（RV-503）；專案或輸出位於 symlink 下時一律以 realpath 比對（RV-504）；只有 axios 的請求方法算 API 呼叫，`axios.request` 讀 config（RV-505）；behavior／rule 的 id 依「檔案＋畫面」計數，同一 JSP 兩段相同 inline script 不再互相覆蓋（RV-506）；`$(window).load(fn)`（RV-507）；`var validateX = function(){}` 的驗證規則（RV-508）；CSS 以位元組改寫、全部複製後只改寫一次（RV-509）；CSP meta 不會插進 `<header>`，React 預覽也加上 CSP（RV-510、RV-513）；React 標記的屬性 denylist 不分大小寫、檢查 `xlink:href` 等 URL 屬性、拒絕含 `url(` 的字串 style（RV-513）；解構與預設值參數遮蔽外層變數（RV-514）；片段 `startLine` 驗證（RV-515）；無 `source` 的元件（RV-516）；數字相加維持數字（RV-517）；只有 DOM 事件名稱的 `on*` 指派才是事件綁定（RV-518）；JSP 遮罩跳過 regex literal（RV-519）；未關閉的 `<!--` 延伸到檔尾（RV-520）。不改變對外契約，未新增 ADR。
+- 驗證：JS 新增 10 個、capture 新增 4 個測試，都已確認在修改前失敗（RV-501、504、509、510、516 未加自動測試）；13 個 fixture 的圖全部與修改前相同（RV-506 第一版以檔案計數時 wp10 兩組 fixture 的 id 改變，改為依檔案＋畫面計數）；JS 191、capture 103、Maven 全數通過。
+
+## R70 viewer 的其餘項目
+
+- WP141：處理 RV-601、603～611：預覽文件解析後，詞法階段漏改名的 fetching 屬性也套用同一份允許規則，詞法階段改用 HTML 的空白與註解結尾、raw-text 讀到結束標籤為止（RV-601）；記住的進度檔晚於使用者的決策回來時不自動載入（RV-603）；選擇新進度檔時等待進行中的寫入（RV-604）；關聯 tooltip 只列 10 個觸發元件（RV-605）；`html:form` 等含 `:` 的路徑改用 `previewSelector`（RV-606）；同名畫面中帶 query 的加註 query 後，其餘照常區分（RV-607）；角色流程的網址入口在確定路徑上重新走訪（RV-608）；決策徽章不放進 `<select>`／`<textarea>`／`<img>` 等元素內（RV-609）；review md 附錄之後允許空行（RV-610，[ADR 0153](adr/0153-r70-review-md-trailing-empty-lines.md)）；沒有擷取高度且頁面隨視窗高度長大時，框架不再無限放大（RV-611）。
+- 修正 R60、R67 留下的 wp10 golden summary：`struts1`、`struts1-spring` 少 1 個使用中的 API（RV-316 將 `/mapping.do?save=save` 併入 `/mapping.do`）；`spring-mvc-jsp`、`spring-boot-jsp` 多 1 個未引用的 API 與 1 個 `SPRING_XML_VIEW_UNRESOLVED`（RV-205 由 `<bean name="/xml-page">` 建立路由）。那兩輪沒有跑 viewer e2e，`synthetic-project.e2e.mjs` 因此失敗。
+- 驗證：新增 9 個測試（`r70-viewer-review.test.mjs` 4 個，其餘加在既有檔案），md 匯入測試加上檔尾空行的案例；RV-601、603～608、610、611 都已確認在修改前失敗（RV-609 測試新抽出的 `placeBadge`）；viewer 157、e2e 120／121（`performance.e2e.mjs` 在修改前也失敗：本機首次繪製 918 ms，超過以 R5 278 ms 為基準的三倍）、Maven 全數通過；只改 viewer，圖不變，未比對 fixture。
+
+## R71 重複程式碼與死碼
+
+- WP142：處理 RV-801～807：Spring 的 controller／mapping／回應本體判斷與路徑接合共用 `SpringMappings`（RV-801）；Struts dispatch 端點的請求、屬性與 confidence 共用 `StrutsDispatch`，連結建立的端點補上 `category=ACTION`、`servletMappingStatus`（RV-802）；Struts 連結目標的判斷條件共用，`html:link action` 正規化 JSP parser 解析後的值，`moduleTarget`、`extendedMapping` 改用既有函式（RV-803）；parser-jsp 的元件 id、`literal()`、VOID 集合、`<current-view>`、javascript-request 修剪各只留一份（RV-804）；viewer 的端點方法／路徑、root trigger 回溯、排序比較器各只留一份（RV-805）；React 樣式改用 `resolveSpecifier`、POM 改用 `SafeProjectFiles.parseXml`（RV-806）；移除 RV-807 列出的死碼。不改變對外契約，未新增 ADR。
+- 驗證：`StrutsRound71Test` 新增 2 個測試，都已確認在修改前失敗；14 個 fixture（不含 Struts 2 拒絕案例）的圖只有 `wp10/struts1`、`wp10/struts1-spring` 改變：兩個 dispatch 端點多了 `category=ACTION` 與 `servletMappingStatus=PROVEN`（RV-802 的預期結果），其餘逐位元組相同；Maven、JS 191、capture 103、viewer 157、e2e 120／121（`performance.e2e.mjs` 同 R70）全數通過。
+
+## R72 parser-jsp 的其餘項目
+
+- WP143：處理 RV-407、409、410、416：tag file 展開依呼叫行記錄證據，每個呼叫只引用自己的 tag file（RV-407）；共用片段的 `conditional`／`repeated` 只在每個包含它的畫面都成立時才標在節點上，各畫面情境留在 CONTAINS 證據（RV-409，[ADR 0154](adr/0154-r72-shared-fragment-include-context.md)）；表單內無 type 的 `<button>`／`<form:button>` 顯示為 SUBMIT，id 仍用與情境無關的 kind，`type="SUBMIT"` 不分大小寫（RV-410）；parent 無法解析的 Tiles definition 保留自己宣告的內容（RV-416）。
+- 驗證：`ParserRound72Test` 新增 3 個、`StrutsRound72Test` 新增 1 個測試，都已確認在修改前失敗；以 R71 為基準比對 14 個 fixture：`spring-mvc-jsp` 表單內無 type 的 `<button formaction>` 由 BUTTON 改為 SUBMIT（其 `componentType` 本來就是 FORM_SUBMIT）；`r3/wp17`、`r3/wp20`、`r5/wp21`、`r7/anchors` 只移除錯配的 tag file 證據（共 126 筆），節點、關係與行為不變；其餘逐位元組相同；Maven 全數通過。
+
+## R73 依量測處理效能熱點
+
+- WP144：以 300 個 action 的 Struts 合成專案（依 ADR 0149 的描述重建：每頁 40 列表格、表單、前後頁連結，每個 Action 20 個 dispatch 方法）配合 JFR 量測：`ActionContracts` 改為每個 struts-config 解析一次、依 action path 建索引，關係依來源分組（RV-703）；`StrutsConfigParser.moduleFor` 依 path 快取（RV-703）；`redactHome` 在字串不含家目錄時略過 regex（RV-706）；`StrutsBehaviorProjection` 的表單送出依目標 path 建索引（RV-702）。
+- 量測（sandbox，只計 Java 分析）：同一合成專案由 100 秒降為 32 秒（R72 為基準）。
+- 驗證：合成專案與 14 個 fixture 的圖逐位元組相同；Maven 全數通過。純效能修改，未新增測試。
+
+## R74 Spring MVC 與 JS 分析器的效能熱點
+
+- WP145：新增 Spring MVC 合成專案（每個 controller 10 組 GET／POST mapping、3 個 JSP、表單與表格連結、inline script）以 JFR 與 Node `--cpu-prof` 量測：`SpringMvcAnalyzer` 的 addNode／edge 改用 id 索引，`endpointsFor` 有完全相同路徑時直接回傳；`SpringFormBindings`、`SpringServerValidation`、`RouteTemplateInference`、`UrlGraphContribution` 的請求邊移除與 `UrlResolution` 的端點比對改用索引（RV-702）；分析流程中的 `ObjectMapper` 改為常數（RV-705）；`UrlResolution.match` 快取端點樣板、`pathScore` 不再每次編譯 regex（RV-706）；`analyzer.mjs` 不再為每個 unit 過濾整份 DOM（RV-709）。量測中發現條件重導長鏈會讓導覽邊與證據呈平方成長，記為 RV-119，未處理。
+- 量測（sandbox，只計分析）：40 個 controller（含 40 層重導鏈）76 秒 → 16 秒；300 個 controller 由超過 10 分鐘降為 96 秒；Node 端（100 個 controller）32 秒 → 2 秒；Struts 300 個 action 維持約 33 秒。
+- 驗證：14 個 fixture、Struts 合成專案與 40 個 controller 的 Spring 合成專案（與 R73 比對），以及 100、300 個 controller 的專案（與本輪第一版比對），圖都逐位元組相同；Maven、JS 191、capture 103 全數通過。純效能修改，未新增測試。
+
+## R75 React 與 viewer 的量測、私人路徑遮蔽
+
+- WP146：以 300 頁的 Spring Boot＋React 合成專案量測：分析 16 秒，Node 端 7 秒來自每個畫面重走含全部路由的 App 元件，佔比不高，未修改；以同一張圖（7,500 個節點）在 Chromium 量測 viewer：載入 1.8 秒、開啟畫面面板 2.1 秒（聚焦動畫每幀強制版面計算）、搜尋輸入 250 ms，RV-710 列出的 `indexGraph` 重建合計約 90 ms，未修改。`hidePrivateLocations` 先單獨遮蔽 application，再以串流序列化確認其餘內容不含家目錄時直接回傳，不再把整張圖轉成 JSON 樹（RV-706）。更正 RV-119：重導展開有 10 層上限，是常數倍膨脹。
+- 量測（只計分析）：Spring MVC 40 個 controller 16 → 8 秒、100 個 23 秒（R74 為 32 秒）、React 300 頁 16 → 13 秒、Struts 300 個 action 35 → 31 秒；80 個 controller 的專案在 3.4 GB 預設 heap 下由記憶體不足改為 35 秒完成。
+- 驗證：`HomeRedactionTest` 新增 1 個測試（application 與節點中的家目錄都會遮蔽）；14 個 fixture 與 4 個合成專案的圖逐位元組相同；Maven 全數通過。

@@ -1679,7 +1679,10 @@ class ScreenRenderer {
 
   styleOf(expr, scope) {
     const value = this.evaluator.evaluate(expr, scope);
-    if (value.t === 'lit' && typeof value.v === 'string') return value.v;
+    // A string style passes the same filter as an object one: no url(), expression() or markup
+    // (RV-513).
+    if (value.t === 'lit' && typeof value.v === 'string')
+      return /[<>{}]|url\s*\(|expression\s*\(/i.test(value.v) ? undefined : value.v;
     if (value.t !== 'object') return undefined;
     const entries = [];
     for (const property of value.node.properties) {

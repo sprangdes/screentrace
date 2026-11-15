@@ -1,24 +1,12 @@
 import { Graph, Behavior } from './contracts';
-import { Index, indexGraph } from './map';
+import { Index, indexGraph, rootBehavior } from './map';
 export interface Caller {
   screenId: string;
   componentId?: string;
   behaviorId?: string;
 }
 export function rootTrigger(index: Index, b: Behavior): string | undefined {
-  let parent = b;
-  const seen = new Set<string>(),
-    behaviors = index.behaviors;
-  while (
-    !parent.triggerId &&
-    parent.parentId &&
-    !seen.has(parent.id) &&
-    behaviors.has(parent.parentId)
-  ) {
-    seen.add(parent.id);
-    parent = behaviors.get(parent.parentId)!;
-  }
-  return parent.triggerId;
+  return rootBehavior(index.behaviors, b).triggerId;
 }
 export function callSources(graph: Graph): Map<string, Caller[]> {
   const index = indexGraph(graph),
@@ -33,18 +21,28 @@ export function callSources(graph: Graph): Map<string, Caller[]> {
       for (const screenId of index.owners.get(trigger) || [])
         result.get(target)?.push({ screenId, componentId: trigger, behaviorId });
   };
+  // Same rule as ApiUsage.java: a CALLS/TRIGGERS edge whose trigger already calls the endpoint
+  // through a CALL_API behavior, directly or nested under another behavior, is that same call
+  // (RV-612). The set replaces a scan of every behavior per edge.
+  const roots = new Map<string, string>(),
+    behaviorCalls = new Set<string>();
+  for (const b of graph.behaviors || [])
+    if (b.type === 'CALL_API' && b.targetId) {
+      const trigger = rootTrigger(index, b);
+      if (!trigger) continue;
+      roots.set(b.id, trigger);
+      behaviorCalls.add(trigger + '\u0000' + b.targetId);
+    }
   for (const e of edges)
     if (
       result.has(e.to) &&
       ['CALLS', 'TRIGGERS'].includes(e.type) &&
-      !(graph.behaviors || []).some(
-        (b) => b.type === 'CALL_API' && b.triggerId === e.from && b.targetId === e.to,
-      )
+      !behaviorCalls.has(e.from + '\u0000' + e.to)
     )
       add(e.to, e.from);
   for (const b of graph.behaviors || [])
     if (b.type === 'CALL_API' && b.targetId && result.has(b.targetId)) {
-      const trigger = rootTrigger(index, b);
+      const trigger = roots.get(b.id);
       if (trigger) add(b.targetId, trigger, b.id);
     }
   const redirects = new Map<string, Set<string>>();
@@ -103,13 +101,9 @@ export function screenBehaviors(index: Index, id: string): Behavior[] {
 
 export function callerKind(index: Index, caller: Caller): 'load' | 'component' | 'unresolved' {
   if (caller.componentId) return 'component';
-  let b = index.behaviors.get(caller.behaviorId || '');
-  if (!b) return 'load';
-  const seen = new Set<string>();
-  while (!b.triggerId && b.parentId && !seen.has(b.id) && index.behaviors.has(b.parentId)) {
-    seen.add(b.id);
-    b = index.behaviors.get(b.parentId)!;
-  }
+  const called = index.behaviors.get(caller.behaviorId || '');
+  if (!called) return 'load';
+  const b = rootBehavior(index.behaviors, called);
   return (b.event &&
     !['load', 'onload', 'ready', 'domcontentloaded'].includes(b.event.toLowerCase())) ||
     (!b.event && b.evidence?.some((e) => e.resolution === 'UNRESOLVED'))

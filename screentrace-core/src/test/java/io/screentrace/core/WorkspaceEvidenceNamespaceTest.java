@@ -55,7 +55,7 @@ class WorkspaceEvidenceNamespaceTest {
             "C:\\config.json",
             "../config.json"))
       assertThrows(
-          IllegalStateException.class,
+          GraphValidationException.class,
           () -> GraphIntegrityValidator.validate(graph(source)),
           source);
   }

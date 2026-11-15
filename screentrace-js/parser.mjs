@@ -50,6 +50,27 @@ function maskJspArguments(code, ranges) {
       i = end + 2;
       continue;
     }
+    // A regex literal (after an operator, opening punctuation or the start) is copied as is, so a
+    // quote inside it such as /'/g does not open a string (RV-519).
+    if (
+      c === '/' &&
+      /[(,=:[!&|?{};+\-*%<>~^]$|^\s*$|\breturn\s*$|\btypeof\s*$/.test(result.trimEnd() || ' ')
+    ) {
+      let j = i + 1,
+        inClass = false;
+      while (j < code.length && code[j] !== '\n') {
+        if (code[j] === '\\') j += 2;
+        else if (code[j] === '[') ((inClass = true), j++);
+        else if (code[j] === ']') ((inClass = false), j++);
+        else if (code[j] === '/' && !inClass) break;
+        else j++;
+      }
+      if (code[j] === '/') {
+        result += code.slice(i, j + 1);
+        i = j + 1;
+        continue;
+      }
+    }
     if ((c === '$' || c === '#') && code[i + 1] === '{') {
       let end = i + 2,
         depth = 1,

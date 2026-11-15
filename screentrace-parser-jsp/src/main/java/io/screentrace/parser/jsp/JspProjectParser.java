@@ -4,6 +4,7 @@ import io.screentrace.core.ApplicationGraph.Confidence;
 import io.screentrace.core.ApplicationGraph.Diagnostic;
 import io.screentrace.core.ApplicationGraph.SourceLocation;
 import io.screentrace.scanner.SafeProjectFiles;
+import io.screentrace.scanner.WebRoots;
 import java.io.IOException;
 import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
@@ -13,7 +14,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
-import java.util.regex.Pattern;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
@@ -25,9 +25,6 @@ import org.w3c.dom.NodeList;
 public final class JspProjectParser {
   private static final String PARSER = "JspProjectParser";
   public static final String CURRENT_VIEW_TARGET = "<current-view>";
-  private static final Pattern JSP_COMMENT = Pattern.compile("(?s)<%--.*?--%>");
-  private static final Pattern JSTL_URL =
-      Pattern.compile("(?is)<c:url\\b[^>]*?\\bvalue\\s*=\\s*(['\"])(.*?)\\1[^>]*/>");
 
   public JspAnalysis analyze(Path root, List<Path> files) throws IOException {
     return analyze(root, files, (bundle, key) -> null);
@@ -155,17 +152,10 @@ public final class JspProjectParser {
       }
       var componentKind = MarkupAnalysis.kind(tagName, tag.attributes());
       String componentId = null;
-      if (componentKind != null) {
-        var identity = new java.util.TreeMap<>(tag.attributes());
-        identity.put("tag", tagName);
-        String key = componentKind + identity.toString();
+      if (componentKind != null)
         componentId =
-            io.screentrace.core.StableGraphIds.component(
-                relative,
-                componentKind,
-                identity,
-                componentOccurrences.merge(key, 1, Integer::sum) - 1);
-      }
+            MarkupAnalysis.componentId(
+                relative, componentKind, tagName, tag.attributes(), componentOccurrences);
       int interactionStart = interactions.size();
       UrlVariableResolver.Resolution resolution = null;
       switch (tagName) {
@@ -181,7 +171,7 @@ public final class JspProjectParser {
               target(tag, "page", "file", "definition", "value", "template", "url");
           boolean inferredImport = false;
           if (tagName.equals("c:import")
-              && literal(includeTarget)
+              && MarkupTag.literal(includeTarget)
               && !includeTarget.startsWith("/")
               && resolveInclude(root, relative, includeTarget) == null) {
             List<Path> candidates = new ArrayList<>();
@@ -462,13 +452,13 @@ public final class JspProjectParser {
         // An absolute external import is a separate HTTP request and cannot write this request's
         // variables.
         if (imported
-            && literal(target)
+            && MarkupTag.literal(target)
             && tag.attribute("context") == null
             && target.matches("(?i)^(https?:)?//.*")) continue;
-        if (imported && literal(target) && tag.attribute("context") == null)
+        if (imported && MarkupTag.literal(target) && tag.attribute("context") == null)
           target = target.split("[?#]", 2)[0];
         else if (imported) target = null;
-        String child = literal(target) ? resolveInclude(root, path, target) : null;
+        String child = MarkupTag.literal(target) ? resolveInclude(root, path, target) : null;
         if (child == null) {
           result.add("*");
           continue;
@@ -498,15 +488,10 @@ public final class JspProjectParser {
       SourceLocation source,
       List<JspAnalysis.Include> includes,
       List<Diagnostic> diagnostics) {
-    if (literal(target))
+    if (MarkupTag.literal(target))
       includes.add(new JspAnalysis.Include(sourcePath, target, source, Confidence.CONFIRMED));
     else if (target != null)
       diagnostics.add(unresolved("JSP include cannot be resolved statically: " + target, source));
-  }
-
-  /** Removes JSP-only syntax and converts literal c:url tags before markup tokenization. */
-  static String preprocess(String source) {
-    return JSTL_URL.matcher(JSP_COMMENT.matcher(source).replaceAll("")).replaceAll("$2");
   }
 
   private static JspAnalysis.InteractionType linkType(MarkupTag tag, String target) {
@@ -565,6 +550,9 @@ public final class JspProjectParser {
       List<JspAnalysis.Interaction> result) {
     if (!stack.add(current)) return;
     for (String child : included.getOrDefault(current, List.of())) {
+      // A fragment reached through two includes (a diamond) is added once (RV-422); the set is
+      // kept for the whole screen, which also stops cycles.
+      if (stack.contains(child)) continue;
       for (JspAnalysis.Interaction item : byView.getOrDefault(child, List.of()))
         result.add(
             new JspAnalysis.Interaction(
@@ -581,21 +569,25 @@ public final class JspProjectParser {
                 item.componentId()));
       collectIncluded(screen, child, included, byView, stack, result);
     }
-    stack.remove(current);
   }
 
   private static String resolveInclude(Path root, String sourceView, String target) {
+    // "tabs.jsp?tab=1" includes tabs.jsp; the query only sets request parameters (RV-427).
+    target = target.split("[?#]", 2)[0];
+    if (target.isEmpty()) return null;
     try {
-      Path source = root.resolve(sourceView).getParent();
-      Path candidate =
-          target.startsWith("/")
-              ? root.resolve("src/main/webapp" + target)
-              : source.resolve(target).normalize();
-      if (SafeProjectFiles.isSafeRegularFile(root, candidate)) return relative(root, candidate);
       if (target.startsWith("/")) {
-        candidate = root.resolve(target.substring(1));
-        if (SafeProjectFiles.isSafeRegularFile(root, candidate)) return relative(root, candidate);
+        // Under the web root of the including file, not always src/main/webapp (RV-401), then the
+        // project root.
+        for (String path : WebRoots.candidates(WebRoots.of(root), sourceView, target)) {
+          Path candidate = root.resolve(path).normalize();
+          if (SafeProjectFiles.isSafeRegularFile(root, candidate)) return relative(root, candidate);
+        }
+        return null;
       }
+      Path source = root.resolve(sourceView).getParent();
+      Path candidate = source.resolve(target).normalize();
+      if (SafeProjectFiles.isSafeRegularFile(root, candidate)) return relative(root, candidate);
     } catch (InvalidPathException notAFilePath) {
       // A URL or query string ("https://…", "page.jsp?tab=1") names no project file. Linux accepts
       // such names and finds no file; Windows rejects ':' and '?', so treat both the same way.
@@ -649,11 +641,11 @@ public final class JspProjectParser {
       List<JspAnalysis.Interaction> interactions,
       List<Diagnostic> diagnostics) {
     if (target == null && !submitsCurrentView) return;
-    String resolved = submitsCurrentView ? CURRENT_VIEW_TARGET : target;
+    String resolved = submitsCurrentView ? CURRENT_VIEW_TARGET : MarkupTag.decodeAmpersands(target);
     Confidence confidence =
         submitsCurrentView
             ? Confidence.INFERRED
-            : literal(resolved) ? Confidence.CONFIRMED : Confidence.UNRESOLVED;
+            : MarkupTag.literal(resolved) ? Confidence.CONFIRMED : Confidence.UNRESOLVED;
     interactions.add(
         new JspAnalysis.Interaction(
             viewPath, type, label, resolved, method, source, confidence, submitsCurrentView));
@@ -691,17 +683,15 @@ public final class JspProjectParser {
 
   private static String interactionLabel(MarkupTag tag, String source) {
     String fallback = label(tag);
-    if (!fallback.equals("button") && !fallback.equals("a")) return fallback;
+    if (!fallback.equalsIgnoreCase("button") && !fallback.equalsIgnoreCase("a")) return fallback;
     String tagName = tag.name().toLowerCase(Locale.ROOT);
     if (!tagName.equals("button") && !tagName.equals("a")) return fallback;
-    int close = source.indexOf("</" + tagName, tag.end());
-    if (close < 0) return fallback;
+    // The matching end tag, in any letter case; "</a" must not match "</abbr>" (RV-423).
+    var end = java.util.regex.Pattern.compile("(?i)</" + tagName + "\\s*>").matcher(source);
+    if (!end.find(tag.end())) return fallback;
+    int close = end.start();
     String text = source.substring(tag.end() + 1, close).replaceAll("<[^>]+>", "").strip();
     return text.isBlank() ? fallback : text;
-  }
-
-  private static boolean literal(String value) {
-    return value != null && !value.contains("${") && !value.contains("<%") && !value.contains("#{");
   }
 
   private static void parseTiles(
@@ -728,9 +718,14 @@ public final class JspProjectParser {
               attributeIndex < attributeNodes.getLength();
               attributeIndex++) {
             Element attribute = (Element) attributeNodes.item(attributeIndex);
-            attributes.add(
-                new JspAnalysis.TilesAttribute(
-                    attribute.getAttribute("name"), attribute.getAttribute("value")));
+            // Tiles 1 `content` and an element body give the value too (RV-417).
+            String value =
+                !attribute.getAttribute("value").isEmpty()
+                    ? attribute.getAttribute("value")
+                    : !attribute.getAttribute("content").isEmpty()
+                        ? attribute.getAttribute("content")
+                        : attribute.getTextContent().trim();
+            attributes.add(new JspAnalysis.TilesAttribute(attribute.getAttribute("name"), value));
           }
         }
         // Tiles 2/3 <put-list-attribute><add-attribute value/>, Tiles 1 <putList><add value/>: e.g.
@@ -818,13 +813,14 @@ public final class JspProjectParser {
     String template = current.template();
     if (!current.parent().isBlank()) {
       var parent = resolveTile(current.parent(), definitions, resolved, stack, diagnostics);
-      if (parent == null) {
+      // An unresolved parent (missing, duplicated or in a cycle) leaves the definition with
+      // what it declares itself; the diagnostic says what is missing (RV-416).
+      if (parent == null)
         diagnostics.add(unresolved("Tiles 父定義未解析：" + current.parent(), current.source()));
-        stack.remove(name);
-        return null;
+      else {
+        parent.attributes().forEach(a -> attrs.put(a.name(), a));
+        if (template.isBlank()) template = parent.template();
       }
-      parent.attributes().forEach(a -> attrs.put(a.name(), a));
-      if (template.isBlank()) template = parent.template();
     }
     current.attributes().forEach(a -> attrs.put(a.name(), a));
     var result =
@@ -845,11 +841,5 @@ public final class JspProjectParser {
 
   private static String relative(Path root, Path file) {
     return root.relativize(file).toString().replace('\\', '/');
-  }
-
-  private static int line(String source, int offset) {
-    int line = 1;
-    for (int index = 0; index < offset; index++) if (source.charAt(index) == '\n') line++;
-    return line;
   }
 }

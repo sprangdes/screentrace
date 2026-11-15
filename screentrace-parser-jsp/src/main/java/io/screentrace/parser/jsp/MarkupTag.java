@@ -9,6 +9,17 @@ import java.util.Map;
 
 /** Minimal quote-aware JSP markup tokenizer for element names and literal attributes. */
 public final class MarkupTag {
+  /** HTML elements that never have content or an end tag. */
+  public static final java.util.Set<String> VOID_ELEMENTS =
+      java.util.Set.of(
+          "input", "img", "br", "hr", "meta", "link", "area", "base", "col", "embed", "param",
+          "source", "track", "wbr");
+
+  /** Whether a markup value is plain text: no EL, JSF or JSP expression in it. */
+  public static boolean literal(String value) {
+    return value != null && !value.contains("${") && !value.contains("#{") && !value.contains("<%");
+  }
+
   private final String name;
   private final Map<String, String> attributes;
   private final int line;
@@ -139,10 +150,7 @@ public final class MarkupTag {
           && tag != null
           && !tag.closing()
           && (tag.name().equalsIgnoreCase("script") || tag.name().equalsIgnoreCase("style"))) {
-        int close =
-            source
-                .toLowerCase(Locale.ROOT)
-                .indexOf("</" + tag.name().toLowerCase(Locale.ROOT), end + 1);
+        int close = indexOfIgnoreCase(source, "</" + tag.name(), end + 1);
         if (close < 0) break;
         start = close - 1;
       }
@@ -182,6 +190,18 @@ public final class MarkupTag {
     return attributes.get(name.toLowerCase(Locale.ROOT));
   }
 
+  private static final java.util.regex.Pattern AMPERSAND =
+      java.util.regex.Pattern.compile("(?i)&(?:amp|#38|#x26);");
+
+  /**
+   * A URL as the browser reads it from an attribute: {@code &amp;} (and its numeric forms) become
+   * {@code &}. Only the ampersand is decoded, because it is the one reference that changes how a
+   * query string splits (RV-313, RV-424); other text keeps its source form.
+   */
+  public static String decodeAmpersands(String value) {
+    return value == null ? null : AMPERSAND.matcher(value).replaceAll("&");
+  }
+
   private static int endOfExpression(String source, int start) {
     int depth = 1;
     char quote = 0;
@@ -202,7 +222,7 @@ public final class MarkupTag {
     for (int index = start + 1; index < source.length(); index++) {
       char current = source.charAt(index);
       if (quote != 0) {
-        if (current == '<' && (source.startsWith("<%", index) || source.startsWith("<", index))) {
+        if (current == '<') {
           int nested = nestedEnd(source, index);
           if (nested >= 0) {
             index = nested;
@@ -299,5 +319,16 @@ public final class MarkupTag {
       values.put(name, body.substring(valueStart, valueEnd));
     }
     return values;
+  }
+
+  /**
+   * Like {@code source.toLowerCase().indexOf(needle.toLowerCase(), from)} without copying the
+   * source for each call, and with indexes that always match the original text: lowercasing can
+   * change a string's length (Turkish 'İ'), which shifted them (RV-418).
+   */
+  public static int indexOfIgnoreCase(String source, String needle, int from) {
+    for (int i = Math.max(0, from); i <= source.length() - needle.length(); i++)
+      if (source.regionMatches(true, i, needle, 0, needle.length())) return i;
+    return -1;
   }
 }

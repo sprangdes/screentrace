@@ -4,6 +4,7 @@ import io.screentrace.core.ApplicationGraph.AnalysisEvidence;
 import io.screentrace.core.ApplicationGraph.ResolutionStatus;
 import io.screentrace.core.ApplicationGraph.SourceLocation;
 import io.screentrace.scanner.SafeProjectFiles;
+import io.screentrace.scanner.WebRoots;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.*;
@@ -20,8 +21,16 @@ final class JspTagFileExpander {
       List<String> diagnostics,
       Map<Integer, String> anchors) {}
 
+  /**
+   * @param byCall evidence of each tag call in the expanded file, by the line of the call: the
+   *     call, its definition and what its template expands to, but not a caller body's own calls,
+   *     which have lines of their own (RV-407)
+   */
   private record Expanded(
-      String text, List<AnalysisEvidence> definitions, List<String> diagnostics) {}
+      String text,
+      List<AnalysisEvidence> definitions,
+      List<String> diagnostics,
+      Map<Integer, List<AnalysisEvidence>> byCall) {}
 
   private static final Pattern VARIABLE =
       Pattern.compile("\\$\\{\\s*([A-Za-z_][A-Za-z0-9_]*)\\s*}");
@@ -47,7 +56,9 @@ final class JspTagFileExpander {
       if (tag.closing()) continue;
       String file = tagFile(root, pagePath, pagePrefixes, tag.name());
       if (file == null) continue;
-      byLine.put(tag.line(), expanded.definitions().stream().distinct().toList());
+      byLine.put(
+          tag.line(),
+          expanded.byCall().getOrDefault(tag.line(), List.of()).stream().distinct().toList());
     }
     var clean = bookmarks.clean(expanded.text());
     return new Result(clean.text(), byLine, expanded.diagnostics(), clean.anchors());
@@ -67,6 +78,7 @@ final class JspTagFileExpander {
     prefixes.putAll(prefixes(tags));
     StringBuilder out = new StringBuilder();
     List<AnalysisEvidence> evidence = new ArrayList<>();
+    Map<Integer, List<AnalysisEvidence>> byCall = new TreeMap<>();
     List<String> diagnostics = new ArrayList<>();
     int cursor = 0;
     for (int i = 0; i < tags.size(); i++) {
@@ -137,7 +149,7 @@ final class JspTagFileExpander {
                     prefixes,
                     lineOffset + open.line() - 1 + newlines(text.substring(start, open.end() + 1)),
                     bookmarks)
-                : new Expanded("", List.of(), List.of());
+                : new Expanded("", List.of(), List.of(), Map.of());
         stack.pop();
         String replacement =
             nested
@@ -153,16 +165,24 @@ final class JspTagFileExpander {
             "\n"
                 .repeat(
                     Math.max(0, newlines(text.substring(start, after)) - newlines(replacement))));
-        evidence.add(
+        List<AnalysisEvidence> own = new ArrayList<>();
+        own.add(
             new AnalysisEvidence(
                 call, "JspTagFileExpander", ResolutionStatus.CONFIRMED, "自訂標籤呼叫位置"));
-        evidence.add(
+        own.add(
             new AnalysisEvidence(
                 new SourceLocation(definition, definitionLine),
                 "JspTagFileExpander",
                 ResolutionStatus.CONFIRMED,
                 "標籤定義位置"));
-        evidence.addAll(nested.definitions());
+        own.addAll(nested.definitions());
+        byCall.computeIfAbsent(call.line(), line -> new ArrayList<>()).addAll(own);
+        callerBody
+            .byCall()
+            .forEach(
+                (line, items) ->
+                    byCall.computeIfAbsent(line, ignored -> new ArrayList<>()).addAll(items));
+        evidence.addAll(own);
         evidence.addAll(callerBody.definitions());
         diagnostics.addAll(nested.diagnostics());
         diagnostics.addAll(callerBody.diagnostics());
@@ -176,7 +196,8 @@ final class JspTagFileExpander {
     return new Expanded(
         out.toString(),
         evidence.stream().distinct().toList(),
-        diagnostics.stream().distinct().sorted().toList());
+        diagnostics.stream().distinct().sorted().toList(),
+        byCall);
   }
 
   private static int newlines(String text) {
@@ -248,9 +269,8 @@ final class JspTagFileExpander {
     String name = tagName.substring(colon + 1);
     List<Path> candidates = new ArrayList<>();
     if (tagdir.startsWith("/")) {
-      candidates.add(
-          root.resolve("src/main/webapp").resolve(tagdir.substring(1)).resolve(name + ".tag"));
-      candidates.add(root.resolve(tagdir.substring(1)).resolve(name + ".tag"));
+      for (String path : WebRoots.candidates(WebRoots.of(root), sourcePath, tagdir))
+        candidates.add(root.resolve(path).resolve(name + ".tag"));
     } else {
       Path parent = root.resolve(sourcePath).getParent();
       if (parent != null) candidates.add(parent.resolve(tagdir).resolve(name + ".tag"));

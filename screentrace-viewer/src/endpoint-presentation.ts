@@ -1,5 +1,11 @@
 import { Node } from './contracts';
 import { Index } from './map';
+/** The request method an endpoint answers; `ANY` when the analysis names none. */
+export const endpointMethod = (node: Node): string =>
+  node.attributes.httpMethod || node.attributes.method || 'ANY';
+/** The URL path an endpoint answers, falling back to its route and then its name. */
+export const endpointPath = (node: Node): string =>
+  node.attributes.path || node.attributes.route || node.name;
 export type EndpointGroup = 'API' | 'SCREEN' | 'UNCLASSIFIED' | 'ALL';
 export function endpointGroup(node: Node, index?: Index): EndpointGroup {
   const category = node.attributes.category;
@@ -32,8 +38,8 @@ export function endpointAction(
   type: string,
   _triggerId?: string,
 ): string {
-  const path = node.attributes.path || node.attributes.route || node.name,
-    method = node.attributes.httpMethod || node.attributes.method || 'ANY';
+  const path = endpointPath(node),
+    method = endpointMethod(node);
   if (type === 'SUBMIT_FORM') return `送出表單 → ${path}`;
   if (type === 'NAVIGATE' || (type !== 'CALL_API' && endpointGroup(node, index) === 'SCREEN')) {
     const screens = new Set<Node>(),

@@ -25,7 +25,8 @@ export function relationTooltip(index: Index, payload: Payload, r: FocusRelation
     tip.append(img);
   } else tip.append(element('p', text.noThumbnail));
   const labels = componentLabelsForScreen(index, r.from);
-  for (const id of r.triggers) tip.append(element('div', labels.get(id) || '可操作項目（無文字）'));
+  for (const id of r.triggers.slice(0, 10))
+    tip.append(element('div', labels.get(id) || '可操作項目（無文字）'));
   if (r.triggers.length > 10)
     tip.append(element('p', `${text.remaining} ${r.triggers.length - 10} ${text.items}`));
   return tip;

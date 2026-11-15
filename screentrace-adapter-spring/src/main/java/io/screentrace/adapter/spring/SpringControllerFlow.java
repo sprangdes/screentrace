@@ -429,6 +429,13 @@ final class SpringControllerFlow {
     }
   }
 
+  /** True when {@code view} is the file at public path {@code clean} under its own web root. */
+  private static boolean publicViewMatches(String view, String clean) {
+    String root =
+        io.screentrace.scanner.WebRoots.rootOf(io.screentrace.scanner.WebRoots.DEFAULTS, view);
+    return root != null && view.equals(root + clean.substring(1));
+  }
+
   private static List<GraphNode> publicScreens(String path, List<GraphNode> nodes) {
     if (path == null
         || !path.startsWith("/")
@@ -441,8 +448,7 @@ final class SpringControllerFlow {
     return nodes.stream()
         .filter(
             n ->
-                n.type() == NodeType.SCREEN
-                    && ("src/main/webapp" + clean).equals(n.attributes().get("view")))
+                n.type() == NodeType.SCREEN && publicViewMatches(n.attributes().get("view"), clean))
         .toList();
   }
 
@@ -512,53 +518,63 @@ final class SpringControllerFlow {
     graph.nodes().forEach(n -> nodes.put(n.id(), n));
     Map<String, Relationship> output = new TreeMap<>();
     graph.relationships().forEach(e -> output.put(e.id(), e));
+    // Edges by source, in graph order, so each trigger does not rescan every relationship twice.
+    Map<String, List<Relationship>> handledBy = new HashMap<>(), destinations = new HashMap<>();
+    for (var e : graph.relationships())
+      if (e.type() == EdgeType.HANDLED_BY)
+        handledBy.computeIfAbsent(e.from(), k -> new ArrayList<>()).add(e);
+      else if (e.type() == EdgeType.RENDERS || e.type() == EdgeType.FORWARDS_TO)
+        destinations.computeIfAbsent(e.from(), k -> new ArrayList<>()).add(e);
+    Map<String, List<Behavior>> behaviorsByTrigger = new HashMap<>();
+    for (var b : graph.behaviors())
+      if (b.triggerId() != null)
+        behaviorsByTrigger.computeIfAbsent(b.triggerId(), k -> new ArrayList<>()).add(b);
     for (var request : graph.relationships())
       if (request.type() == EdgeType.TRIGGERS
           && nodes.get(request.from()) != null
           && nodes.get(request.from()).type() == NodeType.COMPONENT) {
         boolean navigation =
-            graph.behaviors().stream()
+            behaviorsByTrigger.getOrDefault(request.from(), List.of()).stream()
                 .anyMatch(
                     b ->
-                        request.from().equals(b.triggerId())
-                            && (Set.of(BehaviorType.NAVIGATE, BehaviorType.SUBMIT_FORM)
-                                        .contains(b.type())
-                                    && (request.to().equals(b.targetId())
-                                        || b.targetId() == null
-                                            && request.evidence().containsAll(b.evidence()))
-                                || fullPageLoad(b) && request.to().equals(b.targetId())));
+                        (Set.of(BehaviorType.NAVIGATE, BehaviorType.SUBMIT_FORM).contains(b.type())
+                                && (request.to().equals(b.targetId())
+                                    || b.targetId() == null
+                                        && request.evidence().containsAll(b.evidence()))
+                            || fullPageLoad(b) && request.to().equals(b.targetId())));
         if (!navigation) continue;
-        for (var handled : graph.relationships())
-          if (handled.type() == EdgeType.HANDLED_BY && handled.from().equals(request.to()))
-            for (var destination : graph.relationships())
-              if (Set.of(EdgeType.RENDERS, EdgeType.FORWARDS_TO).contains(destination.type())
-                  && destination.from().equals(handled.to())
-                  && nodes.get(destination.to()).type() == NodeType.SCREEN) {
-                String id =
-                    ApplicationGraph.id(
-                        NodeType.COMPONENT,
-                        "NAVIGATES_TO:" + request.from() + ":" + destination.to());
-                List<AnalysisEvidence> proof = new ArrayList<>(request.evidence());
-                proof.addAll(handled.evidence());
-                proof.addAll(destination.evidence());
-                var old = output.get(id);
-                if (old != null) proof.addAll(old.evidence());
-                Confidence confidence =
-                    request.confidence() == Confidence.AMBIGUOUS
-                            || destination.confidence() == Confidence.AMBIGUOUS
-                        ? Confidence.AMBIGUOUS
-                        : Confidence.INFERRED;
-                output.put(
-                    id,
-                    new Relationship(
-                        id,
-                        EdgeType.NAVIGATES_TO,
-                        request.from(),
-                        destination.to(),
-                        confidence,
-                        nodes.get(request.from()).source(),
-                        proof.stream().distinct().sorted().toList()));
-              }
+        for (var handled : handledBy.getOrDefault(request.to(), List.of()))
+          for (var destination : destinations.getOrDefault(handled.to(), List.of()))
+            if (nodes.get(destination.to()).type() == NodeType.SCREEN) {
+              String id =
+                  ApplicationGraph.id(
+                      NodeType.COMPONENT,
+                      "NAVIGATES_TO:" + request.from() + ":" + destination.to());
+              List<AnalysisEvidence> proof = new ArrayList<>(request.evidence());
+              proof.addAll(handled.evidence());
+              proof.addAll(destination.evidence());
+              var old = output.get(id);
+              if (old != null) proof.addAll(old.evidence());
+              // A navigation another pass already proved (for example a public screen alias)
+              // keeps its CONFIRMED status; this projection only infers (RV-206).
+              Confidence confidence =
+                  old != null && old.confidence() == Confidence.CONFIRMED
+                      ? Confidence.CONFIRMED
+                      : request.confidence() == Confidence.AMBIGUOUS
+                              || destination.confidence() == Confidence.AMBIGUOUS
+                          ? Confidence.AMBIGUOUS
+                          : Confidence.INFERRED;
+              output.put(
+                  id,
+                  new Relationship(
+                      id,
+                      EdgeType.NAVIGATES_TO,
+                      request.from(),
+                      destination.to(),
+                      confidence,
+                      nodes.get(request.from()).source(),
+                      proof.stream().distinct().sorted().toList()));
+            }
       }
     return new ApplicationGraph(
         graph.application(),

@@ -5,6 +5,7 @@ import com.github.javaparser.ast.expr.*;
 import com.github.javaparser.ast.stmt.*;
 import io.screentrace.adapter.struts.StrutsModel.Mapping;
 import io.screentrace.adapter.struts.StrutsModel.State;
+import io.screentrace.parser.jsp.MarkupTag;
 import java.util.*;
 
 /** DispatchAction family detection and dispatch method resolution. */
@@ -54,7 +55,8 @@ final class StrutsDispatch {
   static String dispatchValue(String target, String parameter) {
     if (parameter == null || parameter.isBlank() || !target.contains("?")) return null;
     String found = null;
-    for (String pair : target.substring(target.indexOf('?') + 1).split("&")) {
+    for (String pair :
+        MarkupTag.decodeAmpersands(target.substring(target.indexOf('?') + 1)).split("&")) {
       String[] parts = pair.split("=", 2);
       if (parts.length == 2 && parts[0].equals(parameter)) {
         if (found != null || !parts[1].matches("[A-Za-z_][A-Za-z0-9_]*")) return null;
@@ -124,5 +126,47 @@ final class StrutsDispatch {
             methods.add(call.getArgument(1).asStringLiteralExpr().asString());
         }
     return methods.size() == 1 ? methods.iterator().next() : null;
+  }
+
+  /** Whether the module's servlet mapping is proven, so its public paths are too. */
+  static boolean provenMapping(Mapping mapping, State state) {
+    var servlet = state.servletMappings.get(mapping.module());
+    return servlet != null && servlet.status() == StrutsModel.ServletMappingStatus.PROVEN;
+  }
+
+  /** The request a dispatch call makes: the public path with the method parameter. */
+  static String dispatchRequest(String publicPath, Mapping mapping, String value) {
+    return publicPath + "?" + mapping.parameter() + "=" + value;
+  }
+
+  /**
+   * The attributes of a dispatch endpoint. A link, a redirect and a script call to the same method
+   * build the same node, so they share one description (RV-802).
+   */
+  static Map<String, String> dispatchEndpointAttributes(
+      String publicPath, Mapping mapping, String value, State state) {
+    return Map.of(
+        "path",
+        publicPath,
+        "httpMethod",
+        "ANY",
+        "category",
+        "ACTION",
+        "parameter",
+        mapping.parameter(),
+        "parameterValue",
+        value,
+        "servletMappingStatus",
+        provenMapping(mapping, state) ? "PROVEN" : "UNRESOLVED");
+  }
+
+  /** A dispatch endpoint is only as certain as the servlet mapping that makes its path public. */
+  static io.screentrace.core.ApplicationGraph.Confidence dispatchEndpointConfidence(
+      Mapping mapping, io.screentrace.core.ApplicationGraph.Confidence found, State state) {
+    var inferred = io.screentrace.core.ApplicationGraph.Confidence.INFERRED;
+    return provenMapping(mapping, state)
+            || found != io.screentrace.core.ApplicationGraph.Confidence.CONFIRMED
+        ? found
+        : inferred;
   }
 }

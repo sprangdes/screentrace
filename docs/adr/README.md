@@ -67,6 +67,7 @@ JSP、JSPF、tag file、Tiles 與有限的 Thymeleaf 以 `MarkupTag` 等 parser 
 | [0046](0046-endpoint-presentation-groups.md) | WP22 頁面路由與 API 呈現 | 有效 |
 | [0067](0067-r14-static-route-inference-and-security.md) | R14 靜態路由推定與安全導向證據 | 有效 |
 | [0137](0137-r46-parse-markup-instead-of-regex.md) | R46 以 parser 讀取 XML 與 JSP 結構，取代 regex | 有效 |
+| [0154](0154-r72-shared-fragment-include-context.md) | R72 共用片段的 include 情境記在各畫面的 CONTAINS 證據，節點只標所有畫面共同的情境 | 有效 |
 
 ## JavaScript 與 React
 
@@ -181,13 +182,14 @@ JSP、JSPF、tag file、Tiles 與有限的 Thymeleaf 以 `MarkupTag` 等 parser 
 |---|---|---|
 | [0004](0004-screen-scoped-component-decisions.md) | 元件決策依畫面與元件複合鍵保存 | 有效 |
 | [0022](0022-review-md-data-isolation.md) | review md 的專案資料隔離（OQ-007） | 有效 |
-| [0023](0023-review-md-machine-state.md) | review md 機器狀態的完整性與隔離 | 有效 |
+| [0023](0023-review-md-machine-state.md) | review md 機器狀態的完整性與隔離 | 部分被取代：附錄區塊之後可以有空行，見 [0153](0153-r70-review-md-trailing-empty-lines.md) |
 | [0024](0024-md-expression-redaction.md) | md 的運算式內容邊界 | 有效 |
 | [0025](0025-retire-json-review-export.md) | 歷史 JSON review 匯出退場 | 有效 |
 | [0026](0026-review-md-unicode-and-code-span.md) | Review md 隱形字元隔離與 code span 忠實度 | 有效 |
 | [0062](0062-confirmation-dashboard-workflow.md) | 以既有決策模型擴充確認工作流 | 部分被取代：介面於 R17 重寫或移除，見 [0084](0084-r17-two-page-report-and-retired-tests.md) |
 | [0069](0069-r14-wp47-decision-notes-and-md-v3.md) | R14 WP47 決策原因、備註與 Markdown v3 | 部分被取代：決策原因與備註已退場（[0084](0084-r17-two-page-report-and-retired-tests.md)），md 改為 v1（[0086](0086-r17-progress-file-autosave-and-md-v1.md)） |
 | [0086](0086-r17-progress-file-autosave-and-md-v1.md) | R17 進度檔自動存檔與 md v1 | 有效 |
+| [0153](0153-r70-review-md-trailing-empty-lines.md) | R70 review md 的附錄區塊之後允許空行 | 有效 |
 
 ## 元件庫
 
@@ -232,3 +234,12 @@ Java 以 google-java-format、TS／JS 以 Prettier 排版，JS 以 ESLint、TS �
 | [0141](0141-r50-explained-catch-blocks.md) | R50 每個被吞掉的例外都要說明或縮小型別 | 有效 |
 | [0142](0142-r51-adr-index.md) | R51 ADR 索引與現況摘要 | 有效 |
 | [0143](0143-r52-capture-timeout-and-java-lint.md) | R52 預覽擷取上限依畫面數放寬，Java 不導入 Error Prone | 有效 |
+| [0144](0144-r53-code-review-p1-fixes.md) | R53 修正 2026-11-14 code review 的 P1 項目（CLI exit status、清除舊預覽、Struts 2 偵測） | 有效 |
+| [0145](0145-r54-shared-web-roots.md) | R54 context 絕對路徑依引用檔所在的 web root 解析（共用 `WebRoots`） | 有效 |
+| [0146](0146-r55-contain-single-item-failures.md) | R55 單一檔案或項目出錯只影響它自己 | 有效 |
+| [0147](0147-r57-decode-ampersands-in-urls.md) | R57 URL 中的 `&amp;` 在使用處解碼一次 | 有效 |
+| [0148](0148-r60-one-endpoint-per-request-method.md) | R60 多個 HTTP 方法的 mapping 每個方法各建一個端點 | 有效 |
+| [0149](0149-r62-hotspots-and-oversized-capture.md) | R62 三個熱點改用索引；過大的元素樣式不再讓報表失敗 | 部分被取代（上限值，見 [0150](0150-r63-element-styles-size-and-reading.md)） |
+| [0150](0150-r63-element-styles-size-and-reading.md) | R63 元素樣式精簡 JSON、直接解析位元組，上限 256 MiB | 有效 |
+| [0151](0151-r64-capture-deadline.md) | R64 預覽擷取依截止時間停止，已完成的畫面照常寫出 | 有效 |
+| [0152](0152-r65-graph-merge-and-validation-errors.md) | R65 合併節點保留雙方屬性；驗證失敗統一為 GraphValidationException | 有效 |

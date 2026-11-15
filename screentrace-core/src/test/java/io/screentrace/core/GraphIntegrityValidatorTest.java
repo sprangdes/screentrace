@@ -82,7 +82,7 @@ class GraphIntegrityValidatorTest {
                     Confidence.CONFIRMED,
                     null)),
             List.of());
-    assertThrows(IllegalStateException.class, () -> GraphIntegrityValidator.validate(graph));
+    assertThrows(GraphValidationException.class, () -> GraphIntegrityValidator.validate(graph));
   }
 
   @Test
@@ -267,6 +267,23 @@ class GraphIntegrityValidatorTest {
                     null)),
             List.of());
 
-    assertThrows(IllegalStateException.class, () -> GraphIntegrityValidator.validate(graph));
+    assertThrows(GraphValidationException.class, () -> GraphIntegrityValidator.validate(graph));
+  }
+
+  @Test
+  void aNullEdgeTypeIsAValidationErrorNotANullPointer() {
+    // RV-109
+    var source = new SourceLocation("a.jsp", 1);
+    var graph =
+        new ApplicationGraph(
+            new Application("sample", ".", List.of()),
+            List.of(
+                new GraphNode(
+                    "a", NodeType.SCREEN, "a", java.util.Map.of(), source, Confidence.CONFIRMED),
+                new GraphNode(
+                    "b", NodeType.SCREEN, "b", java.util.Map.of(), source, Confidence.CONFIRMED)),
+            List.of(new Relationship("r", null, "a", "b", Confidence.CONFIRMED, source)),
+            List.of());
+    assertThrows(GraphValidationException.class, () -> GraphIntegrityValidator.validate(graph));
   }
 }

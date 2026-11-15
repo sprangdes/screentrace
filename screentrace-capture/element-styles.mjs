@@ -68,8 +68,10 @@ function componentLinks(elements, graph, screenId) {
       .filter((e) => e.type === 'CONTAINS' && e.from === screenId)
       .map((e) => e.to),
   );
+  // A component without a source (synthesized or merged) cannot be matched by file and line; it is
+  // skipped instead of failing the screen (RV-516).
   const nodes = graph.nodes
-    .filter((n) => n.type === 'COMPONENT' && owned.has(n.id))
+    .filter((n) => n.type === 'COMPONENT' && owned.has(n.id) && n.source?.file)
     .sort(
       (a, b) =>
         a.source.file.localeCompare(b.source.file, 'en') ||
@@ -242,14 +244,9 @@ export async function collectElementStyles(
   );
   const styles = {};
   const elements = raw.map(({ css, namespace, ...element }) => {
+    // `css` already holds only the properties that differ from the element's defaults.
     const defaultId = `${namespace}:${element.tag}`,
-      base = defaults[defaultId],
-      delta = sorted(
-        portableResourceUrls(
-          Object.fromEntries(Object.entries(css).filter(([key, value]) => base[key] !== value)),
-          options.outputUrl,
-        ),
-      );
+      delta = sorted(portableResourceUrls(css, options.outputUrl));
     const styleId = 'style:' + createHash('sha256').update(JSON.stringify(delta)).digest('hex');
     styles[styleId] = delta;
     return { ...element, defaultId, styleId };

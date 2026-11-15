@@ -49,10 +49,6 @@ public final class ScriptSources {
       boolean scopeProven,
       String kind) {}
 
-  private static final Set<String> VOID =
-      Set.of(
-          "input", "img", "br", "hr", "meta", "link", "area", "base", "col", "embed", "param",
-          "source", "track", "wbr");
   private static final Pattern PREFIX =
       Pattern.compile(
           "^\\$\\{([A-Za-z_][A-Za-z0-9_]*|pageContext\\.(?:request|servletContext)\\.contextPath)\\}(/[^$#<]*)$");
@@ -94,7 +90,12 @@ public final class ScriptSources {
         continue;
       }
       if (path.endsWith(".java")) {
-        var parsed = new JavaParser().parse(source);
+        // The same language level as every other Java pass (RV-402).
+        var parsed =
+            new JavaParser(
+                    new com.github.javaparser.ParserConfiguration()
+                        .setLanguageLevel(JavaSources.LEVEL))
+                .parse(source);
         if (!parsed.isSuccessful()) {
           unknownDefinitions = true;
           continue;
@@ -126,8 +127,8 @@ public final class ScriptSources {
                           "java"));
           }
         for (var call : parsed.getResult().orElseThrow().findAll(MethodCallExpr.class))
-          if (Set.of("setAttribute", "addAttribute", "addObject", "put")
-              .contains(call.getNameAsString())) {
+          if (Set.of("setAttribute", "addAttribute", "addObject").contains(call.getNameAsString())
+              || (call.getNameAsString().equals("put") && modelScope(call))) {
             if (call.getArguments().size() < 2 || !call.getArgument(0).isStringLiteralExpr()) {
               unknownDefinitions = true;
               continue;
@@ -154,7 +155,10 @@ public final class ScriptSources {
       for (var tag : MarkupTag.scan(source)) {
         String name = tag.name().toLowerCase(Locale.ROOT);
         if (tag.closing()) {
-          if (!scopes.isEmpty()) scopes.remove(scopes.size() - 1);
+          // Close the matching open element; a stray end tag no longer ends a c:if early
+          // (RV-428).
+          int open = scopes.lastIndexOf(name);
+          if (open >= 0) scopes.subList(open, scopes.size()).clear();
           continue;
         }
         if (tag.attribute("var") != null) {
@@ -186,11 +190,11 @@ public final class ScriptSources {
                               || tag.attribute("scope").equals("page")),
                       name));
         }
-        if (!VOID.contains(name) && source.charAt(tag.end() - 1) != '/') scopes.add(name);
+        if (!MarkupTag.VOID_ELEMENTS.contains(name) && source.charAt(tag.end() - 1) != '/')
+          scopes.add(name);
       }
-      if (source.contains("<%")
-          && !source.replaceAll("(?s)<%--.*?--%>|<%@.*?%>", "").contains("<%")) continue;
-      if (source.replaceAll("(?s)<%--.*?--%>|<%@.*?%>", "").contains("<%"))
+      // A scriptlet (not a comment or directive) can define anything.
+      if (source.contains("<%") && source.replaceAll("(?s)<%--.*?--%>|<%@.*?%>", "").contains("<%"))
         unknownDefinitions = true;
     }
     Map<String, String> moduleFiles = new TreeMap<>();
@@ -481,7 +485,7 @@ public final class ScriptSources {
                       "JS_SCRIPT_REFERENCE",
                       "script src 無法唯一解析；原文：" + raw + "；候選：" + candidates));
           } else {
-            int end = source.toLowerCase(Locale.ROOT).indexOf("</script", tag.end() + 1);
+            int end = MarkupTag.indexOfIgnoreCase(source, "</script", tag.end() + 1);
             String type = tag.attribute("type");
             if (end >= 0
                 && (type == null
@@ -522,13 +526,16 @@ public final class ScriptSources {
             String controller = tag.attribute("ng-controller");
             if (controller == null) controller = tag.attribute("data-ng-controller");
             if (controller == null)
-              controller =
-                  stack.stream()
-                      .map(e -> ((Map<?, ?>) e.get("attrs")).get("ng-controller"))
-                      .filter(Objects::nonNull)
-                      .map(Object::toString)
-                      .findFirst()
-                      .orElse(null);
+              // The innermost ancestor controller handles the event; data-ng-controller is the
+              // same directive (RV-413).
+              for (int i = stack.size() - 1; i >= 0 && controller == null; i--) {
+                Map<?, ?> attrs = (Map<?, ?>) stack.get(i).get("attrs");
+                Object value =
+                    attrs.get("ng-controller") != null
+                        ? attrs.get("ng-controller")
+                        : attrs.get("data-ng-controller");
+                if (value != null) controller = value.toString();
+              }
             scripts.add(
                 new Script(
                     path,
@@ -553,7 +560,8 @@ public final class ScriptSources {
                     controller));
           }
         }
-        if (!VOID.contains(name) && source.charAt(tag.end() - 1) != '/') stack.add(element);
+        if (!MarkupTag.VOID_ELEMENTS.contains(name) && source.charAt(tag.end() - 1) != '/')
+          stack.add(element);
       }
     }
     return new Result(
@@ -665,7 +673,11 @@ public final class ScriptSources {
             if (!name.equals("resources")
                 || !element.hasAttribute("mapping")
                 || !element.hasAttribute("location")) continue;
-            int offset = xml.indexOf("mapping");
+            // The line of this element's own mapping attribute, not of the first "mapping" in the
+            // file (RV-419).
+            int offset = xml.indexOf("mapping=\"" + element.getAttribute("mapping") + "\"");
+            if (offset < 0)
+              offset = xml.indexOf("mapping='" + element.getAttribute("mapping") + "'");
             int line =
                 offset < 0
                     ? 1
@@ -731,5 +743,28 @@ public final class ScriptSources {
         source,
         code,
         List.of(proof(source, "UNRESOLVED", message)));
+  }
+
+  /**
+   * True when a {@code put} call is made on a parameter typed Model or ModelMap. A {@code
+   * map.put(key, value)} on any other map defines nothing a JSP can read, so its key no longer
+   * makes every definition unknown (RV-403).
+   */
+  private static boolean modelScope(MethodCallExpr call) {
+    if (call.getScope().isEmpty() || !call.getScope().get().isNameExpr()) return false;
+    String name = call.getScope().get().asNameExpr().getNameAsString();
+    return call.findAncestor(com.github.javaparser.ast.body.MethodDeclaration.class)
+        .map(
+            method ->
+                method.getParameters().stream()
+                    .anyMatch(
+                        p ->
+                            p.getNameAsString().equals(name)
+                                && Set.of("Model", "ModelMap", "ExtendedModelMap")
+                                    .contains(
+                                        p.getType().isClassOrInterfaceType()
+                                            ? p.getType().asClassOrInterfaceType().getNameAsString()
+                                            : "")))
+        .orElse(false);
   }
 }

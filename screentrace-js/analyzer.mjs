@@ -15,6 +15,7 @@ import {
 } from './bindings.mjs';
 import { environment, lookup, resolveValue } from './values.mjs';
 import { expandModules } from './modules.mjs';
+const AXIOS_REQUEST = /^axios\.(get|post|put|delete|patch|head|options|request)$/;
 const table = JSON.parse(readFileSync(new URL('./api-table.json', import.meta.url), 'utf8'));
 const functionTypes = new Set([
   'FunctionDeclaration',
@@ -59,6 +60,7 @@ export function analyze(request) {
     libraries = [],
     dom = request.dom ?? [];
   let occurrences = new Map();
+  const occurrencesByFile = new Map();
   const emitted = new Map(),
     guardPaths = new Map();
   const globalFunctions = new Map(),
@@ -122,6 +124,35 @@ export function analyze(request) {
       }
       calendars.set(unit.screenId, list);
     }
+  // The DOM a unit sees: everything when it names no owner file, otherwise the elements of its
+  // owner file or its screen, in document order. Filtering the whole DOM for every unit was the
+  // largest cost on big projects (RV-709); units of the same file and screen share one list.
+  const domIndex = (key) => {
+    const index = new Map();
+    dom.forEach((d, i) => {
+      const value = d[key];
+      if (!index.has(value)) index.set(value, []);
+      index.get(value).push(i);
+    });
+    return index;
+  };
+  const domByOwner = domIndex('ownerFile'),
+    domByScreen = domIndex('screenId'),
+    domCache = new Map();
+  const domFor = (unit) => {
+    if (!unit.ownerFile) return dom;
+    const key = JSON.stringify([unit.ownerFile, unit.screenId]);
+    let result = domCache.get(key);
+    if (!result) {
+      const positions = new Set([
+        ...(domByOwner.get(unit.ownerFile) ?? []),
+        ...(domByScreen.get(unit.screenId) ?? []),
+      ]);
+      result = [...positions].sort((a, b) => a - b).map((i) => dom[i]);
+      domCache.set(key, result);
+    }
+    return result;
+  };
   const provenTrim = trimHelpers(expanded.sources);
   for (const unit of expanded.sources) {
     const library = identifyLibrary(unit.file, unit.code);
@@ -133,9 +164,7 @@ export function analyze(request) {
     diagnostics.push(...parsed.diagnostics);
     if (!parsed.ast) continue;
     const code = unit.code,
-      unitDom = dom.filter(
-        (d) => !unit.ownerFile || d.ownerFile === unit.ownerFile || d.screenId === unit.screenId,
-      );
+      unitDom = domFor(unit);
     const source = (n) => ({
       file: unit.file,
       line: (unit.line ?? 1) + (n?.loc?.start.line ?? 1) - 1,
@@ -511,7 +540,7 @@ export function analyze(request) {
             'fetch',
             'axios',
           ].includes(name) ||
-          name?.startsWith('axios.') ||
+          AXIOS_REQUEST.test(name ?? '') ||
           (method === 'load' &&
             receiver?.type === 'CallExpression' &&
             ['$', 'jQuery'].includes(calleeName(receiver.callee))) ||
@@ -910,6 +939,19 @@ export function analyze(request) {
           return;
         }
         const ready = (name === '$' || name === 'jQuery') && functionTypes.has(args[0]?.type);
+        // jQuery < 3 shorthand $(window).load(fn) is a load handler, not an ajax .load(url)
+        // (RV-507).
+        const windowLoad =
+          method === 'load' &&
+          receiver?.type === 'CallExpression' &&
+          ['$', 'jQuery'].includes(calleeName(receiver.callee)) &&
+          receiver.arguments[0]?.type === 'Identifier' &&
+          receiver.arguments[0].name === 'window' &&
+          functionTypes.has(args[0]?.type);
+        if (windowLoad) {
+          execute(args[0], [], { ...root, event: 'load' }, node, true);
+          return;
+        }
         const load =
           method === 'ready' ||
           (method === 'addEventListener' &&
@@ -1074,11 +1116,13 @@ export function analyze(request) {
           urlNode = args[0];
           methodValue = configuredMethod(args[1]);
           data = prop(args[1], 'body');
-        } else if (name === 'axios' || name?.startsWith('axios.')) {
+        } else if (name === 'axios' || AXIOS_REQUEST.test(name ?? '')) {
+          // Only request calls; axios.create or axios.interceptors.* send nothing (RV-505).
+          const config = name === 'axios' || name === 'axios.request';
           api = true;
-          urlNode = name === 'axios' ? prop(args[0], 'url') : args[0];
-          methodValue = name === 'axios' ? configuredMethod(args[0]) : name.slice(6).toUpperCase();
-          data = name === 'axios' ? prop(args[0], 'data') : args[1];
+          urlNode = config ? prop(args[0], 'url') : args[0];
+          methodValue = config ? configuredMethod(args[0]) : name.slice(6).toUpperCase();
+          data = config ? prop(args[0], 'data') : args[1];
         } else if (jquery && method === 'load' && args.length) {
           api = true;
           urlNode = args[0];
@@ -1372,6 +1416,19 @@ export function analyze(request) {
                 : { value: '{' + p.name + '}', status: 'UNRESOLVED', known: false, tainted: false },
             at: 0,
           });
+        // Destructured, defaulted and rest parameters still shadow outer names; their values are
+        // not evaluated, so they are unresolved rather than taken from an outer variable (RV-514).
+        else
+          for (const name of patternNames(p))
+            env.values.set(name, {
+              resolved: {
+                value: '{' + name + '}',
+                status: 'UNRESOLVED',
+                known: false,
+                tainted: false,
+              },
+              at: 0,
+            });
       });
       const next = {
         ...ctx,
@@ -1379,7 +1436,12 @@ export function analyze(request) {
         depth: asHandler ? ctx.depth : ctx.depth + 1,
         stack: [...ctx.stack, key],
       };
-      if (/^validate/i.test(fn.id?.name ?? call.name ?? '')) {
+      // `var validateForm = function(){}` has no fn.id; the called name identifies it (RV-508).
+      let calledName =
+        (call?.type === 'CallExpression' ? calleeName(call.callee) : call?.name) ?? '';
+      for (let scope = declEnv; !calledName && scope; scope = scope.parent)
+        for (const [name, entry] of scope.functions) if (entry.node === fn) calledName = name;
+      if (/^validate/i.test(fn.id?.name ?? (calledName.split('.').pop() || ''))) {
         walk(fn.body, (n) => {
           if (n.type === 'IfStatement') {
             let ids = [];
@@ -1581,10 +1643,36 @@ export function analyze(request) {
       });
     }
     runners.push(() => {
-      occurrences = new Map();
+      // Counted per source file and screen, not per unit: two inline scripts of one JSP with the
+      // same effect get different IDs instead of overwriting each other (RV-506). A shared script
+      // file keeps the same IDs on every screen that includes it.
+      const scope = JSON.stringify([unit.file, unit.screenId ?? null]);
+      occurrences = occurrencesByFile.get(scope) ?? new Map();
+      occurrencesByFile.set(scope, occurrences);
       visit(parsed.ast, root);
     });
   }
   for (const run of runners) run();
   return { schemaVersion: '1.0', behaviors, rules, diagnostics, libraries };
+}
+
+/** Identifier names a parameter pattern declares: {a, b: c}, [d, ...e], f = 1. */
+function patternNames(pattern) {
+  if (!pattern) return [];
+  switch (pattern.type) {
+    case 'Identifier':
+      return [pattern.name];
+    case 'AssignmentPattern':
+      return patternNames(pattern.left);
+    case 'RestElement':
+      return patternNames(pattern.argument);
+    case 'ArrayPattern':
+      return pattern.elements.flatMap((element) => patternNames(element));
+    case 'ObjectPattern':
+      return pattern.properties.flatMap((property) =>
+        patternNames(property.type === 'RestElement' ? property : property.value),
+      );
+    default:
+      return [];
+  }
 }

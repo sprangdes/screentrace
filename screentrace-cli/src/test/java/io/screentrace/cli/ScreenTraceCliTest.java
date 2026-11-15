@@ -2,24 +2,31 @@ package io.screentrace.cli;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import java.io.ByteArrayOutputStream;
+import java.io.PrintStream;
+import java.nio.charset.StandardCharsets;
 import org.junit.jupiter.api.Test;
 
 class ScreenTraceCliTest {
 
   @Test
-  void rejectsRemovedCommandsAndCustomOutputOptions() {
-    assertThrows(
-        IllegalArgumentException.class, () -> ScreenTraceCli.main(new String[] {"capture"}));
-    assertThrows(IllegalArgumentException.class, () -> ScreenTraceCli.main(new String[] {"open"}));
-    assertThrows(IllegalArgumentException.class, () -> ScreenTraceCli.main(new String[] {"serve"}));
-    assertThrows(
-        IllegalArgumentException.class,
-        () -> ScreenTraceCli.main(new String[] {"analyze", "--serve"}));
-    assertThrows(
-        IllegalArgumentException.class,
-        () -> ScreenTraceCli.main(new String[] {"analyze", "--output", "/tmp/output"}));
-    assertThrows(
-        IllegalArgumentException.class,
-        () -> ScreenTraceCli.main(new String[] {"export", "--output", "/tmp/result.json"}));
+  void rejectsRemovedCommandsAndCustomOutputOptions() throws Exception {
+    for (String[] args :
+        new String[][] {
+          {"capture"},
+          {"open"},
+          {"serve"},
+          {"analyze", "--serve"},
+          {"analyze", "--output", "/tmp/output"},
+          {"export", "--output", "/tmp/result.json"}
+        }) {
+      var bytes = new ByteArrayOutputStream();
+      assertEquals(
+          2,
+          ScreenTraceCli.runReportingRefusals(
+              args, new PrintStream(bytes, true, StandardCharsets.UTF_8)),
+          String.join(" ", args));
+      assertTrue(bytes.toString(StandardCharsets.UTF_8).startsWith("Usage: screentrace"));
+    }
   }
 }

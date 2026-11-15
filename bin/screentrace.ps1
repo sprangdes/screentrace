@@ -111,6 +111,7 @@ function Test-BuildRequired([string]$jar) {
   return $null -ne (Get-ChildItem $baseDir -Recurse -File |
     Where-Object {
       $_.FullName -notmatch '[\\/](target|node_modules)[\\/]' -and
+      -not $_.FullName.StartsWith((Join-Path $baseDir 'analyze') + [IO.Path]::DirectorySeparatorChar) -and
       ($_.Name -in @('pom.xml','build.mjs','package-lock.json') -or $_.Extension -in @('.java','.ts','.css','.html')) -and
       $_.LastWriteTimeUtc -gt $jarTime
     } |

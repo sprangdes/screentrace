@@ -260,8 +260,10 @@ public final class UrlResolution {
       // nothing matched exactly.
       Set<String> attempt = pass == 0 ? paths : withoutTrailingSlash(paths, context);
       if (attempt.isEmpty()) break;
+      EndpointIndex index = EndpointIndex.of(endpoints);
       for (String normalized : attempt)
-        for (Endpoint endpoint : endpoints) {
+        for (Endpoint endpoint :
+            index.candidates(normalized.isEmpty() ? "/" : normalized, extensionMappings)) {
           int match =
               match(normalized.isEmpty() ? "/" : normalized, endpoint.path(), extensionMappings);
           if (match == 0) continue;
@@ -455,14 +457,73 @@ public final class UrlResolution {
             || Arrays.asList(Objects.toString(actual, "").split("[,| ]+")).contains(requested));
   }
 
+  /**
+   * The endpoints {@link #match} can accept for a path: those with that exact path, those with a
+   * template ({@code {var}} or {@code *}), and, under a suffix mapping, those with the path minus
+   * the suffix. Every other endpoint matches nothing, so resolving a request no longer compares it
+   * with every endpoint (RV-702). Callers pass the same unmodifiable list for many requests; the
+   * index of the last list is kept.
+   */
+  private record EndpointIndex(
+      List<Endpoint> source, Map<String, List<Endpoint>> byPath, List<Endpoint> templates) {
+    private static volatile EndpointIndex last;
+
+    static EndpointIndex of(List<Endpoint> endpoints) {
+      EndpointIndex cached = last;
+      if (cached != null && cached.source == endpoints) return cached;
+      Map<String, List<Endpoint>> byPath = new HashMap<>();
+      List<Endpoint> templates = new ArrayList<>();
+      for (Endpoint endpoint : endpoints) {
+        byPath.computeIfAbsent(endpoint.path(), ignored -> new ArrayList<>()).add(endpoint);
+        if (endpoint.path().indexOf('{') >= 0 || endpoint.path().indexOf('*') >= 0)
+          templates.add(endpoint);
+      }
+      EndpointIndex built = new EndpointIndex(endpoints, byPath, templates);
+      // Only an unmodifiable list can be reused by identity.
+      if (endpoints.size() > 16 && endpoints.getClass().getName().contains("Immutable"))
+        last = built;
+      return built;
+    }
+
+    Collection<Endpoint> candidates(String path, List<String> extensions) {
+      Set<Endpoint> result = new LinkedHashSet<>(byPath.getOrDefault(path, List.of()));
+      result.addAll(templates);
+      for (String mapping : extensions)
+        if (mapping.startsWith("*.") && path.endsWith(mapping.substring(1)))
+          result.addAll(
+              byPath.getOrDefault(
+                  path.substring(0, path.length() - mapping.length() + 1), List.of()));
+      return result;
+    }
+  }
+
+  /** Endpoint templates compiled once; the same few are matched against every request (RV-706). */
+  private static final Map<String, Optional<Pattern>> TEMPLATES =
+      new java.util.concurrent.ConcurrentHashMap<>();
+
   private static int match(String path, String endpoint, List<String> extensions) {
     if (path.equals(endpoint)) return path.contains("{") || path.contains("*") ? 1 : 2;
+    // A literal endpoint matches only itself, which the line above already answered.
+    if (endpoint.indexOf('{') >= 0 || endpoint.indexOf('*') >= 0) {
+      Pattern template = TEMPLATES.computeIfAbsent(endpoint, UrlResolution::template).orElse(null);
+      if (template == null) return 0;
+      if (template.matcher(path).matches()) return 1;
+    }
+    for (String mapping : extensions)
+      if (mapping.startsWith("*.")
+          && path.endsWith(mapping.substring(1))
+          && path.substring(0, path.length() - mapping.length() + 1).equals(endpoint)) return 1;
+    return 0;
+  }
+
+  /** `{name}` is one segment, `*` part of one, `**` any; an unclosed `{` matches nothing. */
+  private static Optional<Pattern> template(String endpoint) {
     StringBuilder regex = new StringBuilder("^");
     for (int i = 0; i < endpoint.length(); i++) {
       char c = endpoint.charAt(i);
       if (c == '{') {
         int end = endpoint.indexOf('}', i);
-        if (end < 0) return 0;
+        if (end < 0) return Optional.empty();
         regex.append("[^/]+");
         i = end;
       } else if (c == '*') {
@@ -472,11 +533,6 @@ public final class UrlResolution {
         } else regex.append("[^/]*");
       } else regex.append(Pattern.quote(String.valueOf(c)));
     }
-    if (path.matches(regex.append('$').toString())) return 1;
-    for (String mapping : extensions)
-      if (mapping.startsWith("*.")
-          && path.endsWith(mapping.substring(1))
-          && path.substring(0, path.length() - mapping.length() + 1).equals(endpoint)) return 1;
-    return 0;
+    return Optional.of(Pattern.compile(regex.append('$').toString()));
   }
 }

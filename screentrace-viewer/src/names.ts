@@ -85,16 +85,16 @@ export function screenNames(
   const byId = new Map(screens.map((screen) => [screen.id, screen])),
     groups = new Map<string, string[]>();
   for (const [id, name] of names) groups.set(name, [...(groups.get(name) || []), id]);
-  for (const [name, ids] of groups)
-    if (ids.length > 1) {
-      const queryIds = ids.filter((id) => byId.get(id)?.attributes.entryQuery);
-      if (queryIds.length) {
-        for (const id of queryIds) {
-          const query = byId.get(id)!.attributes.entryQuery;
-          names.set(id, `${name}（?${query}）`);
-        }
-        continue;
+  for (const [name, group] of groups)
+    if (group.length > 1) {
+      // Screens opened with a query are told apart by it; the rest still share the name.
+      const queryIds = group.filter((id) => byId.get(id)?.attributes.entryQuery);
+      for (const id of queryIds) {
+        const query = byId.get(id)!.attributes.entryQuery;
+        names.set(id, `${name}（?${query}）`);
       }
+      const ids = group.filter((id) => !queryIds.includes(id));
+      if (ids.length < 2) continue;
       const candidates = new Map(
         ids.map((id) => {
           const screen = byId.get(id),

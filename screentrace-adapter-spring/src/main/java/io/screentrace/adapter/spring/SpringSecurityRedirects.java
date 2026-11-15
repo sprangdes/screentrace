@@ -19,6 +19,9 @@ final class SpringSecurityRedirects {
     List<Redirect> redirects = new ArrayList<>();
     List<Diagnostic> diagnostics = new ArrayList<>(graph.diagnostics());
     for (Path file : inventory.files()) {
+      // Only XML and Java can declare Security redirects; jars, images and bundles are not read
+      // (RV-204).
+      if (!file.toString().endsWith(".xml") && !file.toString().endsWith(".java")) continue;
       String relative = inventory.root().relativize(file).toString().replace('\\', '/');
       try {
         String text =

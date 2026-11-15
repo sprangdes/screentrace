@@ -19,11 +19,17 @@ function fakeFileSystem({ supported = true } = {}) {
     },
     async createWritable() {
       let buffer = '';
+      // Count writes open at once; with `fake-hold-writes`, a write waits for __releaseWrites().
+      window.__activeWrites = (window.__activeWrites || 0) + 1;
+      window.__maxActiveWrites = Math.max(window.__maxActiveWrites || 0, window.__activeWrites);
       return {
         async write(text) {
           buffer += String(text);
         },
         async close() {
+          if (localStorage.getItem('fake-hold-writes') === '1')
+            await new Promise((resolve) => (window.__releaseWrites = resolve));
+          window.__activeWrites--;
           if (localStorage.getItem('fake-fail') === '1') throw new Error('磁碟已滿');
           localStorage.setItem('fake-file:' + name, buffer);
           localStorage.setItem(
@@ -50,6 +56,9 @@ function fakeFileSystem({ supported = true } = {}) {
   ];
   window.__screentraceHandleStore = {
     async load(key) {
+      // With `fake-slow-handle`, the remembered handle arrives only after __releaseHandle().
+      if (localStorage.getItem('fake-slow-handle') === '1')
+        await new Promise((resolve) => (window.__releaseHandle = resolve));
       const name = localStorage.getItem('fake-handle:' + key);
       return name ? fake(name) : undefined;
     },
@@ -166,6 +175,71 @@ test('R17 WP65 reopening offers to continue the last progress file and the file 
       () => document.querySelector('.save-menu').dataset.fileState === 'saved',
     );
     assert.equal(data.graph.application.name, '測試應用');
+  } finally {
+    await browser.close();
+  }
+});
+
+test('RV-603 decisions made before the remembered file arrives are not overwritten by it', async () => {
+  const { browser, page } = await open();
+  try {
+    await decide(page, 'a', 'KEEP');
+    await page.getByRole('button', { name: '選擇存放位置…' }).click();
+    await page.waitForFunction(
+      () => document.querySelector('.save-menu').dataset.fileState === 'saved',
+    );
+    await page.evaluate(() => {
+      for (const key of Object.keys(localStorage))
+        if (key.startsWith('screentrace:review:')) localStorage.removeItem(key);
+      localStorage.setItem('fake-slow-handle', '1');
+    });
+    await page.reload();
+    await page.locator('#app[data-ready="true"]').waitFor();
+    await decide(page, 'b', 'REMOVE');
+    await page.evaluate(() => window.__releaseHandle());
+    await page.waitForFunction(
+      () => document.querySelector('.save-menu').dataset.fileState === 'pending',
+    );
+    assert.equal(await page.locator('.save-menu').evaluate((menu) => menu.open), true);
+    await page.locator('.prototype-back').click();
+    assert.equal(
+      await page.locator('.screen-list [data-screen-list="b"]').getAttribute('data-decision'),
+      'REMOVE',
+    );
+    assert.equal(
+      await page.locator('.screen-list [data-screen-list="a"]').getAttribute('data-decision'),
+      'UNDECIDED',
+    );
+    assert.deepEqual(machine(await fileText(page)).screen_decisions, { a: 'KEEP' });
+  } finally {
+    await browser.close();
+  }
+});
+
+test('RV-604 choosing a new file waits for the write in progress', async () => {
+  const { browser, page } = await open();
+  try {
+    await decide(page, 'a', 'KEEP');
+    await page.getByRole('button', { name: '選擇存放位置…' }).click();
+    await page.waitForFunction(
+      () => document.querySelector('.save-menu').dataset.fileState === 'saved',
+    );
+    await page.evaluate(() => localStorage.setItem('fake-hold-writes', '1'));
+    await page.locator('.prototype-back').click();
+    await decide(page, 'b', 'REMOVE');
+    await page.waitForFunction(() => window.__activeWrites === 1);
+    await page.locator('.save-menu > summary').click();
+    await page.getByRole('button', { name: '更換存放位置…' }).click();
+    await page.waitForTimeout(300);
+    assert.equal(await page.evaluate(() => window.__maxActiveWrites), 1);
+    await page.evaluate(() => localStorage.removeItem('fake-hold-writes'));
+    await page.evaluate(() => window.__releaseWrites());
+    await page.waitForFunction(() => window.__activeWrites === 0);
+    await page.waitForFunction(
+      () => document.querySelector('.save-menu').dataset.fileState === 'saved',
+    );
+    assert.equal(await page.evaluate(() => window.__maxActiveWrites), 1);
+    assert.deepEqual(machine(await fileText(page)).screen_decisions, { a: 'KEEP', b: 'REMOVE' });
   } finally {
     await browser.close();
   }

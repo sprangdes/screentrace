@@ -3,7 +3,10 @@ package io.screentrace.adapter.spring;
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
 import com.github.javaparser.ast.body.MethodDeclaration;
 import com.github.javaparser.ast.expr.AnnotationExpr;
+import com.github.javaparser.ast.expr.ArrayInitializerExpr;
 import com.github.javaparser.ast.expr.Expression;
+import com.github.javaparser.ast.expr.FieldAccessExpr;
+import com.github.javaparser.ast.expr.NameExpr;
 import com.github.javaparser.ast.expr.NormalAnnotationExpr;
 import io.screentrace.core.ApplicationGraph;
 import io.screentrace.core.ApplicationGraph.Confidence;
@@ -21,7 +24,9 @@ import io.screentrace.scanner.ProjectScanner.ProjectInventory;
 import io.screentrace.scanner.SafeProjectFiles;
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -36,14 +41,9 @@ import org.w3c.dom.NodeList;
 
 /** Static analysis for annotation-based, server-rendered Spring MVC applications. */
 public final class SpringMvcAnalyzer {
-  private static final Set<String> MAPPINGS =
-      Set.of(
-          "RequestMapping",
-          "GetMapping",
-          "PostMapping",
-          "PutMapping",
-          "DeleteMapping",
-          "PatchMapping");
+  /** Default-configured and thread-safe; one per class instead of one per call (RV-705). */
+  private static final com.fasterxml.jackson.databind.ObjectMapper SHARED_JSON =
+      new com.fasterxml.jackson.databind.ObjectMapper();
 
   public ApplicationGraph analyze(ProjectInventory inventory) throws IOException {
     State state = new State(inventory.root(), inventory.javaFiles());
@@ -77,6 +77,8 @@ public final class SpringMvcAnalyzer {
         state.diagnostics,
         state.returnTargets,
         io.screentrace.parser.jsp.UrlResolution.context(inventory, List.of()));
+    // resolve() appends to the edge list directly.
+    state.indexEdges();
     foldUnroutedTileBodies(state);
     addJspInteractions(jsp, state);
     addJspIncludes(jsp, state);
@@ -154,9 +156,12 @@ public final class SpringMvcAnalyzer {
     String id = ApplicationGraph.id(NodeType.SCREEN, relative);
     Map<String, String> attributes = new TreeMap<>();
     attributes.put("view", relative);
-    if (relative.startsWith("src/main/webapp/")
-        && !relative.toUpperCase(java.util.Locale.ROOT).contains("/WEB-INF/"))
-      attributes.put("routeAliases", relative.substring("src/main/webapp".length()));
+    // Public paths are relative to the JSP's own web root, not always src/main/webapp.
+    String webRoot = io.screentrace.scanner.WebRoots.rootOf(state.webRoots, relative);
+    String publicPath = webRoot == null ? null : relative.substring(webRoot.length() - 1);
+    if (publicPath != null
+        && !publicPath.toUpperCase(java.util.Locale.ROOT).startsWith("/WEB-INF/"))
+      attributes.put("routeAliases", publicPath);
     attributes.put("staticPreview", jspPreview(file, state));
     addNode(
         state,
@@ -170,25 +175,36 @@ public final class SpringMvcAnalyzer {
     state.screensByView.put(relative, id);
     state.screensByView.put("/" + relative, id);
     webPath(relative).ifPresent(path -> state.screensByView.put(path, id));
-    if (relative.startsWith("src/main/webapp/") && !relative.contains("/WEB-INF/"))
-      state.screensByView.put(relative.substring("src/main/webapp".length()), id);
-    for (String prefix :
-        List.of(
-            "src/main/webapp/WEB-INF/jsp/",
-            "src/main/webapp/WEB-INF/views/",
-            "WEB-INF/jsp/",
-            "WEB-INF/views/",
-            "src/main/resources/templates/")) {
+    if (publicPath != null && !publicPath.startsWith("/WEB-INF/"))
+      state.screensByView.put(publicPath, id);
+    List<String> prefixes =
+        new ArrayList<>(List.of("WEB-INF/jsp/", "WEB-INF/views/", "src/main/resources/templates/"));
+    if (webRoot != null) {
+      prefixes.add(webRoot + "WEB-INF/jsp/");
+      prefixes.add(webRoot + "WEB-INF/views/");
+    }
+    for (String prefix : prefixes) {
       if (relative.startsWith(prefix))
         state.screensByView.put(
             relative.substring(prefix.length()).replaceFirst("\\.jsp$", ""), id);
     }
-    String templateRoot = "src/main/resources/templates/";
-    if (relative.startsWith(templateRoot) && relative.endsWith(".html")) {
+    String templateRoot = templateRoot(relative);
+    if (templateRoot != null && relative.endsWith(".html")) {
       String logical = relative.substring(templateRoot.length(), relative.length() - 5);
       state.screensByView.put(logical, id);
       state.screensByView.put("/" + logical, id);
     }
+  }
+
+  /**
+   * The Spring Boot templates folder holding {@code relative}, also inside a module folder
+   * ("web/src/main/resources/templates/"); null when the file is not in one (RV-216).
+   */
+  static String templateRoot(String relative) {
+    String marker = "src/main/resources/templates/";
+    if (relative.startsWith(marker)) return marker;
+    int index = relative.indexOf("/" + marker);
+    return index < 0 ? null : relative.substring(0, index + 1) + marker;
   }
 
   private static String jspPreview(Path file, State state) {
@@ -206,7 +222,10 @@ public final class SpringMvcAnalyzer {
         String name = tag.name().toLowerCase(java.util.Locale.ROOT).replaceFirst("^form:", "");
         String field =
             tag.attribute("path") != null ? tag.attribute("path") : tag.attribute("name");
+        String type = tag.attribute("type") == null ? "text" : tag.attribute("type").toLowerCase();
+        // Hidden inputs and buttons are not fields the user fills in (RV-215).
         if (Set.of("input", "password", "textarea", "select").contains(name)
+            && !Set.of("hidden", "submit", "button", "reset", "image").contains(type)
             && field != null
             && !field.isEmpty()) items.add("FIELD:" + field);
       }
@@ -214,6 +233,11 @@ public final class SpringMvcAnalyzer {
         if (items.size() >= 12) break;
         String name = tag.name().toLowerCase(java.util.Locale.ROOT), value = tag.attribute("value");
         if (!name.equals("button") && !name.equals("input")) continue;
+        // Only buttons are actions; a text input's default value is not (RV-215).
+        String type = tag.attribute("type") == null ? "" : tag.attribute("type").toLowerCase();
+        boolean button =
+            name.equals("button") || Set.of("submit", "button", "reset", "image").contains(type);
+        if (!button) continue;
         if (value != null && !value.isEmpty()) items.add("ACTION:" + value);
         else if ("submit".equalsIgnoreCase(tag.attribute("type"))) {
           int next = source.indexOf('<', tag.end() + 1);
@@ -233,9 +257,7 @@ public final class SpringMvcAnalyzer {
     try {
       for (ClassOrInterfaceDeclaration type :
           units.parse(file).findAll(ClassOrInterfaceDeclaration.class)) {
-        AnnotationExpr controller = annotation(type, "Controller");
-        boolean rest = annotation(type, "RestController") != null;
-        if (controller == null && !rest) continue;
+        if (!SpringMappings.isController(type)) continue;
         var declaredBases = SpringMappingPaths.of(annotation(type, "RequestMapping"), type);
         SpringMappingPaths.report(
             declaredBases,
@@ -245,11 +267,7 @@ public final class SpringMvcAnalyzer {
         List<String> bases = SpringMappingPaths.effective(declaredBases);
         Map<String, String> constants = viewConstants(type);
         for (MethodDeclaration method : type.getMethods()) {
-          AnnotationExpr mapping =
-              method.getAnnotations().stream()
-                  .filter(a -> MAPPINGS.contains(a.getNameAsString()))
-                  .findFirst()
-                  .orElse(null);
+          AnnotationExpr mapping = SpringMappings.mapping(method).orElse(null);
           if (mapping != null)
             addMapping(
                 type,
@@ -258,18 +276,7 @@ public final class SpringMvcAnalyzer {
                 relative,
                 bases,
                 constants,
-                rest
-                    || annotation(type, "ResponseBody") != null
-                    || annotation(method, "ResponseBody") != null
-                    || method.getType().isClassOrInterfaceType()
-                        && method
-                            .getType()
-                            .asClassOrInterfaceType()
-                            .getNameAsString()
-                            .equals("ResponseEntity")
-                    || (annotation(type, "ResponseStatus") != null
-                            || annotation(method, "ResponseStatus") != null)
-                        && method.getType().isVoidType(),
+                SpringMappings.respondsWithBody(type, method),
                 state);
         }
       }
@@ -331,14 +338,13 @@ public final class SpringMvcAnalyzer {
     var unknownReturns =
         returns.stream().filter(t -> t.kind() == SpringControllerReturns.Kind.UNKNOWN).toList();
     if (!unknownReturns.isEmpty()) {
-      var old =
-          state.nodes.stream().filter(n -> n.id().equals(handlerId)).findFirst().orElseThrow();
+      var old = Objects.requireNonNull(state.nodeById.get(handlerId));
       var attrs = new TreeMap<>(old.attributes());
       attrs.put("unresolvedReturnCount", Integer.toString(unknownReturns.size()));
       var proof = new ArrayList<>(old.evidence());
       unknownReturns.forEach(t -> proof.addAll(t.evidence()));
       state.nodes.remove(old);
-      state.nodes.add(
+      state.addNodeLast(
           new GraphNode(
               old.id(), old.type(), old.name(), attrs, old.source(), old.confidence(), proof));
     }
@@ -346,110 +352,113 @@ public final class SpringMvcAnalyzer {
       if (target.kind() == SpringControllerReturns.Kind.UNKNOWN)
         SpringControllerFlow.unresolved(state.diagnostics, target, "無法證明常值或未改寫的回傳物件");
       else if (target.kind() != SpringControllerReturns.Kind.VIEW)
-        state.returnTargets.add(
-            new SpringControllerFlow.Pending(handlerId, httpMethod(mapping), target));
+        for (String httpMethod : httpMethods(mapping))
+          state.returnTargets.add(new SpringControllerFlow.Pending(handlerId, httpMethod, target));
     }
-    for (String base : bases)
-      for (String child : children) {
-        String path = join(base, child);
-        String endpointId =
-            ApplicationGraph.id(
-                NodeType.ENDPOINT, httpMethod(mapping) + " " + path + ":" + handlerId);
-        addNode(
-            state,
-            new GraphNode(
-                endpointId,
-                NodeType.ENDPOINT,
-                httpMethod(mapping) + " " + path,
-                Map.of(
-                    "httpMethod",
-                    httpMethod(mapping),
-                    "path",
-                    path,
-                    "category",
-                    rest
-                        ? "REST_API"
-                        : !views.isEmpty()
-                                && views.stream().allMatch(view -> view.startsWith("redirect:"))
-                            ? "REDIRECT"
-                            : "MVC_SCREEN"),
-                source,
-                Confidence.CONFIRMED));
-        state.endpointByPath.putIfAbsent(path, endpointId);
-        EndpointReference endpoint =
-            new EndpointReference(
-                endpointId, path, httpMethod(mapping), rest ? "REST_API" : "MVC_SCREEN");
-        state.endpoints.add(endpoint);
-        edge(state, EdgeType.HANDLED_BY, endpointId, handlerId, Confidence.CONFIRMED, source);
-        state.apiContracts.add(
-            state.contracts.contract(endpointId, method, mapping, source, views));
-        for (var target :
-            returns.stream().filter(t -> t.kind() == SpringControllerReturns.Kind.VIEW).toList()) {
-          String view = target.value();
-          String screenId = screenForView(view, target.source(), state);
-          Confidence confidence =
-              resolvedScreenId(view, state) != null
-                      && !target.evidence().stream()
-                          .anyMatch(
-                              e ->
-                                  e.parser().equals("SpringControllerReturns")
-                                      && e.resolution()
-                                          == ApplicationGraph.ResolutionStatus.INFERRED)
-                  ? Confidence.CONFIRMED
-                  : Confidence.INFERRED;
-          String returnId =
-              ApplicationGraph.id(
-                  NodeType.COMPONENT,
-                  "RENDERS:"
-                      + handlerId
-                      + ":"
-                      + screenId
-                      + ":"
-                      + target.source().line()
-                      + ":"
-                      + target.expression()
-                      + SpringControllerReturns.branchKey(target));
-          if (state.edges.stream().noneMatch(e -> e.id().equals(returnId)))
-            state.edges.add(
-                new Relationship(
-                    returnId,
-                    EdgeType.RENDERS,
-                    handlerId,
-                    screenId,
-                    confidence,
-                    target.source(),
-                    viewEvidence(target, view, screenId, state)));
-          state
-              .endpointsByScreen
-              .computeIfAbsent(screenId, ignored -> new ArrayList<>())
-              .add(endpoint);
-          state
-              .screensByEndpoint
-              .computeIfAbsent(endpointId, ignored -> new ArrayList<>())
-              .add(screenId);
+    for (String httpMethod : httpMethods(mapping))
+      for (String base : bases)
+        for (String child : children) {
+          String path = SpringMappings.join(base, child);
+          String endpointId =
+              ApplicationGraph.id(NodeType.ENDPOINT, httpMethod + " " + path + ":" + handlerId);
+          addNode(
+              state,
+              new GraphNode(
+                  endpointId,
+                  NodeType.ENDPOINT,
+                  httpMethod + " " + path,
+                  Map.of(
+                      "httpMethod",
+                      httpMethod,
+                      "path",
+                      path,
+                      "category",
+                      rest
+                          ? "REST_API"
+                          : !views.isEmpty()
+                                  && views.stream().allMatch(view -> view.startsWith("redirect:"))
+                              ? "REDIRECT"
+                              : "MVC_SCREEN"),
+                  source,
+                  Confidence.CONFIRMED));
+          EndpointReference endpoint = new EndpointReference(endpointId, path, httpMethod);
+          state.endpoints.add(endpoint);
+          edge(state, EdgeType.HANDLED_BY, endpointId, handlerId, Confidence.CONFIRMED, source);
+          state.apiContracts.add(
+              state.contracts.contract(endpointId, method, mapping, source, views));
+          for (var target :
+              returns.stream()
+                  .filter(t -> t.kind() == SpringControllerReturns.Kind.VIEW)
+                  .toList()) {
+            String view = target.value();
+            String screenId = screenForView(view, target.source(), state);
+            Confidence confidence =
+                resolvedScreenId(view, state) != null
+                        && !target.evidence().stream()
+                            .anyMatch(
+                                e ->
+                                    e.parser().equals("SpringControllerReturns")
+                                        && e.resolution()
+                                            == ApplicationGraph.ResolutionStatus.INFERRED)
+                    ? Confidence.CONFIRMED
+                    : Confidence.INFERRED;
+            String returnId =
+                ApplicationGraph.id(
+                    NodeType.COMPONENT,
+                    "RENDERS:"
+                        + handlerId
+                        + ":"
+                        + screenId
+                        + ":"
+                        + target.source().line()
+                        + ":"
+                        + target.expression()
+                        + SpringControllerReturns.branchKey(target));
+            if (!state.edgeIndex.containsKey(returnId))
+              state.addEdge(
+                  new Relationship(
+                      returnId,
+                      EdgeType.RENDERS,
+                      handlerId,
+                      screenId,
+                      confidence,
+                      target.source(),
+                      viewEvidence(target, view, screenId, state)));
+            state
+                .endpointsByScreen
+                .computeIfAbsent(screenId, ignored -> new ArrayList<>())
+                .add(endpoint);
+            state
+                .screensByEndpoint
+                .computeIfAbsent(endpointId, ignored -> new ArrayList<>())
+                .add(screenId);
+          }
+          if (!rest
+              && views.isEmpty()
+              && throwsException(method)
+              && state.defaultExceptionView != null) {
+            String screenId = screenForView(state.defaultExceptionView, source, state);
+            edge(state, EdgeType.RENDERS, handlerId, screenId, Confidence.CONFIRMED, source);
+            state
+                .endpointsByScreen
+                .computeIfAbsent(screenId, ignored -> new ArrayList<>())
+                .add(endpoint);
+            state
+                .screensByEndpoint
+                .computeIfAbsent(endpointId, ignored -> new ArrayList<>())
+                .add(screenId);
+          }
+          // A throwing handler with no default exception view still has no provable view; it
+          // used to get no diagnostic at all (RV-210).
+          if (!rest
+              && views.isEmpty()
+              && (!throwsException(method) || state.defaultExceptionView == null))
+            state.diagnostics.add(
+                new Diagnostic(
+                    "Handler return view cannot be resolved statically: " + handlerName,
+                    Confidence.UNRESOLVED,
+                    source));
         }
-        if (!rest
-            && views.isEmpty()
-            && throwsException(method)
-            && state.defaultExceptionView != null) {
-          String screenId = screenForView(state.defaultExceptionView, source, state);
-          edge(state, EdgeType.RENDERS, handlerId, screenId, Confidence.CONFIRMED, source);
-          state
-              .endpointsByScreen
-              .computeIfAbsent(screenId, ignored -> new ArrayList<>())
-              .add(endpoint);
-          state
-              .screensByEndpoint
-              .computeIfAbsent(endpointId, ignored -> new ArrayList<>())
-              .add(screenId);
-        }
-        if (!rest && views.isEmpty() && !throwsException(method))
-          state.diagnostics.add(
-              new Diagnostic(
-                  "Handler return view cannot be resolved statically: " + handlerName,
-                  Confidence.UNRESOLVED,
-                  source));
-      }
   }
 
   private static List<ApplicationGraph.AnalysisEvidence> viewEvidence(
@@ -523,7 +532,10 @@ public final class SpringMvcAnalyzer {
     for (int index = 0; index < nodes.getLength(); index++) {
       Element bean = (Element) nodes.item(index);
       String id = bean.getAttribute("id");
-      beans.put(id.isBlank() ? "__anonymous_" + index : id, bean);
+      List<String> names = beanNames(bean);
+      // A bean declared only by name is found by its first name, as Spring does (RV-205).
+      beans.put(
+          !id.isBlank() ? id : !names.isEmpty() ? names.get(0) : "__anonymous_" + index, bean);
     }
     return beans;
   }
@@ -629,7 +641,9 @@ public final class SpringMvcAnalyzer {
 
   private static void addPropertiesViewResolvers(ProjectInventory inventory, State state) {
     for (Path file : inventory.files())
-      if (file.getFileName().toString().equals("application.properties"))
+      // Test resources configure test runs, not the application (RV-219).
+      if (file.getFileName().toString().equals("application.properties")
+          && !inventory.root().relativize(file).toString().replace('\\', '/').contains("src/test/"))
         try {
           var properties = new java.util.Properties();
           properties.load(
@@ -638,8 +652,12 @@ public final class SpringMvcAnalyzer {
                       inventory.root(), file, SafeProjectFiles.MAX_SOURCE_FILE_BYTES)));
           String prefix = properties.getProperty("spring.mvc.view.prefix"),
               suffix = properties.getProperty("spring.mvc.view.suffix");
-          if (prefix != null && suffix != null && !prefix.contains("${") && !suffix.contains("${"))
-            state.viewResolvers.add(new ViewResolver(prefix, suffix));
+          // Spring Boot defaults the one that is not set to an empty string (RV-219).
+          if ((prefix != null || suffix != null)
+              && (prefix == null || !prefix.contains("${"))
+              && (suffix == null || !suffix.contains("${")))
+            state.viewResolvers.add(
+                new ViewResolver(prefix == null ? "" : prefix, suffix == null ? "" : suffix));
         } catch (IOException error) {
           state.diagnostics.add(
               new Diagnostic(
@@ -660,13 +678,26 @@ public final class SpringMvcAnalyzer {
     }
   }
 
+  /** The bean's name attribute split as Spring splits it (comma, semicolon or whitespace). */
+  private static List<String> beanNames(Element bean) {
+    return java.util.Arrays.stream(bean.getAttribute("name").split("[,;\\s]+"))
+        .filter(name -> !name.isBlank())
+        .toList();
+  }
+
   private static Map<String, String> xmlRoutes(Map<String, Element> beans) {
     Map<String, String> routes = new TreeMap<>();
-    for (Element bean : beans.values()) {
+    for (var entry : beans.entrySet()) {
+      Element bean = entry.getValue();
       if (bean.getAttribute("class").contains("SimpleUrlHandlerMapping"))
         routes.putAll(urlMap(bean));
-      if (bean.getAttribute("id").startsWith("/") && isXmlController(bean))
-        routes.put(bean.getAttribute("id"), bean.getAttribute("id"));
+      if (!isXmlController(bean)) continue;
+      // BeanNameUrlHandlerMapping maps the id and every name that starts with '/'; the usual form
+      // is name="/welcome.htm" (RV-205).
+      List<String> urls = new ArrayList<>();
+      urls.add(bean.getAttribute("id"));
+      urls.addAll(beanNames(bean));
+      for (String url : urls) if (url.startsWith("/")) routes.put(url, entry.getKey());
     }
     return routes;
   }
@@ -695,6 +726,13 @@ public final class SpringMvcAnalyzer {
   private static void addXmlController(
       String path, String beanId, Map<String, Element> beans, String relative, State state) {
     Element bean = beans.get(beanId);
+    // A value-ref may name a bean by one of its names rather than its id.
+    if (bean == null)
+      bean =
+          beans.values().stream()
+              .filter(candidate -> beanNames(candidate).contains(beanId))
+              .findFirst()
+              .orElse(null);
     if (bean == null || !isXmlController(bean)) {
       state.diagnostics.add(
           new Diagnostic(
@@ -727,8 +765,7 @@ public final class SpringMvcAnalyzer {
             Map.of("httpMethod", "ANY", "path", path, "category", "MVC_SCREEN"),
             source,
             Confidence.CONFIRMED));
-    state.endpointByPath.putIfAbsent(path, endpointId);
-    state.endpoints.add(new EndpointReference(endpointId, path, "ANY", "MVC_SCREEN"));
+    state.endpoints.add(new EndpointReference(endpointId, path, "ANY"));
     edge(state, EdgeType.HANDLED_BY, endpointId, handlerId, Confidence.CONFIRMED, source);
     String view = property(bean, "viewName");
     if (view == null || view.isBlank()) {
@@ -742,6 +779,12 @@ public final class SpringMvcAnalyzer {
     } else {
       String screenId = screenForView(view, source, state);
       edge(state, EdgeType.RENDERS, handlerId, screenId, Confidence.CONFIRMED, source);
+      // Like annotation and view-controller routes, so forms without an action and relative links
+      // on this screen know the route that opens it (RV-207).
+      state
+          .endpointsByScreen
+          .computeIfAbsent(screenId, ignored -> new ArrayList<>())
+          .add(new EndpointReference(endpointId, path, "ANY"));
       state
           .screensByEndpoint
           .computeIfAbsent(endpointId, ignored -> new ArrayList<>())
@@ -778,15 +821,14 @@ public final class SpringMvcAnalyzer {
               Map.of("httpMethod", "GET", "path", path, "category", "MVC_SCREEN"),
               source,
               Confidence.CONFIRMED));
-      state.endpointByPath.putIfAbsent(path, endpointId);
-      state.endpoints.add(new EndpointReference(endpointId, path, "GET", "MVC_SCREEN"));
+      state.endpoints.add(new EndpointReference(endpointId, path, "GET"));
       edge(state, EdgeType.HANDLED_BY, endpointId, handlerId, Confidence.CONFIRMED, source);
       String screenId = screenForView(view, source, state);
       edge(state, EdgeType.RENDERS, handlerId, screenId, Confidence.CONFIRMED, source);
       state
           .endpointsByScreen
           .computeIfAbsent(screenId, ignored -> new ArrayList<>())
-          .add(new EndpointReference(endpointId, path, "GET", "MVC_SCREEN"));
+          .add(new EndpointReference(endpointId, path, "GET"));
       state
           .screensByEndpoint
           .computeIfAbsent(endpointId, ignored -> new ArrayList<>())
@@ -881,7 +923,7 @@ public final class SpringMvcAnalyzer {
       attributes.put("template", definition.template());
       // The static preview renders the template and fills each tiles:insertAttribute slot from
       // tilesAttributes.
-      String template = tilesJspPath(definition.template(), jsp);
+      String template = tilesJspPath(definition.template(), definition, jsp);
       if (template != null) attributes.put("view", template);
       attributes.put("tilesAttributes", tilesAttributesJson(definition, byName, jsp));
       addNode(
@@ -904,13 +946,17 @@ public final class SpringMvcAnalyzer {
   /**
    * Resolves a Tiles web path such as /WEB-INF/views/home.jsp to the analyzed project-relative JSP.
    */
-  private static String tilesJspPath(String value, JspAnalysis jsp) {
+  private static String tilesJspPath(
+      String value, JspAnalysis.TilesDefinition definition, JspAnalysis jsp) {
     if (value == null
         || value.isBlank()
         || value.contains("${")
         || value.contains("#{")
         || !value.startsWith("/")) return null;
-    for (String candidate : List.of("src/main/webapp" + value, value.substring(1)))
+    // Under the web root of the Tiles definition file, then the project root.
+    for (String candidate :
+        io.screentrace.scanner.WebRoots.candidates(
+            io.screentrace.scanner.WebRoots.DEFAULTS, definition.source().file(), value))
       if (jsp.markup().containsKey(candidate)) return candidate;
     return null;
   }
@@ -929,7 +975,7 @@ public final class SpringMvcAnalyzer {
       JspAnalysis.TilesDefinition nested = byName.get(target);
       if (nested != null) collectTilesJspPaths(nested, byName, jsp, paths, seen);
       else {
-        String path = tilesJspPath(target, jsp);
+        String path = tilesJspPath(target, definition, jsp);
         if (path != null) paths.add(path);
       }
     }
@@ -944,8 +990,7 @@ public final class SpringMvcAnalyzer {
       Map<String, JspAnalysis.TilesDefinition> byName,
       JspAnalysis jsp) {
     try {
-      return new com.fasterxml.jackson.databind.ObjectMapper()
-          .writeValueAsString(tilesContext(definition, byName, jsp, new HashSet<>()));
+      return SHARED_JSON.writeValueAsString(tilesContext(definition, byName, jsp, new HashSet<>()));
     } catch (com.fasterxml.jackson.core.JsonProcessingException error) {
       throw new java.io.UncheckedIOException(error);
     }
@@ -971,14 +1016,14 @@ public final class SpringMvcAnalyzer {
             attribute.name(), Map.of("definition", tilesContext(nested, byName, jsp, stack)));
       else if (nested != null) attributes.put(attribute.name(), Map.of("unresolved", value));
       else if (value.startsWith("/") || value.matches("(?i).*\\.(jspf?|html?)$")) {
-        String path = tilesJspPath(value, jsp);
+        String path = tilesJspPath(value, definition, jsp);
         attributes.put(
             attribute.name(), path == null ? Map.of("unresolved", value) : Map.of("path", path));
       } else attributes.put(attribute.name(), Map.of("value", value));
     }
     stack.remove(definition.name());
     Map<String, Object> context = new TreeMap<>();
-    String template = tilesJspPath(definition.template(), jsp);
+    String template = tilesJspPath(definition.template(), definition, jsp);
     context.put("template", template == null ? definition.template() : template);
     context.put("attributes", attributes);
     return context;
@@ -993,16 +1038,25 @@ public final class SpringMvcAnalyzer {
     for (var entry : state.tileOwnersByView.entrySet()) {
       String bodyScreen = state.screensByView.get(entry.getKey());
       if (bodyScreen == null || entry.getValue().contains(bodyScreen)) continue;
-      if (state.nodes.stream()
-          .noneMatch(
-              n ->
-                  n.id().equals(bodyScreen)
-                      && n.type() == NodeType.SCREEN
-                      && !"true".equals(n.attributes().get("tilesDefinition")))) continue;
+      GraphNode body = state.nodeById.get(bodyScreen);
+      if (body == null
+          || body.type() != NodeType.SCREEN
+          || "true".equals(body.attributes().get("tilesDefinition"))) continue;
       if (state.edges.stream()
           .anyMatch(e -> e.to().equals(bodyScreen) || e.from().equals(bodyScreen))) continue;
       state.nodes.removeIf(n -> n.id().equals(bodyScreen));
+      state.nodeById.remove(bodyScreen);
       String owner = entry.getValue().iterator().next();
+      // Several definitions fill the same body; its interactions follow the first one here, and
+      // the choice is reported instead of made silently (RV-209).
+      if (entry.getValue().size() > 1)
+        state.diagnostics.add(
+            new Diagnostic(
+                "Tiles body JSP 由多個 definition 共用，互動先歸到 " + owner + "；全部候選：" + entry.getValue(),
+                Confidence.AMBIGUOUS,
+                new SourceLocation(entry.getKey(), 1),
+                "TILES_BODY_AMBIGUOUS",
+                List.of()));
       state.screensByView.replaceAll((view, screen) -> screen.equals(bodyScreen) ? owner : screen);
     }
   }
@@ -1068,17 +1122,42 @@ public final class SpringMvcAnalyzer {
       String next = state.screensByView.get(interaction.target());
       // A template's logical name is a view resolver key, never proof of a public URL.
       String direct = next;
-      if (next != null
-          && state.nodes.stream()
-              .anyMatch(
-                  n ->
-                      n.id().equals(direct)
-                          && n.attributes()
-                              .getOrDefault("view", "")
-                              .startsWith("src/main/resources/templates/"))) next = null;
+      GraphNode directNode = next == null ? null : state.nodeById.get(direct);
+      if (directNode != null
+          && directNode
+              .attributes()
+              .getOrDefault("view", "")
+              .transform(view -> templateRoot(view) != null)) next = null;
       if (next != null)
         edge(state, EdgeType.NAVIGATES_TO, id, next, Confidence.CONFIRMED, interaction.source());
     }
+  }
+
+  /**
+   * The request path with "." and ".." segments applied and repeated slashes collapsed, keeping any
+   * query or fragment; null when ".." would leave the application root (RV-208).
+   */
+  static String normalizedRequestPath(String path) {
+    int boundary = path.length();
+    for (char mark : new char[] {'?', '#'}) {
+      int index = path.indexOf(mark);
+      if (index >= 0) boundary = Math.min(boundary, index);
+    }
+    String suffix = path.substring(boundary);
+    Deque<String> segments = new ArrayDeque<>();
+    String[] parts = path.substring(0, boundary).split("/", -1);
+    for (int index = 0; index < parts.length; index++) {
+      String part = parts[index];
+      boolean last = index == parts.length - 1;
+      if (part.equals("..")) {
+        if (segments.isEmpty()) return null;
+        segments.removeLast();
+        if (last) segments.addLast("");
+      } else if (part.equals(".")) {
+        if (last) segments.addLast("");
+      } else if (!part.isEmpty() || last) segments.addLast(part);
+    }
+    return "/" + String.join("/", segments) + suffix;
   }
 
   private static JspAnalysis.Interaction resolveRelativeJspTarget(
@@ -1112,11 +1191,7 @@ public final class SpringMvcAnalyzer {
           new ArrayList<>(interaction.definitionEvidence());
       routes.forEach(
           route -> {
-            GraphNode endpoint =
-                state.nodes.stream()
-                    .filter(n -> n.id().equals(route.id()))
-                    .findFirst()
-                    .orElse(null);
+            GraphNode endpoint = state.nodeById.get(route.id());
             if (endpoint != null)
               proof.add(
                   new ApplicationGraph.AnalysisEvidence(
@@ -1148,12 +1223,9 @@ public final class SpringMvcAnalyzer {
     String route = routes.get(0).path();
     int slash = route.lastIndexOf('/');
     String parent = slash <= 0 ? "" : route.substring(0, slash);
-    String resolved = (parent + "/" + raw).replaceAll("/{2,}", "/");
-    GraphNode endpoint =
-        state.nodes.stream()
-            .filter(n -> n.id().equals(routes.get(0).id()))
-            .findFirst()
-            .orElse(null);
+    String resolved = normalizedRequestPath(parent + "/" + raw);
+    if (resolved == null) return unresolvedRelative(interaction, state, routes, "相對路徑超出應用程式根目錄");
+    GraphNode endpoint = state.nodeById.get(routes.get(0).id());
     List<ApplicationGraph.AnalysisEvidence> proof =
         new ArrayList<>(interaction.definitionEvidence());
     proof.add(
@@ -1192,8 +1264,7 @@ public final class SpringMvcAnalyzer {
         new ArrayList<>(interaction.definitionEvidence());
     routes.forEach(
         route -> {
-          GraphNode endpoint =
-              state.nodes.stream().filter(n -> n.id().equals(route.id())).findFirst().orElse(null);
+          GraphNode endpoint = state.nodeById.get(route.id());
           if (endpoint != null)
             proof.add(
                 new ApplicationGraph.AnalysisEvidence(
@@ -1254,6 +1325,10 @@ public final class SpringMvcAnalyzer {
         interaction.submitsCurrentView()
             ? state.endpointsByScreen.getOrDefault(screenId, List.of())
             : state.endpoints;
+    if (!interaction.submitsCurrentView()) {
+      List<EndpointMatch> exact = exactEndpoints(interaction, state);
+      if (exact != null) return exact;
+    }
     int best = 0;
     List<EndpointMatch> matches = new ArrayList<>();
     for (EndpointReference endpoint : candidates) {
@@ -1276,6 +1351,31 @@ public final class SpringMvcAnalyzer {
     return matches;
   }
 
+  /**
+   * The endpoints whose path equals the request path, or null when none do. An equal path scores
+   * 1000 and any other path at most 100 + 10 per segment, so below 90 segments the equal ones are
+   * exactly the best matches and the full scoring scan can be skipped (RV-702).
+   */
+  private static List<EndpointMatch> exactEndpoints(
+      JspAnalysis.Interaction interaction, State state) {
+    String target = QUERY_OR_FRAGMENT.matcher(interaction.target()).replaceFirst("");
+    if (target.isEmpty() || segments(target).length >= 90) return null;
+    if (state.endpointsIndexed != state.endpoints.size()) {
+      state.endpointsByPath.clear();
+      for (EndpointReference endpoint : state.endpoints)
+        state
+            .endpointsByPath
+            .computeIfAbsent(endpoint.path(), ignored -> new ArrayList<>())
+            .add(endpoint);
+      state.endpointsIndexed = state.endpoints.size();
+    }
+    List<EndpointMatch> matches = new ArrayList<>();
+    for (EndpointReference endpoint : state.endpointsByPath.getOrDefault(target, List.of()))
+      if (methodMatches(interaction.httpMethod(), endpoint.httpMethod()))
+        matches.add(new EndpointMatch(endpoint.id(), Confidence.CONFIRMED));
+    return matches.isEmpty() ? null : matches;
+  }
+
   private static boolean methodMatches(String requested, String actual) {
     return requested == null
         || requested.equals("ANY")
@@ -1283,9 +1383,13 @@ public final class SpringMvcAnalyzer {
         || requested.equals(actual);
   }
 
+  // pathScore runs for every interaction against every endpoint (RV-706).
+  private static final java.util.regex.Pattern QUERY_OR_FRAGMENT =
+      java.util.regex.Pattern.compile("[?#].*$");
+
   private static int pathScore(String target, String endpoint) {
     // Query strings and fragments never take part in Spring request mapping.
-    target = target.replaceFirst("[?#].*$", "");
+    target = QUERY_OR_FRAGMENT.matcher(target).replaceFirst("");
     if (target.isEmpty()) return 0;
     if (target.equals(endpoint)) return 1_000;
     String[] targetSegments = segments(target);
@@ -1305,7 +1409,7 @@ public final class SpringMvcAnalyzer {
   }
 
   private static String[] segments(String path) {
-    return path.replaceFirst("^/", "").split("/");
+    return (path.startsWith("/") ? path.substring(1) : path).split("/");
   }
 
   private static boolean dynamicSegment(String segment) {
@@ -1324,18 +1428,26 @@ public final class SpringMvcAnalyzer {
 
   private static Set<String> includedViewPaths(Path root, JspAnalysis jsp) {
     Set<String> paths = new java.util.HashSet<>();
+    List<String> webRoots = io.screentrace.scanner.WebRoots.of(root);
     for (JspAnalysis.Include include : jsp.includes()) {
-      Path source = root.resolve(include.sourceViewPath()).getParent();
-      Path candidate =
-          include.targetPath().startsWith("/")
-              ? root.resolve("src/main/webapp" + include.targetPath())
-              : source.resolve(include.targetPath()).normalize();
-      if (!SafeProjectFiles.isSafeRegularFile(root, candidate)
-          && include.targetPath().startsWith("/"))
-        candidate = root.resolve(include.targetPath().substring(1));
-      if (SafeProjectFiles.isSafeRegularFile(root, candidate))
-        paths.add(
-            root.relativize(candidate.toAbsolutePath().normalize()).toString().replace('\\', '/'));
+      List<Path> candidates = new ArrayList<>();
+      if (include.targetPath().startsWith("/"))
+        for (String path :
+            io.screentrace.scanner.WebRoots.candidates(
+                webRoots, include.sourceViewPath(), include.targetPath()))
+          candidates.add(root.resolve(path));
+      else {
+        Path source = root.resolve(include.sourceViewPath()).getParent();
+        candidates.add((source == null ? root : source).resolve(include.targetPath()).normalize());
+      }
+      for (Path candidate : candidates)
+        if (SafeProjectFiles.isSafeRegularFile(root, candidate)) {
+          paths.add(
+              root.relativize(candidate.toAbsolutePath().normalize())
+                  .toString()
+                  .replace('\\', '/'));
+          break;
+        }
     }
     return paths;
   }
@@ -1359,27 +1471,46 @@ public final class SpringMvcAnalyzer {
         .orElse(null);
   }
 
-  private static String httpMethod(AnnotationExpr mapping) {
+  /**
+   * Each HTTP method a mapping accepts, in declaration order; "ANY" when none is declared. {@code
+   * method = {GET, POST}} gives two methods instead of the text "{ GET, POST }" (RV-202).
+   */
+  static List<String> httpMethods(AnnotationExpr mapping) {
     if (!mapping.getNameAsString().equals("RequestMapping"))
-      return Map.of(
-              "GetMapping",
-              "GET",
-              "PostMapping",
-              "POST",
-              "PutMapping",
-              "PUT",
-              "DeleteMapping",
-              "DELETE",
-              "PatchMapping",
-              "PATCH")
-          .getOrDefault(mapping.getNameAsString(), "ANY");
-    if (mapping instanceof NormalAnnotationExpr normal)
-      return normal.getPairs().stream()
-          .filter(p -> p.getNameAsString().equals("method"))
-          .map(p -> p.getValue().toString().replace("RequestMethod.", ""))
-          .findFirst()
-          .orElse("ANY");
-    return "ANY";
+      return List.of(
+          Map.of(
+                  "GetMapping",
+                  "GET",
+                  "PostMapping",
+                  "POST",
+                  "PutMapping",
+                  "PUT",
+                  "DeleteMapping",
+                  "DELETE",
+                  "PatchMapping",
+                  "PATCH")
+              .getOrDefault(mapping.getNameAsString(), "ANY"));
+    if (!(mapping instanceof NormalAnnotationExpr normal)) return List.of("ANY");
+    var value =
+        normal.getPairs().stream()
+            .filter(p -> p.getNameAsString().equals("method"))
+            .map(p -> p.getValue())
+            .findFirst();
+    if (value.isEmpty()) return List.of("ANY");
+    List<Expression> items =
+        value.get() instanceof ArrayInitializerExpr array
+            ? array.getValues()
+            : List.of(value.get());
+    List<String> methods = new ArrayList<>();
+    for (Expression item : items) {
+      String name =
+          item instanceof FieldAccessExpr field
+              ? field.getNameAsString()
+              : item instanceof NameExpr simple ? simple.getNameAsString() : null;
+      if (name == null || !name.matches("[A-Z]+")) return List.of("ANY");
+      if (!methods.contains(name)) methods.add(name);
+    }
+    return methods.isEmpty() ? List.of("ANY") : List.copyOf(methods);
   }
 
   private static Map<String, String> viewConstants(ClassOrInterfaceDeclaration type) {
@@ -1403,13 +1534,8 @@ public final class SpringMvcAnalyzer {
     return values;
   }
 
-  private static String join(String base, String child) {
-    String path = (child.isEmpty() ? base : base + "/" + child).replaceAll("/{2,}", "/");
-    return path.isEmpty() ? "/" : path.startsWith("/") ? path : "/" + path;
-  }
-
   private static void addNode(State state, GraphNode node) {
-    if (state.nodes.stream().noneMatch(n -> n.id().equals(node.id()))) {
+    if (!state.nodeById.containsKey(node.id())) {
       List<ApplicationGraph.AnalysisEvidence> proof =
           node.evidence().stream()
               .map(
@@ -1419,7 +1545,7 @@ public final class SpringMvcAnalyzer {
                               e.source(), "SpringMvcAnalyzer", e.resolution(), e.detail())
                           : e)
               .toList();
-      state.nodes.add(
+      state.addNodeLast(
           new GraphNode(
               node.id(),
               node.type(),
@@ -1439,30 +1565,60 @@ public final class SpringMvcAnalyzer {
       Confidence confidence,
       SourceLocation source) {
     String id = ApplicationGraph.id(NodeType.COMPONENT, type + ":" + from + ":" + to);
-    if (state.edges.stream().noneMatch(e -> e.id().equals(id)))
-      state.edges.add(
-          new Relationship(
-              id,
-              type,
-              from,
-              to,
-              confidence,
-              source,
-              List.of(
-                  new ApplicationGraph.AnalysisEvidence(
-                      source, "SpringMvcAnalyzer", confidence.resolutionStatus(), null))));
+    var proof =
+        new ApplicationGraph.AnalysisEvidence(
+            source, "SpringMvcAnalyzer", confidence.resolutionStatus(), null);
+    Integer index = state.edgeIndex.get(id);
+    if (index != null) {
+      Relationship existing = state.edges.get(index);
+      // A proof for an edge first recorded as inferred upgrades it, keeping both pieces of
+      // evidence (RV-206); a weaker proof never downgrades an existing edge.
+      if (confidence == Confidence.CONFIRMED && existing.confidence() != Confidence.CONFIRMED) {
+        List<ApplicationGraph.AnalysisEvidence> evidence = new ArrayList<>(existing.evidence());
+        evidence.add(proof);
+        state.edges.set(
+            index,
+            new Relationship(
+                id, type, from, to, confidence, existing.source(), List.copyOf(evidence)));
+      }
+      return;
+    }
+    state.addEdge(new Relationship(id, type, from, to, confidence, source, List.of(proof)));
   }
 
   private static final class State {
     private final Path root;
+    private final List<String> webRoots;
     private final List<GraphNode> nodes = new ArrayList<>();
     private final List<Relationship> edges = new ArrayList<>();
+    // Id lookups for nodes and edges, kept with the lists: deduplicating by scanning them made a
+    // 300-controller project take more than ten minutes (RV-702). Edges are only appended.
+    private final Map<String, GraphNode> nodeById = new HashMap<>();
+    private final Map<String, Integer> edgeIndex = new HashMap<>();
+
+    private void addNodeLast(GraphNode node) {
+      nodes.add(node);
+      nodeById.put(node.id(), node);
+    }
+
+    private void indexEdges() {
+      for (int index = 0; index < edges.size(); index++)
+        edgeIndex.putIfAbsent(edges.get(index).id(), index);
+    }
+
+    private void addEdge(Relationship edge) {
+      edgeIndex.putIfAbsent(edge.id(), edges.size());
+      edges.add(edge);
+    }
+
     private final List<Diagnostic> diagnostics = new ArrayList<>();
     private final List<ApplicationGraph.ApiContract> apiContracts = new ArrayList<>();
     private final ApiContractExtractor contracts;
-    private final Map<String, String> endpointByPath = new HashMap<>();
     private final List<EndpointReference> endpoints = new ArrayList<>();
     private final Map<String, List<EndpointReference>> endpointsByScreen = new HashMap<>();
+    // endpoints by path, rebuilt when endpoints were added since (they are only appended).
+    private final Map<String, List<EndpointReference>> endpointsByPath = new HashMap<>();
+    private int endpointsIndexed = -1;
     private final Map<String, List<String>> screensByEndpoint = new HashMap<>();
     private final Map<String, String> screensByView = new HashMap<>();
     private final Map<String, String> fragmentsByPath = new HashMap<>();
@@ -1473,11 +1629,12 @@ public final class SpringMvcAnalyzer {
 
     private State(Path root, List<Path> javaFiles) {
       this.root = root;
+      this.webRoots = io.screentrace.scanner.WebRoots.of(root);
       this.contracts = new ApiContractExtractor(root, javaFiles);
     }
   }
 
-  private record EndpointReference(String id, String path, String httpMethod, String category) {}
+  private record EndpointReference(String id, String path, String httpMethod) {}
 
   private record EndpointMatch(String endpointId, Confidence confidence) {}
 

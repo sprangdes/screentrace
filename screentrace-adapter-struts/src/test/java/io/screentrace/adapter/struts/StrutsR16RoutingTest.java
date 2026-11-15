@@ -333,6 +333,62 @@ class StrutsR16RoutingTest {
   }
 
   @Test
+  void welcomeFileNamingAnActionWithoutLeadingSlashOpensItsScreen() throws Exception {
+    // RV-305: welcome-file values have no leading slash, so index.do never matched /index.
+    actionServlet("*.do", "/WEB-INF/struts-config.xml");
+    file(
+        "src/main/webapp/WEB-INF/web.xml",
+        Files.readString(root.resolve("src/main/webapp/WEB-INF/web.xml"))
+            .replace(
+                "</web-app>",
+                "<welcome-file-list><welcome-file>index.do</welcome-file></welcome-file-list></web-app>"));
+    config(
+        "<action path=\"/index\" type=\"sample.IndexAction\"><forward name=\"page\" path=\"/WEB-INF/home.jsp\"/></action>");
+    file("src/main/webapp/WEB-INF/home.jsp", "<h1>Home</h1>");
+    var graph = analyze();
+    assertTrue(
+        graph.diagnostics().stream()
+            .noneMatch(d -> d.code().equals("STRUTS_WELCOME_FILE_UNRESOLVED")),
+        graph.diagnostics().toString());
+    assertTrue(
+        graph.nodes().stream()
+            .anyMatch(
+                node ->
+                    node.type() == NodeType.ENDPOINT
+                        && "index.do".equals(node.attributes().get("welcomeFile"))
+                        && "/index.do".equals(node.attributes().get("path"))),
+        graph.nodes().toString());
+  }
+
+  @Test
+  void logicForwardNameTargetsTheGlobalForward() throws Exception {
+    // RV-306: <logic:forward name="..."> names a global forward; its target used to be null.
+    actionServlet("*.do", "/WEB-INF/struts-config.xml");
+    file(
+        "src/main/webapp/WEB-INF/struts-config.xml",
+        "<struts-config><global-forwards><forward name=\"welcome\" path=\"/Welcome.do\"/></global-forwards><action-mappings><action path=\"/Welcome\" type=\"sample.WelcomeAction\"><forward name=\"page\" path=\"/WEB-INF/welcome.jsp\"/></action></action-mappings></struts-config>");
+    file("src/main/webapp/index.jsp", "<logic:forward name=\"welcome\"/>");
+    file("src/main/webapp/WEB-INF/welcome.jsp", "<h1>Welcome</h1>");
+    var graph = analyze();
+    var welcome =
+        graph.nodes().stream()
+            .filter(
+                node ->
+                    node.type() == NodeType.SCREEN
+                        && node.attributes().getOrDefault("view", "").endsWith("welcome.jsp"))
+            .findFirst()
+            .orElseThrow();
+    assertTrue(
+        graph.relationships().stream()
+            .anyMatch(
+                edge -> edge.type() == EdgeType.NAVIGATES_TO && edge.to().equals(welcome.id())),
+        graph.nodes().stream()
+            .filter(node -> node.type() == NodeType.COMPONENT)
+            .toList()
+            .toString());
+  }
+
+  @Test
   void welcomeFileAndLogicRedirectForwardCreateProvableScreenEntrances() throws Exception {
     actionServlet("*.do", "/WEB-INF/struts-config.xml");
     file(
@@ -837,5 +893,41 @@ class StrutsR16RoutingTest {
                   edge -> edge.type() == EdgeType.TRIGGERS && edge.to().equals(endpoint.id())),
           path + " " + graph.relationships());
     }
+  }
+
+  @Test
+  void exceptionForwardInsideAnActionOnlyLeavesThatAction() throws Exception {
+    // RV-301: an <exception> nested in one action was walked from every action of the module.
+    actionServlet("*.do", "/WEB-INF/struts-config.xml");
+    config(
+        "<action path=\"/a\" type=\"sample.A\"><exception type=\"java.lang.Exception\" key=\"e\" path=\"/error.do\"/><forward name=\"ok\" path=\"/WEB-INF/a.jsp\"/></action>"
+            + "<action path=\"/b\" type=\"sample.B\"><forward name=\"ok\" path=\"/WEB-INF/b.jsp\"/></action>"
+            + "<action path=\"/c\" type=\"sample.C\"><forward name=\"ok\" path=\"/WEB-INF/c.jsp\"/></action>"
+            + "<action path=\"/error\" type=\"sample.Error\"><forward name=\"ok\" path=\"/WEB-INF/error.jsp\"/></action>");
+    for (String page : List.of("a", "b", "c", "error"))
+      file("src/main/webapp/WEB-INF/" + page + ".jsp", "<h1>" + page + "</h1>");
+    var graph = analyze();
+    var error =
+        graph.nodes().stream()
+            .filter(
+                n ->
+                    n.type() == NodeType.ENDPOINT && "/error.do".equals(n.attributes().get("path")))
+            .findFirst()
+            .orElseThrow();
+    var callers =
+        graph.relationships().stream()
+            .filter(e -> e.type() == EdgeType.CALLS && e.to().equals(error.id()))
+            .map(
+                e ->
+                    graph.nodes().stream()
+                        .filter(n -> n.id().equals(e.from()))
+                        .findFirst()
+                        .orElseThrow()
+                        .name())
+            .toList();
+    assertTrue(
+        callers.stream()
+            .noneMatch(name -> name.startsWith("sample.B") || name.startsWith("sample.C")),
+        callers.toString());
   }
 }

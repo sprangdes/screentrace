@@ -54,4 +54,60 @@ class PrototypeRelationshipIndexTest {
       }
     assertNull(index.getOrDefault(EdgeType.RENDERS, java.util.Map.of()).get("a"));
   }
+
+  @Test
+  void componentsArePlacedPerScreenInColumnsAndSharedOnesGetOneIdPerScreen() {
+    // RV-111: the 7th component overlapped the 1st; RV-112: a shared component got duplicate IDs.
+    List<ApplicationGraph.GraphNode> nodes = new ArrayList<>();
+    List<Relationship> relationships = new ArrayList<>();
+    for (String screen : List.of("s1", "s2"))
+      nodes.add(
+          new ApplicationGraph.GraphNode(
+              screen,
+              ApplicationGraph.NodeType.SCREEN,
+              screen,
+              java.util.Map.of(),
+              SOURCE,
+              Confidence.CONFIRMED,
+              List.of()));
+    for (int i = 0; i < 8; i++) {
+      nodes.add(
+          new ApplicationGraph.GraphNode(
+              "c" + i,
+              ApplicationGraph.NodeType.COMPONENT,
+              "c" + i,
+              java.util.Map.of(),
+              SOURCE,
+              Confidence.CONFIRMED,
+              List.of()));
+      relationships.add(
+          new Relationship(
+              "e" + i, EdgeType.CONTAINS, "s1", "c" + i, Confidence.CONFIRMED, SOURCE));
+    }
+    relationships.add(
+        new Relationship("shared", EdgeType.CONTAINS, "s2", "c0", Confidence.CONFIRMED, SOURCE));
+    var graph =
+        new ApplicationGraph(
+            new Application("fixture", ".", List.of()),
+            nodes,
+            relationships,
+            List.of(),
+            List.of(),
+            "2.2",
+            List.of(),
+            List.of());
+    var components = new PrototypeModelGenerator().generate(graph).components();
+    var bounds = components.stream().map(c -> c.bounds().x() + "," + c.bounds().y()).toList();
+    assertEquals(
+        bounds.size(), new java.util.HashSet<>(bounds.subList(0, 8)).size() + 1, bounds.toString());
+    var ids =
+        components.stream().map(io.screentrace.core.PrototypeModel.PrototypeComponent::id).toList();
+    assertEquals(ids.size(), new java.util.HashSet<>(ids).size(), ids.toString());
+    var onS2 =
+        components.stream()
+            .filter(c -> c.screenId().equals("prototype:s2"))
+            .findFirst()
+            .orElseThrow();
+    assertEquals(80, onS2.bounds().y());
+  }
 }

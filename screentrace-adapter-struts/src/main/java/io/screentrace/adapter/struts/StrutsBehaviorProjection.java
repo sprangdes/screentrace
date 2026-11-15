@@ -31,6 +31,7 @@ final class StrutsBehaviorProjection {
     var json = new com.fasterxml.jackson.databind.ObjectMapper();
     Set<String> previousNodes = new HashSet<>(state.nodes.keySet()),
         previousEdges = new HashSet<>(state.edges.keySet());
+    int previousDiagnostics = state.diagnostics.size();
     for (var b : graph.behaviors()) {
       if (!Set.of(BehaviorType.NAVIGATE, BehaviorType.SUBMIT_FORM).contains(b.type())) {
         behaviors.add(b);
@@ -96,9 +97,8 @@ final class StrutsBehaviorProjection {
       }
       var source =
           new SourceLocation(type.source().file(), methods.get(0).getBegin().orElseThrow().line);
-      String
-          endpoint =
-              StableGraphIds.endpoint("ANY", path + "?" + mapping.parameter() + "=" + command),
+      String request = StrutsDispatch.dispatchRequest(path, mapping, command),
+          endpoint = StableGraphIds.endpoint("ANY", request),
           handler = ApplicationGraph.id(NodeType.HANDLER, mapping.type() + "#" + command);
       var proof = new ArrayList<>(b.evidence());
       proof.add(
@@ -107,7 +107,10 @@ final class StrutsBehaviorProjection {
               "StrutsDispatchResolution",
               ResolutionStatus.INFERRED,
               "來源 parameter=" + mapping.parameter() + "；字面方法=" + command + "；原文=" + raw));
-      nodes.put(
+      // The servlet mapping decides whether this public path is proven; a node another pass
+      // already built (possibly UNRESOLVED or AMBIGUOUS) keeps its own status and evidence
+      // (RV-308).
+      nodes.putIfAbsent(
           handler,
           new GraphNode(
               handler,
@@ -117,27 +120,15 @@ final class StrutsBehaviorProjection {
               source,
               Confidence.CONFIRMED,
               proof));
-      nodes.put(
+      nodes.putIfAbsent(
           endpoint,
           new GraphNode(
               endpoint,
               NodeType.ENDPOINT,
-              "ANY " + path + "?" + mapping.parameter() + "=" + command,
-              Map.of(
-                  "path",
-                  path,
-                  "httpMethod",
-                  "ANY",
-                  "parameter",
-                  mapping.parameter(),
-                  "parameterValue",
-                  command,
-                  "category",
-                  "ACTION",
-                  "servletMappingStatus",
-                  "PROVEN"),
+              "ANY " + request,
+              StrutsDispatch.dispatchEndpointAttributes(path, mapping, command, state),
               mapping.source(),
-              Confidence.CONFIRMED,
+              StrutsDispatch.dispatchEndpointConfidence(mapping, Confidence.CONFIRMED, state),
               proof));
       String handled =
           ApplicationGraph.id(NodeType.COMPONENT, "dispatch:" + endpoint + ":" + handler);
@@ -179,11 +170,17 @@ final class StrutsBehaviorProjection {
         (id, e) -> {
           if (!previousEdges.contains(id)) edges.putIfAbsent(id, e);
         });
+    // Diagnostics the dispatch projection raised (an unresolvable forward, for example) used to be
+    // dropped with the rest of the state (RV-302).
+    List<Diagnostic> diagnostics = new ArrayList<>(graph.diagnostics());
+    for (Diagnostic diagnostic :
+        state.diagnostics.subList(previousDiagnostics, state.diagnostics.size()))
+      if (!diagnostics.contains(diagnostic)) diagnostics.add(diagnostic);
     return new ApplicationGraph(
         graph.application(),
         List.copyOf(nodes.values()),
         List.copyOf(edges.values()),
-        graph.diagnostics(),
+        diagnostics,
         graph.apiContracts(),
         graph.schemaVersion(),
         behaviors,
@@ -195,14 +192,19 @@ final class StrutsBehaviorProjection {
     graph.nodes().forEach(node -> nodes.put(node.id(), node));
     Map<String, Behavior> behaviors = new TreeMap<>();
     graph.behaviors().forEach(behavior -> behaviors.put(behavior.id(), behavior));
+    // Form submissions by the path they post to, so each mapping finds its own instead of
+    // scanning every behavior (RV-702).
+    Map<String, List<String>> submitsByPath = new HashMap<>();
+    for (Behavior behavior : behaviors.values()) {
+      GraphNode target = behavior.targetId() == null ? null : nodes.get(behavior.targetId());
+      String path = target == null ? null : target.attributes().get("path");
+      if (behavior.type() == BehaviorType.SUBMIT_FORM && path != null)
+        submitsByPath.computeIfAbsent(path, ignored -> new ArrayList<>()).add(behavior.id());
+    }
     for (Mapping mapping : state.actionMappings) {
       String publicRoute = publicPath(mapping.route(), mapping.module(), state);
-      for (var entry : new ArrayList<>(behaviors.entrySet())) {
-        Behavior behavior = entry.getValue();
-        GraphNode target = behavior.targetId() == null ? null : nodes.get(behavior.targetId());
-        if (behavior.type() != BehaviorType.SUBMIT_FORM
-            || target == null
-            || !publicRoute.equals(target.attributes().get("path"))) continue;
+      for (String id : submitsByPath.getOrDefault(publicRoute, List.of())) {
+        Behavior behavior = behaviors.get(id);
         List<AnalysisEvidence> proof = new ArrayList<>(behavior.evidence());
         proof.add(
             new AnalysisEvidence(
@@ -211,7 +213,7 @@ final class StrutsBehaviorProjection {
                 ResolutionStatus.CONFIRMED,
                 "Struts action mapping=" + mapping.route()));
         behaviors.put(
-            entry.getKey(),
+            id,
             new Behavior(
                 behavior.id(),
                 behavior.triggerId(),

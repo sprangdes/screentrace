@@ -66,13 +66,13 @@ class BehaviorGraphTest {
   @Test
   void rejectsMissingKindAndEvidenceInBehaviorSchema() {
     assertThrows(
-        IllegalStateException.class,
+        GraphValidationException.class,
         () ->
             GraphIntegrityValidator.validate(
                 graph(List.of(node("x", NodeType.COMPONENT, Map.of())), List.of(), List.of())));
     var missing = new GraphNode("x", NodeType.SCREEN, "x", Map.of(), null, Confidence.CONFIRMED);
     assertThrows(
-        IllegalStateException.class,
+        GraphValidationException.class,
         () -> GraphIntegrityValidator.validate(graph(List.of(missing), List.of(), List.of())));
   }
 
@@ -91,14 +91,14 @@ class BehaviorGraphTest {
             null,
             evidence);
     assertThrows(
-        IllegalStateException.class,
+        GraphValidationException.class,
         () -> GraphIntegrityValidator.validate(graph(List.of(button), List.of(bad), List.of())));
     var a =
         new Behavior("a", "button", "click", BehaviorType.UNKNOWN, null, null, "b", null, evidence);
     var b =
         new Behavior("b", "button", "click", BehaviorType.UNKNOWN, null, null, "a", null, evidence);
     assertThrows(
-        IllegalStateException.class,
+        GraphValidationException.class,
         () -> GraphIntegrityValidator.validate(graph(List.of(button), List.of(a, b), List.of())));
   }
 
@@ -109,13 +109,13 @@ class BehaviorGraphTest {
         new Behavior(
             "b", "button", "click", BehaviorType.CALL_API, "button", null, null, null, List.of());
     assertThrows(
-        IllegalStateException.class,
+        GraphValidationException.class,
         () -> GraphIntegrityValidator.validate(graph(List.of(button), List.of(bad), List.of())));
     var rule =
         new ValidationRule(
             "r", "required", List.of("field"), null, ValidationLayer.SERVER, Map.of(), List.of());
     assertThrows(
-        IllegalStateException.class,
+        GraphValidationException.class,
         () -> GraphIntegrityValidator.validate(graph(List.of(button), List.of(), List.of(rule))));
   }
 
@@ -172,6 +172,6 @@ class BehaviorGraphTest {
             ApplicationGraph.BEHAVIOR_SCHEMA_VERSION,
             List.of(),
             List.of());
-    assertThrows(IllegalStateException.class, () -> GraphIntegrityValidator.validate(graph));
+    assertThrows(GraphValidationException.class, () -> GraphIntegrityValidator.validate(graph));
   }
 }

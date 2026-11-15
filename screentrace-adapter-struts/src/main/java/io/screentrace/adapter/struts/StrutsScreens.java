@@ -29,7 +29,7 @@ final class StrutsScreens {
         Map.of("view", view.path()),
         view.source(),
         Confidence.CONFIRMED);
-    indexView(state.viewIds, view.path(), viewId);
+    indexView(state.viewIds, view.path(), viewId, state.inventory.webRoots());
     if (view.kind() == JspAnalysis.ViewKind.JSP) {
       String id = StableGraphIds.screen(view.path());
       Map<String, String> attributes = new TreeMap<>();
@@ -45,7 +45,7 @@ final class StrutsScreens {
           attributes,
           view.source(),
           Confidence.CONFIRMED);
-      indexView(state.screens, view.path(), id);
+      indexView(state.screens, view.path(), id, state.inventory.webRoots());
       for (String root : state.inventory.webRoots())
         if (view.path().startsWith(root)
             && !view.path().substring(root.length()).startsWith("WEB-INF/")) {
@@ -54,9 +54,16 @@ final class StrutsScreens {
               id, "/" + view.path().substring(root.length()), view.source(), state);
         }
     } else if (view.kind() == JspAnalysis.ViewKind.HTML
-        && view.path().replace('\\', '/').startsWith("src/main/webapp/")) {
+        && io.screentrace.scanner.WebRoots.rootOf(state.inventory.webRoots(), view.path())
+            != null) {
       String id = StableGraphIds.screen(view.path());
-      String publicUrl = "/" + view.path().substring("src/main/webapp/".length());
+      String publicUrl =
+          "/"
+              + view.path()
+                  .substring(
+                      io.screentrace.scanner.WebRoots.rootOf(
+                              state.inventory.webRoots(), view.path())
+                          .length());
       Map<String, String> attributes = new TreeMap<>();
       attributes.put("view", view.path());
       attributes.put("route", publicUrl);
@@ -68,7 +75,7 @@ final class StrutsScreens {
           attributes,
           view.source(),
           Confidence.CONFIRMED);
-      indexView(state.screens, view.path(), id);
+      indexView(state.screens, view.path(), id, state.inventory.webRoots());
     }
   }
 
@@ -93,15 +100,7 @@ final class StrutsScreens {
         return isTilesLayoutPath(viewPath, state) ? null : ensureJspScreen(viewPath, state);
     }
     if (!resolvedPath.startsWith("/")) return null;
-    List<String> matches =
-        state.nodes.values().stream()
-            .filter(
-                node ->
-                    node.type() == NodeType.SCREEN
-                        && node.attributes().getOrDefault("view", "").endsWith(resolvedPath))
-            .map(GraphNode::id)
-            .distinct()
-            .toList();
+    List<String> matches = state.nodes.screensWithViewEndingIn(resolvedPath);
     if (matches.size() == 1) return matches.get(0);
     if (matches.size() > 1)
       diagnostic(state, "forward JSP 路徑對應多個畫面：" + resolvedPath, source, "STRUTS_FORWARD_AMBIGUOUS");
@@ -124,7 +123,7 @@ final class StrutsScreens {
         Map.of("view", viewPath),
         view.source(),
         Confidence.CONFIRMED);
-    indexView(state.screens, viewPath, id);
+    indexView(state.screens, viewPath, id, state.inventory.webRoots());
     return id;
   }
 
@@ -162,7 +161,10 @@ final class StrutsScreens {
               var source = StrutsSources.source(path, welcome);
               String screenId, route = "/";
               if (value.endsWith(".do") || value.contains("/do/")) {
-                String normalized = logicalPath(value, "", state);
+                // Welcome files are context-relative and usually written without a leading slash
+                // ("index.do"); routes are keyed with one (RV-305).
+                String normalized =
+                    logicalPath(value.startsWith("/") ? value : "/" + value, "", state);
                 List<Mapping> routes =
                     normalized == null
                         ? List.of()

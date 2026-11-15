@@ -1,4 +1,5 @@
 import path from 'node:path';
+import { resolveSpecifier } from './modules.mjs';
 
 /**
  * Stylesheets the bundle would load, in import order from the entry module: side-effect `.css` imports,
@@ -38,7 +39,7 @@ export function stylesheets(modules, entries) {
           )?.file
         : null;
       if (target) visit(target);
-      else if (specifier.startsWith('.')) visit(resolveRelative(modules, file, specifier));
+      else if (specifier.startsWith('.')) visit(resolveSpecifier(file, specifier, modules));
     }
   };
   entries.forEach(visit);
@@ -68,13 +69,4 @@ function cssCandidates(from, specifier) {
     if (directory === '.' || directory === '/' || directory === '') break;
   }
   return candidates.filter((candidate) => !candidate.startsWith('..'));
-}
-
-function resolveRelative(modules, from, specifier) {
-  const base = path.posix.normalize(path.posix.join(path.posix.dirname(from), specifier));
-  return (
-    ['', '.tsx', '.ts', '.jsx', '.js', '/index.tsx', '/index.ts', '/index.jsx', '/index.js']
-      .map((suffix) => base + suffix)
-      .find((file) => modules.has(file)) ?? null
-  );
 }

@@ -48,7 +48,14 @@ final class LibraryCommands {
         default -> throw new IllegalArgumentException("library 指令無效");
       };
     } catch (IOException e) {
-      return "元件庫指令失敗：無法安全讀取或儲存";
+      throw new FailedException("元件庫指令失敗：無法安全讀取或儲存");
+    }
+  }
+
+  /** A library command that could not read or store its files; the message holds no paths. */
+  static final class FailedException extends RuntimeException {
+    FailedException(String message) {
+      super(message);
     }
   }
 }

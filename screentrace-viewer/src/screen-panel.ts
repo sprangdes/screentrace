@@ -1,3 +1,4 @@
+import { endpointMethod, endpointPath } from './endpoint-presentation';
 import { Index } from './map';
 import { Node } from './contracts';
 import { element, text } from './text';
@@ -37,8 +38,8 @@ export interface ScreenPanelActions {
 const ROW_TOLERANCE = 8;
 
 const endpointLabel = (node: Node) => {
-  const method = node.attributes.httpMethod || node.attributes.method || 'ANY';
-  return `${method === 'ANY' ? '任何方法' : method} ${node.attributes.path || node.attributes.route || node.name}`;
+  const method = endpointMethod(node);
+  return `${method === 'ANY' ? '任何方法' : method} ${endpointPath(node)}`;
 };
 
 /** What a component leads to, phrased for people: destination screens and called APIs. */
@@ -285,10 +286,7 @@ export function screenPanel(
     const link = element('button', undefined, 'link-row api-link');
     link.dataset.api = node.id;
     link.setAttribute('aria-label', endpointLabel(node));
-    link.append(
-      methodBadge(node.attributes.httpMethod || node.attributes.method || 'ANY'),
-      pathCode(node.attributes.path || node.attributes.route || node.name, 'api-link-path'),
-    );
+    link.append(methodBadge(endpointMethod(node)), pathCode(endpointPath(node), 'api-link-path'));
     link.onclick = () => actions.api(node.id);
     apiSection.append(link);
   }

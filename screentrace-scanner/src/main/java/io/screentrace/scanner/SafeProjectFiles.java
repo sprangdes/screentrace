@@ -72,6 +72,33 @@ public final class SafeProjectFiles {
     return false;
   }
 
+  /**
+   * True unless the whole file was read and the ASCII text {@code marker} (case-insensitive) does
+   * not occur in its bytes. Lets a caller ignore a file it cannot read or parse when the file
+   * cannot hold the construct it looks for (RV-007, RV-217); any read failure answers true.
+   */
+  public static boolean mayContainAscii(Path root, Path file, String marker) {
+    String needle = marker.toLowerCase(java.util.Locale.ROOT);
+    try (var input = Files.newInputStream(requireExistingRegularFileWithin(root, file))) {
+      // Each chunk is searched together with the end of the previous one, so a match that spans
+      // a chunk boundary is still found.
+      String tail = "";
+      byte[] buffer = new byte[64 * 1024];
+      int read;
+      while ((read = input.read(buffer)) > 0) {
+        String window =
+            tail
+                + new String(buffer, 0, read, StandardCharsets.ISO_8859_1)
+                    .toLowerCase(java.util.Locale.ROOT);
+        if (window.contains(needle)) return true;
+        tail = window.substring(Math.max(0, window.length() - (needle.length() - 1)));
+      }
+      return false;
+    } catch (IOException | RuntimeException error) {
+      return true;
+    }
+  }
+
   public static String readUtf8Limited(Path root, Path file, long maxBytes) throws IOException {
     byte[] bytes = readBytesLimited(root, file, maxBytes);
     String charset;

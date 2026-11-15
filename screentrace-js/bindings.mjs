@@ -220,7 +220,11 @@ export function bindings(unit, dom = [], options = {}) {
     if (
       node.type === 'AssignmentExpression' &&
       node.left.type === 'MemberExpression' &&
-      /^on/.test(node.left.property.name ?? '')
+      // An event handler property: onclick, onsubmit…, never computed (arr[one]) or a camelCase
+      // option such as onSuccess or user.online (RV-518).
+      !node.left.computed &&
+      /^on[a-z]+$/.test(node.left.property.name ?? '') &&
+      DOM_EVENTS.has(node.left.property.name.slice(2))
     ) {
       add(
         node,
@@ -235,3 +239,49 @@ export function bindings(unit, dom = [], options = {}) {
   scan(parsed.ast);
   return result;
 }
+
+/** DOM event names an `on…` property can handle. */
+const DOM_EVENTS = new Set([
+  'click',
+  'dblclick',
+  'submit',
+  'change',
+  'input',
+  'load',
+  'unload',
+  'beforeunload',
+  'focus',
+  'blur',
+  'keydown',
+  'keyup',
+  'keypress',
+  'mousedown',
+  'mouseup',
+  'mouseover',
+  'mouseout',
+  'mouseenter',
+  'mouseleave',
+  'mousemove',
+  'contextmenu',
+  'select',
+  'reset',
+  'resize',
+  'scroll',
+  'error',
+  'abort',
+  'readystatechange',
+  'touchstart',
+  'touchend',
+  'drop',
+  'dragstart',
+  'paste',
+  'copy',
+  'cut',
+  'wheel',
+  'hashchange',
+  'popstate',
+  'pageshow',
+  'pagehide',
+  'invalid',
+  'toggle',
+]);

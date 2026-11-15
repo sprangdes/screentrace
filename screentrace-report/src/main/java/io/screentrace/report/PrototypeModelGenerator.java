@@ -42,12 +42,23 @@ final class PrototypeModelGenerator {
     Map<String, GraphNode> nodesById = nodesById(graph);
     Map<EdgeType, Map<String, Relationship>> firstFrom = firstRelationshipFrom(graph);
     List<PrototypeModel.PrototypeComponent> components = new ArrayList<>();
-    int index = 0;
+    // Positions count per screen and move to the next column every COMPONENTS_PER_COLUMN (RV-111);
+    // a component on several screens gets one prototype entry per screen with its own ID
+    // (RV-112).
+    Map<String, Integer> owners = new HashMap<>();
+    for (Relationship contains : graph.relationships())
+      if (componentFor(contains, screens, nodesById) != null)
+        owners.merge(contains.to(), 1, Integer::sum);
+    Map<String, Integer> indexByScreen = new HashMap<>();
     for (Relationship contains : graph.relationships()) {
       GraphNode component = componentFor(contains, screens, nodesById);
       if (component != null) {
-        components.add(component(firstFrom, screens, contains, component, index));
-        index++;
+        int index = indexByScreen.merge(contains.from(), 1, Integer::sum) - 1;
+        String id =
+            owners.get(component.id()) > 1
+                ? "prototype:" + contains.from() + ":" + component.id()
+                : "prototype:" + component.id();
+        components.add(component(firstFrom, screens, contains, component, index, id));
       }
     }
     return components;
@@ -68,12 +79,13 @@ final class PrototypeModelGenerator {
       Map<String, PrototypeModel.PrototypeScreen> screens,
       Relationship contains,
       GraphNode component,
-      int index) {
+      int index,
+      String id) {
     Relationship navigation = relationshipFrom(firstFrom, EdgeType.NAVIGATES_TO, component.id());
     Relationship request = relationshipFrom(firstFrom, EdgeType.TRIGGERS, component.id());
     PrototypeModel.PrototypeScreen owner = screens.get(contains.from());
     return new PrototypeModel.PrototypeComponent(
-        "prototype:" + component.id(),
+        id,
         owner.id(),
         component.id(),
         component.attributes().getOrDefault(COMPONENT_TYPE, "COMPONENT"),
@@ -125,7 +137,8 @@ final class PrototypeModelGenerator {
   }
 
   private static PrototypeModel.Bounds bounds(int index) {
-    return new PrototypeModel.Bounds(32, 80 + index % COMPONENTS_PER_COLUMN * 52, 320, 40);
+    return new PrototypeModel.Bounds(
+        32 + index / COMPONENTS_PER_COLUMN * 352, 80 + index % COMPONENTS_PER_COLUMN * 52, 320, 40);
   }
 
   private static String screenshot(String route) {

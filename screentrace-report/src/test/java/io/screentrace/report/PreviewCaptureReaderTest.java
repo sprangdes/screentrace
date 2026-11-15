@@ -95,4 +95,19 @@ class PreviewCaptureReaderTest {
             new PreviewCaptureReader()
                 .read(graph("2.2"), new PreviewModel("1", List.of(), List.of()), root));
   }
+
+  @Test
+  void oversizedCaptureStillProducesTheReportAndSaysWhy() throws Exception {
+    // A 300-screen project wrote 70 MB of element styles and the whole report failed (RV-118).
+    var root = output();
+    long size = Files.size(root.resolve("static-preview/element-styles.json"));
+    System.setProperty("screentrace.preview.maxStyleBytes", Long.toString(size - 1));
+    try {
+      var report = new SingleHtmlAnalysisWriter().generate(graph("2.2"), root);
+      assertTrue(Files.readString(report.path()).contains("PREVIEW_STYLES_TOO_LARGE"));
+    } finally {
+      System.clearProperty("screentrace.preview.maxStyleBytes");
+    }
+    assertEquals(256L * 1024 * 1024, PreviewCaptureReader.maxStyleBytes());
+  }
 }

@@ -19,6 +19,10 @@ import org.w3c.dom.*;
 
 /** Tiles definitions, Tiles screens and their names. */
 final class StrutsTiles {
+  /** Default-configured and thread-safe; one per class instead of one per call (RV-705). */
+  private static final com.fasterxml.jackson.databind.ObjectMapper SHARED_JSON =
+      new com.fasterxml.jackson.databind.ObjectMapper();
+
   private StrutsTiles() {}
 
   static void readTiles(State state) {
@@ -37,7 +41,14 @@ final class StrutsTiles {
           Map<String, String> puts = new TreeMap<>();
           for (String tag : List.of("put", "put-attribute"))
             for (Element item : StrutsSources.elements(definition, tag))
-              puts.put(item.getAttribute("name"), item.getAttribute("value"));
+              // Tiles 1 also writes the value as `content` or as the element body (RV-322).
+              puts.put(
+                  item.getAttribute("name"),
+                  !item.getAttribute("value").isEmpty()
+                      ? item.getAttribute("value")
+                      : !item.getAttribute("content").isEmpty()
+                          ? item.getAttribute("content")
+                          : item.getTextContent().trim());
           if (tiles.containsKey(name)) {
             diagnostic(
                 state,
@@ -196,7 +207,10 @@ final class StrutsTiles {
     String suffix = resolvedTarget.startsWith("/") ? resolvedTarget.substring(1) : resolvedTarget;
     List<String> paths =
         state.inventory.files().stream()
-            .filter(file -> relative(state, file).endsWith(suffix))
+            .filter(
+                file ->
+                    relative(state, file).equals(suffix)
+                        || relative(state, file).endsWith("/" + suffix))
             .map(file -> relative(state, file))
             .distinct()
             .toList();
@@ -229,12 +243,20 @@ final class StrutsTiles {
       String resolved = message(tags.get(0), state);
       return resolved == null ? null : cleanScreenName(resolved);
     }
-    if (candidate.matches("(?s).*\\$\\{|.*#\\{|.*<%.*")) return null;
+    if (dynamic(candidate)) return null;
     Set<String> translations = state.messages.get(candidate);
     if (translations != null && translations.size() == 1)
       return cleanScreenName(translations.iterator().next());
     if (candidate.contains("<") || candidate.contains(">")) return null;
     return cleanScreenName(candidate);
+  }
+
+  /**
+   * True when the text holds EL, a deferred expression or a scriptlet anywhere; the former regex
+   * only matched text ending in "${" or "#{" (RV-312).
+   */
+  static boolean dynamic(String text) {
+    return text.contains("${") || text.contains("#{") || text.contains("<%");
   }
 
   static String tilePrimaryBodyPath(Tile tile, State state, Set<String> seen) {
@@ -291,7 +313,7 @@ final class StrutsTiles {
                     !tag.closing()
                         && Set.of("c:choose", "c:when", "c:if", "c:foreach")
                             .contains(tag.name().toLowerCase(Locale.ROOT)))
-        || markup.matches("(?s).*\\$\\{|.*#\\{|.*<%.*")) return null;
+        || dynamic(markup)) return null;
     String resolved =
         MarkupTag.replaceTags(markup, StrutsTiles::isMessageTag, tag -> message(tag, state));
     if (resolved == null) return null;
@@ -378,12 +400,6 @@ final class StrutsTiles {
       if (path != null) viewId = state.viewIds.get(path);
     }
     return viewId;
-  }
-
-  static boolean sameJspPath(String actual, String target, State state) {
-    String resolved = tileJspViewPath(target, state);
-    return actual.equals(resolved)
-        || (resolved == null && actual.endsWith(target.startsWith("/") ? target : "/" + target));
   }
 
   static void materializeTileScreens(State state) {
@@ -533,8 +549,7 @@ final class StrutsTiles {
    */
   static String tilesAttributesJson(Tile tile, State state) {
     try {
-      return new com.fasterxml.jackson.databind.ObjectMapper()
-          .writeValueAsString(tilesContext(tile, state, new HashSet<>()));
+      return SHARED_JSON.writeValueAsString(tilesContext(tile, state, new HashSet<>()));
     } catch (com.fasterxml.jackson.core.JsonProcessingException error) {
       throw new UncheckedIOException(error);
     }

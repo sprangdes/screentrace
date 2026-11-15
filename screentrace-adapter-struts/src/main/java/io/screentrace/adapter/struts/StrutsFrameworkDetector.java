@@ -76,6 +76,9 @@ public final class StrutsFrameworkDetector {
         } else if ((name.endsWith(".gradle") || name.endsWith(".gradle.kts"))
             && text.contains("struts2-core")) return Optional.of(rejection(inventory, file, 1));
       } catch (Exception error) {
+        // Every Struts 2 signal checked above contains "struts2", so a file that cannot be read or
+        // parsed, but whose bytes never contain it, cannot be one (RV-007). Otherwise stay closed.
+        if (!mayMentionStrutsTwo(inventory.root(), file)) continue;
         return Optional.of(
             StrutsSources.diagnostic(
                 "框架偵測未完成：" + error.getMessage(),
@@ -84,6 +87,11 @@ public final class StrutsFrameworkDetector {
                 "FRAMEWORK_DETECTION_UNRESOLVED"));
       }
     return Optional.empty();
+  }
+
+  /** True unless the whole file was read and "struts2" does not occur in it. */
+  static boolean mayMentionStrutsTwo(Path root, Path file) {
+    return SafeProjectFiles.mayContainAscii(root, file, "struts2");
   }
 
   private static Diagnostic rejection(ProjectInventory inventory, Path file, int line) {

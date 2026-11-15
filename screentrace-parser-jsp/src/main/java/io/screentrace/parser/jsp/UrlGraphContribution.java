@@ -208,7 +208,7 @@ public final class UrlGraphContribution {
                 paths,
                 errors,
                 alternativeProof);
-      } else if ("<current-view>".equals(raw)) {
+      } else if (JspProjectParser.CURRENT_VIEW_TARGET.equals(raw)) {
         Set<String> owners = new TreeSet<>();
         graph.relationships().stream()
             .filter(e -> e.type() == EdgeType.CONTAINS && e.to().equals(b.triggerId()))
@@ -336,18 +336,14 @@ public final class UrlGraphContribution {
                         "原始 URL=" + Objects.toString(raw, "UNRESOLVED")))));
       // Rebuild only request edges; unmatched frontend descriptions still retain their caller.
       final String previous = b.targetId(), requestUrl = raw, requestMethod = method;
-      edges
-          .entrySet()
-          .removeIf(
-              entry -> {
-                var edge = entry.getValue();
-                return edge.from().equals(b.triggerId())
-                    && Set.of(EdgeType.CALLS, EdgeType.TRIGGERS).contains(edge.type())
-                    && (resolved.candidates().contains(edge.to())
-                        || Objects.equals(previous, edge.to())
-                        || !resolved.candidates().isEmpty()
-                            && frontendRequest(nodes.get(edge.to()), requestUrl, requestMethod));
-              });
+      // Only the trigger's own edges can match; look them up instead of scanning all (RV-702).
+      for (var edge : edges.from(b.triggerId()))
+        if ((edge.type() == EdgeType.CALLS || edge.type() == EdgeType.TRIGGERS)
+            && (resolved.candidates().contains(edge.to())
+                || Objects.equals(previous, edge.to())
+                || !resolved.candidates().isEmpty()
+                    && frontendRequest(nodes.get(edge.to()), requestUrl, requestMethod)))
+          edges.remove(edge.id());
       String target =
           resolved.candidates().size() == 1
               ? resolved.candidates().get(0)
@@ -412,14 +408,7 @@ public final class UrlGraphContribution {
                 combined.stream().distinct().sorted().toList()));
       }
     }
-    nodes
-        .entrySet()
-        .removeIf(
-            entry ->
-                "javascript-request".equals(entry.getValue().attributes().get("origin"))
-                    && behaviors.values().stream()
-                        .noneMatch(b -> entry.getKey().equals(b.targetId()))
-                    && edges.values().stream().noneMatch(e -> entry.getKey().equals(e.to())));
+    removeUnusedRequestEndpoints(nodes, behaviors.values(), edges.values());
     var enriched =
         new ApplicationGraph(
             graph.application(),
@@ -597,7 +586,21 @@ public final class UrlGraphContribution {
 
   /** The same user.home redaction hidePrivateLocations applies to every graph string. */
   public static String hidePrivateLocation(String text) {
-    for (String home : homeForms()) text = text.replace(home, "[home]");
+    return redactHome(text, homeForms());
+  }
+
+  /**
+   * Replaces each home path that ends at a path boundary; "/root" must not turn "/rootCategory"
+   * into "[home]Category" (RV-412).
+   */
+  static String redactHome(String text, List<String> homes) {
+    for (String home : homes)
+      // Almost no value holds the home path; skip the regex for those (it is compiled per call).
+      if (text.contains(home))
+        text =
+            text.replaceAll(
+                java.util.regex.Pattern.quote(home) + "(?=[/\\\\\"'\\s]|$)",
+                java.util.regex.Matcher.quoteReplacement("[home]"));
     return text;
   }
 
@@ -605,10 +608,73 @@ public final class UrlGraphContribution {
     List<String> homes = homeForms();
     if (homes.isEmpty()) return graph;
     try {
+      // Source paths are project-relative, so the home path is rarely anywhere; a streaming scan
+      // finds that out without building a JSON tree of the whole graph, which took a fifth of the
+      // analysis time and most of its memory on large projects (RV-706).
+      // The application holds the project's absolute path, which usually is under the home.
+      Application application =
+          JSON.treeToValue(redact(JSON.valueToTree(graph.application()), homes), Application.class);
+      if (!mentionsAny(
+          homes,
+          graph.nodes(),
+          graph.relationships(),
+          graph.diagnostics(),
+          graph.apiContracts(),
+          graph.schemaVersion(),
+          graph.behaviors(),
+          graph.validationRules()))
+        return new ApplicationGraph(
+            application,
+            graph.nodes(),
+            graph.relationships(),
+            graph.diagnostics(),
+            graph.apiContracts(),
+            graph.schemaVersion(),
+            graph.behaviors(),
+            graph.validationRules());
       return JSON.treeToValue(redact(JSON.valueToTree(graph), homes), ApplicationGraph.class);
     } catch (Exception error) {
       throw new IllegalStateException("圖隱私處理失敗", error);
     }
+  }
+
+  /** Whether the JSON of any of the values contains any of the texts, as JSON writes them. */
+  private static boolean mentionsAny(List<String> texts, Object... values)
+      throws java.io.IOException {
+    List<String> needles = new ArrayList<>();
+    for (String text : texts) {
+      String quoted = JSON.writeValueAsString(text);
+      needles.add(quoted.substring(1, quoted.length() - 1));
+    }
+    int keep = needles.stream().mapToInt(String::length).max().orElse(1) - 1;
+    StringBuilder window = new StringBuilder();
+    boolean[] found = {false};
+    try (java.io.Writer scan =
+        new java.io.Writer() {
+          @Override
+          public void write(char[] buffer, int offset, int length) {
+            if (found[0]) return;
+            window.append(buffer, offset, length);
+            for (String needle : needles)
+              if (window.indexOf(needle) >= 0) {
+                found[0] = true;
+                return;
+              }
+            if (window.length() > keep) window.delete(0, window.length() - keep);
+          }
+
+          @Override
+          public void flush() {}
+
+          @Override
+          public void close() {}
+        }) {
+      for (Object value : values) {
+        JSON.writer().without(SerializationFeature.CLOSE_CLOSEABLE).writeValue(scan, value);
+        if (found[0]) return true;
+      }
+    }
+    return found[0];
   }
 
   /**
@@ -637,7 +703,7 @@ public final class UrlGraphContribution {
   private static JsonNode redact(JsonNode node, List<String> homes) {
     if (node.isTextual()) {
       String text = node.asText();
-      for (String home : homes) text = text.replace(home, "[home]");
+      text = redactHome(text, homes);
       return com.fasterxml.jackson.databind.node.TextNode.valueOf(text);
     }
     if (node.isArray()) {
@@ -696,5 +762,24 @@ public final class UrlGraphContribution {
                           "Servlet 映射無法安全解析"))));
         }
     return List.copyOf(result);
+  }
+
+  /**
+   * Drops endpoints made up for a script request (origin {@code javascript-request}) once nothing
+   * points at them any more: no behavior targets them and no relationship ends at them.
+   */
+  static void removeUnusedRequestEndpoints(
+      Map<String, GraphNode> nodes,
+      java.util.Collection<Behavior> behaviors,
+      java.util.Collection<Relationship> edges) {
+    Set<String> used = new java.util.HashSet<>();
+    behaviors.forEach(b -> used.add(b.targetId()));
+    edges.forEach(e -> used.add(e.to()));
+    nodes
+        .entrySet()
+        .removeIf(
+            entry ->
+                "javascript-request".equals(entry.getValue().attributes().get("origin"))
+                    && !used.contains(entry.getKey()));
   }
 }

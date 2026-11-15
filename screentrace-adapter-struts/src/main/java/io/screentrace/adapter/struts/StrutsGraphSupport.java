@@ -15,13 +15,6 @@ import org.w3c.dom.*;
 final class StrutsGraphSupport {
   private StrutsGraphSupport() {}
 
-  static int lineAt(String source, int offset) {
-    int line = 1;
-    for (int i = 0; i < Math.min(offset, source.length()); i++)
-      if (source.charAt(i) == '\n') line++;
-    return line;
-  }
-
   static String directText(Element parent, String name) {
     for (Node child = parent.getFirstChild(); child != null; child = child.getNextSibling())
       if (child instanceof Element element && name.equals(element.getTagName()))
@@ -45,10 +38,11 @@ final class StrutsGraphSupport {
     return null;
   }
 
-  static void indexView(Map<String, String> index, String path, String id) {
+  static void indexView(Map<String, String> index, String path, String id, List<String> roots) {
     index.put(path, id);
-    for (String root : List.of("src/main/webapp/", "WebContent/", "web/"))
-      if (path.startsWith(root)) index.put("/" + path.substring(root.length()), id);
+    // The context path of a view is relative to its own web root (RV-317).
+    String root = io.screentrace.scanner.WebRoots.rootOf(roots, path);
+    if (root != null) index.put("/" + path.substring(root.length()), id);
     int marker = path.indexOf("/WEB-INF/");
     if (marker >= 0) index.put(path.substring(marker), id);
   }

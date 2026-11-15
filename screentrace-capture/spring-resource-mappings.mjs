@@ -35,7 +35,10 @@ async function files(root, projectRoot, depth = 0, budget = { count: 0 }) {
 
 function mappingPrefix(mapping) {
   const value = mapping.replace(/\/\*\*.*$/, '').replace(/^\/+|\/+$/g, '');
-  return value ? `/${value}/` : null;
+  // The prefix also names the asset folder, so a dot segment or backslash could leave it (RV-011).
+  if (!value || value.includes('\\') || value.split('/').some((s) => s === '..' || s === '.' || !s))
+    return null;
+  return `/${value}/`;
 }
 
 function sourceDirectory(target, webRoot, location) {
@@ -74,13 +77,21 @@ function pathWithin(root, candidate) {
 /** Discovers servlet-webapp and classpath locations exposed by Spring MVC resource mappings. */
 export async function discoverSpringResourceMappings(target, webRoot, readFile) {
   const mappings = [];
-  for (const file of await files(path.join(target, 'src/main'), target)) {
+  // Dispatcher XML lives under src/main in Maven projects and under WEB-INF of the web root in
+  // WebContent / WebRoot / web layouts (RV-512); a file reachable from both is read once.
+  const configs = new Set([
+    ...(await files(path.join(target, 'src/main'), target)),
+    ...(await files(webRoot, target)),
+  ]);
+  for (const file of [...configs].sort()) {
     let xml;
     try {
       xml = await readFile(file, 'utf8');
     } catch {
       continue;
     }
+    // Commented-out mappings are not configuration.
+    xml = xml.replace(/<!--[\s\S]*?(?:-->|$)/g, '');
     for (const tag of xml.matchAll(/<mvc:resources\b([^>]*?)\/?>/gi)) {
       const values = attributes(tag[1]);
       const prefix = values.mapping && mappingPrefix(values.mapping);

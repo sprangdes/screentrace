@@ -159,3 +159,41 @@ test('stylesheet references keep only relative local files', () => {
     ['../f.woff', 'img/a.png'],
   );
 });
+
+test('an oversized stylesheet is reported and the other stylesheets still apply (RV-511)', async () => {
+  const { prepareReactPreview } = await import('./react-preview.mjs');
+  const root = await mkdtemp(path.join(os.tmpdir(), 'react-preview-')),
+    output = path.join(root, 'analysis'),
+    htmlRoot = path.join(output, 'static-preview');
+  await mkdir(path.join(root, 'web/src'), { recursive: true });
+  await mkdir(htmlRoot, { recursive: true });
+  await writeFile(path.join(root, 'web/src/huge.css'), 'a{}'.repeat(3 * 1024 * 1024));
+  await writeFile(path.join(root, 'web/src/app.css'), 'body{margin:0}');
+  await writeFile(
+    path.join(htmlRoot, 'react-preview.json'),
+    JSON.stringify({
+      screens: { s: '<p>x</p>' },
+      stylesheets: [
+        {
+          specifier: './huge.css',
+          from: 'web/src/App.tsx',
+          line: 1,
+          candidates: ['web/src/huge.css'],
+        },
+        {
+          specifier: './app.css',
+          from: 'web/src/App.tsx',
+          line: 2,
+          candidates: ['web/src/app.css'],
+        },
+      ],
+    }),
+  );
+  const preview = await prepareReactPreview({ projectRoot: root, output, htmlRoot });
+  assert.deepEqual(
+    preview.diagnostics.map((d) => [d.code, d.source.line]),
+    [['REACT_STYLESHEET_UNREADABLE', 1]],
+  );
+  assert.match(preview.document('s'), /react-assets\/web\/src\/app\.css|web\/src\/app\.css/);
+  await rm(root, { recursive: true, force: true });
+});

@@ -186,6 +186,6 @@ final class StrutsSources {
   }
 
   static boolean literal(String value) {
-    return value != null && !value.contains("${") && !value.contains("#{") && !value.contains("<%");
+    return io.screentrace.parser.jsp.MarkupTag.literal(value);
   }
 }

@@ -45,10 +45,6 @@ public record MarkupAnalysis(
       String nestedPath,
       String linkId) {}
 
-  private static final Set<String> VOID =
-      Set.of(
-          "input", "img", "br", "hr", "meta", "link", "area", "base", "col", "embed", "param",
-          "source", "track", "wbr");
   private static final Set<String> CONDITIONS =
       Set.of(
           "c:if",
@@ -102,12 +98,8 @@ public record MarkupAnalysis(
       String condition = CONDITIONS.contains(tag) ? condition(token) : null;
       ComponentKind kind = kind(tag, attrs);
       if (kind != null) {
-        Map<String, String> identity = new TreeMap<>(attrs);
-        identity.put("tag", tag);
-        String occurrenceKey = kind + identity.toString();
-        String id =
-            StableGraphIds.component(
-                path, kind, identity, occurrences.merge(occurrenceKey, 1, Integer::sum) - 1);
+        String id = componentId(path, kind, tag, attrs, occurrences);
+        kind = kindInContext(kind, tag, attrs, form != null);
         if (kind == ComponentKind.FORM) {
           form = id;
           model = first(attrs, "modelattribute", "commandname", "name");
@@ -163,7 +155,7 @@ public record MarkupAnalysis(
               new SourceLocation(path, token.attributeLine("type")));
       }
       boolean selfClosing = token.end() > 0 && text.charAt(token.end() - 1) == '/';
-      if (!selfClosing && !VOID.contains(tag) && !tag.startsWith("@")) {
+      if (!selfClosing && !MarkupTag.VOID_ELEMENTS.contains(tag) && !tag.startsWith("@")) {
         stack.add(
             new Scope(
                 tag,
@@ -241,8 +233,24 @@ public record MarkupAnalysis(
             List.of(evidence(source, status, "HTML5 屬性：" + kind))));
   }
 
+  /**
+   * The id of the next component of `kind` written as `tag` with `attributes` in `path`. The JSP
+   * parser derives the same ids for its interactions, so both must count occurrences this way.
+   */
+  static String componentId(
+      String path,
+      ComponentKind kind,
+      String tag,
+      Map<String, String> attributes,
+      Map<String, Integer> occurrences) {
+    Map<String, String> identity = new TreeMap<>(attributes);
+    identity.put("tag", tag);
+    return StableGraphIds.component(
+        path, kind, identity, occurrences.merge(kind + identity.toString(), 1, Integer::sum) - 1);
+  }
+
   static boolean dynamic(String value) {
-    return value != null && (value.contains("${") || value.contains("#{") || value.contains("<%"));
+    return value != null && !MarkupTag.literal(value);
   }
 
   static AnalysisEvidence evidence(SourceLocation source, Confidence confidence, String detail) {
@@ -255,6 +263,23 @@ public record MarkupAnalysis(
     return null;
   }
 
+  /**
+   * The kind a component shows once its form is known: a {@code <button>} or {@code <form:button>}
+   * without a type submits its form, as the JSP parser's interactions already assume (RV-410).
+   * Component ids keep the kind from {@link #kind}, which needs no context, so every parser derives
+   * the same id.
+   */
+  public static ComponentKind kindInContext(
+      ComponentKind kind, String tag, Map<String, String> attrs, boolean insideForm) {
+    String type = attrs.get("type");
+    return kind == ComponentKind.BUTTON
+            && insideForm
+            && (tag.equals("button") || tag.equals("form:button"))
+            && (type == null || type.isBlank())
+        ? ComponentKind.SUBMIT
+        : kind;
+  }
+
   public static ComponentKind kind(String tag, Map<String, String> attrs) {
     if (tag.equals("dialog")
         || "dialog".equals(attrs.get("role"))
@@ -262,13 +287,18 @@ public record MarkupAnalysis(
             .anyMatch(c -> Set.of("modal", "offcanvas").contains(c))) return ComponentKind.MODAL;
     String local = tag.contains(":") ? tag.substring(tag.indexOf(':') + 1) : tag;
     if (tag.contains(":")
-        && !(tag.startsWith("html:") || tag.startsWith("html-el:") || tag.startsWith("form:")))
+        && !(tag.startsWith("html:")
+            || tag.startsWith("html-el:")
+            || tag.startsWith("nested:") // Struts nested taglib (RV-426)
+            || tag.startsWith("form:")))
       return attrs.keySet().stream().anyMatch(k -> k.startsWith("on")) ? ComponentKind.OTHER : null;
     return switch (local) {
       case "form" -> ComponentKind.FORM;
       case "a", "link" -> tag.equals("link") ? null : ComponentKind.LINK;
       case "button", "reset" ->
-          "submit".equals(attrs.get("type")) ? ComponentKind.SUBMIT : ComponentKind.BUTTON;
+          "submit".equalsIgnoreCase(Objects.toString(attrs.get("type"), "").strip())
+              ? ComponentKind.SUBMIT
+              : ComponentKind.BUTTON;
       case "submit", "cancel" -> ComponentKind.SUBMIT;
       case "text", "password", "input" -> inputKind(attrs);
       case "textarea" -> ComponentKind.TEXTAREA;

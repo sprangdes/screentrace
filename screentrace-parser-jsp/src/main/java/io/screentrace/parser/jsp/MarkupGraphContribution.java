@@ -79,6 +79,8 @@ public final class MarkupGraphContribution {
                 old == null ? Confidence.CONFIRMED : old.confidence(),
                 evidence.stream().distinct().toList()));
       }
+    // Per component: whether every screen includes it under a guard, and in a repetition.
+    Map<String, boolean[]> placements = new TreeMap<>();
     for (var screen : graph.nodes())
       if (screen.type() == NodeType.SCREEN) {
         Set<String> roots = new TreeSet<>();
@@ -86,14 +88,46 @@ public final class MarkupGraphContribution {
         if (view != null) roots.add(view);
         if ("true".equals(screen.attributes().get("tilesDefinition"))) {
           roots.clear();
-          roots.add(screen.name());
+          // The display name can come from a title put or the body JSP; the definition name is the
+          // key that tilesDefinitions and includes use (RV-009).
+          roots.add(screen.attributes().getOrDefault("tilesDefinitionName", screen.name()));
         }
         if (roots.isEmpty())
           collectGraphIncludes(screen.id(), graph, nodes, roots, new HashSet<>());
         for (String path : roots)
           project(
-              screen.id(), path, null, false, jsp, nodes, edges, behaviors, rules, new HashSet<>());
+              screen.id(),
+              path,
+              null,
+              false,
+              jsp,
+              nodes,
+              edges,
+              behaviors,
+              rules,
+              placements,
+              new HashSet<>());
       }
+    // A shared component is conditional or repeated only where every screen includes it that
+    // way; each screen's own context stays on its CONTAINS evidence (RV-409).
+    placements.forEach(
+        (id, placement) -> {
+          var old = nodes.get(id);
+          if (old == null || !placement[0] && !placement[1]) return;
+          var attrs = new TreeMap<>(old.attributes());
+          if (placement[0]) attrs.put("conditional", "true");
+          if (placement[1]) attrs.put("repeated", "true");
+          nodes.put(
+              id,
+              new GraphNode(
+                  old.id(),
+                  old.type(),
+                  old.name(),
+                  attrs,
+                  old.source(),
+                  old.confidence(),
+                  old.evidence()));
+        });
     for (var interaction : jsp.interactions())
       if (interaction.componentId() != null && nodes.containsKey(interaction.componentId())) {
         var node = nodes.get(interaction.componentId());
@@ -156,23 +190,21 @@ public final class MarkupGraphContribution {
                         status,
                         "彈窗候選：" + candidates.stream().map(GraphNode::id).toList()))));
       }
+    // Triggers that already have a navigation, submit or unknown behavior; kept current as this
+    // loop adds behaviors, so each interaction no longer scans every behavior (RV-702).
+    Set<BehaviorType> navigationTypes =
+        Set.of(BehaviorType.NAVIGATE, BehaviorType.SUBMIT_FORM, BehaviorType.UNKNOWN);
+    Set<String> navigating = new HashSet<>();
+    for (Behavior b : behaviors.values())
+      if (b.triggerId() != null && navigationTypes.contains(b.type()))
+        navigating.add(b.triggerId());
     for (var interaction : jsp.interactions())
       if (interaction.componentId() != null
           && nodes.containsKey(interaction.componentId())
           && Set.of(JspAnalysis.InteractionType.NAVIGATION, JspAnalysis.InteractionType.FORM_SUBMIT)
               .contains(interaction.type())) {
         String trigger = interaction.componentId();
-        boolean existing =
-            behaviors.values().stream()
-                .anyMatch(
-                    b ->
-                        trigger.equals(b.triggerId())
-                            && Set.of(
-                                    BehaviorType.NAVIGATE,
-                                    BehaviorType.SUBMIT_FORM,
-                                    BehaviorType.UNKNOWN)
-                                .contains(b.type()));
-        if (existing) continue;
+        if (navigating.contains(trigger)) continue;
         BehaviorType type =
             interaction.type() == JspAnalysis.InteractionType.FORM_SUBMIT
                 ? BehaviorType.SUBMIT_FORM
@@ -216,6 +248,7 @@ public final class MarkupGraphContribution {
         String event = type == BehaviorType.SUBMIT_FORM ? "submit" : "click",
             expression = interaction.originalExpression();
         String id = StableGraphIds.behavior(trigger, event, type, expression, 0);
+        navigating.add(trigger);
         behaviors.put(
             id,
             new Behavior(
@@ -396,6 +429,7 @@ public final class MarkupGraphContribution {
       RelationshipsByFrom edges,
       Map<String, Behavior> behaviors,
       Map<String, ValidationRule> rules,
+      Map<String, boolean[]> placements,
       Set<String> stack) {
     if (!stack.add(path)) return;
     var definition = jsp.tilesDefinitions().stream().filter(d -> d.name().equals(path)).findFirst();
@@ -407,7 +441,18 @@ public final class MarkupGraphContribution {
       for (String reference : references) {
         String child = resolve(tile.source().file(), reference, jsp);
         if (child != null)
-          project(screen, child, guard, repeated, jsp, nodes, edges, behaviors, rules, stack);
+          project(
+              screen,
+              child,
+              guard,
+              repeated,
+              jsp,
+              nodes,
+              edges,
+              behaviors,
+              rules,
+              placements,
+              stack);
       }
     }
     var markup = jsp.markup().get(path);
@@ -424,22 +469,9 @@ public final class MarkupGraphContribution {
                         + "；repeated="
                         + (repeated || c.repeated())));
         putEdge(edges, EdgeType.CONTAINS, screen, c.id(), c.source(), "畫面元件來源", proof);
-        if (combined != null || repeated) {
-          var old = nodes.get(c.id());
-          var attrs = new TreeMap<>(old.attributes());
-          if (combined != null) attrs.put("conditional", "true");
-          if (repeated) attrs.put("repeated", "true");
-          nodes.put(
-              c.id(),
-              new GraphNode(
-                  old.id(),
-                  old.type(),
-                  old.name(),
-                  attrs,
-                  old.source(),
-                  old.confidence(),
-                  old.evidence()));
-        }
+        boolean[] placement = placements.computeIfAbsent(c.id(), id -> new boolean[] {true, true});
+        placement[0] &= combined != null;
+        placement[1] &= repeated;
       }
       for (var rule : markup.rules()) {
         rules.putIfAbsent(rule.id(), rule);
@@ -466,42 +498,8 @@ public final class MarkupGraphContribution {
                   rule.evidence()));
         }
       }
-      for (var behavior : markup.behaviors()) {
-        String selector = behavior.expression();
-        List<GraphNode> targets =
-            nodes.values().stream()
-                .filter(
-                    n ->
-                        n.type() == NodeType.COMPONENT
-                            && "MODAL".equals(n.attributes().get("kind"))
-                            && selector != null
-                            && selector.equals("#" + n.attributes().get("id")))
-                .filter(
-                    n ->
-                        ownedBy(screen, n.id(), edges)
-                            || reachableSource(path, n.source().file(), jsp, new HashSet<>()))
-                .toList();
-        Confidence status =
-            targets.size() == 1
-                ? Confidence.CONFIRMED
-                : targets.size() > 1 ? Confidence.AMBIGUOUS : Confidence.UNRESOLVED;
-        behaviors.put(
-            behavior.id(),
-            new Behavior(
-                behavior.id(),
-                behavior.triggerId(),
-                behavior.event(),
-                behavior.type(),
-                targets.size() == 1 ? targets.get(0).id() : null,
-                behavior.guard(),
-                behavior.parentId(),
-                selector,
-                List.of(
-                    MarkupAnalysis.evidence(
-                        behavior.evidence().get(0).source(),
-                        status,
-                        "彈窗候選：" + targets.stream().map(GraphNode::id).toList()))));
-      }
+      // Modal targets are resolved once every screen's includes are projected (see analyze).
+      for (var behavior : markup.behaviors()) behaviors.put(behavior.id(), behavior);
     }
     for (var include : jsp.includes())
       if (include.sourceViewPath().equals(path)) {
@@ -518,21 +516,10 @@ public final class MarkupGraphContribution {
             edges,
             behaviors,
             rules,
+            placements,
             stack);
       }
     stack.remove(path);
-  }
-
-  private static boolean reachableSource(
-      String path, String target, JspAnalysis jsp, Set<String> seen) {
-    if (path.equals(target)) return true;
-    if (!seen.add(path)) return false;
-    for (var include : jsp.includes())
-      if (include.sourceViewPath().equals(path)) {
-        String child = resolve(path, include.targetPath(), jsp);
-        if (child != null && reachableSource(child, target, jsp, seen)) return true;
-      }
-    return false;
   }
 
   private static boolean ownedBy(String screen, String component, RelationshipsByFrom edges) {
@@ -545,7 +532,8 @@ public final class MarkupGraphContribution {
     if (jsp.tilesDefinitions().stream().anyMatch(d -> d.name().equals(target))) return target;
     List<String> candidates =
         target.startsWith("/")
-            ? List.of("src/main/webapp" + target, target.substring(1))
+            ? io.screentrace.scanner.WebRoots.candidates(
+                io.screentrace.scanner.WebRoots.DEFAULTS, source, target)
             : List.of(
                 Path.of(source).getParent() == null
                     ? target

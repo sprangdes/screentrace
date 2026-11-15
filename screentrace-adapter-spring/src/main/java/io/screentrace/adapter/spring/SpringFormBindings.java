@@ -79,15 +79,23 @@ final class SpringFormBindings {
                         null))));
       }
     }
+    Index index = Index.of(graph);
     List<GraphNode> nodes = new ArrayList<>(graph.nodes());
     List<Relationship> edges = new ArrayList<>(graph.relationships());
+    // Ids already present, so each form does not rescan every node and edge (RV-702).
+    Set<String> nodeIds = new HashSet<>(), edgeIds = new HashSet<>();
+    nodes.forEach(n -> nodeIds.add(n.id()));
+    edges.forEach(e -> edgeIds.add(e.id()));
+    Map<String, List<Model>> modelsByName = new HashMap<>();
+    for (Model m : models)
+      modelsByName.computeIfAbsent(m.name(), ignored -> new ArrayList<>()).add(m);
     for (var form : graph.nodes())
       if (form.type() == NodeType.COMPONENT && "FORM".equals(form.attributes().get("kind"))) {
         String name = form.attributes().get("model");
         if (name == null) continue;
         List<Model> candidates =
-            models.stream()
-                .filter(m -> m.name().equals(name) && appliesTo(m, form, graph))
+            modelsByName.getOrDefault(name, List.of()).stream()
+                .filter(m -> appliesTo(m, form, index))
                 .toList();
         // Several declarations are ambiguous, even if they happen to use the same class.
         if (candidates.size() != 1) continue;
@@ -101,12 +109,15 @@ final class SpringFormBindings {
                 model.source().file() + ":" + model.type() + ":" + model.name());
         Map<String, String> attrs = new TreeMap<>();
         attrs.put("class", model.type());
+        // Static fields and getters (serialVersionUID, constants) are never bound (RV-218).
         for (var field : type.node().getFields())
-          for (var variable : field.getVariables())
-            attrs.put(
-                "field." + variable.getNameAsString() + ".type", variable.getType().asString());
+          if (!field.isStatic())
+            for (var variable : field.getVariables())
+              attrs.put(
+                  "field." + variable.getNameAsString() + ".type", variable.getType().asString());
         for (var method : type.node().getMethods())
           if (method.getParameters().isEmpty()
+              && !method.isStatic()
               && method.getNameAsString().startsWith("get")
               && method.getNameAsString().length() > 3) {
             String raw = method.getNameAsString().substring(3);
@@ -127,7 +138,7 @@ final class SpringFormBindings {
                     "SpringFormBindings",
                     ResolutionStatus.CONFIRMED,
                     "欄位宣告：" + model.type()));
-        if (nodes.stream().noneMatch(n -> n.id().equals(id)))
+        if (nodeIds.add(id))
           nodes.add(
               new GraphNode(
                   id,
@@ -139,7 +150,7 @@ final class SpringFormBindings {
                   proof));
         String edgeId =
             ApplicationGraph.id(NodeType.COMPONENT, EdgeType.BINDS_TO + ":" + form.id() + ":" + id);
-        if (edges.stream().noneMatch(e -> e.id().equals(edgeId)))
+        if (edgeIds.add(edgeId))
           edges.add(
               new Relationship(
                   edgeId,
@@ -194,43 +205,66 @@ final class SpringFormBindings {
         declaration instanceof Parameter);
   }
 
-  private static boolean appliesTo(Model model, GraphNode form, ApplicationGraph graph) {
+  /** Lookups for {@link #appliesTo}, built once per graph instead of scanned per form (RV-702). */
+  private record Index(
+      Map<String, List<GraphNode>> handlersByClass,
+      Map<String, List<Relationship>> byFrom,
+      Map<String, List<String>> containersOf) {
+    static Index of(ApplicationGraph graph) {
+      Map<String, List<GraphNode>> handlers = new HashMap<>();
+      for (var node : graph.nodes())
+        if (node.type() == NodeType.HANDLER)
+          handlers
+              .computeIfAbsent(
+                  node.source().file() + "\u0000" + node.attributes().get("class"),
+                  ignored -> new ArrayList<>())
+              .add(node);
+      Map<String, List<Relationship>> byFrom = new HashMap<>();
+      Map<String, List<String>> containers = new HashMap<>();
+      for (var edge : graph.relationships()) {
+        byFrom.computeIfAbsent(edge.from(), ignored -> new ArrayList<>()).add(edge);
+        if (edge.type() == EdgeType.CONTAINS)
+          containers.computeIfAbsent(edge.to(), ignored -> new ArrayList<>()).add(edge.from());
+      }
+      return new Index(handlers, byFrom, containers);
+    }
+
+    List<Relationship> from(String id) {
+      return byFrom.getOrDefault(id, List.of());
+    }
+  }
+
+  private static boolean appliesTo(Model model, GraphNode form, Index index) {
     Set<String> handlers = new HashSet<>();
-    for (var node : graph.nodes())
-      if (node.type() == NodeType.HANDLER
-          && node.source().file().equals(model.source().file())
-          && model.ownerClass().equals(node.attributes().get("class"))
-          && (model.provider()
-              || (model.method().equals(node.attributes().get("method"))
-                  && node.source().line() == model.methodLine()))) handlers.add(node.id());
+    for (var node :
+        index
+            .handlersByClass()
+            .getOrDefault(model.source().file() + "\u0000" + model.ownerClass(), List.of()))
+      if (model.provider()
+          || (model.method().equals(node.attributes().get("method"))
+              && node.source().line() == model.methodLine())) handlers.add(node.id());
     if (handlers.isEmpty()) return false;
-    for (var submit : graph.relationships())
-      if (model.requestParameter()
-          && submit.type() == EdgeType.TRIGGERS
-          && submit.from().equals(form.id())
-          && submit.confidence() == Confidence.CONFIRMED)
-        if (graph.relationships().stream()
-            .anyMatch(
-                e ->
-                    e.type() == EdgeType.HANDLED_BY
-                        && e.from().equals(submit.to())
-                        && handlers.contains(e.to())
-                        && e.confidence() == Confidence.CONFIRMED)) return true;
-    Set<String> owners = new HashSet<>();
-    graph.relationships().stream()
-        .filter(e -> e.type() == EdgeType.CONTAINS && e.to().equals(form.id()))
-        .forEach(e -> owners.add(e.from()));
+    if (model.requestParameter())
+      for (var submit : index.from(form.id()))
+        if (submit.type() == EdgeType.TRIGGERS && submit.confidence() == Confidence.CONFIRMED)
+          for (var e : index.from(submit.to()))
+            if (e.type() == EdgeType.HANDLED_BY
+                && handlers.contains(e.to())
+                && e.confidence() == Confidence.CONFIRMED) return true;
+    Set<String> owners = new HashSet<>(index.containersOf().getOrDefault(form.id(), List.of()));
     return !owners.isEmpty()
         && owners.stream()
             .allMatch(
                 owner ->
-                    graph.relationships().stream()
+                    handlers.stream()
                         .anyMatch(
-                            e ->
-                                e.type() == EdgeType.RENDERS
-                                    && handlers.contains(e.from())
-                                    && e.to().equals(owner)
-                                    && e.confidence() == Confidence.CONFIRMED));
+                            handler ->
+                                index.from(handler).stream()
+                                    .anyMatch(
+                                        e ->
+                                            e.type() == EdgeType.RENDERS
+                                                && e.to().equals(owner)
+                                                && e.confidence() == Confidence.CONFIRMED)));
   }
 
   private static boolean isModelAttribute(

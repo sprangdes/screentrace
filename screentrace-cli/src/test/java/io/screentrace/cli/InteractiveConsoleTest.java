@@ -1,6 +1,8 @@
 package io.screentrace.cli;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.ByteArrayInputStream;
@@ -52,5 +54,50 @@ class InteractiveConsoleTest {
     try (InteractiveConsole console = new InteractiveConsole(terminal)) {
       return console.confirmOpenReport("file:///out/report.html");
     }
+  }
+
+  @Test
+  void pathPromptsExpandHomeAndCancelOnClosedInput() throws Exception {
+    // RV-116: '~' was taken literally and Ctrl-D crashed the session.
+    String home = System.getProperty("user.home");
+    try (InteractiveConsole console = lineConsole("~\n")) {
+      assertEquals(
+          java.nio.file.Path.of(home).toAbsolutePath().normalize(),
+          console.existingDirectory("folder", java.nio.file.Path.of(".")));
+    }
+    try (InteractiveConsole console = lineConsole("")) {
+      assertThrows(
+          InteractiveConsole.SelectionCancelledException.class,
+          () -> console.existingDirectory("folder", java.nio.file.Path.of(".")));
+    }
+  }
+
+  @Test
+  void aMenuWiderThanTheTerminalIsCutToItsWidth() throws Exception {
+    var output = new ByteArrayOutputStream();
+    var input = new ByteArrayInputStream("\r".getBytes(StandardCharsets.UTF_8));
+    Terminal terminal =
+        new ExternalTerminal("test", "xterm-256color", input, output, StandardCharsets.UTF_8);
+    terminal.setSize(new Size(40, 24));
+    try (InteractiveConsole console = new InteractiveConsole(terminal)) {
+      console.select("Projects", java.util.List.of("x".repeat(120)), v -> v, 'q', "q 離開", -1);
+    }
+    for (String line : output.toString(StandardCharsets.UTF_8).split("\\R"))
+      assertTrue(
+          new org.jline.utils.AttributedString(line.replaceAll("\\u001b\\[[0-9;?]*[A-Za-z]", ""))
+                  .columnLength()
+              <= 40,
+          line);
+  }
+
+  private static InteractiveConsole lineConsole(String keys) throws Exception {
+    var input = new ByteArrayInputStream(keys.getBytes(StandardCharsets.UTF_8));
+    return new InteractiveConsole(
+        new DumbTerminal(
+            "test",
+            Terminal.TYPE_DUMB,
+            input,
+            new ByteArrayOutputStream(),
+            StandardCharsets.UTF_8));
   }
 }

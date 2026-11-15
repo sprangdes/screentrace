@@ -48,7 +48,18 @@ public final class StrutsMenus {
         String text =
             SafeProjectFiles.readUtf8Limited(root, file, SafeProjectFiles.MAX_XML_FILE_BYTES);
         if (!text.contains("MenuPlugIn")) continue;
+        // The web root is the folder holding WEB-INF, also for WEB-INF/config/struts-config.xml
+        // (RV-425); a config outside WEB-INF keeps the folder above its own.
         Path webRoot = file.getParent().getParent();
+        for (Path folder = file.getParent();
+            folder != null && folder.startsWith(root);
+            folder = folder.getParent())
+          if (folder.getFileName() != null
+              && folder.getFileName().toString().equals("WEB-INF")
+              && folder.getParent() != null) {
+            webRoot = folder.getParent();
+            break;
+          }
         List<String> declared = new ArrayList<>();
         String pending = null;
         boolean inPlugin = false;
@@ -145,6 +156,15 @@ public final class StrutsMenus {
               .append(escape(item.title()))
               .append("</a>");
       }
+      // Keep the tag's line breaks so every later line number stays where it was (RV-408).
+      out.append(
+          "\n"
+              .repeat(
+                  (int)
+                      text.substring(tag.start(), tag.end() + 1)
+                          .chars()
+                          .filter(c -> c == '\n')
+                          .count()));
       cursor = tag.end() + 1;
     }
     return out.append(text.substring(cursor)).toString();

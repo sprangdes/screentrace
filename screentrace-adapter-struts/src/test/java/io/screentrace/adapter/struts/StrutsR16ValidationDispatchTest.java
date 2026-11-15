@@ -181,6 +181,28 @@ class StrutsR16ValidationDispatchTest {
   }
 
   @Test
+  void escapedAmpersandInALinkStillSelectsTheDispatchMethod() throws Exception {
+    // RV-313: XHTML-correct "&amp;" used to split into "amp;dispatchMethod=doBar".
+    base(
+        "<struts-config><action-mappings><action path='/dispatch' type='sample.Dispatch' parameter='dispatchMethod'/></action-mappings></struts-config>");
+    file(
+        "src/main/java/sample/Dispatch.java",
+        "package sample; public class Dispatch extends org.apache.struts.actions.DispatchAction { public org.apache.struts.action.ActionForward doFoo(org.apache.struts.action.ActionMapping m, org.apache.struts.action.ActionForm f, javax.servlet.http.HttpServletRequest q, javax.servlet.http.HttpServletResponse s){return null;} public org.apache.struts.action.ActionForward doBar(org.apache.struts.action.ActionMapping m, org.apache.struts.action.ActionForm f, javax.servlet.http.HttpServletRequest q, javax.servlet.http.HttpServletResponse s){return null;} }");
+    file(
+        "src/main/webapp/dispatch.jsp",
+        "<a href='/dispatch.do?id=1&amp;dispatchMethod=doBar'>Bar</a>");
+    ApplicationGraph graph = analyze();
+    assertTrue(
+        graph.nodes().stream()
+            .anyMatch(
+                n -> n.type() == NodeType.HANDLER && "doBar".equals(n.attributes().get("method"))),
+        graph.nodes().toString());
+    assertTrue(
+        graph.diagnostics().stream().noneMatch(d -> d.code().equals("STRUTS_DISPATCH_UNRESOLVED")),
+        graph.diagnostics().toString());
+  }
+
+  @Test
   void dispatchActionKeepsEveryOrdinaryHtmlParameterCandidateAmbiguous() throws Exception {
     base(
         "<struts-config><action-mappings><action path='/dispatch' type='sample.Dispatch' parameter='dispatchMethod'/></action-mappings></struts-config>");

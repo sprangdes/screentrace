@@ -3,6 +3,34 @@ import { element } from './text';
 import { Decision, EffectiveDecision } from './shared/review';
 import { decisionTerm } from './terms';
 
+/** Elements that never show children: void elements, form controls that draw their own
+ * content, and embedded media. A badge goes after them instead of inside. */
+const NO_VISIBLE_CHILDREN = new Set([
+  'input',
+  'img',
+  'select',
+  'textarea',
+  'option',
+  'optgroup',
+  'br',
+  'hr',
+  'wbr',
+  'area',
+  'embed',
+  'iframe',
+  'object',
+  'video',
+  'audio',
+  'canvas',
+  'meter',
+  'progress',
+]);
+/** Put a decision badge where it can be seen: inside `node`, or right after it when its
+ * children would not render. */
+export function placeBadge(node: Element, badge: Element): void {
+  if (NO_VISIBLE_CHILDREN.has(node.localName)) node.insertAdjacentElement('afterend', badge);
+  else node.append(badge);
+}
 export function decisionLabel(value: EffectiveDecision): string {
   return decisionTerm(value);
 }

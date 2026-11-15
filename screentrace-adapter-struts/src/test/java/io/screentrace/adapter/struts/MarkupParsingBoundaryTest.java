@@ -102,4 +102,91 @@ class MarkupParsingBoundaryTest {
     assertEquals("Orders", screen.name());
     assertEquals("body JSP", screen.attributes().get("screenNameSource"));
   }
+
+  @Test
+  void tilesScreenNamedFromItsBodyStillGetsTheMarkupProjection() throws Exception {
+    // RV-009: the markup projection keys Tiles screens by definition name, not display name, so a
+    // screen named from its body heading still receives markup evidence for its controls.
+    file("src/main/webapp/WEB-INF/web.xml", "<web-app>" + WEB_XML_ACTION + "</web-app>");
+    file(
+        "src/main/webapp/WEB-INF/struts-config.xml",
+        "<struts-config><action-mappings><action path='/orders' type='sample.Orders'><forward name='ok' path='.ordersPage'/></action></action-mappings></struts-config>");
+    file(
+        "tiles-defs.xml",
+        "<tiles-definitions><definition name='.layout' path='/layout.jsp'/><definition name='.ordersPage' extends='.layout'><put name='body' value='/orders-body.jsp'/></definition></tiles-definitions>");
+    file(
+        "src/main/webapp/layout.jsp", "<html><body><tiles:insert attribute='body'/></body></html>");
+    file(
+        "src/main/webapp/orders-body.jsp",
+        "<h1>Orders</h1>\n<form action='/orders.do'><input type='submit' value='Search'/></form>");
+    ApplicationGraph graph = analyze();
+    String id = ApplicationGraph.id(NodeType.SCREEN, "tiles:.ordersPage");
+    assertEquals(
+        "Orders",
+        graph.nodes().stream()
+            .filter(node -> node.id().equals(id))
+            .findFirst()
+            .orElseThrow()
+            .name());
+    var contains =
+        graph.relationships().stream()
+            .filter(edge -> edge.type() == EdgeType.CONTAINS && edge.from().equals(id))
+            .toList();
+    assertFalse(contains.isEmpty());
+    assertTrue(
+        contains.stream()
+            .allMatch(
+                edge ->
+                    edge.evidence().stream()
+                        .anyMatch(proof -> proof.parser().equals("JspMarkupParser"))),
+        contains.toString());
+  }
+
+  @Test
+  void jspAtTheProjectRootWithRelativeLinksAndIncludesIsAnalyzed() throws Exception {
+    // RV-008: a JSP with no parent directory used to throw a NullPointerException.
+    file(
+        "WEB-INF/web.xml",
+        "<web-app>"
+            + WEB_XML_ACTION
+            + "<welcome-file-list><welcome-file>index.jsp</welcome-file></welcome-file-list></web-app>");
+    file(
+        "WEB-INF/struts-config.xml",
+        "<struts-config><action-mappings><action path='/home' type='sample.HomeAction' forward='/index.jsp'/></action-mappings></struts-config>");
+    file("menu.jsp", "<a href='next.do'>Next</a>");
+    file(
+        "index.jsp",
+        "<%@ include file=\"menu.jsp\" %>\n<a href='next.do'>Next</a><form action='save.do'><input type='submit' value='Save'/></form>");
+    ApplicationGraph graph = analyze();
+    assertTrue(graph.nodes().stream().anyMatch(node -> node.type() == NodeType.SCREEN));
+  }
+
+  @Test
+  void webRootLayoutResolvesHtmlScreensIncludesAndRelativeLinks() throws Exception {
+    // RV-317: Struts used to know only src/main/webapp, WebContent and web.
+    file("WebRoot/WEB-INF/web.xml", "<web-app>" + WEB_XML_ACTION + "</web-app>");
+    file(
+        "WebRoot/WEB-INF/struts-config.xml",
+        "<struts-config><action-mappings><action path='/home' type='sample.HomeAction' forward='/pages/home.jsp'/><action path='/list' type='sample.ListAction' forward='/pages/home.jsp'/></action-mappings></struts-config>");
+    file("WebRoot/common/menu.jsp", "<a href='/app/list.do'>Menu list</a>");
+    file(
+        "WebRoot/pages/home.jsp",
+        "<%@ include file=\"/common/menu.jsp\" %>\n<a href='../list.do'>Relative list</a>");
+    file("WebRoot/help.html", "<html><body><h1>Help</h1></body></html>");
+    ApplicationGraph graph = analyze();
+    GraphNode help =
+        graph.nodes().stream()
+            .filter(
+                n ->
+                    n.type() == NodeType.SCREEN && "/help.html".equals(n.attributes().get("route")))
+            .findFirst()
+            .orElseThrow(() -> new AssertionError(graph.nodes().toString()));
+    assertEquals("WebRoot/help.html", help.attributes().get("view"));
+    GraphNode relative =
+        graph.nodes().stream()
+            .filter(n -> n.type() == NodeType.COMPONENT && n.name().equals("Relative list"))
+            .findFirst()
+            .orElseThrow();
+    assertEquals("/list.do", relative.attributes().get("target"), relative.attributes().toString());
+  }
 }

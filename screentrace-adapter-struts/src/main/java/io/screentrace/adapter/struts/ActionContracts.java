@@ -17,14 +17,21 @@ final class ActionContracts {
     Map<String, GraphNode> nodes = new TreeMap<>();
     graph.nodes().forEach(n -> nodes.put(n.id(), n));
     List<ApiContract> contracts = new ArrayList<>(graph.apiContracts());
+    // Relationships by source, in graph order: each endpoint and handler used to scan all of
+    // them three times (RV-703).
+    Map<String, List<Relationship>> byFrom = new HashMap<>();
+    for (var edge : graph.relationships())
+      byFrom.computeIfAbsent(edge.from(), ignored -> new ArrayList<>()).add(edge);
+    // Each config's <forward> elements by action path, parsed once instead of once per handler.
+    Map<String, Map<String, List<org.w3c.dom.Element>>> forwardsByConfig = new HashMap<>();
     for (var endpoint : graph.nodes())
       if (endpoint.type() == NodeType.ENDPOINT
               && "ACTION".equals(endpoint.attributes().get("category"))
           || endpoint.type() == NodeType.ENDPOINT
               && endpoint.attributes().containsKey("parameterValue")) {
         List<GraphNode> handlers =
-            graph.relationships().stream()
-                .filter(e -> e.type() == EdgeType.HANDLED_BY && e.from().equals(endpoint.id()))
+            byFrom.getOrDefault(endpoint.id(), List.of()).stream()
+                .filter(e -> e.type() == EdgeType.HANDLED_BY)
                 .map(e -> nodes.get(e.to()))
                 .filter(Objects::nonNull)
                 .toList();
@@ -33,13 +40,19 @@ final class ActionContracts {
         List<String> bodyTypes = new ArrayList<>();
         boolean known = false;
         for (var handler : handlers) {
+          // A DelegatingActionProxy's real class is the Spring-resolved actionType (RV-310).
           String name =
-              handler.attributes().getOrDefault("class", handler.attributes().get("type"));
+              handler
+                  .attributes()
+                  .getOrDefault(
+                      "class",
+                      handler
+                          .attributes()
+                          .getOrDefault("actionType", handler.attributes().get("type")));
           var type = name == null ? null : types.get(name);
           String method = handler.attributes().getOrDefault("method", "execute");
-          for (var declaration : graph.relationships())
-            if (declaration.type() == EdgeType.DECLARED_BY
-                && declaration.from().equals(handler.id())) {
+          for (var declaration : byFrom.getOrDefault(handler.id(), List.of()))
+            if (declaration.type() == EdgeType.DECLARED_BY) {
               var form = nodes.get(declaration.to());
               if (form != null && form.type() == NodeType.FORM_MODEL) {
                 String body = form.attributes().get("class");
@@ -88,44 +101,29 @@ final class ActionContracts {
                               type.source().file(), call.getBegin().map(p -> p.line).orElse(1)),
                           Confidence.CONFIRMED));
             }
-          for (var config : configs)
-            if (inventory
-                .root()
-                .relativize(config)
-                .toString()
-                .replace('\\', '/')
-                .equals(handler.source().file()))
-              try {
-                String file = handler.source().file();
-                var document =
-                    StrutsSources.xml(
-                        io.screentrace.scanner.SafeProjectFiles.readUtf8Limited(
-                            inventory.root(),
-                            config,
-                            io.screentrace.scanner.SafeProjectFiles.MAX_XML_FILE_BYTES));
-                for (var action : StrutsSources.elements(document, "action"))
-                  if (action.getAttribute("path").equals(handler.attributes().get("path")))
-                    for (var forward : StrutsSources.elements(action, "forward")) {
-                      String target = forward.getAttribute("path");
-                      if (!target.isBlank())
-                        responses.add(
-                            new Response(
-                                "UNKNOWN",
-                                target.endsWith(".jsp") ? "text/html" : null,
-                                "VIEW: " + target,
-                                List.of(),
-                                StrutsSources.source(file, forward),
-                                StrutsSources.literal(target)
-                                    ? Confidence.INFERRED
-                                    : Confidence.UNRESOLVED));
-                    }
-              } catch (Exception unread) {
-                // StrutsConfigParser reports an unreadable config; it only adds no view contract
-                // here.
-              }
-          for (var edge : graph.relationships())
-            if (Set.of(EdgeType.FORWARDS_TO, EdgeType.RENDERS).contains(edge.type())
-                && edge.from().equals(handler.id())) {
+          for (var config : configs) {
+            String file = handler.source().file();
+            if (!inventory.root().relativize(config).toString().replace('\\', '/').equals(file))
+              continue;
+            var forwards =
+                forwardsByConfig.computeIfAbsent(file, ignored -> forwards(inventory, config));
+            for (var forward : forwards.getOrDefault(handler.attributes().get("path"), List.of())) {
+              String target = forward.getAttribute("path");
+              if (!target.isBlank())
+                responses.add(
+                    new Response(
+                        "UNKNOWN",
+                        target.endsWith(".jsp") ? "text/html" : null,
+                        "VIEW: " + target,
+                        List.of(),
+                        StrutsSources.source(file, forward),
+                        StrutsSources.literal(target)
+                            ? Confidence.INFERRED
+                            : Confidence.UNRESOLVED));
+            }
+          }
+          for (var edge : byFrom.getOrDefault(handler.id(), List.of()))
+            if (edge.type() == EdgeType.FORWARDS_TO || edge.type() == EdgeType.RENDERS) {
               var screen = nodes.get(edge.to());
               if (screen != null)
                 responses.add(
@@ -171,5 +169,29 @@ final class ActionContracts {
         graph.schemaVersion(),
         graph.behaviors(),
         graph.validationRules());
+  }
+
+  /**
+   * The {@code <forward>} elements of each {@code <action>} in one config, by action path in
+   * document order; an unreadable config has none (StrutsConfigParser reports it).
+   */
+  private static Map<String, List<org.w3c.dom.Element>> forwards(
+      ProjectInventory inventory, java.nio.file.Path config) {
+    Map<String, List<org.w3c.dom.Element>> result = new HashMap<>();
+    try {
+      var document =
+          StrutsSources.xml(
+              io.screentrace.scanner.SafeProjectFiles.readUtf8Limited(
+                  inventory.root(),
+                  config,
+                  io.screentrace.scanner.SafeProjectFiles.MAX_XML_FILE_BYTES));
+      for (var action : StrutsSources.elements(document, "action"))
+        result
+            .computeIfAbsent(action.getAttribute("path"), ignored -> new ArrayList<>())
+            .addAll(StrutsSources.elements(action, "forward"));
+    } catch (Exception unread) {
+      // StrutsConfigParser reports an unreadable config; it only adds no view contract here.
+    }
+    return result;
   }
 }

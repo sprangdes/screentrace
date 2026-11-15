@@ -68,3 +68,41 @@ test('rejects a resource location symlinked outside the project', async () => {
   await symlink(outside, path.join(webRoot, 'linked'));
   assert.deepEqual(await discoverSpringResourceMappings(root, webRoot, readFile), []);
 });
+
+test('mappings with dot segments or inside comments never name an asset folder (RV-011)', async () => {
+  for (const mapping of [
+    '/../../**',
+    '/static/../../x/**',
+    '/./x/**',
+    '/a\\..\\b/**',
+    '/a//b/**',
+  ]) {
+    const { root, webRoot } = await fixture(
+      `<mvc:resources mapping="${mapping}" location="/WEB-INF/static/"/>`,
+    );
+    await mkdir(path.join(webRoot, 'WEB-INF/static'), { recursive: true });
+    assert.deepEqual(await discoverSpringResourceMappings(root, webRoot, readFile), [], mapping);
+  }
+  const { root, webRoot } = await fixture(
+    '<!-- <mvc:resources mapping="/old/**" location="/WEB-INF/static/"/> --><mvc:resources mapping="/static/**" location="/WEB-INF/static/"/>',
+  );
+  await mkdir(path.join(webRoot, 'WEB-INF/static'), { recursive: true });
+  assert.deepEqual(
+    (await discoverSpringResourceMappings(root, webRoot, readFile)).map((m) => m.assetKey),
+    ['static'],
+  );
+});
+
+test('discovers mappings in a WebContent web root outside src/main (RV-512)', async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'screentrace-resources-'));
+  const webRoot = path.join(root, 'WebContent');
+  await mkdir(path.join(webRoot, 'WEB-INF/spring'), { recursive: true });
+  await mkdir(path.join(webRoot, 'static'), { recursive: true });
+  await writeFile(
+    path.join(webRoot, 'WEB-INF/spring/dispatcher-servlet.xml'),
+    '<mvc:resources mapping="/static/**" location="/static/"/>',
+  );
+  assert.deepEqual(await discoverSpringResourceMappings(root, webRoot, readFile), [
+    { urlPrefix: '/static/', assetKey: 'static', sourceDir: path.join(webRoot, 'static') },
+  ]);
+});

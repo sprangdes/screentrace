@@ -269,16 +269,26 @@ export async function packStandaloneDocuments(root, manifest) {
         )
           delete attrs[key];
       }
-      if (attrs.style) attrs.style = await css(decode(attrs.style), file);
-      if (attrs.src) {
-        if (['img', 'source', 'video', 'audio', 'input'].includes(name))
-          attrs.src = await asset(decode(attrs.src), file);
-        else delete attrs.src;
+      // Values rewritten here are already decoded; decoding them again on output would turn an
+      // escaped "&lt;" in CSS text into "<" (RV-521).
+      const decoded = new Set();
+      if (attrs.style) {
+        attrs.style = await css(decode(attrs.style), file);
+        decoded.add('style');
       }
-      if (attrs.poster) attrs.poster = await asset(decode(attrs.poster), file);
+      if (attrs.src) {
+        if (['img', 'source', 'video', 'audio', 'input'].includes(name)) {
+          attrs.src = await asset(decode(attrs.src), file);
+          decoded.add('src');
+        } else delete attrs.src;
+      }
+      if (attrs.poster) {
+        attrs.poster = await asset(decode(attrs.poster), file);
+        decoded.add('poster');
+      }
       output.push(
         `<${name}${Object.entries(attrs)
-          .map(([key, value]) => ` ${key}="${escape(decode(value))}"`)
+          .map(([key, value]) => ` ${key}="${escape(decoded.has(key) ? value : decode(value))}"`)
           .join('')}${token.selfClosing ? '/' : ''}>`,
       );
     }

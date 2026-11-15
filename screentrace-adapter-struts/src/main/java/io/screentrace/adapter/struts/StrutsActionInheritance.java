@@ -39,17 +39,20 @@ final class StrutsActionInheritance {
               new LinkedHashSet<>(List.of(origin.route())),
               1,
               state);
+        List<PendingForward> exceptions = new ArrayList<>();
         for (PendingForward exception : state.exceptionForwards)
-          if (exception.module().equals(origin.module()))
-            walkActionForward(
-                origin,
-                sourceEndpoint,
-                exception.target(),
-                exception.source(),
-                List.of(origin),
-                new LinkedHashSet<>(List.of(origin.route())),
-                1,
-                state);
+          if (exception.module().equals(origin.module())) exceptions.add(exception);
+        exceptions.addAll(state.actionExceptionForwards.getOrDefault(base.route(), List.of()));
+        for (PendingForward exception : exceptions)
+          walkActionForward(
+              origin,
+              sourceEndpoint,
+              exception.target(),
+              exception.source(),
+              List.of(origin),
+              new LinkedHashSet<>(List.of(origin.route())),
+              1,
+              state);
       }
     }
   }
@@ -193,49 +196,42 @@ final class StrutsActionInheritance {
             targetSource, "RedirectInheritance", ResolutionStatus.INFERRED, detail));
     String dispatch = dispatchValue(rawTarget, destination.parameter());
     if (dispatch != null && !destination.family().isBlank()) {
-      var java = state.types.get(destination.type());
+      // The same resolution as a link to the action: a LookupDispatchAction key maps to its
+      // method, and the method may be inherited from a base class (RV-309).
+      String method = StrutsDispatch.resolveMethod(destination, dispatch, state);
+      var java =
+          method == null
+              ? null
+              : StrutsDispatch.typeWithMethod(destination.type(), method, state, new HashSet<>());
       var methods =
           java == null
               ? List.<MethodDeclaration>of()
-              : java.declaration().getMethodsByName(dispatch).stream()
+              : java.declaration().getMethodsByName(method).stream()
                   .filter(StrutsDispatch::validDispatchSignature)
                   .toList();
       if (methods.size() != 1) return;
       String publicRoute = publicPath(destination.route(), destination.module(), state),
-          specific =
-              StableGraphIds.endpoint(
-                  "ANY", publicRoute + "?" + destination.parameter() + "=" + dispatch),
-          handler = ApplicationGraph.id(NodeType.HANDLER, destination.type() + "#" + dispatch);
+          request = StrutsDispatch.dispatchRequest(publicRoute, destination, dispatch),
+          specific = StableGraphIds.endpoint("ANY", request),
+          handler = ApplicationGraph.id(NodeType.HANDLER, destination.type() + "#" + method);
       addNode(
           state,
           specific,
           NodeType.ENDPOINT,
-          "ANY " + publicRoute + "?" + destination.parameter() + "=" + dispatch,
-          Map.of(
-              "path",
-              publicRoute,
-              "httpMethod",
-              "ANY",
-              "category",
-              "ACTION",
-              "parameter",
-              destination.parameter(),
-              "parameterValue",
-              dispatch,
-              "servletMappingStatus",
-              "PROVEN"),
+          "ANY " + request,
+          StrutsDispatch.dispatchEndpointAttributes(publicRoute, destination, dispatch, state),
           targetSource,
-          Confidence.CONFIRMED);
+          StrutsDispatch.dispatchEndpointConfidence(destination, Confidence.CONFIRMED, state));
       addNode(
           state,
           handler,
           NodeType.HANDLER,
-          destination.type() + "." + dispatch + "()",
-          Map.of("class", destination.type(), "method", dispatch),
+          destination.type() + "." + method + "()",
+          Map.of("class", destination.type(), "method", method),
           new SourceLocation(java.source().file(), methods.get(0).getBegin().orElseThrow().line),
           Confidence.CONFIRMED);
       edge(state, EdgeType.HANDLED_BY, specific, handler, Confidence.INFERRED, targetSource);
-      for (var value : sourceTargets(destination, dispatch, state))
+      for (var value : sourceTargets(destination, method, state))
         forward(value.target(), handler, destination.module(), value.source(), state);
       endpoint = specific;
     }
@@ -336,6 +332,17 @@ final class StrutsActionInheritance {
     return effective;
   }
 
+  /** True when {@code child}'s extends="{@code value}" names {@code template}. */
+  static boolean extendsTemplate(Mapping child, String value, Mapping template, State state) {
+    String normalized = value.startsWith("//") ? value.substring(1) : value;
+    GraphNode handler = state.nodes.get(template.handlerId());
+    return template.module().equals(child.module())
+        && (template.route().equals(value)
+            || template.route().equals(normalized)
+            || template.route().equals(child.module() + normalized)
+            || (handler != null && Objects.equals(handler.attributes().get("name"), value)));
+  }
+
   static void markInheritedActionTemplates(State state) {
     Set<String> extendsTargets = new TreeSet<>();
     for (Mapping mapping : state.actionMappings) {
@@ -343,14 +350,8 @@ final class StrutsActionInheritance {
       if (handler == null) continue;
       String value = handler.attributes().get("extends");
       if (value == null || value.isBlank()) continue;
-      String normalized = value.startsWith("//") ? value.substring(1) : value;
       for (Mapping candidate : state.actionMappings)
-        if (candidate.module().equals(mapping.module())
-            && (candidate.route().equals(value)
-                || candidate.route().equals(normalized)
-                || candidate.route().equals(mapping.module() + normalized)
-                || Objects.equals(
-                    state.nodes.get(candidate.handlerId()).attributes().get("name"), value)))
+        if (extendsTemplate(mapping, value, candidate, state))
           extendsTargets.add(candidate.route());
     }
     for (Mapping mapping : state.actionMappings)
@@ -373,10 +374,8 @@ final class StrutsActionInheritance {
           GraphNode handler = state.nodes.get(child.handlerId());
           if (handler == null) continue;
           String value = handler.attributes().get("extends");
-          if (value != null
-              && (value.equals(mapping.route())
-                  || value.equals(mapping.route().replaceFirst("^/", "//"))
-                  || value.startsWith("//") && value.substring(1).equals(mapping.route())))
+          // The same rule as the detection above, so a module child is cited too (RV-323).
+          if (value != null && !value.isBlank() && extendsTemplate(child, value, mapping, state))
             proof.add(
                 new AnalysisEvidence(
                     handler.source(),

@@ -28,11 +28,11 @@
     "VALIDATE": 19
   },
   "apis": {
-    "total": 26,
+    "total": 27,
     "by_status": {
       "IN_USE": 21,
       "REMOVABLE": 0,
-      "UNREFERENCED": 5
+      "UNREFERENCED": 6
     }
   },
   "validation_rules_by_layer": {
@@ -46,6 +46,7 @@
     "JS_DEPTH_LIMIT": 1,
     "JS_SCRIPT_REFERENCE": 11,
     "JS_SYNTAX_ERROR": 1,
+    "SPRING_XML_VIEW_UNRESOLVED": 1,
     "UNKNOWN_CALL": 4,
     "URL_METHOD_MISMATCH": 4,
     "URL_UNRESOLVED": 9

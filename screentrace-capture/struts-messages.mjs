@@ -15,16 +15,32 @@ const decode = (value) =>
     .replace(/&apos;/g, "'")
     .replace(/&lt;/g, '<')
     .replace(/&gt;/g, '>');
-function propertyMap(source) {
+/** Java .properties escapes: \\uXXXX (native2ascii bundles), \\n, \\t and escaped separators (RV-502). */
+const unescape = (value) =>
+  value
+    .replace(/\\u([0-9a-fA-F]{4})/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)))
+    .replace(/\\n/g, '\n')
+    .replace(/\\t/g, '\t')
+    .replace(/\\(.)/g, '$1');
+export function propertyMap(source) {
   const result = new Map();
-  for (const line of source.split(/\r?\n/)) {
+  // A line ending in an odd number of backslashes continues on the next line (RV-502).
+  const lines = [];
+  let pending = null;
+  for (const raw of source.split(/\r?\n/)) {
+    const line = pending === null ? raw : pending + raw.replace(/^\s+/, '');
+    const trailing = line.match(/\\+$/)?.[0].length ?? 0;
+    if (trailing % 2 === 1) pending = line.slice(0, -1);
+    else {
+      lines.push(line);
+      pending = null;
+    }
+  }
+  if (pending !== null) lines.push(pending);
+  for (const line of lines) {
     if (!line.trim() || /^\s*[#!]/.test(line)) continue;
-    const match = line.match(/^\s*((?:\\.|[^:=\s])+)[\s:=]+(.*)$/);
-    if (match)
-      result.set(
-        match[1].replace(/\\([ :=])/g, '$1'),
-        match[2].replace(/\\n/g, '\n').replace(/\\([ :=])/g, '$1'),
-      );
+    const match = line.match(/^\s*((?:\\.|[^:=\s])+)\s*[:=\s]\s*(.*)$/);
+    if (match) result.set(unescape(match[1]), unescape(match[2]));
   }
   return result;
 }
@@ -54,8 +70,11 @@ export async function loadStrutsMessageCatalog(projectRoot, webRoot) {
   for (const match of webXml.matchAll(
     /<param-name>\s*config(?:\/[^<]*)?\s*<\/param-name>\s*<param-value>\s*([^<]+)\s*<\/param-value>/gi,
   )) {
-    const value = decode(match[1]).trim();
-    if (value.startsWith('/') && !value.includes('..')) configs.add(path.join(webRoot, value));
+    // The init-param may list several struts-config files separated by commas (RV-503).
+    for (const part of decode(match[1]).split(',')) {
+      const value = part.trim();
+      if (value.startsWith('/') && !value.includes('..')) configs.add(path.join(webRoot, value));
+    }
   }
   for (const file of [...configs].sort())
     try {

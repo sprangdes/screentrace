@@ -113,15 +113,17 @@ export function personaView(index: Index, persona: Persona): PersonaView {
   }
   // From each screen, follow steps through URL entries (no screen in between) to the next screens.
   const next = (from: string) => {
+    // An entry first met on an uncertain path is walked again when a certain path reaches
+    // it, so the result does not depend on the order of the steps.
     const found = new Map<string, boolean>(),
-      seen = new Set<string>([from]);
+      seen = new Map<string, boolean>([[from, true]]);
     const walk = (id: string, certain: boolean) => {
       for (const step of out.get(id) || []) {
         const ok = certain && step.status === 'APPLIES';
         if (isScreen(step.to)) {
           if (!found.get(step.to)) found.set(step.to, ok);
-        } else if (!seen.has(step.to)) {
-          seen.add(step.to);
+        } else if (!seen.has(step.to) || (ok && !seen.get(step.to))) {
+          seen.set(step.to, ok);
           walk(step.to, ok);
         }
       }

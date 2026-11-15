@@ -33,7 +33,11 @@ public record PrototypeModel(
       ApplicationGraph.Confidence confidence)
       implements Comparable<PrototypeComponent> {
     public PrototypeComponent {
-      style = style == null ? Map.of() : Map.copyOf(new TreeMap<>(style));
+      style =
+          style == null
+              ? Map.of()
+              : java.util.Collections.unmodifiableMap(
+                  new TreeMap<>(style)); // key order is kept for deterministic JSON (RV-115)
     }
 
     public int compareTo(PrototypeComponent other) {

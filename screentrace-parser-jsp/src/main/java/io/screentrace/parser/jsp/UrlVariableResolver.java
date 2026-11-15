@@ -97,7 +97,7 @@ public final class UrlVariableResolver {
                     loopScope,
                     valid));
       } else if (tag.attribute("var") != null || name.equals("c:remove")) {
-        String variable = name.equals("c:remove") ? tag.attribute("var") : tag.attribute("var");
+        String variable = tag.attribute("var");
         if (variable == null || MarkupAnalysis.dynamic(variable)) unknownWrite = true;
         else writes.add(variable);
       }

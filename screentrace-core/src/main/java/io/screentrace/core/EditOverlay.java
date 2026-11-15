@@ -13,7 +13,11 @@ public record EditOverlay(String version, List<EditOperation> operations) {
   public record EditOperation(
       String screenId, String componentId, Operation operation, Map<String, Object> changes) {
     public EditOperation {
-      changes = changes == null ? Map.of() : Map.copyOf(changes);
+      // Sorted for deterministic JSON; a null value is kept (RV-115).
+      changes =
+          changes == null
+              ? Map.of()
+              : java.util.Collections.unmodifiableMap(new java.util.TreeMap<>(changes));
     }
   }
 

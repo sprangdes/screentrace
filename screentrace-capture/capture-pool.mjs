@@ -28,18 +28,42 @@ export function outputChains(items, fileKey) {
   return [...chains.values()];
 }
 
-/** Runs `worker(item, slot)` for every item of every chain, at most `concurrency` chains at once. */
-export async function runChains(chains, concurrency, worker) {
-  let next = 0;
+/** Reads `--deadline=<epoch milliseconds>`, after which no new screen starts; null if absent. */
+export function captureDeadline(args) {
+  const raw = args.find((arg) => arg.startsWith('--deadline='));
+  if (!raw) return null;
+  const value = Number(raw.split('=')[1]);
+  if (!Number.isSafeInteger(value) || value < 0) throw new Error('無效預覽設定：deadline');
+  return value;
+}
+
+/**
+ * Runs `worker(item, slot)` for every item of every chain, at most `concurrency` chains at once.
+ * Before each item `mayStart()` is asked; once it answers false, no further item starts, items
+ * already running finish, and the items never started are returned in their original order
+ * (RV-105).
+ */
+export async function runChains(chains, concurrency, worker, mayStart = () => true) {
+  let next = 0,
+    stopped = false;
+  const skipped = new Set();
   const lane = async (slot) => {
     while (next < chains.length) {
       const chain = chains[next++];
-      for (const item of chain) await worker(item, slot);
+      for (const item of chain) {
+        if (stopped || !mayStart()) {
+          stopped = true;
+          skipped.add(item);
+          continue;
+        }
+        await worker(item, slot);
+      }
     }
   };
   await Promise.all(
     Array.from({ length: Math.min(concurrency, chains.length) }, (_, slot) => lane(slot)),
   );
+  return chains.flat().filter((item) => skipped.has(item));
 }
 
 /** One task at a time, in call order; for steps that use module-level state. */

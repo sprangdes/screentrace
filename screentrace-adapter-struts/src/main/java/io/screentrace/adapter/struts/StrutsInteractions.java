@@ -25,6 +25,11 @@ final class StrutsInteractions {
   private StrutsInteractions() {}
 
   static void addInteractions(JspAnalysis jsp, State state) throws IOException {
+    // The first interaction of each component, looked up per tag instead of scanning them all.
+    Map<String, JspAnalysis.Interaction> interactionByComponent = new HashMap<>();
+    for (var interaction : jsp.interactions())
+      if (interaction.componentId() != null)
+        interactionByComponent.putIfAbsent(interaction.componentId(), interaction);
     Map<String, List<Control>> byView = new TreeMap<>();
     Map<String, List<ScreenLoadCall>> loadCallsByView = new TreeMap<>();
     var menus =
@@ -62,7 +67,8 @@ final class StrutsInteractions {
               String target = raw;
               if (target != null && tag.attribute("action") != null)
                 target = normalizeStrutsAction(target, module, state);
-              else if (target != null) target = resolveRelativeJspUrl(path, target);
+              else if (target != null)
+                target = resolveRelativeJspUrl(path, target, state.inventory.webRoots());
               if (target != null)
                 loadCallsByView
                     .computeIfAbsent(path, ignored -> new ArrayList<>())
@@ -88,20 +94,26 @@ final class StrutsInteractions {
                     ? ComponentKind.LINK
                     : kind(name, tag);
             if (kind == null) continue;
+            // The id keeps the context-free kind, as in the JSP parser.
+            ComponentKind idKind = kind;
+            kind = MarkupAnalysis.kindInContext(kind, name, tag.attributes(), formGroup != null);
             if (kind == ComponentKind.FORM) action = first(tag, "action");
             String target =
                 kind == ComponentKind.LINK
                     ? first(tag, "href", "forward", "page", "action")
                     : first(tag, "formaction");
-            if (Set.of("logic:redirect", "logic:forward").contains(name))
+            if (name.equals("logic:redirect"))
               target = first(tag, "forward", "page", "action", "href");
+            // <logic:forward> has only `name`, the global forward to follow (RV-306).
+            boolean namesForward =
+                tag.attribute("forward") != null
+                    || (name.equals("logic:forward") && tag.attribute("name") != null);
+            if (name.equals("logic:forward"))
+              target = first(tag, "name", "forward", "page", "action", "href");
             boolean inheritedFormAction =
                 kind == ComponentKind.SUBMIT && target == null && action != null;
             String module = moduleFor(path, state);
-            if (target != null
-                && tag.attribute("forward") != null
-                && !target.startsWith("/")
-                && !target.contains("."))
+            if (target != null && namesForward && !target.startsWith("/") && !target.contains("."))
               target = state.globalForwards.getOrDefault(module + ":" + target, target);
             if (kind == ComponentKind.FORM) activeModule = tag.attribute("module");
             if (target == null && (kind == ComponentKind.FORM || kind == ComponentKind.SUBMIT))
@@ -130,7 +142,7 @@ final class StrutsInteractions {
                           || name.equals("form:form"))
                       ? normalizeStrutsAction(action, moduleValue, state)
                       : action != null && !action.startsWith("/") && !action.contains(":")
-                          ? resolveRelativeJspUrl(path, action)
+                          ? resolveRelativeJspUrl(path, action, state.inventory.webRoots())
                           : action;
               if (action != null) {
                 target = action;
@@ -138,21 +150,10 @@ final class StrutsInteractions {
                 attrs.put("target", action);
               }
             } else if (target != null) {
-              if (Set.of(
-                          "html:link",
-                          "html-el:link",
-                          "html:rewrite",
-                          "html-el:rewrite",
-                          "logic:redirect",
-                          "logic:forward")
-                      .contains(name)
-                  && tag.attribute("action") != null)
+              if (strutsActionLink(name, tag))
                 target = normalizeStrutsAction(target, moduleValue, state);
-              else if (Set.of("a", "form", "html:link", "html-el:link").contains(name)
-                  && !target.startsWith("/")
-                  && !target.startsWith("#")
-                  && !target.matches("(?is)^[a-z][a-z0-9+.-]*:.*")
-                  && tag.attribute("action") == null) target = resolveRelativeJspUrl(path, target);
+              else if (relativeLink(name, tag, target))
+                target = resolveRelativeJspUrl(path, target, state.inventory.webRoots());
               if (target != null && target.toLowerCase(Locale.ROOT).endsWith(".faces")) {
                 String facesTarget = normalizeFacesPath(target, state);
                 if (facesTarget != null && !facesTarget.equals(target)) {
@@ -170,9 +171,8 @@ final class StrutsInteractions {
             String occurrenceKey = name + new TreeMap<>(tag.attributes());
             int occurrence = occurrences.merge(occurrenceKey, 1, Integer::sum) - 1;
             String id =
-                StableGraphIds.component(path, kind, identityAttributes(tag, name), occurrence);
-            var resolved =
-                jsp.interactions().stream().filter(i -> id.equals(i.componentId())).findFirst();
+                StableGraphIds.component(path, idKind, identityAttributes(tag, name), occurrence);
+            var resolved = Optional.ofNullable(interactionByComponent.get(id));
             if (resolved.isPresent() && !resolved.get().submitsCurrentView()) {
               target = resolved.get().target();
               if (resolved.get().originalExpression() != null)
@@ -198,27 +198,22 @@ final class StrutsInteractions {
               }
             }
             if (target != null) {
-              if (Set.of(
-                          "html:link",
-                          "html-el:link",
-                          "html:rewrite",
-                          "html-el:rewrite",
-                          "logic:redirect",
-                          "logic:forward")
-                      .contains(name)
-                  && tag.attribute("action") != null)
-                target = normalizeStrutsAction(tag.attribute("action"), moduleValue, state);
+              if (strutsActionLink(name, tag))
+                // The JSP parser resolved the action's variables; Struts adds the module and the
+                // servlet suffix.
+                target =
+                    normalizeStrutsAction(
+                        resolvedLinkAction(tag, resolved).orElse(tag.attribute("action")),
+                        moduleValue,
+                        state);
               else if ((name.equals("html:submit")
                       || name.equals("html:button")
                       || name.equals("button")
                       || name.equals("input"))
                   && tag.attribute("formaction") == null
                   && action != null) target = action;
-              else if (Set.of("a", "form", "html:link", "html-el:link").contains(name)
-                  && !target.startsWith("/")
-                  && !target.startsWith("#")
-                  && !target.matches("(?is)^[a-z][a-z0-9+.-]*:.*")
-                  && tag.attribute("action") == null) target = resolveRelativeJspUrl(path, target);
+              else if (relativeLink(name, tag, target))
+                target = resolveRelativeJspUrl(path, target, state.inventory.webRoots());
               attrs.put("target", target);
             }
             if (kind == ComponentKind.FORM) formGroup = id;
@@ -388,7 +383,9 @@ final class StrutsInteractions {
     Set<SourceLocation> actionIncludes = new HashSet<>();
     for (JspAnalysis.Include include : jsp.includes()) {
       String module = moduleFor(include.sourceViewPath(), state);
-      String target = resolveRelativeJspUrl(include.sourceViewPath(), include.targetPath());
+      String target =
+          resolveRelativeJspUrl(
+              include.sourceViewPath(), include.targetPath(), state.inventory.webRoots());
       if (target == null) continue;
       String path = target.split("[?#]", 2)[0];
       String logical = logicalPath(path, module, state);
@@ -461,19 +458,16 @@ final class StrutsInteractions {
       if (include.sourceViewPath().equals(view) && StrutsSources.literal(include.targetPath())) {
         String child =
             include.targetPath().startsWith("/")
-                ? "src/main/webapp" + include.targetPath()
-                : Path.of(view)
-                    .getParent()
-                    .resolve(include.targetPath())
-                    .normalize()
-                    .toString()
-                    .replace('\\', '/');
+                ? io.screentrace.scanner.WebRoots.candidates(
+                        state.inventory.webRoots(), view, include.targetPath())
+                    .get(0)
+                : besideFile(view, include.targetPath());
         if (!sources.add(child)) continue;
         collectIncludeSources(child, jsp, state, seen, sources);
       }
   }
 
-  static String resolveRelativeJspUrl(String jspPath, String raw) {
+  static String resolveRelativeJspUrl(String jspPath, String raw, List<String> roots) {
     if (raw == null || !StrutsSources.literal(raw)) return raw;
     String suffix = "";
     int boundary = raw.length();
@@ -483,18 +477,25 @@ final class StrutsInteractions {
     suffix = raw.substring(boundary);
     String path = raw.substring(0, boundary);
     if (path.isBlank()) return raw;
-    String normalized =
-        Path.of(jspPath).getParent().resolve(path).normalize().toString().replace('\\', '/');
-    for (String webRoot : List.of("src/main/webapp/", "WebContent/", "web/"))
-      if (normalized.startsWith(webRoot))
-        return "/" + normalized.substring(webRoot.length()) + suffix;
+    String normalized = besideFile(jspPath, path);
+    String webRoot = io.screentrace.scanner.WebRoots.rootOf(roots, normalized);
+    if (webRoot != null) return "/" + normalized.substring(webRoot.length()) + suffix;
     return normalized.startsWith("/") ? normalized + suffix : raw;
+  }
+
+  /** {@code relative} resolved next to {@code file}; a file at the project root has no parent. */
+  static String besideFile(String file, String relative) {
+    Path parent = Path.of(file).getParent();
+    return (parent == null ? Path.of(relative) : parent.resolve(relative))
+        .normalize()
+        .toString()
+        .replace('\\', '/');
   }
 
   static String switchActionTarget(String target) {
     String query = target.contains("?") ? target.substring(target.indexOf('?') + 1) : "";
     Map<String, String> values = new TreeMap<>();
-    for (String pair : query.split("&")) {
+    for (String pair : MarkupTag.decodeAmpersands(query).split("&")) {
       String[] parts = pair.split("=", 2);
       if (parts.length == 2) values.put(parts[0], parts[1]);
     }
@@ -503,5 +504,40 @@ final class StrutsInteractions {
         ? null
         : (prefix.endsWith("/") ? prefix.substring(0, prefix.length() - 1) : prefix)
             + (page.startsWith("/") ? page : "/" + page);
+  }
+
+  /** A Struts tag whose `action` names an action mapping. */
+  private static boolean strutsActionLink(String name, MarkupTag tag) {
+    return Set.of(
+                "html:link",
+                "html-el:link",
+                "html:rewrite",
+                "html-el:rewrite",
+                "logic:redirect",
+                "logic:forward")
+            .contains(name)
+        && tag.attribute("action") != null;
+  }
+
+  /** A plain link or form whose target is relative to the JSP that holds it. */
+  private static boolean relativeLink(String name, MarkupTag tag, String target) {
+    return Set.of("a", "form", "html:link", "html-el:link").contains(name)
+        && !target.startsWith("/")
+        && !target.startsWith("#")
+        && !target.matches("(?is)^[a-z][a-z0-9+.-]*:.*")
+        && tag.attribute("action") == null;
+  }
+
+  /**
+   * The `action` the JSP parser resolved for this tag: only when the tag has no `href` or `page`,
+   * which the parser would read first, and only a literal result.
+   */
+  private static Optional<String> resolvedLinkAction(
+      MarkupTag tag, Optional<JspAnalysis.Interaction> resolved) {
+    if (tag.attribute("href") != null || tag.attribute("page") != null) return Optional.empty();
+    return resolved
+        .filter(item -> !item.submitsCurrentView())
+        .map(JspAnalysis.Interaction::target)
+        .filter(MarkupTag::literal);
   }
 }

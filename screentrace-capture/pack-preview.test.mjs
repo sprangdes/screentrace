@@ -67,3 +67,13 @@ test('pack never reads symlinked resources', async () => {
   assert.ok(packed.diagnostics.length);
   assert.doesNotMatch(JSON.stringify(packed), /PRIVATE/);
 });
+test('an escaped reference in a style attribute is decoded once (RV-521)', async () => {
+  const root = await mkdtemp(path.join(tmpdir(), 'st-pack-'));
+  await mkdir(path.join(root, 'static-preview'), { recursive: true });
+  await writeFile(
+    path.join(root, 'static-preview/a.html'),
+    `<html><body><p style="content:'&amp;lt;b&amp;gt;'">A</p></body></html>`,
+  );
+  const packed = await packStandaloneDocuments(root, { a: 'static-preview/a.html' });
+  assert.match(packed.documents.a, /content:'&amp;lt;b&amp;gt;'/, packed.documents.a);
+});

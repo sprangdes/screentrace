@@ -344,12 +344,19 @@ final class StrutsForwards {
     if (direct != null) return List.of(direct);
     String routePath = target.split("[?#]", 2)[0];
     String logical = logicalPath(routePath, module, state);
+    // A forward inside a module is module-relative; its query string never takes part in the
+    // route key (RV-304).
+    if (logical != null
+        && !module.isBlank()
+        && !logical.startsWith(module + "/")
+        && state.routes.containsKey(module + logical)) logical = module + logical;
     if (logical == null
-        && target.startsWith("/")
-        && !target.startsWith("/WEB-INF/")
-        && !target.contains(".jsp"))
-      logical = module.isBlank() || target.startsWith(module + "/") ? target : module + target;
-    if (logical == null) logical = target;
+        && routePath.startsWith("/")
+        && !routePath.startsWith("/WEB-INF/")
+        && !routePath.contains(".jsp"))
+      logical =
+          module.isBlank() || routePath.startsWith(module + "/") ? routePath : module + routePath;
+    if (logical == null) logical = routePath;
     List<Mapping> mappings = state.routes.getOrDefault(logical, List.of());
     if (mappings.isEmpty()) return List.of();
     if (mappings.size() > 1) {

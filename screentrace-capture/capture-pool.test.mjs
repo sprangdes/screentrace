@@ -164,3 +164,41 @@ test('capturing on several pages writes the same files as one page, merged in sc
     await rm(f.root, { recursive: true, force: true });
   }
 });
+
+test('a past deadline starts no screen and the capture still writes its manifests (RV-105)', async () => {
+  const f = await project();
+  try {
+    const { code, stderr } = await capture(f.root, f.output, '--deadline=0');
+    assert.equal(code, 0, stderr);
+    const manifest = JSON.parse(
+      await readFile(path.join(f.output, 'static-preview/manifest.json')),
+    );
+    assert.deepEqual(manifest, {});
+    const styles = JSON.parse(
+      await readFile(path.join(f.output, 'static-preview/element-styles.json')),
+    );
+    assert.deepEqual(Object.keys(styles.screens), f.ids);
+    for (const id of f.ids)
+      assert.equal(styles.screens[id].diagnostics[0].code, 'PREVIEW_CAPTURE_DEADLINE');
+    const diagnostics = JSON.parse(
+      await readFile(path.join(f.output, 'static-preview/diagnostics.json')),
+    );
+    assert.ok(diagnostics.some((d) => d.startsWith('CAPTURE_DEADLINE_REACHED')));
+  } finally {
+    await rm(f.root, { recursive: true, force: true });
+  }
+});
+
+test('runChains stops starting items once mayStart answers false and returns the rest', async () => {
+  const { runChains } = await import('./capture-pool.mjs');
+  const done = [];
+  let budget = 3;
+  const skipped = await runChains(
+    [['a', 'b'], ['c'], ['d', 'e']],
+    2,
+    async (item) => done.push(item),
+    () => budget-- > 0,
+  );
+  assert.deepEqual([...done, ...skipped].sort(), ['a', 'b', 'c', 'd', 'e']);
+  assert.equal(done.length, 3);
+});

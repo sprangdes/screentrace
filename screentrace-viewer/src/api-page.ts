@@ -1,4 +1,4 @@
-import { endpointGroup } from './endpoint-presentation';
+import { endpointGroup, endpointMethod, endpointPath } from './endpoint-presentation';
 import { deriveApiUsage, screenDecision, componentDecision, ReviewState } from './shared/review';
 import { componentLabelsForScreen } from './labels';
 import { callerKind, Caller } from './usage';
@@ -16,7 +16,7 @@ export const apiStatusLabels: Record<ApiStatus, string> = {
   REMOVABLE: '可移除',
 };
 const systemEntry = (node: Node, index: Index): string | undefined => {
-  const path = node.attributes.path || node.attributes.route || node.name;
+  const path = endpointPath(node);
   if (node.attributes.inheritedTemplate === 'true') return '被繼承的設定樣板';
   if (String(node.attributes.entrySource || '').includes('welcome-file')) return '系統預設首頁';
   if (
@@ -242,8 +242,8 @@ export function apiPage(index: Index, state: ReviewState, options: ApiPageOption
     statuses = apiStatuses(index, state),
     edges = index.graph.relationships || [];
   const records: ApiRecord[] = apiEndpoints(index).map((node) => {
-    const method = node.attributes.httpMethod || node.attributes.method || 'ANY',
-      path = node.attributes.path || node.attributes.route || node.name;
+    const method = endpointMethod(node),
+      path = endpointPath(node);
     const handlers = edges
       .filter((e) => e.type === 'HANDLED_BY' && e.from === node.id)
       .map((e) => index.nodes.get(e.to))

@@ -32,4 +32,56 @@ class HomeRedactionTest {
       System.setProperty("user.home", previous);
     }
   }
+
+  @Test
+  void onlyWholePathPrefixesAreRedacted() {
+    // RV-412
+    var homes = java.util.List.of("/root");
+    assertEquals("[home]/x", UrlGraphContribution.redactHome("/root/x", homes));
+    assertEquals("[home]", UrlGraphContribution.redactHome("/root", homes));
+    assertEquals(
+        "/rootCategory/list", UrlGraphContribution.redactHome("/rootCategory/list", homes));
+    assertEquals("C:[home]\\a", UrlGraphContribution.redactHome("C:/root\\a", homes));
+  }
+
+  @Test
+  void theWholeGraphIsRedactedWhetherOrNotOnlyTheApplicationMentionsTheHome() throws Exception {
+    // R75: the home is looked for before converting the whole graph.
+    String previous = System.getProperty("user.home");
+    Path home = Files.createDirectory(temp.resolve("someone")).toRealPath();
+    System.setProperty("user.home", home.toString());
+    try {
+      String project = home.resolve("work").resolve("shop").toString();
+      var source = new io.screentrace.core.ApplicationGraph.SourceLocation("web/a.jsp", 1);
+      java.util.function.Function<String, io.screentrace.core.ApplicationGraph> graph =
+          value ->
+              new io.screentrace.core.ApplicationGraph(
+                  new io.screentrace.core.ApplicationGraph.Application(
+                      "shop", project, java.util.List.of(), null, null, null),
+                  java.util.List.of(
+                      new io.screentrace.core.ApplicationGraph.GraphNode(
+                          "screen:a",
+                          io.screentrace.core.ApplicationGraph.NodeType.SCREEN,
+                          "A",
+                          java.util.Map.of("note", value),
+                          source,
+                          io.screentrace.core.ApplicationGraph.Confidence.CONFIRMED)),
+                  java.util.List.of(),
+                  java.util.List.of(),
+                  java.util.List.of(),
+                  io.screentrace.core.ApplicationGraph.BEHAVIOR_SCHEMA_VERSION,
+                  java.util.List.of(),
+                  java.util.List.of());
+      var plain = UrlGraphContribution.hidePrivateLocations(graph.apply("relative/path"));
+      assertEquals(
+          "[home]" + project.substring(home.toString().length()), plain.application().path());
+      assertEquals("relative/path", plain.nodes().get(0).attributes().get("note"));
+      var mentioned = UrlGraphContribution.hidePrivateLocations(graph.apply(project + "/x"));
+      assertEquals(
+          "[home]" + project.substring(home.toString().length()) + "/x",
+          mentioned.nodes().get(0).attributes().get("note"));
+    } finally {
+      System.setProperty("user.home", previous);
+    }
+  }
 }

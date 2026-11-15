@@ -84,7 +84,7 @@ final class StrutsModel {
   static final class State {
     final ProjectInventory inventory;
     final StrutsVersionEvidence strutsVersion;
-    final Map<String, GraphNode> nodes = new TreeMap<>();
+    final NodesByViewName nodes = new NodesByViewName();
     final Map<String, Relationship> edges = new TreeMap<>();
     final List<Diagnostic> diagnostics = new ArrayList<>();
     final Map<String, Behavior> behaviors = new TreeMap<>();
@@ -108,11 +108,18 @@ final class StrutsModel {
     final Map<String, Set<String>> tilePageOwners = new TreeMap<>();
     final Map<String, List<Mapping>> routes = new TreeMap<>();
     final Map<String, String> endpointIds = new TreeMap<>(), globalForwards = new TreeMap<>();
-    final Map<String, Boolean> inputForward = new TreeMap<>();
+
+    /** {@link StrutsConfigParser#moduleFor} results by path. */
+    final Map<String, String> moduleByPath = new HashMap<>();
+
     final List<Mapping> actionMappings = new ArrayList<>();
     final List<PendingForward> pendingForwards = new ArrayList<>(),
         exceptionForwards = new ArrayList<>();
     final Map<String, List<PendingForward>> actionForwardTargets = new TreeMap<>();
+
+    /** Exception forwards declared inside one {@code <action>}, by that action's route. */
+    final Map<String, List<PendingForward>> actionExceptionForwards = new TreeMap<>();
+
     final Map<String, Map<String, WildcardMatch>> wildcardMatches = new TreeMap<>();
     final Map<String, ServletMappingResolution> servletMappings = new TreeMap<>();
     final Map<String, List<FacesSuffixMapping>> facesMappings = new TreeMap<>();

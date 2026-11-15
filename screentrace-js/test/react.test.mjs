@@ -575,3 +575,12 @@ test('external stylesheet imports identify package roots and ignore relative CSS
     ['pkg-a', '@scope/pkg-b'],
   );
 });
+
+test('React attributes drop dangerous names in any case and check every URL attribute (RV-513)', async () => {
+  const { htmlAttribute } = await import('../react/markup.mjs');
+  assert.equal(htmlAttribute('formaction', 'javascript:alert(1)'), null);
+  assert.equal(htmlAttribute('SRC', 'http://x'), null);
+  assert.equal(htmlAttribute('xlink:href', 'javascript:alert(1)'), null);
+  assert.deepEqual(htmlAttribute('xlink:href', '#icon'), ['xlink:href', '#icon']);
+  assert.deepEqual(htmlAttribute('href', '/next'), ['href', '/next']);
+});

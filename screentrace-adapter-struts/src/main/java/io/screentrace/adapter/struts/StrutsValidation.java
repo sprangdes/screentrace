@@ -169,8 +169,20 @@ final class StrutsValidation {
               new SourceLocation(relative(state, file), 1),
               "VALIDATOR_RULES_UNRESOLVED");
         }
+    // Besides validation.xml, every file a ValidatorPlugIn lists in `pathnames` (RV-321).
+    Set<String> declared = new TreeSet<>();
+    for (GraphNode node : state.nodes.values())
+      if (node.type() == NodeType.SOURCE_ARTIFACT
+          && node.attributes().getOrDefault("className", "").endsWith("ValidatorPlugIn"))
+        for (String name : node.attributes().getOrDefault("pathnames", "").split(","))
+          if (!name.isBlank()) declared.add(name.trim().replaceFirst("^/+", ""));
     for (Path file : state.inventory.files())
-      if (file.getFileName().toString().equals("validation.xml"))
+      if (file.getFileName().toString().equals("validation.xml")
+          || declared.stream()
+              .anyMatch(
+                  name ->
+                      relative(state, file).endsWith("/" + name)
+                          && !file.getFileName().toString().equals("validator-rules.xml")))
         try {
           String path = relative(state, file);
           for (Element form : StrutsSources.elements(readXml(file, state), "form"))

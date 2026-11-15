@@ -36,7 +36,6 @@ public record ComponentLibrary(JsonNode manifest, String sha256) {
       for (var c : data.path("components"))
         if (!ids.add(c.path("id").asText()))
           throw new IllegalArgumentException("$.components: 元件 ID 重複");
-      checkPrivacy(data, "$");
       return new ComponentLibrary(
           data, HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(bytes)));
     } catch (IllegalArgumentException e) {

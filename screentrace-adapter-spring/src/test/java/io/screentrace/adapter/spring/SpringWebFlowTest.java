@@ -101,6 +101,37 @@ class SpringWebFlowTest {
     assertTrue(g.relationships().stream().noneMatch(e -> e.type() == EdgeType.RENDERS));
   }
 
+  @Test
+  void brokenFlowIsReportedAloneAndOtherFlowsInTheRegistryAreStillRead() throws Exception {
+    // RV-220: duplicate states in the first flow used to skip every later flow of the registry.
+    Path root = Files.createTempDirectory("flow-partial");
+    write(
+        root,
+        "src/main/webapp/WEB-INF/registry.xml",
+        "<beans xmlns:flow=\"urn:flow\">\n<flow:flow-location id=\"broken\" path=\"/WEB-INF/flow/broken.xml\"/>\n<flow:flow-location id=\"good\" path=\"/WEB-INF/flow/good.xml\"/></beans>");
+    write(
+        root,
+        "src/main/webapp/WEB-INF/flow/broken.xml",
+        "<flow><view-state id=\"a\" view=\"a.jsp\"/><view-state id=\"a\" view=\"a.jsp\"/></flow>");
+    write(
+        root,
+        "src/main/webapp/WEB-INF/flow/good.xml",
+        "<flow><view-state id=\"start\" view=\"good.jsp\"/></flow>");
+    write(root, "src/main/webapp/WEB-INF/flow/a.jsp", "<p>A</p>");
+    write(root, "src/main/webapp/WEB-INF/flow/good.jsp", "<p>Good</p>");
+    var g = new SpringMvcAnalyzer().analyze(new ProjectScanner().scan(root));
+    var paths =
+        g.nodes().stream()
+            .filter(n -> n.type() == NodeType.ENDPOINT)
+            .map(n -> n.attributes().get("path"))
+            .toList();
+    assertTrue(paths.contains("/good"), paths.toString());
+    assertFalse(paths.contains("/broken"), paths.toString());
+    var broken = g.diagnostics().stream().filter(d -> d.code().equals("FLOW_UNRESOLVED")).toList();
+    assertEquals(1, broken.size(), g.diagnostics().toString());
+    assertEquals(2, broken.get(0).source().line());
+  }
+
   private static void write(Path r, String f, String s) throws Exception {
     Path p = r.resolve(f);
     Files.createDirectories(p.getParent());

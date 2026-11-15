@@ -53,7 +53,14 @@ export async function expandGraphFragments(source, owner, screen, graph, read) {
     const values = {};
     for (const [key, value] of Object.entries(ref.parameters || {}))
       if (matches.every((r) => r.parameters?.[key] === value)) values[key] = value;
-    let fragment = '\n'.repeat(ref.startLine - 1) + original.slice(ref.start, ref.end);
+    // The padding keeps the fragment's own line numbers; a missing or impossible start line adds
+    // none instead of throwing or building a huge string (RV-515).
+    const lineCount = original.split('\n').length;
+    const startLine =
+      Number.isSafeInteger(ref.startLine) && ref.startLine >= 1 && ref.startLine <= lineCount
+        ? ref.startLine
+        : 1;
+    let fragment = '\n'.repeat(startLine - 1) + original.slice(ref.start, ref.end);
     fragment = markupTokens(fragment)
       .map((t) => {
         if (!t.name || t.closing) return t.text;

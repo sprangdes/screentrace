@@ -99,15 +99,22 @@ export function isAllowedTag(tag) {
 }
 
 /** HTML attribute name/value for a JSX prop, or null when the prop must not or cannot appear statically. */
+const DROPPED_LOWER = new Set([...DROPPED_ATTRIBUTES].map((name) => name.toLowerCase()));
+/** Attributes that take a URL; each is checked like `href` (RV-513). */
+const URL_ATTRIBUTES = new Set(['href', 'xlink:href', 'poster', 'background', 'cite', 'longdesc']);
+
 export function htmlAttribute(name, value) {
-  if (/^on[A-Z]/.test(name) || DROPPED_ATTRIBUTES.has(name)) return null;
+  if (/^on[A-Z]/i.test(name) || DROPPED_LOWER.has(name.toLowerCase())) return null;
   const html = RENAMED[name] ?? (/^(aria|data)-/.test(name) ? name : name.toLowerCase());
-  if (!/^[a-z][a-z0-9_:.-]*$/.test(html) || html.startsWith('on')) return null;
+  // The dropped list is compared case-insensitively (formaction, SRC) and namespaced URL
+  // attributes such as xlink:href get the same scheme check as href (RV-513).
+  if (!/^[a-z][a-z0-9_:.-]*$/.test(html) || html.startsWith('on') || DROPPED_LOWER.has(html))
+    return null;
   if (value === true) return [html, ''];
   if (value === false || value === null || value === undefined) return null;
   const textValue = String(value);
   if (
-    html === 'href' &&
+    URL_ATTRIBUTES.has(html) &&
     !/^(\/|#|https?:|mailto:|tel:)/i.test(textValue.trim()) &&
     !/^[\w.-]+(\/|$)/.test(textValue.trim())
   )

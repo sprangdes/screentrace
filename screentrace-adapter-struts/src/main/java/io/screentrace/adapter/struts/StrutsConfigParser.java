@@ -125,7 +125,6 @@ final class StrutsConfigParser {
           StrutsSources.elements(document, "controller").stream()
               .anyMatch(
                   controller -> "true".equalsIgnoreCase(controller.getAttribute("inputForward")));
-      state.inputForward.put(module, inputForward);
       for (Element plugin : StrutsSources.elements(document, "plug-in")) {
         Map<String, String> attrs = new TreeMap<>(StrutsSources.attributes(plugin));
         for (Element property : StrutsSources.elements(plugin, "set-property"))
@@ -173,7 +172,13 @@ final class StrutsConfigParser {
         PendingForward target =
             new PendingForward(id, module, exception.getAttribute("path"), source);
         state.pendingForwards.add(target);
-        state.exceptionForwards.add(target);
+        // An <exception> inside an <action> applies to that action only (RV-301).
+        if (scope.equals("global")) state.exceptionForwards.add(target);
+        else
+          state
+              .actionExceptionForwards
+              .computeIfAbsent(scope.substring("action:".length()), k -> new ArrayList<>())
+              .add(target);
       }
       for (Element action : StrutsSources.elements(document, "action")) {
         String route = module + action.getAttribute("path");
@@ -252,7 +257,8 @@ final class StrutsConfigParser {
           forwardSources.put(item.getAttribute("name"), StrutsSources.source(path, item));
         }
         String input = action.getAttribute("input");
-        if (inputForward && !input.isBlank()) input = global.getOrDefault(input, input);
+        // Like ActionMapping.findForward: the action's own forwards first, then global (RV-303).
+        if (inputForward && !input.isBlank()) input = forwards.getOrDefault(input, input);
         Map<String, String> localForwards = new TreeMap<>();
         for (Element item : StrutsSources.elements(action, "forward"))
           localForwards.put(item.getAttribute("name"), item.getAttribute("path"));
@@ -285,9 +291,11 @@ final class StrutsConfigParser {
                   .toList();
           String primaryPath = publicPaths.get(0),
               endpointId = StableGraphIds.endpoint("ANY", route);
+          // A public path equal to the route is the same alias, not a second mapping (RV-319).
           List<String> aliases = new ArrayList<>();
           aliases.add(route);
-          aliases.addAll(publicPaths);
+          for (String publicPath : publicPaths)
+            if (!aliases.contains(publicPath)) aliases.add(publicPath);
           for (String alias : aliases) {
             List<Mapping> routeMappings =
                 state.routes.computeIfAbsent(alias, key -> new ArrayList<>());
@@ -359,7 +367,19 @@ final class StrutsConfigParser {
     }
   }
 
+  /**
+   * The module a file belongs to. Called for every tag of every page, so each path is answered once
+   * instead of reading every web.xml again (RV-703).
+   */
   static String moduleFor(String path, State state) {
+    String known = state.moduleByPath.get(path);
+    if (known != null) return known;
+    String module = findModule(path, state);
+    state.moduleByPath.put(path, module);
+    return module;
+  }
+
+  private static String findModule(String path, State state) {
     List<String> modules = new ArrayList<>();
     for (Path file : state.inventory.files())
       if (file.getFileName().toString().equals("web.xml"))
@@ -383,6 +403,9 @@ final class StrutsConfigParser {
               "MODULE_CONFIG_UNRESOLVED");
         }
     String clean = path.replace('\\', '/');
+    // A config file belongs to a module only when web.xml lists it; one that is not listed is the
+    // default module's, whatever folder it sits in (RV-320). Pages are still placed by folder.
+    if (clean.endsWith(".xml")) return "";
     return modules.stream()
         .filter(module -> clean.contains(module + "/"))
         .max(Comparator.comparingInt(String::length))
@@ -451,9 +474,9 @@ final class StrutsConfigParser {
               versions.putIfAbsent(matcher.group(1), new SourceLocation(relative, line + 1));
           }
         }
-        var library =
-            java.util.regex.Pattern.compile("(?i).*struts-[a-z-]*?(\\d+\\.\\d+\\.\\d+).*\\.jar")
-                .matcher(name);
+        // Only Struts 1's own jars count; spring-webmvc-struts or struts-menu carry their own
+        // versions (RV-311).
+        var library = STRUTS_JAR.matcher(name);
         if (library.matches())
           versions.putIfAbsent(library.group(1), new SourceLocation(relative, 1));
       } catch (Exception unread) {
@@ -484,13 +507,34 @@ final class StrutsConfigParser {
         entry.getKey() + "（" + entry.getValue().file() + ":" + entry.getValue().line() + "）");
   }
 
+  /** Artifacts of Struts 1 itself; other "struts-*" libraries have unrelated versions. */
+  static final Set<String> STRUTS_ARTIFACTS =
+      Set.of(
+          "struts",
+          "struts-core",
+          "struts-taglib",
+          "struts-tiles",
+          "struts-extras",
+          "struts-el",
+          "struts-faces",
+          "struts-scripting");
+
+  private static final java.util.regex.Pattern STRUTS_JAR =
+      java.util.regex.Pattern.compile(
+          "(?i)(?:struts|struts-(?:core|taglib|tiles|extras|el|faces|scripting))-(\\d+\\.\\d+\\.\\d+)\\.jar");
+
   static void addMavenStrutsVersion(
       Element declaration, String file, Map<String, SourceLocation> versions) {
     String group = directText(declaration, "groupId"),
         artifact = directText(declaration, "artifactId"),
         version = directText(declaration, "version");
-    if (("org.apache.struts".equals(group) || artifact.startsWith("struts-"))
-        && version.matches("\\d+\\.\\d+\\.\\d+"))
+    // Struts' own group (not its Struts 2 artifacts), the legacy "struts" group, or a known
+    // Struts 1 artifact with no group; "struts-menu" and similar libraries do not count (RV-311).
+    boolean struts =
+        ("org.apache.struts".equals(group) && !artifact.startsWith("struts2"))
+            || ("struts".equals(group) && STRUTS_ARTIFACTS.contains(artifact))
+            || (group.isBlank() && STRUTS_ARTIFACTS.contains(artifact));
+    if (struts && version.matches("\\d+\\.\\d+\\.\\d+"))
       versions.putIfAbsent(version, new SourceLocation(file, sourceLine(declaration)));
   }
 }
