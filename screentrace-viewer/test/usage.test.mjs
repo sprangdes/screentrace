@@ -37,3 +37,16 @@ test('caller derivation preserves load/unresolved selectors, shared components, 
   );
   assert.throws(() => m.callSources({ ...data.graph, schemaVersion: '2.1' }), /2\.2/);
 });
+test('a nested CALL_API and its trigger edge are one caller, as in ApiUsage.java (RV-612)', async () => {
+  const m = await ownModule('usage'),
+    data = fixture();
+  data.graph.behaviors = [
+    { id: 'parent', triggerId: 'shared', type: 'OPEN_DIALOG' },
+    { id: 'child', parentId: 'parent', type: 'CALL_API', targetId: 'ep' },
+  ];
+  data.graph.relationships.push({ id: 'edge', type: 'TRIGGERS', from: 'shared', to: 'ep' });
+  assert.deepEqual(m.callSources(data.graph).get('ep'), [
+    { screenId: 'a', componentId: 'shared', behaviorId: 'child' },
+    { screenId: 'b', componentId: 'shared', behaviorId: 'child' },
+  ]);
+});

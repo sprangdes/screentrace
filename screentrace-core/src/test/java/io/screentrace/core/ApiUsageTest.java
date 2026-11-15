@@ -57,6 +57,44 @@ class ApiUsageTest {
   }
 
   @Test
+  void nestedCallBehaviorAndItsTriggerEdgeAreOneCaller() {
+    // RV-110: a CALL_API nested under another behavior of the same trigger used to be counted
+    // again through the trigger's TRIGGERS edge.
+    var graph = graph(false);
+    var evidence =
+        List.of(
+            new AnalysisEvidence(
+                new SourceLocation("a.jsp", 1), "Fixture", ResolutionStatus.CONFIRMED, null));
+    var behaviors =
+        List.of(
+            new Behavior(
+                "confirm",
+                "c",
+                "click",
+                BehaviorType.OPEN_DIALOG,
+                null,
+                null,
+                null,
+                null,
+                evidence),
+            new Behavior(
+                "call", null, "ok", BehaviorType.CALL_API, "api", null, "confirm", null, evidence));
+    var rich =
+        new ApplicationGraph(
+            graph.application(),
+            graph.nodes(),
+            graph.relationships(),
+            List.of(),
+            List.of(),
+            "2.1",
+            behaviors,
+            List.of());
+    assertEquals(
+        List.of(new ApiUsage.Caller("s1", "c", "call"), new ApiUsage.Caller("s2", "c", "call")),
+        ApiUsage.derive(rich).get("api").callers());
+  }
+
+  @Test
   void behaviorCallsFollowComponentOwnershipIncludingChildCallbacks() {
     var graph = graph(false);
     var evidence =

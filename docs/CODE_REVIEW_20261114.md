@@ -113,7 +113,7 @@ P1 處理結果見各項「狀態」（R53，[ADR 0144](adr/0144-r53-code-review
 - **RV-107** `ApplicationGraphMerger.java:113`：兩邊合併同一 behavior、只有一邊解析出 target 時，合併結果 target 變 null 且不留證據。
 - **RV-108** `ApplicationGraphMerger.java:152,154`：`mergeNode` 只保留左邊的屬性、型別、名稱、confidence，右邊衝突值與屬性（例如 `routeAliases`）靜默丟失；evidence 未去重。
 - **RV-109** `GraphIntegrityValidator.java:41,86`：同一種驗證失敗依有無 personas 拋不同例外型別；`Set.of(...).contains(null)` 在欄位為 null 時拋 NPE 而非驗證訊息。
-- **RV-110** `ApiUsage.java:275`（viewer `usage.ts:41` 同理）：巢狀 CALL_API behavior（無 triggerId、經 parentId 回溯）沒有抑制對應的 CALLS 邊，同一呼叫計兩次。
+- **RV-110** `ApiUsage.java:275`（viewer `usage.ts:41` 同理）：巢狀 CALL_API behavior（無 triggerId、經 parentId 回溯）沒有抑制對應的 CALLS 邊，同一呼叫計兩次。 **狀態：已修正（R56）：Java 與 viewer 以同一規則判斷，巢狀 CALL_API 也會抑制對應的邊。**
 - **RV-111** `PrototypeModelGenerator.java:128`：佈局計數器跨畫面共用且 x 永不前進，第 7 個元件與第 1 個完全重疊。
 - **RV-112** `PrototypeModelGenerator.java:76`：被多個畫面 CONTAINS 的元件產生多筆相同 id 的 prototype 元件。
 - **RV-113** `ProjectScanner.java:287`：`build`、`target` 等忽略目錄比對任何深度的路徑段，`com/acme/build/` 套件或 `webapp/target/` 被靜默略過。
@@ -242,7 +242,7 @@ P1 處理結果見各項「狀態」（R53，[ADR 0144](adr/0144-r53-code-review
 - **RV-609** `main.ts:1076`：決策徽章 append 到 `<select>`／`<textarea>`／`<img>` 內，無法顯示。
 - **RV-610** `shared/review-md.ts:760`：結尾多一個換行就拒絕匯入（編輯器常自動加入）。
 - **RV-611** `prototype.ts:120`：無擷取高度且頁面為 `min-height:100vh` + margin 時，ResizeObserver 無限放大 iframe。
-- **RV-612** `usage.ts:41`：同 RV-110，巢狀 CALL_API 重複計算呼叫者。
+- **RV-612** `usage.ts:41`：同 RV-110，巢狀 CALL_API 重複計算呼叫者。 **狀態：已修正（R56，同 RV-110）。**
 
 ---
 
@@ -281,5 +281,5 @@ P1 處理結果見各項「狀態」（R53，[ADR 0144](adr/0144-r53-code-review
 3. **單點失敗擴大為整體失敗**（R53、R55 已處理）：RV-007、RV-217、RV-220、RV-404、RV-414、RV-421、RV-511、RV-602。錯誤應侷限在單一檔案／單一項目並留下診斷。
 4. **預覽輸出生命週期**：RV-005、RV-103、RV-104、RV-105。擷取前清空、逐步寫 manifest、結束整棵程序樹、封裝逾時不中止報告。
 5. **HTML 實體與 URL 編碼**：RV-313、RV-424、RV-521、RV-522。在 `MarkupTag` 取屬性時統一解碼一次。
-6. **API 呼叫者重複計算**：RV-110 與 RV-612 在 Java 與 TypeScript 各有一份相同邏輯，應一起修並以同一組 fixture 驗證。
+6. **API 呼叫者重複計算**（R56 已處理）：RV-110 與 RV-612 在 Java 與 TypeScript 各有一份相同邏輯，應一起修並以同一組 fixture 驗證。
 7. **路徑比對缺少邊界**：RV-318、RV-322、RV-412、RV-423。

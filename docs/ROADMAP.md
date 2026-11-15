@@ -378,3 +378,8 @@
 
 - WP126：Spring Web Flow、Thymeleaf 片段、JavaScript／React 分析輸出、React 預覽樣式表與 viewer CSS 資源，錯誤只影響出錯的那一項並留下診斷；Spring Security 外部呼叫的推論維持 fail closed，但只在讀不到的檔案可能含 security 設定時才停止，並指出是哪個檔案，見 [ADR 0146](adr/0146-r55-contain-single-item-failures.md)（RV-217、RV-220、RV-404、RV-414、RV-421、RV-511、RV-602）。
 - 驗證：每項都新增測試；JS 181、capture 96、viewer 單元 150、viewer e2e 118、Maven 全數通過。
+
+## R56 API 呼叫者不重複計算
+
+- WP127：`ApiUsage.java` 與 viewer 的 `usage.ts` 先算出每個 CALL_API 行為所屬的觸發元件（沿 `parentId` 往上找），同一觸發元件到同一端點的 CALLS／TRIGGERS 邊不再另算一個呼叫者；兩邊規則相同，並以一次集合查詢取代每條邊掃描全部行為（RV-110、RV-612，RV-702 的一部分）。不改變對外契約，未新增 ADR。
+- 驗證：Java 與 viewer 各新增 1 個測試，都已確認在修改前失敗；viewer 單元 151、Maven 全數通過。

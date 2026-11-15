@@ -33,18 +33,28 @@ export function callSources(graph: Graph): Map<string, Caller[]> {
       for (const screenId of index.owners.get(trigger) || [])
         result.get(target)?.push({ screenId, componentId: trigger, behaviorId });
   };
+  // Same rule as ApiUsage.java: a CALLS/TRIGGERS edge whose trigger already calls the endpoint
+  // through a CALL_API behavior, directly or nested under another behavior, is that same call
+  // (RV-612). The set replaces a scan of every behavior per edge.
+  const roots = new Map<string, string>(),
+    behaviorCalls = new Set<string>();
+  for (const b of graph.behaviors || [])
+    if (b.type === 'CALL_API' && b.targetId) {
+      const trigger = rootTrigger(index, b);
+      if (!trigger) continue;
+      roots.set(b.id, trigger);
+      behaviorCalls.add(trigger + '\u0000' + b.targetId);
+    }
   for (const e of edges)
     if (
       result.has(e.to) &&
       ['CALLS', 'TRIGGERS'].includes(e.type) &&
-      !(graph.behaviors || []).some(
-        (b) => b.type === 'CALL_API' && b.triggerId === e.from && b.targetId === e.to,
-      )
+      !behaviorCalls.has(e.from + '\u0000' + e.to)
     )
       add(e.to, e.from);
   for (const b of graph.behaviors || [])
     if (b.type === 'CALL_API' && b.targetId && result.has(b.targetId)) {
-      const trigger = rootTrigger(index, b);
+      const trigger = roots.get(b.id);
       if (trigger) add(b.targetId, trigger, b.id);
     }
   const redirects = new Map<string, Set<string>>();

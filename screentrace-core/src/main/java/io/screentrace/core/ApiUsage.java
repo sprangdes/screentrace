@@ -47,43 +47,36 @@ public final class ApiUsage {
     graph.nodes().stream()
         .filter(n -> n.type() == NodeType.ENDPOINT)
         .forEach(n -> callers.put(n.id(), new TreeSet<>()));
+    Map<String, Behavior> behaviors = new TreeMap<>();
+    graph.behaviors().forEach(b -> behaviors.put(b.id(), b));
+    // The trigger each CALL_API behavior belongs to, following parentId for nested behaviors. A
+    // CALLS/TRIGGERS edge from that trigger to the same endpoint is the same call, so it adds no
+    // second caller (RV-110); one set lookup replaces a scan of every behavior per edge.
+    Map<String, String> roots = new HashMap<>();
+    Set<String> behaviorCalls = new HashSet<>();
+    for (Behavior behavior : graph.behaviors())
+      if (behavior.type() == BehaviorType.CALL_API && behavior.targetId() != null) {
+        String root = rootTrigger(behavior, behaviors);
+        roots.put(behavior.id(), root);
+        if (root != null) behaviorCalls.add(root + "\u0000" + behavior.targetId());
+      }
     for (Relationship edge : graph.relationships())
       if (edge.to() != null
           && callers.containsKey(edge.to())
           && (edge.type() == EdgeType.CALLS || edge.type() == EdgeType.TRIGGERS)) {
         GraphNode from = nodes.get(edge.from());
-        if (from == null) continue;
-        if (from.type() == NodeType.SCREEN
-            && graph.behaviors().stream()
-                .noneMatch(
-                    b ->
-                        b.type() == BehaviorType.CALL_API
-                            && from.id().equals(b.triggerId())
-                            && edge.to().equals(b.targetId())))
+        if (from == null || behaviorCalls.contains(from.id() + "\u0000" + edge.to())) continue;
+        if (from.type() == NodeType.SCREEN)
           callers.get(edge.to()).add(new Caller(from.id(), null, null));
-        if (from.type() == NodeType.COMPONENT
-            && graph.behaviors().stream()
-                .noneMatch(
-                    b ->
-                        b.type() == BehaviorType.CALL_API
-                            && from.id().equals(b.triggerId())
-                            && edge.to().equals(b.targetId())))
+        if (from.type() == NodeType.COMPONENT)
           for (String screen : owners.getOrDefault(from.id(), Set.of()))
             callers.get(edge.to()).add(new Caller(screen, from.id(), null));
       }
-    Map<String, Behavior> behaviors = new TreeMap<>();
-    graph.behaviors().forEach(b -> behaviors.put(b.id(), b));
     for (Behavior behavior : graph.behaviors())
       if (behavior.type() == BehaviorType.CALL_API
           && behavior.targetId() != null
           && callers.containsKey(behavior.targetId())) {
-        Behavior parent = behavior;
-        Set<String> seen = new HashSet<>();
-        while (parent.triggerId() == null
-            && parent.parentId() != null
-            && seen.add(parent.id())
-            && behaviors.containsKey(parent.parentId())) parent = behaviors.get(parent.parentId());
-        GraphNode trigger = nodes.get(parent.triggerId());
+        GraphNode trigger = nodes.get(roots.get(behavior.id()));
         if (trigger == null) continue;
         if (trigger.type() == NodeType.SCREEN)
           callers.get(behavior.targetId()).add(new Caller(trigger.id(), null, behavior.id()));
@@ -132,5 +125,16 @@ public final class ApiUsage {
                 new Usage(
                     values.isEmpty() ? Status.UNREFERENCED : Status.IN_USE, List.copyOf(values))));
     return Collections.unmodifiableMap(result);
+  }
+
+  /** The triggerId of a behavior, or of the nearest ancestor that has one; null if none. */
+  private static String rootTrigger(Behavior behavior, Map<String, Behavior> behaviors) {
+    Behavior parent = behavior;
+    Set<String> seen = new HashSet<>();
+    while (parent.triggerId() == null
+        && parent.parentId() != null
+        && seen.add(parent.id())
+        && behaviors.containsKey(parent.parentId())) parent = behaviors.get(parent.parentId());
+    return parent.triggerId();
   }
 }
