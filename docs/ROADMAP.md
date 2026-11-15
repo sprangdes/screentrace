@@ -414,3 +414,9 @@
 - WP133：以 300 個 action 的合成專案量測後，`StrutsScreens.screenForView`、`MarkupGraphContribution`、`StrutsInteractions` 的線性搜尋改用索引（新增 `NodesByViewName`）；`element-styles.json` 超過 32 MiB 時報表照常產出、不含元素樣式並加上 `PREVIEW_STYLES_TOO_LARGE` 診斷（新發現 RV-118），見 [ADR 0149](adr/0149-r62-hotspots-and-oversized-capture.md)（RV-702 部分）。
 - 量測：Java 分析 37.7 秒 → 18.5 秒；完整 CLI 由無報表變為 186 秒完成。
 - 驗證：合成專案與 14 個 fixture 的圖與 prototype 產物逐位元組相同；新增 2 個測試；Maven 全數通過。
+
+## R63 元素樣式的大小與讀取
+
+- WP134：`element-styles.json` 改為精簡 JSON；報表直接解析位元組、上限提高為 256 MiB；`PreviewCaptureReader` 以每個畫面建立一次的索引取代逐元素全掃描，見 [ADR 0150](adr/0150-r63-element-styles-size-and-reading.md)。
+- 量測（300 個 action 的合成專案）：擷取檔 70 MB → 48.7 MB；報表步驟 140 秒 → 7.5 秒；完整 CLI 173 秒且報表含元素樣式。
+- 驗證：修改前後的報表與 `preview-model.json` 逐位元組相同；capture 97、Maven 全數通過。

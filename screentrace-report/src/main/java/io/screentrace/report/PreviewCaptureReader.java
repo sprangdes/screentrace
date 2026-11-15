@@ -19,8 +19,16 @@ import java.util.regex.Pattern;
 
 /** Reads the WP6 contract without dropping unmatched elements or overflowing style data. */
 final class PreviewCaptureReader {
-  /** Largest element-styles.json read into memory; larger captures are reported, not read. */
-  static final long MAX_STYLE_BYTES = 32L * 1024 * 1024;
+  /**
+   * Largest element-styles.json read; larger captures are reported, not read (ADR 0149). The bytes
+   * are parsed directly, without first building a String of the whole file (R63).
+   */
+  static final long MAX_STYLE_BYTES = 256L * 1024 * 1024;
+
+  /** The limit in effect; {@code -Dscreentrace.preview.maxStyleBytes} can lower or raise it. */
+  static long maxStyleBytes() {
+    return Long.getLong("screentrace.preview.maxStyleBytes", MAX_STYLE_BYTES);
+  }
 
   private final ObjectMapper json = new ObjectMapper();
 
@@ -28,8 +36,8 @@ final class PreviewCaptureReader {
     GraphIntegrityValidator.requireAnalysis(graph);
     var data =
         json.readTree(
-            SafeProjectFiles.readUtf8Limited(
-                output, output.resolve("static-preview/element-styles.json"), MAX_STYLE_BYTES));
+            SafeProjectFiles.readBytesLimited(
+                output, output.resolve("static-preview/element-styles.json"), maxStyleBytes()));
     if (!"2".equals(data.path("version").asText())
         || !"2.2".equals(data.path("schemaVersion").asText()))
       throw new IOException("Preview capture requires version 2 / schema 2.2");
@@ -49,6 +57,14 @@ final class PreviewCaptureReader {
     var elements = new ArrayList<PreviewElement>();
     var nodes = new HashMap<String, ApplicationGraph.GraphNode>();
     graph.nodes().forEach(n -> nodes.put(n.id(), n));
+    // Components each screen CONTAINS, and those components by expansion anchor (sorted IDs), built
+    // once instead of rescanning every relationship and node for each captured element (RV-702;
+    // a 300-screen capture took 140 s here).
+    var owned = new HashMap<String, Set<String>>();
+    for (var e : graph.relationships())
+      if (e.type() == ApplicationGraph.EdgeType.CONTAINS)
+        owned.computeIfAbsent(e.from(), k -> new HashSet<>()).add(e.to());
+    var anchored = new HashMap<String, Map<String, List<String>>>();
     var byScreen = new TreeMap<String, PreviewScreen>();
     baseline.screens().forEach(s -> byScreen.put(s.graphScreenId(), s));
     graph.nodes().stream()
@@ -83,14 +99,9 @@ final class PreviewCaptureReader {
             || !defaults.containsKey(defaultId))
           throw new IOException("Dangling preview style/default reference");
         var candidates = strings(element.path("graphComponentCandidates"));
+        Set<String> screenOwned = owned.getOrDefault(screen.graphScreenId(), Set.of());
         for (String id : candidates) {
-          if (!nodes.containsKey(id)
-              || graph.relationships().stream()
-                  .noneMatch(
-                      e ->
-                          e.type() == ApplicationGraph.EdgeType.CONTAINS
-                              && e.from().equals(screen.graphScreenId())
-                              && e.to().equals(id)))
+          if (!nodes.containsKey(id) || !screenOwned.contains(id))
             throw new IOException("Preview component does not belong to its screen");
         }
         String componentId = optional(element, "graphComponentId");
@@ -113,24 +124,26 @@ final class PreviewCaptureReader {
         if (matchBasis != null && !Set.of("ANCHOR", "HEURISTIC").contains(matchBasis))
           throw new IOException("Invalid preview matchBasis");
         if ("ANCHOR".equals(matchBasis)) {
-          var owned = new HashSet<String>();
-          graph.relationships().stream()
-              .filter(
-                  e ->
-                      e.type() == ApplicationGraph.EdgeType.CONTAINS
-                          && e.from().equals(screen.graphScreenId()))
-              .forEach(e -> owned.add(e.to()));
-          var expected =
-              graph.nodes().stream()
-                  .filter(
-                      n ->
-                          n.type() == ApplicationGraph.NodeType.COMPONENT
-                              && owned.contains(n.id())
-                              && anchor != null
-                              && anchor.equals(n.attributes().get("expansionAnchor")))
-                  .map(ApplicationGraph.GraphNode::id)
-                  .sorted()
-                  .toList();
+          var byAnchor =
+              anchored.computeIfAbsent(
+                  screen.graphScreenId(),
+                  id -> {
+                    var result = new HashMap<String, List<String>>();
+                    for (String component : screenOwned) {
+                      var node = nodes.get(component);
+                      if (node != null
+                          && node.type() == ApplicationGraph.NodeType.COMPONENT
+                          && node.attributes().get("expansionAnchor") != null)
+                        result
+                            .computeIfAbsent(
+                                node.attributes().get("expansionAnchor"), k -> new ArrayList<>())
+                            .add(component);
+                    }
+                    result.values().forEach(list -> list.sort(null));
+                    return result;
+                  });
+          List<String> expected =
+              anchor == null ? List.of() : byAnchor.getOrDefault(anchor, List.of());
           if (expected.isEmpty() || !expected.equals(candidates.stream().sorted().toList()))
             throw new IOException("Invalid preview anchor candidates");
           String resolution = element.path("componentResolution").asText();

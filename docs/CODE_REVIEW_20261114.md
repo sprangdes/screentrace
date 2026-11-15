@@ -248,7 +248,7 @@ P1 處理結果見各項「狀態」（R53，[ADR 0144](adr/0144-r53-code-review
 
 ## 後續發現
 
-- **RV-118 ［已核對，已修正（R62）］** `PreviewCaptureReader.java:28`：`element-styles.json` 有 32 MiB 讀取上限，超過時拋例外，CLI 完全沒有報表。300 個畫面的合成專案就產生 70 MB。改為略過元素樣式並在報表中說明（ADR 0149）。
+- **RV-118 ［已核對，已修正（R62）］** `PreviewCaptureReader.java:28`：`element-styles.json` 有 32 MiB 讀取上限，超過時拋例外，CLI 完全沒有報表。300 個畫面的合成專案就產生 70 MB。改為略過元素樣式並在報表中說明（ADR 0149）；R63 再將擷取檔改為精簡 JSON、上限提高為 256 MiB，該專案的報表已含完整元素樣式（ADR 0150）。
 
 ## P3 — 效能
 

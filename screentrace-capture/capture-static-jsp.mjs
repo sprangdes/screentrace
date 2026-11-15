@@ -1206,8 +1206,7 @@ await writeOutput(
   JSON.stringify([...captureDiagnostics].sort(), null, 2),
 );
 
+// Compact: an intermediate file read only by the report step, and the largest one; indentation
+// alone added about a third to its size (R63).
 if (previewV2)
-  await writeOutput(
-    path.join(htmlRoot, 'element-styles.json'),
-    JSON.stringify(styleCapture, null, 2),
-  );
+  await writeOutput(path.join(htmlRoot, 'element-styles.json'), JSON.stringify(styleCapture));

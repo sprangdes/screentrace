@@ -92,7 +92,7 @@ public final class SingleHtmlAnalysisWriter {
     if (Files.exists(styles, LinkOption.NOFOLLOW_LINKS)) {
       // A very large capture used to stop the whole report; the report is still produced, with
       // previews but without per-element styles, and says why.
-      if (Files.size(styles) > PreviewCaptureReader.MAX_STYLE_BYTES)
+      if (Files.size(styles) > PreviewCaptureReader.maxStyleBytes())
         stylesSkipped =
             Map.of(
                 "code",
@@ -101,7 +101,7 @@ public final class SingleHtmlAnalysisWriter {
                 "元素樣式資料 "
                     + Files.size(styles)
                     + " bytes 超過 "
-                    + PreviewCaptureReader.MAX_STYLE_BYTES
+                    + PreviewCaptureReader.maxStyleBytes()
                     + " bytes 上限，預覽不含元素樣式與元件標示");
       else preview = new PreviewCaptureReader().read(graph, preview, output);
     }
