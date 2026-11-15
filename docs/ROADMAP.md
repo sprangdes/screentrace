@@ -425,3 +425,13 @@
 
 - WP135：擷取腳本接受 `--deadline`，過了截止時間不再開始新畫面、已完成的畫面照常寫出，未擷取的畫面明確標記；CLI 以上限減去預留時間作為截止時間，最後手段改為結束整個子程序樹；`@SuppressWarnings` 移回 `renderStaticJsp`，見 [ADR 0151](adr/0151-r64-capture-deadline.md)（RV-104、RV-105、RV-106）。
 - 驗證：新增 3 個測試，capture 的 2 個已確認在修改前失敗；capture 99、Maven 全數通過。
+
+## R65 啟動腳本、CLI、core、scanner、report 的其餘項目
+
+- WP136：處理 RV-101～117 中尚未修正的 13 項與 RV-808：
+  - 啟動腳本：重建檢查略過 `analyze/` 輸出；Maven 版本只讀「Apache Maven」那一行。
+  - CLI：預覽封裝的上限依畫面數放寬，逾時或失敗時報表照常產出（不含預覽頁面）；互動提示展開 `~`、處理無效路徑與 Ctrl-D／Ctrl-C；選單寬度不超過終端機；`reg query` 的 5 秒上限確實生效；節點數只計算一次。
+  - core：合併保留雙方屬性與較強 confidence、evidence 去重、已解析的行為目標優先；驗證失敗統一為 `GraphValidationException`，null 欄位不再 NPE（[ADR 0152](adr/0152-r65-graph-merge-and-validation-errors.md)）。
+  - scanner：`target`／`build` 只在專案根目錄或建置檔旁略過；POM 屬性依模組解析。
+  - report：prototype 元件依畫面分欄排列，共用元件各畫面有獨立 ID；樣式 map 保留排序。
+- 驗證：新增 11 個測試，修正項目的測試都已確認在修改前失敗；13 個 fixture 中只有 `wp10/struts1-spring` 的圖改變（重複 evidence 移除、保留 Spring 的 `template` 屬性），prototype 位置依新規則改變；Maven 全數通過。

@@ -47,7 +47,7 @@ class SchemaProductionTest {
   @Test
   void rejectsMissingEvidenceEvenWhenInputClaimsSchemaTwo() {
     assertThrows(
-        IllegalStateException.class,
+        GraphValidationException.class,
         () -> ApplicationGraphMerger.merge(graph("2.2", false), graph("2.2", true)));
   }
 

@@ -104,23 +104,23 @@ P1 處理結果見各項「狀態」（R53，[ADR 0144](adr/0144-r53-code-review
 
 ## P2 — bin／cli／core／scanner／report
 
-- **RV-101** `bin/screentrace:121`、`bin/screentrace.ps1:101`：重建檢查沒排除預設輸出 `analyze/`，報告 HTML 比 jar 新，每次啟動都跑 `npm ci` + viewer build + `mvn package`。
-- **RV-102** `bin/screentrace:32`：`maven_version` 直接取第一行第三欄；JDK 先印 WARNING 時取到單字，算術失敗且被視為通過 3.9 檢查。
-- **RV-103** `ScreenTraceCli.java:727`：`packPreview` 固定 120 秒且逾時拋例外中止整次分析；擷取已依畫面數放寬到最多 30 分鐘，大專案更容易走到這裡。
+- **RV-101** `bin/screentrace:121`、`bin/screentrace.ps1:101`：重建檢查沒排除預設輸出 `analyze/`，報告 HTML 比 jar 新，每次啟動都跑 `npm ci` + viewer build + `mvn package`。 **狀態：已修正（R65）。**
+- **RV-102** `bin/screentrace:32`：`maven_version` 直接取第一行第三欄；JDK 先印 WARNING 時取到單字，算術失敗且被視為通過 3.9 檢查。 **狀態：已修正（R65）。**
+- **RV-103** `ScreenTraceCli.java:727`：`packPreview` 固定 120 秒且逾時拋例外中止整次分析；擷取已依畫面數放寬到最多 30 分鐘，大專案更容易走到這裡。 **狀態：已修正（R65）：上限依畫面數放寬，失敗時報表照常產出、不含預覽頁面。**
 - **RV-104** `ScreenTraceCli.java:701`：擷取逾時只結束直接的 `node` 程序，Playwright Chromium 與版本管理 shim 底下的實際 node 成為孤兒，並與後續 `packPreview` 競爭寫入。應沿用 `JavaScriptGraphContribution` 的 `descendants().forEach(destroyForcibly)`。 **狀態：已修正（R64）。**
 - **RV-105** `ScreenTraceCli.java:684`：30 分鐘上限約 840 個畫面就會碰到；擷取腳本只在全部完成後才寫 manifest，一旦被結束就失去所有預覽（HC-004 根因未解）。建議腳本自行管理截止時間並逐步寫出已完成畫面。 **狀態：已修正（R64，ADR 0151）：擷取依截止時間停止並寫出已完成的畫面。**
 - **RV-106** `ScreenTraceCli.java:679`：WP123 把 `@SuppressWarnings("java:S4036")` 移到 `captureTimeoutSeconds`，Javadoc 也因在標註之後而成為懸空註解。 **狀態：已修正（R64）。**
-- **RV-107** `ApplicationGraphMerger.java:113`：兩邊合併同一 behavior、只有一邊解析出 target 時，合併結果 target 變 null 且不留證據。
-- **RV-108** `ApplicationGraphMerger.java:152,154`：`mergeNode` 只保留左邊的屬性、型別、名稱、confidence，右邊衝突值與屬性（例如 `routeAliases`）靜默丟失；evidence 未去重。
-- **RV-109** `GraphIntegrityValidator.java:41,86`：同一種驗證失敗依有無 personas 拋不同例外型別；`Set.of(...).contains(null)` 在欄位為 null 時拋 NPE 而非驗證訊息。
+- **RV-107** `ApplicationGraphMerger.java:113`：兩邊合併同一 behavior、只有一邊解析出 target 時，合併結果 target 變 null 且不留證據。 **狀態：已修正（R65，ADR 0152）。**
+- **RV-108** `ApplicationGraphMerger.java:152,154`：`mergeNode` 只保留左邊的屬性、型別、名稱、confidence，右邊衝突值與屬性（例如 `routeAliases`）靜默丟失；evidence 未去重。 **狀態：已修正（R65，ADR 0152）。**
+- **RV-109** `GraphIntegrityValidator.java:41,86`：同一種驗證失敗依有無 personas 拋不同例外型別；`Set.of(...).contains(null)` 在欄位為 null 時拋 NPE 而非驗證訊息。 **狀態：已修正（R65，ADR 0152）。**
 - **RV-110** `ApiUsage.java:275`（viewer `usage.ts:41` 同理）：巢狀 CALL_API behavior（無 triggerId、經 parentId 回溯）沒有抑制對應的 CALLS 邊，同一呼叫計兩次。 **狀態：已修正（R56）：Java 與 viewer 以同一規則判斷，巢狀 CALL_API 也會抑制對應的邊。**
-- **RV-111** `PrototypeModelGenerator.java:128`：佈局計數器跨畫面共用且 x 永不前進，第 7 個元件與第 1 個完全重疊。
-- **RV-112** `PrototypeModelGenerator.java:76`：被多個畫面 CONTAINS 的元件產生多筆相同 id 的 prototype 元件。
-- **RV-113** `ProjectScanner.java:287`：`build`、`target` 等忽略目錄比對任何深度的路徑段，`com/acme/build/` 套件或 `webapp/target/` 被靜默略過。
-- **RV-114** `BuildVersions.java:51`：所有 POM 的 properties 合併成一張表且 `putIfAbsent`，子模組覆寫的版本被根 POM 的值取代。
-- **RV-115** `PreviewModel.java:230`（`PrototypeModel:328`、`EditOverlay` 同理）：`Map.copyOf(new TreeMap(...))` 丟失排序，序列化結果跨 JVM 不穩定；null 值拋 NPE。
-- **RV-116** `InteractiveConsole.java:44,274`：路徑提示不展開 `~`，未處理 Ctrl-D／Ctrl-C 與 `InvalidPathException`；選單寬度未限制，長標籤換行後重繪殘影。
-- **RV-117** `ReportBrowser.java:241`：`readAllBytes()` 在 `waitFor(5s)` 之前，`reg query` 卡住時整個流程掛住。
+- **RV-111** `PrototypeModelGenerator.java:128`：佈局計數器跨畫面共用且 x 永不前進，第 7 個元件與第 1 個完全重疊。 **狀態：已修正（R65）。**
+- **RV-112** `PrototypeModelGenerator.java:76`：被多個畫面 CONTAINS 的元件產生多筆相同 id 的 prototype 元件。 **狀態：已修正（R65）：只有多個畫面共用的元件才在 ID 加上畫面。**
+- **RV-113** `ProjectScanner.java:287`：`build`、`target` 等忽略目錄比對任何深度的路徑段，`com/acme/build/` 套件或 `webapp/target/` 被靜默略過。 **狀態：已修正（R65）：`target`／`build` 只在專案根目錄或建置檔旁邊才略過。**
+- **RV-114** `BuildVersions.java:51`：所有 POM 的 properties 合併成一張表且 `putIfAbsent`，子模組覆寫的版本被根 POM 的值取代。 **狀態：已修正（R65）：先用該 POM 自己的屬性，其他 POM 一致時才採用。**
+- **RV-115** `PreviewModel.java:230`（`PrototypeModel:328`、`EditOverlay` 同理）：`Map.copyOf(new TreeMap(...))` 丟失排序，序列化結果跨 JVM 不穩定；null 值拋 NPE。 **狀態：已修正（R65）。**
+- **RV-116** `InteractiveConsole.java:44,274`：路徑提示不展開 `~`，未處理 Ctrl-D／Ctrl-C 與 `InvalidPathException`；選單寬度未限制，長標籤換行後重繪殘影。 **狀態：已修正（R65）。**
+- **RV-117** `ReportBrowser.java:241`：`readAllBytes()` 在 `waitFor(5s)` 之前，`reg query` 卡住時整個流程掛住。 **狀態：已修正（R65）。**
 
 ## P2 — adapter-spring
 
@@ -272,7 +272,7 @@ P1 處理結果見各項「狀態」（R53，[ADR 0144](adr/0144-r53-code-review
 - **RV-805** viewer：端點 method／path fallback 三份（`screen-panel`、`api-page`）；root trigger 回溯三份（`map.ts`、`usage.ts`、`callerKind`）；`review.ts:256` 排序比較器兩份。
 - **RV-806** `react/styles.mjs:339` 重複 `resolveSpecifier` 且缺少 `..` 防護；`BuildVersions:107` 重複 `SafeProjectFiles.parseXml` 的強化 XML 設定。
 - **RV-807** 死碼：`SpringMvcAnalyzer` 的 `State.endpointByPath`、`EndpointReference.category`、`SpringBootAnalyzer.line`、`SpringControllerReturns.feedback` 的 `values`；`StrutsServletMappings.servletClass`、`StrutsTiles.sameJspPath`、`StrutsGraphSupport.lineAt`、`State.inputForward`；`MarkupGraphContribution:469` 每畫面 modal 解析被全域覆寫；`UrlVariableResolver:100` 兩邊相同的三元運算；`ScriptSources:191` 無效的 `continue`；`JspProjectParser:850` 未使用的 `line()` 與只被測試使用的 regex 前處理；`MarkupTag:205` 恆真條件；`element-styles.mjs:249` 重複過濾；`ProjectScanner:370` 被忽略的參數；`ComponentLibrary:288` 重複的隱私檢查。
-- **RV-808** `ScreenTraceCli:579,592`：SCREEN 數量算兩次且用兩種寫法（enum 比較與字串比較）。
+- **RV-808** `ScreenTraceCli:579,592`：SCREEN 數量算兩次且用兩種寫法（enum 比較與字串比較）。 **狀態：已修正（R65）。**
 
 ---
 

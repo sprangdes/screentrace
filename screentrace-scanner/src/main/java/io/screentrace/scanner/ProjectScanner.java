@@ -16,7 +16,13 @@ import java.util.TreeSet;
 public final class ProjectScanner {
   private static final String POM_FILE = "pom.xml";
   private static final Set<String> IGNORED_DIRECTORIES =
-      Set.of("target", "build", "node_modules", ".git", ".screentrace");
+      Set.of("node_modules", ".git", ".screentrace");
+
+  /** Build output folders, skipped only at the project root or beside a build file (RV-113). */
+  private static final Set<String> BUILD_OUTPUT_DIRECTORIES = Set.of("target", "build");
+
+  private static final List<String> BUILD_FILES =
+      List.of("pom.xml", "build.gradle", "build.gradle.kts", "build.xml", "package.json");
 
   public ProjectInventory scan(Path project) throws IOException {
     Path root = project.toRealPath();
@@ -42,7 +48,8 @@ public final class ProjectScanner {
               diagnostics.add("Maximum project directory depth exceeded; skipped " + relative);
               return FileVisitResult.SKIP_SUBTREE;
             }
-            if (!dir.equals(root) && ignored(relative)) return FileVisitResult.SKIP_SUBTREE;
+            if (!dir.equals(root) && (ignored(relative) || buildOutput(root, dir)))
+              return FileVisitResult.SKIP_SUBTREE;
             return FileVisitResult.CONTINUE;
           }
 
@@ -290,6 +297,19 @@ public final class ProjectScanner {
 
   private static boolean ignored(Path path) {
     for (Path segment : path) if (IGNORED_DIRECTORIES.contains(segment.toString())) return true;
+    return false;
+  }
+
+  /**
+   * A target or build folder holds generated output when it sits at the project root or next to a
+   * build file; a Java package or web folder of the same name deeper in the sources is kept.
+   */
+  private static boolean buildOutput(Path root, Path dir) {
+    if (!BUILD_OUTPUT_DIRECTORIES.contains(dir.getFileName().toString())) return false;
+    Path parent = dir.getParent();
+    if (parent == null || parent.equals(root)) return true;
+    for (String file : BUILD_FILES)
+      if (Files.isRegularFile(parent.resolve(file), LinkOption.NOFOLLOW_LINKS)) return true;
     return false;
   }
 

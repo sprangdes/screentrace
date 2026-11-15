@@ -38,15 +38,9 @@ public final class GraphIntegrityValidator {
     validateBehaviors(graph, nodes, errors);
     if (ApplicationGraph.isAnalysisSchema(graph.schemaVersion()))
       validateStrictEvidence(graph, errors);
-    if (!errors.isEmpty()
-        && (!graph.application().personas().isEmpty()
-            || !graph.application().personaDimensions().isEmpty()))
-      throw new IllegalArgumentException(
+    if (!errors.isEmpty())
+      throw new GraphValidationException(
           "Application graph validation failed:\n - " + String.join("\n - ", errors));
-    if (!errors.isEmpty()) {
-      throw new IllegalStateException(
-          "Application graph validation failed:\n - " + String.join("\n - ", errors));
-    }
   }
 
   private static void validatePersonas(
@@ -83,7 +77,7 @@ public final class GraphIntegrityValidator {
         if (!nodeIs(nodes, id, NodeType.ENTRY_POINT)) errors.add("Invalid persona entry: " + id);
       for (var reach : flow.reached())
         if (!nodeIs(nodes, reach.screenId(), NodeType.SCREEN)
-            || !Set.of("REACHABLE", "POSSIBLE").contains(reach.reach())
+            || !oneOf(reach.reach(), "REACHABLE", "POSSIBLE")
             || reach.depth() < 1) errors.add("Invalid persona reach: " + reach.screenId());
       for (String id : flow.unreached())
         if (!nodeIs(nodes, id, NodeType.SCREEN)) errors.add("Invalid persona unreached: " + id);
@@ -92,7 +86,7 @@ public final class GraphIntegrityValidator {
                 || nodeIs(nodes, step.from(), NodeType.ENTRY_POINT))
             || !(nodeIs(nodes, step.to(), NodeType.SCREEN)
                 || nodeIs(nodes, step.to(), NodeType.ENTRY_POINT))
-            || !Set.of("RENDERS", "NAVIGATE", "REDIRECT").contains(step.kind())
+            || !oneOf(step.kind(), "RENDERS", "NAVIGATE", "REDIRECT")
             || (step.kind().equals("RENDERS")
                 ? step.behaviorId() != null
                 : !behaviors.containsKey(step.behaviorId())))
@@ -140,8 +134,7 @@ public final class GraphIntegrityValidator {
         errors.add("Missing or invalid source: " + owner);
       if (item.parser() == null
           || item.parser().isBlank()
-          || Set.of("UNKNOWN", "LEGACY").contains(item.parser()))
-        errors.add("Missing parser: " + owner);
+          || oneOf(item.parser(), "UNKNOWN", "LEGACY")) errors.add("Missing parser: " + owner);
       if (item.resolution() == null) errors.add("Missing resolution: " + owner);
     }
   }
@@ -186,7 +179,7 @@ public final class GraphIntegrityValidator {
       GraphNode trigger = nodes.get(behavior.triggerId());
       if (behavior.triggerId() != null
           && (trigger == null
-              || !(Set.of(NodeType.COMPONENT, NodeType.SCREEN).contains(trigger.type())
+              || !(oneOf(trigger.type(), NodeType.COMPONENT, NodeType.SCREEN)
                   || (ApplicationGraph.isAudienceSchema(graph.schemaVersion())
                       && trigger.type() == NodeType.ENTRY_POINT))))
         errors.add("Invalid behavior trigger: " + behavior.id());
@@ -200,8 +193,7 @@ public final class GraphIntegrityValidator {
                 && switch (behavior.type()) {
                   case VALIDATE -> rules.containsKey(behavior.targetId());
                   case NAVIGATE ->
-                      target != null
-                          && Set.of(NodeType.SCREEN, NodeType.ENDPOINT).contains(target.type());
+                      target != null && oneOf(target.type(), NodeType.SCREEN, NodeType.ENDPOINT);
                   case CALL_API, SUBMIT_FORM ->
                       target != null && target.type() == NodeType.ENDPOINT;
                   case OPEN_DIALOG ->
@@ -321,6 +313,10 @@ public final class GraphIntegrityValidator {
       GraphNode to,
       Set<String> containedComponents,
       List<String> errors) {
+    if (edge.type() == null) {
+      errors.add("Missing relationship type: " + edge.id());
+      return;
+    }
     switch (edge.type()) {
       case CONTAINS -> require(edge, from, to, NodeType.SCREEN, NodeType.COMPONENT, errors);
       case HANDLED_BY -> require(edge, from, to, NodeType.ENDPOINT, NodeType.HANDLER, errors);
@@ -427,5 +423,13 @@ public final class GraphIntegrityValidator {
               + routeAliases
               + ")");
     }
+  }
+
+  /** Like {@code Set.of(values).contains(value)}, but false for null instead of throwing. */
+  @SafeVarargs
+  private static <T> boolean oneOf(T value, T... values) {
+    if (value == null) return false;
+    for (T candidate : values) if (candidate.equals(value)) return true;
+    return false;
   }
 }

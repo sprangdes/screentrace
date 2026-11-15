@@ -227,7 +227,11 @@ public record PreviewModel(
       Map<String, String> css)
       implements Comparable<PreviewComponent> {
     public PreviewComponent {
-      css = css == null ? Map.of() : Map.copyOf(new TreeMap<>(css));
+      css =
+          css == null
+              ? Map.of()
+              : java.util.Collections.unmodifiableMap(
+                  new TreeMap<>(css)); // key order is kept for deterministic JSON (RV-115)
     }
 
     @Override

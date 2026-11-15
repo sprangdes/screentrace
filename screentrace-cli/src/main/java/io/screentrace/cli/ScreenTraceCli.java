@@ -14,6 +14,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 import org.jline.terminal.Terminal;
@@ -41,6 +42,9 @@ public final class ScreenTraceCli {
     } catch (CommandRefusedException refused) {
       error.println(refused.getMessage());
       return refused.status;
+    } catch (InteractiveConsole.SelectionCancelledException cancelled) {
+      // The user left an interactive prompt; nothing failed.
+      return 0;
     }
   }
 
@@ -588,6 +592,12 @@ public final class ScreenTraceCli {
       // The report loads whichever preview files exist, so files from an earlier run must not
       // survive a capture that fails, times out or is not needed this time (RV-005).
       clearPreviewOutputs(output);
+      Map<ApplicationGraph.NodeType, Long> counts =
+          graph.nodes().stream()
+              .collect(
+                  java.util.stream.Collectors.groupingBy(
+                      ApplicationGraph.GraphNode::type, java.util.stream.Collectors.counting()));
+      long screens = counts.getOrDefault(ApplicationGraph.NodeType.SCREEN, 0L);
       boolean reactScreens =
           graph.nodes().stream()
               .anyMatch(
@@ -604,13 +614,8 @@ public final class ScreenTraceCli {
                   n ->
                       n.type() == ApplicationGraph.NodeType.SCREEN
                           && n.attributes().getOrDefault("view", "").endsWith(".html"))) {
-        renderStaticJsp(
-            project.sourceDirectory(),
-            output,
-            graph.nodes().stream()
-                .filter(n -> n.type() == ApplicationGraph.NodeType.SCREEN)
-                .count());
-        packPreview(output);
+        renderStaticJsp(project.sourceDirectory(), output, screens);
+        packPreview(output, screens);
       }
       var report =
           writer.generate(
@@ -619,12 +624,8 @@ public final class ScreenTraceCli {
               new LibraryStore(WorkspaceSettings.defaultFile().getParent())
                   .selected(project.name()));
       if (report.warning()) LOGGER.warning("單一 HTML 超過 100 MB，仍完整產出：" + report.bytes() + " bytes");
-      long screens =
-          graph.nodes().stream().filter(node -> node.type().name().equals("SCREEN")).count();
-      long endpoints =
-          graph.nodes().stream().filter(node -> node.type().name().equals("ENDPOINT")).count();
-      long components =
-          graph.nodes().stream().filter(node -> node.type().name().equals("COMPONENT")).count();
+      long endpoints = counts.getOrDefault(ApplicationGraph.NodeType.ENDPOINT, 0L);
+      long components = counts.getOrDefault(ApplicationGraph.NodeType.COMPONENT, 0L);
       long contextPathHintCount =
           graph.diagnostics().stream()
               .filter(d -> "CONTEXT_PATH_HINT".equals(d.code()))
@@ -797,18 +798,32 @@ public final class ScreenTraceCli {
     throw new IOException("找不到預覽工具：" + name);
   }
 
-  private static void packPreview(Path output) throws IOException, InterruptedException {
+  /**
+   * Packs the captured previews. The limit grows with the screen count like the capture's; a
+   * timeout or failure leaves the report without packed previews instead of stopping the analysis
+   * (RV-103).
+   */
+  @SuppressWarnings("java:S4036")
+  private static void packPreview(Path output, long screens)
+      throws IOException, InterruptedException {
     if (!Files.exists(output.resolve("static-preview/manifest.json"))) return;
     Process process =
         new ProcessBuilder("node", captureTool("pack-preview.mjs").toString(), output.toString())
             .inheritIO()
             .start();
-    if (!process.waitFor(120, TimeUnit.SECONDS)) {
+    long timeout = captureTimeoutSeconds(screens);
+    String problem = null;
+    if (!process.waitFor(timeout, TimeUnit.SECONDS)) {
+      process.descendants().forEach(ProcessHandle::destroyForcibly);
       process.destroy();
       if (!process.waitFor(2, TimeUnit.SECONDS)) process.destroyForcibly();
-      throw new IOException("預覽資源封裝逾時");
-    }
-    if (process.exitValue() != 0) throw new IOException("預覽資源封裝失敗");
+      problem = "預覽資源封裝超過 " + timeout + " 秒而逾時";
+    } else if (process.exitValue() != 0) problem = "預覽資源封裝失敗";
+    if (problem == null) return;
+    // A half-written pack must not be read as a complete one.
+    Files.deleteIfExists(
+        SafeProjectFiles.requireWritePathWithin(output, output.resolve("viewer-documents.json")));
+    LOGGER.warning(problem + "；報表不含預覽頁面，畫面將明確標記。");
   }
 
   private static Path printReportPath(Path file) throws IOException {

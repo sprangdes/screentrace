@@ -110,8 +110,14 @@ public final class ApplicationGraphMerger {
               throw new IllegalArgumentException("Conflicting behavior identity: " + left.id());
             List<ApplicationGraph.AnalysisEvidence> proof = new ArrayList<>(left.evidence());
             proof.addAll(next.evidence());
+            // An unresolved side (null) adds no candidate; only two different targets are
+            // ambiguous (RV-107).
             String target =
-                Objects.equals(left.targetId(), next.targetId()) ? left.targetId() : null;
+                Objects.equals(left.targetId(), next.targetId())
+                    ? left.targetId()
+                    : left.targetId() == null
+                        ? next.targetId()
+                        : next.targetId() == null ? left.targetId() : null;
             if (target == null && left.targetId() != null && next.targetId() != null) {
               for (String candidate : new TreeSet<>(List.of(left.targetId(), next.targetId())))
                 proof.add(
@@ -151,17 +157,26 @@ public final class ApplicationGraphMerger {
       ApplicationGraph.GraphNode left, ApplicationGraph.GraphNode right) {
     List<ApplicationGraph.AnalysisEvidence> evidence = new ArrayList<>(left.evidence());
     evidence.addAll(right.evidence());
+    // Attributes only the other contribution found are kept; on a conflict the first wins as
+    // before. The stronger confidence wins, since either side's proof is proof (RV-108).
+    Map<String, String> attributes = new TreeMap<>(right.attributes());
+    attributes.putAll(left.attributes());
     return new ApplicationGraph.GraphNode(
         left.id(),
         left.type(),
         left.name(),
-        left.attributes(),
+        attributes,
         left.source(),
-        left.confidence(),
-        evidence,
+        stronger(left.confidence(), right.confidence()),
+        evidence.stream().distinct().toList(),
         java.util.stream.Stream.concat(left.audience().stream(), right.audience().stream())
             .distinct()
             .toList());
+  }
+
+  private static ApplicationGraph.Confidence stronger(
+      ApplicationGraph.Confidence a, ApplicationGraph.Confidence b) {
+    return a.ordinal() <= b.ordinal() ? a : b;
   }
 
   private static ApplicationGraph.Relationship mergeRelationship(
@@ -169,6 +184,12 @@ public final class ApplicationGraphMerger {
     List<ApplicationGraph.AnalysisEvidence> evidence = new ArrayList<>(left.evidence());
     evidence.addAll(right.evidence());
     return new ApplicationGraph.Relationship(
-        left.id(), left.type(), left.from(), left.to(), left.confidence(), left.source(), evidence);
+        left.id(),
+        left.type(),
+        left.from(),
+        left.to(),
+        stronger(left.confidence(), right.confidence()),
+        left.source(),
+        evidence.stream().distinct().toList());
   }
 }

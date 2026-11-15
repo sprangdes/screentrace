@@ -55,4 +55,20 @@ class BuildVersionsTest {
         "<project><dependencies><dependency><artifactId>spring-webmvc</artifactId><version>6.1.0</version></dependency></dependencies></project>");
     assertTrue(BuildVersions.of(new ProjectScanner().scan(root), "spring-webmvc").isEmpty());
   }
+
+  @Test
+  void moduleOverrideOfAPropertyWinsOverTheRootValue() throws Exception {
+    // RV-114: the first POM's property decided ${x} for every module.
+    Path root = Files.createTempDirectory("st-build-versions");
+    Files.writeString(
+        root.resolve("pom.xml"),
+        "<project><properties><struts.version>1.2.9</struts.version></properties></project>");
+    Files.createDirectories(root.resolve("web"));
+    Files.writeString(
+        root.resolve("web/pom.xml"),
+        "<project><properties><struts.version>1.3.10</struts.version></properties>"
+            + "<dependencies><dependency><artifactId>struts-core</artifactId><version>${struts.version}</version></dependency></dependencies></project>");
+    var declared = BuildVersions.of(new ProjectScanner().scan(root), "struts-core").orElseThrow();
+    assertEquals("1.3.10", declared.version());
+  }
 }

@@ -40,17 +40,29 @@ final class InteractiveConsole implements AutoCloseable {
 
   Path existingDirectory(String prompt, Path defaultValue) {
     while (true) {
-      String value = read(prompt, defaultValue);
-      Path path = Path.of(value).toAbsolutePath().normalize();
+      Path path = pathAnswer(read(prompt, defaultValue));
+      if (path == null) continue;
       if (Files.isDirectory(path)) return path;
       terminal.writer().println("目錄不存在：" + path);
       terminal.flush();
     }
   }
 
+  /** The answer as a path, with '~' expanded like the command line; null after an error line. */
+  private Path pathAnswer(String value) {
+    try {
+      return ScreenTraceCli.projectPath(value);
+    } catch (java.nio.file.InvalidPathException invalid) {
+      terminal.writer().println("路徑無效：" + value);
+      terminal.flush();
+      return null;
+    }
+  }
+
   Path outputDirectory(String prompt, Path defaultValue) {
     while (true) {
-      Path path = Path.of(read(prompt, defaultValue)).toAbsolutePath().normalize();
+      Path path = pathAnswer(read(prompt, defaultValue));
+      if (path == null) continue;
       try {
         Files.createDirectories(path);
         return path;
@@ -173,7 +185,13 @@ final class InteractiveConsole implements AutoCloseable {
   }
 
   private String read(String prompt, Path defaultValue) {
-    String value = lines.readLine(prompt + " [" + defaultValue + "]：").trim();
+    String value;
+    try {
+      value = lines.readLine(prompt + " [" + defaultValue + "]：").trim();
+    } catch (EndOfFileException | UserInterruptException cancelled) {
+      // Ctrl-D or Ctrl-C at a prompt cancels like Esc in a menu (RV-116).
+      throw new SelectionCancelledException();
+    }
     return value.isEmpty() ? defaultValue.toString() : value;
   }
 
@@ -271,7 +289,9 @@ final class InteractiveConsole implements AutoCloseable {
             terminalWidth("ScreenTrace"),
             Math.max(terminalWidth(title), terminalWidth(instructions)));
     for (String choice : choices) width = Math.max(width, terminalWidth(choice));
-    width += 4;
+    // Wider than the terminal, each line would wrap and the redraw would leave stray copies
+    // (RV-116); long labels are cut with "…" instead.
+    width = panelWidth(width + 4);
 
     output.add("╭" + "─".repeat(width) + "╮");
     output.add(boxLine("ScreenTrace", width, true));
@@ -287,6 +307,12 @@ final class InteractiveConsole implements AutoCloseable {
   }
 
   private static String boxLine(String text, int width, boolean centered) {
+    if (terminalWidth(text) > width - 2)
+      text =
+          new org.jline.utils.AttributedString(text)
+                  .columnSubSequence(0, Math.max(0, width - 3))
+                  .toString()
+              + "…";
     int padding = width - terminalWidth(text);
     int left = centered ? padding / 2 : 1;
     int right = padding - left;

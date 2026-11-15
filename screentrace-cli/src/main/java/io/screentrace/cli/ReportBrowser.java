@@ -238,11 +238,28 @@ final class ReportBrowser {
       try {
         Process process =
             new ProcessBuilder("reg", "query", key, "/ve").redirectErrorStream(true).start();
-        String output =
-            new String(
-                process.getInputStream().readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
+        // Read on another thread so the 5-second limit also covers a reg.exe that never closes its
+        // output (RV-117).
+        var reading =
+            java.util.concurrent.CompletableFuture.supplyAsync(
+                () -> {
+                  try {
+                    return new String(
+                        process.getInputStream().readAllBytes(),
+                        java.nio.charset.StandardCharsets.UTF_8);
+                  } catch (IOException unreadable) {
+                    return "";
+                  }
+                });
         if (!process.waitFor(5, TimeUnit.SECONDS)) {
           process.destroyForcibly();
+          continue;
+        }
+        String output;
+        try {
+          output = reading.get(5, TimeUnit.SECONDS);
+        } catch (java.util.concurrent.ExecutionException
+            | java.util.concurrent.TimeoutException unread) {
           continue;
         }
         Optional<Path> path = registryDefaultValue(output);
