@@ -49,10 +49,6 @@ public final class ScriptSources {
       boolean scopeProven,
       String kind) {}
 
-  private static final Set<String> VOID =
-      Set.of(
-          "input", "img", "br", "hr", "meta", "link", "area", "base", "col", "embed", "param",
-          "source", "track", "wbr");
   private static final Pattern PREFIX =
       Pattern.compile(
           "^\\$\\{([A-Za-z_][A-Za-z0-9_]*|pageContext\\.(?:request|servletContext)\\.contextPath)\\}(/[^$#<]*)$");
@@ -194,11 +190,11 @@ public final class ScriptSources {
                               || tag.attribute("scope").equals("page")),
                       name));
         }
-        if (!VOID.contains(name) && source.charAt(tag.end() - 1) != '/') scopes.add(name);
+        if (!MarkupTag.VOID_ELEMENTS.contains(name) && source.charAt(tag.end() - 1) != '/')
+          scopes.add(name);
       }
-      if (source.contains("<%")
-          && !source.replaceAll("(?s)<%--.*?--%>|<%@.*?%>", "").contains("<%")) continue;
-      if (source.replaceAll("(?s)<%--.*?--%>|<%@.*?%>", "").contains("<%"))
+      // A scriptlet (not a comment or directive) can define anything.
+      if (source.contains("<%") && source.replaceAll("(?s)<%--.*?--%>|<%@.*?%>", "").contains("<%"))
         unknownDefinitions = true;
     }
     Map<String, String> moduleFiles = new TreeMap<>();
@@ -564,7 +560,8 @@ public final class ScriptSources {
                     controller));
           }
         }
-        if (!VOID.contains(name) && source.charAt(tag.end() - 1) != '/') stack.add(element);
+        if (!MarkupTag.VOID_ELEMENTS.contains(name) && source.charAt(tag.end() - 1) != '/')
+          stack.add(element);
       }
     }
     return new Result(

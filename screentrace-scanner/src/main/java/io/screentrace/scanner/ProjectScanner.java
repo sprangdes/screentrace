@@ -392,10 +392,6 @@ public final class ProjectScanner {
           webRootsFor(configuredWebRoot(root)));
     }
 
-    public ProjectInventory withContextPaths(List<String> values, String source) {
-      return withContextPaths(values, 1);
-    }
-
     public ProjectInventory withContextPaths(List<String> values, int line) {
       return new ProjectInventory(
           root,

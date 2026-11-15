@@ -30,9 +30,9 @@ P1 處理結果見各項「狀態」（R53，[ADR 0144](adr/0144-r53-code-review
 
 建議修正順序：先處理 P1（RV-001～RV-011），再處理同一主題的 P2 群組（見文末「跨模組主題」），P3 依效能量測結果挑選。
 
-## 修正進度（2026-11-15，至 R70）
+## 修正進度（2026-11-15，至 R71）
 
-各項的處理結果寫在該項的「狀態」；每輪的內容與驗證見 [ROADMAP](ROADMAP.md) R53～R70。
+各項的處理結果寫在該項的「狀態」；每輪的內容與驗證見 [ROADMAP](ROADMAP.md) R53～R71。
 
 | 範圍 | 處理輪次 | 結果 |
 |---|---|---|
@@ -44,13 +44,12 @@ P1 處理結果見各項「狀態」（R53，[ADR 0144](adr/0144-r53-code-review
 | js／capture RV-501～522 | R54、R55、R57、R69 | 全部修正 |
 | viewer RV-601～612 | R53（RV-004）、R55（RV-602）、R56（RV-612）、R70 | 全部修正 |
 | P3 效能 RV-701～710 | R56、R61、R62（RV-702 部分） | RV-701、703～710 未處理 |
-| P3 重複程式碼與死碼 RV-801～808 | R65（RV-808） | RV-801～807 未處理 |
+| P3 重複程式碼與死碼 RV-801～808 | R65（RV-808）、R71 | 全部修正 |
 
 接下來依序處理：
 
-1. RV-801～807（重複程式碼與死碼）。
-2. parser-jsp 剩下的 RV-407、409、410、416（原因見各項狀態；RV-407、410 在 R68 試作後撤回）。
-3. RV-701、703～710 依量測結果挑選。
+1. parser-jsp 剩下的 RV-407、409、410、416（原因見各項狀態；RV-407、410 在 R68 試作後撤回）。
+2. RV-701、703～710 依量測結果挑選。
 
 每輪的做法：
 
@@ -300,13 +299,13 @@ P1 處理結果見各項「狀態」（R53，[ADR 0144](adr/0144-r53-code-review
 
 ## P3 — 重複程式碼與死碼
 
-- **RV-801** `SpringBootAnalyzer:302` 重複實作 `SpringMvcAnalyzer` 的 mapping 邏輯且已分歧（RV-202 兩處都要修）。
-- **RV-802** Struts dispatch 端點建構複製三份（`StrutsControls:328`、`StrutsActionInheritance:194`、`StrutsBehaviorProjection:87`），語意已分歧，可能產生重複端點節點。
-- **RV-803** Struts 目標正規化重複（`StrutsInteractions:141` 與 `:193`），第二段覆蓋 JSP parser 已解析的目標；`StrutsControls.moduleTarget` 重複 `switchActionTarget`；`StrutsActionInheritance:347` 重複 `StrutsWildcards.extendedMapping`。
-- **RV-804** parser-jsp：`JspProjectParser:156` 重複元件 id 推導（與 `MarkupAnalysis` 不同步就會靜默失效）；`literal()` 與 VOID 集合多份；`UrlGraphContribution:211` 寫死 `"<current-view>"`；javascript-request 修剪邏輯兩份。
-- **RV-805** viewer：端點 method／path fallback 三份（`screen-panel`、`api-page`）；root trigger 回溯三份（`map.ts`、`usage.ts`、`callerKind`）；`review.ts:256` 排序比較器兩份。
-- **RV-806** `react/styles.mjs:339` 重複 `resolveSpecifier` 且缺少 `..` 防護；`BuildVersions:107` 重複 `SafeProjectFiles.parseXml` 的強化 XML 設定。
-- **RV-807** 死碼：`SpringMvcAnalyzer` 的 `State.endpointByPath`、`EndpointReference.category`、`SpringBootAnalyzer.line`、`SpringControllerReturns.feedback` 的 `values`；`StrutsServletMappings.servletClass`、`StrutsTiles.sameJspPath`、`StrutsGraphSupport.lineAt`、`State.inputForward`；`MarkupGraphContribution:469` 每畫面 modal 解析被全域覆寫；`UrlVariableResolver:100` 兩邊相同的三元運算；`ScriptSources:191` 無效的 `continue`；`JspProjectParser:850` 未使用的 `line()` 與只被測試使用的 regex 前處理；`MarkupTag:205` 恆真條件；`element-styles.mjs:249` 重複過濾；`ProjectScanner:370` 被忽略的參數；`ComponentLibrary:288` 重複的隱私檢查。
+- **RV-801** `SpringBootAnalyzer:302` 重複實作 `SpringMvcAnalyzer` 的 mapping 邏輯且已分歧（RV-202 兩處都要修）。 **狀態：已修正（R71）：** controller 判斷、mapping 註解、回應本體判斷與路徑接合移到 `SpringMappings`，兩個 analyzer 共用；HTTP 方法原本就共用 `SpringMvcAnalyzer.httpMethods`。回傳畫面的解析仍各自實作（Boot 只取字面值，MVC 走 `SpringControllerReturns`），合併會改變 Boot 的輸出，未處理。
+- **RV-802** Struts dispatch 端點建構複製三份（`StrutsControls:328`、`StrutsActionInheritance:194`、`StrutsBehaviorProjection:87`），語意已分歧，可能產生重複端點節點。 **狀態：已修正（R71）：** 三處改用 `StrutsDispatch` 的同一組請求字串、屬性與 confidence（依 servlet mapping 是否 PROVEN）。三處的 id 本來就相同，不會產生重複節點；分歧在屬性：連結建立的 dispatch 端點缺 `category=ACTION` 與 `servletMappingStatus`，現在一致。
+- **RV-803** Struts 目標正規化重複（`StrutsInteractions:141` 與 `:193`），第二段覆蓋 JSP parser 已解析的目標；`StrutsControls.moduleTarget` 重複 `switchActionTarget`；`StrutsActionInheritance:347` 重複 `StrutsWildcards.extendedMapping`。 **狀態：已修正（R71）：** 兩段的判斷條件抽成 `strutsActionLink`／`relativeLink`；第二段需要保留（JSP parser 對 `html:link action` 只給原始值，沒有模組前綴），但改為正規化 JSP parser 解析後的值，`<c:url var>` 定義的變數不再被原始的 `${…}` 蓋掉。`moduleTarget` 改用 `switchActionTarget`，`extendedMapping` 改用 R67 的 `extendsTemplate`。
+- **RV-804** parser-jsp：`JspProjectParser:156` 重複元件 id 推導（與 `MarkupAnalysis` 不同步就會靜默失效）；`literal()` 與 VOID 集合多份；`UrlGraphContribution:211` 寫死 `"<current-view>"`；javascript-request 修剪邏輯兩份。 **狀態：已修正（R71）：** 元件 id 推導共用 `MarkupAnalysis.componentId`；`literal()` 與 VOID 集合集中在 `MarkupTag`（Struts 也引用）；`<current-view>` 改用常數；javascript-request 端點修剪共用 `UrlGraphContribution.removeUnusedRequestEndpoints`，並改用集合查詢。
+- **RV-805** viewer：端點 method／path fallback 三份（`screen-panel`、`api-page`）；root trigger 回溯三份（`map.ts`、`usage.ts`、`callerKind`）；`review.ts:256` 排序比較器兩份。 **狀態：已修正（R71）：** 新增 `endpointMethod`／`endpointPath`；root trigger 回溯共用 `map.ts` 的 `rootBehavior`；排序比較器共用 `byComponentKey`。
+- **RV-806** `react/styles.mjs:339` 重複 `resolveSpecifier` 且缺少 `..` 防護；`BuildVersions:107` 重複 `SafeProjectFiles.parseXml` 的強化 XML 設定。 **狀態：已修正（R71）：** `styles.mjs` 改用 `modules.mjs` 的 `resolveSpecifier`（含 `..` 防護）；`BuildVersions` 改用 `SafeProjectFiles.parseXml`。
+- **RV-807** 死碼：`SpringMvcAnalyzer` 的 `State.endpointByPath`、`EndpointReference.category`、`SpringBootAnalyzer.line`、`SpringControllerReturns.feedback` 的 `values`；`StrutsServletMappings.servletClass`、`StrutsTiles.sameJspPath`、`StrutsGraphSupport.lineAt`、`State.inputForward`；`MarkupGraphContribution:469` 每畫面 modal 解析被全域覆寫；`UrlVariableResolver:100` 兩邊相同的三元運算；`ScriptSources:191` 無效的 `continue`；`JspProjectParser:850` 未使用的 `line()` 與只被測試使用的 regex 前處理；`MarkupTag:205` 恆真條件；`element-styles.mjs:249` 重複過濾；`ProjectScanner:370` 被忽略的參數；`ComponentLibrary:288` 重複的隱私檢查。 **狀態：已修正（R71）：** 全部移除或簡化；`MarkupGraphContribution` 每畫面的彈窗解析改為只放入原始行為（結果一律由之後的全域解析決定），`reachableSource` 隨之移除；`ProjectInventory.withContextPaths(List, String)` 只有測試使用，已刪除；`JspProjectParser.preprocess` 只有測試使用，連同該斷言刪除。
 - **RV-808** `ScreenTraceCli:579,592`：SCREEN 數量算兩次且用兩種寫法（enum 比較與字串比較）。 **狀態：已修正（R65）。**
 
 ---

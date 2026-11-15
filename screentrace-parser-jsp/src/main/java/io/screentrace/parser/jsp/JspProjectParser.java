@@ -14,7 +14,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
-import java.util.regex.Pattern;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
@@ -26,9 +25,6 @@ import org.w3c.dom.NodeList;
 public final class JspProjectParser {
   private static final String PARSER = "JspProjectParser";
   public static final String CURRENT_VIEW_TARGET = "<current-view>";
-  private static final Pattern JSP_COMMENT = Pattern.compile("(?s)<%--.*?--%>");
-  private static final Pattern JSTL_URL =
-      Pattern.compile("(?is)<c:url\\b[^>]*?\\bvalue\\s*=\\s*(['\"])(.*?)\\1[^>]*/>");
 
   public JspAnalysis analyze(Path root, List<Path> files) throws IOException {
     return analyze(root, files, (bundle, key) -> null);
@@ -156,17 +152,10 @@ public final class JspProjectParser {
       }
       var componentKind = MarkupAnalysis.kind(tagName, tag.attributes());
       String componentId = null;
-      if (componentKind != null) {
-        var identity = new java.util.TreeMap<>(tag.attributes());
-        identity.put("tag", tagName);
-        String key = componentKind + identity.toString();
+      if (componentKind != null)
         componentId =
-            io.screentrace.core.StableGraphIds.component(
-                relative,
-                componentKind,
-                identity,
-                componentOccurrences.merge(key, 1, Integer::sum) - 1);
-      }
+            MarkupAnalysis.componentId(
+                relative, componentKind, tagName, tag.attributes(), componentOccurrences);
       int interactionStart = interactions.size();
       UrlVariableResolver.Resolution resolution = null;
       switch (tagName) {
@@ -182,7 +171,7 @@ public final class JspProjectParser {
               target(tag, "page", "file", "definition", "value", "template", "url");
           boolean inferredImport = false;
           if (tagName.equals("c:import")
-              && literal(includeTarget)
+              && MarkupTag.literal(includeTarget)
               && !includeTarget.startsWith("/")
               && resolveInclude(root, relative, includeTarget) == null) {
             List<Path> candidates = new ArrayList<>();
@@ -463,13 +452,13 @@ public final class JspProjectParser {
         // An absolute external import is a separate HTTP request and cannot write this request's
         // variables.
         if (imported
-            && literal(target)
+            && MarkupTag.literal(target)
             && tag.attribute("context") == null
             && target.matches("(?i)^(https?:)?//.*")) continue;
-        if (imported && literal(target) && tag.attribute("context") == null)
+        if (imported && MarkupTag.literal(target) && tag.attribute("context") == null)
           target = target.split("[?#]", 2)[0];
         else if (imported) target = null;
-        String child = literal(target) ? resolveInclude(root, path, target) : null;
+        String child = MarkupTag.literal(target) ? resolveInclude(root, path, target) : null;
         if (child == null) {
           result.add("*");
           continue;
@@ -499,15 +488,10 @@ public final class JspProjectParser {
       SourceLocation source,
       List<JspAnalysis.Include> includes,
       List<Diagnostic> diagnostics) {
-    if (literal(target))
+    if (MarkupTag.literal(target))
       includes.add(new JspAnalysis.Include(sourcePath, target, source, Confidence.CONFIRMED));
     else if (target != null)
       diagnostics.add(unresolved("JSP include cannot be resolved statically: " + target, source));
-  }
-
-  /** Removes JSP-only syntax and converts literal c:url tags before markup tokenization. */
-  static String preprocess(String source) {
-    return JSTL_URL.matcher(JSP_COMMENT.matcher(source).replaceAll("")).replaceAll("$2");
   }
 
   private static JspAnalysis.InteractionType linkType(MarkupTag tag, String target) {
@@ -661,7 +645,7 @@ public final class JspProjectParser {
     Confidence confidence =
         submitsCurrentView
             ? Confidence.INFERRED
-            : literal(resolved) ? Confidence.CONFIRMED : Confidence.UNRESOLVED;
+            : MarkupTag.literal(resolved) ? Confidence.CONFIRMED : Confidence.UNRESOLVED;
     interactions.add(
         new JspAnalysis.Interaction(
             viewPath, type, label, resolved, method, source, confidence, submitsCurrentView));
@@ -708,10 +692,6 @@ public final class JspProjectParser {
     int close = end.start();
     String text = source.substring(tag.end() + 1, close).replaceAll("<[^>]+>", "").strip();
     return text.isBlank() ? fallback : text;
-  }
-
-  private static boolean literal(String value) {
-    return value != null && !value.contains("${") && !value.contains("<%") && !value.contains("#{");
   }
 
   private static void parseTiles(
@@ -860,11 +840,5 @@ public final class JspProjectParser {
 
   private static String relative(Path root, Path file) {
     return root.relativize(file).toString().replace('\\', '/');
-  }
-
-  private static int line(String source, int offset) {
-    int line = 1;
-    for (int index = 0; index < offset; index++) if (source.charAt(index) == '\n') line++;
-    return line;
   }
 }

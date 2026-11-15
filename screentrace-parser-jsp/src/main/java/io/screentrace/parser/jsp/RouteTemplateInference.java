@@ -276,13 +276,7 @@ public final class RouteTemplateInference {
           new Diagnostic(
               message, Confidence.UNRESOLVED, calls.get(0).source(), "CONTEXT_PATH_HINT", proof));
     }
-    nodes
-        .entrySet()
-        .removeIf(
-            e ->
-                "javascript-request".equals(e.getValue().attributes().get("origin"))
-                    && behaviors.values().stream().noneMatch(b -> e.getKey().equals(b.targetId()))
-                    && edges.values().stream().noneMatch(edge -> e.getKey().equals(edge.to())));
+    UrlGraphContribution.removeUnusedRequestEndpoints(nodes, behaviors.values(), edges.values());
     return new ApplicationGraph(
         graph.application(),
         List.copyOf(nodes.values()),

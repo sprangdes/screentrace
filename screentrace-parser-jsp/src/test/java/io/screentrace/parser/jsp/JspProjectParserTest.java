@@ -112,10 +112,6 @@ class JspProjectParserTest {
 
     JspAnalysis analysis = new JspProjectParser().analyze(root, List.of(home, header));
 
-    assertEquals(
-        "<img src=\"/resources/images/back.jpg\" alt=\"Slide\">",
-        JspProjectParser.preprocess(
-            "<img src=\"<c:url value=\"/resources/images/back.jpg\"/>\" alt=\"Slide\">"));
     assertTrue(
         analysis.interactions().stream()
             .anyMatch(

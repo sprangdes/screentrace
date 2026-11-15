@@ -221,18 +221,11 @@ final class StrutsWildcards {
     GraphNode handler = state.nodes.get(mapping.handlerId());
     String value = handler == null ? null : handler.attributes().get("extends");
     if (value == null || value.isBlank()) return null;
-    String normalized = value.startsWith("//") ? value.substring(1) : value;
     return state.actionMappings.stream()
         .filter(
             candidate ->
                 candidate != mapping
-                    && candidate.module().equals(mapping.module())
-                    && (candidate.route().equals(value)
-                        || candidate.route().equals(normalized)
-                        || candidate.route().equals(mapping.module() + normalized)
-                        || Objects.equals(
-                            state.nodes.get(candidate.handlerId()).attributes().get("name"),
-                            value)))
+                    && StrutsActionInheritance.extendsTemplate(mapping, value, candidate, state))
         .findFirst()
         .orElse(null);
   }

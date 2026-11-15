@@ -147,21 +147,9 @@ final class StrutsInteractions {
                 attrs.put("target", action);
               }
             } else if (target != null) {
-              if (Set.of(
-                          "html:link",
-                          "html-el:link",
-                          "html:rewrite",
-                          "html-el:rewrite",
-                          "logic:redirect",
-                          "logic:forward")
-                      .contains(name)
-                  && tag.attribute("action") != null)
+              if (strutsActionLink(name, tag))
                 target = normalizeStrutsAction(target, moduleValue, state);
-              else if (Set.of("a", "form", "html:link", "html-el:link").contains(name)
-                  && !target.startsWith("/")
-                  && !target.startsWith("#")
-                  && !target.matches("(?is)^[a-z][a-z0-9+.-]*:.*")
-                  && tag.attribute("action") == null)
+              else if (relativeLink(name, tag, target))
                 target = resolveRelativeJspUrl(path, target, state.inventory.webRoots());
               if (target != null && target.toLowerCase(Locale.ROOT).endsWith(".faces")) {
                 String facesTarget = normalizeFacesPath(target, state);
@@ -207,27 +195,21 @@ final class StrutsInteractions {
               }
             }
             if (target != null) {
-              if (Set.of(
-                          "html:link",
-                          "html-el:link",
-                          "html:rewrite",
-                          "html-el:rewrite",
-                          "logic:redirect",
-                          "logic:forward")
-                      .contains(name)
-                  && tag.attribute("action") != null)
-                target = normalizeStrutsAction(tag.attribute("action"), moduleValue, state);
+              if (strutsActionLink(name, tag))
+                // The JSP parser resolved the action's variables; Struts adds the module and the
+                // servlet suffix.
+                target =
+                    normalizeStrutsAction(
+                        resolvedLinkAction(tag, resolved).orElse(tag.attribute("action")),
+                        moduleValue,
+                        state);
               else if ((name.equals("html:submit")
                       || name.equals("html:button")
                       || name.equals("button")
                       || name.equals("input"))
                   && tag.attribute("formaction") == null
                   && action != null) target = action;
-              else if (Set.of("a", "form", "html:link", "html-el:link").contains(name)
-                  && !target.startsWith("/")
-                  && !target.startsWith("#")
-                  && !target.matches("(?is)^[a-z][a-z0-9+.-]*:.*")
-                  && tag.attribute("action") == null)
+              else if (relativeLink(name, tag, target))
                 target = resolveRelativeJspUrl(path, target, state.inventory.webRoots());
               attrs.put("target", target);
             }
@@ -519,5 +501,40 @@ final class StrutsInteractions {
         ? null
         : (prefix.endsWith("/") ? prefix.substring(0, prefix.length() - 1) : prefix)
             + (page.startsWith("/") ? page : "/" + page);
+  }
+
+  /** A Struts tag whose `action` names an action mapping. */
+  private static boolean strutsActionLink(String name, MarkupTag tag) {
+    return Set.of(
+                "html:link",
+                "html-el:link",
+                "html:rewrite",
+                "html-el:rewrite",
+                "logic:redirect",
+                "logic:forward")
+            .contains(name)
+        && tag.attribute("action") != null;
+  }
+
+  /** A plain link or form whose target is relative to the JSP that holds it. */
+  private static boolean relativeLink(String name, MarkupTag tag, String target) {
+    return Set.of("a", "form", "html:link", "html-el:link").contains(name)
+        && !target.startsWith("/")
+        && !target.startsWith("#")
+        && !target.matches("(?is)^[a-z][a-z0-9+.-]*:.*")
+        && tag.attribute("action") == null;
+  }
+
+  /**
+   * The `action` the JSP parser resolved for this tag: only when the tag has no `href` or `page`,
+   * which the parser would read first, and only a literal result.
+   */
+  private static Optional<String> resolvedLinkAction(
+      MarkupTag tag, Optional<JspAnalysis.Interaction> resolved) {
+    if (tag.attribute("href") != null || tag.attribute("page") != null) return Optional.empty();
+    return resolved
+        .filter(item -> !item.submitsCurrentView())
+        .map(JspAnalysis.Interaction::target)
+        .filter(MarkupTag::literal);
   }
 }

@@ -19,8 +19,7 @@ class WorkspaceContextEvidenceTest {
     Files.createDirectories(project);
     var settings = workspace.resolve("config.json");
     Files.writeString(settings, "{\"contextPaths\":{\"target-project\":[\"/shop\"]}}");
-    var inventory =
-        new ProjectScanner().scan(project).withContextPaths(List.of("/shop"), settings.toString());
+    var inventory = new ProjectScanner().scan(project).withContextPaths(List.of("/shop"), 1);
     var context = UrlResolution.context(inventory, List.of());
     var result =
         UrlResolution.resolve(
@@ -58,10 +57,7 @@ class WorkspaceContextEvidenceTest {
     var project = workspace.resolve("project");
     Files.createDirectories(project);
     String home = "/Users/fixture-secret-home";
-    var inventory =
-        new ProjectScanner()
-            .scan(project)
-            .withContextPaths(List.of("/shop"), home + "/.screentrace/config.json");
+    var inventory = new ProjectScanner().scan(project).withContextPaths(List.of("/shop"), 1);
     var result =
         UrlResolution.resolve(
             "/shop/api",

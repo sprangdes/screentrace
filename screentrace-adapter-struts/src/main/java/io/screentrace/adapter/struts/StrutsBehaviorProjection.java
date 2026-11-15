@@ -97,9 +97,8 @@ final class StrutsBehaviorProjection {
       }
       var source =
           new SourceLocation(type.source().file(), methods.get(0).getBegin().orElseThrow().line);
-      String
-          endpoint =
-              StableGraphIds.endpoint("ANY", path + "?" + mapping.parameter() + "=" + command),
+      String request = StrutsDispatch.dispatchRequest(path, mapping, command),
+          endpoint = StableGraphIds.endpoint("ANY", request),
           handler = ApplicationGraph.id(NodeType.HANDLER, mapping.type() + "#" + command);
       var proof = new ArrayList<>(b.evidence());
       proof.add(
@@ -111,9 +110,6 @@ final class StrutsBehaviorProjection {
       // The servlet mapping decides whether this public path is proven; a node another pass
       // already built (possibly UNRESOLVED or AMBIGUOUS) keeps its own status and evidence
       // (RV-308).
-      var servlet = state.servletMappings.get(mapping.module());
-      boolean proven =
-          servlet != null && servlet.status() == StrutsModel.ServletMappingStatus.PROVEN;
       nodes.putIfAbsent(
           handler,
           new GraphNode(
@@ -129,22 +125,10 @@ final class StrutsBehaviorProjection {
           new GraphNode(
               endpoint,
               NodeType.ENDPOINT,
-              "ANY " + path + "?" + mapping.parameter() + "=" + command,
-              Map.of(
-                  "path",
-                  path,
-                  "httpMethod",
-                  "ANY",
-                  "parameter",
-                  mapping.parameter(),
-                  "parameterValue",
-                  command,
-                  "category",
-                  "ACTION",
-                  "servletMappingStatus",
-                  proven ? "PROVEN" : "UNRESOLVED"),
+              "ANY " + request,
+              StrutsDispatch.dispatchEndpointAttributes(path, mapping, command, state),
               mapping.source(),
-              proven ? Confidence.CONFIRMED : Confidence.INFERRED,
+              StrutsDispatch.dispatchEndpointConfidence(mapping, Confidence.CONFIRMED, state),
               proof));
       String handled =
           ApplicationGraph.id(NodeType.COMPONENT, "dispatch:" + endpoint + ":" + handler);

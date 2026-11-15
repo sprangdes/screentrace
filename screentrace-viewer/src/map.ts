@@ -1,4 +1,20 @@
 import { Graph, Node, Behavior, requireGraph } from './contracts';
+/** The behavior that starts `b`'s chain: `b` itself when it has a trigger, otherwise its
+ * nearest ancestor with one (or the last one reachable), stopping at a cycle. */
+export function rootBehavior(behaviors: Map<string, Behavior>, b: Behavior): Behavior {
+  let parent = b;
+  const seen = new Set<string>();
+  while (
+    !parent.triggerId &&
+    parent.parentId &&
+    behaviors.has(parent.parentId) &&
+    !seen.has(parent.id)
+  ) {
+    seen.add(parent.id);
+    parent = behaviors.get(parent.parentId)!;
+  }
+  return parent;
+}
 export interface Relation {
   from: string;
   to: string;
@@ -79,20 +95,7 @@ export function indexGraph(input: Graph): Index {
       }
   };
   const behaviors = new Map((graph.behaviors || []).map((b) => [b.id, b]));
-  const rootTrigger = (b: Behavior) => {
-    let parent = b;
-    const seen = new Set<string>();
-    while (
-      !parent.triggerId &&
-      parent.parentId &&
-      behaviors.has(parent.parentId) &&
-      !seen.has(parent.id)
-    ) {
-      seen.add(parent.id);
-      parent = behaviors.get(parent.parentId)!;
-    }
-    return parent.triggerId;
-  };
+  const rootTrigger = (b: Behavior) => rootBehavior(behaviors, b).triggerId;
   const requests = (types: string[]) =>
     new Set(
       [...behaviors.values()]

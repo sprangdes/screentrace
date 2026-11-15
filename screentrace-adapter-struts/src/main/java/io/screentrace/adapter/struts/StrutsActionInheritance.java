@@ -211,30 +211,17 @@ final class StrutsActionInheritance {
                   .toList();
       if (methods.size() != 1) return;
       String publicRoute = publicPath(destination.route(), destination.module(), state),
-          specific =
-              StableGraphIds.endpoint(
-                  "ANY", publicRoute + "?" + destination.parameter() + "=" + dispatch),
+          request = StrutsDispatch.dispatchRequest(publicRoute, destination, dispatch),
+          specific = StableGraphIds.endpoint("ANY", request),
           handler = ApplicationGraph.id(NodeType.HANDLER, destination.type() + "#" + method);
       addNode(
           state,
           specific,
           NodeType.ENDPOINT,
-          "ANY " + publicRoute + "?" + destination.parameter() + "=" + dispatch,
-          Map.of(
-              "path",
-              publicRoute,
-              "httpMethod",
-              "ANY",
-              "category",
-              "ACTION",
-              "parameter",
-              destination.parameter(),
-              "parameterValue",
-              dispatch,
-              "servletMappingStatus",
-              provenMapping(destination, state) ? "PROVEN" : "UNRESOLVED"),
+          "ANY " + request,
+          StrutsDispatch.dispatchEndpointAttributes(publicRoute, destination, dispatch, state),
           targetSource,
-          provenMapping(destination, state) ? Confidence.CONFIRMED : Confidence.INFERRED);
+          StrutsDispatch.dispatchEndpointConfidence(destination, Confidence.CONFIRMED, state));
       addNode(
           state,
           handler,
@@ -345,14 +332,8 @@ final class StrutsActionInheritance {
     return effective;
   }
 
-  private static boolean provenMapping(Mapping mapping, State state) {
-    var servlet = state.servletMappings.get(mapping.module());
-    return servlet != null && servlet.status() == StrutsModel.ServletMappingStatus.PROVEN;
-  }
-
   /** True when {@code child}'s extends="{@code value}" names {@code template}. */
-  private static boolean extendsTemplate(
-      Mapping child, String value, Mapping template, State state) {
+  static boolean extendsTemplate(Mapping child, String value, Mapping template, State state) {
     String normalized = value.startsWith("//") ? value.substring(1) : value;
     GraphNode handler = state.nodes.get(template.handlerId());
     return template.module().equals(child.module())

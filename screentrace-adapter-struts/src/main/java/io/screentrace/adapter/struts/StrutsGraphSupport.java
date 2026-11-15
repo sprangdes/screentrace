@@ -15,13 +15,6 @@ import org.w3c.dom.*;
 final class StrutsGraphSupport {
   private StrutsGraphSupport() {}
 
-  static int lineAt(String source, int offset) {
-    int line = 1;
-    for (int i = 0; i < Math.min(offset, source.length()); i++)
-      if (source.charAt(i) == '\n') line++;
-    return line;
-  }
-
   static String directText(Element parent, String name) {
     for (Node child = parent.getFirstChild(); child != null; child = child.getNextSibling())
       if (child instanceof Element element && name.equals(element.getTagName()))

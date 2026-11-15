@@ -467,42 +467,8 @@ public final class MarkupGraphContribution {
                   rule.evidence()));
         }
       }
-      for (var behavior : markup.behaviors()) {
-        String selector = behavior.expression();
-        List<GraphNode> targets =
-            nodes.values().stream()
-                .filter(
-                    n ->
-                        n.type() == NodeType.COMPONENT
-                            && "MODAL".equals(n.attributes().get("kind"))
-                            && selector != null
-                            && selector.equals("#" + n.attributes().get("id")))
-                .filter(
-                    n ->
-                        ownedBy(screen, n.id(), edges)
-                            || reachableSource(path, n.source().file(), jsp, new HashSet<>()))
-                .toList();
-        Confidence status =
-            targets.size() == 1
-                ? Confidence.CONFIRMED
-                : targets.size() > 1 ? Confidence.AMBIGUOUS : Confidence.UNRESOLVED;
-        behaviors.put(
-            behavior.id(),
-            new Behavior(
-                behavior.id(),
-                behavior.triggerId(),
-                behavior.event(),
-                behavior.type(),
-                targets.size() == 1 ? targets.get(0).id() : null,
-                behavior.guard(),
-                behavior.parentId(),
-                selector,
-                List.of(
-                    MarkupAnalysis.evidence(
-                        behavior.evidence().get(0).source(),
-                        status,
-                        "彈窗候選：" + targets.stream().map(GraphNode::id).toList()))));
-      }
+      // Modal targets are resolved once every screen's includes are projected (see analyze).
+      for (var behavior : markup.behaviors()) behaviors.put(behavior.id(), behavior);
     }
     for (var include : jsp.includes())
       if (include.sourceViewPath().equals(path)) {
@@ -522,18 +488,6 @@ public final class MarkupGraphContribution {
             stack);
       }
     stack.remove(path);
-  }
-
-  private static boolean reachableSource(
-      String path, String target, JspAnalysis jsp, Set<String> seen) {
-    if (path.equals(target)) return true;
-    if (!seen.add(path)) return false;
-    for (var include : jsp.includes())
-      if (include.sourceViewPath().equals(path)) {
-        String child = resolve(path, include.targetPath(), jsp);
-        if (child != null && reachableSource(child, target, jsp, seen)) return true;
-      }
-    return false;
   }
 
   private static boolean ownedBy(String screen, String component, RelationshipsByFrom edges) {

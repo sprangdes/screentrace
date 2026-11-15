@@ -41,15 +41,6 @@ import org.w3c.dom.NodeList;
 
 /** Static analysis for annotation-based, server-rendered Spring MVC applications. */
 public final class SpringMvcAnalyzer {
-  private static final Set<String> MAPPINGS =
-      Set.of(
-          "RequestMapping",
-          "GetMapping",
-          "PostMapping",
-          "PutMapping",
-          "DeleteMapping",
-          "PatchMapping");
-
   public ApplicationGraph analyze(ProjectInventory inventory) throws IOException {
     State state = new State(inventory.root(), inventory.javaFiles());
     ParsedJavaUnits units = new ParsedJavaUnits(inventory.root());
@@ -260,9 +251,7 @@ public final class SpringMvcAnalyzer {
     try {
       for (ClassOrInterfaceDeclaration type :
           units.parse(file).findAll(ClassOrInterfaceDeclaration.class)) {
-        AnnotationExpr controller = annotation(type, "Controller");
-        boolean rest = annotation(type, "RestController") != null;
-        if (controller == null && !rest) continue;
+        if (!SpringMappings.isController(type)) continue;
         var declaredBases = SpringMappingPaths.of(annotation(type, "RequestMapping"), type);
         SpringMappingPaths.report(
             declaredBases,
@@ -272,11 +261,7 @@ public final class SpringMvcAnalyzer {
         List<String> bases = SpringMappingPaths.effective(declaredBases);
         Map<String, String> constants = viewConstants(type);
         for (MethodDeclaration method : type.getMethods()) {
-          AnnotationExpr mapping =
-              method.getAnnotations().stream()
-                  .filter(a -> MAPPINGS.contains(a.getNameAsString()))
-                  .findFirst()
-                  .orElse(null);
+          AnnotationExpr mapping = SpringMappings.mapping(method).orElse(null);
           if (mapping != null)
             addMapping(
                 type,
@@ -285,18 +270,7 @@ public final class SpringMvcAnalyzer {
                 relative,
                 bases,
                 constants,
-                rest
-                    || annotation(type, "ResponseBody") != null
-                    || annotation(method, "ResponseBody") != null
-                    || method.getType().isClassOrInterfaceType()
-                        && method
-                            .getType()
-                            .asClassOrInterfaceType()
-                            .getNameAsString()
-                            .equals("ResponseEntity")
-                    || (annotation(type, "ResponseStatus") != null
-                            || annotation(method, "ResponseStatus") != null)
-                        && method.getType().isVoidType(),
+                SpringMappings.respondsWithBody(type, method),
                 state);
         }
       }
@@ -379,7 +353,7 @@ public final class SpringMvcAnalyzer {
     for (String httpMethod : httpMethods(mapping))
       for (String base : bases)
         for (String child : children) {
-          String path = join(base, child);
+          String path = SpringMappings.join(base, child);
           String endpointId =
               ApplicationGraph.id(NodeType.ENDPOINT, httpMethod + " " + path + ":" + handlerId);
           addNode(
@@ -402,9 +376,7 @@ public final class SpringMvcAnalyzer {
                               : "MVC_SCREEN"),
                   source,
                   Confidence.CONFIRMED));
-          state.endpointByPath.putIfAbsent(path, endpointId);
-          EndpointReference endpoint =
-              new EndpointReference(endpointId, path, httpMethod, rest ? "REST_API" : "MVC_SCREEN");
+          EndpointReference endpoint = new EndpointReference(endpointId, path, httpMethod);
           state.endpoints.add(endpoint);
           edge(state, EdgeType.HANDLED_BY, endpointId, handlerId, Confidence.CONFIRMED, source);
           state.apiContracts.add(
@@ -788,8 +760,7 @@ public final class SpringMvcAnalyzer {
             Map.of("httpMethod", "ANY", "path", path, "category", "MVC_SCREEN"),
             source,
             Confidence.CONFIRMED));
-    state.endpointByPath.putIfAbsent(path, endpointId);
-    state.endpoints.add(new EndpointReference(endpointId, path, "ANY", "MVC_SCREEN"));
+    state.endpoints.add(new EndpointReference(endpointId, path, "ANY"));
     edge(state, EdgeType.HANDLED_BY, endpointId, handlerId, Confidence.CONFIRMED, source);
     String view = property(bean, "viewName");
     if (view == null || view.isBlank()) {
@@ -808,7 +779,7 @@ public final class SpringMvcAnalyzer {
       state
           .endpointsByScreen
           .computeIfAbsent(screenId, ignored -> new ArrayList<>())
-          .add(new EndpointReference(endpointId, path, "ANY", "MVC_SCREEN"));
+          .add(new EndpointReference(endpointId, path, "ANY"));
       state
           .screensByEndpoint
           .computeIfAbsent(endpointId, ignored -> new ArrayList<>())
@@ -845,15 +816,14 @@ public final class SpringMvcAnalyzer {
               Map.of("httpMethod", "GET", "path", path, "category", "MVC_SCREEN"),
               source,
               Confidence.CONFIRMED));
-      state.endpointByPath.putIfAbsent(path, endpointId);
-      state.endpoints.add(new EndpointReference(endpointId, path, "GET", "MVC_SCREEN"));
+      state.endpoints.add(new EndpointReference(endpointId, path, "GET"));
       edge(state, EdgeType.HANDLED_BY, endpointId, handlerId, Confidence.CONFIRMED, source);
       String screenId = screenForView(view, source, state);
       edge(state, EdgeType.RENDERS, handlerId, screenId, Confidence.CONFIRMED, source);
       state
           .endpointsByScreen
           .computeIfAbsent(screenId, ignored -> new ArrayList<>())
-          .add(new EndpointReference(endpointId, path, "GET", "MVC_SCREEN"));
+          .add(new EndpointReference(endpointId, path, "GET"));
       state
           .screensByEndpoint
           .computeIfAbsent(endpointId, ignored -> new ArrayList<>())
@@ -1539,11 +1509,6 @@ public final class SpringMvcAnalyzer {
     return values;
   }
 
-  private static String join(String base, String child) {
-    String path = (child.isEmpty() ? base : base + "/" + child).replaceAll("/{2,}", "/");
-    return path.isEmpty() ? "/" : path.startsWith("/") ? path : "/" + path;
-  }
-
   private static void addNode(State state, GraphNode node) {
     if (state.nodes.stream().noneMatch(n -> n.id().equals(node.id()))) {
       List<ApplicationGraph.AnalysisEvidence> proof =
@@ -1604,7 +1569,6 @@ public final class SpringMvcAnalyzer {
     private final List<Diagnostic> diagnostics = new ArrayList<>();
     private final List<ApplicationGraph.ApiContract> apiContracts = new ArrayList<>();
     private final ApiContractExtractor contracts;
-    private final Map<String, String> endpointByPath = new HashMap<>();
     private final List<EndpointReference> endpoints = new ArrayList<>();
     private final Map<String, List<EndpointReference>> endpointsByScreen = new HashMap<>();
     private final Map<String, List<String>> screensByEndpoint = new HashMap<>();
@@ -1622,7 +1586,7 @@ public final class SpringMvcAnalyzer {
     }
   }
 
-  private record EndpointReference(String id, String path, String httpMethod, String category) {}
+  private record EndpointReference(String id, String path, String httpMethod) {}
 
   private record EndpointMatch(String endpointId, Confidence confidence) {}
 

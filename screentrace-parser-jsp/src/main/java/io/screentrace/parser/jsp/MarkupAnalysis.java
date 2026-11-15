@@ -45,10 +45,6 @@ public record MarkupAnalysis(
       String nestedPath,
       String linkId) {}
 
-  private static final Set<String> VOID =
-      Set.of(
-          "input", "img", "br", "hr", "meta", "link", "area", "base", "col", "embed", "param",
-          "source", "track", "wbr");
   private static final Set<String> CONDITIONS =
       Set.of(
           "c:if",
@@ -102,12 +98,7 @@ public record MarkupAnalysis(
       String condition = CONDITIONS.contains(tag) ? condition(token) : null;
       ComponentKind kind = kind(tag, attrs);
       if (kind != null) {
-        Map<String, String> identity = new TreeMap<>(attrs);
-        identity.put("tag", tag);
-        String occurrenceKey = kind + identity.toString();
-        String id =
-            StableGraphIds.component(
-                path, kind, identity, occurrences.merge(occurrenceKey, 1, Integer::sum) - 1);
+        String id = componentId(path, kind, tag, attrs, occurrences);
         if (kind == ComponentKind.FORM) {
           form = id;
           model = first(attrs, "modelattribute", "commandname", "name");
@@ -163,7 +154,7 @@ public record MarkupAnalysis(
               new SourceLocation(path, token.attributeLine("type")));
       }
       boolean selfClosing = token.end() > 0 && text.charAt(token.end() - 1) == '/';
-      if (!selfClosing && !VOID.contains(tag) && !tag.startsWith("@")) {
+      if (!selfClosing && !MarkupTag.VOID_ELEMENTS.contains(tag) && !tag.startsWith("@")) {
         stack.add(
             new Scope(
                 tag,
@@ -241,8 +232,24 @@ public record MarkupAnalysis(
             List.of(evidence(source, status, "HTML5 屬性：" + kind))));
   }
 
+  /**
+   * The id of the next component of `kind` written as `tag` with `attributes` in `path`. The JSP
+   * parser derives the same ids for its interactions, so both must count occurrences this way.
+   */
+  static String componentId(
+      String path,
+      ComponentKind kind,
+      String tag,
+      Map<String, String> attributes,
+      Map<String, Integer> occurrences) {
+    Map<String, String> identity = new TreeMap<>(attributes);
+    identity.put("tag", tag);
+    return StableGraphIds.component(
+        path, kind, identity, occurrences.merge(kind + identity.toString(), 1, Integer::sum) - 1);
+  }
+
   static boolean dynamic(String value) {
-    return value != null && (value.contains("${") || value.contains("#{") || value.contains("<%"));
+    return value != null && !MarkupTag.literal(value);
   }
 
   static AnalysisEvidence evidence(SourceLocation source, Confidence confidence, String detail) {

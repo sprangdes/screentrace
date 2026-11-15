@@ -350,7 +350,7 @@ final class StrutsControls {
           // A MappingDispatchAction's method comes from the mapping, not from a request
           // parameter, so its request is the plain path (RV-316).
           boolean byMapping = mapping.family().equals("MappingDispatchAction");
-          String request = byMapping ? path : path + "?" + mapping.parameter() + "=" + value;
+          String request = byMapping ? path : StrutsDispatch.dispatchRequest(path, mapping, value);
           endpoint =
               byMapping
                   ? state.endpointIds.getOrDefault(path, StableGraphIds.endpoint("ANY", path))
@@ -362,17 +362,11 @@ final class StrutsControls {
               "ANY " + request,
               byMapping
                   ? Map.of("httpMethod", "ANY", "path", path)
-                  : Map.of(
-                      "httpMethod",
-                      "ANY",
-                      "path",
-                      path,
-                      "parameter",
-                      mapping.parameter(),
-                      "parameterValue",
-                      value),
+                  : StrutsDispatch.dispatchEndpointAttributes(path, mapping, value, state),
               control.source(),
-              status);
+              byMapping
+                  ? status
+                  : StrutsDispatch.dispatchEndpointConfidence(mapping, status, state));
           edge(state, EdgeType.HANDLED_BY, endpoint, handlerId, status, source);
           for (MethodCallExpr call : declaration.findAll(MethodCallExpr.class))
             if (call.getNameAsString().equals("findForward")
@@ -483,21 +477,10 @@ final class StrutsControls {
               : explicitModule;
       if (!target.startsWith(module + "/")) target = module + target;
     }
-    String query = target.contains("?") ? target.substring(target.indexOf('?') + 1) : "";
-    if (!query.isBlank()) {
-      Map<String, String> values = new TreeMap<>();
-      for (String pair : MarkupTag.decodeAmpersands(query).split("&")) {
-        String[] parts = pair.split("=", 2);
-        if (parts.length == 2) values.put(parts[0], parts[1]);
-      }
-      String prefix = values.get("prefix"), page = values.get("page");
-      // Only a SwitchAction reads prefix and page; a search link with ?prefix=ab&page=2 is an
-      // ordinary request (RV-315).
-      if (prefix != null && page != null && targetsSwitchAction(target, state))
-        return (prefix.endsWith("/") ? prefix.substring(0, prefix.length() - 1) : prefix)
-            + (page.startsWith("/") ? page : "/" + page);
-    }
-    return target;
+    // Only a SwitchAction reads prefix and page; a search link with ?prefix=ab&page=2 is an
+    // ordinary request (RV-315).
+    String switched = StrutsInteractions.switchActionTarget(target);
+    return switched != null && targetsSwitchAction(target, state) ? switched : target;
   }
 
   private static boolean targetsSwitchAction(String target, State state) {

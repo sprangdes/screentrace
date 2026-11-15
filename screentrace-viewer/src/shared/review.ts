@@ -213,6 +213,20 @@ export function effectiveComponent(
     ? 'INHERITED_REMOVE'
     : componentDecision(state, screen, component);
 }
+/** Screen, then component, in code-unit order (stable across locales). */
+const byComponentKey = (
+  a: { screenId: string; componentId: string },
+  b: { screenId: string; componentId: string },
+) =>
+  a.screenId < b.screenId
+    ? -1
+    : a.screenId > b.screenId
+      ? 1
+      : a.componentId < b.componentId
+        ? -1
+        : a.componentId > b.componentId
+          ? 1
+          : 0;
 export function buttonComponents(graph: Graph): { screenId: string; componentId: string }[] {
   const index = indexGraph(graph),
     result: { screenId: string; componentId: string }[] = [];
@@ -229,17 +243,7 @@ export function buttonComponents(graph: Graph): { screenId: string; componentId:
     )
       for (const screenId of owners) result.push({ screenId, componentId });
   }
-  return result.sort((a, b) =>
-    a.screenId < b.screenId
-      ? -1
-      : a.screenId > b.screenId
-        ? 1
-        : a.componentId < b.componentId
-          ? -1
-          : a.componentId > b.componentId
-            ? 1
-            : 0,
-  );
+  return result.sort(byComponentKey);
 }
 export function markableComponents(graph: Graph): { screenId: string; componentId: string }[] {
   const index = indexGraph(graph),
@@ -253,17 +257,7 @@ export function markableComponents(graph: Graph): { screenId: string; componentI
     if (triggers.has(componentId))
       for (const screenId of owners)
         result.set(JSON.stringify([screenId, componentId]), { screenId, componentId });
-  return [...result.values()].sort((a, b) =>
-    a.screenId < b.screenId
-      ? -1
-      : a.screenId > b.screenId
-        ? 1
-        : a.componentId < b.componentId
-          ? -1
-          : a.componentId > b.componentId
-            ? 1
-            : 0,
-  );
+  return [...result.values()].sort(byComponentKey);
 }
 export function statistics(graph: Graph, state: ReviewState) {
   const screens = { UNDECIDED: 0, KEEP: 0, REMOVE: 0 },

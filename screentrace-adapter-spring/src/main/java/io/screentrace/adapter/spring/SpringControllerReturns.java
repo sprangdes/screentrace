@@ -192,7 +192,6 @@ final class SpringControllerReturns {
         .filter(p -> Set.of("Model", "ModelMap").contains(p.getType().asString()))
         .forEach(p -> models.add(p.getNameAsString()));
     Node block = use.getParentNode().orElse(null);
-    Map<String, String> values = new TreeMap<>();
     List<AnalysisEvidence> result = new ArrayList<>();
     for (var call : method.findAll(MethodCallExpr.class))
       if (belongsTo(call, method)
@@ -239,7 +238,6 @@ final class SpringControllerReturns {
         }
         if (value == null) continue;
         if (!key.matches("[A-Za-z_][A-Za-z0-9_]*") || value.length() > 4000) continue;
-        values.put(key, value);
         try {
           result.add(
               new AnalysisEvidence(

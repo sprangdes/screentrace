@@ -9,6 +9,17 @@ import java.util.Map;
 
 /** Minimal quote-aware JSP markup tokenizer for element names and literal attributes. */
 public final class MarkupTag {
+  /** HTML elements that never have content or an end tag. */
+  public static final java.util.Set<String> VOID_ELEMENTS =
+      java.util.Set.of(
+          "input", "img", "br", "hr", "meta", "link", "area", "base", "col", "embed", "param",
+          "source", "track", "wbr");
+
+  /** Whether a markup value is plain text: no EL, JSF or JSP expression in it. */
+  public static boolean literal(String value) {
+    return value != null && !value.contains("${") && !value.contains("#{") && !value.contains("<%");
+  }
+
   private final String name;
   private final Map<String, String> attributes;
   private final int line;
@@ -211,7 +222,7 @@ public final class MarkupTag {
     for (int index = start + 1; index < source.length(); index++) {
       char current = source.charAt(index);
       if (quote != 0) {
-        if (current == '<' && (source.startsWith("<%", index) || source.startsWith("<", index))) {
+        if (current == '<') {
           int nested = nestedEnd(source, index);
           if (nested >= 0) {
             index = nested;

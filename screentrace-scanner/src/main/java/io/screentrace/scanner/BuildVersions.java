@@ -1,7 +1,6 @@
 package io.screentrace.scanner;
 
 import java.io.IOException;
-import java.io.StringReader;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -10,12 +9,9 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
-import javax.xml.XMLConstants;
-import javax.xml.parsers.DocumentBuilderFactory;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
-import org.xml.sax.InputSource;
 
 /**
  * Declared dependency versions read from the project's Maven POMs; nothing is downloaded or
@@ -127,38 +123,8 @@ public final class BuildVersions {
     return result;
   }
 
+  /** The shared hardened parser; a POM never needs namespaces here. */
   private static Document parse(String xml) throws IOException {
-    try {
-      var factory = DocumentBuilderFactory.newInstance();
-      factory.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
-      factory.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
-      factory.setFeature("http://xml.org/sax/features/external-general-entities", false);
-      factory.setFeature("http://xml.org/sax/features/external-parameter-entities", false);
-      factory.setXIncludeAware(false);
-      factory.setAttribute(XMLConstants.ACCESS_EXTERNAL_DTD, "");
-      factory.setAttribute(XMLConstants.ACCESS_EXTERNAL_SCHEMA, "");
-      factory.setExpandEntityReferences(false);
-      var builder = factory.newDocumentBuilder();
-      builder.setErrorHandler(
-          new org.xml.sax.ErrorHandler() {
-            @Override
-            public void warning(org.xml.sax.SAXParseException exception) {}
-
-            @Override
-            public void error(org.xml.sax.SAXParseException exception)
-                throws org.xml.sax.SAXParseException {
-              throw exception;
-            }
-
-            @Override
-            public void fatalError(org.xml.sax.SAXParseException exception)
-                throws org.xml.sax.SAXParseException {
-              throw exception;
-            }
-          });
-      return builder.parse(new InputSource(new StringReader(xml)));
-    } catch (javax.xml.parsers.ParserConfigurationException | org.xml.sax.SAXException error) {
-      throw new IOException("POM could not be parsed safely", error);
-    }
+    return SafeProjectFiles.parseXml(xml, false);
   }
 }

@@ -1,24 +1,12 @@
 import { Graph, Behavior } from './contracts';
-import { Index, indexGraph } from './map';
+import { Index, indexGraph, rootBehavior } from './map';
 export interface Caller {
   screenId: string;
   componentId?: string;
   behaviorId?: string;
 }
 export function rootTrigger(index: Index, b: Behavior): string | undefined {
-  let parent = b;
-  const seen = new Set<string>(),
-    behaviors = index.behaviors;
-  while (
-    !parent.triggerId &&
-    parent.parentId &&
-    !seen.has(parent.id) &&
-    behaviors.has(parent.parentId)
-  ) {
-    seen.add(parent.id);
-    parent = behaviors.get(parent.parentId)!;
-  }
-  return parent.triggerId;
+  return rootBehavior(index.behaviors, b).triggerId;
 }
 export function callSources(graph: Graph): Map<string, Caller[]> {
   const index = indexGraph(graph),
@@ -113,13 +101,9 @@ export function screenBehaviors(index: Index, id: string): Behavior[] {
 
 export function callerKind(index: Index, caller: Caller): 'load' | 'component' | 'unresolved' {
   if (caller.componentId) return 'component';
-  let b = index.behaviors.get(caller.behaviorId || '');
-  if (!b) return 'load';
-  const seen = new Set<string>();
-  while (!b.triggerId && b.parentId && !seen.has(b.id) && index.behaviors.has(b.parentId)) {
-    seen.add(b.id);
-    b = index.behaviors.get(b.parentId)!;
-  }
+  const called = index.behaviors.get(caller.behaviorId || '');
+  if (!called) return 'load';
+  const b = rootBehavior(index.behaviors, called);
   return (b.event &&
     !['load', 'onload', 'ready', 'domcontentloaded'].includes(b.event.toLowerCase())) ||
     (!b.event && b.evidence?.some((e) => e.resolution === 'UNRESOLVED'))

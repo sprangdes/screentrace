@@ -125,7 +125,6 @@ final class StrutsConfigParser {
           StrutsSources.elements(document, "controller").stream()
               .anyMatch(
                   controller -> "true".equalsIgnoreCase(controller.getAttribute("inputForward")));
-      state.inputForward.put(module, inputForward);
       for (Element plugin : StrutsSources.elements(document, "plug-in")) {
         Map<String, String> attrs = new TreeMap<>(StrutsSources.attributes(plugin));
         for (Element property : StrutsSources.elements(plugin, "set-property"))

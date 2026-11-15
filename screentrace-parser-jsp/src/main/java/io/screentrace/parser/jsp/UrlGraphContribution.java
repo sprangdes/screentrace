@@ -208,7 +208,7 @@ public final class UrlGraphContribution {
                 paths,
                 errors,
                 alternativeProof);
-      } else if ("<current-view>".equals(raw)) {
+      } else if (JspProjectParser.CURRENT_VIEW_TARGET.equals(raw)) {
         Set<String> owners = new TreeSet<>();
         graph.relationships().stream()
             .filter(e -> e.type() == EdgeType.CONTAINS && e.to().equals(b.triggerId()))
@@ -412,14 +412,7 @@ public final class UrlGraphContribution {
                 combined.stream().distinct().sorted().toList()));
       }
     }
-    nodes
-        .entrySet()
-        .removeIf(
-            entry ->
-                "javascript-request".equals(entry.getValue().attributes().get("origin"))
-                    && behaviors.values().stream()
-                        .noneMatch(b -> entry.getKey().equals(b.targetId()))
-                    && edges.values().stream().noneMatch(e -> entry.getKey().equals(e.to())));
+    removeUnusedRequestEndpoints(nodes, behaviors.values(), edges.values());
     var enriched =
         new ApplicationGraph(
             graph.application(),
@@ -708,5 +701,24 @@ public final class UrlGraphContribution {
                           "Servlet 映射無法安全解析"))));
         }
     return List.copyOf(result);
+  }
+
+  /**
+   * Drops endpoints made up for a script request (origin {@code javascript-request}) once nothing
+   * points at them any more: no behavior targets them and no relationship ends at them.
+   */
+  static void removeUnusedRequestEndpoints(
+      Map<String, GraphNode> nodes,
+      java.util.Collection<Behavior> behaviors,
+      java.util.Collection<Relationship> edges) {
+    Set<String> used = new java.util.HashSet<>();
+    behaviors.forEach(b -> used.add(b.targetId()));
+    edges.forEach(e -> used.add(e.to()));
+    nodes
+        .entrySet()
+        .removeIf(
+            entry ->
+                "javascript-request".equals(entry.getValue().attributes().get("origin"))
+                    && !used.contains(entry.getKey()));
   }
 }

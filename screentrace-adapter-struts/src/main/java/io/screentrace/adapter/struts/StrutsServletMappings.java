@@ -419,18 +419,6 @@ final class StrutsServletMappings {
     return type != null && isActionServlet(type.parent(), state, visited);
   }
 
-  static String servletClass(Document document, String servletName) {
-    for (Element servlet : StrutsSources.elements(document, "servlet")) {
-      List<Element> names = StrutsSources.elements(servlet, "servlet-name"),
-          classes = StrutsSources.elements(servlet, "servlet-class");
-      if (!names.isEmpty()
-          && !classes.isEmpty()
-          && servletName.equals(names.get(0).getTextContent().trim()))
-        return classes.get(0).getTextContent().trim();
-    }
-    return "";
-  }
-
   static String publicPath(String route, String module, State state) {
     ServletMappingResolution mapping = state.servletMappings.get(module);
     return mapping == null || mapping.status() != ServletMappingStatus.PROVEN

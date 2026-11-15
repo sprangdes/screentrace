@@ -8,10 +8,6 @@ import java.util.regex.*;
 final class StaticComponentNames {
   private StaticComponentNames() {}
 
-  private static final Set<String> VOID =
-      Set.of(
-          "input", "img", "br", "hr", "meta", "link", "area", "base", "col", "embed", "param",
-          "source", "track", "wbr");
   private static final Map<ComponentKind, String> KINDS =
       Map.ofEntries(
           Map.entry(ComponentKind.BUTTON, "按鈕"),
@@ -51,7 +47,7 @@ final class StaticComponentNames {
       if (c.tag().equals("input")
           && Set.of(ComponentKind.BUTTON, ComponentKind.SUBMIT).contains(c.kind()))
         visible = attrs.get("value") == null ? null : decode(attrs.get("value"));
-      else if (!VOID.contains(c.tag()) && !selfClosing(source, token)) {
+      else if (!MarkupTag.VOID_ELEMENTS.contains(c.tag()) && !selfClosing(source, token)) {
         int close = close(tokens, i, source);
         if (close >= 0)
           visible =
@@ -131,7 +127,7 @@ final class StaticComponentNames {
             || "true".equalsIgnoreCase(tag.attribute("aria-hidden"))
             || Objects.toString(tag.attribute("style"), "")
                 .matches("(?is).*?(?:display\\s*:\\s*none|visibility\\s*:\\s*hidden).*")) {
-          if (!selfClosing(body, tag) && !VOID.contains(name)) {
+          if (!selfClosing(body, tag) && !MarkupTag.VOID_ELEMENTS.contains(name)) {
             int end = close(tags, i, body);
             if (end < 0) return null;
             cursor = tags.get(end).end() + 1;

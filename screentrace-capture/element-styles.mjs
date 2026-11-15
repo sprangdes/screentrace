@@ -244,14 +244,9 @@ export async function collectElementStyles(
   );
   const styles = {};
   const elements = raw.map(({ css, namespace, ...element }) => {
+    // `css` already holds only the properties that differ from the element's defaults.
     const defaultId = `${namespace}:${element.tag}`,
-      base = defaults[defaultId],
-      delta = sorted(
-        portableResourceUrls(
-          Object.fromEntries(Object.entries(css).filter(([key, value]) => base[key] !== value)),
-          options.outputUrl,
-        ),
-      );
+      delta = sorted(portableResourceUrls(css, options.outputUrl));
     const styleId = 'style:' + createHash('sha256').update(JSON.stringify(delta)).digest('hex');
     styles[styleId] = delta;
     return { ...element, defaultId, styleId };

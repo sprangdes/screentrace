@@ -398,12 +398,6 @@ final class StrutsTiles {
     return viewId;
   }
 
-  static boolean sameJspPath(String actual, String target, State state) {
-    String resolved = tileJspViewPath(target, state);
-    return actual.equals(resolved)
-        || (resolved == null && actual.endsWith(target.startsWith("/") ? target : "/" + target));
-  }
-
   static void materializeTileScreens(State state) {
     if (state.tiles.isEmpty()) return;
     for (String name : new TreeSet<>(state.tilePageDefinitions)) ensureTileScreen(name, state);
