@@ -13,7 +13,13 @@ import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { chromium } from 'playwright';
 import { collectElementStyles, thumbnailDataUri, captureOptions } from './element-styles.mjs';
-import { captureConcurrency, exclusive, outputChains, runChains } from './capture-pool.mjs';
+import {
+  captureConcurrency,
+  captureDeadline,
+  exclusive,
+  outputChains,
+  runChains,
+} from './capture-pool.mjs';
 import {
   annotateConditions,
   annotateSource,
@@ -964,6 +970,7 @@ if (!previewV2 && allScreens.length > 500)
   );
 const screens = previewV2 ? allScreens : allScreens.slice(0, 500);
 const concurrency = captureConcurrency(extraArgs);
+const deadline = captureDeadline(extraArgs);
 const renderExclusive = exclusive();
 /** Captures one screen on its own page into `r`; results are merged in screen order below. */
 async function captureScreen(screen, page, context, r) {
@@ -1172,9 +1179,33 @@ try {
   }
   // Screens whose preview or screenshot file names coincide stay in one chain, in screen order.
   const chains = outputChains(screens, (screen) => screen.id.replace(/[^a-z0-9-]/gi, '_'));
-  await runChains(chains, pages.length, (screen, slot) =>
-    captureScreen(screen, pages[slot], context, results.get(screen)),
+  // Past the deadline no new screen starts; finished screens are still written below, and the
+  // rest are reported instead of the CLI ending the whole capture (RV-105).
+  const skipped = await runChains(
+    chains,
+    pages.length,
+    (screen, slot) => captureScreen(screen, pages[slot], context, results.get(screen)),
+    () => deadline === null || Date.now() < deadline,
   );
+  if (skipped.length)
+    captureDiagnostics.push(
+      `CAPTURE_DEADLINE_REACHED: ${skipped.length} of ${screens.length} screens not captured`,
+    );
+  for (const screen of skipped) {
+    const diagnostic = {
+      code: 'PREVIEW_CAPTURE_DEADLINE',
+      screenId: screen.id,
+      message: '預覽擷取時間已用完，此畫面未擷取',
+    };
+    const r = results.get(screen);
+    r.styleDiagnostics.push(diagnostic);
+    if (previewV2)
+      r.styleScreen = {
+        rendering: { mode: 'skipped', diagnostic: diagnostic.message },
+        elements: [],
+        diagnostics: [diagnostic],
+      };
+  }
 } finally {
   await browser.close();
 }

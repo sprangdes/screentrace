@@ -707,7 +707,6 @@ public final class ScreenTraceCli {
     return new SpringProjectAnalyzer().analyze(inventory);
   }
 
-  @SuppressWarnings("java:S4036")
   /**
    * Seconds the preview capture may take: 120 plus 2 per screen, at most 30 minutes (HC-004, ADR
    * 0143). A fixed limit dropped every preview of a large project once it was exceeded.
@@ -716,19 +715,33 @@ public final class ScreenTraceCli {
     return Math.min(1_800, 120 + 2 * Math.max(0, screens));
   }
 
+  /**
+   * Seconds before the CLI's own limit at which the capture stops starting new screens, leaving
+   * time to finish the screens in progress and write every result file (RV-105).
+   */
+  static long captureDeadlineMargin(long timeoutSeconds) {
+    return Math.max(15, timeoutSeconds / 5);
+  }
+
+  @SuppressWarnings("java:S4036")
   private static void renderStaticJsp(Path target, Path output, long screens)
       throws IOException, InterruptedException {
+    long timeout = captureTimeoutSeconds(screens);
+    long deadline = System.currentTimeMillis() + (timeout - captureDeadlineMargin(timeout)) * 1000;
     Process process =
         new ProcessBuilder(
                 "node",
                 captureTool("capture-static-jsp.mjs").toString(),
                 target.toString(),
                 output.toString(),
-                "--preview-v2")
+                "--preview-v2",
+                "--deadline=" + deadline)
             .inheritIO()
             .start();
-    long timeout = captureTimeoutSeconds(screens);
     if (!process.waitFor(timeout, TimeUnit.SECONDS)) {
+      // The capture missed its own deadline; stop it with its Chromium and any `node` shim
+      // children, so nothing keeps writing while the report is built (RV-104).
+      process.descendants().forEach(ProcessHandle::destroyForcibly);
       process.destroy();
       if (!process.waitFor(2, TimeUnit.SECONDS)) process.destroyForcibly();
       LOGGER.warning("JSP 靜態預覽超過 " + timeout + " 秒而逾時；未取得預覽的畫面將明確標記。");

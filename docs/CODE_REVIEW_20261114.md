@@ -107,9 +107,9 @@ P1 處理結果見各項「狀態」（R53，[ADR 0144](adr/0144-r53-code-review
 - **RV-101** `bin/screentrace:121`、`bin/screentrace.ps1:101`：重建檢查沒排除預設輸出 `analyze/`，報告 HTML 比 jar 新，每次啟動都跑 `npm ci` + viewer build + `mvn package`。
 - **RV-102** `bin/screentrace:32`：`maven_version` 直接取第一行第三欄；JDK 先印 WARNING 時取到單字，算術失敗且被視為通過 3.9 檢查。
 - **RV-103** `ScreenTraceCli.java:727`：`packPreview` 固定 120 秒且逾時拋例外中止整次分析；擷取已依畫面數放寬到最多 30 分鐘，大專案更容易走到這裡。
-- **RV-104** `ScreenTraceCli.java:701`：擷取逾時只結束直接的 `node` 程序，Playwright Chromium 與版本管理 shim 底下的實際 node 成為孤兒，並與後續 `packPreview` 競爭寫入。應沿用 `JavaScriptGraphContribution` 的 `descendants().forEach(destroyForcibly)`。
-- **RV-105** `ScreenTraceCli.java:684`：30 分鐘上限約 840 個畫面就會碰到；擷取腳本只在全部完成後才寫 manifest，一旦被結束就失去所有預覽（HC-004 根因未解）。建議腳本自行管理截止時間並逐步寫出已完成畫面。
-- **RV-106** `ScreenTraceCli.java:679`：WP123 把 `@SuppressWarnings("java:S4036")` 移到 `captureTimeoutSeconds`，Javadoc 也因在標註之後而成為懸空註解。
+- **RV-104** `ScreenTraceCli.java:701`：擷取逾時只結束直接的 `node` 程序，Playwright Chromium 與版本管理 shim 底下的實際 node 成為孤兒，並與後續 `packPreview` 競爭寫入。應沿用 `JavaScriptGraphContribution` 的 `descendants().forEach(destroyForcibly)`。 **狀態：已修正（R64）。**
+- **RV-105** `ScreenTraceCli.java:684`：30 分鐘上限約 840 個畫面就會碰到；擷取腳本只在全部完成後才寫 manifest，一旦被結束就失去所有預覽（HC-004 根因未解）。建議腳本自行管理截止時間並逐步寫出已完成畫面。 **狀態：已修正（R64，ADR 0151）：擷取依截止時間停止並寫出已完成的畫面。**
+- **RV-106** `ScreenTraceCli.java:679`：WP123 把 `@SuppressWarnings("java:S4036")` 移到 `captureTimeoutSeconds`，Javadoc 也因在標註之後而成為懸空註解。 **狀態：已修正（R64）。**
 - **RV-107** `ApplicationGraphMerger.java:113`：兩邊合併同一 behavior、只有一邊解析出 target 時，合併結果 target 變 null 且不留證據。
 - **RV-108** `ApplicationGraphMerger.java:152,154`：`mergeNode` 只保留左邊的屬性、型別、名稱、confidence，右邊衝突值與屬性（例如 `routeAliases`）靜默丟失；evidence 未去重。
 - **RV-109** `GraphIntegrityValidator.java:41,86`：同一種驗證失敗依有無 personas 拋不同例外型別；`Set.of(...).contains(null)` 在欄位為 null 時拋 NPE 而非驗證訊息。

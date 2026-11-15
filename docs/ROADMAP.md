@@ -420,3 +420,8 @@
 - WP134：`element-styles.json` 改為精簡 JSON；報表直接解析位元組、上限提高為 256 MiB；`PreviewCaptureReader` 以每個畫面建立一次的索引取代逐元素全掃描，見 [ADR 0150](adr/0150-r63-element-styles-size-and-reading.md)。
 - 量測（300 個 action 的合成專案）：擷取檔 70 MB → 48.7 MB；報表步驟 140 秒 → 7.5 秒；完整 CLI 173 秒且報表含元素樣式。
 - 驗證：修改前後的報表與 `preview-model.json` 逐位元組相同；capture 97、Maven 全數通過。
+
+## R64 預覽擷取的截止時間
+
+- WP135：擷取腳本接受 `--deadline`，過了截止時間不再開始新畫面、已完成的畫面照常寫出，未擷取的畫面明確標記；CLI 以上限減去預留時間作為截止時間，最後手段改為結束整個子程序樹；`@SuppressWarnings` 移回 `renderStaticJsp`，見 [ADR 0151](adr/0151-r64-capture-deadline.md)（RV-104、RV-105、RV-106）。
+- 驗證：新增 3 個測試，capture 的 2 個已確認在修改前失敗；capture 99、Maven 全數通過。
