@@ -10,7 +10,7 @@ import com.github.javaparser.ast.CompilationUnit;
  * parse alike.
  */
 public final class JavaSources {
-  private static final ParserConfiguration.LanguageLevel LEVEL =
+  public static final ParserConfiguration.LanguageLevel LEVEL =
       ParserConfiguration.LanguageLevel.JAVA_21;
 
   private JavaSources() {}

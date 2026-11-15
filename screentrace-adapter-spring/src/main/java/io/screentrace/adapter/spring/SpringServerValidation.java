@@ -64,11 +64,11 @@ final class SpringServerValidation {
     for (var file : inventory.javaFiles()) {
       String relative = inventory.root().relativize(file).toString().replace('\\', '/');
       try {
+        // The same language level as every other Java pass (RV-201).
         var parsed =
             new JavaParser(
                     new com.github.javaparser.ParserConfiguration()
-                        .setLanguageLevel(
-                            com.github.javaparser.ParserConfiguration.LanguageLevel.JAVA_17))
+                        .setLanguageLevel(io.screentrace.parser.jsp.JavaSources.LEVEL))
                 .parse(
                     SafeProjectFiles.readUtf8Limited(
                         inventory.root(), file, SafeProjectFiles.MAX_SOURCE_FILE_BYTES));

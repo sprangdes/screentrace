@@ -124,27 +124,27 @@ P1 處理結果見各項「狀態」（R53，[ADR 0144](adr/0144-r53-code-review
 
 ## P2 — adapter-spring
 
-- **RV-201** `SpringServerValidation.java:68`：自建 JavaParser 用 JAVA_17，其餘用 `JavaSources`（JAVA_21）；含 record pattern 的檔案在這裡解析失敗、驗證規則遺失。
+- **RV-201** `SpringServerValidation.java:68`：自建 JavaParser 用 JAVA_17，其餘用 `JavaSources`（JAVA_21）；含 record pattern 的檔案在這裡解析失敗、驗證規則遺失。 **狀態：已修正（R66）：改用 `JavaSources.LEVEL`。**
 - **RV-202** `SpringMvcAnalyzer.java:1379`、`SpringBootAnalyzer.java:318`：`method = {GET, POST}` 被轉成字串 `"{ GET, POST }"`，`methodMatches` 永遠不成立，表單無 TRIGGERS 邊。 **狀態：已修正（R60，ADR 0148）：每個方法各建一個端點。**
 - **RV-203** `SpringSecurityProcessors.java:350`：同一 XML 多個 `<http>` 的 form-login handler 共用 id，互相覆寫，各登入端點指向對方的目的地。 **狀態：已修正（R60）：handler id 加入處理網址。**
-- **RV-204** `SpringSecurityRedirects.java:21`：先讀檔再檢查副檔名，所有 jar／圖片都被讀取；超過 8 MB 產生無關的 `SPRING_SECURITY_PARSE` 診斷。
+- **RV-204** `SpringSecurityRedirects.java:21`：先讀檔再檢查副檔名，所有 jar／圖片都被讀取；超過 8 MB 產生無關的 `SPRING_SECURITY_PARSE` 診斷。 **狀態：已修正（R66）。**
 - **RV-205** `SpringMvcAnalyzer.java:668`：`BeanNameUrlHandlerMapping` 只認 `id` 以 `/` 開頭，常見的 `name="/x.htm"` 寫法不產生端點。 **狀態：已修正（R60）：`name` 屬性的 `/` 開頭名稱也建立路由，value-ref 可用名稱找 bean。**
 - **RV-206** `SpringControllerFlow.java:551`：`project()` 以相同 id 公式產生 NAVIGATES_TO，`put` 覆蓋既有 CONFIRMED 邊而降為 INFERRED。 **狀態：已修正（R61）：實際降級發生在 analyzer 本身先記 INFERRED、再略過同 id 的 CONFIRMED；`edge()` 遇到較強證明時升級，`project()` 也不再覆寫 CONFIRMED。**
 - **RV-207** `SpringMvcAnalyzer.java:745`：XML controller 只記 `screensByEndpoint`，沒記 `endpointsByScreen`，無 action 的 form 與相對連結無法解析。 **狀態：已修正（R61）。**
 - **RV-208** `SpringMvcAnalyzer.java:1151`：相對 URL 只做字串串接，未正規化 `..`／`.`。 **狀態：已修正（R61）：導覽邊原本已由其他流程補上，錯的是元件的 `target` 屬性（`/users/../home`）；現在正規化，超出根目錄時標為 unresolved。**
-- **RV-209** `SpringMvcAnalyzer.java:1005`：多個 Tiles definition 共用 body JSP 時，靜默摺疊到字母序第一個，未發 AMBIGUOUS 診斷。
-- **RV-210** `SpringMvcAnalyzer.java:446`：含 `throw` 且 view 無法解析的 handler，在未設定例外 resolver 時完全沒有診斷。
-- **RV-211** `SpringSecurityProcessors.java:177`：Java config 的 formLogin／logout 新增端點後，未清除先前的 `URL_UNRESOLVED`／`URL_METHOD_MISMATCH` 診斷。
-- **RV-212** `SpringDtoSimulation.java:256`：覆寫而非合併 `simulationBindings`，SpringDataSimulation 的示範資料遺失。
+- **RV-209** `SpringMvcAnalyzer.java:1005`：多個 Tiles definition 共用 body JSP 時，靜默摺疊到字母序第一個，未發 AMBIGUOUS 診斷。 **狀態：已修正（R66）：仍歸到第一個 definition，但回報 `TILES_BODY_AMBIGUOUS`。**
+- **RV-210** `SpringMvcAnalyzer.java:446`：含 `throw` 且 view 無法解析的 handler，在未設定例外 resolver 時完全沒有診斷。 **狀態：已修正（R66）。**
+- **RV-211** `SpringSecurityProcessors.java:177`：Java config 的 formLogin／logout 新增端點後，未清除先前的 `URL_UNRESOLVED`／`URL_METHOD_MISMATCH` 診斷。 **狀態：已修正（R66）。**
+- **RV-212** `SpringDtoSimulation.java:256`：覆寫而非合併 `simulationBindings`，SpringDataSimulation 的示範資料遺失。 **狀態：已修正（R66）。**
 - **RV-213** `SpringBootAnalyzer.java:342`：`returnLiteral` 只取第一個字串 return，含 lambda 內的 return，其他分支的畫面遺失。 **狀態：已修正（R60）：取方法本身每個字面值 return，不含 lambda 與巢狀類別內的 return。**
 - **RV-214** `SpringControllerReturns.java:455`：未重新指派的 `String view = "home"; return view;` 判為 UNKNOWN。 **狀態：部分修正（R60）：宣告時給字面值且之後不再指派的 `String` 區域變數可解析；先宣告、再於各分支指派的寫法仍為 UNRESOLVED。**
-- **RV-215** `SpringMvcAnalyzer.java:217`：`jspPreview` 不看 input type，hidden `_csrf` 與 text 預設值被當成 ACTION 按鈕。
-- **RV-216** `SpringProjectAnalyzer.java:159`：只認根目錄的 `src/main/resources/templates/`，多模組 Thymeleaf 專案被導到 SpringBootAnalyzer 而遺失伺服器端畫面。
+- **RV-215** `SpringMvcAnalyzer.java:217`：`jspPreview` 不看 input type，hidden `_csrf` 與 text 預設值被當成 ACTION 按鈕。 **狀態：已修正（R66）。**
+- **RV-216** `SpringProjectAnalyzer.java:159`：只認根目錄的 `src/main/resources/templates/`，多模組 Thymeleaf 專案被導到 SpringBootAnalyzer 而遺失伺服器端畫面。 **狀態：已修正（R66）：模組內的 `src/main/resources/templates/` 也判定為伺服器端範本。**
 - **RV-217** `SpringExternalCalls.java:53`：任一 Java／XML 讀取或解析失敗就整個略過 externalCall 標註，且無診斷。 **狀態：已修正（R55）：只有可能含 security 設定的檔案讀不到時才停止推論，並回報 `EXTERNAL_CALL_UNRESOLVED`。**
-- **RV-218** `SpringFormBindings.java:104`：FORM_MODEL 欄位包含 static 欄位（`serialVersionUID`）。
-- **RV-219** `SpringMvcAnalyzer.java:641`：properties view resolver 要求 prefix 與 suffix 都設定（Spring 預設空字串）；且讀入 test resources 的設定。
+- **RV-218** `SpringFormBindings.java:104`：FORM_MODEL 欄位包含 static 欄位（`serialVersionUID`）。 **狀態：已修正（R66）。**
+- **RV-219** `SpringMvcAnalyzer.java:641`：properties view resolver 要求 prefix 與 suffix 都設定（Spring 預設空字串）；且讀入 test resources 的設定。 **狀態：已修正（R66）。**
 - **RV-220** `SpringWebFlowContribution.java:76`：registry 中一個 flow 失敗就中斷整個迴圈，其他 flow 全部遺失且保留部分寫入結果。 **狀態：已修正（R55）：每個 flow 各自成功或撤回。**
-- **RV-221** `SpringControllerReturns.java:152`：`branchKey`（影響邊 id）與 `fullPage` 旗標是從中文證據文字字串比對取出，改寫文案就會改變 id。
+- **RV-221** `SpringControllerReturns.java:152`：`branchKey`（影響邊 id）與 `fullPage` 旗標是從中文證據文字字串比對取出，改寫文案就會改變 id。 **狀態：部分修正（R66）：branch key 改為 `Target` 的欄位；`fullPage` 旗標仍從證據文字判斷。**
 
 ## P2 — adapter-struts
 

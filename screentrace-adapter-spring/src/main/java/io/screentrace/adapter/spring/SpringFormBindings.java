@@ -101,12 +101,15 @@ final class SpringFormBindings {
                 model.source().file() + ":" + model.type() + ":" + model.name());
         Map<String, String> attrs = new TreeMap<>();
         attrs.put("class", model.type());
+        // Static fields and getters (serialVersionUID, constants) are never bound (RV-218).
         for (var field : type.node().getFields())
-          for (var variable : field.getVariables())
-            attrs.put(
-                "field." + variable.getNameAsString() + ".type", variable.getType().asString());
+          if (!field.isStatic())
+            for (var variable : field.getVariables())
+              attrs.put(
+                  "field." + variable.getNameAsString() + ".type", variable.getType().asString());
         for (var method : type.node().getMethods())
           if (method.getParameters().isEmpty()
+              && !method.isStatic()
               && method.getNameAsString().startsWith("get")
               && method.getNameAsString().length() > 3) {
             String raw = method.getNameAsString().substring(3);

@@ -191,12 +191,23 @@ public final class SpringMvcAnalyzer {
         state.screensByView.put(
             relative.substring(prefix.length()).replaceFirst("\\.jsp$", ""), id);
     }
-    String templateRoot = "src/main/resources/templates/";
-    if (relative.startsWith(templateRoot) && relative.endsWith(".html")) {
+    String templateRoot = templateRoot(relative);
+    if (templateRoot != null && relative.endsWith(".html")) {
       String logical = relative.substring(templateRoot.length(), relative.length() - 5);
       state.screensByView.put(logical, id);
       state.screensByView.put("/" + logical, id);
     }
+  }
+
+  /**
+   * The Spring Boot templates folder holding {@code relative}, also inside a module folder
+   * ("web/src/main/resources/templates/"); null when the file is not in one (RV-216).
+   */
+  static String templateRoot(String relative) {
+    String marker = "src/main/resources/templates/";
+    if (relative.startsWith(marker)) return marker;
+    int index = relative.indexOf("/" + marker);
+    return index < 0 ? null : relative.substring(0, index + 1) + marker;
   }
 
   private static String jspPreview(Path file, State state) {
@@ -214,7 +225,10 @@ public final class SpringMvcAnalyzer {
         String name = tag.name().toLowerCase(java.util.Locale.ROOT).replaceFirst("^form:", "");
         String field =
             tag.attribute("path") != null ? tag.attribute("path") : tag.attribute("name");
+        String type = tag.attribute("type") == null ? "text" : tag.attribute("type").toLowerCase();
+        // Hidden inputs and buttons are not fields the user fills in (RV-215).
         if (Set.of("input", "password", "textarea", "select").contains(name)
+            && !Set.of("hidden", "submit", "button", "reset", "image").contains(type)
             && field != null
             && !field.isEmpty()) items.add("FIELD:" + field);
       }
@@ -222,6 +236,11 @@ public final class SpringMvcAnalyzer {
         if (items.size() >= 12) break;
         String name = tag.name().toLowerCase(java.util.Locale.ROOT), value = tag.attribute("value");
         if (!name.equals("button") && !name.equals("input")) continue;
+        // Only buttons are actions; a text input's default value is not (RV-215).
+        String type = tag.attribute("type") == null ? "" : tag.attribute("type").toLowerCase();
+        boolean button =
+            name.equals("button") || Set.of("submit", "button", "reset", "image").contains(type);
+        if (!button) continue;
         if (value != null && !value.isEmpty()) items.add("ACTION:" + value);
         else if ("submit".equalsIgnoreCase(tag.attribute("type"))) {
           int next = source.indexOf('<', tag.end() + 1);
@@ -452,7 +471,11 @@ public final class SpringMvcAnalyzer {
                 .computeIfAbsent(endpointId, ignored -> new ArrayList<>())
                 .add(screenId);
           }
-          if (!rest && views.isEmpty() && !throwsException(method))
+          // A throwing handler with no default exception view still has no provable view; it
+          // used to get no diagnostic at all (RV-210).
+          if (!rest
+              && views.isEmpty()
+              && (!throwsException(method) || state.defaultExceptionView == null))
             state.diagnostics.add(
                 new Diagnostic(
                     "Handler return view cannot be resolved statically: " + handlerName,
@@ -641,7 +664,9 @@ public final class SpringMvcAnalyzer {
 
   private static void addPropertiesViewResolvers(ProjectInventory inventory, State state) {
     for (Path file : inventory.files())
-      if (file.getFileName().toString().equals("application.properties"))
+      // Test resources configure test runs, not the application (RV-219).
+      if (file.getFileName().toString().equals("application.properties")
+          && !inventory.root().relativize(file).toString().replace('\\', '/').contains("src/test/"))
         try {
           var properties = new java.util.Properties();
           properties.load(
@@ -650,8 +675,12 @@ public final class SpringMvcAnalyzer {
                       inventory.root(), file, SafeProjectFiles.MAX_SOURCE_FILE_BYTES)));
           String prefix = properties.getProperty("spring.mvc.view.prefix"),
               suffix = properties.getProperty("spring.mvc.view.suffix");
-          if (prefix != null && suffix != null && !prefix.contains("${") && !suffix.contains("${"))
-            state.viewResolvers.add(new ViewResolver(prefix, suffix));
+          // Spring Boot defaults the one that is not set to an empty string (RV-219).
+          if ((prefix != null || suffix != null)
+              && (prefix == null || !prefix.contains("${"))
+              && (suffix == null || !suffix.contains("${")))
+            state.viewResolvers.add(
+                new ViewResolver(prefix == null ? "" : prefix, suffix == null ? "" : suffix));
         } catch (IOException error) {
           state.diagnostics.add(
               new Diagnostic(
@@ -1045,6 +1074,16 @@ public final class SpringMvcAnalyzer {
           .anyMatch(e -> e.to().equals(bodyScreen) || e.from().equals(bodyScreen))) continue;
       state.nodes.removeIf(n -> n.id().equals(bodyScreen));
       String owner = entry.getValue().iterator().next();
+      // Several definitions fill the same body; its interactions follow the first one here, and
+      // the choice is reported instead of made silently (RV-209).
+      if (entry.getValue().size() > 1)
+        state.diagnostics.add(
+            new Diagnostic(
+                "Tiles body JSP 由多個 definition 共用，互動先歸到 " + owner + "；全部候選：" + entry.getValue(),
+                Confidence.AMBIGUOUS,
+                new SourceLocation(entry.getKey(), 1),
+                "TILES_BODY_AMBIGUOUS",
+                List.of()));
       state.screensByView.replaceAll((view, screen) -> screen.equals(bodyScreen) ? owner : screen);
     }
   }
@@ -1117,7 +1156,7 @@ public final class SpringMvcAnalyzer {
                       n.id().equals(direct)
                           && n.attributes()
                               .getOrDefault("view", "")
-                              .startsWith("src/main/resources/templates/"))) next = null;
+                              .transform(view -> templateRoot(view) != null))) next = null;
       if (next != null)
         edge(state, EdgeType.NAVIGATES_TO, id, next, Confidence.CONFIRMED, interaction.source());
     }

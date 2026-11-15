@@ -18,12 +18,27 @@ final class SpringControllerReturns {
     UNKNOWN
   }
 
+  /**
+   * One return target. {@code branch} identifies the assignment a branch-dependent target came from
+   * (":assign:line:column"), or "" — kept as data rather than read back from evidence text, which
+   * may be reworded (RV-221).
+   */
   record Target(
       Kind kind,
       String value,
       String expression,
       SourceLocation source,
-      List<AnalysisEvidence> evidence) {}
+      List<AnalysisEvidence> evidence,
+      String branch) {
+    Target(
+        Kind kind,
+        String value,
+        String expression,
+        SourceLocation source,
+        List<AnalysisEvidence> evidence) {
+      this(kind, value, expression, source, evidence, "");
+    }
+  }
 
   static List<Target> extract(
       MethodDeclaration method, String file, String className, Map<String, String> constants) {
@@ -98,7 +113,18 @@ final class SpringControllerReturns {
             if (path.value.kind() != Kind.UNKNOWN)
               pathEvidence.addAll(feedback(method, statement, file));
             targets.add(
-                new Target(path.value.kind(), path.value.value(), raw, source, pathEvidence));
+                new Target(
+                    path.value.kind(),
+                    path.value.value(),
+                    raw,
+                    source,
+                    pathEvidence,
+                    ":assign:"
+                        + proof.line()
+                        + ":"
+                        + (path.source == null
+                            ? 0
+                            : path.source.getBegin().map(p -> p.column).orElse(0))));
           }
           continue;
         }
@@ -151,16 +177,7 @@ final class SpringControllerReturns {
   }
 
   static String branchKey(Target target) {
-    return target.evidence().stream()
-        .filter(e -> e.detail() != null && e.detail().startsWith("分支內賦值來源；column="))
-        .map(
-            e ->
-                ":assign:"
-                    + e.source().line()
-                    + ":"
-                    + e.detail().substring(e.detail().indexOf("column=") + 7))
-        .findFirst()
-        .orElse("");
+    return target.branch();
   }
 
   private static List<AnalysisEvidence> feedback(

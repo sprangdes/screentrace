@@ -435,3 +435,8 @@
   - scanner：`target`／`build` 只在專案根目錄或建置檔旁略過；POM 屬性依模組解析。
   - report：prototype 元件依畫面分欄排列，共用元件各畫面有獨立 ID；樣式 map 保留排序。
 - 驗證：新增 11 個測試，修正項目的測試都已確認在修改前失敗；13 個 fixture 中只有 `wp10/struts1-spring` 的圖改變（重複 evidence 移除、保留 Spring 的 `template` 屬性），prototype 位置依新規則改變；Maven 全數通過。
+
+## R66 Spring adapter 的其餘項目
+
+- WP137：處理 RV-201～221 中尚未修正的 11 項：驗證規則的 Java 解析層級與其他流程一致（RV-201）；Security 重導只讀 XML／Java（RV-204）；多個 Tiles definition 共用 body 時回報 `TILES_BODY_AMBIGUOUS`（RV-209）；會拋例外且無預設錯誤頁的 handler 也回報無法解析的回傳畫面（RV-210）；Java config 的登入／登出處理也清除過時的 URL 診斷（RV-211）；`simulationBindings` 合併而非覆寫（RV-212）；靜態預覽不列 hidden 欄位與非按鈕的 input 值（RV-215）；模組內的 Thymeleaf 範本目錄（RV-216）；表單模型不含 static 成員（RV-218）；只設 prefix 或 suffix 的 properties view resolver 生效、忽略 test resources（RV-219）；branch key 改為 `Target` 欄位（RV-221 部分）。不改變對外契約，未新增 ADR。
+- 驗證：`SpringRound66Test` 新增 5 個測試，都已確認在修改前失敗；13 個 fixture 中只有兩個 `wp10` Spring 專案的 `staticPreview` 少了 checkbox／radio 的值（RV-215 的預期結果）；Maven 全數通過。

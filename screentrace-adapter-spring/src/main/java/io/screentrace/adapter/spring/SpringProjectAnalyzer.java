@@ -23,12 +23,9 @@ public final class SpringProjectAnalyzer {
     return inventory.files().stream()
         .anyMatch(
             p ->
-                inventory
-                        .root()
-                        .relativize(p)
-                        .toString()
-                        .replace('\\', '/')
-                        .startsWith("src/main/resources/templates/")
+                SpringMvcAnalyzer.templateRoot(
+                            inventory.root().relativize(p).toString().replace('\\', '/'))
+                        != null
                     && p.toString().endsWith(".html"));
   }
 }

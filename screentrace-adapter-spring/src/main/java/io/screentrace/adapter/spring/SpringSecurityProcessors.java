@@ -175,6 +175,14 @@ final class SpringSecurityProcessors {
                     Confidence.INFERRED,
                     proof));
             edge(edges, EdgeType.HANDLED_BY, endpoint, handler, source, proof);
+            // As for XML processors: earlier misses on this exact path are re-checked by the next
+            // URL pass, so stale ones must not remain (RV-211).
+            String processorPath = path.path;
+            diagnostics.removeIf(
+                d ->
+                    Set.of("URL_UNRESOLVED", "URL_METHOD_MISMATCH").contains(d.code())
+                        && d.evidence().stream()
+                            .anyMatch(e -> ("原始 URL=" + processorPath).equals(e.detail())));
             for (var destination : destinations) {
               var destinationProof = new ArrayList<>(proof);
               destinationProof.add(
