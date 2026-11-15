@@ -154,9 +154,12 @@ public final class SpringMvcAnalyzer {
     String id = ApplicationGraph.id(NodeType.SCREEN, relative);
     Map<String, String> attributes = new TreeMap<>();
     attributes.put("view", relative);
-    if (relative.startsWith("src/main/webapp/")
-        && !relative.toUpperCase(java.util.Locale.ROOT).contains("/WEB-INF/"))
-      attributes.put("routeAliases", relative.substring("src/main/webapp".length()));
+    // Public paths are relative to the JSP's own web root, not always src/main/webapp.
+    String webRoot = io.screentrace.scanner.WebRoots.rootOf(state.webRoots, relative);
+    String publicPath = webRoot == null ? null : relative.substring(webRoot.length() - 1);
+    if (publicPath != null
+        && !publicPath.toUpperCase(java.util.Locale.ROOT).startsWith("/WEB-INF/"))
+      attributes.put("routeAliases", publicPath);
     attributes.put("staticPreview", jspPreview(file, state));
     addNode(
         state,
@@ -170,15 +173,15 @@ public final class SpringMvcAnalyzer {
     state.screensByView.put(relative, id);
     state.screensByView.put("/" + relative, id);
     webPath(relative).ifPresent(path -> state.screensByView.put(path, id));
-    if (relative.startsWith("src/main/webapp/") && !relative.contains("/WEB-INF/"))
-      state.screensByView.put(relative.substring("src/main/webapp".length()), id);
-    for (String prefix :
-        List.of(
-            "src/main/webapp/WEB-INF/jsp/",
-            "src/main/webapp/WEB-INF/views/",
-            "WEB-INF/jsp/",
-            "WEB-INF/views/",
-            "src/main/resources/templates/")) {
+    if (publicPath != null && !publicPath.startsWith("/WEB-INF/"))
+      state.screensByView.put(publicPath, id);
+    List<String> prefixes =
+        new ArrayList<>(List.of("WEB-INF/jsp/", "WEB-INF/views/", "src/main/resources/templates/"));
+    if (webRoot != null) {
+      prefixes.add(webRoot + "WEB-INF/jsp/");
+      prefixes.add(webRoot + "WEB-INF/views/");
+    }
+    for (String prefix : prefixes) {
       if (relative.startsWith(prefix))
         state.screensByView.put(
             relative.substring(prefix.length()).replaceFirst("\\.jsp$", ""), id);
@@ -881,7 +884,7 @@ public final class SpringMvcAnalyzer {
       attributes.put("template", definition.template());
       // The static preview renders the template and fills each tiles:insertAttribute slot from
       // tilesAttributes.
-      String template = tilesJspPath(definition.template(), jsp);
+      String template = tilesJspPath(definition.template(), definition, jsp);
       if (template != null) attributes.put("view", template);
       attributes.put("tilesAttributes", tilesAttributesJson(definition, byName, jsp));
       addNode(
@@ -904,13 +907,17 @@ public final class SpringMvcAnalyzer {
   /**
    * Resolves a Tiles web path such as /WEB-INF/views/home.jsp to the analyzed project-relative JSP.
    */
-  private static String tilesJspPath(String value, JspAnalysis jsp) {
+  private static String tilesJspPath(
+      String value, JspAnalysis.TilesDefinition definition, JspAnalysis jsp) {
     if (value == null
         || value.isBlank()
         || value.contains("${")
         || value.contains("#{")
         || !value.startsWith("/")) return null;
-    for (String candidate : List.of("src/main/webapp" + value, value.substring(1)))
+    // Under the web root of the Tiles definition file, then the project root.
+    for (String candidate :
+        io.screentrace.scanner.WebRoots.candidates(
+            io.screentrace.scanner.WebRoots.DEFAULTS, definition.source().file(), value))
       if (jsp.markup().containsKey(candidate)) return candidate;
     return null;
   }
@@ -929,7 +936,7 @@ public final class SpringMvcAnalyzer {
       JspAnalysis.TilesDefinition nested = byName.get(target);
       if (nested != null) collectTilesJspPaths(nested, byName, jsp, paths, seen);
       else {
-        String path = tilesJspPath(target, jsp);
+        String path = tilesJspPath(target, definition, jsp);
         if (path != null) paths.add(path);
       }
     }
@@ -971,14 +978,14 @@ public final class SpringMvcAnalyzer {
             attribute.name(), Map.of("definition", tilesContext(nested, byName, jsp, stack)));
       else if (nested != null) attributes.put(attribute.name(), Map.of("unresolved", value));
       else if (value.startsWith("/") || value.matches("(?i).*\\.(jspf?|html?)$")) {
-        String path = tilesJspPath(value, jsp);
+        String path = tilesJspPath(value, definition, jsp);
         attributes.put(
             attribute.name(), path == null ? Map.of("unresolved", value) : Map.of("path", path));
       } else attributes.put(attribute.name(), Map.of("value", value));
     }
     stack.remove(definition.name());
     Map<String, Object> context = new TreeMap<>();
-    String template = tilesJspPath(definition.template(), jsp);
+    String template = tilesJspPath(definition.template(), definition, jsp);
     context.put("template", template == null ? definition.template() : template);
     context.put("attributes", attributes);
     return context;
@@ -1324,18 +1331,26 @@ public final class SpringMvcAnalyzer {
 
   private static Set<String> includedViewPaths(Path root, JspAnalysis jsp) {
     Set<String> paths = new java.util.HashSet<>();
+    List<String> webRoots = io.screentrace.scanner.WebRoots.of(root);
     for (JspAnalysis.Include include : jsp.includes()) {
-      Path source = root.resolve(include.sourceViewPath()).getParent();
-      Path candidate =
-          include.targetPath().startsWith("/")
-              ? root.resolve("src/main/webapp" + include.targetPath())
-              : source.resolve(include.targetPath()).normalize();
-      if (!SafeProjectFiles.isSafeRegularFile(root, candidate)
-          && include.targetPath().startsWith("/"))
-        candidate = root.resolve(include.targetPath().substring(1));
-      if (SafeProjectFiles.isSafeRegularFile(root, candidate))
-        paths.add(
-            root.relativize(candidate.toAbsolutePath().normalize()).toString().replace('\\', '/'));
+      List<Path> candidates = new ArrayList<>();
+      if (include.targetPath().startsWith("/"))
+        for (String path :
+            io.screentrace.scanner.WebRoots.candidates(
+                webRoots, include.sourceViewPath(), include.targetPath()))
+          candidates.add(root.resolve(path));
+      else {
+        Path source = root.resolve(include.sourceViewPath()).getParent();
+        candidates.add((source == null ? root : source).resolve(include.targetPath()).normalize());
+      }
+      for (Path candidate : candidates)
+        if (SafeProjectFiles.isSafeRegularFile(root, candidate)) {
+          paths.add(
+              root.relativize(candidate.toAbsolutePath().normalize())
+                  .toString()
+                  .replace('\\', '/'));
+          break;
+        }
     }
     return paths;
   }
@@ -1455,6 +1470,7 @@ public final class SpringMvcAnalyzer {
 
   private static final class State {
     private final Path root;
+    private final List<String> webRoots;
     private final List<GraphNode> nodes = new ArrayList<>();
     private final List<Relationship> edges = new ArrayList<>();
     private final List<Diagnostic> diagnostics = new ArrayList<>();
@@ -1473,6 +1489,7 @@ public final class SpringMvcAnalyzer {
 
     private State(Path root, List<Path> javaFiles) {
       this.root = root;
+      this.webRoots = io.screentrace.scanner.WebRoots.of(root);
       this.contracts = new ApiContractExtractor(root, javaFiles);
     }
   }

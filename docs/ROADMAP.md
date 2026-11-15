@@ -388,3 +388,8 @@
 
 - WP128：interaction target 與 Struts 的 query string 切分先把 `&amp;` 換回 `&`；`pack-preview` 不再重複解碼已處理的屬性；capture 以解碼後的路徑尋找資源檔，見 [ADR 0147](adr/0147-r57-decode-ampersands-in-urls.md)（RV-313、RV-424、RV-521、RV-522）。
 - 驗證：新增 3 個測試，都已確認在修改前失敗（RV-522 未加自動測試）；JS 181、capture 97、Maven 全數通過。
+
+## R58 Spring adapter 改用共用 web root 規則
+
+- WP129：`SpringMvcAnalyzer` 的公開 JSP 別名、`WEB-INF/jsp|views` 簡稱、Tiles 範本路徑與 include 來源，以及 `SpringControllerFlow` 的公開畫面比對，都改用 `WebRoots`（ADR 0145 的同一規則）；Java 主程式中除了 scanner 本身的預設清單，已無寫死的 `src/main/webapp`。
+- 驗證：新增 `SpringWebRootLayoutTest` 並確認在修改前失敗；Maven 全數通過。

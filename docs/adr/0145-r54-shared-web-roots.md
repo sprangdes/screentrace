@@ -13,7 +13,7 @@
 - R54-2：改用 `WebRoots` 的位置：JSP include 與 tagdir（`JspProjectParser`、`JspTagFileExpander`）、標記投影（`MarkupGraphContribution`，沒有專案根目錄可讀，使用預設清單）、Struts 的 view 索引、HTML 畫面、相對連結與 include 來源（`StrutsGraphSupport`、`StrutsScreens`、`StrutsInteractions`）。
 - R54-3：struts-menu 的 `menuConfig` 以 `WEB-INF` 的上層資料夾為 web root，`WEB-INF/config/struts-config.xml` 也能找到 `/WEB-INF/menu-config.xml`。
 - R54-4：capture 的 `<mvc:resources>` 探索除了 `src/main`，也掃描實際的 web root；同一檔案只讀一次。
-- Spring adapter 中寫死 `src/main/webapp` 的位置（`SpringMvcAnalyzer`、`SpringControllerFlow`）不在本輪範圍，留待之後依同一規則調整。
+- Spring adapter 中寫死 `src/main/webapp` 的位置（`SpringMvcAnalyzer`、`SpringControllerFlow`）不在本輪範圍；R58 已依同一規則調整，見 ROADMAP。
 
 ## 後果
 

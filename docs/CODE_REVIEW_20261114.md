@@ -276,7 +276,7 @@ P1 處理結果見各項「狀態」（R53，[ADR 0144](adr/0144-r53-code-review
 
 幾個問題在多個模組重複出現，集中修正比逐項修更有效：
 
-1. **web root 寫死**（R54 已處理，Spring adapter 的寫死位置待後續）：RV-317、RV-401、RV-512、RV-425。全部改用 `inventory.webRoots()`，在 capture 端也傳入同一份清單。
+1. **web root 寫死**（R54、R58 已處理）：RV-317、RV-401、RV-512、RV-425。全部改用 `inventory.webRoots()`，在 capture 端也傳入同一份清單。
 2. **Java 解析器設定不一致與重複解析**：RV-201、RV-402、RV-701。統一走 `JavaSources.parse` 與 `ParsedJavaUnits` 快取。
 3. **單點失敗擴大為整體失敗**（R53、R55 已處理）：RV-007、RV-217、RV-220、RV-404、RV-414、RV-421、RV-511、RV-602。錯誤應侷限在單一檔案／單一項目並留下診斷。
 4. **預覽輸出生命週期**：RV-005、RV-103、RV-104、RV-105。擷取前清空、逐步寫 manifest、結束整棵程序樹、封裝逾時不中止報告。

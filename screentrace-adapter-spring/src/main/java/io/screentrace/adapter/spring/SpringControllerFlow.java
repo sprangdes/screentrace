@@ -429,6 +429,13 @@ final class SpringControllerFlow {
     }
   }
 
+  /** True when {@code view} is the file at public path {@code clean} under its own web root. */
+  private static boolean publicViewMatches(String view, String clean) {
+    String root =
+        io.screentrace.scanner.WebRoots.rootOf(io.screentrace.scanner.WebRoots.DEFAULTS, view);
+    return root != null && view.equals(root + clean.substring(1));
+  }
+
   private static List<GraphNode> publicScreens(String path, List<GraphNode> nodes) {
     if (path == null
         || !path.startsWith("/")
@@ -441,8 +448,7 @@ final class SpringControllerFlow {
     return nodes.stream()
         .filter(
             n ->
-                n.type() == NodeType.SCREEN
-                    && ("src/main/webapp" + clean).equals(n.attributes().get("view")))
+                n.type() == NodeType.SCREEN && publicViewMatches(n.attributes().get("view"), clean))
         .toList();
   }
 
