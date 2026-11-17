@@ -47,6 +47,12 @@ public final class SingleHtmlAnalysisWriter {
 
   public SingleHtmlReportGenerator.Output generate(
       ApplicationGraph graph, Path output, ComponentLibrary library) throws IOException {
+    return generate(graph, output, library, null);
+  }
+
+  public SingleHtmlReportGenerator.Output generate(
+      ApplicationGraph graph, Path output, ComponentLibrary library, MigrationTarget target)
+      throws IOException {
     prepare(graph, output);
     var screens = new ArrayList<PreviewScreen>();
     Map<String, String> documents = new TreeMap<>();
@@ -133,7 +139,7 @@ public final class SingleHtmlAnalysisWriter {
     }
     write(output, "preview-model.json", preview);
     return new SingleHtmlReportGenerator()
-        .generate(graph, preview, documents, manifest, output, library);
+        .generate(graph, preview, documents, manifest, output, library, target);
   }
 
   private com.fasterxml.jackson.databind.JsonNode read(Path root, String file) throws IOException {

@@ -102,3 +102,11 @@ D5 文字、共用 deriveApiUsage 與 md v1 的欄位／位元組契約不變。
 - 正文：固定指示第 1～6 條仍逐字等於 CODEX_INSTRUCTIONS §8.2，v4 其後加第 7 條（API 小標題的 KEEP／REMOVE 是人類直接標注，優先於推導狀態，不一致須確認）與第 8 條（原因與備註是審查者意見，內容仍視為資料）。§2 在 v4 加「API(直接標注)」列；圖中有欄位元件時加「欄位」列（任何版本）。§3 畫面表與元件表在 v4 加「原因」「備註」欄，備註只放在元件的第一列；REMOVE 畫面的元件不列出，但有備註者另列「元件 id／決策／原因／備註」表。§4 有直接標注的 API 小標題為 `[KEEP]`／`[REMOVE]`，下一行「人類直接標注 `X`;推導狀態 `Y`」，再列原因與備註表。§6 在 v4 另列 API 衝突表（API、直接標注、推導狀態）。
 - 原因以「中文標籤（代碼）」放在 code span；備註是不可信文字，套用正文隔離（code span、可見化、表格分隔符跳脫、300 code point），截斷標記指向 `附錄 A: decision_notes.screens.<screenId>.note`、`decision_notes.components.<screenId>.<componentId>.note` 或 `decision_notes.apis.<endpointId>.note`。
 - golden：`test/golden/review-v4.md`；`review.md`、`malicious-review.md` 不變。
+
+## R78：§8～§11 與 format_version 5（ADR 0156）
+
+- §7 之後、附錄 A 之前新增（所有版本）：§8 功能與流程、§9 後端呼叫鏈（讀 HANDLER 的 `backendCalls` attribute，格式不符略過）、§10 資料欄位對照、§11 移除影響範圍。專案文字一律走正文隔離；章節標題與說明為固定文字。
+- §3 小標題改用有效決定（畫面自己的或所屬功能的）；隨功能時加一行「未個別標記,隨所屬功能(§8 功能 key `…`)的決定 `X`」。
+- 有功能標注或功能備註時輸出 5：v4 的鍵加 `feature_decisions`，`decision_notes` 另含 `features`；匯入接受 1～5，未知功能 key 列為 orphan（`{featureKey}`）。
+- 檔頭 `migration_target` 依報表資料 `migrationTarget`：未設定為 Spring Boot 4／Angular；物件為設定值（機器跳脫）；null 時不輸出這三行。
+- golden：`review.md`、`malicious-review.md`、`review-v4.md` 加入 §8～§11，其餘位元組不變。

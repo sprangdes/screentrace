@@ -1,6 +1,7 @@
 package io.screentrace.adapter.spring;
 
 import io.screentrace.core.ApplicationGraph;
+import io.screentrace.parser.jsp.BackendCallChains;
 import io.screentrace.scanner.ProjectScanner.ProjectInventory;
 import java.io.IOException;
 
@@ -10,9 +11,9 @@ public final class SpringProjectAnalyzer {
     if (inventory.technologies().contains("Spring MVC")
         || inventory.technologies().contains("JSP")
         || serverTemplates(inventory)) {
-      return new SpringMvcAnalyzer().analyze(inventory);
+      return BackendCallChains.enrich(new SpringMvcAnalyzer().analyze(inventory), inventory);
     }
-    return new SpringBootAnalyzer().analyze(inventory);
+    return BackendCallChains.enrich(new SpringBootAnalyzer().analyze(inventory), inventory);
   }
 
   /**

@@ -102,6 +102,7 @@ test('R77 notes on screens, components and APIs: reasons follow the decision, te
     screens: {},
     components: { a: { name: { note: '改成必填 並限制 20 字' } } },
     apis: { ep: { note: '改用 /api/v2' } },
+    features: {},
   });
   assert.throws(() => m.setDecisionNote(state, 'api', 'ep', { note: 'x'.repeat(1001) }), /1,000/);
   assert.throws(() => m.setDecisionNote(state, 'api', 'ep', { extra: 1 }), /格式錯誤/);

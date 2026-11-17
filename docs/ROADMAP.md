@@ -500,3 +500,8 @@
 - WP148：依 [改善計畫 2026-11-17](IMPROVEMENT_PLAN_20261117.md) 第 1、2（顯示欄位除外）、6 項，待決問題由需求方決定（OQ-052）。輸入欄位與表格可標注並在右側欄獨立成「欄位」分組，隨畫面移除；API 頁可直接標注 API，與推導狀態不一致列為衝突；畫面、按鈕、欄位、API 都可填原因（選填）與備註；有備註或 API 標注時 md 輸出 format_version 4（正文加原因／備註欄、API 直接標注與衝突表），否則仍為 v1 且位元組不變；「下載 md」在標記不在任何檔案中時顯示提示點與上次下載時間，第一次離開頁面時提醒。修正 `putNote` 對 `__proto__` ID 的處理。見 [ADR 0155](adr/0155-r77-notes-fields-api-decisions-and-save-reminder.md)。
 - 驗證：新增 `r77-annotation-scope.test`（4）、`r77-review-md.test`（6）、`r77-annotation.e2e`（4）；`md.test` 的 WP47 測試改為再匯出 v4 保留原因與備註（ADR 0155 說明）。
 - 未做：階段 2（功能心智圖、md 系統分析章節）與階段 3（顯示欄位、模擬可信度）待需求方決定 OQ-053、OQ-054。
+
+## R78 改善計畫階段 2：功能心智圖、後端呼叫鏈、md 系統分析章節
+
+- WP149：依改善計畫第 3、4 項，OQ-053 採建議方案。viewer 依確定性規則（Struts module、處理程式類別、Tiles 定義前綴、網址前綴）分組功能與流程，清單新增「功能」顯示方式與功能地圖，可標注整個功能並由未個別標記的畫面繼承；Java 新增 `BackendCallChains` 追蹤處理程式 → Service → DAO（最多 4 層，寫入 `backendCalls` attribute）；md 新增 §8 功能與流程、§9 後端呼叫鏈、§10 資料欄位對照、§11 移除影響範圍，功能標注輸出 format_version 5；`migration_target` 可依專案在工作區設定 `migrationTargets` 改寫或移除。見 [ADR 0156](adr/0156-r78-features-backend-calls-and-system-md.md)。
+- 驗證：新增 viewer 單元 6、e2e 2、Java 8 個測試；md golden 與 WP40 雜湊只因新增章節而變（刪去後逐位元組相同）。

@@ -105,7 +105,7 @@ ScreenTrace 用來對甲乙雙方都不清楚功能的 legacy 專案做靜態分
 | 階段 | 項目 | 說明 |
 |---|---|---|
 | 1 | 第 1、2 項（顯示欄位除外）、第 6 項 | 以 viewer 與 md 為主，不需改分析器。**已完成（R77，[ADR 0155](adr/0155-r77-notes-fields-api-decisions-and-save-reminder.md)）** |
-| 2 | 第 3、4 項 | 需先決定資料模型與 md 格式。待決問題見 [OQ-053](OPEN_QUESTIONS.md) |
+| 2 | 第 3、4 項 | 需先決定資料模型與 md 格式。**已完成（R78，[ADR 0156](adr/0156-r78-features-backend-calls-and-system-md.md)）** |
 | 3 | 第 5、7 項 | 需修改 parser 與 capture。待決問題見 [OQ-054](OPEN_QUESTIONS.md) |
 
 每個階段開始前，先把「待決定」的問題記入 [OPEN_QUESTIONS](OPEN_QUESTIONS.md) 並由需求方決定，決定後以 ADR 記錄。

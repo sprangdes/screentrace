@@ -622,7 +622,8 @@ public final class ScreenTraceCli {
               graph,
               output,
               new LibraryStore(WorkspaceSettings.defaultFile().getParent())
-                  .selected(project.name()));
+                  .selected(project.name()),
+              settings.migrationTargetFor(project.sourceDirectory()));
       if (report.warning()) LOGGER.warning("單一 HTML 超過 100 MB，仍完整產出：" + report.bytes() + " bytes");
       long endpoints = counts.getOrDefault(ApplicationGraph.NodeType.ENDPOINT, 0L);
       long components = counts.getOrDefault(ApplicationGraph.NodeType.COMPONENT, 0L);

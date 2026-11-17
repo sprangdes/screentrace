@@ -22,6 +22,8 @@ import {
 } from './shared/review';
 
 export interface ScreenPanelActions {
+  /** Set when the screen has no decision of its own and follows its feature's. */
+  inherited?: { decision: Decision; feature: string };
   setScreen: (screenId: string, value: Decision) => void;
   setComponent: (screenId: string, componentId: string, value: Decision) => void;
   focus: (screenId: string) => void;
@@ -97,6 +99,8 @@ export function screenPanel(
   const screen = index.nodes.get(screenId)!,
     routes = index.routes.get(screenId) || [],
     decision = screenDecision(state, screenId),
+    // What the screen's buttons and fields follow: its own decision, or its feature's.
+    effective = actions.inherited?.decision || decision,
     labels = componentLabelsForScreen(index, screenId);
   const apis = new Set(apiEndpoints(index).map((n) => n.id));
   const root = element('div', undefined, 'screen-panel');
@@ -140,6 +144,15 @@ export function screenPanel(
     if (componentId !== undefined) editor.dataset.componentId = componentId;
     return editor;
   };
+  if (actions.inherited) {
+    const tag = element(
+      'p',
+      `沒有個別標記，隨功能「${actions.inherited.feature}」${decisionLabel(actions.inherited.decision)}`,
+      actions.inherited.decision === 'REMOVE' ? 'inherited-tag' : 'inherited-tag is-keep',
+    );
+    tag.dataset.screenInherited = actions.inherited.decision;
+    header.append(tag);
+  }
   if (actions.setNote) header.append(notes());
   if (screen.audience?.length) {
     const audience = element('details', undefined, 'panel-audience');
@@ -246,7 +259,7 @@ export function screenPanel(
     buttons.append(
       element(
         'p',
-        decision === 'REMOVE'
+        effective === 'REMOVE'
           ? '畫面已標記移除，未個別標記的按鈕隨畫面移除。'
           : '沒有個別標記的按鈕跟著畫面的決定。',
         'muted',
@@ -287,7 +300,7 @@ export function screenPanel(
     info.onfocus = () => actions.hover?.(componentId);
     info.onblur = () => actions.hover?.(undefined);
     info.onclick = () => actions.locate?.(componentId);
-    if (decision === 'REMOVE' && value === 'UNDECIDED')
+    if (effective === 'REMOVE' && value === 'UNDECIDED')
       info.append(element('span', decisionLabel('INHERITED_REMOVE'), 'inherited-tag'));
     item.append(
       info,
@@ -353,7 +366,7 @@ export function screenPanel(
       ),
       element(
         'p',
-        decision === 'REMOVE'
+        effective === 'REMOVE'
           ? '畫面已標記移除，未個別標記的欄位隨畫面移除。'
           : '輸入欄位與表格；沒有個別標記的欄位跟著畫面的決定。',
         'muted',

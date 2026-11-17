@@ -63,3 +63,8 @@ R-API-1–6 與 D4／D5 不變。符合 WP82 雙設定證據、沒有畫面 call
 - `decisionNotes` 不再略過，另含選用的 `apis: Record<endpointId, Note>`（驗證接受鍵集合 `components,screens` 或 `apis,components,screens`）。換行與 tab 改為空白，其他控制與方向字元移除，上限 1,000 code point；原因須符合保留／移除決策。`exportableNotes` 是匯出邊界：原因只隨相容的 KEEP／REMOVE 匯出，空項目略過，未知 ID 保留；所有字典以 own property 寫入，`__proto__` 是一般 ID。
 - 暫存鍵、`version` 1、`schemaVersion` '2.2' 不變。元件庫覆寫欄位仍載入時略過並提示。
 - 另以 `screentrace:last-export:v1:<encodeURIComponent(application)>:<fingerprint>` 保存上次下載 md 的時間與標記摘要，只用於「下載 md」的未保存提示與時間顯示，失敗不影響標記。
+
+## R78：功能標注與繼承（ADR 0156）
+
+- `featureDecisions?: Record<featureKey, Decision>` 與 `decisionNotes.features`；功能 key 來自 `shared/features.ts` 的確定性分組（「規則:值」）。驗證時 `decisionNotes` 必含 `screens`、`components`，可另含 `apis`、`features`。
+- `effectiveScreen` 為畫面自己的決定，未確認時用所屬功能的決定；`deriveApiUsage`、`conflicts`、`statistics` 與帶 graph 的 `effectiveComponent` 使用有效決定。沒有功能標注時與 R77 相同。`statistics.screensInherited` 為隨功能決定的畫面數。

@@ -176,7 +176,7 @@ JSP、JSPF、tag file、Tiles 與有限的 Thymeleaf 以 `MarkupTag` 等 parser 
 
 ## 審查 md 與決策
 
-確認結果以畫面／元件複合鍵保存，交付物是單一 md；R17 起使用 md v1 與自動存檔的進度檔（ADR 0086）。R77 起輸入欄位、表格與 API 也可標注，每個標注可附原因與備註，有備註或 API 標注時輸出 md v4（ADR 0155）。
+確認結果以畫面／元件複合鍵保存，交付物是單一 md；R17 起使用 md v1 與自動存檔的進度檔（ADR 0086）。R77 起輸入欄位、表格與 API 也可標注，每個標注可附原因與備註，有備註或 API 標注時輸出 md v4（ADR 0155）。R78 起可標注整個功能（md v5），md 另含功能、後端呼叫鏈、欄位對照與移除影響範圍（ADR 0156）。
 
 | ADR | 決定 | 狀態 |
 |---|---|---|
@@ -191,6 +191,7 @@ JSP、JSPF、tag file、Tiles 與有限的 Thymeleaf 以 `MarkupTag` 等 parser 
 | [0086](0086-r17-progress-file-autosave-and-md-v1.md) | R17 進度檔自動存檔與 md v1 | 部分被取代：有備註或 API 標注時輸出 md v4，見 [0155](0155-r77-notes-fields-api-decisions-and-save-reminder.md) |
 | [0153](0153-r70-review-md-trailing-empty-lines.md) | R70 review md 的附錄區塊之後允許空行 | 有效 |
 | [0155](0155-r77-notes-fields-api-decisions-and-save-reminder.md) | R77 標注備註、欄位與 API 標注、進度保存提醒（md v4） | 有效 |
+| [0156](0156-r78-features-backend-calls-and-system-md.md) | R78 功能分組與心智圖、後端呼叫鏈、md 系統分析章節（md v5、migration_target 設定） | 有效 |
 
 ## 元件庫
 

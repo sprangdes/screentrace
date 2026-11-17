@@ -1,12 +1,11 @@
 import { parseExpressionAt } from 'acorn';
-import { Payload, Source, Evidence, Behavior, Node, Rule } from '../contracts';
+import { Payload, Source, Evidence, Behavior, Node, Rule, Graph } from '../contracts';
 import { strictGraph } from './strict-graph';
 import { indexGraph } from '../map';
 import { screenBehaviors, rootTrigger } from '../usage';
 import {
   ReviewState,
   validateReview,
-  screenDecision,
   componentDecision,
   statistics,
   conflicts,
@@ -18,8 +17,15 @@ import {
   apiConflicts,
   exportableNotes,
   fieldComponents,
+  buttonComponents,
   reasonLabels,
+  featureDecision,
+  effectiveScreen,
+  screenInherited,
+  effectiveComponent,
 } from './review';
+import { features, Feature, ruleLabels } from './features';
+import { callSources } from '../usage';
 import { jsfLimitation } from '../unsupported-framework';
 export const fixedInstructions = `1. \`REMOVE\`:該畫面 / 元件不得遷移到新系統。
 2. \`KEEP\`:必須遷移,行為須等價(導覽、API 呼叫、檢核、彈窗)。
@@ -100,6 +106,41 @@ export async function sha256(value: string): Promise<string> {
 export interface MarkdownOptions {
   generatedAt?: string;
   toolVersion?: string;
+}
+/** The migration target written in the header: the original requirement unless the analyst set another one. */
+export const DEFAULT_MIGRATION_TARGET = { backend: 'Spring Boot 4', frontend: 'Angular' };
+/** The deepest backend call the analysis follows from a handler (ADR 0156). */
+export const BACKEND_CALL_DEPTH = 4;
+interface BackendCall {
+  depth: number;
+  from: string;
+  to: string;
+  layer: string;
+  layerBasis?: string;
+  resolution: string;
+  reason?: string;
+  source?: Source;
+}
+/** Backend calls the Java analysis attached to a handler; anything malformed is left out, never guessed at. */
+export function backendCalls(handler: Node): BackendCall[] {
+  const raw = handler.attributes.backendCalls;
+  if (!raw) return [];
+  try {
+    const value = JSON.parse(raw);
+    if (!Array.isArray(value)) return [];
+    return value.filter(
+      (c): c is BackendCall =>
+        c &&
+        typeof c === 'object' &&
+        Number.isInteger(c.depth) &&
+        typeof c.from === 'string' &&
+        typeof c.to === 'string' &&
+        typeof c.layer === 'string' &&
+        typeof c.resolution === 'string',
+    );
+  } catch {
+    return [];
+  }
 }
 const table = (headers: string[], rows: string[][]) =>
   [
@@ -299,7 +340,8 @@ function fragment(value: string | undefined, source?: Source): string {
   return projectText(value, source);
 }
 interface MachineState {
-  format_version: 1 | 2 | 3 | 4;
+  format_version: 1 | 2 | 3 | 4 | 5;
+  feature_decisions?: Record<string, string>;
   component_overrides?: Record<string, Record<string, string>>;
   orphan_component_overrides?: OverrideRecord[];
   decision_notes?: DecisionNotes;
@@ -348,18 +390,31 @@ export async function generateMarkdown(
     index = indexGraph(graph),
     usage = deriveApiUsage(graph, state),
     notes = exportableNotes(state),
-    // Format 4 only when there is something format 1 cannot carry; otherwise the md stays byte-identical to format 1.
+    featureList = features(index),
+    // Format 5 carries feature decisions; format 4 notes and API decisions; otherwise format 1.
+    v5 =
+      Object.values(state.featureDecisions || {}).some((d) => d !== 'UNDECIDED') ||
+      Object.keys(notes.features).length > 0,
     v4 =
+      v5 ||
       Object.values(state.apiDecisions || {}).some((d) => d !== 'UNDECIDED') ||
       Object.keys(notes.screens).length > 0 ||
       Object.keys(notes.components).length > 0 ||
       Object.keys(notes.apis).length > 0,
     machine: MachineState = {
-      format_version: v4 ? 4 : 1,
+      format_version: v5 ? 5 : v4 ? 4 : 1,
       analysis_fingerprint: state.fingerprint,
       screen_decisions: state.screenDecisions,
       component_decisions: state.componentDecisions,
-      ...(v4 ? { decision_notes: notes, api_decisions: state.apiDecisions || {} } : {}),
+      ...(v4
+        ? {
+            decision_notes: v5
+              ? notes
+              : { screens: notes.screens, components: notes.components, apis: notes.apis },
+            api_decisions: state.apiDecisions || {},
+          }
+        : {}),
+      ...(v5 ? { feature_decisions: state.featureDecisions || {} } : {}),
     };
   const ownNote = (values: Record<string, DecisionNote> | undefined, id: string) =>
     values && Object.hasOwn(values, id) ? values[id] : undefined;
@@ -392,9 +447,14 @@ export async function generateMarkdown(
     `application: ${machineJson(graph.application.name)}`,
     `technologies: ${machineJson([...(graph.application.technologies || [])].sort(order))}`,
     `context_path: ${machineJson(contexts.length ? contexts : [{ value: '未設定', source: '未設定' }])}`,
-    'migration_target:',
-    '  backend: "Spring Boot 4"',
-    '  frontend: "Angular"',
+    // null: the analyst removed the target; otherwise the configured one, or the original requirement's.
+    ...(payload.migrationTarget === null
+      ? []
+      : [
+          'migration_target:',
+          `  backend: ${machineJson((payload.migrationTarget || DEFAULT_MIGRATION_TARGET).backend)}`,
+          `  frontend: ${machineJson((payload.migrationTarget || DEFAULT_MIGRATION_TARGET).frontend)}`,
+        ]),
     '---',
   ];
   const out = [
@@ -468,8 +528,10 @@ export async function generateMarkdown(
         ]),
     );
   };
+  const featureOf = new Map<string, Feature>();
+  for (const feature of featureList) for (const id of feature.screens) featureOf.set(id, feature);
   for (const screen of screens) {
-    const decision = screenDecision(state, screen.id),
+    const decision = effectiveScreen(graph, state, screen.id),
       screenRow = [
         projectText(screen.id, screen.source),
         decision === 'REMOVE' ? '移除' : projectText(screen.name, screen.source),
@@ -495,6 +557,10 @@ export async function generateMarkdown(
           )
         : table(['id', '標籤', '路由', '來源檔案'], [screenRow]),
     );
+    if (screenInherited(graph, state, screen.id))
+      out.push(
+        `未個別標記,隨所屬功能(§8 功能 key ${projectText(featureOf.get(screen.id)?.key)})的決定 \`${decision}\``,
+      );
     if (decision === 'REMOVE') {
       // The removed screen's components are not listed, but notes written on them still reach the reader.
       const removedNotes =
@@ -862,6 +928,7 @@ export async function generateMarkdown(
       evidenceRows.sort((a, b) => order(a.join(''), b.join(''))),
     ),
   );
+  out.push(...systemSections(graph, state, index, featureList, usage, notes, v5, noteCells));
   out.push(
     '## 附錄 A. review state',
     '```json screentrace-review-state\n' +
@@ -870,12 +937,311 @@ export async function generateMarkdown(
   );
   return out.join('\n\n') + '\n';
 }
+/** §8–§11: the system as analysed, for an AI that should not have to read the source again (ADR 0156). */
+function systemSections(
+  graph: Graph,
+  state: ReviewState,
+  index: ReturnType<typeof indexGraph>,
+  featureList: Feature[],
+  usage: ReturnType<typeof deriveApiUsage>,
+  notes: ReturnType<typeof exportableNotes>,
+  v5: boolean,
+  noteCells: (note: DecisionNote | undefined, decision: string, reference: string) => string[],
+): string[] {
+  const out: string[] = [],
+    nodes = index.nodes,
+    edges = graph.relationships || [],
+    screenValue = (id: string) => effectiveScreen(graph, state, id),
+    decisionCell = (id: string) =>
+      screenValue(id) + (screenInherited(graph, state, id) ? '(隨功能)' : ''),
+    endpointLabel = (n: Node | undefined) =>
+      n
+        ? `${n.attributes.httpMethod || n.attributes.method || ''} ${n.attributes.path || n.attributes.route || n.name}`.trim()
+        : '—',
+    buttons = buttonComponents(graph),
+    fields = fieldComponents(graph),
+    callers = callSources(graph);
+  /** What a screen is for, from facts only: what it holds, which APIs it calls and where it leads. */
+  const purpose = (id: string) => {
+    const b = buttons.filter((k) => k.screenId === id).length,
+      f = fields.filter((k) => k.screenId === id).length,
+      apis = [...callers]
+        .filter(([, list]) => list.some((c) => c.screenId === id))
+        .map(([api]) => endpointLabel(nodes.get(api)))
+        .sort(order),
+      next = [
+        ...new Set(index.relations.filter((r) => r.from === id && r.to !== id).map((r) => r.to)),
+      ]
+        .map((to) => nodes.get(to)?.name || to)
+        .sort(order);
+    return [
+      `按鈕 ${b}、欄位 ${f}`,
+      apis.length ? `呼叫 API:${apis.join('、')}` : '',
+      next.length ? `前往:${next.join('、')}` : '',
+    ]
+      .filter(Boolean)
+      .join(';');
+  };
+
+  out.push(
+    '## 8. 功能與流程(依確定性規則分組,非人工命名)',
+    '分組依序採用 Struts module、處理程式類別、Tiles 定義名稱前綴、網址前綴;同一依據至少兩個畫面共用才成為一個功能,其餘列於「其他」。流程從功能內沒有其他畫面導入的入口畫面開始,依導覽順序列出。',
+  );
+  let serial = 0;
+  for (const feature of featureList) {
+    const decision = featureDecision(state, feature.key),
+      row = [
+        projectText(feature.key),
+        projectText(feature.label),
+        ruleLabels[feature.rule],
+        projectText(feature.value),
+        feature.sources.map((s) => sourceCell(s)).join(' / ') || '—',
+      ];
+    out.push(
+      `### 8.${++serial} [${decision}]`,
+      v5
+        ? table(
+            ['功能 key', '名稱', '分組依據', '依據值', '來源', '原因', '備註'],
+            [
+              [
+                ...row,
+                ...noteCells(
+                  Object.hasOwn(notes.features, feature.key)
+                    ? notes.features[feature.key]
+                    : undefined,
+                  decision,
+                  `decision_notes.features.${feature.key}`,
+                ),
+              ],
+            ],
+          )
+        : table(['功能 key', '名稱', '分組依據', '依據值', '來源'], [row]),
+      table(
+        ['流程', '順序', '畫面 id', '名稱', '路由', '決策', '用途摘要'],
+        feature.flows.flatMap((flow, f) =>
+          flow.screens.map((id, step) => {
+            const screen = nodes.get(id);
+            return [
+              String(f + 1),
+              String(step + 1),
+              projectText(id, screen?.source),
+              projectText(screen?.name, screen?.source),
+              projectText(index.routes.get(id)?.[0], screen?.source),
+              decisionCell(id),
+              projectText(purpose(id), screen?.source),
+            ];
+          }),
+        ),
+      ),
+    );
+  }
+
+  out.push(
+    `## 9. 後端呼叫鏈(處理程式 → Service → DAO,最多 ${BACKEND_CALL_DEPTH} 層)`,
+    '每一列是原始碼中可證明的一次方法呼叫;`UNRESOLVED` / `AMBIGUOUS` 表示無法唯一確定被呼叫的實作,不得自行猜測。只列出專案內的類別,框架與函式庫呼叫不列入。',
+  );
+  const chainRows: string[][] = [];
+  for (const handler of graph.nodes
+    .filter((n) => n.type === 'HANDLER')
+    .sort((a, b) => order(a.id, b.id)))
+    for (const call of backendCalls(handler)
+      .slice()
+      .sort((a, b) => a.depth - b.depth || order(a.from, b.from) || order(a.to, b.to)))
+      chainRows.push([
+        projectText(handler.name, handler.source),
+        String(call.depth),
+        projectText(call.from, call.source),
+        projectText(call.to, call.source),
+        projectText(call.layer) + (call.layerBasis ? ` (${projectText(call.layerBasis)})` : ''),
+        projectText(call.resolution) + (call.reason ? ` ${projectText(call.reason)}` : ''),
+        sourceCell(call.source),
+      ]);
+  out.push(
+    chainRows.length
+      ? table(['處理程式', '層', '呼叫者', '被呼叫', '層級', '解析', '來源'], chainRows)
+      : '未偵測到處理程式呼叫專案內的 Service / DAO。',
+  );
+
+  out.push('## 10. 資料欄位對照(畫面欄位 ↔ 表單模型 ↔ API request ↔ 檢核規則)');
+  const binds = (id: string) =>
+    edges
+      .filter(
+        (e) => e.type === 'BINDS_TO' && e.from === id && nodes.get(e.to)?.type === 'FORM_MODEL',
+      )
+      .map((e) => nodes.get(e.to)!);
+  const fieldRows: string[][] = [];
+  const screenOrder = [...index.screens].sort(
+    (a, b) =>
+      order(index.routes.get(a.id)?.[0] || '', index.routes.get(b.id)?.[0] || '') ||
+      order(a.id, b.id),
+  );
+  for (const screen of screenOrder) {
+    if (screenValue(screen.id) === 'REMOVE') continue;
+    for (const key of fields
+      .filter((k) => k.screenId === screen.id)
+      .sort((a, b) => order(a.componentId, b.componentId))) {
+      const component = nodes.get(key.componentId)!,
+        name = component.attributes.field || component.attributes.name || '',
+        form = component.attributes.formId,
+        models = [...new Set([...binds(component.id), ...(form ? binds(form) : [])])],
+        base = name.split(/[.[]/)[0],
+        modelCells = models.map(
+          (m) =>
+            `${m.name}${m.attributes[`field.${base}.type`] ? ': ' + m.attributes[`field.${base}.type`] : ''}`,
+        ),
+        submits = (graph.behaviors || []).filter(
+          (b) =>
+            ['SUBMIT_FORM', 'CALL_API'].includes(b.type) &&
+            b.targetId &&
+            nodes.get(b.targetId)?.type === 'ENDPOINT' &&
+            (b.triggerId === component.id || (!!form && b.triggerId === form)),
+        ),
+        apis = [...new Set(submits.map((b) => b.targetId!))].sort(order),
+        requestFields = apis.flatMap((api) =>
+          (graph.apiContracts || [])
+            .filter((c) => c.endpointId === api)
+            .flatMap((c) => {
+              const request = (c.request || {}) as {
+                fields?: { name?: string; type?: string; location?: string }[];
+              };
+              return (request.fields || [])
+                .filter((f) => !!name && (f.name === name || f.name === base))
+                .map((f) => `${f.name}: ${f.type || '—'} (${f.location || '—'})`);
+            }),
+        ),
+        rules = (graph.validationRules || [])
+          .filter((r) => r.fields.includes(component.id) || (!!name && r.fields.includes(name)))
+          .map((r) => `${r.kind} (${r.layer})`)
+          .sort(order);
+      fieldRows.push([
+        projectText(screen.id, screen.source),
+        projectText(component.id, component.source),
+        projectText(name, component.source),
+        projectText(modelCells.join(' / '), component.source),
+        projectText(apis.map((api) => endpointLabel(nodes.get(api))).join(' / '), component.source),
+        projectText(requestFields.join(' / '), component.source),
+        projectText(rules.join(' / '), component.source),
+      ]);
+    }
+  }
+  out.push(
+    fieldRows.length
+      ? table(
+          ['畫面', '欄位元件', '欄位名稱', '表單模型', 'API', 'API request 欄位', '檢核規則'],
+          fieldRows,
+        )
+      : '—',
+  );
+
+  out.push(
+    '## 11. 移除影響範圍',
+    '列出每個移除項目會牽動的其他畫面、API 與共用樣板;只依分析圖推導,不自動修正標記。',
+  );
+  const impact: string[][] = [];
+  const removedScreens = index.screens
+    .filter((s) => screenValue(s.id) === 'REMOVE')
+    .sort((a, b) => order(a.id, b.id));
+  for (const screen of removedScreens) {
+    const item = projectText(screen.id, screen.source);
+    for (const r of index.relations.filter(
+      (r) => r.to === screen.id && r.from !== screen.id && screenValue(r.from) !== 'REMOVE',
+    ))
+      impact.push([
+        item,
+        '畫面',
+        '仍保留的畫面會連到此畫面',
+        projectText(r.from),
+        r.triggers.map((t) => projectText(t)).join(' / ') || '—',
+      ]);
+    for (const [api, list] of callers) {
+      if (!list.some((c) => c.screenId === screen.id)) continue;
+      const status = usage.get(api)?.status;
+      impact.push([
+        item,
+        '畫面',
+        status === 'REMOVABLE' ? 'API 的呼叫來源都已移除' : 'API 仍有其他呼叫來源',
+        projectText(api),
+        status || '—',
+      ]);
+    }
+    for (const e of edges.filter((e) => e.type === 'INCLUDES' && e.from === screen.id)) {
+      const users = edges
+        .filter((x) => x.type === 'INCLUDES' && x.to === e.to && x.from !== screen.id)
+        .map((x) => x.from)
+        .filter((id) => nodes.get(id)?.type === 'SCREEN' && screenValue(id) !== 'REMOVE');
+      impact.push([
+        item,
+        '畫面',
+        users.length ? '共用樣板仍被保留的畫面使用,不可一併刪除' : '樣板只被已移除的畫面使用',
+        projectText(e.to),
+        users.length ? `${users.length} 個畫面` : '—',
+      ]);
+    }
+  }
+  for (const [screenId, values] of Object.entries(state.componentDecisions).sort(([a], [b]) =>
+    order(a, b),
+  ))
+    for (const componentId of Object.keys(values).sort(order)) {
+      if (values[componentId] !== 'REMOVE' || screenValue(screenId) === 'REMOVE') continue;
+      if (!index.owners.get(componentId)?.includes(screenId)) continue;
+      const item = projectText(`${screenId} / ${componentId}`);
+      for (const r of index.relations.filter(
+        (r) => r.from === screenId && r.triggers.includes(componentId),
+      ))
+        impact.push([item, '元件', '移除後無法再由此元件前往', projectText(r.to), '—']);
+      for (const [api, list] of callers)
+        if (list.some((c) => c.screenId === screenId && c.componentId === componentId))
+          impact.push([
+            item,
+            '元件',
+            '移除後此元件不再呼叫 API',
+            projectText(api),
+            usage.get(api)?.status || '—',
+          ]);
+    }
+  for (const api of Object.keys(state.apiDecisions || {}).sort(order)) {
+    if (state.apiDecisions![api] !== 'REMOVE' || nodes.get(api)?.type !== 'ENDPOINT') continue;
+    const item = projectText(api);
+    for (const c of usage.get(api)?.callers || [])
+      if (
+        screenValue(c.screenId) !== 'REMOVE' &&
+        effectiveComponent(state, c.screenId, c.componentId || '', graph) !== 'REMOVE'
+      )
+        impact.push([
+          item,
+          'API',
+          '仍保留的呼叫來源會失去此 API',
+          projectText(c.componentId ? `${c.screenId} / ${c.componentId}` : c.screenId),
+          '—',
+        ]);
+    for (const e of edges.filter((e) => e.type === 'HANDLED_BY' && e.from === api)) {
+      const others = edges.filter(
+        (x) => x.type === 'HANDLED_BY' && x.to === e.to && x.from !== api,
+      );
+      impact.push([
+        item,
+        'API',
+        others.length ? '處理程式還處理其他 API,不可整個刪除' : '處理程式只服務此 API',
+        projectText(nodes.get(e.to)?.name || e.to, nodes.get(e.to)?.source),
+        others.length ? `${others.length} 個 API` : '—',
+      ]);
+    }
+  }
+  out.push(
+    impact.length
+      ? table(['移除項目', '類型', '影響', '對象', '說明'], impact)
+      : '沒有標記移除的項目。',
+  );
+  return out;
+}
 export const MAX_STATE_JSON_BYTES = 32 * 1024 * 1024;
 export interface Orphan {
   /** Absent for an API decision whose API is no longer in the analysis. */
   screenId?: string;
   componentId?: string;
   apiId?: string;
+  /** A feature decision whose feature (rule and value) no longer exists in the analysis. */
+  featureKey?: string;
   reason?: string;
 }
 export async function importMarkdown(
@@ -920,13 +1286,18 @@ export async function importMarkdown(
             'orphan_component_overrides',
             ...(data.format_version === 3 ? ['decision_notes'] : []),
           ]
-        : data.format_version === 4
-          ? [...baseKeys, 'decision_notes', 'api_decisions']
+        : data.format_version === 4 || data.format_version === 5
+          ? [
+              ...baseKeys,
+              'decision_notes',
+              'api_decisions',
+              ...(data.format_version === 5 ? ['feature_decisions'] : []),
+            ]
           : baseKeys;
   if (Object.keys(data).some((k) => !keys.includes(k)) || keys.some((k) => !Object.hasOwn(data, k)))
     throw Error('附錄包含未知／缺少欄位');
   if (
-    ![1, 2, 3, 4].includes(data.format_version as number) ||
+    ![1, 2, 3, 4, 5].includes(data.format_version as number) ||
     typeof data.analysis_fingerprint !== 'string' ||
     typeof data.state_sha256 !== 'string'
   )
@@ -978,10 +1349,13 @@ export async function importMarkdown(
           orphan_component_overrides: data.orphan_component_overrides,
         }
       : {}),
-    ...(data.format_version === 3 || data.format_version === 4
+    ...(data.format_version === 3 || data.format_version === 4 || data.format_version === 5
       ? { decisionNotes: data.decision_notes }
       : {}),
-    ...(data.format_version === 4 ? { apiDecisions: data.api_decisions } : {}),
+    ...(data.format_version === 4 || data.format_version === 5
+      ? { apiDecisions: data.api_decisions }
+      : {}),
+    ...(data.format_version === 5 ? { featureDecisions: data.feature_decisions } : {}),
   };
   const state = validateReview(
     candidate,
@@ -1020,6 +1394,9 @@ export async function importMarkdown(
         });
   for (const id of Object.keys(state.apiDecisions || {}).sort(order))
     if (index.nodes.get(id)?.type !== 'ENDPOINT') orphans.push({ apiId: id });
+  const featureKeys = new Set(features(index).map((f) => f.key));
+  for (const key of Object.keys(state.featureDecisions || {}).sort(order))
+    if (!featureKeys.has(key)) orphans.push({ featureKey: key });
   for (const record of state.orphan_component_overrides || [])
     orphans.push({ screenId: record.screenId, componentId: record.componentId });
   return {

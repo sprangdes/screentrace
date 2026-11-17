@@ -2,6 +2,7 @@ import { Graph, requireGraph } from '../contracts';
 import { Library } from './library';
 import { indexGraph } from '../map';
 import { callSources, Caller, rootTrigger } from '../usage';
+import { features, featureOfScreen } from './features';
 export const decisions = ['UNDECIDED', 'KEEP', 'REMOVE'] as const;
 export type Decision = (typeof decisions)[number];
 export type EffectiveDecision = Decision | 'INHERITED_REMOVE';
@@ -29,6 +30,8 @@ export interface DecisionNotes {
   components: Record<string, Record<string, DecisionNote>>;
   /** Notes on APIs (endpoint ID); absent in states saved before APIs could be marked. */
   apis?: Record<string, DecisionNote>;
+  /** Notes on features (feature key, ADR 0156). */
+  features?: Record<string, DecisionNote>;
 }
 /** Input fields and tables: markable like buttons, grouped and counted on their own. */
 export const fieldKinds = [
@@ -54,6 +57,8 @@ export interface ReviewState {
   decisionNotes?: DecisionNotes;
   /** Decisions made on an API itself (endpoint ID), shown beside the status derived from its callers. */
   apiDecisions?: Record<string, Decision>;
+  /** Decisions on whole features (feature key); a screen without its own decision follows its feature. */
+  featureDecisions?: Record<string, Decision>;
   manifest_sha256?: string;
   component_overrides?: Record<string, Record<string, string>>;
   orphan_component_overrides?: OverrideRecord[];
@@ -83,15 +88,52 @@ export function apiDecision(state: ReviewState, id: string): Decision {
   const values = state.apiDecisions || {};
   return own(values, id) ? values[id] : 'UNDECIDED';
 }
+export function featureDecision(state: ReviewState, key: string): Decision {
+  const values = state.featureDecisions || {};
+  return own(values, key) ? values[key] : 'UNDECIDED';
+}
+const hasFeatureDecisions = (state: ReviewState) =>
+  Object.values(state.featureDecisions || {}).some((d) => d !== 'UNDECIDED');
+/** Feature membership per graph, rebuilt when the graph's node or relation lists change. */
+const membershipCache = new WeakMap<
+  Graph,
+  { nodes: unknown[]; relationships: unknown[] | undefined; map: Map<string, string> }
+>();
+function membership(graph: Graph): Map<string, string> {
+  const cached = membershipCache.get(graph);
+  if (cached && cached.nodes === graph.nodes && cached.relationships === graph.relationships)
+    return cached.map;
+  const map = featureOfScreen(features(graph));
+  membershipCache.set(graph, { nodes: graph.nodes, relationships: graph.relationships, map });
+  return map;
+}
+/** The decision of the feature a screen belongs to (UNDECIDED when it has none). */
+export function screenFeatureDecision(graph: Graph, state: ReviewState, id: string): Decision {
+  if (!hasFeatureDecisions(state)) return 'UNDECIDED';
+  const key = membership(graph).get(id);
+  return key === undefined ? 'UNDECIDED' : featureDecision(state, key);
+}
+/** A screen's own decision, or its feature's when it has none of its own. */
+export function effectiveScreen(graph: Graph, state: ReviewState, id: string): Decision {
+  const own = screenDecision(state, id);
+  return own !== 'UNDECIDED' ? own : screenFeatureDecision(graph, state, id);
+}
+/** Whether a screen's effective decision comes from its feature. */
+export function screenInherited(graph: Graph, state: ReviewState, id: string): boolean {
+  return (
+    screenDecision(state, id) === 'UNDECIDED' &&
+    screenFeatureDecision(graph, state, id) !== 'UNDECIDED'
+  );
+}
 function requireDecision(value: unknown): asserts value is Decision {
   if (!decisions.includes(value as Decision)) throw Error('無效確認狀態');
 }
 const notesOf = (state: ReviewState): DecisionNotes =>
   state.decisionNotes || { screens: {}, components: {} };
-/** The note kept for one screen, component or API; an empty object when there is none. */
+/** The note kept for one screen, component, API or feature; an empty object when there is none. */
 export function decisionNoteOf(
   state: ReviewState,
-  scope: 'screen' | 'component' | 'api',
+  scope: 'screen' | 'component' | 'api' | 'feature',
   id: string,
   componentId?: string,
 ): DecisionNote {
@@ -101,9 +143,11 @@ export function decisionNoteOf(
         ? notes.screens
         : scope === 'api'
           ? notes.apis || {}
-          : own(notes.components, id)
-            ? notes.components[id]
-            : {},
+          : scope === 'feature'
+            ? notes.features || {}
+            : own(notes.components, id)
+              ? notes.components[id]
+              : {},
     key = scope === 'component' ? componentId! : id;
   return own(values, key) ? values[key] : {};
 }
@@ -162,13 +206,13 @@ export function setDecisionNote(
 ): ReviewState;
 export function setDecisionNote(
   state: ReviewState,
-  scope: 'api',
-  apiId: string,
+  scope: 'api' | 'feature',
+  id: string,
   note: DecisionNote,
 ): ReviewState;
 export function setDecisionNote(
   state: ReviewState,
-  scope: 'screen' | 'component' | 'api',
+  scope: 'screen' | 'component' | 'api' | 'feature',
   screenId: string,
   componentOrNote: string | DecisionNote,
   noteArg?: DecisionNote,
@@ -182,9 +226,16 @@ export function setDecisionNote(
         ? screenDecision(state, screenId)
         : scope === 'api'
           ? apiDecision(state, screenId)
-          : componentDecision(state, screenId, component!);
+          : scope === 'feature'
+            ? featureDecision(state, screenId)
+            : componentDecision(state, screenId, component!);
   if (clean.reason !== undefined && !validReason(decision, clean.reason))
     throw Error('決策原因與目前決策不相符');
+  if (scope === 'feature')
+    return {
+      ...state,
+      decisionNotes: { ...notes, features: putNote(notes.features || {}, screenId, clean) },
+    };
   if (scope === 'api')
     return {
       ...state,
@@ -206,7 +257,7 @@ export function setDecisionNote(
 }
 function clearIncompatibleReason(
   state: ReviewState,
-  scope: 'screen' | 'component' | 'api',
+  scope: 'screen' | 'component' | 'api' | 'feature',
   screenId: string,
   componentId?: string,
   decision?: Decision,
@@ -218,6 +269,11 @@ function clearIncompatibleReason(
   if (!old.reason || validReason(decision, old.reason)) return state;
   const cleaned = { ...old };
   delete cleaned.reason;
+  if (scope === 'feature')
+    return {
+      ...state,
+      decisionNotes: { ...notes, features: putNote(notes.features || {}, screenId, cleaned) },
+    };
   if (scope === 'api')
     return {
       ...state,
@@ -287,6 +343,20 @@ export function setApi(state: ReviewState, id: string, decision: Decision): Revi
     decision,
   );
 }
+export function setFeature(state: ReviewState, key: string, decision: Decision): ReviewState {
+  requireDecision(decision);
+  return clearIncompatibleReason(
+    {
+      ...state,
+      featureDecisions: { ...(state.featureDecisions || {}), [key]: decision },
+      decisionNotes: notesOf(state),
+    },
+    'feature',
+    key,
+    undefined,
+    decision,
+  );
+}
 /** Notes as they leave the page (md): a reason only stays with a KEEP／REMOVE decision it fits,
  * and an entry left with neither reason nor note is dropped. Unknown IDs are kept, as decisions are. */
 export function exportableNotes(state: ReviewState): Required<DecisionNotes> {
@@ -304,7 +374,8 @@ export function exportableNotes(state: ReviewState): Required<DecisionNotes> {
     },
     screens: Record<string, DecisionNote> = {},
     components: Record<string, Record<string, DecisionNote>> = {},
-    apis: Record<string, DecisionNote> = {};
+    apis: Record<string, DecisionNote> = {},
+    featureNotes: Record<string, DecisionNote> = {};
   // IDs are data: defining own properties keeps a key such as __proto__ an ordinary entry.
   const put = <T>(target: Record<string, T>, key: string, value: T) =>
     Object.defineProperty(target, key, {
@@ -328,15 +399,22 @@ export function exportableNotes(state: ReviewState): Required<DecisionNotes> {
     const value = keep(note, apiDecision(state, id));
     if (value) put(apis, id, value);
   }
-  return { screens, components, apis };
+  for (const [id, note] of Object.entries(notes.features || {})) {
+    const value = keep(note, featureDecision(state, id));
+    if (value) put(featureNotes, id, value);
+  }
+  return { screens, components, apis, features: featureNotes };
 }
-/** Applies the existing per-screen/component decision to each selected key. */
+/** Applies the existing per-screen/component decision to each selected key. With the graph, a screen
+ * removed through its feature removes its unmarked components too. */
 export function effectiveComponent(
   state: ReviewState,
   screen: string,
   component: string,
+  graph?: Graph,
 ): EffectiveDecision {
-  return screenDecision(state, screen) === 'REMOVE'
+  const screenValue = graph ? effectiveScreen(graph, state, screen) : screenDecision(state, screen);
+  return screenValue === 'REMOVE'
     ? 'INHERITED_REMOVE'
     : componentDecision(state, screen, component);
 }
@@ -414,22 +492,26 @@ export function statistics(graph: Graph, state: ReviewState) {
     fields = { UNDECIDED: 0, KEEP: 0, REMOVE: 0 },
     apis = { UNDECIDED: 0, KEEP: 0, REMOVE: 0 };
   let inherited = 0,
-    fieldsInherited = 0;
+    fieldsInherited = 0,
+    screensInherited = 0;
+  const screenValue = (id: string) => effectiveScreen(graph, state, id);
   for (const n of requireGraph(graph).nodes)
-    if (n.type === 'SCREEN') screens[screenDecision(state, n.id)]++;
-    else if (n.type === 'ENDPOINT') apis[apiDecision(state, n.id)]++;
+    if (n.type === 'SCREEN') {
+      screens[screenValue(n.id)]++;
+      if (screenInherited(graph, state, n.id)) screensInherited++;
+    } else if (n.type === 'ENDPOINT') apis[apiDecision(state, n.id)]++;
   // One index for both groups: statistics runs on every render of a large report.
   const index = indexGraph(graph),
     buttons = buttonsOf(index);
   for (const key of buttons) {
     components[componentDecision(state, key.screenId, key.componentId)]++;
-    if (screenDecision(state, key.screenId) === 'REMOVE') inherited++;
+    if (screenValue(key.screenId) === 'REMOVE') inherited++;
   }
   for (const key of fieldsOf(index, buttons)) {
     fields[componentDecision(state, key.screenId, key.componentId)]++;
-    if (screenDecision(state, key.screenId) === 'REMOVE') fieldsInherited++;
+    if (screenValue(key.screenId) === 'REMOVE') fieldsInherited++;
   }
-  return { screens, components, inherited, fields, fieldsInherited, apis };
+  return { screens, components, inherited, fields, fieldsInherited, apis, screensInherited };
 }
 export function conflicts(
   graph: Graph,
@@ -438,7 +520,7 @@ export function conflicts(
   const index = indexGraph(graph),
     result: { screenId: string; componentId: string; targetScreenId: string }[] = [];
   for (const r of index.relations)
-    if (screenDecision(state, r.to) === 'REMOVE')
+    if (effectiveScreen(graph, state, r.to) === 'REMOVE')
       for (const component of r.triggers)
         if (componentDecision(state, r.from, component) === 'KEEP')
           result.push({ screenId: r.from, componentId: component, targetScreenId: r.to });
@@ -455,7 +537,7 @@ export function deriveApiUsage(graph: Graph, state: ReviewState): Map<string, Us
       callers.length > 0 &&
       callers.every(
         (c) =>
-          screenDecision(state, c.screenId) === 'REMOVE' ||
+          effectiveScreen(graph, state, c.screenId) === 'REMOVE' ||
           (!!c.componentId && componentDecision(state, c.screenId, c.componentId) === 'REMOVE'),
       );
     result.set(id, {
@@ -520,10 +602,20 @@ export function validateReview(
       requireDecision(decision);
       result = setApi(result, id, decision);
     }
+  if (data.featureDecisions !== undefined)
+    for (const [key, decision] of Object.entries(dictionary(data.featureDecisions))) {
+      requireDecision(decision);
+      result = setFeature(result, key, decision);
+    }
   if (data.decisionNotes !== undefined) {
     const value = dictionary(data.decisionNotes),
-      keys = Object.keys(value).sort().join(',');
-    if (keys !== 'components,screens' && keys !== 'apis,components,screens')
+      keys = Object.keys(value);
+    // screens and components always; apis (R77) and features (R78) when present.
+    if (
+      !keys.includes('screens') ||
+      !keys.includes('components') ||
+      keys.some((k) => !['screens', 'components', 'apis', 'features'].includes(k))
+    )
       throw Error('decisionNotes 欄位錯誤');
     for (const [screen, note] of Object.entries(dictionary(value.screens)))
       result = setDecisionNote(result, 'screen', screen, note as DecisionNote);
@@ -533,6 +625,9 @@ export function validateReview(
     if (value.apis !== undefined)
       for (const [api, note] of Object.entries(dictionary(value.apis)))
         result = setDecisionNote(result, 'api', api, note as DecisionNote);
+    if (value.features !== undefined)
+      for (const [key, note] of Object.entries(dictionary(value.features)))
+        result = setDecisionNote(result, 'feature', key, note as DecisionNote);
   }
   if (
     data.component_overrides !== undefined ||
