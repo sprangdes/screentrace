@@ -166,7 +166,7 @@ export function strictGraph(graph: Graph): Graph {
     if (
       b.triggerId &&
       !(
-        graph.schemaVersion === '2.3'
+        ['2.3', '2.4'].includes(graph.schemaVersion)
           ? ['SCREEN', 'COMPONENT', 'ENTRY_POINT']
           : ['SCREEN', 'COMPONENT']
       ).includes(nodes.get(b.triggerId)?.type || '')

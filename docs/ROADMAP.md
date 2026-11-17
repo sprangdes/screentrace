@@ -489,3 +489,8 @@
 - WP146：以 300 頁的 Spring Boot＋React 合成專案量測：分析 16 秒，Node 端 7 秒來自每個畫面重走含全部路由的 App 元件，佔比不高，未修改；以同一張圖（7,500 個節點）在 Chromium 量測 viewer：載入 1.8 秒、開啟畫面面板 2.1 秒（聚焦動畫每幀強制版面計算）、搜尋輸入 250 ms，RV-710 列出的 `indexGraph` 重建合計約 90 ms，未修改。`hidePrivateLocations` 先單獨遮蔽 application，再以串流序列化確認其餘內容不含家目錄時直接回傳，不再把整張圖轉成 JSON 樹（RV-706）。更正 RV-119：重導展開有 10 層上限，是常數倍膨脹。
 - 量測（只計分析）：Spring MVC 40 個 controller 16 → 8 秒、100 個 23 秒（R74 為 32 秒）、React 300 頁 16 → 13 秒、Struts 300 個 action 35 → 31 秒；80 個 controller 的專案在 3.4 GB 預設 heap 下由記憶體不足改為 35 秒完成。
 - 驗證：`HomeRedactionTest` 新增 1 個測試（application 與節點中的家目錄都會遮蔽）；14 個 fixture 與 4 個合成專案的圖逐位元組相同；Maven 全數通過。
+
+## R76 viewer 下載 md 拒絕角色圖的進入點觸發者
+
+- WP147：設定角色的分析圖（schema 2.4）在報表按「下載 md」時失敗，訊息為「schema 2.2 嚴格驗證：觸發者」。Java `GraphIntegrityValidator` 對 2.3 與 2.4 都允許行為由 `ENTRY_POINT` 觸發，viewer 的 `strictGraph` 只允許 2.3；改為與 Java 一致。
+- 驗證：`r76-entry-point-trigger.test.mjs` 新增 2 個測試（2.3／2.4 接受 ENTRY_POINT 觸發者、2.2 仍拒絕），修正前 2.4 案例以「觸發者」失敗；viewer 測試、建置、Prettier、ESLint 全數通過。
