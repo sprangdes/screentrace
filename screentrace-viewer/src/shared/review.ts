@@ -44,6 +44,8 @@ export const fieldKinds = [
   'DATE_PICKER',
   'FILE_INPUT',
   'TABLE',
+  // Elements that print data (ADR 0157).
+  'DISPLAY_FIELD',
 ] as const;
 /** WP8 reuses this versioned, framework-neutral browser/Node contract. */
 export interface ReviewState {

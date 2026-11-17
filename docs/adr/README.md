@@ -192,6 +192,7 @@ JSP、JSPF、tag file、Tiles 與有限的 Thymeleaf 以 `MarkupTag` 等 parser 
 | [0153](0153-r70-review-md-trailing-empty-lines.md) | R70 review md 的附錄區塊之後允許空行 | 有效 |
 | [0155](0155-r77-notes-fields-api-decisions-and-save-reminder.md) | R77 標注備註、欄位與 API 標注、進度保存提醒（md v4） | 有效 |
 | [0156](0156-r78-features-backend-calls-and-system-md.md) | R78 功能分組與心智圖、後端呼叫鏈、md 系統分析章節（md v5、migration_target 設定） | 有效 |
+| [0157](0157-r79-display-fields-and-preview-trust.md) | R79 顯示欄位（DISPLAY_FIELD）與預覽可信度標示 | 有效 |
 
 ## 元件庫
 

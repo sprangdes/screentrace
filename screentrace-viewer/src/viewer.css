@@ -701,3 +701,15 @@ button.persona-coverage-dot:hover{outline:2px solid var(--primary);outline-offse
 .status-mark.is-inherited{opacity:.55}
 .inherited-tag.is-keep{background:var(--keep-soft);color:var(--keep)}
 
+/* How far the preview can be trusted (R79): a toggle beside the notice, and a legend under the toolbar */
+.trust-toggle{display:inline-flex;align-items:center;gap:4px;flex:none;padding:3px 8px;font-size:13px;color:var(--gray-700)}
+.trust-toggle .icon{width:15px;height:15px}
+.trust-toggle[aria-pressed=true]{background:var(--primary-soft);border-color:var(--primary);color:var(--primary)}
+.trust-legend{display:flex;flex-wrap:wrap;gap:6px 14px;flex:none;padding:6px 10px;background:white;border:1px solid var(--gray-200);border-radius:6px;font-size:13px;color:var(--gray-700)}
+.trust-legend[hidden]{display:none}
+.trust-key{display:inline-flex;align-items:center;gap:6px}
+.trust-key::before{content:"";width:16px;height:10px;border:2px dashed;border-radius:2px}
+.trust-demo::before{border-color:#2563eb}
+.trust-conditional::before{border-color:#d97706}
+.trust-dynamic::before{border:2px solid #64748b}
+

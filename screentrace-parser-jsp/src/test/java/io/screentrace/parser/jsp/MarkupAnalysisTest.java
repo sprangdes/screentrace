@@ -12,8 +12,10 @@ class MarkupAnalysisTest {
   void retainsKindsGuardsEventsValidationBindingsAndModalTargets() throws Exception {
     String text = Files.readString(Path.of("src/test/resources/wp3/components.jsp"));
     var result = MarkupAnalysis.parse("views/order.jsp", text);
+    // Display fields come from DisplayFields after this parse (ADR 0157), not from the parse
+    // itself.
     assertEquals(
-        EnumSet.allOf(ComponentKind.class),
+        EnumSet.complementOf(EnumSet.of(ComponentKind.DISPLAY_FIELD)),
         EnumSet.copyOf(result.components().stream().map(MarkupAnalysis.Component::kind).toList()));
     var email =
         result.components().stream()

@@ -505,3 +505,8 @@
 
 - WP149：依改善計畫第 3、4 項，OQ-053 採建議方案。viewer 依確定性規則（Struts module、處理程式類別、Tiles 定義前綴、網址前綴）分組功能與流程，清單新增「功能」顯示方式與功能地圖，可標注整個功能並由未個別標記的畫面繼承；Java 新增 `BackendCallChains` 追蹤處理程式 → Service → DAO（最多 4 層，寫入 `backendCalls` attribute）；md 新增 §8 功能與流程、§9 後端呼叫鏈、§10 資料欄位對照、§11 移除影響範圍，功能標注輸出 format_version 5；`migration_target` 可依專案在工作區設定 `migrationTargets` 改寫或移除。見 [ADR 0156](adr/0156-r78-features-backend-calls-and-system-md.md)。
 - 驗證：新增 viewer 單元 6、e2e 2、Java 8 個測試；md golden 與 WP40 雜湊只因新增章節而變（刪去後逐位元組相同）。
+
+## R79 改善計畫階段 3：顯示欄位與預覽可信度標示
+
+- WP150：依改善計畫第 5、7 項，OQ-054 採建議方案。JSP／Thymeleaf（`DisplayFields`）與 React（`screentrace-js`）把印出資料的元素建模為 `DISPLAY_FIELD` 元件，名稱依表頭、前置標籤或屬性路徑，迴圈內為一個重複元件；capture 沿用元件 ID 對應預覽元素；viewer 把顯示欄位列入「欄位」分組，可標注、可從預覽點選；md §10 以屬性對照表單模型。預覽新增「標示示範內容」切換，框出示範資料、依條件顯示與無法確定的內容。見 [ADR 0157](adr/0157-r79-display-fields-and-preview-trust.md)。
+- 驗證：新增 Java 4、JS 1、viewer e2e 2 個測試；合成專案 `page.jsp` 結尾各加一行輸出；`MarkupAnalysisTest`、`Wp21ComponentNamesTest` 排除新 kind（ADR 0157 說明）。

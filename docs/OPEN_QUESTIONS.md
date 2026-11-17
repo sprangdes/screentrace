@@ -2,7 +2,7 @@
 
 每項問題記錄：編號、情境、可選方案、影響範圍、狀態與需求方決定。未決問題不得由實作者自行選擇；依附件 §0.3 暫停受影響工作包。
 
-> 現況（2026-11-17）：OQ-001 至 OQ-054 皆已決定；OQ-053、OQ-054 由需求方回覆「依建議方案實作」。OQ-054（階段 3）尚未實作。文中引用的 `reports/*.md`、`docs/reports/*.md` 已於 commit df28b33 移除，僅能從 git 歷史查閱。
+> 現況（2026-11-17）：OQ-001 至 OQ-054 皆已決定；OQ-053、OQ-054 由需求方回覆「依建議方案實作」。OQ-054 已於 R79 實作（ADR 0157）。文中引用的 `reports/*.md`、`docs/reports/*.md` 已於 commit df28b33 移除，僅能從 git 歷史查閱。
 
 ## OQ-001 — 檢核來源層級與框架中立約束衝突
 
@@ -519,5 +519,5 @@
   - 顯示欄位的命名：A. 用綁定的模型屬性（例如 `owner.lastName`）；B. 用附近的標籤文字（表頭、label），找不到時退回屬性名；C. 兩者並列。
   - core 元件 kind 的名稱（例如新增 `DISPLAY_FIELD`）與 schema 是否升版。
 - 影響範圍：`screentrace-parser-jsp`、`screentrace-js`、core 元件 kind、capture 的元素位置對應、viewer、md。
-- 狀態：已決定（2026-11-17），尚未實作。
+- 狀態：已決定（2026-11-17），R79 實作（[ADR 0157](adr/0157-r79-display-fields-and-preview-trust.md)）。
 - 決定：需求方回覆「依你的建議繼續實作」，採用建議方案：迴圈內重複輸出視為一個元件（以來源位置識別，預覽對應所有出現處）；命名用附近的標籤文字（表頭、label），找不到時用綁定的模型屬性，原始運算式另存為 attribute；core 新增元件 kind `DISPLAY_FIELD`，kind 是既有的 attribute 字串，schema 不升版。

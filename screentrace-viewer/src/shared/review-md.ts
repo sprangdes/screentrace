@@ -1081,10 +1081,24 @@ function systemSections(
       .filter((k) => k.screenId === screen.id)
       .sort((a, b) => order(a.componentId, b.componentId))) {
       const component = nodes.get(key.componentId)!,
-        name = component.attributes.field || component.attributes.name || '',
+        // An input's field name, or the property a display field prints (ADR 0157).
+        name =
+          component.attributes.field ||
+          component.attributes.name ||
+          component.attributes.property ||
+          '',
         form = component.attributes.formId,
-        models = [...new Set([...binds(component.id), ...(form ? binds(form) : [])])],
-        base = name.split(/[.[]/)[0],
+        // A display field reads `model.property`: the form model of that name, when the graph has one.
+        printed =
+          component.attributes.kind === 'DISPLAY_FIELD' && name.includes('.')
+            ? graph.nodes.filter(
+                (n) =>
+                  n.type === 'FORM_MODEL' &&
+                  (n.name === name.split('.')[0] || n.attributes.name === name.split('.')[0]),
+              )
+            : [],
+        models = [...new Set([...binds(component.id), ...(form ? binds(form) : []), ...printed])],
+        base = printed.length ? name.split('.')[1].split(/[.[]/)[0] : name.split(/[.[]/)[0],
         modelCells = models.map(
           (m) =>
             `${m.name}${m.attributes[`field.${base}.type`] ? ': ' + m.attributes[`field.${base}.type`] : ''}`,

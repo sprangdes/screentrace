@@ -16,6 +16,7 @@ export const kindNames: Record<string, string> = {
   TEXTAREA: '文字區域',
   FILE_INPUT: '檔案欄位',
   TABLE: '資料表',
+  DISPLAY_FIELD: '顯示欄位',
   MODAL: '彈窗',
   OTHER: '其他項目',
 };
@@ -100,6 +101,11 @@ export function componentLabel(
   const a = node.attributes,
     kind = kindName(node),
     tag = String(a.tag || '').toLowerCase();
+  // A display field's visible text is the demo value it prints; its label is the one the markup proves.
+  if (String(a.kind || '').toUpperCase() === 'DISPLAY_FIELD') {
+    const proven = normalize(a.displayName) || normalize(a.property) || normalize(node.name);
+    if (proven) return proven;
+  }
   const sourceText =
     context.dynamicContent || String(a.kind || '').toUpperCase() === 'FORM'
       ? undefined
@@ -470,9 +476,16 @@ export function componentLabelsForScreen(index: Index, screenId: string): Map<st
 }
 export function isAction(index: Index, node: Node): boolean {
   if (
-    ['TEXT_INPUT', 'TEXTAREA', 'CHECKBOX', 'RADIO', 'FILE_INPUT', 'TABLE', 'FORM'].includes(
-      node.attributes.kind,
-    )
+    [
+      'TEXT_INPUT',
+      'TEXTAREA',
+      'CHECKBOX',
+      'RADIO',
+      'FILE_INPUT',
+      'TABLE',
+      'FORM',
+      'DISPLAY_FIELD',
+    ].includes(node.attributes.kind)
   )
     return false;
   if (

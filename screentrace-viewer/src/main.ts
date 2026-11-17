@@ -1309,6 +1309,55 @@ try {
       if (current === id) view?.lightLines(undefined);
     });
   };
+  // ---- how far the preview can be trusted (ADR 0157): demo data and content shown only under conditions
+  let showTrust = false;
+  const TRUST_STYLE = `[data-st-viewer-trust~="demo"]:not([data-review-status]):not([data-spotlight]){outline:2px dashed #2563eb!important;outline-offset:1px}
+[data-st-viewer-trust~="conditional"]:not([data-review-status]):not([data-spotlight]){outline:2px dashed #d97706!important;outline-offset:3px}
+[data-st-viewer-trust~="demo"][data-st-viewer-trust~="conditional"]:not([data-review-status]):not([data-spotlight]){outline-style:dotted!important}
+.st-dynamic-placeholder{outline:2px solid #64748b!important}`;
+  /** Marks, inside the preview, what is demonstration data and what only shows under some condition. */
+  const applyTrust = (doc: Document, id: string) => {
+    doc
+      .querySelectorAll('[data-st-viewer-trust]')
+      .forEach((n) => n.removeAttribute('data-st-viewer-trust'));
+    doc.getElementById('st-viewer-trust-style')?.remove();
+    if (!showTrust) return;
+    const style = doc.createElement('style');
+    style.id = 'st-viewer-trust-style';
+    style.textContent = TRUST_STYLE;
+    (doc.head || doc.documentElement).append(style);
+    const mark = (node: Element | null, token: 'demo' | 'conditional') => {
+      if (!node) return;
+      const tokens = new Set(
+        (node.getAttribute('data-st-viewer-trust') || '').split(' ').filter(Boolean),
+      );
+      tokens.add(token);
+      node.setAttribute('data-st-viewer-trust', [...tokens].sort().join(' '));
+    };
+    // Demo data: rows and values the preview filled in, and every field that prints data.
+    doc
+      .querySelectorAll(
+        '[data-st-demo-row],[data-st-demo-text],[data-st-demo-parts],[data-st-demo-key]',
+      )
+      .forEach((node) => mark(node, 'demo'));
+    doc.querySelectorAll('[data-st-conditional]').forEach((node) => mark(node, 'conditional'));
+    for (const record of payload.preview.elements || []) {
+      if (record.graphScreenId !== id) continue;
+      const kind = record.graphComponentId
+          ? index.nodes.get(record.graphComponentId)?.attributes.kind
+          : undefined,
+        conditional = !!(record as { conditions?: unknown[] }).conditions?.length;
+      if (kind !== 'DISPLAY_FIELD' && !conditional) continue;
+      let node: Element | null = null;
+      try {
+        node = doc.querySelector(previewSelector(record.path));
+      } catch {
+        continue;
+      }
+      if (kind === 'DISPLAY_FIELD') mark(node, 'demo');
+      if (conditional) mark(node, 'conditional');
+    }
+  };
   /** Decision outlines and badges inside the preview, reapplied in place whenever decisions change. */
   const decorate = (doc: Document, id: string) => {
     doc.querySelectorAll('[data-review-badge]').forEach((node) => node.remove());
@@ -1346,6 +1395,7 @@ try {
       badge.style.cssText = `display:inline-block;background:${color};color:white;font:600 11px system-ui;padding:2px 5px;border-radius:4px;pointer-events:none;`;
       placeBadge(node, badge);
     }
+    applyTrust(doc, id);
   };
   // Building a preview inlines its images and takes long enough to stall the zoom, so it is prepared as soon as
   // the person points at a screen; decisions are applied on load, so a prepared document never goes stale.
@@ -1372,7 +1422,30 @@ try {
   const renderFocus = (id: string, host: HTMLElement) =>
     new Promise<void>((shown) => {
       const preview = element('section', undefined, 'preview'),
-        notice = element('span', '示意畫面：資料為範例值，不是真實系統', 'preview-notice');
+        notice = element('span', '示意畫面：資料為範例值，不是真實系統', 'preview-notice'),
+        trust = element('button', undefined, 'trust-toggle'),
+        legend = element('div', undefined, 'trust-legend');
+      trust.type = 'button';
+      trust.dataset.trustToggle = 'true';
+      trust.append(icon('info'), element('span', '標示示範內容'));
+      trust.title = '框出示範資料與依條件才出現的內容';
+      legend.dataset.trustLegend = 'true';
+      legend.append(
+        element('span', '藍色虛線：示範資料，不是真實資料', 'trust-key trust-demo'),
+        element('span', '橘色虛線：依條件才顯示（權限、狀態等）', 'trust-key trust-conditional'),
+        element('span', '灰框：無法確定的動態內容', 'trust-key trust-dynamic'),
+      );
+      const syncTrust = () => {
+        trust.setAttribute('aria-pressed', String(showTrust));
+        legend.hidden = !showTrust;
+      };
+      syncTrust();
+      trust.onclick = () => {
+        showTrust = !showTrust;
+        syncTrust();
+        const doc = frame?.contentDocument;
+        if (doc && current) applyTrust(doc, current);
+      };
       frame = element('iframe');
       simulation = undefined;
       const own = frame;
@@ -1415,7 +1488,8 @@ try {
         scroll,
       });
       // The notice sits beside the URL, outside the page, so it never covers the page's own buttons.
-      viewer.querySelector('.prototype-present')?.before(notice);
+      viewer.querySelector('.prototype-present')?.before(notice, trust);
+      viewer.querySelector('.prototype-status')?.after(legend);
       host.replaceChildren(viewer);
       // A simulated click that requested APIs on the way here says so on the screen it arrived at.
       if (pendingNotice) {
