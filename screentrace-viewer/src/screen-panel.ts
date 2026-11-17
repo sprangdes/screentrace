@@ -2,19 +2,22 @@ import { endpointMethod, endpointPath } from './endpoint-presentation';
 import { Index } from './map';
 import { Node } from './contracts';
 import { element, text } from './text';
-import { componentLabelsForScreen } from './labels';
+import { componentLabelsForScreen, kindName } from './labels';
 import { callSources } from './usage';
 import { methodBadge, pathCode } from './api-page';
 import { jsfLimitation } from './unsupported-framework';
 import { apiEndpoints } from './api-page';
 import { sharedNavigation } from './relations';
-import { decisionSwitch, decisionLabel } from './review-ui';
+import { decisionSwitch, decisionLabel, noteEditor } from './review-ui';
 import {
   ReviewState,
   Decision,
+  DecisionNote,
   screenDecision,
   componentDecision,
+  decisionNoteOf,
   markableComponents,
+  fieldComponents,
   conflicts,
 } from './shared/review';
 
@@ -25,6 +28,13 @@ export interface ScreenPanelActions {
   api: (endpointId: string) => void;
   buttonsOpen: boolean;
   onButtonsToggle: (open: boolean) => void;
+  fieldsOpen?: boolean;
+  onFieldsToggle?: (open: boolean) => void;
+  /** Typing a note keeps it without rebuilding the panel; committing (leaving the field) may rebuild it. */
+  setNote?: (screenId: string, componentId: string | undefined, note: DecisionNote) => void;
+  commitNote?: () => void;
+  /** Note editors left open, by `noteKey`, so a rebuilt panel keeps them open. */
+  notesOpen?: Set<string>;
   highlight?: string;
   /** Where each button sits in the preview (top, then left); a button without a position is not visible there. */
   positions?: Map<string, { x: number; y: number }>;
@@ -58,6 +68,10 @@ function outcomes(index: Index, componentId: string, apis: Set<string>): string[
   }
   return [...result];
 }
+
+/** Identifies one note editor across rebuilds of the panel. */
+export const noteKey = (screenId: string, componentId?: string) =>
+  JSON.stringify(componentId === undefined ? [screenId] : [screenId, componentId]);
 
 /** Templates included by the screen; their buttons (page header／footer) are grouped separately. */
 function fragmentFiles(index: Index, screenId: string): Set<string> {
@@ -103,6 +117,30 @@ export function screenPanel(
       screen: screenId,
     }),
   );
+  const notes = (componentId?: string, label = '這個畫面') => {
+    const key = noteKey(screenId, componentId),
+      editor = noteEditor({
+        label,
+        compact: componentId !== undefined,
+        decision:
+          componentId === undefined ? decision : componentDecision(state, screenId, componentId),
+        note:
+          componentId === undefined
+            ? decisionNoteOf(state, 'screen', screenId)
+            : decisionNoteOf(state, 'component', screenId, componentId),
+        open: !!actions.notesOpen?.has(key),
+        onToggle: (open) => {
+          if (open) actions.notesOpen?.add(key);
+          else actions.notesOpen?.delete(key);
+        },
+        onInput: (note) => actions.setNote?.(screenId, componentId, note),
+        onCommit: () => actions.commitNote?.(),
+      });
+    editor.dataset.noteFor = componentId === undefined ? 'screen' : 'component';
+    if (componentId !== undefined) editor.dataset.componentId = componentId;
+    return editor;
+  };
+  if (actions.setNote) header.append(notes());
   if (screen.audience?.length) {
     const audience = element('details', undefined, 'panel-audience');
     audience.append(element('summary', '適用條件'));
@@ -184,7 +222,14 @@ export function screenPanel(
   }
   if (notices.childElementCount) root.append(notices);
 
-  const keys = markableComponents(index.graph).filter((k) => k.screenId === screenId),
+  const fieldIds = new Set(
+      fieldComponents(index.graph)
+        .filter((k) => k.screenId === screenId)
+        .map((k) => k.componentId),
+    ),
+    markable = markableComponents(index.graph).filter((k) => k.screenId === screenId),
+    keys = markable.filter((k) => !fieldIds.has(k.componentId)),
+    fieldKeys = markable.filter((k) => fieldIds.has(k.componentId)),
     fragments = fragmentFiles(index, screenId);
   const buttons = element('details', undefined, 'panel-section panel-buttons');
   buttons.open = actions.buttonsOpen;
@@ -208,8 +253,10 @@ export function screenPanel(
       ),
     );
   const row = (componentId: string) => {
-    const value = componentDecision(state, screenId, componentId),
-      name = labels.get(componentId) || '沒有文字的按鈕',
+    const field = fieldIds.has(componentId),
+      node = index.nodes.get(componentId),
+      value = componentDecision(state, screenId, componentId),
+      name = labels.get(componentId) || (field && node ? kindName(node) : '沒有文字的按鈕'),
       item = element('div', undefined, 'button-row');
     item.dataset.componentRow = componentId;
     item.tabIndex = -1;
@@ -218,12 +265,22 @@ export function screenPanel(
       result = outcomes(index, componentId, apis);
     info.type = 'button';
     info.dataset.locate = componentId;
+    const what = field ? '欄位' : '按鈕';
     info.title = actions.positions?.has(componentId)
-      ? '在預覽中標示這個按鈕'
-      : '這個按鈕在預覽中看不到';
+      ? `在預覽中標示這個${what}`
+      : `這個${what}在預覽中看不到`;
+    if (field) item.dataset.field = 'true';
     info.append(
       element('strong', name),
-      element('span', result.length ? result.join(' · ') : '目的地無法確定', 'muted'),
+      element(
+        'span',
+        field
+          ? [node ? kindName(node) : '欄位', ...result].join(' · ')
+          : result.length
+            ? result.join(' · ')
+            : '目的地無法確定',
+        'muted',
+      ),
     );
     item.onmouseenter = () => actions.hover?.(componentId);
     item.onmouseleave = () => actions.hover?.(undefined);
@@ -240,6 +297,7 @@ export function screenPanel(
         component: componentId,
       }),
     );
+    if (actions.setNote) item.append(notes(componentId, name));
     return item;
   };
   const positions = actions.positions,
@@ -256,22 +314,62 @@ export function screenPanel(
     ),
     shared = keys.filter((k) => !own.includes(k));
   for (const key of own.filter(placed).sort(byPosition)) buttons.append(row(key.componentId));
-  const group = (title: string, items: { componentId: string }[], note?: string) => {
+  const group = (
+    parent: HTMLElement,
+    title: string,
+    items: { componentId: string }[],
+    note?: string,
+  ) => {
     if (!items.length) return;
     const box = element('details', undefined, 'fragment-group');
     box.append(element('summary', `${title} ${items.length} 個`));
     if (note) box.append(element('p', note, 'muted'));
     for (const key of items) box.append(row(key.componentId));
     if (items.some((k) => k.componentId === actions.highlight)) box.open = true;
-    buttons.append(box);
+    parent.append(box);
   };
-  group('頁首、頁尾的按鈕', shared.filter(placed).sort(byPosition));
+  group(buttons, '頁首、頁尾的按鈕', shared.filter(placed).sort(byPosition));
   group(
+    buttons,
     '預覽中未顯示',
     [...own, ...shared].filter((k) => !placed(k)),
     '這些按鈕只在特定情況下出現（例如點了某個按鈕才開啟的視窗、載入中或錯誤狀態），預覽畫面中看不到它們的位置。',
   );
   root.append(buttons);
+
+  // Input fields and tables: marked like buttons, listed in their own section in page order.
+  if (fieldKeys.length) {
+    const fields = element('details', undefined, 'panel-section panel-fields');
+    fields.open =
+      !!actions.fieldsOpen || fieldKeys.some((k) => k.componentId === actions.highlight);
+    fields.dataset.section = 'fields';
+    const decidedFields = fieldKeys.filter(
+      (k) => componentDecision(state, screenId, k.componentId) !== 'UNDECIDED',
+    ).length;
+    fields.append(
+      element(
+        'summary',
+        `欄位 ${fieldKeys.length} 個${decidedFields ? ` · 已標記 ${decidedFields}` : ''}`,
+      ),
+      element(
+        'p',
+        decision === 'REMOVE'
+          ? '畫面已標記移除，未個別標記的欄位隨畫面移除。'
+          : '輸入欄位與表格；沒有個別標記的欄位跟著畫面的決定。',
+        'muted',
+      ),
+    );
+    fields.addEventListener('toggle', () => actions.onFieldsToggle?.(fields.open));
+    for (const key of fieldKeys.filter(placed).sort(byPosition))
+      fields.append(row(key.componentId));
+    group(
+      fields,
+      '預覽中未顯示',
+      fieldKeys.filter((k) => !placed(k)),
+      '這些欄位只在特定情況下出現，預覽畫面中看不到它們的位置。',
+    );
+    root.append(fields);
+  }
 
   const called = [...callSources(index.graph)]
     .filter(([api, callers]) => apis.has(api) && callers.some((c) => c.screenId === screenId))

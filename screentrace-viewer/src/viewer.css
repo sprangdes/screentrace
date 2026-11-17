@@ -312,6 +312,25 @@ body[data-presenting=true] .focus-layer{position:fixed!important;inset:0!importa
 .button-info strong{font-size:14px;overflow-wrap:anywhere}
 .button-info .muted{margin:0;overflow-wrap:anywhere}
 .inherited-tag{align-self:flex-start;margin-top:2px;padding:1px 6px;border-radius:4px;background:var(--remove-soft);color:var(--remove);font-size:12px}
+.button-row{flex-wrap:wrap}
+/* Notes: a folded line under the screen's decision, a small toggle at the end of each button or field row. */
+.note-toggle{display:inline-flex;align-items:center;gap:4px;font-size:13px;color:var(--gray-500);border:0;background:transparent;padding:2px 4px;border-radius:4px}
+.note-toggle:hover{background:var(--gray-200)}
+.note-toggle .icon{width:15px;height:15px}
+.note-editor[data-note-filled] .note-toggle{color:var(--primary);font-weight:600}
+.note-editor{display:flex;flex-direction:column;align-items:flex-start;gap:6px}
+.note-body{display:flex;flex-direction:column;gap:6px;width:100%}
+.note-body[hidden]{display:none}
+.note-editor.compact{flex:none}
+.note-editor.compact .note-toggle span{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+.note-editor.compact[data-open=true]{flex:1 0 100%;align-items:flex-end}
+.note-reason{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--gray-700)}
+.note-reason select{padding:4px 6px;border:1px solid var(--gray-300);border-radius:6px;background:white}
+.note-editor textarea{width:100%;min-height:64px;resize:vertical;padding:6px 8px;border:1px solid var(--gray-300);border-radius:6px;font:inherit;font-size:14px;line-height:1.5}
+.note-editor textarea:focus-visible{outline:3px solid var(--primary);outline-offset:1px}
+.note-help{display:flex;justify-content:space-between;gap:8px;margin:0}
+.note-count{flex:none;font-variant-numeric:tabular-nums}
+.panel-fields{border-bottom:1px solid var(--gray-200)}
 .fragment-group{margin-top:6px}
 .fragment-group summary{font-size:13px;color:var(--gray-500);cursor:pointer;padding:4px 0}
 
@@ -629,3 +648,15 @@ button.persona-coverage-dot:hover{outline:2px solid var(--primary);outline-offse
 .sidebar>.splitter::after{left:auto;right:2px;transform:translateY(-50%)}
 .shell:not([data-sidebar=expanded]) .sidebar>.splitter{display:none}
 .shell:has(.sidebar>.splitter.is-dragging){transition:none}
+
+/* Direct decisions on an API, and the reminder that marks are not in any file yet */
+.api-decision{display:flex;flex-direction:column;gap:8px;margin:8px 0 12px;padding:10px 12px;border:1px solid var(--gray-200);border-radius:var(--radius);background:var(--gray-100)}
+.api-decision-label{font-size:13px;font-weight:700;color:var(--gray-700)}
+.api-decision .notice{margin:0}
+.api-decision-mark{padding:1px 6px;border-radius:4px;font-size:12px;font-weight:600}
+.api-decision-mark[data-api-decision=KEEP]{background:var(--keep-soft);color:var(--keep)}
+.api-decision-mark[data-api-decision=REMOVE]{background:var(--remove-soft);color:var(--remove)}
+.download-md{position:relative}
+.unsaved-dot{display:none;position:absolute;top:-4px;right:-4px;width:12px;height:12px;border-radius:50%;background:var(--warning-fill);border:2px solid white}
+.download-md[data-unsaved=true] .unsaved-dot{display:block}
+.last-export{margin-top:8px}

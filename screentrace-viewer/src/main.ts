@@ -48,10 +48,15 @@ import {
   effectiveComponent,
   setScreen,
   setComponent,
+  setApi,
+  setDecisionNote,
+  exportableNotes,
   statistics,
   conflicts,
+  apiConflicts,
   ReviewState,
   Decision,
+  DecisionNote,
 } from './shared/review';
 
 /** How long a message that something worked stays beside the save menu before it fades. */
@@ -60,24 +65,28 @@ const STATUS_SHOWN_MS = 5000;
 type Filter = 'ALL' | 'UNDECIDED' | 'KEEP' | 'REMOVE';
 const root = document.querySelector<HTMLDivElement>('#app')!;
 
-/** Fields from earlier report versions (reasons, notes, component library) that this report no longer uses. */
+/** Fields from earlier report versions (the component library mapping) that this report no longer uses.
+ * Reasons and notes are used again (ADR 0155) and are kept. */
 function withoutRetiredFields(state: ReviewState): { state: ReviewState; dropped: boolean } {
-  const {
-    decisionNotes,
-    component_overrides,
-    orphan_component_overrides,
-    manifest_sha256,
-    ...rest
-  } = state as ReviewState & Record<string, unknown>;
-  const notes = decisionNotes as { screens?: object; components?: object } | undefined;
+  const { component_overrides, orphan_component_overrides, manifest_sha256, ...rest } =
+    state as ReviewState & Record<string, unknown>;
   const dropped =
-    !!(
-      notes &&
-      (Object.keys(notes.screens || {}).length || Object.keys(notes.components || {}).length)
-    ) ||
-    !!component_overrides ||
-    !!(orphan_component_overrides as unknown[] | undefined)?.length;
+    !!component_overrides || !!(orphan_component_overrides as unknown[] | undefined)?.length;
   return { state: rest as ReviewState, dropped };
+}
+/** Whether the state holds anything worth keeping: a keep／remove decision or a note. */
+function hasMarks(state: ReviewState): boolean {
+  const decided = (values: Record<string, Decision>) =>
+    Object.values(values).some((d) => d !== 'UNDECIDED');
+  const notes = exportableNotes(state);
+  return (
+    decided(state.screenDecisions) ||
+    Object.values(state.componentDecisions).some(decided) ||
+    decided(state.apiDecisions || {}) ||
+    Object.keys(notes.screens).length > 0 ||
+    Object.keys(notes.components).length > 0 ||
+    Object.keys(notes.apis).length > 0
+  );
 }
 
 try {
@@ -138,10 +147,14 @@ try {
     query = '',
     canvasTransform: CanvasTransform | undefined;
   let buttonsOpen = false,
+    fieldsOpen = false,
     highlightComponent: string | undefined,
     selectedApi: string | undefined,
     personaId: string | undefined,
     showUnreached = false;
+  // Note editors left open (screen panel keys and API IDs), so rebuilding a panel keeps them open.
+  const notesOpen = new Set<string>(),
+    apiNotesOpen = new Set<string>();
   const activePersona = (): PersonaView | undefined =>
     personaViews.find((view) => view.persona.id === personaId);
   const history = new PrototypeHistory();
@@ -177,6 +190,10 @@ try {
   const download = element('button', undefined, 'primary download-md');
   download.append(icon('import'), element('span', '下載 md'));
   download.dataset.mdExport = 'true';
+  // A dot on the button while there are marks that are neither in a progress file nor in a downloaded md.
+  const unsavedDot = element('span', undefined, 'unsaved-dot');
+  unsavedDot.setAttribute('aria-hidden', 'true');
+  download.append(unsavedDot);
   const openMd = element('button', '開啟 md…', 'menu-row');
   openMd.dataset.mdImport = 'true';
   const saveMenu = element('details', undefined, 'save-menu'),
@@ -203,7 +220,7 @@ try {
     helpPanel.append(list);
   };
   helpList('快捷鍵', [
-    'k 保留、x 移除、u 未確認（作用於目前畫面，或右側欄中選取的按鈕）',
+    'k 保留、x 移除、u 未確認（作用於目前畫面，或右側欄中選取的按鈕、欄位）',
     'n 前往下一個未確認的畫面',
     '/ 搜尋畫面',
     'f 全螢幕預覽（展示用，再按一次或 Esc 結束）',
@@ -212,14 +229,16 @@ try {
   helpList('操作方式', [
     '觸控板兩指滑動或滑鼠拖曳移動畫布；兩指捏合或 ⌘／Ctrl＋滾輪縮放',
     '點一下畫面看它的關聯，點兩下查看完整預覽',
-    '在預覽中點連結或按鈕，會模擬前往的畫面',
-    '標記會自動暫存在這個瀏覽器；請用「下載 md」保存並交付',
+    '在預覽中點連結或按鈕，會模擬前往的畫面；點輸入欄位或表格，右側欄會標出對應的欄位',
+    '右側欄的「備註」可寫下修改意見或移除理由，會寫進 md 交給 AI',
+    'API 頁可直接標記 API；與畫面標記推導的狀態不一致時列為衝突',
+    '標記會自動暫存在這個瀏覽器，但換電腦或清除瀏覽資料就會遺失；請用「下載 md」保存並交付',
   ]);
   helpList('狀態', [
     '綠色勾：保留',
     '紅色叉：移除',
     '沒有標示：未確認',
-    '隨畫面移除：畫面標記移除時，沒有個別標記的按鈕一起移除',
+    '隨畫面移除：畫面標記移除時，沒有個別標記的按鈕與欄位一起移除',
   ]);
   helpList('ScreenTrace 看不到的事', [
     '書籤或 Email 連結直接進入的畫面',
@@ -382,7 +401,7 @@ try {
     notices.append(
       element(
         'p',
-        '先前的進度含已不再使用的欄位（原因、備註、元件庫對應），已略過；保留／移除標記不受影響。',
+        '先前的進度含已不再使用的欄位（元件庫對應），已略過；保留／移除標記與備註不受影響。',
         'notice',
       ),
     );
@@ -418,24 +437,58 @@ try {
     edits++;
     if (saveReview(storage, reviewState)) say('⚠ 無法暫存在瀏覽器，請下載 md', 'error');
   };
+  // ---- keeping the marks: when the md was last downloaded, and whether marks exist that no file holds
+  const exportKey = `screentrace:last-export:v1:${encodeURIComponent(graph.application.name)}:${payload.fingerprint}`;
+  /** A short fingerprint of the marks, to tell on the next visit whether the last download still holds them. */
+  const marksHash = (state: ReviewState) => {
+    let hash = 0x811c9dc5;
+    const text = JSON.stringify([
+      state.screenDecisions,
+      state.componentDecisions,
+      state.apiDecisions || {},
+      exportableNotes(state),
+    ]);
+    for (let i = 0; i < text.length; i++) hash = Math.imul(hash ^ text.charCodeAt(i), 0x01000193);
+    return (hash >>> 0).toString(16);
+  };
+  // -1: the marks restored from this browser are not known to be in any file.
+  let exportedEdits = -1,
+    lastExport: Date | undefined,
+    reminded = false;
+  try {
+    const saved = JSON.parse(storage?.getItem(exportKey) || 'null');
+    if (saved && typeof saved.at === 'string' && Number.isFinite(Date.parse(saved.at))) {
+      lastExport = new Date(saved.at);
+      if (saved.marks === marksHash(reviewState)) exportedEdits = 0;
+    }
+  } catch {
+    /* the time is only a convenience */
+  }
+  const exportTime = (date: Date) =>
+    date.toLocaleString('zh-TW', {
+      hour12: false,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
 
   const applyImported = (imported: Awaited<ReturnType<typeof importMarkdown>>) => {
     const clean = withoutRetiredFields(imported.state);
     reviewState = clean.state;
     persist();
+    // What was just opened is a file the person has; until the next mark there is nothing unsaved.
+    exportedEdits = edits;
     notices.querySelectorAll('[data-import-notice]').forEach((n) => n.remove());
     // A different analysis only matters when the file holds decisions that could now point elsewhere.
-    const decided =
-      Object.values(clean.state.screenDecisions).some((d) => d !== 'UNDECIDED') ||
-      Object.values(clean.state.componentDecisions).some((c) =>
-        Object.values(c).some((d) => d !== 'UNDECIDED'),
-      );
+    const decided = hasMarks(clean.state);
     const messages = [
       imported.changed && decided ? '分析結果已變更，部分標記可能對應不到目前的畫面。' : '',
       imported.orphans.length
-        ? `有 ${imported.orphans.length} 筆標記找不到對應的畫面或按鈕，已保留在檔案中。`
+        ? `有 ${imported.orphans.length} 筆標記找不到對應的畫面、按鈕或 API，已保留在檔案中。`
         : '',
-      clean.dropped ? '檔案含已不再使用的欄位（原因、備註、元件庫對應），已略過。' : '',
+      clean.dropped ? '檔案含已不再使用的欄位（元件庫對應），已略過。' : '',
     ].filter(Boolean);
     for (const message of messages) {
       const note = element('p', message, 'notice');
@@ -458,7 +511,7 @@ try {
         list.append(
           element(
             'li',
-            `${orphan.screenId}${orphan.componentId ? ` / ${orphan.componentId}` : ''}${orphan.reason ? `：${orphan.reason}` : ''}`,
+            `${orphan.apiId !== undefined ? `API ${orphan.apiId}` : orphan.screenId}${orphan.componentId ? ` / ${orphan.componentId}` : ''}${orphan.reason ? `：${orphan.reason}` : ''}`,
           ),
         );
       notices.append(list);
@@ -482,6 +535,27 @@ try {
     saved: '已自動儲存',
     error: '儲存失敗',
   };
+  /** Marks exist that are neither written to a progress file nor in an md downloaded since the last change. */
+  const unsaved = () =>
+    edits !== exportedEdits &&
+    !(fileHandle && (fileState === 'saved' || fileState === 'saving')) &&
+    hasMarks(reviewState);
+  const renderExport = () => {
+    const pending = unsaved();
+    download.dataset.unsaved = String(pending);
+    download.title = [
+      pending ? '有尚未保存到檔案的標記' : '',
+      lastExport ? `上次下載 md：${exportTime(lastExport)}` : '尚未下載過 md',
+    ]
+      .filter(Boolean)
+      .join('\n');
+  };
+  const lastExportLine = () =>
+    element(
+      'p',
+      lastExport ? `上次下載 md：${exportTime(lastExport)}` : '這份報表尚未下載過 md。',
+      'muted last-export',
+    );
   const menuButton = (label: string, action: () => void, primary = false) => {
     const button = element('button', label, primary ? 'menu-row primary' : 'menu-row');
     button.onclick = () => {
@@ -491,6 +565,7 @@ try {
     return button;
   };
   const renderFile = () => {
+    renderExport();
     saveMenu.dataset.fileState = fileState;
     const dot = element('span', undefined, 'file-dot');
     saveSummary.replaceChildren(dot, element('span', fileLabels[fileState]), icon('more'));
@@ -501,16 +576,22 @@ try {
     const text = (value: string) => savePanel.append(element('p', value, 'muted'));
     if (fileState === 'unsupported') {
       text(
-        '這個瀏覽器不支援自動存檔。標記會暫存在這個瀏覽器；請用「下載 md」保存，之後用「開啟 md」接續。',
+        '這個瀏覽器不支援自動存檔。標記只暫存在這個瀏覽器，換電腦或清除瀏覽資料就會遺失；請用「下載 md」保存，之後用「開啟 md」接續。',
       );
-      savePanel.append(openMd);
+      savePanel.append(
+        lastExportLine(),
+        menuButton('下載 md', () => download.click(), true),
+        openMd,
+      );
       return;
     }
     if (fileState === 'none') {
       text('選擇一個 md 檔的存放位置，之後每次標記都會自動寫入。這個檔案就是要交給 AI 的 md。');
       savePanel.append(
         menuButton('選擇存放位置…', () => void choose(), true),
+        menuButton('下載 md', () => download.click()),
         openMd,
+        lastExportLine(),
       );
       if (!promptDismissed)
         savePanel.append(
@@ -659,6 +740,7 @@ try {
     persist();
     scheduleWrite();
     maybePrompt();
+    renderExport();
     render();
   };
   const decide = {
@@ -671,13 +753,63 @@ try {
       highlightComponent = componentId;
       changed();
     },
+    api: (id: string, value: Decision) => {
+      reviewState = setApi(reviewState, id, value);
+      selectedApi = id;
+      changed();
+    },
   };
+  /** Typing a note keeps it and saves it, without rebuilding anything the person is typing in. */
+  let noteDirty = false;
+  const keepNote = (next: ReviewState) => {
+    reviewState = next;
+    noteDirty = true;
+    persist();
+    scheduleWrite();
+    renderExport();
+  };
+  const note = {
+    screen: (screenId: string, componentId: string | undefined, value: DecisionNote) => {
+      try {
+        keepNote(
+          componentId === undefined
+            ? setDecisionNote(reviewState, 'screen', screenId, value)
+            : setDecisionNote(reviewState, 'component', screenId, componentId, value),
+        );
+      } catch (error) {
+        say(`備註未儲存：${String(error instanceof Error ? error.message : error)}`, 'error');
+      }
+    },
+    api: (id: string, value: DecisionNote) => {
+      try {
+        keepNote(setDecisionNote(reviewState, 'api', id, value));
+      } catch (error) {
+        say(`備註未儲存：${String(error instanceof Error ? error.message : error)}`, 'error');
+      }
+    },
+    /** Leaving a note field: show its new state (the 「已填」 mark, counts) once typing is done. */
+    commit: () => {
+      if (!noteDirty) return;
+      noteDirty = false;
+      maybePrompt();
+      // Rebuilding now would swallow the click that moved focus away; wait until it has landed.
+      setTimeout(render);
+    },
+  };
+  window.addEventListener('beforeunload', (event) => {
+    // Once per visit: marks only in this browser are lost with its data, so say so before leaving.
+    if (reminded || !unsaved()) return;
+    reminded = true;
+    event.preventDefault();
+    event.returnValue = '';
+  });
 
   const renderProgress = () => {
     const counts = statistics(graph, reviewState),
       done = counts.screens.KEEP + counts.screens.REMOVE,
       total = index.screens.length,
-      issues = conflicts(graph, reviewState);
+      issues = conflicts(graph, reviewState),
+      apiIssues = apiConflicts(graph, reviewState);
     progressSummary.replaceChildren(element('span', `已確認 ${done}／${total}`), icon('more'));
     progressSummary.dataset.done = String(done);
     progressPanel.replaceChildren(element('h2', '確認進度'));
@@ -707,10 +839,38 @@ try {
         'muted',
       ),
     );
-    const conflictBox = element('div', undefined, 'progress-conflicts');
-    conflictBox.dataset.conflictCount = String(issues.length);
-    conflictBox.append(element('h3', `衝突 ${issues.length} 個`));
-    if (!issues.length) conflictBox.append(element('p', '沒有衝突', 'muted'));
+    const fieldTotal = counts.fields.KEEP + counts.fields.REMOVE + counts.fields.UNDECIDED;
+    if (fieldTotal) {
+      const line = element(
+        'p',
+        `保留 ${counts.fields.KEEP} · 移除 ${counts.fields.REMOVE} · 隨畫面移除 ${counts.fieldsInherited}`,
+        'muted',
+      );
+      line.dataset.progressFields = 'true';
+      progressPanel.append(element('h3', '欄位'), line);
+    }
+    const apiLine = element('p', `保留 ${counts.apis.KEEP} · 移除 ${counts.apis.REMOVE}`, 'muted');
+    apiLine.dataset.progressApis = 'true';
+    progressPanel.append(element('h3', 'API（直接標記）'), apiLine);
+    const conflictBox = element('div', undefined, 'progress-conflicts'),
+      conflictCount = issues.length + apiIssues.length;
+    conflictBox.dataset.conflictCount = String(conflictCount);
+    conflictBox.append(element('h3', `衝突 ${conflictCount} 個`));
+    if (!conflictCount) conflictBox.append(element('p', '沒有衝突', 'muted'));
+    for (const issue of apiIssues) {
+      const api = index.nodes.get(issue.apiId),
+        link = element(
+          'button',
+          `API ${api ? `${api.attributes.httpMethod || api.attributes.method || ''} ${api.attributes.path || api.attributes.route || api.name}`.trim() : issue.apiId}：${issue.decision === 'KEEP' ? '標記保留，但呼叫來源都已移除' : '標記移除，但仍有呼叫來源'}`,
+          'link-row',
+        );
+      link.dataset.apiConflictLink = issue.apiId;
+      link.onclick = () => {
+        progress.open = false;
+        showApi(issue.apiId);
+      };
+      conflictBox.append(link);
+    }
     for (const issue of issues) {
       const link = element(
         'button',
@@ -883,9 +1043,20 @@ try {
       `[data-screen-panel="${CSS.escape(current)}"] .panel-buttons`,
     );
     if (shown) buttonsOpen = shown.open || (buttonsOpen && !!highlightComponent);
+    const fieldsShown = panel.querySelector<HTMLDetailsElement>(
+      `[data-screen-panel="${CSS.escape(current)}"] .panel-fields`,
+    );
+    if (fieldsShown) fieldsOpen = fieldsShown.open;
     screenPanel(panelBody, index, reviewState, current, {
       setScreen: decide.screen,
       setComponent: decide.component,
+      setNote: note.screen,
+      commitNote: note.commit,
+      notesOpen,
+      fieldsOpen,
+      onFieldsToggle: (open) => {
+        fieldsOpen = open;
+      },
       focus: (id) => openScreen(id),
       api: (id) => showApi(id),
       buttonsOpen,
@@ -1264,6 +1435,10 @@ try {
           selectedApi = id;
         },
         onCaller: (screenId, componentId) => openScreen(screenId, { component: componentId }),
+        setApi: decide.api,
+        setNote: note.api,
+        commitNote: note.commit,
+        notesOpen: apiNotesOpen,
       });
       const hint = (
         (graph.diagnostics as { code?: string; evidence?: unknown }[] | undefined) || []
@@ -1404,6 +1579,17 @@ try {
       link.click();
       link.remove();
       setTimeout(() => URL.revokeObjectURL(url), 1000);
+      exportedEdits = edits;
+      lastExport = new Date();
+      try {
+        storage?.setItem(
+          exportKey,
+          JSON.stringify({ at: lastExport.toISOString(), marks: marksHash(reviewState) }),
+        );
+      } catch {
+        /* the time is only a convenience */
+      }
+      renderFile();
       say(markdownSizeWarning(md) ? 'md 超過 5 MB，仍完整下載' : '已下載 md');
     } catch (error) {
       say(`下載失敗：${String(error)}`, 'error');

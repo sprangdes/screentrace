@@ -8,6 +8,7 @@ const paths: Record<string, string> = {
   check: 'M4 12l5 5L20 6',
   close: 'M6 6l12 12 M18 6L6 18',
   question: 'M9 8a3 3 0 1 1 5 2l-2 2v2 M12 18h.01',
+  note: 'M5 3h14v18H5z M8 8h8 M8 12h8 M8 16h5',
   info: 'M12 11v6 M12 7h.01 M12 2a10 10 0 1 0 0 20a10 10 0 1 0 0-20',
   warning: 'M12 3L2 21h20z M12 9v5 M12 18h.01',
   copy: 'M9 9h12v12H9z M15 9V3H3v12h6',

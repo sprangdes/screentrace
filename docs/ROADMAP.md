@@ -494,3 +494,9 @@
 
 - WP147：設定角色的分析圖（schema 2.4）在報表按「下載 md」時失敗，訊息為「schema 2.2 嚴格驗證：觸發者」。Java `GraphIntegrityValidator` 對 2.3 與 2.4 都允許行為由 `ENTRY_POINT` 觸發，viewer 的 `strictGraph` 只允許 2.3；改為與 Java 一致。
 - 驗證：`r76-entry-point-trigger.test.mjs` 新增 2 個測試（2.3／2.4 接受 ENTRY_POINT 觸發者、2.2 仍拒絕），修正前 2.4 案例以「觸發者」失敗；viewer 測試、建置、Prettier、ESLint 全數通過。
+
+## R77 改善計畫階段 1：標注備註、欄位與 API 標注、進度保存提醒
+
+- WP148：依 [改善計畫 2026-11-17](IMPROVEMENT_PLAN_20261117.md) 第 1、2（顯示欄位除外）、6 項，待決問題由需求方決定（OQ-052）。輸入欄位與表格可標注並在右側欄獨立成「欄位」分組，隨畫面移除；API 頁可直接標注 API，與推導狀態不一致列為衝突；畫面、按鈕、欄位、API 都可填原因（選填）與備註；有備註或 API 標注時 md 輸出 format_version 4（正文加原因／備註欄、API 直接標注與衝突表），否則仍為 v1 且位元組不變；「下載 md」在標記不在任何檔案中時顯示提示點與上次下載時間，第一次離開頁面時提醒。修正 `putNote` 對 `__proto__` ID 的處理。見 [ADR 0155](adr/0155-r77-notes-fields-api-decisions-and-save-reminder.md)。
+- 驗證：新增 `r77-annotation-scope.test`（4）、`r77-review-md.test`（6）、`r77-annotation.e2e`（4）；`md.test` 的 WP47 測試改為再匯出 v4 保留原因與備註（ADR 0155 說明）。
+- 未做：階段 2（功能心智圖、md 系統分析章節）與階段 3（顯示欄位、模擬可信度）待需求方決定 OQ-053、OQ-054。
