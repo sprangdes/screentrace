@@ -33,6 +33,8 @@
 
 - 新增 `DisplayFieldsTest`（4）、`screentrace-js` `r79-display-fields.test`（1）、viewer `r79-display-trust.e2e`（2）。
 - 合成專案的完整流程（`SyntheticProjectIntegrationTest`）斷言每種元件 kind 都出現；在 `fixtures/wp10` 四個 JSP 專案的 `page.jsp` 結尾、`</body></html>` 之前各加一行輸出（`<bean:write>` 或 `<c:out>`），其他行號不變。合成專案的預覽中，三個 JSP 專案的顯示欄位都對應到預覽元素。
+- viewer 的 md 嚴格驗證（`strict-graph.ts`）元件 kind 白名單加入 `DISPLAY_FIELD`；修正前，含顯示欄位的報表按「下載 md」會以「元件種類」失敗（`r79-display-fields.test` 覆蓋）。
+- `fixtures/wp10/golden/*.summary.json` 的 `components_by_kind` 各加 `DISPLAY_FIELD: 1`（即上述新增的一行輸出），其他值逐項比對不變；`analysis-summary.mjs` 的零值清單加入 `DISPLAY_FIELD`。
 - 修改的既有斷言：`MarkupAnalysisTest` 原本斷言 `MarkupAnalysis.parse` 產生「所有」kind，改為「`DISPLAY_FIELD` 以外的所有」kind（顯示欄位在其後附加）；`Wp21ComponentNamesTest` 比對 parse 與圖中的元件 ID 時排除 `DISPLAY_FIELD`，其他 ID 仍須完全相同。
 
 ## 後果

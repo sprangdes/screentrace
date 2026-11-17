@@ -4,6 +4,7 @@
     "BUTTON": 16,
     "CHECKBOX": 2,
     "DATE_PICKER": 1,
+    "DISPLAY_FIELD": 1,
     "FILE_INPUT": 2,
     "FORM": 4,
     "LINK": 13,
