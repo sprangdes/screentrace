@@ -20,6 +20,8 @@ export interface StateChange {
   fromNot?: string[];
   fromCreated?: boolean;
   fromLines?: number[];
+  /** Only some ways into the write say the prior value; the others say nothing (ADR 0178). */
+  fromPartial?: boolean;
   /** Every word the frontend uses for the value when it uses more than one (ADR 0170). */
   labelWords?: { text: string; source?: Source }[];
 }
@@ -81,7 +83,8 @@ export function priorText(change: StateChange): string | undefined {
   const from = strings(change.from),
     not = strings(change.fromNot);
   if (change.fromCreated === true) return '新建立';
-  if (from?.length) return from.map(word).join(' 或 ');
+  if (from?.length)
+    return `${from.map(word).join(' 或 ')}${change.fromPartial === true ? '，或其他推不出的狀態' : ''}`;
   if (not?.length) return `不是 ${not.map(word).join('、')}`;
   return undefined;
 }
@@ -146,6 +149,8 @@ export interface StateTransition {
   from?: string;
   to: string;
   writers: StateWriter[];
+  /** Some writer of this pair also has other ways in whose prior value is unknown. */
+  partial?: boolean;
 }
 /**
  * The inferred transitions of one state (ADR 0176): every write whose prior values are known, as
@@ -162,6 +167,7 @@ export function stateTransitions(type: StateType): StateTransition[] {
         const key = `${from ?? ''}\u0000${value.value}`;
         const item = byPair.get(key) || { from, to: value.value, writers: [] };
         if (!item.writers.includes(writer)) item.writers.push(writer);
+        if (change.fromPartial === true && from !== undefined) item.partial = true;
         byPair.set(key, item);
       }
     }

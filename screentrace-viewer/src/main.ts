@@ -41,6 +41,7 @@ import {
   PersonaView,
 } from './personas';
 import { personaPage } from './persona-page';
+import { suggestedPersonaNames, withSuggestedPersonaNames } from './shared/persona-names';
 import { splitter, LIST_SPLIT } from './splitter';
 import {
   loadReview,
@@ -133,8 +134,13 @@ try {
           { label: component.name, from: relation.from },
         ]);
       }
+  // Suggested roles named by the screen that creates their accounts (ADR 0178).
+  const namedGraph = withSuggestedPersonaNames(
+    sourceGraph,
+    suggestedPersonaNames(sourceGraph, (id) => hints.get(id)?.heading),
+  );
   const roles = new Map<string, string[]>();
-  for (const persona of (sourceGraph.application.personas || []) as {
+  for (const persona of (namedGraph.application.personas || []) as {
     name?: string;
     screens?: Record<string, string>;
   }[])
@@ -146,7 +152,7 @@ try {
     roles,
   });
   const graph = {
-      ...sourceGraph,
+      ...namedGraph,
       nodes: sourceGraph.nodes.map((node) =>
         node.type === 'SCREEN' ? { ...node, name: displayNames.get(node.id) || node.name } : node,
       ),
@@ -158,7 +164,7 @@ try {
     dynamicScreens,
     payload.preview.elements || [],
   );
-  const mdPayload: Payload = { ...payload, componentLibrary: undefined };
+  const mdPayload: Payload = { ...payload, graph: namedGraph, componentLibrary: undefined };
   // Features by deterministic rules (ADR 0156); the same grouping the md and the review state use.
   const featureList = features(index),
     featureByScreen = new Map<string, (typeof featureList)[number]>();

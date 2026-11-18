@@ -659,6 +659,7 @@ export function apiPage(index: Index, state: ReviewState, options: ApiPageOption
         const item = element('li');
         item.dataset.stateFrom = t.from ?? '';
         item.dataset.stateTo = t.to;
+        if (t.partial) item.dataset.statePartial = 'true';
         item.append(
           element('strong', `${word(t.from)} → ${word(t.to)}`),
           element(
@@ -667,6 +668,7 @@ export function apiPage(index: Index, state: ReviewState, options: ApiPageOption
             'muted',
           ),
         );
+        if (t.partial) item.append(element('span', '另有推不出原狀態的進入方式', 'muted'));
         list.append(item);
       }
       flow.append(list);

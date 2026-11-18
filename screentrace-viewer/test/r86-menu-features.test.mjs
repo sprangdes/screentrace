@@ -104,3 +104,42 @@ test('R102 screens left over that only one role uses group by that role', async 
   assert.deepEqual(role.screens, ['a', 'b']);
   assert.equal(f.featureOfScreen(list).get('c'), 'other');
 });
+
+test('R103 a screen left over that one role uses joins the feature of that role’s other screens', async () => {
+  const f = await ownModule('shared/features');
+  const screens = ['home', 'orders', 'settings', 'wishlist', 'shop', 'both'].map((id) =>
+    node(id, 'SCREEN', id, { route: `/${id}` }),
+  );
+  const nav = [link('n0', '訂單', 9, 0), link('n1', '設定', 9, 1)];
+  const graph = {
+    schemaVersion: '2.4',
+    application: {
+      name: 'x',
+      path: '.',
+      technologies: [],
+      personas: [
+        {
+          id: 'buyer',
+          name: '買家',
+          screens: { orders: 'APPLIES', settings: 'APPLIES', wishlist: 'APPLIES', both: 'APPLIES' },
+        },
+        { id: 'seller', name: '店家', screens: { shop: 'APPLIES', both: 'APPLIES' } },
+      ],
+    },
+    nodes: [...screens, ...nav],
+    relationships: [
+      ...nav.map((n, i) => ({ id: `c${i}`, type: 'CONTAINS', from: 'home', to: n.id })),
+      { id: 'g0', type: 'NAVIGATES_TO', from: 'n0', to: 'orders' },
+      { id: 'g1', type: 'NAVIGATES_TO', from: 'n1', to: 'settings' },
+    ],
+    behaviors: [],
+    apiContracts: [],
+    validationRules: [],
+  };
+  const of = f.featureOfScreen(f.features(graph));
+  // wishlist is only for buyers, and the buyers' other screens are in the menu.
+  assert.equal(of.get('wishlist'), 'menu:src/Nav.tsx:9');
+  // No other seller screen is in a feature; a screen for both roles has no one role.
+  assert.equal(of.get('shop'), 'other');
+  assert.equal(of.get('both'), 'other');
+});

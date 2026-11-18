@@ -88,8 +88,13 @@ public final class BackendCallChains {
    * What the value was before the write, read from the conditions around it (ADR 0169): only these
    * values, or none of those, or a new object built by a builder. Always INFERRED.
    */
-  record Prior(List<String> only, List<String> not, boolean created, List<Integer> lines) {
-    static final Prior NONE = new Prior(null, List.of(), false, List.of());
+  record Prior(
+      List<String> only, List<String> not, boolean created, List<Integer> lines, boolean partial) {
+    static final Prior NONE = new Prior(null, List.of(), false, List.of(), false);
+
+    Prior(List<String> only, List<String> not, boolean created, List<Integer> lines) {
+      this(only, not, created, lines, false);
+    }
 
     boolean known() {
       return created || only != null || !not.isEmpty();
@@ -241,6 +246,7 @@ public final class BackendCallChains {
     var prior = change.prior();
     if (prior != null && prior.known()) {
       if (prior.created()) row.put("fromCreated", true);
+      if (prior.partial()) row.put("fromPartial", true);
       if (prior.only() != null) row.put("from", prior.only());
       else if (!prior.not().isEmpty()) row.put("fromNot", prior.not());
       if (!prior.lines().isEmpty()) row.put("fromLines", prior.lines());
@@ -588,6 +594,7 @@ public final class BackendCallChains {
       boolean callers) {
     Set<String> only = null, not = new java.util.TreeSet<>();
     java.util.TreeSet<Integer> lines = new java.util.TreeSet<>();
+    boolean partial = false;
     Node current = write;
     while (current != null && current != method) {
       Node parent = current.getParentNode().orElse(null);
@@ -660,20 +667,22 @@ public final class BackendCallChains {
                               && c.findAncestor(MethodDeclaration.class).orElse(null) != method)
                   .toList();
       Set<String> union = new java.util.TreeSet<>();
-      boolean all = !sites.isEmpty();
+      int known = 0;
       for (var site : sites) {
         var caller = site.findAncestor(MethodDeclaration.class).orElse(null);
         var found =
             caller == null ? Prior.NONE : prior(site, caller, null, field, type, unit, false);
-        if (found.only() == null) {
-          all = false;
-          break;
-        }
+        if (found.only() == null) continue;
+        known++;
         union.addAll(found.only());
         lines.addAll(found.lines());
       }
-      if (all) only = union;
-      else lines.clear();
+      // Some call sites say the state and others do not: keep what they say, marked as only part
+      // of the ways in (ADR 0178).
+      if (known > 0) {
+        only = union;
+        partial = known < sites.size();
+      }
     }
     if (only != null) only.removeAll(not);
     // An enum keeps its declaration order; a text state has no declaration, so its values sort.
@@ -689,7 +698,7 @@ public final class BackendCallChains {
             ? List.of()
             : text ? List.copyOf(not) : type.constants().stream().filter(not::contains).toList();
     if (ordered == null && excluded.isEmpty()) return Prior.NONE;
-    return new Prior(ordered, excluded, false, List.copyOf(lines));
+    return new Prior(ordered, excluded, false, List.copyOf(lines), partial && ordered != null);
   }
 
   private record Test(Set<String> values, boolean equal) {}
@@ -881,6 +890,11 @@ public final class BackendCallChains {
 
   /** {@code Status.DONE} or a statically imported {@code DONE}: [enum, constant], else null. */
   private String[] constant(Expression expression, CompilationUnit unit) {
+    // `ROLE_USER.name()` stores the constant's own name: the same value (ADR 0178).
+    if (expression instanceof MethodCallExpr call
+        && call.getNameAsString().equals("name")
+        && call.getArguments().isEmpty()
+        && call.getScope().isPresent()) return constant(call.getScope().get(), unit);
     if (expression instanceof FieldAccessExpr access) {
       String type = access.getScope().toString();
       type = type.substring(type.lastIndexOf('.') + 1);

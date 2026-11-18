@@ -289,6 +289,27 @@ export function features(input: Graph | Index): Feature[] {
     }
     for (const [id, c] of joined) chosen.set(id, c);
   }
+  // A screen still left out that only one role uses joins the feature most of that role's other
+  // screens are in (ADR 0178): a role's own pages stay together, and nothing crosses roles.
+  const peers = new Map<string, Candidate>();
+  for (const screen of index.screens) {
+    if (chosen.get(screen.id)) continue;
+    const role = all.get(screen.id)!.find((c) => c.rule === 'ROLE');
+    if (!role) continue;
+    const votes = new Map<string, { candidate: Candidate; count: number }>();
+    for (const other of index.screens) {
+      const c = chosen.get(other.id);
+      if (!c || !all.get(other.id)!.some((x) => key(x) === key(role))) continue;
+      const vote = votes.get(key(c)) || { candidate: c, count: 0 };
+      vote.count++;
+      votes.set(key(c), vote);
+    }
+    const best = [...votes.entries()].sort(
+      (a, b) => b[1].count - a[1].count || order(a[0], b[0]),
+    )[0];
+    if (best) peers.set(screen.id, best[1].candidate);
+  }
+  for (const [id, c] of peers) chosen.set(id, c);
   const groups = new Map<string, { candidate?: Candidate; screens: string[]; sources: Source[] }>();
   for (const [screenId, c] of chosen) {
     const k = c

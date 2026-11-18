@@ -178,4 +178,5 @@ reservio 的權限守衛（`RequireCustomer`、`RequireBusiness`、`RequireBusin
 | 疊加狀態 | R99 | JSP 的空清單／錯誤區塊也預設隱藏；React 狀態命名擴充 |
 | 登入導回 | R100 | 另認 `String.format`、`URI`、`StringBuilder`、`RedirectStrategy`、`defaultSuccessUrl` 等 |
 | 呈現瑕疵 | R102 | 「Settings Scaffold Page」消失；「其他」降為 6 個；處理中按鈕的用途；角色可採前端中文（reservio 沒有對照，仍為 BUSINESS、USER） |
+| 剩餘三項 | R103 | 自動建議的角色依建立帳號的畫面命名為「商家」「客戶」；LINE `selectTime`／`confirm` 的原狀態列出並註明另有推不出的進入方式；「其他」降為 3 個（萬用轉址、強制改密碼、LINE 帳號連結，皆無共用依據） |
 

@@ -135,7 +135,61 @@ class R94PriorStateTest {
     for (var row : handle) from.put(row.get("value"), row.get("from"));
     assertEquals(List.of("CHOOSING"), from.get("DATING"));
     assertEquals(List.of("IDLE", "DONE"), from.get("CHOOSING"));
-    // date() is also called outside the switch: its prior state is not known.
-    assertNull(from.get("DONE"));
+    // date() is also called outside the switch: R103 (ADR 0178) keeps what the switch says and
+    // marks
+    // that other ways in say nothing.
+    var done = handle.stream().filter(r -> "DONE".equals(r.get("value"))).findFirst().orElseThrow();
+    assertEquals(List.of("DATING"), done.get("from"));
+    assertEquals(true, done.get("fromPartial"));
+    assertNull(
+        handle.stream()
+            .filter(r -> "DATING".equals(r.get("value")))
+            .findFirst()
+            .orElseThrow()
+            .get("fromPartial"));
+  }
+
+  @Test
+  void r103APrivateStepWithNoCallSiteStateHasNoPrior() throws Exception {
+    write("src/main/java/demo/Step.java", "package demo; public enum Step { IDLE, DONE }");
+    write(
+        "src/main/java/demo/Api.java",
+        """
+        package demo;
+        class Api {
+          Object handle(Chat chat) { return finish(chat); }
+          Object again(Chat chat) { return finish(chat); }
+          private Object finish(Chat c) { c.setStep(Step.DONE); return null; }
+        }
+        """);
+    var row = changes("handle").get(0);
+    assertNull(row.get("from"));
+    assertNull(row.get("fromPartial"));
+  }
+
+  @Test
+  void r103AnEnumConstantsNameIsTheSameValue() throws Exception {
+    write(
+        "src/main/java/demo/Role.java", "package demo; public enum Role { ROLE_USER, ROLE_ADMIN }");
+    write(
+        "src/main/java/demo/Api.java",
+        """
+        package demo;
+        import static demo.Role.ROLE_ADMIN;
+        class Api {
+          void create(Repo repo) {
+            repo.save(User.builder().role(Role.ROLE_USER.name()).build());
+          }
+          void promote(User u) { u.setRole(ROLE_ADMIN.name()); }
+          void other(User u) { u.setRole(u.getRole().name()); }
+        }
+        """);
+    var create = changes("create").get(0);
+    assertEquals("Role", create.get("enum"));
+    assertEquals("ROLE_USER", create.get("value"));
+    assertEquals(true, create.get("fromCreated"));
+    assertEquals("ROLE_ADMIN", changes("promote").get(0).get("value"));
+    // `.name()` of something that is not a constant proves nothing.
+    assertTrue(changes("other").isEmpty());
   }
 }
