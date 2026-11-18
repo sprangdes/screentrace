@@ -91,6 +91,7 @@ export class Evaluator {
       scope.bindings.set(name, {
         value: this.project(this.argumentValue(argument), steps, scope),
         from: argument,
+        steps,
       });
   }
 

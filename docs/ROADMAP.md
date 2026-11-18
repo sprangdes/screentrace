@@ -585,3 +585,7 @@
 
 - WP169：狀態欄位（名稱以 status／state／stage／phase 結尾）的字串、整數與常數寫入也列為狀態並推論原狀態；狀態寫入追到 8 層（呼叫鏈仍列 4 層）。見 [ADR 0172](adr/0172-r97-text-states-and-deeper-writes.md)。
 
+## R98 改名 props、Context 與 hook 條件
+
+- WP170：畫面事實的條件判斷延伸到改名解構的 props、Context provider 提供的條件值與只回傳條件的自訂 hook。見 [ADR 0173](adr/0173-r98-renamed-props-and-hook-conditions.md)。
+
