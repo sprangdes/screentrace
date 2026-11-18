@@ -351,7 +351,9 @@ export class Evaluator {
       }
       case 'LogicalExpression': {
         const left = this.evaluate(node.left, scope),
-          truth = truthy(left);
+          truth =
+            truthy(left) ??
+            (left.t === 'unknown' ? (this.decide?.(node.left, scope) ?? null) : null);
         if (node.operator === '??') {
           if (left.t === 'lit')
             return left.v === null || left.v === undefined
@@ -364,7 +366,9 @@ export class Evaluator {
         return truth ? left : this.evaluate(node.right, scope);
       }
       case 'ConditionalExpression': {
-        const truth = truthy(this.evaluate(node.test, scope));
+        // The screen's own facts decide a test the values cannot (`me` absent on a signed-out page).
+        const truth =
+          truthy(this.evaluate(node.test, scope)) ?? this.decide?.(node.test, scope) ?? null;
         if (truth === null) return unknown();
         return this.evaluate(truth ? node.consequent : node.alternate, scope);
       }
@@ -587,7 +591,8 @@ export class Evaluator {
             : undefined;
         if (assumed !== undefined)
           return this.strings(assumed ? node.consequent : node.alternate, scope, depth + 1);
-        const truth = truthy(this.evaluate(node.test, scope, depth));
+        const truth =
+          truthy(this.evaluate(node.test, scope, depth)) ?? this.decide?.(node.test, scope) ?? null;
         if (truth !== null)
           return this.strings(truth ? node.consequent : node.alternate, scope, depth + 1);
         return union(
@@ -685,7 +690,11 @@ export class Evaluator {
           ? this.assumptions.get(conditionText(scope.module, node.test))
           : undefined;
       const truth =
-        assumed !== undefined ? assumed : truthy(this.evaluate(node.test, scope, depth));
+        assumed !== undefined
+          ? assumed
+          : (truthy(this.evaluate(node.test, scope, depth)) ??
+            this.decide?.(node.test, scope) ??
+            null);
       if (truth !== null)
         return this.objectLiterals(truth ? node.consequent : node.alternate, scope, depth + 1);
       const a = this.objectLiterals(node.consequent, scope, depth + 1),

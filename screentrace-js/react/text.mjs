@@ -127,7 +127,7 @@ function literalAlternatives(evaluator, expr, scope) {
     : null;
 }
 /** Substitute parameter bindings through AST source ranges; local state remains symbolic. */
-function boundText(node, scope, evaluator, seen = new Set()) {
+function boundText(node, scope, evaluator, seen = new Set(), constants = false) {
   const source = text(scope.module, node),
     edits = [];
   function visit(n, parent, key) {
@@ -152,12 +152,52 @@ function boundText(node, scope, evaluator, seen = new Set()) {
           expr.callee.name === 'Boolean' &&
           !evaluator.lookup('Boolean', binding.scope) &&
           expr.arguments.length === 1
-            ? '!!(' + boundText(expr.arguments[0], binding.scope, evaluator, next) + ')'
-            : boundText(expr, binding.scope, evaluator, next);
+            ? '!!(' + boundText(expr.arguments[0], binding.scope, evaluator, next, constants) + ')'
+            : boundText(expr, binding.scope, evaluator, next, constants);
         edits.push({
           from: n.start - node.start,
           to: n.end - node.start,
           value: '(' + value + ')',
+        });
+        return;
+      }
+      // A destructured prop (`function Header({ isCustomer })`) reads as the attribute the parent
+      // passed (ADR 0168).
+      const passed = binding?.from?.value;
+      if (
+        constants &&
+        passed?.t === 'props' &&
+        passed.attrs.has(n.name) &&
+        !seen.has(passed.attrs.get(n.name))
+      ) {
+        const attr = passed.attrs.get(n.name);
+        edits.push({
+          from: n.start - node.start,
+          to: n.end - node.start,
+          value:
+            '(' + boundText(attr.expr, attr.scope, evaluator, new Set([...seen, attr]), true) + ')',
+        });
+        return;
+      }
+      // `const isCustomer = me?.role === 'USER'`: a constant made of conditions reads as them (ADR 0168).
+      const entry = found?.entry;
+      if (
+        constants &&
+        !binding?.expr &&
+        entry?.kind === 'variable' &&
+        entry.node.id?.type === 'Identifier' &&
+        entry.node.init &&
+        !(entry.steps ?? []).length &&
+        !seen.has(entry) &&
+        conditionOnly(entry.node.init)
+      ) {
+        edits.push({
+          from: n.start - node.start,
+          to: n.end - node.start,
+          value:
+            '(' +
+            boundText(entry.node.init, found.scope, evaluator, new Set([...seen, entry]), true) +
+            ')',
         });
         return;
       }
@@ -176,7 +216,44 @@ function boundText(node, scope, evaluator, seen = new Set()) {
   return result;
 }
 
+/** Only reads and comparisons: no call, assignment, function or markup. */
+function conditionOnly(node) {
+  if (!node?.type) return true;
+  if (
+    [
+      'CallExpression',
+      'OptionalCallExpression',
+      'NewExpression',
+      'AssignmentExpression',
+      'UpdateExpression',
+      'AwaitExpression',
+      'ArrowFunctionExpression',
+      'FunctionExpression',
+      'JSXElement',
+      'JSXFragment',
+      'ObjectExpression',
+      'ArrayExpression',
+    ].includes(node.type)
+  )
+    return false;
+  for (const [key, value] of Object.entries(node)) {
+    if (
+      ['loc', 'start', 'end', 'extra', 'comments', 'leadingComments', 'trailingComments'].includes(
+        key,
+      )
+    )
+      continue;
+    if (Array.isArray(value)) {
+      if (!value.every((child) => !child?.type || conditionOnly(child))) return false;
+    } else if (value?.type && !conditionOnly(value)) return false;
+  }
+  return true;
+}
+/** A condition rewritten over the facts it depends on: props and condition constants substituted. */
+const factText = (node, scope, evaluator) => boundText(node, scope, evaluator, new Set(), true);
+
 export {
+  factText,
   hasContent,
   textual,
   intrinsicKind,

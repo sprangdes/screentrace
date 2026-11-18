@@ -157,7 +157,7 @@ reservio 的權限守衛（`RequireCustomer`、`RequireBusiness`、`RequireBusin
 |---|---|---|
 | P1 沒有畫面的功能 | R81（[ADR 0159](adr/0159-r81-background-jobs.md)） | API 頁「系統自動作業」列出 6 個排程與白話執行時機、後端呼叫；md §12 |
 | P2 狀態流程 | R82（[ADR 0160](adr/0160-r82-state-changes.md)） | API 頁「資料狀態」列出各狀態由哪個 API／作業設定，前端一致時並列中文；LINE 對話 9 個步驟可見；md §13 |
-| P3 示例值 | R83（[ADR 0161](adr/0161-r83-literal-alternatives-and-wrapped-labels.md)） | 首頁按鈕讀成「前往預約 / 開始預約」，預約間隔顯示 15／30／45／60 分鐘；訪客導覽列仍為示例值 |
+| P3 示例值 | R83、R91（[ADR 0161](adr/0161-r83-literal-alternatives-and-wrapped-labels.md)、[0168](adr/0168-r91-screen-facts-through-props.md)） | 訪客首頁導覽列與按鈕與實際畫面一致（「我要預約…」「開始預約」），預約間隔顯示 15／30／45／60 分鐘 |
 | P4 疊加狀態 | R84（[ADR 0162](adr/0162-r84-page-states-in-preview.md)） | 截圖與預覽預設只顯示有資料狀態，可切換載入中／錯誤／沒有資料 |
 | P5 畫面名稱 | R85（[ADR 0163](adr/0163-r85-plain-screen-names.md)） | 「網址帶 lineLogin=…」「step 為 1」「通知中心（商家）」「概覽」 |
 | P6 功能地圖 | R86（[ADR 0164](adr/0164-r86-menu-features.md)） | 依選單分組；說明只列實際用到的依據 |

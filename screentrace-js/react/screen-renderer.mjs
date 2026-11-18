@@ -34,6 +34,7 @@ import {
   labelOf,
   LABEL_ATTRIBUTES,
   literalAlternatives,
+  factText,
 } from './text.mjs';
 import { hrefEntryUrls, cleanUrls, destinationCandidates } from './urls.mjs';
 
@@ -103,7 +104,27 @@ class ScreenRenderer {
     this.componentFrames = [];
   }
 
+  /** A condition over props and condition constants, decided by the screen's facts (ADR 0168). */
+  decideByFacts(node, scope) {
+    if (!this.facts?.length) return null;
+    try {
+      return implied(this.facts, factText(node, scope, this.evaluator));
+    } catch {
+      return null;
+    }
+  }
+
   render(route, shell = null) {
+    const previous = this.evaluator.decide;
+    this.evaluator.decide = (node, scope) => this.decideByFacts(node, scope);
+    try {
+      return this.renderScreen(route, shell);
+    } finally {
+      this.evaluator.decide = previous;
+    }
+  }
+
+  renderScreen(route, shell = null) {
     this.evaluator.routePath = /[:*]/.test(route.path) ? null : route.path;
     this.facts = resolveRouteFacts(this.audience, this.evaluator);
     this.routesElement = route.routesElement ?? null;
@@ -327,7 +348,7 @@ class ScreenRenderer {
     const known = truthy(this.evaluator.evaluate(node, scope));
     if (known !== null) return known;
     const expression = this.evaluator.expandAudience(node, scope) ?? text(scope.module, node);
-    return implied(this.facts, expression);
+    return implied(this.facts, expression) ?? this.decideByFacts(node, scope);
   }
 
   reachableStateCondition(node, scope) {

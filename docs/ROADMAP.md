@@ -557,3 +557,7 @@
 
 - WP162：依 [reservio 評估](RESERVIO_EVALUATION_20261118.md) P10。`bin/screentrace` 與 `bin/screentrace.ps1` 原本只讀 `java -version` 的第一行，環境設有 `JAVA_TOOL_OPTIONS` 時第一行是「Picked up …」，`doctor` 誤報缺 Java、`analyze` 無法執行；改為取含 `version "` 的那一行。新增 viewer `r90-launcher-java.test`（1）。
 
+## R91 畫面身分事實經由 props 決定條件
+
+- WP163：R83 的剩餘問題。React 分析器在條件無法由值判斷時，把解構的 prop 換回父元件傳入的運算式、把條件常數換回初始值，再以畫面的身分事實判斷；reservio 訪客首頁的導覽列與按鈕與實際畫面一致，不再出現「示例值」與「登出」。見 [ADR 0168](adr/0168-r91-screen-facts-through-props.md)。
+
