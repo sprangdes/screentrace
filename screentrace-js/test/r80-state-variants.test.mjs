@@ -91,3 +91,56 @@ test('R80 links from other screens open the initial step', () => {
   assert.deepEqual(link.targetRoutes, ['/new']);
   assert.ok(!(link.targetScreens ?? []).some((t) => t.stateKey));
 });
+
+test('R80 a write whose branches are all literals is proven, as in a step correction effect', () => {
+  const result = run(
+    `type Step = 1 | 2 | 3;
+     function Fix(){ const [step, setStep] = useState<Step>(1); const [ok, setOk] = useState(false);
+       useEffect(() => { if (step === 3 && !ok) setStep(window.flag ? 2 : 1); }, [step, ok]);
+       const moveToStep = (n: Step) => { setStep(n); };
+       return <div>{step === 1 && <button type="button" onClick={() => moveToStep(2)}>To 2</button>}
+         {step === 2 && <button type="button" onClick={() => moveToStep(3)}>To 3</button>}{step === 3 && <p>Three</p>}</div>; }`,
+    '<Route path="/fix" element={<Fix/>}/>',
+  );
+  assert.deepEqual(
+    result.screens.filter((s) => s.route === '/fix').map((s) => s.stateVariant?.value),
+    [1, 2, 3],
+  );
+});
+
+test('R80 an otherwise splittable state with an unproven write is reported at that write', () => {
+  const result = run(
+    `function Odd(){ const [step, setStep] = useState(1);
+       return <div>{step === 1 && <button type="button" onClick={() => setStep(2)}>To 2</button>}
+         {step === 2 && <input onChange={(e) => setStep(e.target.value)}/>}</div>; }`,
+    '<Route path="/odd" element={<Odd/>}/>',
+  );
+  assert.equal(result.screens.filter((s) => s.route === '/odd').length, 1);
+  const found = result.diagnostics.find((d) => d.code === 'REACT_STATE_VARIANT_UNPROVEN');
+  assert.ok(found, JSON.stringify(result.diagnostics));
+  assert.equal(found.source.line, 3);
+});
+
+test('R80 loading states, message states and a wizard inside a closed dialog stay one screen', () => {
+  const result = run(
+    `function Load(){ const [phase, setPhase] = useState('loading');
+       const load = async () => { setPhase('loading'); try { await fetch('/api/x'); setPhase('ready'); } catch { setPhase('error'); } };
+       useEffect(() => { void load(); }, []);
+       return <div>{phase === 'loading' && <p>Loading</p>}{phase === 'ready' && <button type="button">Item</button>}
+         {phase === 'error' && <button type="button" onClick={() => void load()}>Retry</button>}</div>; }
+     function Message(){ const [error, setError] = useState('');
+       return <div><button type="button" onClick={() => setError('Bad input')}>Check</button>
+         {error ? <div role="alert">{error}<button type="button" onClick={() => setError('Still bad')}>Again</button></div> : null}</div>; }
+     function Flow(){ const [step, setStep] = useState('request');
+       return <div role="dialog" aria-modal="true">{step === 'request' && <button type="button" onClick={() => setStep('otp')}>Send</button>}
+         {step === 'otp' && <button type="button" onClick={() => setStep('done')}>Verify</button>}{step === 'done' && <p>Done</p>}</div>; }
+     function Settings(){ const [open, setOpen] = useState(false);
+       return <section><button type="button" onClick={() => setOpen(true)}>Verify email</button>{open ? <Flow/> : null}</section>; }`,
+    '<Route path="/load" element={<Load/>}/><Route path="/message" element={<Message/>}/><Route path="/settings" element={<Settings/>}/>',
+  );
+  for (const route of ['/load', '/message', '/settings']) {
+    const screens = result.screens.filter((s) => s.route === route);
+    assert.equal(screens.length, 1, route);
+    assert.equal(screens[0].stateVariant, undefined, route);
+  }
+});

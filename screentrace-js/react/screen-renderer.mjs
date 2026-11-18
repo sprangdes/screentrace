@@ -39,6 +39,19 @@ import { hrefEntryUrls, cleanUrls, destinationCandidates } from './urls.mjs';
 const EFFECT_HOOKS = new Set(['useEffect', 'useLayoutEffect', 'useInsertionEffect']);
 const PASS_THROUGH = new Set(['Fragment', 'StrictMode', 'Suspense', 'Profiler']);
 const MAX_UNROLLED = 50;
+/** Expansion anchors the preview shows: not inside a block a closed dialog hides. */
+function visibleAnchors(document) {
+  const anchors = [];
+  const visit = (node) => {
+    if (typeof node === 'string' || node.attributes?.['data-st-condition']) return;
+    const anchor = node.attributes?.['data-st-expansion-anchor'];
+    if (anchor) anchors.push(anchor);
+    for (const child of node.children ?? []) visit(child);
+  };
+  visit(document);
+  return anchors;
+}
+
 /** Identifies a `useState` declaration: file, line and state name. */
 export const stateKey = (file, lineNo, name) => `${file}:${lineNo}:${name}`;
 
@@ -183,6 +196,14 @@ class ScreenRenderer {
           }
         : {}),
       ...(this.markup ? { markup: serialize(closeConditionalDialogs(this.document)) } : {}),
+      ...(this.stateCandidates && this.markup
+        ? {
+            loadWrittenStates: [...this.previewStates.values()]
+              .filter((item) => item.loadWritten && item.key)
+              .map((item) => item.key),
+            visibleAnchors: visibleAnchors(this.document),
+          }
+        : {}),
     };
   }
 
@@ -792,8 +813,12 @@ class ScreenRenderer {
   prepareStateReachability(body, scope) {
     const states = new Map(),
       helpers = new Map(),
-      unknown = new Set(),
+      unknown = new Map(),
       parents = new WeakMap();
+    // The first write whose value cannot be proven, kept to explain why a state is not split.
+    const markUnknown = (record, at) => {
+      if (!unknown.has(record)) unknown.set(record, { file: scope.module.file, line: line(at) });
+    };
     const collect = (node, parent = null) => {
       if (!node?.type) return;
       if (parent) parents.set(node, parent);
@@ -852,13 +877,13 @@ class ScreenRenderer {
               if (index >= 0) {
                 if (!helpers.has(fn)) helpers.set(fn, []);
                 helpers.get(fn).push({ record: setter, index });
-              } else unknown.add(setter);
+              } else markUnknown(setter, node);
             } else if (
               arg?.type !== 'ArrowFunctionExpression' &&
               arg?.type !== 'FunctionExpression' &&
-              this.evaluator.evaluate(arg, scope).t !== 'lit'
+              !this.writeChoices(arg, scope)
             )
-              unknown.add(setter);
+              markUnknown(setter, node);
           }
         }
         for (const child of children(node)) visit(child);
@@ -917,7 +942,7 @@ class ScreenRenderer {
           parent.callee === node;
         const declaration =
           parent?.type === 'ArrayPattern' || parent?.type === 'VariableDeclarator';
-        if (!directCall && !declaration) unknown.add(setterByName.get(node.name));
+        if (!directCall && !declaration) markUnknown(setterByName.get(node.name), node);
       }
       if (node.type === 'CallExpression' || node.type === 'OptionalCallExpression') {
         const callee = this.evaluator.evaluate(node.callee, scope);
@@ -925,7 +950,7 @@ class ScreenRenderer {
         if (record) {
           const arg = node.arguments[0];
           if (arg?.type === 'ArrowFunctionExpression' || arg?.type === 'FunctionExpression')
-            unknown.add(record);
+            markUnknown(record, node);
           else if (arg?.type === 'Identifier') {
             const owner = functionNodes.find((fn) => {
               let p = parents.get(node);
@@ -944,24 +969,24 @@ class ScreenRenderer {
                 );
             if (helper) {
               for (const call of this.findCalls(body, owner, scope)) {
-                const value = this.evaluator.evaluate(call.arguments[helper.index], scope);
-                if (value.t !== 'lit') unknown.add(record);
-                else if (eligible(call)) record.values.push(value);
+                const values = this.writeChoices(call.arguments[helper.index], scope);
+                if (!values) markUnknown(record, call);
+                else if (eligible(call)) record.values.push(...values);
                 record.writes.push({ file: scope.module.file, line: line(call) });
               }
-            } else unknown.add(record);
+            } else markUnknown(record, node);
           } else {
-            const value = this.evaluator.evaluate(arg, scope);
-            if (value.t === 'lit') {
-              if (eligible(node)) record.values.push(value);
+            const values = this.writeChoices(arg, scope);
+            if (values) {
+              if (eligible(node)) record.values.push(...values);
               record.writes.push({ file: scope.module.file, line: line(node) });
-            } else unknown.add(record);
+            } else markUnknown(record, node);
           }
         } else if (callee.t === 'fn' && helpers.has(callee.node))
           for (const item of helpers.get(callee.node)) {
-            const value = this.evaluator.evaluate(node.arguments[item.index], scope);
-            if (value.t !== 'lit') unknown.add(item.record);
-            else if (eligible(node)) item.record.values.push(value);
+            const values = this.writeChoices(node.arguments[item.index], scope);
+            if (!values) markUnknown(item.record, node);
+            else if (eligible(node)) item.record.values.push(...values);
             item.record.writes.push({ file: scope.module.file, line: line(node) });
           }
       }
@@ -980,8 +1005,9 @@ class ScreenRenderer {
         scope.bindings.set(record.setter, {
           value: { t: 'state-setter', record: { key: record.key, name: record.name } },
         });
-      if (this.stateCandidates && this.inRoute && !unknown.has(record))
+      if (this.stateCandidates && this.inRoute)
         this.stateCandidates.push({
+          ...(unknown.has(record) ? { unproven: unknown.get(record) } : {}),
           key: record.key,
           name: record.name,
           source: record.source,
@@ -990,6 +1016,20 @@ class ScreenRenderer {
           writes: record.writes,
         });
     }
+  }
+
+  /** The literal values a state write can set: a literal, or a conditional whose branches are all literals. */
+  writeChoices(node, scope) {
+    if (!node) return [{ t: 'lit', v: undefined }];
+    const value = this.evaluator.evaluate(node, scope);
+    if (value.t === 'lit') return [value];
+    const bare = unwrap(node);
+    if (bare?.type !== 'ConditionalExpression') return null;
+    const known = truthy(this.evaluator.evaluate(bare.test, scope));
+    if (known !== null) return this.writeChoices(known ? bare.consequent : bare.alternate, scope);
+    const consequent = this.writeChoices(bare.consequent, scope),
+      alternate = this.writeChoices(bare.alternate, scope);
+    return consequent && alternate ? [...consequent, ...alternate] : null;
   }
 
   findCalls(body, fn, scope) {
@@ -1299,6 +1339,7 @@ class ScreenRenderer {
           record.file = scope.module.file;
           record.line = line(expression);
           record.ownerScope.bindings.set(record.name, { value });
+          record.loadWritten = true;
           return false;
         }
         if (callee.t === 'fn')

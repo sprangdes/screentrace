@@ -65,6 +65,12 @@ export function analyzeReact({ files = [], maxDepth = 24, markup = false, person
               base.audienceOriginal,
               { statePins: pins },
             ).render(route, shell),
+          // The mount-time load path (ADR 0103) is simulated whatever `markup` is, so the graph and
+          // the preview make the same decision.
+          () =>
+            new ScreenRenderer(evaluator, occurrences, [], maxDepth, true, base.audienceOriginal, {
+              collectStates: true,
+            }).render(route, shell),
           diagnostics,
         );
     delete base.stateCandidates;

@@ -23,13 +23,18 @@ function orderedValues(candidate) {
  * wizard. A state qualifies only when every value is proven (ADR 0105: a literal initial value and
  * literal writes), the screen shows different components for different values, and at least one
  * component that only some values show moves the state to another value. Tabs whose buttons are
- * always visible do not qualify. More than one qualifying state is reported, not guessed.
+ * always visible do not qualify; neither do values that show the same components (messages), a
+ * state the mount-time load path writes (loading / ready / error), nor a state whose first step the
+ * preview does not show (inside a dialog that starts closed). More than one qualifying state is
+ * reported, not guessed.
  */
-export function chooseStateVariants(base, route, renderPinned, diagnostics) {
+export function chooseStateVariants(base, route, renderPinned, renderPreview, diagnostics) {
   const seen = new Map();
   for (const candidate of base.stateCandidates ?? [])
     if (!seen.has(candidate.key)) seen.set(candidate.key, candidate);
-  const qualified = [];
+  const qualified = [],
+    unproven = [];
+  let preview;
   for (const candidate of seen.values()) {
     const values = orderedValues(candidate);
     if (
@@ -54,8 +59,36 @@ export function chooseStateVariants(base, route, renderPinned, diagnostics) {
           component.behaviors.some((effect) => effect.stateTransition?.key === candidate.key),
       ),
     );
-    if (advances) qualified.push({ ...candidate, values });
+    if (!advances) continue;
+    // Values that show the same components (messages, for example) are not separate screens.
+    if (new Set(keySets.map((keys) => [...keys].sort().join('\n'))).size !== keySets.length)
+      continue;
+    // A state the mount-time load path writes is data loading (loading / ready / error), which the
+    // preview already resolves; it is not a page step.
+    preview ??= renderPreview();
+    if ((preview.loadWrittenStates ?? []).includes(candidate.key)) continue;
+    // The first step has to be visible in the preview; one inside a dialog that starts closed is not.
+    const visible = new Set(preview.visibleAnchors ?? []);
+    if (
+      !renders[0].screen.components.some(
+        (component) =>
+          keySets.some((keys) => !keys.has(component.key)) && visible.has(component.anchor),
+      )
+    )
+      continue;
+    // A state that would split but has a write whose value cannot be proven is reported, not guessed.
+    if (candidate.unproven) unproven.push(candidate);
+    else qualified.push({ ...candidate, values });
   }
+  for (const candidate of unproven)
+    diagnostics.push(
+      diagnostic(
+        candidate.unproven.file,
+        candidate.unproven.line,
+        'REACT_STATE_VARIANT_UNPROVEN',
+        `路由 ${route.path} 的頁面狀態 ${candidate.name} 在此寫入無法證明的值，未拆成畫面變體`,
+      ),
+    );
   if (qualified.length > 1) {
     diagnostics.push(
       diagnostic(
@@ -63,7 +96,7 @@ export function chooseStateVariants(base, route, renderPinned, diagnostics) {
         route.line,
         'REACT_STATE_VARIANTS_MULTIPLE',
         `路由 ${route.path} 有多個頁面狀態可拆成畫面變體（${qualified
-          .map((item) => item.name)
+          .map((item) => `${item.name}（${item.source.file}:${item.source.line}）`)
           .sort()
           .join('、')}），未拆分`,
       ),
