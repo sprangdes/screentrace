@@ -553,3 +553,11 @@
 - 狀態：已決定（2026-11-18）。
 - 決定：四項都選 A。P4 見 [ADR 0162](adr/0162-r84-page-states-in-preview.md)（R84），P5 見 [ADR 0163](adr/0163-r85-plain-screen-names.md)（R85），P6 見 [ADR 0164](adr/0164-r86-menu-features.md)（R86），P9 見 [ADR 0167](adr/0167-r89-suggested-personas.md)（R89）。
 
+## OQ-058 — 狀態流程推論原狀態、前端多種寫法
+
+- 情境：R82 依 OQ-056 只列「誰把狀態設成什麼」，前端用語不一致時只顯示常數名。需求方檢視後要求重新決定。
+- 可選方案：(1) 推論原狀態並標為推測；或維持不推論。(2) 前端多種寫法全部列出並附來源；或維持只顯示常數名。另問是否在全部處理完後開 PR。
+- 影響範圍：`BackendCallChains`、`StateLabels`、viewer API 頁、md §13。
+- 狀態：已決定（2026-11-18）。
+- 決定：兩項都改做（推論並標推測、列出所有寫法），全部處理完後開 PR。推論原狀態見 [ADR 0169](adr/0169-r94-prior-state.md)（R94）。
+

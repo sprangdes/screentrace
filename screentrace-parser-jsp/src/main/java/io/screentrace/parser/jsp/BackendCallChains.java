@@ -74,7 +74,20 @@ public final class BackendCallChains {
       String value,
       ResolutionStatus resolution,
       String reason,
-      SourceLocation source) {}
+      SourceLocation source,
+      Prior prior) {}
+
+  /**
+   * What the value was before the write, read from the conditions around it (ADR 0169): only these
+   * values, or none of those, or a new object built by a builder. Always INFERRED.
+   */
+  record Prior(List<String> only, List<String> not, boolean created, List<Integer> lines) {
+    static final Prior NONE = new Prior(null, List.of(), false, List.of());
+
+    boolean known() {
+      return created || only != null || !not.isEmpty();
+    }
+  }
 
   private BackendCallChains() {}
 
@@ -200,6 +213,13 @@ public final class BackendCallChains {
         if (label != null) words.put(constant, label.text());
       }
       if (!words.isEmpty()) row.put("labels", words);
+    }
+    var prior = change.prior();
+    if (prior != null && prior.known()) {
+      if (prior.created()) row.put("fromCreated", true);
+      if (prior.only() != null) row.put("from", prior.only());
+      else if (!prior.not().isEmpty()) row.put("fromNot", prior.not());
+      if (!prior.lines().isEmpty()) row.put("fromLines", prior.lines());
     }
     row.put("resolution", change.resolution().name());
     if (change.reason() != null) row.put("reason", change.reason());
@@ -474,10 +494,202 @@ public final class BackendCallChains {
           }
         }
       }
+      Prior prior = Prior.NONE;
+      if (!found.isEmpty()) {
+        var type = enums.getOrDefault(found.get(0)[0], List.of());
+        if (node instanceof MethodCallExpr call && builderChain(call))
+          prior = new Prior(null, List.of(), true, List.of());
+        else if (type.size() == 1) {
+          Expression target =
+              node instanceof MethodCallExpr call
+                  ? call.getScope().orElse(null)
+                  : ((FieldAccessExpr) ((AssignExpr) node).getTarget()).getScope();
+          if (target != null)
+            prior = prior(node, method, target.toString(), field, type.get(0), unit);
+        }
+      }
       for (var item : found)
         if (written.add(in + "\u0000" + field + "\u0000" + item[1] + "\u0000" + line))
-          changes.add(new StateChange(depth, in, item[0], field, item[1], status, reason, source));
+          changes.add(
+              new StateChange(depth, in, item[0], field, item[1], status, reason, source, prior));
     }
+  }
+
+  /**
+   * The values the field can hold where the write runs, from status comparisons on the same object
+   * (ADR 0169): an enclosing {@code if}'s branch, an earlier {@code if (...) throw/return} guard in
+   * an enclosing block, or a {@code switch} on the status. Conditions on anything else are ignored.
+   */
+  private Prior prior(
+      Node write,
+      MethodDeclaration method,
+      String scope,
+      String field,
+      EnumType type,
+      CompilationUnit unit) {
+    Set<String> only = null, not = new java.util.TreeSet<>();
+    java.util.TreeSet<Integer> lines = new java.util.TreeSet<>();
+    Node current = write;
+    while (current != null && current != method) {
+      Node parent = current.getParentNode().orElse(null);
+      if (parent == null || parent instanceof com.github.javaparser.ast.expr.LambdaExpr) break;
+      if (parent instanceof com.github.javaparser.ast.stmt.IfStmt branch
+          && branch.getCondition() != current) {
+        var test = comparison(branch.getCondition(), method, scope, field, type, unit);
+        if (test != null) {
+          boolean positive = branch.getThenStmt() == current ? test.equal() : !test.equal();
+          if (positive) only = intersect(only, test.values());
+          else not.addAll(test.values());
+          lines.add(branch.getBegin().map(p -> p.line).orElse(1));
+        }
+      }
+      if (parent instanceof com.github.javaparser.ast.stmt.SwitchEntry entry
+          && entry.getParentNode().orElse(null)
+              instanceof com.github.javaparser.ast.stmt.SwitchStmt sw
+          && read(sw.getSelector(), method, scope, field)
+          && !entry.getLabels().isEmpty()) {
+        Set<String> labels = new java.util.TreeSet<>();
+        for (var label : entry.getLabels()) {
+          String constant =
+              label instanceof NameExpr n
+                  ? n.getNameAsString()
+                  : label instanceof FieldAccessExpr f ? f.getNameAsString() : null;
+          if (constant != null && type.constants().contains(constant)) labels.add(constant);
+        }
+        if (!labels.isEmpty()) {
+          only = intersect(only, labels);
+          lines.add(sw.getBegin().map(p -> p.line).orElse(1));
+        }
+      }
+      if (parent instanceof com.github.javaparser.ast.stmt.BlockStmt block)
+        for (var statement : block.getStatements()) {
+          if (statement == current) break;
+          if (statement instanceof com.github.javaparser.ast.stmt.IfStmt guard
+              && guard.getElseStmt().isEmpty()
+              && exits(guard.getThenStmt())) {
+            var test = comparison(guard.getCondition(), method, scope, field, type, unit);
+            if (test == null) continue;
+            // Past `if (status == X) throw`, the status is not X; past `!=`, it is X.
+            if (test.equal()) not.addAll(test.values());
+            else only = intersect(only, test.values());
+            lines.add(guard.getBegin().map(p -> p.line).orElse(1));
+          }
+        }
+      current = parent;
+    }
+    if (only != null) only.removeAll(not);
+    List<String> ordered =
+        only == null ? null : type.constants().stream().filter(only::contains).toList();
+    List<String> excluded =
+        only != null ? List.of() : type.constants().stream().filter(not::contains).toList();
+    if (ordered == null && excluded.isEmpty()) return Prior.NONE;
+    return new Prior(ordered, excluded, false, List.copyOf(lines));
+  }
+
+  private record Test(Set<String> values, boolean equal) {}
+
+  private static Set<String> intersect(Set<String> current, Set<String> values) {
+    if (current == null) return new java.util.TreeSet<>(values);
+    current.retainAll(values);
+    return current;
+  }
+
+  /** A block that always leaves: a throw or return, alone or as its last statement. */
+  private static boolean exits(com.github.javaparser.ast.stmt.Statement statement) {
+    if (statement instanceof com.github.javaparser.ast.stmt.BlockStmt block)
+      return !block.getStatements().isEmpty() && exits(block.getStatements().getLast().get());
+    return statement instanceof com.github.javaparser.ast.stmt.ThrowStmt
+        || statement instanceof com.github.javaparser.ast.stmt.ReturnStmt;
+  }
+
+  /**
+   * {@code status == X}, {@code status != X}, {@code status.equals(X)}, and `||` / `&&` of them.
+   */
+  private Test comparison(
+      Expression test,
+      MethodDeclaration method,
+      String scope,
+      String field,
+      EnumType type,
+      CompilationUnit unit) {
+    if (test instanceof com.github.javaparser.ast.expr.EnclosedExpr enclosed)
+      return comparison(enclosed.getInner(), method, scope, field, type, unit);
+    if (test instanceof com.github.javaparser.ast.expr.UnaryExpr unary
+        && unary.getOperator()
+            == com.github.javaparser.ast.expr.UnaryExpr.Operator.LOGICAL_COMPLEMENT) {
+      var inner = comparison(unary.getExpression(), method, scope, field, type, unit);
+      return inner == null ? null : new Test(inner.values(), !inner.equal());
+    }
+    if (test instanceof com.github.javaparser.ast.expr.BinaryExpr binary) {
+      var op = binary.getOperator();
+      if (op == com.github.javaparser.ast.expr.BinaryExpr.Operator.EQUALS
+          || op == com.github.javaparser.ast.expr.BinaryExpr.Operator.NOT_EQUALS) {
+        Expression other =
+            read(binary.getLeft(), method, scope, field)
+                ? binary.getRight()
+                : read(binary.getRight(), method, scope, field) ? binary.getLeft() : null;
+        var c = other == null ? null : constant(other, unit);
+        if (c == null || !c[0].equals(type.name())) return null;
+        return new Test(
+            Set.of(c[1]), op == com.github.javaparser.ast.expr.BinaryExpr.Operator.EQUALS);
+      }
+      boolean or = op == com.github.javaparser.ast.expr.BinaryExpr.Operator.OR,
+          and = op == com.github.javaparser.ast.expr.BinaryExpr.Operator.AND;
+      if (or || and) {
+        var a = comparison(binary.getLeft(), method, scope, field, type, unit);
+        var b = comparison(binary.getRight(), method, scope, field, type, unit);
+        // a == X || a == Y is "one of"; a != X && a != Y is "none of"; mixed shapes say nothing.
+        if (a == null || b == null || a.equal() != b.equal() || a.equal() != or) return null;
+        Set<String> values = new java.util.TreeSet<>(a.values());
+        values.addAll(b.values());
+        return new Test(values, a.equal());
+      }
+    }
+    if (test instanceof MethodCallExpr call
+        && call.getNameAsString().equals("equals")
+        && call.getArguments().size() == 1
+        && call.getScope().isPresent()) {
+      Expression other =
+          read(call.getScope().get(), method, scope, field)
+              ? call.getArgument(0)
+              : read(call.getArgument(0), method, scope, field) ? call.getScope().get() : null;
+      var c = other == null ? null : constant(other, unit);
+      if (c == null || !c[0].equals(type.name())) return null;
+      return new Test(Set.of(c[1]), true);
+    }
+    return null;
+  }
+
+  /** {@code x.getStatus()}, {@code x.status}, or a local assigned once from one of them. */
+  private static boolean read(
+      Expression expression, MethodDeclaration method, String scope, String field) {
+    String getter = "get" + Character.toUpperCase(field.charAt(0)) + field.substring(1);
+    if (expression instanceof MethodCallExpr call)
+      return call.getArguments().isEmpty()
+          && call.getNameAsString().equals(getter)
+          && call.getScope().map(s -> s.toString().equals(scope)).orElse(false);
+    if (expression instanceof FieldAccessExpr access)
+      return access.getNameAsString().equals(field) && access.getScope().toString().equals(scope);
+    if (expression instanceof NameExpr name) {
+      var declarations =
+          method.findAll(VariableDeclarator.class).stream()
+              .filter(v -> v.getNameAsString().equals(name.getNameAsString()))
+              .toList();
+      boolean reassigned =
+          method.findAll(AssignExpr.class).stream()
+              .anyMatch(
+                  a ->
+                      a.getTarget() instanceof NameExpr t
+                          && t.getNameAsString().equals(name.getNameAsString()));
+      return declarations.size() == 1
+          && !reassigned
+          && declarations
+              .get(0)
+              .getInitializer()
+              .map(i -> read(i, method, scope, field))
+              .orElse(false);
+    }
+    return false;
   }
 
   /** {@code Type.builder()...name(x)}: the call is part of a builder chain. */

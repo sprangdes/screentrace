@@ -15,6 +15,11 @@ export interface StateChange {
   resolution: string;
   reason?: string;
   source?: Source;
+  /** The values it may have had before, inferred from conditions around the write (ADR 0169). */
+  from?: string[];
+  fromNot?: string[];
+  fromCreated?: boolean;
+  fromLines?: number[];
 }
 
 /** Who makes a write happen: an API (through its handler) or a background job. */
@@ -63,6 +68,20 @@ const order = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);
 /** A constant with the frontend's word for it, when there is one: `已取消（CANCELLED）`. */
 export const stateLabel = (value: string, label?: string) =>
   label ? `${label}（${value}）` : value;
+
+const strings = (value: unknown): string[] | undefined =>
+  Array.isArray(value) && value.every((v) => typeof v === 'string') ? value : undefined;
+
+/** The value before the write, in words; undefined when the conditions say nothing. Always a guess. */
+export function priorText(change: StateChange): string | undefined {
+  const word = (v: string) => stateLabel(v, change.labels?.[v]);
+  const from = strings(change.from),
+    not = strings(change.fromNot);
+  if (change.fromCreated === true) return '新建立';
+  if (from?.length) return from.map(word).join(' 或 ');
+  if (not?.length) return `不是 ${not.map(word).join('、')}`;
+  return undefined;
+}
 
 /** Every enum some handler writes, its constants in declaration order and who sets each one. */
 export function stateTypes(graph: Graph): StateType[] {

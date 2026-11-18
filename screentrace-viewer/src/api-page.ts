@@ -19,7 +19,7 @@ import { proportionBar, sharePercent } from './proportion';
 import { splitter, SplitRange } from './splitter';
 import { backgroundJobs, jobTriggerLabels, BackgroundJob } from './shared/jobs';
 import { backendCalls } from './shared/review-md';
-import { stateChanges, stateLabel, stateTypes, StateType } from './shared/states';
+import { priorText, stateChanges, stateLabel, stateTypes, StateType } from './shared/states';
 
 /** The three statuses shown to people: inferred usage and system entry points both count as in use. */
 export type ApiStatus = 'IN_USE' | 'UNREFERENCED' | 'REMOVABLE';
@@ -602,6 +602,8 @@ export function apiPage(index: Index, state: ReviewState, options: ApiPageOption
     const line = element('div', undefined, 'state-writer');
     line.append(writerLinks(writer));
     const where = [`在 ${writer.change.in}`];
+    const prior = priorText(writer.change);
+    if (prior) where.unshift(`原本：${prior}（推測）`);
     if (writer.change.reason) where.push(writer.change.reason);
     line.append(element('span', where.join('；'), 'muted'));
     if (writer.change.source?.file)
@@ -660,13 +662,15 @@ export function apiPage(index: Index, state: ReviewState, options: ApiPageOption
       link.type = 'button';
       link.dataset.stateGoto = `state:${change.enum}`;
       link.onclick = () => select(`state:${change.enum}`);
+      const prior = priorText(change);
       line.append(
         link,
         element(
           'strong',
-          change.value ? `→ ${stateLabel(change.value, change.label)}` : '→ 無法確定',
+          `${prior ? `${prior} ` : ''}${change.value ? `→ ${stateLabel(change.value, change.label)}` : '→ 無法確定'}`,
         ),
       );
+      if (prior) line.append(element('span', '原狀態為推測', 'muted'));
       if (change.reason) line.append(element('span', change.reason, 'muted'));
       if (change.source?.file)
         line.append(element('code', `${change.source.file}:${change.source.line}`, 'api-source'));

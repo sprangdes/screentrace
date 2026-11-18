@@ -52,3 +52,16 @@ test('R82 md §13 lists writes per value, values nobody sets, and unresolved wri
   const restored = await m.importMarkdown(out, data);
   assert.equal(await m.generateMarkdown(data, restored.state, opts), out);
 });
+
+test('R94 the prior state reads in words: one of, none of, or newly created', async () => {
+  const states = await ownModule('shared/states');
+  const labels = { PENDING: '待確認', CONFIRMED: '已確認' };
+  assert.equal(
+    states.priorText({ from: ['PENDING', 'CONFIRMED'], labels }),
+    '待確認（PENDING） 或 已確認（CONFIRMED）',
+  );
+  assert.equal(states.priorText({ fromNot: ['COMPLETED'], labels }), '不是 COMPLETED');
+  assert.equal(states.priorText({ fromCreated: true }), '新建立');
+  assert.equal(states.priorText({ from: 'x' }), undefined);
+  assert.equal(states.priorText({}), undefined);
+});
