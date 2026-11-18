@@ -1,5 +1,6 @@
 import { openingAnchorPositions } from './expansion-anchor.mjs';
 import { createHash } from 'node:crypto';
+import { elPageState } from './el-page-states.mjs';
 function nestedTagEnd(source, start) {
   if (source.startsWith('<%', start)) {
     const e = source.indexOf('%>', start + 2);
@@ -250,12 +251,19 @@ export function annotateConditions(source) {
         return '';
       }
       if (!token.name || token.closing) return token.text;
-      const text = removeReserved(token.text, ['data-st-conditional', 'data-st-condition']);
+      const text = removeReserved(token.text, [
+        'data-st-conditional',
+        'data-st-condition',
+        'data-st-state',
+      ]);
       const conditions = stack.filter((s) => s.condition).map((s) => s.condition);
+      // Empty-list and error blocks are marked so the preview shows the data state first (ADR 0174).
+      const state = elPageState(conditions);
       return conditions.length
         ? add(text, {
             'data-st-conditional': 'true',
             'data-st-condition': JSON.stringify(conditions),
+            ...(state ? { 'data-st-state': state } : {}),
           })
         : text;
     })

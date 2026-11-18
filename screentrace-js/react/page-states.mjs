@@ -16,13 +16,18 @@ import { parseExpression } from '@babel/parser';
  * options) are never hidden.
  */
 const cache = new Map();
-const LOADING = /^(is)?(initial|page)?(loading|fetching)$|loading$/i;
+const LOADING =
+  /^(is)?(initial|page)?(loading|fetching|refreshing)$|loading$|^is(Pending|Submitting|Busy)$|^busy$/i;
 const READY = /^(is)?(loaded|ready|initialized|initialised)$/i;
 const ERROR = /error|^(load)?fail(ed|ure)?$/i;
-const EMPTY = /empty/i;
+const EMPTY = /empty|^(no|hasNo)(Data|Results?|Items|Records|Rows)$/i;
 const LITERAL_STATES = new Map([
   ['loading', 'loading'],
+  ['busy', 'loading'],
+  ['fetching', 'loading'],
+  ['submitting', 'loading'],
   ['error', 'error'],
+  ['rejected', 'error'],
   ['failed', 'error'],
   ['failure', 'error'],
   ['empty', 'empty'],

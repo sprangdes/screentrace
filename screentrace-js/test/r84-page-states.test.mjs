@@ -25,6 +25,14 @@ test('R84 conditions are classified by parsed shape, and ordinary conditions are
     [['pendingCount > 0'], null],
     [['(('], null],
     [['me', 'loading'], 'loading'],
+    // R99: more names for the same states.
+    [['query.isPending'], 'loading'],
+    [['isSubmitting'], 'loading'],
+    [['status === "busy"'], 'loading'],
+    [['state === "rejected"'], 'error'],
+    [['noResults'], 'empty'],
+    [['hasNoItems'], 'empty'],
+    [['pendingReservations.length > 0'], null],
   ];
   for (const [guards, expected] of cases)
     assert.equal(pageState(guards), expected, guards.join(' && '));

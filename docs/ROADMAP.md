@@ -589,3 +589,7 @@
 
 - WP170：畫面事實的條件判斷延伸到改名解構的 props、Context provider 提供的條件值與只回傳條件的自訂 hook。見 [ADR 0173](adr/0173-r98-renamed-props-and-hook-conditions.md)。
 
+## R99 JSP 疊加狀態
+
+- WP171：JSP 預覽依 EL 條件形狀（`empty 清單`、`not empty errors` 等）標出沒有資料與錯誤區塊，預設隱藏並可切換；React 的狀態命名另認 `isPending`、`isSubmitting`、`noResults` 等。見 [ADR 0174](adr/0174-r99-jsp-page-states-and-names.md)。
+

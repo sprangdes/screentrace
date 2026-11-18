@@ -984,7 +984,13 @@ async function renderJsp(screen) {
   if (previewV2) {
     source = source.replace(
       HEAD_TAG,
-      (head) => head + '<style data-st-preview-freeze>' + snapshotMotionCss + '</style>',
+      (head) =>
+        head +
+        '<style data-st-preview-freeze>' +
+        snapshotMotionCss +
+        '</style><style data-st-page-states>' +
+        pageStateCss +
+        '</style>',
     );
   }
   const htmlFile = await assertOutputPathWithin(
