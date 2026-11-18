@@ -13,11 +13,15 @@ reservio 的顧客預約精靈 `/reservation/new` 以元件狀態 `useState<Step
 ## 決定
 
 1. **哪些狀態會拆**（`screentrace-js/react/state-variants.mjs`），不依變數或函式名稱判斷，以下條件都要成立：
-   - 路由內元件以常值初始化的 `useState`，可能值依 ADR 0105 可證明：初始值加上所有常值寫入（含經由區域函式參數的寫入），沒有未知寫入。
+   - 路由內元件以常值初始化的 `useState`，可能值依 ADR 0105 可證明：初始值加上所有常值寫入（含經由區域函式參數的寫入），沒有未知寫入。寫入值是各分支都是常值的條件運算式（`a ? 2 : 1`）時，各分支的值都算可能值；這也適用 ADR 0105 的可達性判斷（可能值變多，只會更保守）。
    - 可能值都是字串或數字，2～8 個。
    - 把狀態固定成各個值分別渲染，出現的元件不同。
    - 至少有一個只在部分值出現的元件，在使用者事件中把狀態寫成另一個值。分頁（tab）的按鈕在每個值都出現，不符合這一條，維持一個畫面。
+   - 每個值顯示的元件組合都不同。只有文字不同的值（錯誤訊息）不拆。
+   - 頁面掛載時的載入路徑（ADR 0103 的「載入成功路徑」模擬）沒有寫入這個狀態。載入狀態（loading／ready／error）由預覽處理，不拆。不論 `markup` 為何都做這個模擬，圖與預覽的判斷一致。
+   - 初始值那一步專屬的元件至少有一個在初始預覽中看得到。放在預設關閉的條件對話框裡的流程（ADR 0089）不拆。
    - 同一路由有一個以上的狀態符合時不拆，記 `REACT_STATE_VARIANTS_MULTIPLE` 診斷。
+   - 符合其他條件、只因某處寫入無法證明而不拆時，在該寫入處記 `REACT_STATE_VARIANT_UNPROVEN` 診斷。
 2. **變體**：每個值各渲染一次（圖與預覽都把狀態固定成該值），與身分變體、查詢參數變體相乘。初始值的變體沿用原畫面 ID，既有決策不受影響；其他值的 ID 為原 ID 加上 `:state:<名稱>=<值的 JSON>`。
 3. **SCREEN 屬性**：`stateVariant`（如 `step = 2`）、`stateVariantName`、`stateVariantValues`；非初始值另有 `stateVariantOf`（初始值變體的 ID）。畫面名稱加上「（step = 2）」，證據記錄可能值、初始值與寫入點。路由唯一性檢查（Java `GraphIntegrityValidator`、viewer `strictGraph`）把 `stateVariant` 併入鍵。
 4. **導覽**：使用者事件中把狀態寫成另一個值（直接呼叫 setter，或經由函式）記為 `NAVIGATE`，`stateTransition` 標明狀態與值，目標是同一路由、同一身分變體下該值的畫面，產生 `NAVIGATES_TO` 邊。寫入相同值與 `useEffect` 中的寫入不記。
@@ -37,4 +41,4 @@ reservio 的顧客預約精靈 `/reservation/new` 以元件狀態 `useState<Step
 - `StateVariantTest`（Maven）：三個步驟各為一個畫面，第 1 步沿用原 ID；「下一步」與衝突處理指向正確步驟；首頁連結只指向第 1 步；只有第 1 步有 RENDERS；送出的 API 歸第 3 步；分頁維持一個畫面。
 - `r80-state-variants.test.mjs`（JS）：各步驟的預覽只畫該步驟；寫入成為指向該步驟的導覽；函式形式更新、分頁、無法求值的寫入不拆；兩個狀態都符合時記診斷不拆；其他畫面的連結只開啟第 1 步。
 - `r80-state-variant-name.test.mjs`（viewer）：三個步驟的顯示名稱各帶狀態值。
-- reservio 實測需由需求方在 sandbox 外執行。
+- reservio（`sprangdes/reservio` 預設分支）的 React 分析：只有 `/reservation/new` 拆成 3 步（41 → 43 個畫面），「下一步」「返回」與送出時段衝突都指向對應步驟；其他 40 個畫面、轉址、身分組合與診斷和 `main` 逐項相同（圖與預覽兩種模式）。第一版因 `BookingFlowPage.tsx:79` 的 `setStep(… ? 2 : 1)` 不拆；加上條件運算式後一度多拆 5 個路由（3 個載入狀態、1 個錯誤訊息、1 個對話框內的 Email 驗證流程），以上述三條規則排除。完整 CLI 與報表實測由需求方執行。
