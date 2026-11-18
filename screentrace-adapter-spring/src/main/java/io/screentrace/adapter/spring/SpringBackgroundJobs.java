@@ -40,7 +40,7 @@ final class SpringBackgroundJobs {
       List.of(
           "Scheduled", "EventListener", "ApplicationRunner", "CommandLineRunner", "publishEvent");
 
-  private record Setting(String file, int line, String raw) {}
+  record Setting(String file, int line, String raw) {}
 
   /** A value read from an annotation: its words, how sure, and what else may change it. */
   private record Value(String text, ResolutionStatus status, List<String> notes, String property) {}
@@ -403,7 +403,7 @@ final class SpringBackgroundJobs {
   }
 
   /** A literal value, or the literal default of {@code ${ENV:default}}; null otherwise. */
-  private static String literalOrDefault(String raw) {
+  static String literalOrDefault(String raw) {
     if (!raw.contains("${")) return raw;
     Matcher match = PLACEHOLDER.matcher(raw.trim());
     if (match.matches() && match.group(2) != null && !match.group(2).contains("${"))
@@ -491,7 +491,7 @@ final class SpringBackgroundJobs {
   }
 
   /** Every key set in an {@code application*.properties} or {@code .yml}, flattened with dots. */
-  private static Map<String, List<Setting>> settings(ProjectInventory inventory) {
+  static Map<String, List<Setting>> settings(ProjectInventory inventory) {
     Map<String, List<Setting>> out = new TreeMap<>();
     List<Path> files =
         inventory.files().stream()

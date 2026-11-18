@@ -545,3 +545,7 @@
 
 - WP159：依 [reservio 評估](RESERVIO_EVALUATION_20261118.md) P7。API 詳情顯示「用途：按下「取消預約」時呼叫」這類由呼叫來源組成的句子，清單每列顯示觸發的按鈕名稱；排除處理中文字、示例值與無文字標籤。見 [ADR 0165](adr/0165-r87-api-purpose.md)。
 
+## R88 外部登入導回路徑
+
+- WP160：依 [reservio 評估](RESERVIO_EVALUATION_20261118.md) P8。外部登入的導回路徑讀值器支援有參數的輔助方法、條件運算式、`UriComponentsBuilder` 串接與 `@ConfigurationProperties` 設定值；reservio LINE 登入的導回路徑解析為 `/login`，`EXTERNAL_LOGIN_RETURN_UNRESOLVED` 消失。見 [ADR 0166](adr/0166-r88-login-return-through-helpers-and-configuration.md)。
+
