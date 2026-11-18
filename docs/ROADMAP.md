@@ -597,3 +597,7 @@
 
 - WP172：外部登入導回路徑讀值器另認 `String.format`、`URI.create`／`new URI`、`concat`、`StringBuilder`、`path()`／`pathSegment()`、`fromCurrentContextPath()`、三參數 `RedirectStrategy.sendRedirect` 與沒有自訂 handler 時的 `defaultSuccessUrl`。見 [ADR 0175](adr/0175-r100-more-return-url-shapes.md)。
 
+## R101 狀態轉換清單
+
+- WP173：私有方法由狀態 `switch` 或 `if` 分派時，以呼叫端推論原狀態；API 頁狀態詳情新增「狀態轉換（推測）」清單。reservio 的 LINE 聊天預約步驟（選服務 → 輸入日期 …）可依序看到。見 [ADR 0176](adr/0176-r101-dispatched-steps-and-transitions.md)。
+

@@ -569,6 +569,23 @@ public final class BackendCallChains {
       String field,
       EnumType type,
       CompilationUnit unit) {
+    return prior(write, method, scope, field, type, unit, true);
+  }
+
+  /**
+   * As above; with {@code callers}, a private method whose own conditions say nothing takes the
+   * union of what its call sites in the same class say, when every call site says something (a
+   * {@code switch (x.getState())} that dispatches to it), ADR 0176. The call sites read the state
+   * on any object, since the argument names differ between methods.
+   */
+  private Prior prior(
+      Node write,
+      MethodDeclaration method,
+      String scope,
+      String field,
+      EnumType type,
+      CompilationUnit unit,
+      boolean callers) {
     Set<String> only = null, not = new java.util.TreeSet<>();
     java.util.TreeSet<Integer> lines = new java.util.TreeSet<>();
     Node current = write;
@@ -585,11 +602,21 @@ public final class BackendCallChains {
           lines.add(branch.getBegin().map(p -> p.line).orElse(1));
         }
       }
+      Node switchNode =
+          parent instanceof com.github.javaparser.ast.stmt.SwitchEntry e
+              ? e.getParentNode().orElse(null)
+              : null;
+      Expression selector =
+          switchNode instanceof com.github.javaparser.ast.stmt.SwitchStmt st
+              ? st.getSelector()
+              : switchNode instanceof com.github.javaparser.ast.expr.SwitchExpr se
+                  ? se.getSelector()
+                  : null;
       if (parent instanceof com.github.javaparser.ast.stmt.SwitchEntry entry
-          && entry.getParentNode().orElse(null)
-              instanceof com.github.javaparser.ast.stmt.SwitchStmt sw
-          && read(sw.getSelector(), method, scope, field)
+          && selector != null
+          && read(selector, method, scope, field)
           && !entry.getLabels().isEmpty()) {
+        var sw = switchNode;
         Set<String> labels = new java.util.TreeSet<>();
         for (var label : entry.getLabels()) {
           String constant =
@@ -618,6 +645,35 @@ public final class BackendCallChains {
           }
         }
       current = parent;
+    }
+    if (only == null && not.isEmpty() && callers && method.isPrivate()) {
+      var owner = method.findAncestor(ClassOrInterfaceDeclaration.class).orElse(null);
+      List<MethodCallExpr> sites =
+          owner == null
+              ? List.of()
+              : owner.findAll(MethodCallExpr.class).stream()
+                  .filter(
+                      c ->
+                          c.getNameAsString().equals(method.getNameAsString())
+                              && c.getArguments().size() == method.getParameters().size()
+                              && (c.getScope().isEmpty() || c.getScope().get() instanceof ThisExpr)
+                              && c.findAncestor(MethodDeclaration.class).orElse(null) != method)
+                  .toList();
+      Set<String> union = new java.util.TreeSet<>();
+      boolean all = !sites.isEmpty();
+      for (var site : sites) {
+        var caller = site.findAncestor(MethodDeclaration.class).orElse(null);
+        var found =
+            caller == null ? Prior.NONE : prior(site, caller, null, field, type, unit, false);
+        if (found.only() == null) {
+          all = false;
+          break;
+        }
+        union.addAll(found.only());
+        lines.addAll(found.lines());
+      }
+      if (all) only = union;
+      else lines.clear();
     }
     if (only != null) only.removeAll(not);
     // An enum keeps its declaration order; a text state has no declaration, so its values sort.
@@ -717,9 +773,10 @@ public final class BackendCallChains {
     if (expression instanceof MethodCallExpr call)
       return call.getArguments().isEmpty()
           && call.getNameAsString().equals(getter)
-          && call.getScope().map(s -> s.toString().equals(scope)).orElse(false);
+          && call.getScope().map(s -> scope == null || s.toString().equals(scope)).orElse(false);
     if (expression instanceof FieldAccessExpr access)
-      return access.getNameAsString().equals(field) && access.getScope().toString().equals(scope);
+      return access.getNameAsString().equals(field)
+          && (scope == null || access.getScope().toString().equals(scope));
     if (expression instanceof NameExpr name) {
       var declarations =
           method.findAll(VariableDeclarator.class).stream()

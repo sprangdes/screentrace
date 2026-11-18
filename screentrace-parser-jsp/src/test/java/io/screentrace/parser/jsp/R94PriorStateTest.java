@@ -105,4 +105,37 @@ class R94PriorStateTest {
     assertNull(sweep.get(1).get("fromNot"));
     assertEquals(true, changes("create").get(0).get("fromCreated"));
   }
+
+  @Test
+  void r101APrivateStepDispatchedByAStateSwitchTakesTheCaseItRunsIn() throws Exception {
+    // R101 (ADR 0176): the step methods of a conversation are called from a switch on its state.
+    write(
+        "src/main/java/demo/Step.java",
+        "package demo; public enum Step { IDLE, CHOOSING, DATING, DONE }");
+    write(
+        "src/main/java/demo/Api.java",
+        """
+        package demo;
+        class Api {
+          Object handle(Chat chat, String text) {
+            return switch (chat.getStep()) {
+              case CHOOSING -> choose(chat, text);
+              case DATING -> date(chat);
+              case IDLE, DONE -> start(chat);
+            };
+          }
+          private Object choose(Chat c, String text) { c.setStep(Step.DATING); return null; }
+          private Object date(Chat c) { c.setStep(Step.DONE); return null; }
+          private Object start(Chat c) { c.setStep(Step.CHOOSING); return null; }
+          Object shortcut(Chat chat) { return date(chat); }
+        }
+        """);
+    var handle = changes("handle");
+    Map<Object, Object> from = new HashMap<>();
+    for (var row : handle) from.put(row.get("value"), row.get("from"));
+    assertEquals(List.of("CHOOSING"), from.get("DATING"));
+    assertEquals(List.of("IDLE", "DONE"), from.get("CHOOSING"));
+    // date() is also called outside the switch: its prior state is not known.
+    assertNull(from.get("DONE"));
+  }
 }

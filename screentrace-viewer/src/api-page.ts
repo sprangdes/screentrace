@@ -19,7 +19,14 @@ import { proportionBar, sharePercent } from './proportion';
 import { splitter, SplitRange } from './splitter';
 import { backgroundJobs, jobTriggerLabels, BackgroundJob } from './shared/jobs';
 import { backendCalls } from './shared/review-md';
-import { priorText, stateChanges, stateLabel, stateTypes, StateType } from './shared/states';
+import {
+  priorText,
+  stateChanges,
+  stateLabel,
+  stateTransitions,
+  stateTypes,
+  StateType,
+} from './shared/states';
 
 /** The three statuses shown to people: inferred usage and system entry points both count as in use. */
 export type ApiStatus = 'IN_USE' | 'UNREFERENCED' | 'REMOVABLE';
@@ -628,10 +635,41 @@ export function apiPage(index: Index, state: ReviewState, options: ApiPageOption
       element('p', `欄位：${type.fields.join('、')}`, 'api-reason'),
       element(
         'p',
-        '列出原始碼中把這個狀態設成各個值的 API 或系統作業。中文取自前端畫面的對照文字；前端各處寫法不一致時只顯示程式中的名稱。',
+        '列出原始碼中把這個狀態設成各個值的 API 或系統作業。中文取自前端畫面的對照文字，前端各處寫法不同時以「／」全部列出；前端沒有對照時只顯示程式中的名稱。',
         'muted',
       ),
     );
+    const transitions = stateTransitions(type);
+    if (transitions.length) {
+      const flow = section('狀態轉換（推測）');
+      flow.dataset.stateFlow = type.name;
+      flow.append(
+        element(
+          'p',
+          '由寫入處的條件推得原狀態；沒有列出的轉換表示推不出原狀態，不代表不會發生。',
+          'muted',
+        ),
+      );
+      const word = (v?: string) =>
+        v === undefined ? '新建立' : stateLabel(v, type.values.find((x) => x.value === v)?.label);
+      const list = element('ol', undefined, 'state-flow');
+      for (const t of transitions) {
+        const item = element('li');
+        item.dataset.stateFrom = t.from ?? '';
+        item.dataset.stateTo = t.to;
+        item.append(
+          element('strong', `${word(t.from)} → ${word(t.to)}`),
+          element(
+            'span',
+            `由 ${[...new Set(t.writers.flatMap((w) => (w.endpoints.length ? w.endpoints.map((e) => `${endpointMethod(e)} ${endpointPath(e)}`) : [w.handler.name])))].join('、')}`,
+            'muted',
+          ),
+        );
+        list.append(item);
+      }
+      flow.append(list);
+      inner.append(flow);
+    }
     for (const value of type.values) {
       const box = section(stateLabel(value.value, value.label));
       box.dataset.stateValue = value.value;

@@ -58,6 +58,7 @@ Controller、回傳 view、表單綁定與伺服器端檢核以 JavaParser 靜�
 | [0169](0169-r94-prior-state.md) | R94 由同一方法內同一物件的狀態比較推論寫入前的原狀態（推測），報表與 md §13 顯示（OQ-058） | 有效 |
 | [0170](0170-r95-every-frontend-word.md) | R95 前端對同一狀態的多種寫法依出現位置全部列出，取代只顯示常數名（OQ-058） | 有效 |
 | [0172](0172-r97-text-states-and-deeper-writes.md) | R97 狀態欄位的字串／數字寫入也列為狀態；狀態寫入追到 8 層 | 有效 |
+| [0176](0176-r101-dispatched-steps-and-transitions.md) | R101 私有方法由狀態 switch 分派時以呼叫端推論原狀態；狀態詳情列出狀態轉換 | 有效 |
 | [0160](0160-r82-state-changes.md) | R82 沿後端呼叫鏈記錄列舉狀態寫入（`stateChanges`）、前端一致時並列中文，API 頁「資料狀態」與 md §13（OQ-056） | 部分被取代（[0169](0169-r94-prior-state.md) 加入原狀態、[0170](0170-r95-every-frontend-word.md) 列出所有寫法） |
 
 ## JSP／標記與 URL

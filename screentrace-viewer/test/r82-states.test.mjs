@@ -65,3 +65,65 @@ test('R94 the prior state reads in words: one of, none of, or newly created', as
   assert.equal(states.priorText({ from: 'x' }), undefined);
   assert.equal(states.priorText({}), undefined);
 });
+
+test('R101 transitions list prior → value in declaration order, new objects first', async () => {
+  const states = await ownModule('shared/states');
+  const graph = {
+    nodes: [
+      node('h', 'HANDLER', 'H.go()', {
+        stateChanges: JSON.stringify([
+          {
+            depth: 0,
+            in: 'H#a',
+            enum: 'S',
+            field: 's',
+            value: 'B',
+            from: ['A'],
+            values: ['A', 'B', 'C'],
+            resolution: 'CONFIRMED',
+          },
+          {
+            depth: 0,
+            in: 'H#b',
+            enum: 'S',
+            field: 's',
+            value: 'C',
+            from: ['A', 'B'],
+            values: ['A', 'B', 'C'],
+            resolution: 'CONFIRMED',
+          },
+          {
+            depth: 0,
+            in: 'H#c',
+            enum: 'S',
+            field: 's',
+            value: 'A',
+            fromCreated: true,
+            values: ['A', 'B', 'C'],
+            resolution: 'CONFIRMED',
+          },
+          {
+            depth: 0,
+            in: 'H#d',
+            enum: 'S',
+            field: 's',
+            value: 'C',
+            values: ['A', 'B', 'C'],
+            resolution: 'CONFIRMED',
+          },
+        ]),
+      }),
+    ],
+    relationships: [],
+  };
+  const [type] = states.stateTypes(graph);
+  assert.deepEqual(
+    states.stateTransitions(type).map((t) => [t.from, t.to]),
+    [
+      [undefined, 'A'],
+      ['A', 'B'],
+      ['A', 'C'],
+      ['B', 'C'],
+    ],
+  );
+});

@@ -140,3 +140,33 @@ export function stateTypes(graph: Graph): StateType[] {
     }))
     .sort((a, b) => order(a.name, b.name));
 }
+
+export interface StateTransition {
+  /** Undefined for a newly created object. */
+  from?: string;
+  to: string;
+  writers: StateWriter[];
+}
+/**
+ * The inferred transitions of one state (ADR 0176): every write whose prior values are known, as
+ * from → to, in the order the values are declared; a newly created object starts from nothing.
+ */
+export function stateTransitions(type: StateType): StateTransition[] {
+  const order = new Map(type.values.map((v, i) => [v.value, i]));
+  const byPair = new Map<string, StateTransition>();
+  for (const value of type.values)
+    for (const writer of value.writers) {
+      const change = writer.change;
+      const froms = change.fromCreated === true ? [undefined] : (change.from ?? []);
+      for (const from of froms) {
+        const key = `${from ?? ''}\u0000${value.value}`;
+        const item = byPair.get(key) || { from, to: value.value, writers: [] };
+        if (!item.writers.includes(writer)) item.writers.push(writer);
+        byPair.set(key, item);
+      }
+    }
+  const rank = (v?: string) => (v === undefined ? -1 : (order.get(v) ?? Number.MAX_SAFE_INTEGER));
+  return [...byPair.values()].sort(
+    (a, b) => rank(a.from) - rank(b.from) || rank(a.to) - rank(b.to),
+  );
+}
