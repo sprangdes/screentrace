@@ -97,6 +97,7 @@ JSP、JSPF、tag file、Tiles 與有限的 Thymeleaf 以 `MarkupTag` 等 parser 
 | [0118](0118-r27-entry-renders-plain-version.md) | R27 入口只開啟不需要網址參數的畫面 | 有效 |
 | [0135](0135-r44-split-react-analyzer.md) | R44 拆分 react/analyzer.mjs | 有效 |
 | [0158](0158-r80-page-state-variants.md) | R80 可證明的頁面狀態（如精靈步驟）拆成畫面變體（OQ-055） | 有效 |
+| [0161](0161-r83-literal-alternatives-and-wrapped-labels.md) | R83 物件字面值的屬性文字讀成「A / B」、含 spread 的字面陣列逐項展開、`<label>` 內的欄位以 label 文字命名 | 有效 |
 
 ## 角色（persona）流程
 

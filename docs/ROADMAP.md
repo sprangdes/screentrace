@@ -525,3 +525,7 @@
 
 - WP154：依 [reservio 評估](RESERVIO_EVALUATION_20261118.md) P2，OQ-056 採 A。`BackendCallChains` 沿呼叫鏈記錄列舉常數的寫入（setter、builder、欄位指定；條件式兩值為 INFERRED，變數為 UNRESOLVED），寫入 HANDLER 的 `stateChanges`；`screentrace-js` 新增 `state-labels` 模式擷取前端字面對照，所有對照一致才並列中文。API 頁新增「資料狀態」分組與各 API／作業的「會改變的資料狀態」，md 新增 §13。reservio 的 LINE 對話 9 個步驟狀態與預約狀態的設定來源都能看到。見 [ADR 0160](adr/0160-r82-state-changes.md)。
 
+## R83 程式組出的按鈕文字與選項
+
+- WP155：依 [reservio 評估](RESERVIO_EVALUATION_20261118.md) P3。React 分析器讀取「條件選擇的物件字面值」的屬性（`primary.label` 讀成「前往預約 / 開始預約」，不再是「示例值」），`.map` 的字面陣列含 spread 時逐項展開已知項目（預約間隔顯示 15／30／45／60 分鐘四個選項），`<label>` 內沒有名稱的欄位以 label 文字命名。訪客導覽列由函式依身分回傳兩組陣列，仍無法展開，記於 ADR。見 [ADR 0161](adr/0161-r83-literal-alternatives-and-wrapped-labels.md)。
+

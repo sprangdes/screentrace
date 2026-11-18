@@ -645,9 +645,65 @@ export class Evaluator {
         }
         return [placeholder(node)];
       }
+      case 'MemberExpression':
+      case 'OptionalMemberExpression': {
+        // `primary.label` where `primary` is one of a few object literals (R83, ADR 0161).
+        if (node.computed || node.property?.type !== 'Identifier') return [placeholder(node)];
+        const objects = this.objectLiterals(node.object, scope, depth + 1);
+        if (!objects?.length) return [placeholder(node)];
+        let out = [];
+        for (const { object, scope: at } of objects) {
+          if (object.properties.some((p) => p.type !== 'ObjectProperty'))
+            return [placeholder(node)];
+          const property = object.properties.find(
+            (p) =>
+              !p.computed &&
+              (p.key.type === 'Identifier' ? p.key.name : p.key.value) === node.property.name,
+          );
+          if (!property) return [placeholder(node)];
+          out = union(out, this.strings(property.value, at, depth + 1));
+        }
+        return out;
+      }
       default:
         return [placeholder(node)];
     }
+  }
+
+  /**
+   * The object literals an expression can be: the literal itself, both branches of a conditional
+   * whose test is not known, or a constant variable's initializer. Null when any branch is
+   * something else, so a property read never mixes proven and unproven values.
+   */
+  objectLiterals(expr, scope, depth = 0) {
+    const node = unwrap(expr);
+    if (!node || depth > this.maxDepth) return null;
+    if (node.type === 'ObjectExpression') return [{ object: node, scope }];
+    if (node.type === 'ConditionalExpression') {
+      const assumed =
+        this.assumptions && scope?.module
+          ? this.assumptions.get(conditionText(scope.module, node.test))
+          : undefined;
+      const truth =
+        assumed !== undefined ? assumed : truthy(this.evaluate(node.test, scope, depth));
+      if (truth !== null)
+        return this.objectLiterals(truth ? node.consequent : node.alternate, scope, depth + 1);
+      const a = this.objectLiterals(node.consequent, scope, depth + 1),
+        b = this.objectLiterals(node.alternate, scope, depth + 1);
+      return a && b ? [...a, ...b].slice(0, MAX_ALTERNATIVES) : null;
+    }
+    if (node.type === 'Identifier') {
+      const found = this.lookup(node.name, scope);
+      if (found?.binding && !found.binding.value)
+        return this.objectLiterals(found.binding.expr, found.binding.scope, depth + 1);
+      if (
+        found?.entry?.kind === 'variable' &&
+        found.entry.node.init &&
+        !(found.entry.steps ?? []).length
+      )
+        return this.objectLiterals(found.entry.node.init, found.scope, depth + 1);
+    }
+    return null;
   }
 }
 
