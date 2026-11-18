@@ -109,6 +109,7 @@ JSP、JSPF、tag file、Tiles 與有限的 Thymeleaf 以 `MarkupTag` 等 parser 
 | [0173](0173-r98-renamed-props-and-hook-conditions.md) | R98 事實判斷延伸到改名解構的 props、Context 提供的條件值與回傳條件的自訂 hook | 有效 |
 | [0162](0162-r84-page-states-in-preview.md) | R84 React 預覽以條件形狀標出載入中／錯誤／沒有資料，截圖與預覽預設只顯示有資料狀態，可切換（OQ-057） | 有效 |
 | [0174](0174-r99-jsp-page-states-and-names.md) | R99 JSP 的 c:if／c:when 依 EL 形狀標出沒有資料與錯誤，React 狀態命名擴充 | 有效 |
+| [0181](0181-r106-struts-and-thymeleaf-page-states.md) | R106 Struts `logic:` 標籤與 Thymeleaf `th:if`／`th:unless` 依條件形狀標出沒有資料與錯誤區塊 | 有效 |
 | [0163](0163-r85-plain-screen-names.md) | R85 畫面名稱：網址參數與狀態變體寫成白話，同名畫面先以角色區分，沒有標題時用連到它的選單文字（OQ-057） | 有效 |
 | [0164](0164-r86-menu-features.md) | R86 功能地圖新增「選單」分組依據（同一份清單產生的連結），說明只列實際用到的依據（OQ-057） | 有效 |
 | [0177](0177-r102-presentation-fixes.md) | R102 畫面名稱以兩個事實組合區分、功能依「只有一個角色會用到」分組、建議角色採前端中文、處理中按鈕的用途 | 有效 |

@@ -1,6 +1,6 @@
 import { openingAnchorPositions } from './expansion-anchor.mjs';
 import { createHash } from 'node:crypto';
-import { elPageState } from './el-page-states.mjs';
+import { elPageState, strutsLogicPageState, thymeleafPageState } from './el-page-states.mjs';
 function nestedTagEnd(source, start) {
   if (source.startsWith('<%', start)) {
     const e = source.indexOf('%>', start + 2);
@@ -250,6 +250,16 @@ export function annotateConditions(source) {
         if (token.selfClosing) stack.pop();
         return '';
       }
+      // Struts logic tags stay as written; they only tell their content's page state (ADR 0181).
+      if (token.name?.startsWith('logic:')) {
+        const tag = token.name.slice(6);
+        if (token.closing) {
+          const index = stack.findLastIndex((s) => s.logic === tag);
+          if (index >= 0) stack.splice(index, 1);
+        } else if (!token.selfClosing)
+          stack.push({ logic: tag, state: strutsLogicPageState(tag, attributes(token.text)) });
+        return token.text;
+      }
       if (!token.name || token.closing) return token.text;
       const text = removeReserved(token.text, [
         'data-st-conditional',
@@ -258,14 +268,23 @@ export function annotateConditions(source) {
       ]);
       const conditions = stack.filter((s) => s.condition).map((s) => s.condition);
       // Empty-list and error blocks are marked so the preview shows the data state first (ADR 0174).
-      const state = elPageState(conditions);
-      return conditions.length
-        ? add(text, {
-            'data-st-conditional': 'true',
-            'data-st-condition': JSON.stringify(conditions),
-            ...(state ? { 'data-st-state': state } : {}),
-          })
-        : text;
+      const logic = ['loading', 'error', 'empty'].find((state) =>
+          stack.some((s) => s.logic && s.state === state),
+        ),
+        own = attributes(text),
+        // A th:if / th:unless on the element itself; a block the preview already hides for model
+        // feedback keeps that behavior.
+        thymeleaf =
+          own['data-st-model-if'] === undefined
+            ? thymeleafPageState(own['th:if'], own['th:unless'])
+            : null,
+        state = elPageState(conditions) ?? thymeleaf ?? logic ?? null;
+      if (!conditions.length) return state ? add(text, { 'data-st-state': state }) : text;
+      return add(text, {
+        'data-st-conditional': 'true',
+        'data-st-condition': JSON.stringify(conditions),
+        ...(state ? { 'data-st-state': state } : {}),
+      });
     })
     .join('');
 }

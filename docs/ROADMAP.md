@@ -616,3 +616,7 @@
 ## R105 依比對認出的文字狀態
 
 - WP177：欄位名稱不像狀態時，若程式拿它和代碼字比對（`"PAID".equals(o.getPayment())`、`switch` 字串分支），而寫入的值也是代碼字，同樣列為文字狀態。見 [ADR 0180](adr/0180-r105-compared-text-fields-are-states.md)。
+
+## R106 Struts 與 Thymeleaf 的疊加狀態
+
+- WP178：`logic:empty`、`logic:messagesPresent` 等 Struts 標籤與 Thymeleaf `th:if`／否定的 `th:unless`（含 `#lists.isEmpty`、`#fields.hasErrors`）標出沒有資料與錯誤區塊，預覽預設隱藏、可切換。見 [ADR 0181](adr/0181-r106-struts-and-thymeleaf-page-states.md)。
