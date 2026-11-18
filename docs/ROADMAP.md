@@ -577,3 +577,7 @@
 
 - WP167：OQ-058。前端對同一狀態有多種寫法時依出現位置全部列出（「待確認／等待店家確認」），狀態詳情附每種寫法的來源。見 [ADR 0170](adr/0170-r95-every-frontend-word.md)。
 
+## R96 背景作業擴充
+
+- WP168：背景作業偵測移到共用模組並套用 Struts 管線，新增 XML `task:scheduled`、程式排程（TaskScheduler、ScheduledExecutorService）、Quartz Job 與 `@Async`。見 [ADR 0171](adr/0171-r96-more-background-jobs.md)。
+

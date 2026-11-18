@@ -1,13 +1,14 @@
 import { Graph, Node, Source } from '../contracts';
 
 /** How code without a screen starts (ADR 0159). */
-export type JobTrigger = 'SCHEDULE' | 'EVENT' | 'STARTUP';
+export type JobTrigger = 'SCHEDULE' | 'EVENT' | 'STARTUP' | 'ASYNC';
 export const jobTriggerLabels: Record<JobTrigger, string> = {
   SCHEDULE: '排程',
   EVENT: '事件',
   STARTUP: '啟動時',
+  ASYNC: '非同步',
 };
-const TRIGGER_ORDER: JobTrigger[] = ['SCHEDULE', 'EVENT', 'STARTUP'];
+const TRIGGER_ORDER: JobTrigger[] = ['SCHEDULE', 'EVENT', 'STARTUP', 'ASYNC'];
 
 export interface JobPublisher {
   from: string;

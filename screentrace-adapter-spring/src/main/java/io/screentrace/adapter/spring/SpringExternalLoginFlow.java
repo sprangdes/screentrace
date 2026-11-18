@@ -27,7 +27,8 @@ final class SpringExternalLoginFlow {
 
   /** What the value reader may consult: every parsed unit and the configuration (ADR 0166). */
   private record Context(
-      Collection<Unit> units, Map<String, List<SpringBackgroundJobs.Setting>> settings) {}
+      Collection<Unit> units,
+      Map<String, List<io.screentrace.parser.jsp.BackgroundJobs.Setting>> settings) {}
 
   private static final Set<String> URI_FACTORIES =
       Set.of("fromPath", "fromUriString", "fromHttpUrl");
@@ -52,7 +53,8 @@ final class SpringExternalLoginFlow {
       } catch (Exception ignored) {
         /* The source parser already reports unreadable Java files. */
       }
-    var context = new Context(units.values(), SpringBackgroundJobs.settings(inventory));
+    var context =
+        new Context(units.values(), io.screentrace.parser.jsp.BackgroundJobs.settings(inventory));
     List<Callback> callbacks = new ArrayList<>();
     boolean oauth = false, customAuthorizationBase = false;
     Set<String> authorizationUris = new TreeSet<>();
@@ -516,7 +518,7 @@ final class SpringExternalLoginFlow {
     List<SourceLocation> proof = new ArrayList<>();
     boolean unresolved = false;
     for (var setting : context.settings().getOrDefault(key, List.of())) {
-      String value = SpringBackgroundJobs.literalOrDefault(setting.raw());
+      String value = io.screentrace.parser.jsp.BackgroundJobs.literalOrDefault(setting.raw());
       proof.add(new SourceLocation(setting.file(), setting.line()));
       if (value == null) unresolved = true;
       else paths.add(value);

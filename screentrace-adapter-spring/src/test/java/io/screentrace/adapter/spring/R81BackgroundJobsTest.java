@@ -81,7 +81,7 @@ class R81BackgroundJobsTest {
         sweep.evidence().stream()
             .anyMatch(
                 e ->
-                    e.parser().equals(SpringBackgroundJobs.PARSER)
+                    e.parser().equals(io.screentrace.parser.jsp.BackgroundJobs.PARSER)
                         && e.source()
                             .equals(new SourceLocation("src/main/java/demo/Jobs.java", 3))));
     GraphIntegrityValidator.validate(graph);

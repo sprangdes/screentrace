@@ -758,3 +758,7 @@ Spring adapter 的 `SpringBackgroundJobs` 把 `@Scheduled`、`@EventListener`／
 ## R82 資料狀態變更
 
 `BackendCallChains` 追蹤時記錄 setter、builder 與欄位指定寫入的專案列舉常數，寫入 HANDLER 的 `stateChanges` attribute（含該列舉全部常數與前端對照文字）；`StateLabels` 以 `screentrace-js` 的 `state-labels` 模式擷取前端字面對照，所有對照一致才採用。viewer 的 `shared/states.ts` 依列舉彙整，API 頁列為「資料狀態」分組，md 為 §13。schema 不變。見 [ADR 0160](adr/0160-r82-state-changes.md)。
+
+## R96 背景作業共用化
+
+`BackgroundJobs`（原 Spring adapter 的 `SpringBackgroundJobs`）與 `ScheduleText` 移到 `screentrace-parser-jsp`，Spring 與 Struts 管線都套用；另認得 XML `task:scheduled`、TaskScheduler／ScheduledExecutorService 呼叫、Quartz Job 與 `@Async`（觸發種類 `ASYNC`）。見 [ADR 0171](adr/0171-r96-more-background-jobs.md)。

@@ -53,3 +53,18 @@ test('R81 md §12 lists every job with its timing, or says none was found', asyn
   const restored = await m.importMarkdown(out, data);
   assert.equal(await m.generateMarkdown(data, restored.state, opts), out);
 });
+
+test('R96 async methods are listed after the other jobs with their own label', async () => {
+  const jobs = await ownModule('shared/jobs'),
+    data = addJobs(fixture());
+  data.graph.nodes.push(
+    node('job-async', 'HANDLER', 'Mailer.later()', {
+      trigger: 'ASYNC',
+      triggerText: '被呼叫後在背景另外執行，呼叫端不等它完成',
+      triggerExpression: '@Async',
+    }),
+  );
+  const list = jobs.backgroundJobs(data.graph);
+  assert.equal(list.at(-1).node.id, 'job-async');
+  assert.equal(jobs.jobTriggerLabels[list.at(-1).trigger], '非同步');
+});

@@ -1,4 +1,4 @@
-package io.screentrace.adapter.spring;
+package io.screentrace.parser.jsp;
 
 import java.util.List;
 import java.util.Locale;

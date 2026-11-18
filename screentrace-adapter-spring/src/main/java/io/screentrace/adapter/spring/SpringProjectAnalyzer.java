@@ -12,11 +12,13 @@ public final class SpringProjectAnalyzer {
         || inventory.technologies().contains("JSP")
         || serverTemplates(inventory)) {
       return BackendCallChains.enrich(
-          SpringBackgroundJobs.enrich(new SpringMvcAnalyzer().analyze(inventory), inventory),
+          io.screentrace.parser.jsp.BackgroundJobs.enrich(
+              new SpringMvcAnalyzer().analyze(inventory), inventory),
           inventory);
     }
     return BackendCallChains.enrich(
-        SpringBackgroundJobs.enrich(new SpringBootAnalyzer().analyze(inventory), inventory),
+        io.screentrace.parser.jsp.BackgroundJobs.enrich(
+            new SpringBootAnalyzer().analyze(inventory), inventory),
         inventory);
   }
 
