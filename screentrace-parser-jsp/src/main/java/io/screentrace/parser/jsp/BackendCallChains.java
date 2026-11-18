@@ -350,6 +350,20 @@ public final class BackendCallChains {
     }
     List<Call> calls = new ArrayList<>();
     Set<String> seen = new HashSet<>(), written = new HashSet<>();
+    // A task written in place inside the method (ADR 0179): only its own code runs on schedule.
+    String taskLine = handler.attributes().get("taskLine");
+    if (taskLine != null) {
+      for (var start : starts)
+        for (var task : start.findAll(Expression.class)) {
+          if (task.getBegin().map(p -> !String.valueOf(p.line).equals(taskLine)).orElse(true))
+            continue;
+          Node region = BackgroundJobs.taskBody(task);
+          if (region == null) continue;
+          follow(type.get(), start, region, 1, calls, seen, new HashSet<>(), changes, written);
+          return calls;
+        }
+      return calls;
+    }
     for (var start : starts)
       follow(type.get(), start, 1, calls, seen, new HashSet<>(), changes, written);
     return calls;
@@ -365,14 +379,29 @@ public final class BackendCallChains {
       Set<MethodDeclaration> helpers,
       List<StateChange> changes,
       Set<String> written) {
-    if (!helpers.add(method) || method.getBody().isEmpty()) return;
+    if (method.getBody().isEmpty()) return;
+    follow(owner, method, method.getBody().get(), depth, calls, seen, helpers, changes, written);
+  }
+
+  /** Calls made by {@code region}, a part of {@code method}: its body, or a task inside it. */
+  private void follow(
+      Type owner,
+      MethodDeclaration method,
+      Node region,
+      int depth,
+      List<Call> calls,
+      Set<String> seen,
+      Set<MethodDeclaration> helpers,
+      List<StateChange> changes,
+      Set<String> written) {
+    if (!helpers.add(method)) return;
     // Past the listed depth only state writes are looked for, once per method.
     if (depth > MAX_DEPTH
         && !seen.add("deep\u0000" + owner.qualified() + "#" + method.getSignature().asString()))
       return;
     String from = owner.name() + "#" + method.getNameAsString();
-    stateChanges(owner, method, depth - 1, from, changes, written);
-    for (var call : method.getBody().get().findAll(MethodCallExpr.class)) {
+    stateChanges(owner, method, region, depth - 1, from, changes, written);
+    for (var call : region.findAll(MethodCallExpr.class)) {
       if (calls.size() >= MAX_CALLS) return;
       // A call to the class's own method: its calls count as this method's.
       if (call.getScope().isEmpty() || call.getScope().get() instanceof ThisExpr) {
@@ -482,12 +511,13 @@ public final class BackendCallChains {
   private void stateChanges(
       Type owner,
       MethodDeclaration method,
+      Node region,
       int depth,
       String in,
       List<StateChange> changes,
       Set<String> written) {
     var unit = owner.declaration().findCompilationUnit().orElse(null);
-    for (var node : method.getBody().get().findAll(Node.class)) {
+    for (var node : region.findAll(Node.class)) {
       String field = null;
       Expression value = null;
       if (node instanceof MethodCallExpr call && call.getArguments().size() == 1) {
@@ -598,7 +628,10 @@ public final class BackendCallChains {
     Node current = write;
     while (current != null && current != method) {
       Node parent = current.getParentNode().orElse(null);
-      if (parent == null || parent instanceof com.github.javaparser.ast.expr.LambdaExpr) break;
+      // Conditions outside a lambda or an anonymous class do not hold when its code runs.
+      if (parent == null
+          || parent instanceof com.github.javaparser.ast.expr.LambdaExpr
+          || current instanceof MethodDeclaration) break;
       if (parent instanceof com.github.javaparser.ast.stmt.IfStmt branch
           && branch.getCondition() != current) {
         var test = comparison(branch.getCondition(), method, scope, field, type, unit);

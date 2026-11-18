@@ -608,3 +608,7 @@
 ## R103 角色名稱、部分原狀態、落單畫面
 
 - WP175：自動建議的角色依建立該角色帳號的畫面標題命名（reservio 為「商家」「客戶」）；列舉的 `.name()` 寫入視同該值；私有方法只有部分呼叫端說得出原狀態時列出並標示；功能地圖中只屬於一個角色的落單畫面加入該角色其他畫面所在的功能。見 [ADR 0178](adr/0178-r103-role-names-partial-priors-and-role-peers.md)。
+
+## R104 寫在呼叫處的排程工作
+
+- WP176：交給排程器的多行 lambda 與匿名 `Runnable`／`Callable`／`TimerTask` 成為「`類別.方法()` 的排程工作（第 N 行）」，後端呼叫只追工作本身。見 [ADR 0179](adr/0179-r104-tasks-written-in-place.md)。

@@ -114,4 +114,49 @@ class R96MoreBackgroundJobsTest {
     assertEquals(Confidence.INFERRED, later.confidence());
     assertTrue(later.attributes().get("triggerNote").contains("@EnableAsync"));
   }
+
+  @Test
+  void r104TasksWrittenInPlaceAreJobsOfTheirOwn() throws Exception {
+    // R104 (ADR 0179): a lambda with more than one statement and an anonymous Runnable.
+    write(
+        "src/main/java/demo/Starter.java",
+        """
+        package demo;
+        @Component public class Starter {
+          private final TaskScheduler scheduler; private final Mailer mailer; private final Audit audit;
+          void start() {
+            audit.prepare();
+            scheduler.scheduleAtFixedRate(() -> {
+              mailer.flush();
+              mailer.retry();
+            }, Duration.ofMinutes(10));
+            scheduler.scheduleWithFixedDelay(new Runnable() {
+              @Override public void run() { audit.sweep(); }
+            }, 60000);
+          }
+        }
+        """);
+    write(
+        "src/main/java/demo/Mailer.java",
+        "package demo; @Service public class Mailer { public void flush() {} public void retry() {} }");
+    write(
+        "src/main/java/demo/Audit.java",
+        "package demo; @Service public class Audit { public void prepare() {} public void sweep() {} }");
+    var graph = analyze();
+    var lambda = job(graph, "Starter.start() 的排程工作（第 6 行）");
+    assertEquals("SCHEDULE", lambda.attributes().get("trigger"));
+    assertEquals("每 10 分鐘執行一次", lambda.attributes().get("triggerText"));
+    assertEquals("6", lambda.attributes().get("taskLine"));
+    assertTrue(lambda.attributes().get("triggerNote").contains("沒有自己的方法名稱"));
+    String calls = lambda.attributes().get("backendCalls");
+    assertTrue(calls.contains("Mailer#flush") && calls.contains("Mailer#retry"));
+    // Only the task's own code runs on schedule: not the setup around it.
+    assertFalse(calls.contains("Audit#prepare"));
+    var anonymous = job(graph, "Starter.start() 的排程工作（第 10 行）");
+    assertEquals("上一次執行完成後隔 1 分鐘再執行", anonymous.attributes().get("triggerText"));
+    assertTrue(anonymous.attributes().get("backendCalls").contains("Audit#sweep"));
+    assertFalse(anonymous.attributes().get("backendCalls").contains("Mailer#flush"));
+    assertNotEquals(lambda.id(), anonymous.id());
+    GraphIntegrityValidator.validate(graph);
+  }
 }

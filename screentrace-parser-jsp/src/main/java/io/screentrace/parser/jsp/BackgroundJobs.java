@@ -3,6 +3,7 @@ package io.screentrace.parser.jsp;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.javaparser.ast.CompilationUnit;
+import com.github.javaparser.ast.Node;
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
 import com.github.javaparser.ast.body.MethodDeclaration;
 import com.github.javaparser.ast.expr.*;
@@ -58,7 +59,18 @@ public final class BackgroundJobs {
       String trigger,
       Value value,
       String expression,
-      SourceLocation source) {}
+      SourceLocation source,
+      Integer taskLine) {
+    Remote(
+        String type,
+        String method,
+        String trigger,
+        Value value,
+        String expression,
+        SourceLocation source) {
+      this(type, method, trigger, value, expression, source, null);
+    }
+  }
 
   public record Setting(String file, int line, String raw) {}
 
@@ -76,7 +88,35 @@ public final class BackgroundJobs {
       ResolutionStatus status,
       List<String> notes,
       String property,
-      String eventType) {}
+      String eventType,
+      Integer taskLine) {
+    Job(
+        String file,
+        String qualified,
+        String simple,
+        MethodDeclaration method,
+        String trigger,
+        List<String> texts,
+        List<String> expressions,
+        ResolutionStatus status,
+        List<String> notes,
+        String property,
+        String eventType) {
+      this(
+          file,
+          qualified,
+          simple,
+          method,
+          trigger,
+          texts,
+          expressions,
+          status,
+          notes,
+          property,
+          eventType,
+          null);
+    }
+  }
 
   private record Publisher(String eventType, String from, SourceLocation source) {}
 
@@ -129,10 +169,14 @@ public final class BackgroundJobs {
     Map<String, GraphNode> nodes = new TreeMap<>();
     graph.nodes().forEach(n -> nodes.put(n.id(), n));
     for (Job job : jobs) {
-      String id =
-          StableGraphIds.handler(
-              job.file(), job.qualified(), job.method().getSignature().asString());
-      int line = job.method().getBegin().map(p -> p.line).orElse(1);
+      String signature =
+          job.method().getSignature().asString()
+              + (job.taskLine() == null ? "" : " task@" + job.taskLine());
+      String id = StableGraphIds.handler(job.file(), job.qualified(), signature);
+      int line =
+          job.taskLine() != null
+              ? job.taskLine()
+              : job.method().getBegin().map(p -> p.line).orElse(1);
       var source = new SourceLocation(job.file(), line);
       List<String> notes = new ArrayList<>(job.notes());
       ResolutionStatus status = job.status();
@@ -151,6 +195,17 @@ public final class BackgroundJobs {
       if (existing != null) attributes.putAll(existing.attributes());
       attributes.putIfAbsent("class", job.qualified());
       attributes.putIfAbsent("method", job.method().getNameAsString());
+      if (job.taskLine() != null) {
+        attributes.put("taskLine", String.valueOf(job.taskLine()));
+        notes.add(
+            "排程的工作直接寫在 "
+                + job.simple()
+                + "."
+                + job.method().getNameAsString()
+                + "() 第 "
+                + job.taskLine()
+                + " 行，沒有自己的方法名稱");
+      }
       attributes.put("trigger", job.trigger());
       attributes.put("triggerText", String.join("；", job.texts()));
       attributes.put("triggerExpression", String.join("\n", job.expressions()));
@@ -195,7 +250,11 @@ public final class BackgroundJobs {
               NodeType.HANDLER,
               existing != null
                   ? existing.name()
-                  : job.simple() + "." + job.method().getNameAsString() + "()",
+                  : job.simple()
+                      + "."
+                      + job.method().getNameAsString()
+                      + "()"
+                      + (job.taskLine() == null ? "" : " 的排程工作（第 " + job.taskLine() + " 行）"),
               attributes,
               existing != null ? existing.source() : source,
               confidence,
@@ -369,15 +428,25 @@ public final class BackgroundJobs {
               && call.getArguments().size() >= 2
               && schedulerField(call, type)) {
             String[] target = taskTarget(call.getArgument(0), type);
-            if (target == null) continue;
+            Integer local = target == null ? localTask(call.getArgument(0)) : null;
+            if (target == null && local == null) continue;
             found.add(
-                new Remote(
-                    target[0],
-                    target[1],
-                    "SCHEDULE",
-                    programmatic(call, settings),
-                    call.toString(),
-                    source));
+                target != null
+                    ? new Remote(
+                        target[0],
+                        target[1],
+                        "SCHEDULE",
+                        programmatic(call, settings),
+                        call.toString(),
+                        source)
+                    : new Remote(
+                        type.getNameAsString(),
+                        method.getNameAsString(),
+                        "SCHEDULE",
+                        programmatic(call, settings),
+                        call.toString(),
+                        source,
+                        local));
           }
           if (call.getNameAsString().equals("newJob")
               && call.getArguments().size() == 1
@@ -451,6 +520,28 @@ public final class BackgroundJobs {
               .getTypeAsString()
               .matches(".*(TaskScheduler|ScheduledExecutorService|Scheduler)(<.*>)?$");
     return false;
+  }
+
+  /**
+   * The line of a task written in place (ADR 0179): a lambda whose body is more than one call, or
+   * an anonymous {@code Runnable}/{@code Callable}/{@code TimerTask} with a {@code run()} or {@code
+   * call()} method. Null for anything else.
+   */
+  static Integer localTask(Expression task) {
+    Node body = taskBody(task);
+    return body == null ? null : task.getBegin().map(p -> p.line).orElse(null);
+  }
+
+  /** The code a task written in place runs: the lambda's body or the anonymous class's method. */
+  public static Node taskBody(Expression task) {
+    if (task instanceof LambdaExpr lambda) return lambda.getBody();
+    if (task instanceof ObjectCreationExpr created && created.getAnonymousClassBody().isPresent())
+      for (var member : created.getAnonymousClassBody().get())
+        if (member instanceof MethodDeclaration m
+            && m.getParameters().isEmpty()
+            && (m.getNameAsString().equals("run") || m.getNameAsString().equals("call"))
+            && m.getBody().isPresent()) return m.getBody().get();
+    return null;
   }
 
   /**
@@ -674,7 +765,11 @@ public final class BackgroundJobs {
             .thenComparing(r -> r.source().file())
             .thenComparingInt(r -> r.source().line()));
     for (var remote : ordered) {
-      if (!done.add(remote.type() + "#" + remote.method())) continue;
+      if (!done.add(
+          remote.type()
+              + "#"
+              + remote.method()
+              + (remote.taskLine() == null ? "" : "@" + remote.taskLine()))) continue;
       Path file = javaBySimple.get(remote.type());
       if (file == null) continue;
       String relative = inventory.root().relativize(file).toString().replace('\\', '/');
@@ -701,6 +796,12 @@ public final class BackgroundJobs {
         for (var method : type.getMethods()) {
           if (!names.contains(method.getNameAsString())) continue;
           if (remote.method() == null && method.getParameters().size() != 1) continue;
+          // A task written in place belongs to the method whose code holds it.
+          if (remote.taskLine() != null
+              && !method
+                  .getRange()
+                  .map(r -> r.begin.line <= remote.taskLine() && remote.taskLine() <= r.end.line)
+                  .orElse(false)) continue;
           String qualified = type.getFullyQualifiedName().orElse(pkg + type.getNameAsString());
           List<String> notes = new ArrayList<>(remote.value().notes());
           notes.add("排程設定在 " + remote.source().file() + ":" + remote.source().line());
@@ -716,7 +817,8 @@ public final class BackgroundJobs {
                   remote.value().status(),
                   notes,
                   remote.value().property(),
-                  null));
+                  null,
+                  remote.taskLine()));
           break;
         }
       }
