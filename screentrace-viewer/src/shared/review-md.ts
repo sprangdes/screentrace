@@ -25,6 +25,8 @@ import {
   effectiveComponent,
 } from './review';
 import { features, Feature, ruleLabels } from './features';
+import { backgroundJobs, jobTriggerLabels } from './jobs';
+import { priorText, stateTypes, StateType } from './states';
 import { callSources } from '../usage';
 import { jsfLimitation } from '../unsupported-framework';
 export const fixedInstructions = `1. \`REMOVE\`:該畫面 / 元件不得遷移到新系統。
@@ -937,7 +939,7 @@ export async function generateMarkdown(
   );
   return out.join('\n\n') + '\n';
 }
-/** §8–§11: the system as analysed, for an AI that should not have to read the source again (ADR 0156). */
+/** §8–§13: the system as analysed, for an AI that should not have to read the source again (ADR 0156). */
 function systemSections(
   graph: Graph,
   state: ReviewState,
@@ -985,7 +987,7 @@ function systemSections(
 
   out.push(
     '## 8. 功能與流程(依確定性規則分組,非人工命名)',
-    '分組依序採用 Struts module、處理程式類別、Tiles 定義名稱前綴、網址前綴;同一依據至少兩個畫面共用才成為一個功能,其餘列於「其他」。流程從功能內沒有其他畫面導入的入口畫面開始,依導覽順序列出。',
+    '分組依序採用 Struts module、處理程式類別、Tiles 定義名稱前綴、選單(同一份清單產生、連到兩個以上畫面的連結)、網址前綴、只有一個角色會用到;同一依據至少兩個畫面共用才成為一個功能,其餘列於「其他」。流程從功能內沒有其他畫面導入的入口畫面開始,依導覽順序列出。',
   );
   let serial = 0;
   for (const feature of featureList) {
@@ -1245,6 +1247,100 @@ function systemSections(
     impact.length
       ? table(['移除項目', '類型', '影響', '對象', '說明'], impact)
       : '沒有標記移除的項目。',
+  );
+
+  out.push(
+    '## 12. 系統自動作業(排程、事件、啟動時)',
+    '沒有畫面、由系統自動執行的程式。執行時機由原始碼與設定檔推導:`INFERRED` 表示取自預設值,執行時可能被設定檔或環境變數覆寫;`UNRESOLVED` 表示無法確定,不得自行猜測。這些作業不在 API 保留/移除推導範圍內;各作業的後端呼叫見 §9。',
+  );
+  const jobRows = backgroundJobs(graph).map((job) => [
+    projectText(job.node.name, job.node.source),
+    projectText(jobTriggerLabels[job.trigger]),
+    projectText(job.text),
+    projectText(job.expression.replaceAll('\n', ' / '), job.node.source),
+    projectText(job.node.confidence),
+    projectText(
+      [
+        job.note,
+        job.eventType && job.publishers.length
+          ? `發布來源:${job.publishers.map((p) => p.from).join('、')}`
+          : job.eventType
+            ? '找不到發布來源'
+            : '',
+      ]
+        .filter(Boolean)
+        .join(';'),
+    ),
+    sourceCell(job.node.source),
+  ]);
+  out.push(
+    jobRows.length
+      ? table(['作業', '觸發', '執行時機', '原始設定', '解析', '備註', '來源'], jobRows)
+      : '未偵測到排程、事件監聽或啟動時執行的程式。',
+  );
+
+  out.push(
+    '## 13. 資料狀態變更(誰把哪個狀態設成什麼)',
+    '列出 API 與系統作業沿後端呼叫鏈(§9)可證明的列舉狀態寫入:setter、builder 或欄位指定。「前端文字」取自前端原始碼的對照文字,前端各處寫法不同時以「／」依出現位置列出全部。設定值來自變數時「設為」為 `—`、解析為 `UNRESOLVED`。「原狀態(推測)」只由寫入處同一物件的狀態比較(外層 if、先前的 throw/return 守衛、switch)推得,是推測(INFERRED);空白表示無法推得,不得自行補上狀態轉換條件。',
+  );
+  const jobIds = new Set(backgroundJobs(graph).map((j) => j.node.id));
+  const stateRows: string[][] = [];
+  for (const type of stateTypes(graph)) {
+    const who = (writer: StateType['unresolved'][number]) =>
+      [
+        ...writer.endpoints.map((e) => endpointLabel(e)),
+        ...(jobIds.has(writer.handler.id) ? [`系統自動作業 ${writer.handler.name}`] : []),
+      ].join('、') || writer.handler.name;
+    const row = (
+      value: string | undefined,
+      label: string | undefined,
+      writer: StateType['unresolved'][number],
+    ) => [
+      projectText(type.name),
+      projectText(writer.change.field),
+      projectText(priorText(writer.change)),
+      projectText(value || '—'),
+      projectText(label),
+      projectText(who(writer), writer.handler.source),
+      projectText(writer.change.in, writer.change.source),
+      projectText(writer.change.resolution) +
+        (writer.change.reason ? ` ${projectText(writer.change.reason)}` : ''),
+      sourceCell(writer.change.source),
+    ];
+    for (const value of type.values) {
+      if (!value.writers.length)
+        stateRows.push([
+          projectText(type.name),
+          projectText(type.fields.join('、')),
+          '—',
+          projectText(value.value),
+          projectText(value.label),
+          projectText('原始碼中找不到設成這個值的地方'),
+          '—',
+          '—',
+          '—',
+        ]);
+      for (const writer of value.writers) stateRows.push(row(value.value, value.label, writer));
+    }
+    for (const writer of type.unresolved) stateRows.push(row(undefined, undefined, writer));
+  }
+  out.push(
+    stateRows.length
+      ? table(
+          [
+            '狀態類型',
+            '欄位',
+            '原狀態(推測)',
+            '設為',
+            '前端文字',
+            '由誰',
+            '在哪個方法',
+            '解析',
+            '來源',
+          ],
+          stateRows,
+        )
+      : '未偵測到列舉狀態的寫入。',
   );
   return out;
 }

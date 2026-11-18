@@ -3,6 +3,23 @@ export interface NameHint {
   title?: string;
   heading?: string;
 }
+/** What else can name a screen in plain words (ADR 0163). */
+export interface NameContext {
+  /** The text of links and buttons that lead to each screen, one entry per link. */
+  linkLabels?: Map<string, { label: string; from: string }[]>;
+  /** The roles each screen is for, from the analysis's personas. */
+  roles?: Map<string, string[]>;
+}
+/** `lineLogin=failed|success` → `網址帶 lineLogin=failed 或 success`. */
+export function queryText(query: string): string {
+  return `網址帶 ${query
+    .split('&')
+    .filter(Boolean)
+    .map((part) => part.split('|').join(' 或 '))
+    .join('、')}`;
+}
+/** `step = 2` → `step 為 2`. */
+export const stateText = (variant: string) => variant.replace(/\s*={1,3}\s*/g, ' 為 ');
 const unsafeSourceMarkup =
   /(?:data-st-|<\/?[a-z][\w.-]*:[^>]*>|<\/?[a-z][\w.-]*\b[^>]*\bdata-st-[^>]*>)/iu;
 // The static preview shows unproven text as this sample value; it never names a screen.
@@ -38,6 +55,7 @@ export function screenNames(
   screens: Node[],
   hints: Map<string, NameHint>,
   routes: Map<string, string[]>,
+  context: NameContext = {},
 ): Map<string, string> {
   const sorted = [...screens].sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0)),
     counts = new Map<string, number>();
@@ -46,6 +64,7 @@ export function screenNames(
       [clean(hints.get(screen.id)?.title), clean(hints.get(screen.id)?.heading)].filter(Boolean),
     ))
       counts.set(value, (counts.get(value) || 0) + 1);
+  const linkName = linkNames(context.linkLabels);
   const names = new Map<string, string>();
   for (const screen of sorted) {
     const hint = hints.get(screen.id) || {},
@@ -69,7 +88,7 @@ export function screenNames(
           : heading && counts.get(heading)! <= SHARED_HEADING_LIMIT
             ? heading
             : duplicate || screen.attributes.view
-              ? humanizeName(fallback)
+              ? linkName.get(screen.id) || humanizeName(fallback)
               : clean(screen.attributes.screenName || screen.name) || humanizeName(fallback)),
     );
   }
@@ -85,7 +104,10 @@ export function screenNames(
   // The steps of one page share its title; each is named with the page state it shows.
   for (const screen of sorted)
     if (screen.attributes.stateVariant)
-      names.set(screen.id, `${names.get(screen.id)}（${screen.attributes.stateVariant}）`);
+      names.set(
+        screen.id,
+        `${names.get(screen.id)}（${stateText(screen.attributes.stateVariant)}）`,
+      );
   const byId = new Map(screens.map((screen) => [screen.id, screen])),
     groups = new Map<string, string[]>();
   for (const [id, name] of names) groups.set(name, [...(groups.get(name) || []), id]);
@@ -95,7 +117,7 @@ export function screenNames(
       const queryIds = group.filter((id) => byId.get(id)?.attributes.entryQuery);
       for (const id of queryIds) {
         const query = byId.get(id)!.attributes.entryQuery;
-        names.set(id, `${name}（?${query}）`);
+        names.set(id, `${name}（${queryText(query)}）`);
       }
       const ids = group.filter((id) => !queryIds.includes(id));
       if (ids.length < 2) continue;
@@ -109,7 +131,8 @@ export function screenNames(
           return [
             id,
             [
-              screen?.attributes.entryQuery ? `?${screen.attributes.entryQuery}` : undefined,
+              screen?.attributes.entryQuery ? queryText(screen.attributes.entryQuery) : undefined,
+              context.roles?.get(id)?.length ? context.roles.get(id)!.join('、') : undefined,
               routes.get(id)?.[0],
               clean(screen?.attributes.tilesDefinitionName).replace(/^\.+/, ''),
               sourceFileName(source),
@@ -118,15 +141,64 @@ export function screenNames(
           ];
         }),
       );
+      // Facts people read (query, role, route, Tiles name) first, alone then in pairs; the source file
+      // and folder only when those cannot tell the screens apart (ADR 0177).
+      const PLAIN = 4;
       for (const id of ids) {
-        const available = candidates.get(id)!.filter(Boolean),
-          unique = available.find(
+        const list = candidates.get(id)!,
+          plain = list.slice(0, PLAIN).filter(Boolean) as string[],
+          files = list.slice(PLAIN).filter(Boolean) as string[];
+        const alone = (values: string[]) =>
+          values.find(
             (value) => ids.filter((other) => candidates.get(other)!.includes(value)).length === 1,
           );
-        if (unique) names.set(id, `${name}（${unique}）`);
+        const shared = (a: string, b: string) =>
+          ids.filter((other) => {
+            const values = candidates.get(other)!;
+            return values.includes(a) && values.includes(b);
+          }).length;
+        let label = alone(plain);
+        for (let i = 0; i < plain.length && !label; i++)
+          for (let j = i + 1; j < plain.length && !label; j++)
+            if (shared(plain[i], plain[j]) === 1) label = `${plain[i]}・${plain[j]}`;
+        label ??= alone(files);
+        if (label) names.set(id, `${name}（${label}）`);
       }
     }
   return names;
+}
+/**
+ * A screen without a title is named by the links that lead to it: the label that leads only here,
+ * or most often here, from the most screens. A label also used for other screens (a logo) loses to
+ * one that is specific to this screen.
+ */
+function linkNames(labels?: Map<string, { label: string; from: string }[]>): Map<string, string> {
+  const out = new Map<string, string>();
+  if (!labels) return out;
+  const targets = new Map<string, Set<string>>();
+  for (const [id, list] of labels)
+    for (const { label } of list) {
+      const text = clean(label);
+      if (text) targets.set(text, new Set([...(targets.get(text) || []), id]));
+    }
+  for (const [id, list] of labels) {
+    const from = new Map<string, Set<string>>();
+    for (const { label, from: source } of list) {
+      const text = clean(label);
+      if (text && !/^<.*>$/.test(text))
+        from.set(text, new Set([...(from.get(text) || []), source]));
+    }
+    const best = [...from]
+      .map(([text, sources]) => ({ text, sources: sources.size, targets: targets.get(text)!.size }))
+      .sort(
+        (a, b) =>
+          a.targets - b.targets ||
+          b.sources - a.sources ||
+          (a.text < b.text ? -1 : a.text > b.text ? 1 : 0),
+      )[0];
+    if (best) out.set(id, best.text);
+  }
+  return out;
 }
 function sourceDirectoryName(path?: string): string {
   const parts = String(path || '')

@@ -110,3 +110,13 @@ D5 文字、共用 deriveApiUsage 與 md v1 的欄位／位元組契約不變。
 - 有功能標注或功能備註時輸出 5：v4 的鍵加 `feature_decisions`，`decision_notes` 另含 `features`；匯入接受 1～5，未知功能 key 列為 orphan（`{featureKey}`）。
 - 檔頭 `migration_target` 依報表資料 `migrationTarget`：未設定為 Spring Boot 4／Angular；物件為設定值（機器跳脫）；null 時不輸出這三行。
 - golden：`review.md`、`malicious-review.md`、`review-v4.md` 加入 §8～§11，其餘位元組不變。
+
+## R81：§12 系統自動作業（ADR 0159）
+
+- §11 之後、附錄 A 之前新增（所有版本）：§12 系統自動作業，讀 HANDLER 的 `trigger`、`triggerText`、`triggerExpression`、`triggerNote`、`eventType`、`eventPublishers`；沒有作業時寫「未偵測到排程、事件監聽或啟動時執行的程式。」。專案文字一律走正文隔離。format_version 不變。
+- golden：`review.md`、`malicious-review.md`、`review-v4.md` 加入 §12，其餘位元組不變。
+
+## R82：§13 資料狀態變更（ADR 0160）
+
+- §12 之後、附錄 A 之前新增（所有版本）：§13 資料狀態變更，讀 HANDLER 的 `stateChanges`；每個值列出設定它的 API 或系統作業，沒有人設定的值與無法確定的寫入也列出；沒有寫入時寫「未偵測到列舉狀態的寫入。」。format_version 不變。
+- golden：三份 golden 加入 §13，其餘位元組不變。

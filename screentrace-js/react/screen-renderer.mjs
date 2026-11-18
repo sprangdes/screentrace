@@ -23,6 +23,7 @@ import {
   branchIdentity,
 } from './branches.mjs';
 import { closeConditionalDialogs } from './dialogs.mjs';
+import { pageState } from './page-states.mjs';
 import { EffectRunner } from './effects.mjs';
 import { jsxName, attribute, attributeExpression } from './jsx.mjs';
 import { ROUTER, REACT, elementValue } from './routes.mjs';
@@ -33,6 +34,7 @@ import {
   labelOf,
   LABEL_ATTRIBUTES,
   literalAlternatives,
+  factText,
 } from './text.mjs';
 import { hrefEntryUrls, cleanUrls, destinationCandidates } from './urls.mjs';
 
@@ -54,6 +56,17 @@ function visibleAnchors(document) {
 
 /** Identifies a `useState` declaration: file, line and state name. */
 export const stateKey = (file, lineNo, name) => `${file}:${lineNo}:${name}`;
+
+const LABELLED_FIELDS = new Set([
+  'RADIO',
+  'CHECKBOX',
+  'TEXT_INPUT',
+  'TEXTAREA',
+  'SELECT',
+  'MULTI_SELECT',
+  'DATE_PICKER',
+  'FILE_INPUT',
+]);
 
 class ScreenRenderer {
   constructor(
@@ -91,7 +104,27 @@ class ScreenRenderer {
     this.componentFrames = [];
   }
 
+  /** A condition over props and condition constants, decided by the screen's facts (ADR 0168). */
+  decideByFacts(node, scope) {
+    if (!this.facts?.length) return null;
+    try {
+      return implied(this.facts, factText(node, scope, this.evaluator));
+    } catch {
+      return null;
+    }
+  }
+
   render(route, shell = null) {
+    const previous = this.evaluator.decide;
+    this.evaluator.decide = (node, scope) => this.decideByFacts(node, scope);
+    try {
+      return this.renderScreen(route, shell);
+    } finally {
+      this.evaluator.decide = previous;
+    }
+  }
+
+  renderScreen(route, shell = null) {
     this.evaluator.routePath = /[:*]/.test(route.path) ? null : route.path;
     this.facts = resolveRouteFacts(this.audience, this.evaluator);
     this.routesElement = route.routesElement ?? null;
@@ -315,7 +348,7 @@ class ScreenRenderer {
     const known = truthy(this.evaluator.evaluate(node, scope));
     if (known !== null) return known;
     const expression = this.evaluator.expandAudience(node, scope) ?? text(scope.module, node);
-    return implied(this.facts, expression);
+    return implied(this.facts, expression) ?? this.decideByFacts(node, scope);
   }
 
   reachableStateCondition(node, scope) {
@@ -384,7 +417,19 @@ class ScreenRenderer {
     else if (value.t === 'unknown') {
       const before = state.out.children.length;
       if (node.type === 'Identifier') this.renderVariable(node, scope, next);
-      if (state.out.children.length === before) this.emitText(SAMPLE_TEXT, state);
+      if (state.out.children.length === before) {
+        // Literal alternatives (`primary.label` of two object literals) read as `A / B` (ADR 0161).
+        const options =
+          node.type === 'MemberExpression' || node.type === 'OptionalMemberExpression'
+            ? this.evaluator.strings(node, scope).filter((item) => item.trim())
+            : [];
+        this.emitText(
+          options.length && options.every((item) => !item.includes('{'))
+            ? options.join(' / ')
+            : SAMPLE_TEXT,
+          state,
+        );
+      }
     }
   }
 
@@ -424,16 +469,13 @@ class ScreenRenderer {
       const fn = this.evaluator.evaluate(node.arguments[0], scope);
       if (fn.t !== 'fn') return;
       const items = this.evaluator.evaluate(callee.object, scope);
-      const elements = items.t === 'array' ? items.node.elements : null;
-      if (
-        elements &&
-        elements.length <= MAX_UNROLLED &&
-        elements.every((item) => item && item.type !== 'SpreadElement')
-      ) {
+      const elements =
+        items.t === 'array' ? this.unrollable(items.node.elements, items.scope) : null;
+      if (elements && elements.length && elements.length <= MAX_UNROLLED) {
         elements.forEach((item, index) =>
           this.body(
             fn,
-            [{ expr: item, scope: items.scope }, { value: { t: 'lit', v: index } }],
+            [{ expr: item.expr, scope: item.scope }, { value: { t: 'lit', v: index } }],
             {
               ...state,
               keys: [...state.keys, `[${index}]`],
@@ -490,6 +532,37 @@ class ScreenRenderer {
     );
     markupArguments.forEach((arg) => this.expr(arg, scope, state));
     if (!markupArguments.length) this.emitText(SAMPLE_TEXT, state);
+  }
+
+  /**
+   * The items of an array literal to render one by one. A spread of another array literal, or of a
+   * conditional whose test is known, adds its items; a spread whose items cannot be proven (an
+   * optional extra like `...(custom ? [value] : [])`) adds nothing, so only the items the source
+   * states are shown (ADR 0161). Null when an item is a hole.
+   */
+  unrollable(elements, scope, depth = 0) {
+    const out = [];
+    for (const item of elements) {
+      if (!item) return null;
+      if (item.type !== 'SpreadElement') {
+        out.push({ expr: item, scope });
+        continue;
+      }
+      if (depth > 4) continue;
+      let inner = unwrap(item.argument);
+      if (inner?.type === 'ConditionalExpression') {
+        const truth = truthy(this.evaluator.evaluate(inner.test, scope));
+        if (truth === null) continue;
+        inner = unwrap(truth ? inner.consequent : inner.alternate);
+      }
+      const value = inner ? this.evaluator.evaluate(inner, scope) : null;
+      if (value?.t === 'array') {
+        const nested = this.unrollable(value.node.elements, value.scope, depth + 1);
+        if (!nested) return null;
+        out.push(...nested);
+      }
+    }
+    return out;
   }
 
   childNodes(nodes, scope, state) {
@@ -1696,6 +1769,8 @@ class ScreenRenderer {
     if (display) kind = 'DISPLAY_FIELD';
     const out = this.output(node, tag, scope, state, key);
     let next = { ...state, out, routeCandidate: false };
+    // A field wrapped in `<label>` is named by the label's text (ADR 0161).
+    if (tag === 'label') next = { ...next, enclosingLabel: { node, scope } };
     if (kind) {
       const component = this.record(node, scope, state, key, {
         kind,
@@ -1704,6 +1779,19 @@ class ScreenRenderer {
         handlers,
         target: tag === 'a' ? (attrs.href ?? null) : null,
       });
+      if (!component.label && state.enclosingLabel && LABELLED_FIELDS.has(kind)) {
+        const wrapped = labelOf(
+          state.enclosingLabel.node,
+          {},
+          this.evaluator,
+          state.enclosingLabel.scope,
+          kind,
+        );
+        if (wrapped.text) {
+          component.label = wrapped.text;
+          component.labelSource = 'label';
+        }
+      }
       if (out.tag) out.attributes['data-st-expansion-anchor'] = component.anchor;
       if (display) {
         component.attrs = {
@@ -1775,6 +1863,10 @@ class ScreenRenderer {
       const html = htmlAttribute(name, value);
       if (html && !html[0].startsWith('data-st-')) attributes[html[0]] = html[1];
     }
+    // Loading, error and empty content is marked so the preview can show one state at a time (ADR 0162).
+    const pageStateOf = pageState(state.guards);
+    if (pageStateOf && pageStateOf !== pageState(state.out.guards ?? []))
+      attributes['data-st-state'] = pageStateOf;
     const element = htmlElement(tag, attributes);
     element.guards = state.guards;
     state.out.children.push(element);

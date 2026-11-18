@@ -22,7 +22,8 @@ version_at_least() {
 
 java_major_version() {
   local version
-  version="$(java -version 2>&1 | sed -n '1s/.*version "\([^"]*\)".*/\1/p')"
+  # JAVA_TOOL_OPTIONS / _JAVA_OPTIONS print "Picked up ..." first; the version is on its own line.
+  version="$(java -version 2>&1 | sed -n 's/.*version "\([^"]*\)".*/\1/p' | head -n 1)"
   version="${version#1.}"
   printf '%s\n' "${version%%[^0-9]*}"
 }

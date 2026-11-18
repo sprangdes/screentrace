@@ -516,3 +516,107 @@
 - WP151：需求方回報 reservio `/reservation/new` 的預約精靈只看得到第 1 步，點「下一步」沒有反應。原因是步驟由元件狀態切換，網址不變，第 2、3 步只在圖上以條件元件存在，預覽固定畫初始值。需求方決定（OQ-055）：步驟成為畫布上的子畫面，API 歸到各步驟。實作可證明的頁面狀態變體：常值初始化、常值寫入、不同值顯示不同元件，且步驟內的元件會寫入其他值；初始值沿用原畫面 ID，setter 寫入成為導覽到該步驟的 `NAVIGATES_TO`，網址只開啟初始值。見 [ADR 0158](adr/0158-r80-page-state-variants.md)。
 - WP152：需求方以 reservio 實測第一版，精靈仍未拆開。原因是 `BookingFlowPage.tsx:79` 在 `useEffect` 中以 `setStep(flow.draft.business && activeService ? 2 : 1)` 修正步驟，條件運算式不是單一常值，`step` 被視為未知。改為：各分支都是常值的條件運算式，各分支的值都算可能值；其他條件都符合、只因寫入無法證明而不拆時記 `REACT_STATE_VARIANT_UNPROVEN`。放寬後 reservio 多拆了 5 個路由，加上三條規則排除：各值的元件組合要不同（排除錯誤訊息）、掛載時的載入路徑不寫入它（排除 loading／ready／error）、第一步要在初始預覽中看得到（排除預設關閉的對話框）。
 - 驗證：Maven `StateVariantTest` 新增 4 個測試，JS `r80-state-variants.test.mjs` 新增 8 個（共 200 個，原有測試都不需修改），viewer `r80-state-variant-name.test.mjs` 新增 1 個；Maven 除 `screentrace-cli` 6 個需要擷取產物的整合測試（本環境沒有 capture 的 Playwright 套件，改動前即失敗）外全數通過；viewer 除 3 個同樣需要 capture 套件的測試外全數通過。reservio 的 React 分析只有 `/reservation/new` 拆成 3 步（41 → 43 畫面），其他輸出與 `main` 逐項相同；完整 CLI 與報表實測待需求方執行。
+
+## R81 沒有畫面的系統自動作業
+
+- WP153：依 [reservio 評估](RESERVIO_EVALUATION_20261118.md) P1，OQ-056 採 A。Spring adapter 新增 `SpringBackgroundJobs`，把 `@Scheduled`、`@EventListener`／`@TransactionalEventListener`、`ApplicationRunner`／`CommandLineRunner` 建成 HANDLER，執行時機轉成白話（cron 已知形狀、固定間隔、設定佔位的預設值與覆寫來源），事件記錄發布來源，並沿用後端呼叫鏈；API 頁新增「系統自動作業」分組與詳情，md 新增 §12。見 [ADR 0159](adr/0159-r81-background-jobs.md)。
+
+## R82 資料狀態變更
+
+- WP154：依 [reservio 評估](RESERVIO_EVALUATION_20261118.md) P2，OQ-056 採 A。`BackendCallChains` 沿呼叫鏈記錄列舉常數的寫入（setter、builder、欄位指定；條件式兩值為 INFERRED，變數為 UNRESOLVED），寫入 HANDLER 的 `stateChanges`；`screentrace-js` 新增 `state-labels` 模式擷取前端字面對照，所有對照一致才並列中文。API 頁新增「資料狀態」分組與各 API／作業的「會改變的資料狀態」，md 新增 §13。reservio 的 LINE 對話 9 個步驟狀態與預約狀態的設定來源都能看到。見 [ADR 0160](adr/0160-r82-state-changes.md)。
+
+## R83 程式組出的按鈕文字與選項
+
+- WP155：依 [reservio 評估](RESERVIO_EVALUATION_20261118.md) P3。React 分析器讀取「條件選擇的物件字面值」的屬性（`primary.label` 讀成「前往預約 / 開始預約」，不再是「示例值」），`.map` 的字面陣列含 spread 時逐項展開已知項目（預約間隔顯示 15／30／45／60 分鐘四個選項），`<label>` 內沒有名稱的欄位以 label 文字命名。訪客導覽列由函式依身分回傳兩組陣列，仍無法展開，記於 ADR。見 [ADR 0161](adr/0161-r83-literal-alternatives-and-wrapped-labels.md)。
+
+## R84 預覽預設只顯示有資料狀態
+
+- WP156：依 [reservio 評估](RESERVIO_EVALUATION_20261118.md) P4，OQ-057 採 A。React 分析器以 AST 解析每個元素的顯示條件，辨識載入中、錯誤、沒有資料，在預覽 HTML 標 `data-st-state`；capture 加入預設隱藏規則，截圖只剩有資料狀態；viewer 預覽工具列新增「畫面狀態」切換。reservio 建立預約第 1 步不再疊出骨架、錯誤與空白訊息。見 [ADR 0162](adr/0162-r84-page-states-in-preview.md)。
+
+## R85 畫面名稱白話化
+
+- WP157：依 [reservio 評估](RESERVIO_EVALUATION_20261118.md) P5，OQ-057 採 A。viewer 顯示名稱的網址參數與狀態變體改寫成白話（「網址帶 lineLogin=failed 或 success」「step 為 1」），同名畫面先以角色名稱區分（「通知中心（商家）」），沒有標題的畫面改用連到它的選單文字（reservio `/dashboard` 由「Customer Dashboard Page」變為「概覽」）。見 [ADR 0163](adr/0163-r85-plain-screen-names.md)。
+
+## R86 功能地圖依選單分組
+
+- WP158：依 [reservio 評估](RESERVIO_EVALUATION_20261118.md) P6，OQ-057 採 A。功能分組新增「選單」依據（同一份清單產生、連到兩個以上畫面的連結），優先於網址前綴；功能地圖的說明只列實際用到的依據，md §8 說明加入選單。見 [ADR 0164](adr/0164-r86-menu-features.md)。
+
+## R87 API 的白話用途
+
+- WP159：依 [reservio 評估](RESERVIO_EVALUATION_20261118.md) P7。API 詳情顯示「用途：按下「取消預約」時呼叫」這類由呼叫來源組成的句子，清單每列顯示觸發的按鈕名稱；排除處理中文字、示例值與無文字標籤。見 [ADR 0165](adr/0165-r87-api-purpose.md)。
+
+## R88 外部登入導回路徑
+
+- WP160：依 [reservio 評估](RESERVIO_EVALUATION_20261118.md) P8。外部登入的導回路徑讀值器支援有參數的輔助方法、條件運算式、`UriComponentsBuilder` 串接與 `@ConfigurationProperties` 設定值；reservio LINE 登入的導回路徑解析為 `/login`，`EXTERNAL_LOGIN_RETURN_UNRESOLVED` 消失。見 [ADR 0166](adr/0166-r88-login-return-through-helpers-and-configuration.md)。
+
+## R89 自動建議角色
+
+- WP161：依 [reservio 評估](RESERVIO_EVALUATION_20261118.md) P9，OQ-057 採 A。沒有設定角色的 React 專案，分析器依路由守衛的身分條件建議「未登入」與各角色值的角色（載入旗標與 `must…` 例外旗標設為否），描述標「自動建議」；有手動設定時不建議。見 [ADR 0167](adr/0167-r89-suggested-personas.md)。
+
+## R90 啟動腳本的 Java 版本判斷
+
+- WP162：依 [reservio 評估](RESERVIO_EVALUATION_20261118.md) P10。`bin/screentrace` 與 `bin/screentrace.ps1` 原本只讀 `java -version` 的第一行，環境設有 `JAVA_TOOL_OPTIONS` 時第一行是「Picked up …」，`doctor` 誤報缺 Java、`analyze` 無法執行；改為取含 `version "` 的那一行。新增 viewer `r90-launcher-java.test`（1）。
+
+## R91 畫面身分事實經由 props 決定條件
+
+- WP163：R83 的剩餘問題。React 分析器在條件無法由值判斷時，把解構的 prop 換回父元件傳入的運算式、把條件常數換回初始值，再以畫面的身分事實判斷；reservio 訪客首頁的導覽列與按鈕與實際畫面一致，不再出現「示例值」與「登出」。見 [ADR 0168](adr/0168-r91-screen-facts-through-props.md)。
+
+## R92 自動建議角色的一般狀態
+
+- WP164：R89 的剩餘問題。自動建議的角色另外取同一登入物件上其他旗標（如 `me.business`）在該角色守衛的畫面中多數要求的值；reservio 三個建議角色的結果與手動設定相同。見 [ADR 0167](adr/0167-r89-suggested-personas.md) 的 R92 補充。
+
+## R93 未分組畫面併入兄弟畫面的功能
+
+- WP165：R86 的剩餘問題。未分組的網址參數／頁面狀態版本併入同網址畫面的功能，同一頁面元件畫出的畫面併入彼此的功能（轉址頁與身分版本除外）；reservio「其他」由 14 個降為 8 個。見 [ADR 0164](adr/0164-r86-menu-features.md) 的 R93 補充。
+
+## R94 推論原狀態
+
+- WP166：OQ-058。狀態寫入加上由同一方法內同一物件的狀態比較（外層 if、throw／return 守衛、switch）推得的原狀態，標為推測；API 頁與 md §13 顯示「待確認 → 已取消」。見 [ADR 0169](adr/0169-r94-prior-state.md)。
+
+## R95 前端多種寫法
+
+- WP167：OQ-058。前端對同一狀態有多種寫法時依出現位置全部列出（「待確認／等待店家確認」），狀態詳情附每種寫法的來源。見 [ADR 0170](adr/0170-r95-every-frontend-word.md)。
+
+## R96 背景作業擴充
+
+- WP168：背景作業偵測移到共用模組並套用 Struts 管線，新增 XML `task:scheduled`、程式排程（TaskScheduler、ScheduledExecutorService）、Quartz Job 與 `@Async`。見 [ADR 0171](adr/0171-r96-more-background-jobs.md)。
+
+## R97 文字狀態與較深的狀態寫入
+
+- WP169：狀態欄位（名稱以 status／state／stage／phase 結尾）的字串、整數與常數寫入也列為狀態並推論原狀態；狀態寫入追到 8 層（呼叫鏈仍列 4 層）。見 [ADR 0172](adr/0172-r97-text-states-and-deeper-writes.md)。
+
+## R98 改名 props、Context 與 hook 條件
+
+- WP170：畫面事實的條件判斷延伸到改名解構的 props、Context provider 提供的條件值與只回傳條件的自訂 hook。見 [ADR 0173](adr/0173-r98-renamed-props-and-hook-conditions.md)。
+
+## R99 JSP 疊加狀態
+
+- WP171：JSP 預覽依 EL 條件形狀（`empty 清單`、`not empty errors` 等）標出沒有資料與錯誤區塊，預設隱藏並可切換；React 的狀態命名另認 `isPending`、`isSubmitting`、`noResults` 等。見 [ADR 0174](adr/0174-r99-jsp-page-states-and-names.md)。
+
+## R100 登入導回的其他網址組法
+
+- WP172：外部登入導回路徑讀值器另認 `String.format`、`URI.create`／`new URI`、`concat`、`StringBuilder`、`path()`／`pathSegment()`、`fromCurrentContextPath()`、三參數 `RedirectStrategy.sendRedirect` 與沒有自訂 handler 時的 `defaultSuccessUrl`。見 [ADR 0175](adr/0175-r100-more-return-url-shapes.md)。
+
+## R101 狀態轉換清單
+
+- WP173：私有方法由狀態 `switch` 或 `if` 分派時，以呼叫端推論原狀態；API 頁狀態詳情新增「狀態轉換（推測）」清單。reservio 的 LINE 聊天預約步驟（選服務 → 輸入日期 …）可依序看到。見 [ADR 0176](adr/0176-r101-dispatched-steps-and-transitions.md)。
+
+## R102 呈現修正
+
+- WP174：同名畫面以兩個事實組合區分（不再用檔名）；功能地圖新增「只有一個角色會用到」分組；自動建議角色可採前端的中文對照；只有處理中字樣的按鈕在 API 用途寫成「顯示「處理中」的按鈕」。見 [ADR 0177](adr/0177-r102-presentation-fixes.md)。
+
+## R103 角色名稱、部分原狀態、落單畫面
+
+- WP175：自動建議的角色依建立該角色帳號的畫面標題命名（reservio 為「商家」「客戶」）；列舉的 `.name()` 寫入視同該值；私有方法只有部分呼叫端說得出原狀態時列出並標示；功能地圖中只屬於一個角色的落單畫面加入該角色其他畫面所在的功能。見 [ADR 0178](adr/0178-r103-role-names-partial-priors-and-role-peers.md)。
+
+## R104 寫在呼叫處的排程工作
+
+- WP176：交給排程器的多行 lambda 與匿名 `Runnable`／`Callable`／`TimerTask` 成為「`類別.方法()` 的排程工作（第 N 行）」，後端呼叫只追工作本身。見 [ADR 0179](adr/0179-r104-tasks-written-in-place.md)。
+
+## R105 依比對認出的文字狀態
+
+- WP177：欄位名稱不像狀態時，若程式拿它和代碼字比對（`"PAID".equals(o.getPayment())`、`switch` 字串分支），而寫入的值也是代碼字，同樣列為文字狀態。見 [ADR 0180](adr/0180-r105-compared-text-fields-are-states.md)。
+
+## R106 Struts 與 Thymeleaf 的疊加狀態
+
+- WP178：`logic:empty`、`logic:messagesPresent` 等 Struts 標籤與 Thymeleaf `th:if`／否定的 `th:unless`（含 `#lists.isEmpty`、`#fields.hasErrors`）標出沒有資料與錯誤區塊，預覽預設隱藏、可切換。見 [ADR 0181](adr/0181-r106-struts-and-thymeleaf-page-states.md)。

@@ -1,5 +1,6 @@
 import { parseExpression } from '@babel/parser';
 import { atoms, unique, contradicts, leaves, implied } from './audience.mjs';
+import { pageState } from './page-states.mjs';
 
 const literal = (n) =>
   ['StringLiteral', 'NumericLiteral', 'BooleanLiteral', 'NullLiteral'].includes(n.type);
@@ -76,6 +77,135 @@ export function personaDimensions(screens, routeRedirects) {
         : [];
   return { dimensions, all, diagnostics };
 }
+/**
+ * Personas suggested from the route guards when the analyst configured none (ADR 0167): of the
+ * conditions compared with two or more string values, the one most screens are guarded by (then
+ * the one with most values) is the role; its object, when it
+ * is itself a condition (`me` for `me.role`), tells signed-in from signed-out; loading flags are
+ * false for every persona, and exception flags of the signed-in object named `must…`, `force…`,
+ * `needs…` or `requires…` are false for the role personas; any other flag of that object takes
+ * the value most screens guarded by the role require. Each persona says it is a suggestion and which condition defines it.
+ */
+export function suggestPersonas(dimensions, screens, labelGroups = []) {
+  const uses = new Map();
+  for (const screen of screens) {
+    const seen = new Set();
+    for (const atom of screen.audience ?? [])
+      for (const leaf of leaves(atom.raw ?? atom.text)) {
+        const part = parts(leaf);
+        if (part) seen.add(part[0]);
+      }
+    for (const text of seen) uses.set(text, (uses.get(text) ?? 0) + 1);
+  }
+  const words = (d) => d.values.filter((v) => /^(["']).*\1$/.test(v));
+  const role = dimensions
+    .filter((d) => words(d).length >= 2)
+    .sort(
+      (a, b) =>
+        (uses.get(b.text) ?? 0) - (uses.get(a.text) ?? 0) ||
+        words(b).length - words(a).length ||
+        (a.text < b.text ? -1 : 1),
+    )[0];
+  if (!role) return [];
+  const base = role.text.replace(/\?\./g, '.').split('.')[0];
+  const login = dimensions.find((d) => d.truthy && d.text === base);
+  const fact = (text, truth, source) => atoms(truth ? text : `!(${text})`, source);
+  const common = dimensions
+    .filter((d) => d.truthy && pageState([d.text]) === 'loading')
+    .flatMap((d) => fact(d.text, false, d.source));
+  // Exception flags on the signed-in object (`me.mustChangePassword`) are off for an ordinary user.
+  const exceptions = dimensions
+    .filter(
+      (d) =>
+        d.truthy &&
+        d.text.replace(/\?\./g, '.').startsWith(`${base}.`) &&
+        /^(must|force|needs?|requires?)[A-Z]/.test(d.text.split(/\??\./).at(-1)),
+    )
+    .flatMap((d) => fact(d.text, false, d.source));
+  const list = [];
+  if (login)
+    list.push({
+      id: 'guest',
+      name: '未登入',
+      description: `自動建議：依路由條件，${base} 不存在`,
+      facts: unique([...fact(login.text, false, login.source), ...common]),
+    });
+  const ids = new Set(list.map((p) => p.id));
+  const flag = (text) =>
+    text.startsWith(`${base}.`) && /^[\w$.]+$/.test(text) && text !== role.text;
+  const isException = (text) => /^(must|force|needs?|requires?)[A-Z]/.test(text.split('.').at(-1));
+  /**
+   * Other flags of the signed-in object that screens guarded by this role require (`me.business`):
+   * the value most of those screens require, when it is a strict majority, is the role's ordinary
+   * state.
+   */
+  const ordinary = (value) => {
+    const roleFact = `${role.text} === ${value.replace(/^'(.*)'$/, '"$1"')}`,
+      tally = new Map();
+    for (const screen of screens) {
+      const atomsOf = screen.audience ?? [];
+      if (!atomsOf.some((a) => a.text === roleFact && a.truth)) continue;
+      for (const a of atomsOf)
+        if (flag(a.text) && !isException(a.text)) {
+          const count = tally.get(a.text) ?? { yes: 0, no: 0 };
+          count[a.truth ? 'yes' : 'no']++;
+          tally.set(a.text, count);
+        }
+    }
+    const facts = [];
+    for (const [text, { yes, no }] of [...tally].sort(([a], [b]) => (a < b ? -1 : 1)))
+      if (yes !== no) {
+        const dimension = dimensions.find((d) => d.text === text);
+        facts.push(...fact(text, yes > no, dimension?.source ?? role.source));
+      }
+    return facts;
+  };
+  // The frontend's own word for a role value, when a label group names two or more of the role
+  // values (with or without a `ROLE_` prefix) and every such group agrees (ADR 0177).
+  const roleWords = words(role).map((v) => v.slice(1, -1));
+  const keyOf = (w) => w.replace(/^ROLE_/i, '');
+  const spoken = new Map();
+  for (const group of labelGroups) {
+    const keys = Object.keys(group.entries ?? {});
+    const hits = roleWords.filter((w) => keys.includes(w) || keys.includes(keyOf(w)));
+    if (hits.length < 2) continue;
+    for (const w of hits) {
+      const text = group.entries[w] ?? group.entries[keyOf(w)];
+      spoken.set(w, [...new Set([...(spoken.get(w) ?? []), text])]);
+    }
+  }
+  const nameOf = (w) =>
+    spoken.get(w)?.length === 1 ? spoken.get(w)[0] : w.replace(/^ROLE_/i, '') || w;
+  for (const value of words(role)) {
+    const word = value.slice(1, -1);
+    let id = `role-${
+      word
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '')
+        .slice(0, 24) || 'x'
+    }`;
+    for (let n = 2; ids.has(id); n++) id = `${id.slice(0, 28)}-${n}`;
+    ids.add(id);
+    list.push({
+      id,
+      name: nameOf(word).slice(0, 40),
+      description: `自動建議：依路由條件 ${role.text} === ${value}`.slice(0, 80),
+      facts: unique([
+        ...(login ? fact(login.text, true, login.source) : []),
+        ...fact(`${role.text} === ${value}`, true, role.source),
+        ...ordinary(value),
+        ...exceptions,
+        ...common,
+      ]),
+    });
+  }
+  return list
+    .filter((p) => !contradicts(p.facts))
+    .slice(0, 8)
+    .map((p) => ({ ...p, startPaths: ['/'], suggested: true }));
+}
+
 export function normalizePersonas(personas, dimensions) {
   const result = [],
     diagnostics = [];

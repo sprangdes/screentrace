@@ -70,7 +70,10 @@ public final class StrutsProjectAnalyzer {
                 inventory));
     enriched = projectDispatchBehaviors(enriched, state);
     enriched = linkValidatorFields(enriched, state);
+    // Spring scheduling in a Struts + Spring project runs without a screen too (ADR 0171).
     return io.screentrace.parser.jsp.BackendCallChains.enrich(
-        retainActionAndInlineEventEvidence(enriched, state), inventory);
+        io.screentrace.parser.jsp.BackgroundJobs.enrich(
+            retainActionAndInlineEventEvidence(enriched, state), inventory),
+        inventory);
   }
 }

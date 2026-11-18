@@ -10,13 +10,23 @@ import {
   ReviewState,
 } from './shared/review';
 import { decisionSwitch, decisionLabel, noteEditor } from './review-ui';
-import { componentLabelsForScreen } from './labels';
+import { componentLabelsForScreen, kindNames } from './labels';
 import { callerKind, Caller } from './usage';
 import { Index } from './map';
 import { Node, Evidence } from './contracts';
 import { element } from './text';
 import { proportionBar, sharePercent } from './proportion';
 import { splitter, SplitRange } from './splitter';
+import { backgroundJobs, jobTriggerLabels, BackgroundJob } from './shared/jobs';
+import { backendCalls } from './shared/review-md';
+import {
+  priorText,
+  stateChanges,
+  stateLabel,
+  stateTransitions,
+  stateTypes,
+  StateType,
+} from './shared/states';
 
 /** The three statuses shown to people: inferred usage and system entry points both count as in use. */
 export type ApiStatus = 'IN_USE' | 'UNREFERENCED' | 'REMOVABLE';
@@ -107,6 +117,62 @@ export function callerLabel(index: Index, caller: Caller): string {
     : callerKind(index, caller) === 'unresolved'
       ? '無法確定的觸發來源'
       : '畫面載入時';
+}
+/**
+ * What an API is for, in plain words, from its callers only (ADR 0165): the buttons that call it,
+ * the screens that call it when they open, or an outside system. Undefined when nothing calls it.
+ */
+export function apiPurpose(
+  index: Index,
+  callers: Caller[],
+  external = false,
+): { short: string; sentence: string } | undefined {
+  const buttons = new Map<string, Set<string>>(),
+    loads = new Set<string>();
+  for (const caller of callers) {
+    const label = callerLabel(index, caller);
+    if (!caller.componentId) {
+      if (label === '畫面載入時') loads.add(caller.screenId);
+      continue;
+    }
+    if (label === '沒有文字的按鈕') continue;
+    // The label without the kind word or the occurrence number the panel adds.
+    const kind = kindNames[index.nodes.get(caller.componentId)?.attributes.kind || ''];
+    let text = label.replace(/（第 \d+ 個）$/, '');
+    if (kind && text.endsWith(` ${kind}`)) text = text.slice(0, -kind.length - 1);
+    // `busy ? '送出中…' : '送出'` reads as both; the in-progress wording is left out. A button whose
+    // only provable text is in-progress wording is described by it (ADR 0177).
+    const all = text.split(' / '),
+      options = all.filter((o) => !/(中|…|\.\.\.)$/.test(o.trim()));
+    text = options.length ? options.join(' / ') : `顯示「${all.join(' / ')}」的按鈕`;
+    if (!text || text.includes('示例值') || /^<.*>$/.test(text)) continue;
+    buttons.set(text, new Set([...(buttons.get(text) || []), caller.screenId]));
+  }
+  const labels = [...buttons]
+    .sort((a, b) => b[1].size - a[1].size || (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0))
+    .map(([text]) => text);
+  const name = (id: string) => index.nodes.get(id)?.name || '畫面';
+  const opened = [...loads].sort((a, b) => name(a).localeCompare(name(b), 'zh-Hant'));
+  const parts: string[] = [];
+  if (labels.length)
+    parts.push(
+      `按下${labels
+        .slice(0, 3)
+        .map((l) => `「${l}」`)
+        .join('、')}${labels.length > 3 ? ` 等 ${labels.length} 個按鈕` : ''}時呼叫`,
+    );
+  if (opened.length)
+    parts.push(
+      `開啟「${name(opened[0])}」${opened.length > 1 ? ` 等 ${opened.length} 個畫面` : ''}時自動呼叫`,
+    );
+  if (external) parts.push('由外部系統（Webhook）呼叫');
+  if (!parts.length) return undefined;
+  const short = [
+    ...labels.slice(0, 2),
+    ...(opened.length && labels.length < 2 ? ['畫面載入時'] : []),
+    ...(external ? ['外部系統'] : []),
+  ].join('、');
+  return { short, sentence: parts.join('；') + '。' };
 }
 export interface ChainScreen {
   screenId: string;
@@ -300,12 +366,43 @@ export function apiPage(index: Index, state: ReviewState, options: ApiPageOption
   });
   const byId = new Map(records.map((r) => [r.node.id, r])),
     mostScreens = Math.max(0, ...records.map((r) => r.screens));
+  // Code that runs without a screen: listed under the APIs, never counted as one (ADR 0159).
+  const jobs = backgroundJobs(index.graph),
+    jobById = new Map(jobs.map((j) => [j.node.id, j])),
+    jobSearch = new Map(
+      jobs.map((j) => [
+        j.node.id,
+        [
+          '系統自動作業',
+          jobTriggerLabels[j.trigger],
+          j.node.name,
+          j.text,
+          j.expression,
+          j.eventType || '',
+          j.node.attributes.class || '',
+        ]
+          .join(' ')
+          .toLowerCase(),
+      ]),
+    );
+  // Enum states some API or job sets, with who sets each value (ADR 0160).
+  const states = stateTypes(index.graph),
+    stateById = new Map(states.map((t) => [`state:${t.name}`, t])),
+    stateSearch = new Map(
+      states.map((t) => [
+        `state:${t.name}`,
+        ['資料狀態', t.name, ...t.fields, ...t.values.flatMap((v) => [v.value, v.label || ''])]
+          .join(' ')
+          .toLowerCase(),
+      ]),
+    );
+  const known = (id: string) => byId.has(id) || jobById.has(id) || stateById.has(id);
   // Arriving from a screen for one API: show it whatever the list was narrowed to before.
-  if (options.selected && byId.has(options.selected)) {
+  if (options.selected && known(options.selected)) {
     memory.filter = 'ALL';
     memory.query = '';
   }
-  let selected = options.selected && byId.has(options.selected) ? options.selected : undefined;
+  let selected = options.selected && known(options.selected) ? options.selected : undefined;
 
   const root = element('section', undefined, 'api-page'),
     master = element('div', undefined, 'api-master'),
@@ -387,6 +484,332 @@ export function apiPage(index: Index, state: ReviewState, options: ApiPageOption
     renderDetail();
   };
 
+  /** The schedules, event listeners and startup code, as one group after the APIs. */
+  const jobGroup = (items: BackgroundJob[], searching: boolean) => {
+    const key = '系統自動作業',
+      memoryKey = `jobs:${key}`,
+      collapsed =
+        !searching && memory.collapsed.has(memoryKey) && !items.some((j) => j.node.id === selected);
+    const group = element('section', undefined, 'api-group api-job-group'),
+      header = element('button', undefined, 'api-group-header'),
+      body = element('div', undefined, 'api-group-items');
+    group.dataset.apiGroup = key;
+    group.dataset.jobGroup = 'true';
+    group.classList.toggle('is-collapsed', collapsed);
+    body.setAttribute('role', 'group');
+    body.setAttribute('aria-label', key);
+    header.type = 'button';
+    header.setAttribute('aria-expanded', String(!collapsed));
+    header.append(
+      element('span', undefined, 'api-group-caret'),
+      element('span', key, 'api-group-name'),
+      element('span', String(items.length), 'api-group-count'),
+    );
+    header.onclick = () => {
+      const now = !group.classList.contains('is-collapsed');
+      group.classList.toggle('is-collapsed', now);
+      header.setAttribute('aria-expanded', String(!now));
+      if (now) memory.collapsed.add(memoryKey);
+      else memory.collapsed.delete(memoryKey);
+    };
+    for (const job of items) {
+      const row = element('button', undefined, 'api-row api-job-row');
+      row.type = 'button';
+      row.setAttribute('role', 'option');
+      row.dataset.apiRow = job.node.id;
+      row.dataset.jobRow = job.node.id;
+      row.dataset.jobTrigger = job.trigger;
+      row.title = `${job.node.name}：${job.text}`;
+      const badge = element('span', jobTriggerLabels[job.trigger], 'job-badge');
+      badge.dataset.jobTrigger = job.trigger;
+      const text = element('span', undefined, 'api-job-text');
+      text.append(
+        element('span', job.text, 'api-job-when'),
+        element('span', job.node.name, 'api-job-name'),
+      );
+      row.append(badge, text);
+      row.onclick = () => select(job.node.id);
+      body.append(row);
+    }
+    group.append(header, body);
+    return group;
+  };
+
+  /** The enum states, as one group after the jobs. */
+  const stateGroup = (items: StateType[], searching: boolean) => {
+    const key = '資料狀態',
+      memoryKey = `states:${key}`,
+      collapsed =
+        !searching &&
+        memory.collapsed.has(memoryKey) &&
+        !items.some((t) => `state:${t.name}` === selected);
+    const group = element('section', undefined, 'api-group api-state-group'),
+      header = element('button', undefined, 'api-group-header'),
+      body = element('div', undefined, 'api-group-items');
+    group.dataset.apiGroup = key;
+    group.dataset.stateGroup = 'true';
+    group.classList.toggle('is-collapsed', collapsed);
+    body.setAttribute('role', 'group');
+    body.setAttribute('aria-label', key);
+    header.type = 'button';
+    header.setAttribute('aria-expanded', String(!collapsed));
+    header.append(
+      element('span', undefined, 'api-group-caret'),
+      element('span', key, 'api-group-name'),
+      element('span', String(items.length), 'api-group-count'),
+    );
+    header.onclick = () => {
+      const now = !group.classList.contains('is-collapsed');
+      group.classList.toggle('is-collapsed', now);
+      header.setAttribute('aria-expanded', String(!now));
+      if (now) memory.collapsed.add(memoryKey);
+      else memory.collapsed.delete(memoryKey);
+    };
+    for (const type of items) {
+      const id = `state:${type.name}`,
+        row = element('button', undefined, 'api-row api-job-row');
+      row.type = 'button';
+      row.setAttribute('role', 'option');
+      row.dataset.apiRow = id;
+      row.dataset.stateRow = type.name;
+      const text = element('span', undefined, 'api-job-text');
+      text.append(
+        element(
+          'span',
+          type.values.map((v) => stateLabel(v.value, v.label)).join('、') || type.name,
+          'api-job-when',
+        ),
+        element('span', `${type.name}・${type.fields.join('、')}`, 'api-job-name'),
+      );
+      row.append(element('span', `${type.values.length} 種`, 'job-badge state-badge'), text);
+      row.onclick = () => select(id);
+      body.append(row);
+    }
+    group.append(header, body);
+    return group;
+  };
+
+  /** Buttons that open the APIs or job behind a write, or the handler's name when there is neither. */
+  const writerLinks = (writer: StateType['unresolved'][number]) => {
+    const box = element('span', undefined, 'state-writer-links');
+    const go = (id: string, label: string) => {
+      const link = element('button', label, 'api-caller');
+      link.type = 'button';
+      link.dataset.stateGoto = id;
+      link.onclick = () => select(id);
+      box.append(link);
+    };
+    for (const endpoint of writer.endpoints)
+      go(endpoint.id, `${endpointMethod(endpoint)} ${endpointPath(endpoint)}`);
+    if (jobById.has(writer.handler.id))
+      go(writer.handler.id, `系統自動作業 ${writer.handler.name}`);
+    if (!writer.endpoints.length && !jobById.has(writer.handler.id))
+      box.append(element('span', writer.handler.name, 'api-job-call'));
+    return box;
+  };
+  const writerLine = (writer: StateType['unresolved'][number]) => {
+    const line = element('div', undefined, 'state-writer');
+    line.append(writerLinks(writer));
+    const where = [`在 ${writer.change.in}`];
+    const prior = priorText(writer.change);
+    if (prior) where.unshift(`原本：${prior}（推測）`);
+    if (writer.change.reason) where.push(writer.change.reason);
+    line.append(element('span', where.join('；'), 'muted'));
+    if (writer.change.source?.file)
+      line.append(
+        element('code', `${writer.change.source.file}:${writer.change.source.line}`, 'api-source'),
+      );
+    return line;
+  };
+
+  const renderState = (type: StateType) => {
+    const id = `state:${type.name}`,
+      inner = element('div', undefined, 'api-detail-inner');
+    inner.dataset.apiDetail = id;
+    inner.dataset.stateDetail = type.name;
+    const title = element('div', undefined, 'api-detail-title');
+    title.append(
+      element('span', '資料狀態', 'job-badge state-badge'),
+      element('code', type.name, 'api-detail-path'),
+    );
+    inner.append(
+      title,
+      element('p', `欄位：${type.fields.join('、')}`, 'api-reason'),
+      element(
+        'p',
+        '列出原始碼中把這個狀態設成各個值的 API 或系統作業。中文取自前端畫面的對照文字，前端各處寫法不同時以「／」全部列出；前端沒有對照時只顯示程式中的名稱。',
+        'muted',
+      ),
+    );
+    const transitions = stateTransitions(type);
+    if (transitions.length) {
+      const flow = section('狀態轉換（推測）');
+      flow.dataset.stateFlow = type.name;
+      flow.append(
+        element(
+          'p',
+          '由寫入處的條件推得原狀態；沒有列出的轉換表示推不出原狀態，不代表不會發生。',
+          'muted',
+        ),
+      );
+      const word = (v?: string) =>
+        v === undefined ? '新建立' : stateLabel(v, type.values.find((x) => x.value === v)?.label);
+      const list = element('ol', undefined, 'state-flow');
+      for (const t of transitions) {
+        const item = element('li');
+        item.dataset.stateFrom = t.from ?? '';
+        item.dataset.stateTo = t.to;
+        if (t.partial) item.dataset.statePartial = 'true';
+        item.append(
+          element('strong', `${word(t.from)} → ${word(t.to)}`),
+          element(
+            'span',
+            `由 ${[...new Set(t.writers.flatMap((w) => (w.endpoints.length ? w.endpoints.map((e) => `${endpointMethod(e)} ${endpointPath(e)}`) : [w.handler.name])))].join('、')}`,
+            'muted',
+          ),
+        );
+        if (t.partial) item.append(element('span', '另有推不出原狀態的進入方式', 'muted'));
+        list.append(item);
+      }
+      flow.append(list);
+      inner.append(flow);
+    }
+    for (const value of type.values) {
+      const box = section(stateLabel(value.value, value.label));
+      box.dataset.stateValue = value.value;
+      if (value.words?.length) {
+        const words = element(
+          'p',
+          `前端有 ${value.words.length} 種寫法：${value.words
+            .map(
+              (w) =>
+                `「${w.text}」${w.source?.file ? `（${w.source.file}:${w.source.line}）` : ''}`,
+            )
+            .join('、')}`,
+          'muted',
+        );
+        words.dataset.stateWords = value.value;
+        box.append(words);
+      }
+      if (!value.writers.length)
+        box.append(element('p', '原始碼中找不到設成這個值的地方。', 'muted'));
+      for (const writer of value.writers) box.append(writerLine(writer));
+      inner.append(box);
+    }
+    if (type.unresolved.length) {
+      const box = section('設成哪個值無法確定');
+      box.dataset.stateValue = '';
+      for (const writer of type.unresolved) box.append(writerLine(writer));
+      inner.append(box);
+    }
+    detail.append(inner);
+    detail.scrollTop = 0;
+  };
+
+  /** What the handlers change, shown in an API's or a job's detail. */
+  const changesSection = (handlers: Node[]) => {
+    const rows = handlers.flatMap((h) => stateChanges(h));
+    if (!rows.length) return undefined;
+    const box = section('會改變的資料狀態');
+    box.dataset.apiSection = 'state-changes';
+    for (const change of rows) {
+      const line = element('div', undefined, 'state-writer'),
+        link = element('button', `${change.enum}.${change.field}`, 'api-caller');
+      link.type = 'button';
+      link.dataset.stateGoto = `state:${change.enum}`;
+      link.onclick = () => select(`state:${change.enum}`);
+      const prior = priorText(change);
+      line.append(
+        link,
+        element(
+          'strong',
+          `${prior ? `${prior} ` : ''}${change.value ? `→ ${stateLabel(change.value, change.label)}` : '→ 無法確定'}`,
+        ),
+      );
+      if (prior) line.append(element('span', '原狀態為推測', 'muted'));
+      if (change.reason) line.append(element('span', change.reason, 'muted'));
+      if (change.source?.file)
+        line.append(element('code', `${change.source.file}:${change.source.line}`, 'api-source'));
+      box.append(line);
+    }
+    return box;
+  };
+
+  const renderJob = (job: BackgroundJob) => {
+    const inner = element('div', undefined, 'api-detail-inner');
+    inner.dataset.apiDetail = job.node.id;
+    inner.dataset.jobDetail = job.node.id;
+    const title = element('div', undefined, 'api-detail-title'),
+      badge = element('span', jobTriggerLabels[job.trigger], 'job-badge');
+    badge.dataset.jobTrigger = job.trigger;
+    title.append(badge, element('code', job.node.name, 'api-detail-path'));
+    const when = element('p', `執行時機：${job.text}`, 'api-reason');
+    when.dataset.jobWhen = job.trigger;
+    inner.append(
+      title,
+      when,
+      element('p', '這段程式沒有畫面，由系統自動執行；不在 API 的保留／移除推導範圍內。', 'muted'),
+    );
+    if (job.note) {
+      const note = element('p', job.note, 'notice');
+      note.dataset.jobNote = 'true';
+      inner.append(note);
+    }
+    const setting = section('原始設定');
+    setting.dataset.apiSection = 'job-setting';
+    setting.append(element('pre', job.expression, 'api-job-expression'));
+    const source = job.node.source;
+    if (source?.file)
+      setting.append(
+        element('code', `${source.file}${source.line ? `:${source.line}` : ''}`, 'api-source'),
+      );
+    inner.append(setting);
+    if (job.trigger === 'EVENT') {
+      const from = section('誰會觸發這個事件');
+      from.dataset.apiSection = 'job-publishers';
+      if (!job.publishers.length)
+        from.append(element('p', '原始碼中找不到發布這個事件的地方。', 'muted'));
+      for (const publisher of job.publishers) {
+        const line = element('div', undefined, 'api-handler');
+        line.append(element('strong', publisher.from));
+        if (publisher.source?.file)
+          line.append(
+            element('code', `${publisher.source.file}:${publisher.source.line}`, 'api-source'),
+          );
+        from.append(line);
+      }
+      inner.append(from);
+    }
+    const calls = section('會做哪些事（後端呼叫）');
+    calls.dataset.apiSection = 'job-calls';
+    const list = backendCalls(job.node);
+    if (!list.length) calls.append(element('p', '沒有分析到呼叫專案內的 Service／DAO。', 'muted'));
+    else {
+      const items = element('ol', undefined, 'api-job-calls');
+      for (const call of list) {
+        const item = element('li');
+        item.style.marginInlineStart = `${(call.depth - 1) * 16}px`;
+        item.append(
+          element('span', call.to, 'api-job-call'),
+          element(
+            'span',
+            ` ${call.layer}${call.resolution === 'CONFIRMED' ? '' : `・${call.resolution}`}`,
+            'muted',
+          ),
+        );
+        if (call.source?.file)
+          item.append(element('code', `${call.source.file}:${call.source.line}`, 'api-source'));
+        items.append(item);
+      }
+      calls.append(items);
+    }
+    inner.append(calls);
+    const changed = changesSection([job.node]);
+    if (changed) inner.append(changed);
+    detail.append(inner);
+    detail.scrollTop = 0;
+  };
+
   const renderControls = () => {
     grouping.replaceChildren();
     for (const [value, label, description] of [
@@ -438,7 +861,17 @@ export function apiPage(index: Index, state: ReviewState, options: ApiPageOption
       (a, b) => (a === NO_HANDLER ? 1 : 0) - (b === NO_HANDLER ? 1 : 0) || a.localeCompare(b, 'en'),
     );
     list.replaceChildren();
-    if (!shown.length) list.append(element('p', '沒有符合的 API', 'empty-list'));
+    const query = memory.query.trim().toLowerCase(),
+      shownJobs =
+        memory.filter === 'ALL'
+          ? jobs.filter((j) => !query || jobSearch.get(j.node.id)!.includes(query))
+          : [],
+      shownStates =
+        memory.filter === 'ALL'
+          ? states.filter((t) => !query || stateSearch.get(`state:${t.name}`)!.includes(query))
+          : [];
+    if (!shown.length && !shownJobs.length && !shownStates.length)
+      list.append(element('p', '沒有符合的 API', 'empty-list'));
     const searching = !!memory.query.trim();
     for (const key of keys) {
       const items = groups
@@ -503,13 +936,19 @@ export function apiPage(index: Index, state: ReviewState, options: ApiPageOption
         }
         if (record.external.length)
           meta.append(element('span', '外部呼叫（Webhook）', 'api-external-call'));
-        row.append(methodBadge(record.method), pathCode(record.path, 'api-path'), meta);
+        const main = element('span', undefined, 'api-row-main');
+        main.append(pathCode(record.path, 'api-path'));
+        const purpose = apiPurpose(index, record.callers, record.external.length > 0);
+        if (purpose) main.append(element('span', purpose.short, 'api-row-purpose'));
+        row.append(methodBadge(record.method), main, meta);
         row.onclick = () => select(record.node.id);
         body.append(row);
       }
       group.append(header, body);
       list.append(group);
     }
+    if (shownJobs.length) list.append(jobGroup(shownJobs, searching));
+    if (shownStates.length) list.append(stateGroup(shownStates, searching));
     // Keep the selection on a visible API; when it is filtered away, the first one shown takes its place.
     const ids = rows().map((row) => row.dataset.apiRow!);
     if (!selected || !ids.includes(selected)) selected = ids[0];
@@ -788,6 +1227,16 @@ export function apiPage(index: Index, state: ReviewState, options: ApiPageOption
 
   const renderDetail = () => {
     detail.replaceChildren();
+    const job = selected ? jobById.get(selected) : undefined;
+    if (job) {
+      renderJob(job);
+      return;
+    }
+    const stateType = selected ? stateById.get(selected) : undefined;
+    if (stateType) {
+      renderState(stateType);
+      return;
+    }
     const record = selected ? byId.get(selected) : undefined;
     if (!record) {
       detail.append(element('p', '選一個 API 查看詳情', 'empty-list'));
@@ -811,7 +1260,14 @@ export function apiPage(index: Index, state: ReviewState, options: ApiPageOption
     );
     const why = element('p', reason(record), record.note ? 'api-reason api-note' : 'api-reason');
     why.dataset.apiStatus = record.status;
-    inner.append(title, why);
+    inner.append(title);
+    const purpose = apiPurpose(index, record.callers, record.external.length > 0);
+    if (purpose) {
+      const line = element('p', `用途：${purpose.sentence}`, 'api-purpose');
+      line.dataset.apiPurpose = 'true';
+      inner.append(line);
+    }
+    inner.append(why);
     if (options.setApi) {
       // The person's own decision on this API, shown beside the status its callers give it.
       const id = record.node.id,
@@ -894,6 +1350,8 @@ export function apiPage(index: Index, state: ReviewState, options: ApiPageOption
       handlers.append(line);
     }
     main.append(handlers);
+    const changed = changesSection(record.handlers);
+    if (changed) main.append(changed);
     side.append(renderCallers(record));
     const contract = renderContract(record);
     if (contract) main.append(contract);

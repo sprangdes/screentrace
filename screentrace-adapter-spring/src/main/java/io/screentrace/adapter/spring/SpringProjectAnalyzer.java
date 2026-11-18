@@ -11,9 +11,15 @@ public final class SpringProjectAnalyzer {
     if (inventory.technologies().contains("Spring MVC")
         || inventory.technologies().contains("JSP")
         || serverTemplates(inventory)) {
-      return BackendCallChains.enrich(new SpringMvcAnalyzer().analyze(inventory), inventory);
+      return BackendCallChains.enrich(
+          io.screentrace.parser.jsp.BackgroundJobs.enrich(
+              new SpringMvcAnalyzer().analyze(inventory), inventory),
+          inventory);
     }
-    return BackendCallChains.enrich(new SpringBootAnalyzer().analyze(inventory), inventory);
+    return BackendCallChains.enrich(
+        io.screentrace.parser.jsp.BackgroundJobs.enrich(
+            new SpringBootAnalyzer().analyze(inventory), inventory),
+        inventory);
   }
 
   /**

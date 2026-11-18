@@ -51,6 +51,15 @@ Controller、回傳 view、表單綁定與伺服器端檢核以 JavaParser 靜�
 | [0014](0014-server-contracts-and-validation.md) | API 契約與 SERVER 檢核的靜態來源 | 有效 |
 | [0037](0037-controller-return-flow.md) | Controller 回傳與表單畫面流程 | 有效 |
 | [0102](0102-r18-spring-api-paths-and-external-call-notes.md) | R18 WP82 的 Spring API 選路與外部呼叫附註 | 有效 |
+| [0159](0159-r81-background-jobs.md) | R81 排程、事件監聽與啟動時作業成為 HANDLER，API 頁「系統自動作業」與 md §12（OQ-056） | 有效 |
+| [0171](0171-r96-more-background-jobs.md) | R96 背景作業移到共用模組並套用 Struts 管線，新增 XML 排程、程式排程、Quartz 與 @Async | 有效 |
+| [0166](0166-r88-login-return-through-helpers-and-configuration.md) | R88 外部登入導回路徑可讀過有參數的輔助方法、UriComponentsBuilder 與 @ConfigurationProperties 設定 | 有效 |
+| [0175](0175-r100-more-return-url-shapes.md) | R100 登入導回路徑另認 String.format、URI、StringBuilder、path()、RedirectStrategy 與 defaultSuccessUrl | 有效 |
+| [0169](0169-r94-prior-state.md) | R94 由同一方法內同一物件的狀態比較推論寫入前的原狀態（推測），報表與 md §13 顯示（OQ-058） | 有效 |
+| [0170](0170-r95-every-frontend-word.md) | R95 前端對同一狀態的多種寫法依出現位置全部列出，取代只顯示常數名（OQ-058） | 有效 |
+| [0172](0172-r97-text-states-and-deeper-writes.md) | R97 狀態欄位的字串／數字寫入也列為狀態；狀態寫入追到 8 層 | 有效 |
+| [0176](0176-r101-dispatched-steps-and-transitions.md) | R101 私有方法由狀態 switch 分派時以呼叫端推論原狀態；狀態詳情列出狀態轉換 | 有效 |
+| [0160](0160-r82-state-changes.md) | R82 沿後端呼叫鏈記錄列舉狀態寫入（`stateChanges`）、前端一致時並列中文，API 頁「資料狀態」與 md §13（OQ-056） | 部分被取代（[0169](0169-r94-prior-state.md) 加入原狀態、[0170](0170-r95-every-frontend-word.md) 列出所有寫法） |
 
 ## JSP／標記與 URL
 
@@ -95,6 +104,20 @@ JSP、JSPF、tag file、Tiles 與有限的 Thymeleaf 以 `MarkupTag` 等 parser 
 | [0118](0118-r27-entry-renders-plain-version.md) | R27 入口只開啟不需要網址參數的畫面 | 有效 |
 | [0135](0135-r44-split-react-analyzer.md) | R44 拆分 react/analyzer.mjs | 有效 |
 | [0158](0158-r80-page-state-variants.md) | R80 可證明的頁面狀態（如精靈步驟）拆成畫面變體（OQ-055） | 有效 |
+| [0161](0161-r83-literal-alternatives-and-wrapped-labels.md) | R83 物件字面值的屬性文字讀成「A / B」、含 spread 的字面陣列逐項展開、`<label>` 內的欄位以 label 文字命名 | 有效 |
+| [0168](0168-r91-screen-facts-through-props.md) | R91 畫面的身分事實經由解構 props 與條件常數決定條件與選項 | 有效 |
+| [0173](0173-r98-renamed-props-and-hook-conditions.md) | R98 事實判斷延伸到改名解構的 props、Context 提供的條件值與回傳條件的自訂 hook | 有效 |
+| [0162](0162-r84-page-states-in-preview.md) | R84 React 預覽以條件形狀標出載入中／錯誤／沒有資料，截圖與預覽預設只顯示有資料狀態，可切換（OQ-057） | 有效 |
+| [0174](0174-r99-jsp-page-states-and-names.md) | R99 JSP 的 c:if／c:when 依 EL 形狀標出沒有資料與錯誤，React 狀態命名擴充 | 有效 |
+| [0181](0181-r106-struts-and-thymeleaf-page-states.md) | R106 Struts `logic:` 標籤與 Thymeleaf `th:if`／`th:unless` 依條件形狀標出沒有資料與錯誤區塊 | 有效 |
+| [0163](0163-r85-plain-screen-names.md) | R85 畫面名稱：網址參數與狀態變體寫成白話，同名畫面先以角色區分，沒有標題時用連到它的選單文字（OQ-057） | 有效 |
+| [0164](0164-r86-menu-features.md) | R86 功能地圖新增「選單」分組依據（同一份清單產生的連結），說明只列實際用到的依據（OQ-057） | 有效 |
+| [0177](0177-r102-presentation-fixes.md) | R102 畫面名稱以兩個事實組合區分、功能依「只有一個角色會用到」分組、建議角色採前端中文、處理中按鈕的用途 | 有效 |
+| [0178](0178-r103-role-names-partial-priors-and-role-peers.md) | R103 建議角色依建立帳號的畫面命名、部分呼叫端可推的原狀態、落單畫面依角色歸入功能、列舉 `.name()` 寫入 | 有效 |
+| [0179](0179-r104-tasks-written-in-place.md) | R104 多行 lambda 與匿名類別的排程工作成為作業，後端呼叫只追工作本身 | 有效 |
+| [0180](0180-r105-compared-text-fields-are-states.md) | R105 名稱不像狀態、但被拿來和代碼字比對且寫入代碼字的欄位也列為文字狀態 | 有效 |
+| [0165](0165-r87-api-purpose.md) | R87 API 詳情與清單顯示由呼叫來源組成的白話用途 | 有效 |
+| [0167](0167-r89-suggested-personas.md) | R89 沒有設定角色時依路由守衛自動建議角色，描述標「自動建議」（OQ-057） | 有效 |
 
 ## 角色（persona）流程
 

@@ -22,7 +22,8 @@ function Command-Exists([string]$name) {
 function Get-JavaMajorVersion {
   $ErrorActionPreference = 'Continue'
   if (-not (Command-Exists 'java')) { return 0 }
-  $line = (& java -version 2>&1 | Select-Object -First 1 | ForEach-Object { "$_" })
+  # JAVA_TOOL_OPTIONS / _JAVA_OPTIONS print "Picked up ..." first; take the line with the version.
+  $line = (& java -version 2>&1 | ForEach-Object { "$_" } | Where-Object { $_ -match 'version "' } | Select-Object -First 1)
   if ($line -match 'version "([^"]+)"') {
     $version = $Matches[1]
     if ($version.StartsWith('1.')) { $version = $version.Substring(2) }
