@@ -21,7 +21,7 @@ test('WP40 fixed remove, component override and inherited remove sequence preser
   const actual = await md.generateMarkdown(payload, state, options);
   assert.equal(
     createHash('sha256').update(actual).digest('hex'),
-    'bbd38ba07c385ba092c847aad47b9cba6b3871cb6a34b6011eb90f74ba131e46',
+    '54e7252b7aaf8957d0c10981696d9f4f5f04a12bab15d04e56fd647768793efd',
   );
   const restored = await md.importMarkdown(actual, payload);
   assert.equal(await md.generateMarkdown(payload, restored.state, options), actual);

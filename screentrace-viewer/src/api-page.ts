@@ -19,6 +19,7 @@ import { proportionBar, sharePercent } from './proportion';
 import { splitter, SplitRange } from './splitter';
 import { backgroundJobs, jobTriggerLabels, BackgroundJob } from './shared/jobs';
 import { backendCalls } from './shared/review-md';
+import { stateChanges, stateLabel, stateTypes, StateType } from './shared/states';
 
 /** The three statuses shown to people: inferred usage and system entry points both count as in use. */
 export type ApiStatus = 'IN_USE' | 'UNREFERENCED' | 'REMOVABLE';
@@ -321,7 +322,18 @@ export function apiPage(index: Index, state: ReviewState, options: ApiPageOption
           .toLowerCase(),
       ]),
     );
-  const known = (id: string) => byId.has(id) || jobById.has(id);
+  // Enum states some API or job sets, with who sets each value (ADR 0160).
+  const states = stateTypes(index.graph),
+    stateById = new Map(states.map((t) => [`state:${t.name}`, t])),
+    stateSearch = new Map(
+      states.map((t) => [
+        `state:${t.name}`,
+        ['資料狀態', t.name, ...t.fields, ...t.values.flatMap((v) => [v.value, v.label || ''])]
+          .join(' ')
+          .toLowerCase(),
+      ]),
+    );
+  const known = (id: string) => byId.has(id) || jobById.has(id) || stateById.has(id);
   // Arriving from a screen for one API: show it whatever the list was narrowed to before.
   if (options.selected && known(options.selected)) {
     memory.filter = 'ALL';
@@ -460,6 +472,155 @@ export function apiPage(index: Index, state: ReviewState, options: ApiPageOption
     return group;
   };
 
+  /** The enum states, as one group after the jobs. */
+  const stateGroup = (items: StateType[], searching: boolean) => {
+    const key = '資料狀態',
+      memoryKey = `states:${key}`,
+      collapsed =
+        !searching &&
+        memory.collapsed.has(memoryKey) &&
+        !items.some((t) => `state:${t.name}` === selected);
+    const group = element('section', undefined, 'api-group api-state-group'),
+      header = element('button', undefined, 'api-group-header'),
+      body = element('div', undefined, 'api-group-items');
+    group.dataset.apiGroup = key;
+    group.dataset.stateGroup = 'true';
+    group.classList.toggle('is-collapsed', collapsed);
+    body.setAttribute('role', 'group');
+    body.setAttribute('aria-label', key);
+    header.type = 'button';
+    header.setAttribute('aria-expanded', String(!collapsed));
+    header.append(
+      element('span', undefined, 'api-group-caret'),
+      element('span', key, 'api-group-name'),
+      element('span', String(items.length), 'api-group-count'),
+    );
+    header.onclick = () => {
+      const now = !group.classList.contains('is-collapsed');
+      group.classList.toggle('is-collapsed', now);
+      header.setAttribute('aria-expanded', String(!now));
+      if (now) memory.collapsed.add(memoryKey);
+      else memory.collapsed.delete(memoryKey);
+    };
+    for (const type of items) {
+      const id = `state:${type.name}`,
+        row = element('button', undefined, 'api-row api-job-row');
+      row.type = 'button';
+      row.setAttribute('role', 'option');
+      row.dataset.apiRow = id;
+      row.dataset.stateRow = type.name;
+      const text = element('span', undefined, 'api-job-text');
+      text.append(
+        element(
+          'span',
+          type.values.map((v) => stateLabel(v.value, v.label)).join('、') || type.name,
+          'api-job-when',
+        ),
+        element('span', `${type.name}・${type.fields.join('、')}`, 'api-job-name'),
+      );
+      row.append(element('span', `${type.values.length} 種`, 'job-badge state-badge'), text);
+      row.onclick = () => select(id);
+      body.append(row);
+    }
+    group.append(header, body);
+    return group;
+  };
+
+  /** Buttons that open the APIs or job behind a write, or the handler's name when there is neither. */
+  const writerLinks = (writer: StateType['unresolved'][number]) => {
+    const box = element('span', undefined, 'state-writer-links');
+    const go = (id: string, label: string) => {
+      const link = element('button', label, 'api-caller');
+      link.type = 'button';
+      link.dataset.stateGoto = id;
+      link.onclick = () => select(id);
+      box.append(link);
+    };
+    for (const endpoint of writer.endpoints)
+      go(endpoint.id, `${endpointMethod(endpoint)} ${endpointPath(endpoint)}`);
+    if (jobById.has(writer.handler.id))
+      go(writer.handler.id, `系統自動作業 ${writer.handler.name}`);
+    if (!writer.endpoints.length && !jobById.has(writer.handler.id))
+      box.append(element('span', writer.handler.name, 'api-job-call'));
+    return box;
+  };
+  const writerLine = (writer: StateType['unresolved'][number]) => {
+    const line = element('div', undefined, 'state-writer');
+    line.append(writerLinks(writer));
+    const where = [`在 ${writer.change.in}`];
+    if (writer.change.reason) where.push(writer.change.reason);
+    line.append(element('span', where.join('；'), 'muted'));
+    if (writer.change.source?.file)
+      line.append(
+        element('code', `${writer.change.source.file}:${writer.change.source.line}`, 'api-source'),
+      );
+    return line;
+  };
+
+  const renderState = (type: StateType) => {
+    const id = `state:${type.name}`,
+      inner = element('div', undefined, 'api-detail-inner');
+    inner.dataset.apiDetail = id;
+    inner.dataset.stateDetail = type.name;
+    const title = element('div', undefined, 'api-detail-title');
+    title.append(
+      element('span', '資料狀態', 'job-badge state-badge'),
+      element('code', type.name, 'api-detail-path'),
+    );
+    inner.append(
+      title,
+      element('p', `欄位：${type.fields.join('、')}`, 'api-reason'),
+      element(
+        'p',
+        '列出原始碼中把這個狀態設成各個值的 API 或系統作業。中文取自前端畫面的對照文字；前端各處寫法不一致時只顯示程式中的名稱。',
+        'muted',
+      ),
+    );
+    for (const value of type.values) {
+      const box = section(stateLabel(value.value, value.label));
+      box.dataset.stateValue = value.value;
+      if (!value.writers.length)
+        box.append(element('p', '原始碼中找不到設成這個值的地方。', 'muted'));
+      for (const writer of value.writers) box.append(writerLine(writer));
+      inner.append(box);
+    }
+    if (type.unresolved.length) {
+      const box = section('設成哪個值無法確定');
+      box.dataset.stateValue = '';
+      for (const writer of type.unresolved) box.append(writerLine(writer));
+      inner.append(box);
+    }
+    detail.append(inner);
+    detail.scrollTop = 0;
+  };
+
+  /** What the handlers change, shown in an API's or a job's detail. */
+  const changesSection = (handlers: Node[]) => {
+    const rows = handlers.flatMap((h) => stateChanges(h));
+    if (!rows.length) return undefined;
+    const box = section('會改變的資料狀態');
+    box.dataset.apiSection = 'state-changes';
+    for (const change of rows) {
+      const line = element('div', undefined, 'state-writer'),
+        link = element('button', `${change.enum}.${change.field}`, 'api-caller');
+      link.type = 'button';
+      link.dataset.stateGoto = `state:${change.enum}`;
+      link.onclick = () => select(`state:${change.enum}`);
+      line.append(
+        link,
+        element(
+          'strong',
+          change.value ? `→ ${stateLabel(change.value, change.label)}` : '→ 無法確定',
+        ),
+      );
+      if (change.reason) line.append(element('span', change.reason, 'muted'));
+      if (change.source?.file)
+        line.append(element('code', `${change.source.file}:${change.source.line}`, 'api-source'));
+      box.append(line);
+    }
+    return box;
+  };
+
   const renderJob = (job: BackgroundJob) => {
     const inner = element('div', undefined, 'api-detail-inner');
     inner.dataset.apiDetail = job.node.id;
@@ -529,6 +690,8 @@ export function apiPage(index: Index, state: ReviewState, options: ApiPageOption
       calls.append(items);
     }
     inner.append(calls);
+    const changed = changesSection([job.node]);
+    if (changed) inner.append(changed);
     detail.append(inner);
     detail.scrollTop = 0;
   };
@@ -588,8 +751,12 @@ export function apiPage(index: Index, state: ReviewState, options: ApiPageOption
       shownJobs =
         memory.filter === 'ALL'
           ? jobs.filter((j) => !query || jobSearch.get(j.node.id)!.includes(query))
+          : [],
+      shownStates =
+        memory.filter === 'ALL'
+          ? states.filter((t) => !query || stateSearch.get(`state:${t.name}`)!.includes(query))
           : [];
-    if (!shown.length && !shownJobs.length)
+    if (!shown.length && !shownJobs.length && !shownStates.length)
       list.append(element('p', '沒有符合的 API', 'empty-list'));
     const searching = !!memory.query.trim();
     for (const key of keys) {
@@ -663,6 +830,7 @@ export function apiPage(index: Index, state: ReviewState, options: ApiPageOption
       list.append(group);
     }
     if (shownJobs.length) list.append(jobGroup(shownJobs, searching));
+    if (shownStates.length) list.append(stateGroup(shownStates, searching));
     // Keep the selection on a visible API; when it is filtered away, the first one shown takes its place.
     const ids = rows().map((row) => row.dataset.apiRow!);
     if (!selected || !ids.includes(selected)) selected = ids[0];
@@ -946,6 +1114,11 @@ export function apiPage(index: Index, state: ReviewState, options: ApiPageOption
       renderJob(job);
       return;
     }
+    const stateType = selected ? stateById.get(selected) : undefined;
+    if (stateType) {
+      renderState(stateType);
+      return;
+    }
     const record = selected ? byId.get(selected) : undefined;
     if (!record) {
       detail.append(element('p', '選一個 API 查看詳情', 'empty-list'));
@@ -1052,6 +1225,8 @@ export function apiPage(index: Index, state: ReviewState, options: ApiPageOption
       handlers.append(line);
     }
     main.append(handlers);
+    const changed = changesSection(record.handlers);
+    if (changed) main.append(changed);
     side.append(renderCallers(record));
     const contract = renderContract(record);
     if (contract) main.append(contract);

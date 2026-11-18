@@ -539,4 +539,4 @@
   - 狀態名稱：A. 前端有對照表時並列中文；B. 只顯示常數名。
 - 影響範圍：Spring adapter、`BackendCallChains`、viewer API 頁、md。
 - 狀態：已決定（2026-11-18）。
-- 決定：需求方四項都選 A。系統作業見 [ADR 0159](adr/0159-r81-background-jobs.md)（R81）；狀態流程於 R82 實作。
+- 決定：需求方四項都選 A。系統作業見 [ADR 0159](adr/0159-r81-background-jobs.md)（R81）；狀態流程見 [ADR 0160](adr/0160-r82-state-changes.md)（R82）。

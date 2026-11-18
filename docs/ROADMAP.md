@@ -520,3 +520,8 @@
 ## R81 沒有畫面的系統自動作業
 
 - WP153：依 [reservio 評估](RESERVIO_EVALUATION_20261118.md) P1，OQ-056 採 A。Spring adapter 新增 `SpringBackgroundJobs`，把 `@Scheduled`、`@EventListener`／`@TransactionalEventListener`、`ApplicationRunner`／`CommandLineRunner` 建成 HANDLER，執行時機轉成白話（cron 已知形狀、固定間隔、設定佔位的預設值與覆寫來源），事件記錄發布來源，並沿用後端呼叫鏈；API 頁新增「系統自動作業」分組與詳情，md 新增 §12。見 [ADR 0159](adr/0159-r81-background-jobs.md)。
+
+## R82 資料狀態變更
+
+- WP154：依 [reservio 評估](RESERVIO_EVALUATION_20261118.md) P2，OQ-056 採 A。`BackendCallChains` 沿呼叫鏈記錄列舉常數的寫入（setter、builder、欄位指定；條件式兩值為 INFERRED，變數為 UNRESOLVED），寫入 HANDLER 的 `stateChanges`；`screentrace-js` 新增 `state-labels` 模式擷取前端字面對照，所有對照一致才並列中文。API 頁新增「資料狀態」分組與各 API／作業的「會改變的資料狀態」，md 新增 §13。reservio 的 LINE 對話 9 個步驟狀態與預約狀態的設定來源都能看到。見 [ADR 0160](adr/0160-r82-state-changes.md)。
+

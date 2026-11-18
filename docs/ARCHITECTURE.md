@@ -754,3 +754,7 @@ R18 WP82：SpringBootAnalyzer 明確啟用 Spring API 的字面路徑優先與�
 ## R81 系統自動作業
 
 Spring adapter 的 `SpringBackgroundJobs` 把 `@Scheduled`、`@EventListener`／`@TransactionalEventListener` 與 `ApplicationRunner`／`CommandLineRunner` 建成 HANDLER，attributes 含 `trigger`、`triggerText`（白話執行時機）、`triggerExpression` 與選填的 `triggerNote`、`triggerProperty`、`eventType`、`eventPublishers`；在 `BackendCallChains` 之前套用，因此作業也有後端呼叫鏈。schema 不變。viewer 的 `shared/jobs.ts` 讀取這些 attributes，API 頁列為「系統自動作業」分組（不計入 API），md 為 §12。見 [ADR 0159](adr/0159-r81-background-jobs.md)。
+
+## R82 資料狀態變更
+
+`BackendCallChains` 追蹤時記錄 setter、builder 與欄位指定寫入的專案列舉常數，寫入 HANDLER 的 `stateChanges` attribute（含該列舉全部常數與前端對照文字）；`StateLabels` 以 `screentrace-js` 的 `state-labels` 模式擷取前端字面對照，所有對照一致才採用。viewer 的 `shared/states.ts` 依列舉彙整，API 頁列為「資料狀態」分組，md 為 §13。schema 不變。見 [ADR 0160](adr/0160-r82-state-changes.md)。

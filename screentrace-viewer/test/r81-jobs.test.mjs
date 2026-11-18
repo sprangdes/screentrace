@@ -39,11 +39,11 @@ test('R81 md §12 lists every job with its timing, or says none was found', asyn
   const none = await m.generateMarkdown(empty, r.emptyReview(empty.graph, empty.fingerprint), opts);
   assert.match(
     none,
-    /## 12\. 系統自動作業\(排程、事件、啟動時\)\n\n[^\n]+\n\n未偵測到排程、事件監聽或啟動時執行的程式。\n\n## 附錄 A/,
+    /## 12\. 系統自動作業\(排程、事件、啟動時\)\n\n[^\n]+\n\n未偵測到排程、事件監聽或啟動時執行的程式。\n\n## 13\. /,
   );
   const data = addJobs(mdFixture());
   const out = await m.generateMarkdown(data, r.emptyReview(data.graph, data.fingerprint), opts);
-  const section = out.split('## 12. ')[1].split('## 附錄 A')[0];
+  const section = out.split('## 12. ')[1].split('## 13. ')[0];
   assert.match(section, /\| ` Jobs\.sweep\(\) ` \| ` 排程 ` \| ` 每 5 分鐘 ` \|/);
   assert.match(section, /` 事件 ` \| ` 當 OrderCreated 事件發生時 `/);
   assert.match(section, /發布來源:Orders#place/);

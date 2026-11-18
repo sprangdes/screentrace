@@ -26,6 +26,7 @@ import {
 } from './review';
 import { features, Feature, ruleLabels } from './features';
 import { backgroundJobs, jobTriggerLabels } from './jobs';
+import { stateTypes, StateType } from './states';
 import { callSources } from '../usage';
 import { jsfLimitation } from '../unsupported-framework';
 export const fixedInstructions = `1. \`REMOVE\`:該畫面 / 元件不得遷移到新系統。
@@ -938,7 +939,7 @@ export async function generateMarkdown(
   );
   return out.join('\n\n') + '\n';
 }
-/** §8–§12: the system as analysed, for an AI that should not have to read the source again (ADR 0156). */
+/** §8–§13: the system as analysed, for an AI that should not have to read the source again (ADR 0156). */
 function systemSections(
   graph: Graph,
   state: ReviewState,
@@ -1276,6 +1277,58 @@ function systemSections(
     jobRows.length
       ? table(['作業', '觸發', '執行時機', '原始設定', '解析', '備註', '來源'], jobRows)
       : '未偵測到排程、事件監聽或啟動時執行的程式。',
+  );
+
+  out.push(
+    '## 13. 資料狀態變更(誰把哪個狀態設成什麼)',
+    '列出 API 與系統作業沿後端呼叫鏈(§9)可證明的列舉狀態寫入:setter、builder 或欄位指定。「前端文字」取自前端原始碼的對照文字,前端各處不一致時留空。設定值來自變數時「設為」為 `—`、解析為 `UNRESOLVED`;只列「設成什麼」,不推論原本是什麼狀態,不得自行補上狀態轉換條件。',
+  );
+  const jobIds = new Set(backgroundJobs(graph).map((j) => j.node.id));
+  const stateRows: string[][] = [];
+  for (const type of stateTypes(graph)) {
+    const who = (writer: StateType['unresolved'][number]) =>
+      [
+        ...writer.endpoints.map((e) => endpointLabel(e)),
+        ...(jobIds.has(writer.handler.id) ? [`系統自動作業 ${writer.handler.name}`] : []),
+      ].join('、') || writer.handler.name;
+    const row = (
+      value: string | undefined,
+      label: string | undefined,
+      writer: StateType['unresolved'][number],
+    ) => [
+      projectText(type.name),
+      projectText(writer.change.field),
+      projectText(value || '—'),
+      projectText(label),
+      projectText(who(writer), writer.handler.source),
+      projectText(writer.change.in, writer.change.source),
+      projectText(writer.change.resolution) +
+        (writer.change.reason ? ` ${projectText(writer.change.reason)}` : ''),
+      sourceCell(writer.change.source),
+    ];
+    for (const value of type.values) {
+      if (!value.writers.length)
+        stateRows.push([
+          projectText(type.name),
+          projectText(type.fields.join('、')),
+          projectText(value.value),
+          projectText(value.label),
+          projectText('原始碼中找不到設成這個值的地方'),
+          '—',
+          '—',
+          '—',
+        ]);
+      for (const writer of value.writers) stateRows.push(row(value.value, value.label, writer));
+    }
+    for (const writer of type.unresolved) stateRows.push(row(undefined, undefined, writer));
+  }
+  out.push(
+    stateRows.length
+      ? table(
+          ['狀態類型', '欄位', '設為', '前端文字', '由誰', '在哪個方法', '解析', '來源'],
+          stateRows,
+        )
+      : '未偵測到列舉狀態的寫入。',
   );
   return out;
 }
