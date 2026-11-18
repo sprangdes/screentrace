@@ -730,3 +730,6 @@ button.persona-coverage-dot:hover{outline:2px solid var(--primary);outline-offse
 .page-state-switch{flex:none}
 .page-state-switch[hidden]{display:none}
 .page-state-switch button{flex:none;font-size:12px;padding:3px 8px;white-space:nowrap}
+.api-row-main{display:flex;flex-direction:column;min-width:0}
+.api-row-purpose{color:var(--gray-500);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.api-purpose{margin:4px 0 0;font-weight:600}

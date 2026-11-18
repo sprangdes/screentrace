@@ -541,3 +541,7 @@
 
 - WP158：依 [reservio 評估](RESERVIO_EVALUATION_20261118.md) P6，OQ-057 採 A。功能分組新增「選單」依據（同一份清單產生、連到兩個以上畫面的連結），優先於網址前綴；功能地圖的說明只列實際用到的依據，md §8 說明加入選單。見 [ADR 0164](adr/0164-r86-menu-features.md)。
 
+## R87 API 的白話用途
+
+- WP159：依 [reservio 評估](RESERVIO_EVALUATION_20261118.md) P7。API 詳情顯示「用途：按下「取消預約」時呼叫」這類由呼叫來源組成的句子，清單每列顯示觸發的按鈕名稱；排除處理中文字、示例值與無文字標籤。見 [ADR 0165](adr/0165-r87-api-purpose.md)。
+

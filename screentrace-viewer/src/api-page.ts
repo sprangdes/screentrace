@@ -10,7 +10,7 @@ import {
   ReviewState,
 } from './shared/review';
 import { decisionSwitch, decisionLabel, noteEditor } from './review-ui';
-import { componentLabelsForScreen } from './labels';
+import { componentLabelsForScreen, kindNames } from './labels';
 import { callerKind, Caller } from './usage';
 import { Index } from './map';
 import { Node, Evidence } from './contracts';
@@ -110,6 +110,60 @@ export function callerLabel(index: Index, caller: Caller): string {
     : callerKind(index, caller) === 'unresolved'
       ? '無法確定的觸發來源'
       : '畫面載入時';
+}
+/**
+ * What an API is for, in plain words, from its callers only (ADR 0165): the buttons that call it,
+ * the screens that call it when they open, or an outside system. Undefined when nothing calls it.
+ */
+export function apiPurpose(
+  index: Index,
+  callers: Caller[],
+  external = false,
+): { short: string; sentence: string } | undefined {
+  const buttons = new Map<string, Set<string>>(),
+    loads = new Set<string>();
+  for (const caller of callers) {
+    const label = callerLabel(index, caller);
+    if (!caller.componentId) {
+      if (label === '畫面載入時') loads.add(caller.screenId);
+      continue;
+    }
+    if (label === '沒有文字的按鈕') continue;
+    // The label without the kind word or the occurrence number the panel adds.
+    const kind = kindNames[index.nodes.get(caller.componentId)?.attributes.kind || ''];
+    let text = label.replace(/（第 \d+ 個）$/, '');
+    if (kind && text.endsWith(` ${kind}`)) text = text.slice(0, -kind.length - 1);
+    // `busy ? '送出中…' : '送出'` reads as both; the in-progress wording is left out.
+    const options = text.split(' / ').filter((o) => !/(…|\.\.\.)$/.test(o.trim()));
+    text = (options.length ? options : text.split(' / ')).join(' / ');
+    if (!text || text.includes('示例值') || /^<.*>$/.test(text)) continue;
+    buttons.set(text, new Set([...(buttons.get(text) || []), caller.screenId]));
+  }
+  const labels = [...buttons]
+    .sort((a, b) => b[1].size - a[1].size || (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0))
+    .map(([text]) => text);
+  const name = (id: string) => index.nodes.get(id)?.name || '畫面';
+  const opened = [...loads].sort((a, b) => name(a).localeCompare(name(b), 'zh-Hant'));
+  const parts: string[] = [];
+  if (labels.length)
+    parts.push(
+      `按下${labels
+        .slice(0, 3)
+        .map((l) => `「${l}」`)
+        .join('、')}${labels.length > 3 ? ` 等 ${labels.length} 個按鈕` : ''}時呼叫`,
+    );
+  if (opened.length)
+    parts.push(
+      `開啟「${name(opened[0])}」${opened.length > 1 ? ` 等 ${opened.length} 個畫面` : ''}時自動呼叫`,
+    );
+  if (external) parts.push('由外部系統（Webhook）呼叫');
+  if (!parts.length) return undefined;
+  const short = [
+    ...labels.slice(0, 2),
+    ...(opened.length && labels.length < 2 ? ['畫面載入時'] : []),
+    ...(external ? ['外部系統'] : []),
+  ].join('、');
+  return { short, sentence: parts.join('；') + '。' };
 }
 export interface ChainScreen {
   screenId: string;
@@ -822,7 +876,11 @@ export function apiPage(index: Index, state: ReviewState, options: ApiPageOption
         }
         if (record.external.length)
           meta.append(element('span', '外部呼叫（Webhook）', 'api-external-call'));
-        row.append(methodBadge(record.method), pathCode(record.path, 'api-path'), meta);
+        const main = element('span', undefined, 'api-row-main');
+        main.append(pathCode(record.path, 'api-path'));
+        const purpose = apiPurpose(index, record.callers, record.external.length > 0);
+        if (purpose) main.append(element('span', purpose.short, 'api-row-purpose'));
+        row.append(methodBadge(record.method), main, meta);
         row.onclick = () => select(record.node.id);
         body.append(row);
       }
@@ -1142,7 +1200,14 @@ export function apiPage(index: Index, state: ReviewState, options: ApiPageOption
     );
     const why = element('p', reason(record), record.note ? 'api-reason api-note' : 'api-reason');
     why.dataset.apiStatus = record.status;
-    inner.append(title, why);
+    inner.append(title);
+    const purpose = apiPurpose(index, record.callers, record.external.length > 0);
+    if (purpose) {
+      const line = element('p', `用途：${purpose.sentence}`, 'api-purpose');
+      line.dataset.apiPurpose = 'true';
+      inner.append(line);
+    }
+    inner.append(why);
     if (options.setApi) {
       // The person's own decision on this API, shown beside the status its callers give it.
       const id = record.node.id,
