@@ -635,6 +635,20 @@ export function apiPage(index: Index, state: ReviewState, options: ApiPageOption
     for (const value of type.values) {
       const box = section(stateLabel(value.value, value.label));
       box.dataset.stateValue = value.value;
+      if (value.words?.length) {
+        const words = element(
+          'p',
+          `前端有 ${value.words.length} 種寫法：${value.words
+            .map(
+              (w) =>
+                `「${w.text}」${w.source?.file ? `（${w.source.file}:${w.source.line}）` : ''}`,
+            )
+            .join('、')}`,
+          'muted',
+        );
+        words.dataset.stateWords = value.value;
+        box.append(words);
+      }
       if (!value.writers.length)
         box.append(element('p', '原始碼中找不到設成這個值的地方。', 'muted'));
       for (const writer of value.writers) box.append(writerLine(writer));

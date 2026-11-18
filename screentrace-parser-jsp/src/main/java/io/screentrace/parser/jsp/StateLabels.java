@@ -10,11 +10,14 @@ import java.util.*;
  * The words the project's own frontend shows for an enum's constants (ADR 0160). The AST tool
  * reports literal label groups (an object keyed by constants, {@code { value, label }} items, the
  * options of one select); a group belongs to an enum when at least two of its keys, and at least
- * half of them, are constants of that enum and of no other written enum. A constant gets a word
- * only when every group that names it agrees; a disagreement leaves the constant name alone.
+ * half of them, are constants of that enum and of no other written enum. When the groups use
+ * different words for one constant, all of them are kept in source order (ADR 0170, OQ-058).
  */
 final class StateLabels {
-  record Label(String text, SourceLocation source) {}
+  /** One constant's words: the joined text, the first source, and every word with its source. */
+  record Label(String text, SourceLocation source, List<Word> words) {}
+
+  record Word(String text, SourceLocation source) {}
 
   static final StateLabels NONE = new StateLabels(Map.of());
 
@@ -91,10 +94,15 @@ final class StateLabels {
         (type, constants) ->
             constants.forEach(
                 (constant, texts) -> {
-                  if (texts.size() != 1) return; // the frontend disagrees with itself
-                  var only = texts.firstEntry();
+                  // Every word the frontend uses, in the order of where it first appears.
+                  List<Word> words =
+                      texts.entrySet().stream()
+                          .map(e -> new Word(e.getKey(), e.getValue()))
+                          .sorted((a, b) -> compare(a.source(), b.source()))
+                          .toList();
+                  String text = String.join("／", words.stream().map(Word::text).toList());
                   out.computeIfAbsent(type, k -> new TreeMap<>())
-                      .put(constant, new Label(only.getKey(), only.getValue()));
+                      .put(constant, new Label(text, words.get(0).source(), words));
                 }));
     return new StateLabels(out);
   }

@@ -139,7 +139,7 @@ class R82StateChangesTest {
   }
 
   @Test
-  void frontendWordsAreUsedOnlyWhereEveryGroupAgrees() throws Exception {
+  void frontendWordsAreKeptAndDisagreementsListEveryWord() throws Exception {
     project();
     write(
         "frontend/src/status.ts",
@@ -156,9 +156,17 @@ class R82StateChangesTest {
     assertEquals(Map.of("file", "frontend/src/status.ts", "line", 1), cancelled.get("labelSource"));
     @SuppressWarnings("unchecked")
     var words = (Map<String, String>) cancelled.get("labels");
-    // PENDING disagrees between the two groups, CANCEL_REQUESTED has no word: both stay names.
-    assertEquals(Map.of("CONFIRMED", "已確認", "CANCELLED", "已取消"), words);
+    // R95 (ADR 0170, OQ-058): PENDING's two words are both kept, in source order; before, the
+    // disagreement left PENDING without a word. CANCEL_REQUESTED has no word and stays a name.
+    assertEquals(Map.of("PENDING", "等待店家確認／待確認", "CONFIRMED", "已確認", "CANCELLED", "已取消"), words);
     assertNull(cancel.get(1).get("label"));
+    var pending = changes(analyze(handler("create", "Api", "create")), "create").get(0);
+    assertEquals("等待店家確認／待確認", pending.get("label"));
+    @SuppressWarnings("unchecked")
+    var alternatives = (List<Map<String, Object>>) pending.get("labelWords");
+    assertEquals(
+        List.of("frontend/src/Filter.tsx", "frontend/src/status.ts"),
+        alternatives.stream().map(w -> ((Map<?, ?>) w.get("source")).get("file")).toList());
   }
 
   @Test

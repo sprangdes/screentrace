@@ -204,6 +204,19 @@ public final class BackendCallChains {
         row.put("label", label.text());
         row.put(
             "labelSource", Map.of("file", label.source().file(), "line", label.source().line()));
+        // The frontend calls this value by several words: every one, with where it is written.
+        if (label.words().size() > 1)
+          row.put(
+              "labelWords",
+              label.words().stream()
+                  .map(
+                      w ->
+                          Map.of(
+                              "text",
+                              w.text(),
+                              "source",
+                              Map.of("file", w.source().file(), "line", w.source().line())))
+                  .toList());
       }
     }
     if (type.size() == 1) {

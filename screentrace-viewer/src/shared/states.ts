@@ -20,6 +20,8 @@ export interface StateChange {
   fromNot?: string[];
   fromCreated?: boolean;
   fromLines?: number[];
+  /** Every word the frontend uses for the value when it uses more than one (ADR 0170). */
+  labelWords?: { text: string; source?: Source }[];
 }
 
 /** Who makes a write happen: an API (through its handler) or a background job. */
@@ -31,6 +33,7 @@ export interface StateWriter {
 export interface StateValue {
   value: string;
   label?: string;
+  words?: { text: string; source?: Source }[];
   writers: StateWriter[];
 }
 export interface StateType {
@@ -122,6 +125,10 @@ export function stateTypes(graph: Graph): StateType[] {
         type.byValue.set(change.value, entry);
         type.values.push(entry);
       }
+      if (!entry.words && Array.isArray(change.labelWords))
+        entry.words = change.labelWords.filter(
+          (w) => !!w && typeof w === 'object' && typeof w.text === 'string',
+        );
       entry.writers.push(writer);
     }
   return [...types.values()]

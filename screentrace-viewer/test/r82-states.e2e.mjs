@@ -8,7 +8,16 @@ test('R82 API page shows each state, who sets each value, and links both ways', 
   const browser = await chromium.launch();
   try {
     const page = await browser.newPage();
-    await page.goto(await fileFixture(addStates(fixture())));
+    const data = addStates(fixture());
+    // R95: the frontend writes CANCELLED two ways.
+    const handler = data.graph.nodes.find((n) => n.id === 'cancel-handler');
+    const rows = JSON.parse(handler.attributes.stateChanges);
+    rows[0].labelWords = [
+      { text: '已取消', source: { file: 'src/status.ts', line: 3 } },
+      { text: '取消', source: { file: 'src/Filter.tsx', line: 8 } },
+    ];
+    handler.attributes.stateChanges = JSON.stringify(rows);
+    await page.goto(await fileFixture(data));
     await page.locator('.page-tab[data-page="api"]').click();
     const row = page.locator('[data-state-row="Status"]');
     assert.match(
@@ -26,6 +35,11 @@ test('R82 API page shows each state, who sets each value, and links both ways', 
       /系統自動作業 Jobs\.confirm\(\)/,
     );
     assert.match(await detail.locator('[data-state-value=""]').innerText(), /值由變數 next 決定/);
+    // R95: every word the frontend uses, with where it is written.
+    assert.match(
+      await detail.locator('[data-state-words="CANCELLED"]').innerText(),
+      /前端有 2 種寫法：「已取消」（src\/status\.ts:3）、「取消」（src\/Filter\.tsx:8）/,
+    );
     // From the state to the API, and from the API's detail back to the state.
     await detail.locator('[data-state-value="CANCELLED"] [data-state-goto="ep"]').click();
     const changes = page.locator('[data-api-detail="ep"] [data-api-section="state-changes"]');
