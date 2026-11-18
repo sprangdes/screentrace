@@ -41,3 +41,15 @@ test('R87 in-progress wording, sample values and bare tags do not describe an AP
   );
   assert.equal(purpose.short, '送出');
 });
+
+test('R102 a button whose only text is in-progress wording is described by it', async () => {
+  const api = await ownModule('api-page'),
+    map = await ownModule('map'),
+    data = fixture();
+  data.graph.nodes.push(node('busy', 'COMPONENT', '處理中', { kind: 'BUTTON' }));
+  data.graph.relationships.push({ id: 'c-busy', type: 'CONTAINS', from: 'a', to: 'busy' });
+  const purpose = api.apiPurpose(map.indexGraph(data.graph), [
+    { screenId: 'a', componentId: 'busy' },
+  ]);
+  assert.equal(purpose.short, '顯示「處理中」的按鈕');
+});

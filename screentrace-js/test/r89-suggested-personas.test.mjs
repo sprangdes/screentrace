@@ -95,3 +95,18 @@ test('R92 a role persona takes the value of other flags most of its guarded scre
   const orders = r.screens.find((s) => s.route === '/orders');
   assert.equal(orders.personas['role-role-seller'], 'APPLIES');
 });
+
+test('R102 a suggested role takes the word the frontend uses for its value', () => {
+  const labelled = [
+    ...files,
+    {
+      file: 'src/roles.ts',
+      code: "export const ROLE_NAMES = { ROLE_SELLER: '店家', ROLE_BUYER: '買家' };",
+    },
+  ];
+  const r = analyzeReact({ files: labelled, suggestPersonas: true });
+  assert.deepEqual(
+    r.personas.map((p) => p.name),
+    ['未登入', '買家', '店家'],
+  );
+});

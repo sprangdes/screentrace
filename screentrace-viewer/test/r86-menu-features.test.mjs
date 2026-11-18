@@ -76,3 +76,31 @@ test('R93 a query or step version and a screen of the same page component join t
   assert.equal(of.get('settingsGuest'), 'other');
   assert.equal(of.get('redirect'), 'other');
 });
+
+test('R102 screens left over that only one role uses group by that role', async () => {
+  const f = await ownModule('shared/features');
+  const screen = (id, route) => node(id, 'SCREEN', id, { route });
+  const graph = {
+    schemaVersion: '2.4',
+    application: {
+      name: 'x',
+      path: '.',
+      technologies: [],
+      personas: [
+        { id: 'buyer', name: '買家', screens: { a: 'APPLIES', b: 'APPLIES', c: 'APPLIES' } },
+        { id: 'seller', name: '店家', screens: { c: 'APPLIES', d: 'APPLIES' } },
+      ],
+    },
+    nodes: [screen('a', '/a'), screen('b', '/b'), screen('c', '/c'), screen('d', '/d')],
+    relationships: [],
+    behaviors: [],
+    apiContracts: [],
+    validationRules: [],
+  };
+  const list = f.features(graph);
+  const role = list.find((x) => x.rule === 'ROLE');
+  assert.equal(role.key, 'role:buyer');
+  assert.equal(role.label, '買家專用');
+  assert.deepEqual(role.screens, ['a', 'b']);
+  assert.equal(f.featureOfScreen(list).get('c'), 'other');
+});

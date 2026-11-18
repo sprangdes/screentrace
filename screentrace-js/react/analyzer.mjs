@@ -9,6 +9,7 @@ import {
   applyPersonas,
   suggestPersonas,
 } from './personas.mjs';
+import { analyzeStateLabels } from './state-labels.mjs';
 import { expandScalarCondition } from './branches.mjs';
 import { jsxOccurrences } from './jsx.mjs';
 import {
@@ -400,7 +401,7 @@ export function analyzeReact({
   } else if (suggest) {
     // Nothing configured: personas suggested from the route guards, marked as such (ADR 0167).
     const found = personaDimensions(screens, routeRedirects);
-    const suggested = suggestPersonas(found.all, screens);
+    const suggested = suggestPersonas(found.all, screens, analyzeStateLabels({ files }).groups);
     if (suggested.length) {
       applyPersonas(suggested, screens, routeRedirects);
       personaResult = { personaDimensions: found.dimensions, personas: suggested };

@@ -86,7 +86,7 @@ export function personaDimensions(screens, routeRedirects) {
  * `needs…` or `requires…` are false for the role personas; any other flag of that object takes
  * the value most screens guarded by the role require. Each persona says it is a suggestion and which condition defines it.
  */
-export function suggestPersonas(dimensions, screens) {
+export function suggestPersonas(dimensions, screens, labelGroups = []) {
   const uses = new Map();
   for (const screen of screens) {
     const seen = new Set();
@@ -160,6 +160,22 @@ export function suggestPersonas(dimensions, screens) {
       }
     return facts;
   };
+  // The frontend's own word for a role value, when a label group names two or more of the role
+  // values (with or without a `ROLE_` prefix) and every such group agrees (ADR 0177).
+  const roleWords = words(role).map((v) => v.slice(1, -1));
+  const keyOf = (w) => w.replace(/^ROLE_/i, '');
+  const spoken = new Map();
+  for (const group of labelGroups) {
+    const keys = Object.keys(group.entries ?? {});
+    const hits = roleWords.filter((w) => keys.includes(w) || keys.includes(keyOf(w)));
+    if (hits.length < 2) continue;
+    for (const w of hits) {
+      const text = group.entries[w] ?? group.entries[keyOf(w)];
+      spoken.set(w, [...new Set([...(spoken.get(w) ?? []), text])]);
+    }
+  }
+  const nameOf = (w) =>
+    spoken.get(w)?.length === 1 ? spoken.get(w)[0] : w.replace(/^ROLE_/i, '') || w;
   for (const value of words(role)) {
     const word = value.slice(1, -1);
     let id = `role-${
@@ -173,7 +189,7 @@ export function suggestPersonas(dimensions, screens) {
     ids.add(id);
     list.push({
       id,
-      name: (word.replace(/^ROLE_/i, '') || word).slice(0, 40),
+      name: nameOf(word).slice(0, 40),
       description: `自動建議：依路由條件 ${role.text} === ${value}`.slice(0, 80),
       facts: unique([
         ...(login ? fact(login.text, true, login.source) : []),

@@ -75,3 +75,27 @@ test('R85 a screen without a title is named by the link specific to it, not a sh
     'Customer Dashboard Page',
   );
 });
+
+test('R102 when no single fact tells same-named screens apart, the first pair that does is used', async () => {
+  const m = await ownModule('names');
+  const screens = [
+    node('settings', 'SCREEN', 'a', { view: 'SettingsPage' }),
+    node('customer', 'SCREEN', 'b', { view: 'CustomerPage' }),
+    node('merchant', 'SCREEN', 'c', { view: 'ScaffoldPage' }),
+  ];
+  const hints = new Map(screens.map((s) => [s.id, { heading: '通知設定' }]));
+  const routes = new Map([
+    ['settings', ['/business/settings/notifications']],
+    ['customer', ['/notifications/settings']],
+    ['merchant', ['/notifications/settings']],
+  ]);
+  const roles = new Map([
+    ['settings', ['商家']],
+    ['customer', ['顧客']],
+    ['merchant', ['商家']],
+  ]);
+  const names = m.screenNames(screens, hints, routes, { roles });
+  assert.equal(names.get('customer'), '通知設定（顧客）');
+  assert.equal(names.get('merchant'), '通知設定（商家・/notifications/settings）');
+  assert.equal(names.get('settings'), '通知設定（/business/settings/notifications）');
+});

@@ -141,12 +141,28 @@ export function screenNames(
           ];
         }),
       );
+      // Facts people read (query, role, route, Tiles name) first, alone then in pairs; the source file
+      // and folder only when those cannot tell the screens apart (ADR 0177).
+      const PLAIN = 4;
       for (const id of ids) {
-        const available = candidates.get(id)!.filter(Boolean),
-          unique = available.find(
+        const list = candidates.get(id)!,
+          plain = list.slice(0, PLAIN).filter(Boolean) as string[],
+          files = list.slice(PLAIN).filter(Boolean) as string[];
+        const alone = (values: string[]) =>
+          values.find(
             (value) => ids.filter((other) => candidates.get(other)!.includes(value)).length === 1,
           );
-        if (unique) names.set(id, `${name}（${unique}）`);
+        const shared = (a: string, b: string) =>
+          ids.filter((other) => {
+            const values = candidates.get(other)!;
+            return values.includes(a) && values.includes(b);
+          }).length;
+        let label = alone(plain);
+        for (let i = 0; i < plain.length && !label; i++)
+          for (let j = i + 1; j < plain.length && !label; j++)
+            if (shared(plain[i], plain[j]) === 1) label = `${plain[i]}・${plain[j]}`;
+        label ??= alone(files);
+        if (label) names.set(id, `${name}（${label}）`);
       }
     }
   return names;

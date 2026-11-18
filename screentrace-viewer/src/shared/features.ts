@@ -6,7 +6,7 @@ import { indexGraph, Index } from '../map';
  * Nothing is guessed: each feature names the rule and the value that put its screens together,
  * with the source of that value. A screen no rule groups with another screen goes to 其他.
  */
-export type FeatureRule = 'MODULE' | 'HANDLER_CLASS' | 'TILES' | 'MENU' | 'URL' | 'OTHER';
+export type FeatureRule = 'MODULE' | 'HANDLER_CLASS' | 'TILES' | 'MENU' | 'URL' | 'ROLE' | 'OTHER';
 export interface FeatureFlow {
   /** The screen the flow starts from: no other screen of the feature leads to it (or, in a loop, the first by name). */
   entry: string;
@@ -31,6 +31,7 @@ export const ruleLabels: Record<FeatureRule, string> = {
   TILES: 'Tiles 定義名稱前綴',
   MENU: '選單',
   URL: '網址前綴',
+  ROLE: '只有一個角色會用到',
   OTHER: '沒有可共用的分組依據',
 };
 const order = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);
@@ -136,6 +137,28 @@ function candidates(index: Index): Map<string, Candidate[]> {
     for (const id of [...menu.targets].sort(order))
       result.get(id)?.push({ rule: 'MENU', value, label, source: menu.source });
   }
+  // The one role a screen is for, from the analysis's personas (ADR 0177).
+  for (const persona of (index.graph.application.personas || []) as {
+    id?: string;
+    name?: string;
+    screens?: Record<string, string>;
+  }[]) {
+    if (!persona.id || !persona.name) continue;
+    for (const [id, status] of Object.entries(persona.screens || {})) {
+      if (status !== 'APPLIES' || !result.has(id)) continue;
+      const others = (index.graph.application.personas || []) as {
+        id?: string;
+        screens?: Record<string, string>;
+      }[];
+      if (others.some((p) => p.id !== persona.id && p.screens?.[id] === 'APPLIES')) continue;
+      result.get(id)!.push({
+        rule: 'ROLE',
+        value: persona.id,
+        label: `${persona.name}專用`,
+        source: index.nodes.get(id)?.source,
+      });
+    }
+  }
   // The URL area: the first path segment that tells screens apart (a shared context path is skipped).
   const routes = new Map(
     index.screens.map((s) => [s.id, segments(index.routes.get(s.id)?.[0] || '')]),
@@ -159,7 +182,7 @@ function candidates(index: Index): Map<string, Candidate[]> {
   return result;
 }
 
-const RULES: FeatureRule[] = ['MODULE', 'HANDLER_CLASS', 'TILES', 'MENU', 'URL'];
+const RULES: FeatureRule[] = ['MODULE', 'HANDLER_CLASS', 'TILES', 'MENU', 'URL', 'ROLE'];
 
 /** The grouping rules a list of features actually used, in priority order, for the description. */
 export function usedRules(list: Feature[]): FeatureRule[] {

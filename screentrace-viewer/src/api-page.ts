@@ -140,9 +140,11 @@ export function apiPurpose(
     const kind = kindNames[index.nodes.get(caller.componentId)?.attributes.kind || ''];
     let text = label.replace(/（第 \d+ 個）$/, '');
     if (kind && text.endsWith(` ${kind}`)) text = text.slice(0, -kind.length - 1);
-    // `busy ? '送出中…' : '送出'` reads as both; the in-progress wording is left out.
-    const options = text.split(' / ').filter((o) => !/(…|\.\.\.)$/.test(o.trim()));
-    text = (options.length ? options : text.split(' / ')).join(' / ');
+    // `busy ? '送出中…' : '送出'` reads as both; the in-progress wording is left out. A button whose
+    // only provable text is in-progress wording is described by it (ADR 0177).
+    const all = text.split(' / '),
+      options = all.filter((o) => !/(中|…|\.\.\.)$/.test(o.trim()));
+    text = options.length ? options.join(' / ') : `顯示「${all.join(' / ')}」的按鈕`;
     if (!text || text.includes('示例值') || /^<.*>$/.test(text)) continue;
     buttons.set(text, new Set([...(buttons.get(text) || []), caller.screenId]));
   }
