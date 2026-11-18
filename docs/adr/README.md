@@ -51,6 +51,7 @@ Controller、回傳 view、表單綁定與伺服器端檢核以 JavaParser 靜�
 | [0014](0014-server-contracts-and-validation.md) | API 契約與 SERVER 檢核的靜態來源 | 有效 |
 | [0037](0037-controller-return-flow.md) | Controller 回傳與表單畫面流程 | 有效 |
 | [0102](0102-r18-spring-api-paths-and-external-call-notes.md) | R18 WP82 的 Spring API 選路與外部呼叫附註 | 有效 |
+| [0159](0159-r81-background-jobs.md) | R81 排程、事件監聽與啟動時作業成為 HANDLER，API 頁「系統自動作業」與 md §12（OQ-056） | 有效 |
 
 ## JSP／標記與 URL
 

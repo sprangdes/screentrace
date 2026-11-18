@@ -17,6 +17,8 @@ import { Node, Evidence } from './contracts';
 import { element } from './text';
 import { proportionBar, sharePercent } from './proportion';
 import { splitter, SplitRange } from './splitter';
+import { backgroundJobs, jobTriggerLabels, BackgroundJob } from './shared/jobs';
+import { backendCalls } from './shared/review-md';
 
 /** The three statuses shown to people: inferred usage and system entry points both count as in use. */
 export type ApiStatus = 'IN_USE' | 'UNREFERENCED' | 'REMOVABLE';
@@ -300,12 +302,32 @@ export function apiPage(index: Index, state: ReviewState, options: ApiPageOption
   });
   const byId = new Map(records.map((r) => [r.node.id, r])),
     mostScreens = Math.max(0, ...records.map((r) => r.screens));
+  // Code that runs without a screen: listed under the APIs, never counted as one (ADR 0159).
+  const jobs = backgroundJobs(index.graph),
+    jobById = new Map(jobs.map((j) => [j.node.id, j])),
+    jobSearch = new Map(
+      jobs.map((j) => [
+        j.node.id,
+        [
+          '系統自動作業',
+          jobTriggerLabels[j.trigger],
+          j.node.name,
+          j.text,
+          j.expression,
+          j.eventType || '',
+          j.node.attributes.class || '',
+        ]
+          .join(' ')
+          .toLowerCase(),
+      ]),
+    );
+  const known = (id: string) => byId.has(id) || jobById.has(id);
   // Arriving from a screen for one API: show it whatever the list was narrowed to before.
-  if (options.selected && byId.has(options.selected)) {
+  if (options.selected && known(options.selected)) {
     memory.filter = 'ALL';
     memory.query = '';
   }
-  let selected = options.selected && byId.has(options.selected) ? options.selected : undefined;
+  let selected = options.selected && known(options.selected) ? options.selected : undefined;
 
   const root = element('section', undefined, 'api-page'),
     master = element('div', undefined, 'api-master'),
@@ -387,6 +409,130 @@ export function apiPage(index: Index, state: ReviewState, options: ApiPageOption
     renderDetail();
   };
 
+  /** The schedules, event listeners and startup code, as one group after the APIs. */
+  const jobGroup = (items: BackgroundJob[], searching: boolean) => {
+    const key = '系統自動作業',
+      memoryKey = `jobs:${key}`,
+      collapsed =
+        !searching && memory.collapsed.has(memoryKey) && !items.some((j) => j.node.id === selected);
+    const group = element('section', undefined, 'api-group api-job-group'),
+      header = element('button', undefined, 'api-group-header'),
+      body = element('div', undefined, 'api-group-items');
+    group.dataset.apiGroup = key;
+    group.dataset.jobGroup = 'true';
+    group.classList.toggle('is-collapsed', collapsed);
+    body.setAttribute('role', 'group');
+    body.setAttribute('aria-label', key);
+    header.type = 'button';
+    header.setAttribute('aria-expanded', String(!collapsed));
+    header.append(
+      element('span', undefined, 'api-group-caret'),
+      element('span', key, 'api-group-name'),
+      element('span', String(items.length), 'api-group-count'),
+    );
+    header.onclick = () => {
+      const now = !group.classList.contains('is-collapsed');
+      group.classList.toggle('is-collapsed', now);
+      header.setAttribute('aria-expanded', String(!now));
+      if (now) memory.collapsed.add(memoryKey);
+      else memory.collapsed.delete(memoryKey);
+    };
+    for (const job of items) {
+      const row = element('button', undefined, 'api-row api-job-row');
+      row.type = 'button';
+      row.setAttribute('role', 'option');
+      row.dataset.apiRow = job.node.id;
+      row.dataset.jobRow = job.node.id;
+      row.dataset.jobTrigger = job.trigger;
+      row.title = `${job.node.name}：${job.text}`;
+      const badge = element('span', jobTriggerLabels[job.trigger], 'job-badge');
+      badge.dataset.jobTrigger = job.trigger;
+      const text = element('span', undefined, 'api-job-text');
+      text.append(
+        element('span', job.text, 'api-job-when'),
+        element('span', job.node.name, 'api-job-name'),
+      );
+      row.append(badge, text);
+      row.onclick = () => select(job.node.id);
+      body.append(row);
+    }
+    group.append(header, body);
+    return group;
+  };
+
+  const renderJob = (job: BackgroundJob) => {
+    const inner = element('div', undefined, 'api-detail-inner');
+    inner.dataset.apiDetail = job.node.id;
+    inner.dataset.jobDetail = job.node.id;
+    const title = element('div', undefined, 'api-detail-title'),
+      badge = element('span', jobTriggerLabels[job.trigger], 'job-badge');
+    badge.dataset.jobTrigger = job.trigger;
+    title.append(badge, element('code', job.node.name, 'api-detail-path'));
+    const when = element('p', `執行時機：${job.text}`, 'api-reason');
+    when.dataset.jobWhen = job.trigger;
+    inner.append(
+      title,
+      when,
+      element('p', '這段程式沒有畫面，由系統自動執行；不在 API 的保留／移除推導範圍內。', 'muted'),
+    );
+    if (job.note) {
+      const note = element('p', job.note, 'notice');
+      note.dataset.jobNote = 'true';
+      inner.append(note);
+    }
+    const setting = section('原始設定');
+    setting.dataset.apiSection = 'job-setting';
+    setting.append(element('pre', job.expression, 'api-job-expression'));
+    const source = job.node.source;
+    if (source?.file)
+      setting.append(
+        element('code', `${source.file}${source.line ? `:${source.line}` : ''}`, 'api-source'),
+      );
+    inner.append(setting);
+    if (job.trigger === 'EVENT') {
+      const from = section('誰會觸發這個事件');
+      from.dataset.apiSection = 'job-publishers';
+      if (!job.publishers.length)
+        from.append(element('p', '原始碼中找不到發布這個事件的地方。', 'muted'));
+      for (const publisher of job.publishers) {
+        const line = element('div', undefined, 'api-handler');
+        line.append(element('strong', publisher.from));
+        if (publisher.source?.file)
+          line.append(
+            element('code', `${publisher.source.file}:${publisher.source.line}`, 'api-source'),
+          );
+        from.append(line);
+      }
+      inner.append(from);
+    }
+    const calls = section('會做哪些事（後端呼叫）');
+    calls.dataset.apiSection = 'job-calls';
+    const list = backendCalls(job.node);
+    if (!list.length) calls.append(element('p', '沒有分析到呼叫專案內的 Service／DAO。', 'muted'));
+    else {
+      const items = element('ol', undefined, 'api-job-calls');
+      for (const call of list) {
+        const item = element('li');
+        item.style.marginInlineStart = `${(call.depth - 1) * 16}px`;
+        item.append(
+          element('span', call.to, 'api-job-call'),
+          element(
+            'span',
+            ` ${call.layer}${call.resolution === 'CONFIRMED' ? '' : `・${call.resolution}`}`,
+            'muted',
+          ),
+        );
+        if (call.source?.file)
+          item.append(element('code', `${call.source.file}:${call.source.line}`, 'api-source'));
+        items.append(item);
+      }
+      calls.append(items);
+    }
+    inner.append(calls);
+    detail.append(inner);
+    detail.scrollTop = 0;
+  };
+
   const renderControls = () => {
     grouping.replaceChildren();
     for (const [value, label, description] of [
@@ -438,7 +584,13 @@ export function apiPage(index: Index, state: ReviewState, options: ApiPageOption
       (a, b) => (a === NO_HANDLER ? 1 : 0) - (b === NO_HANDLER ? 1 : 0) || a.localeCompare(b, 'en'),
     );
     list.replaceChildren();
-    if (!shown.length) list.append(element('p', '沒有符合的 API', 'empty-list'));
+    const query = memory.query.trim().toLowerCase(),
+      shownJobs =
+        memory.filter === 'ALL'
+          ? jobs.filter((j) => !query || jobSearch.get(j.node.id)!.includes(query))
+          : [];
+    if (!shown.length && !shownJobs.length)
+      list.append(element('p', '沒有符合的 API', 'empty-list'));
     const searching = !!memory.query.trim();
     for (const key of keys) {
       const items = groups
@@ -510,6 +662,7 @@ export function apiPage(index: Index, state: ReviewState, options: ApiPageOption
       group.append(header, body);
       list.append(group);
     }
+    if (shownJobs.length) list.append(jobGroup(shownJobs, searching));
     // Keep the selection on a visible API; when it is filtered away, the first one shown takes its place.
     const ids = rows().map((row) => row.dataset.apiRow!);
     if (!selected || !ids.includes(selected)) selected = ids[0];
@@ -788,6 +941,11 @@ export function apiPage(index: Index, state: ReviewState, options: ApiPageOption
 
   const renderDetail = () => {
     detail.replaceChildren();
+    const job = selected ? jobById.get(selected) : undefined;
+    if (job) {
+      renderJob(job);
+      return;
+    }
     const record = selected ? byId.get(selected) : undefined;
     if (!record) {
       detail.append(element('p', '選一個 API 查看詳情', 'empty-list'));

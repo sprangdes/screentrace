@@ -750,3 +750,7 @@ R18 WP82：SpringBootAnalyzer 明確啟用 Spring API 的字面路徑優先與�
 ## R79 顯示欄位與預覽可信度
 
 印出資料的元素以 core 元件 kind `DISPLAY_FIELD` 表示（`ComponentKind` 新增值，schema 不升版），由 `screentrace-parser-jsp` 的 `DisplayFields`（JSP、Thymeleaf）與 `screentrace-js` 的 React 渲染器產生，attributes 含 `expression`、`property`、`displayName`、`labelSource`。元件 ID 沿用既有規則，capture 不需新增對應。viewer 的預覽可信度標示只讀 capture 既有的 `data-st-demo-*`、`data-st-conditional` 與預覽元素資料。見 [ADR 0157](adr/0157-r79-display-fields-and-preview-trust.md)。
+
+## R81 系統自動作業
+
+Spring adapter 的 `SpringBackgroundJobs` 把 `@Scheduled`、`@EventListener`／`@TransactionalEventListener` 與 `ApplicationRunner`／`CommandLineRunner` 建成 HANDLER，attributes 含 `trigger`、`triggerText`（白話執行時機）、`triggerExpression` 與選填的 `triggerNote`、`triggerProperty`、`eventType`、`eventPublishers`；在 `BackendCallChains` 之前套用，因此作業也有後端呼叫鏈。schema 不變。viewer 的 `shared/jobs.ts` 讀取這些 attributes，API 頁列為「系統自動作業」分組（不計入 API），md 為 §12。見 [ADR 0159](adr/0159-r81-background-jobs.md)。

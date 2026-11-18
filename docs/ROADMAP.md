@@ -516,3 +516,7 @@
 - WP151：需求方回報 reservio `/reservation/new` 的預約精靈只看得到第 1 步，點「下一步」沒有反應。原因是步驟由元件狀態切換，網址不變，第 2、3 步只在圖上以條件元件存在，預覽固定畫初始值。需求方決定（OQ-055）：步驟成為畫布上的子畫面，API 歸到各步驟。實作可證明的頁面狀態變體：常值初始化、常值寫入、不同值顯示不同元件，且步驟內的元件會寫入其他值；初始值沿用原畫面 ID，setter 寫入成為導覽到該步驟的 `NAVIGATES_TO`，網址只開啟初始值。見 [ADR 0158](adr/0158-r80-page-state-variants.md)。
 - WP152：需求方以 reservio 實測第一版，精靈仍未拆開。原因是 `BookingFlowPage.tsx:79` 在 `useEffect` 中以 `setStep(flow.draft.business && activeService ? 2 : 1)` 修正步驟，條件運算式不是單一常值，`step` 被視為未知。改為：各分支都是常值的條件運算式，各分支的值都算可能值；其他條件都符合、只因寫入無法證明而不拆時記 `REACT_STATE_VARIANT_UNPROVEN`。放寬後 reservio 多拆了 5 個路由，加上三條規則排除：各值的元件組合要不同（排除錯誤訊息）、掛載時的載入路徑不寫入它（排除 loading／ready／error）、第一步要在初始預覽中看得到（排除預設關閉的對話框）。
 - 驗證：Maven `StateVariantTest` 新增 4 個測試，JS `r80-state-variants.test.mjs` 新增 8 個（共 200 個，原有測試都不需修改），viewer `r80-state-variant-name.test.mjs` 新增 1 個；Maven 除 `screentrace-cli` 6 個需要擷取產物的整合測試（本環境沒有 capture 的 Playwright 套件，改動前即失敗）外全數通過；viewer 除 3 個同樣需要 capture 套件的測試外全數通過。reservio 的 React 分析只有 `/reservation/new` 拆成 3 步（41 → 43 畫面），其他輸出與 `main` 逐項相同；完整 CLI 與報表實測待需求方執行。
+
+## R81 沒有畫面的系統自動作業
+
+- WP153：依 [reservio 評估](RESERVIO_EVALUATION_20261118.md) P1，OQ-056 採 A。Spring adapter 新增 `SpringBackgroundJobs`，把 `@Scheduled`、`@EventListener`／`@TransactionalEventListener`、`ApplicationRunner`／`CommandLineRunner` 建成 HANDLER，執行時機轉成白話（cron 已知形狀、固定間隔、設定佔位的預設值與覆寫來源），事件記錄發布來源，並沿用後端呼叫鏈；API 頁新增「系統自動作業」分組與詳情，md 新增 §12。見 [ADR 0159](adr/0159-r81-background-jobs.md)。

@@ -165,6 +165,12 @@ migration_target:
 | ` a / shared ` | 元件 | 移除後無法再由此元件前往 | ` b ` | — |
 | ` a / shared ` | 元件 | 移除後此元件不再呼叫 API | ` ep ` | REMOVABLE |
 
+## 12. 系統自動作業(排程、事件、啟動時)
+
+沒有畫面、由系統自動執行的程式。執行時機由原始碼與設定檔推導:`INFERRED` 表示取自預設值,執行時可能被設定檔或環境變數覆寫;`UNRESOLVED` 表示無法確定,不得自行猜測。這些作業不在 API 保留/移除推導範圍內;各作業的後端呼叫見 §9。
+
+未偵測到排程、事件監聽或啟動時執行的程式。
+
 ## 附錄 A. review state
 
 ```json screentrace-review-state

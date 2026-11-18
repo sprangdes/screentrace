@@ -25,6 +25,7 @@ import {
   effectiveComponent,
 } from './review';
 import { features, Feature, ruleLabels } from './features';
+import { backgroundJobs, jobTriggerLabels } from './jobs';
 import { callSources } from '../usage';
 import { jsfLimitation } from '../unsupported-framework';
 export const fixedInstructions = `1. \`REMOVE\`:該畫面 / 元件不得遷移到新系統。
@@ -937,7 +938,7 @@ export async function generateMarkdown(
   );
   return out.join('\n\n') + '\n';
 }
-/** §8–§11: the system as analysed, for an AI that should not have to read the source again (ADR 0156). */
+/** §8–§12: the system as analysed, for an AI that should not have to read the source again (ADR 0156). */
 function systemSections(
   graph: Graph,
   state: ReviewState,
@@ -1245,6 +1246,36 @@ function systemSections(
     impact.length
       ? table(['移除項目', '類型', '影響', '對象', '說明'], impact)
       : '沒有標記移除的項目。',
+  );
+
+  out.push(
+    '## 12. 系統自動作業(排程、事件、啟動時)',
+    '沒有畫面、由系統自動執行的程式。執行時機由原始碼與設定檔推導:`INFERRED` 表示取自預設值,執行時可能被設定檔或環境變數覆寫;`UNRESOLVED` 表示無法確定,不得自行猜測。這些作業不在 API 保留/移除推導範圍內;各作業的後端呼叫見 §9。',
+  );
+  const jobRows = backgroundJobs(graph).map((job) => [
+    projectText(job.node.name, job.node.source),
+    projectText(jobTriggerLabels[job.trigger]),
+    projectText(job.text),
+    projectText(job.expression.replaceAll('\n', ' / '), job.node.source),
+    projectText(job.node.confidence),
+    projectText(
+      [
+        job.note,
+        job.eventType && job.publishers.length
+          ? `發布來源:${job.publishers.map((p) => p.from).join('、')}`
+          : job.eventType
+            ? '找不到發布來源'
+            : '',
+      ]
+        .filter(Boolean)
+        .join(';'),
+    ),
+    sourceCell(job.node.source),
+  ]);
+  out.push(
+    jobRows.length
+      ? table(['作業', '觸發', '執行時機', '原始設定', '解析', '備註', '來源'], jobRows)
+      : '未偵測到排程、事件監聽或啟動時執行的程式。',
   );
   return out;
 }
