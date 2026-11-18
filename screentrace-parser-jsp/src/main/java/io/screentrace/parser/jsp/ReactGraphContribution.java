@@ -52,7 +52,10 @@ public final class ReactGraphContribution {
           "aria-label",
           "value",
           "action",
-          "method");
+          "method",
+          // A display field's printed expression and the property it reads (ADR 0157).
+          "expression",
+          "property");
 
   private ReactGraphContribution() {}
 
@@ -1027,6 +1030,7 @@ public final class ReactGraphContribution {
       case SUBMIT -> "FORM_SUBMIT";
       case FORM -> "FORM";
       case BUTTON, OTHER -> "BUTTON";
+      case DISPLAY_FIELD -> "DISPLAY";
       default -> "INPUT";
     };
   }

@@ -114,8 +114,12 @@ public final class JspProjectParser {
     }
     markup.put(
         relative,
-        withAnchors(
-            StaticComponentNames.annotate(MarkupAnalysis.parse(relative, text), text, messages),
+        DisplayFields.add(
+            withAnchors(
+                StaticComponentNames.annotate(MarkupAnalysis.parse(relative, text), text, messages),
+                text,
+                tagExpansion.anchors()),
+            relative,
             text,
             tagExpansion.anchors()));
     // A .jsp holding only directives (oussamazoghlami/SpringStrutsHibernate

@@ -122,6 +122,8 @@ export interface Payload {
   manifest: Record<string, unknown>;
   fingerprint: string;
   toolVersion?: string;
+  /** The md header's migration target set by the analyst; null removes it, absent keeps the default. */
+  migrationTarget?: { backend: string; frontend: string } | null;
 }
 export function requireGraph(graph: Graph): Graph {
   if (!['2.2', '2.3', '2.4'].includes(graph?.schemaVersion))

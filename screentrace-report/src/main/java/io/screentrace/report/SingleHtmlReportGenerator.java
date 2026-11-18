@@ -39,6 +39,19 @@ public final class SingleHtmlReportGenerator {
       Path output,
       ComponentLibrary library)
       throws IOException {
+    return generate(graph, preview, documents, manifest, output, library, null);
+  }
+
+  /** With a migration target set by the analyst: null keeps the default, NONE removes it. */
+  public Output generate(
+      ApplicationGraph graph,
+      PreviewModel preview,
+      Map<String, String> documents,
+      Map<String, Object> manifest,
+      Path output,
+      ComponentLibrary library,
+      MigrationTarget target)
+      throws IOException {
     GraphIntegrityValidator.requireAnalysis(graph);
     String script = resource("viewer.js"), hash = resource("viewer.sha256").trim();
     if (!hash.equals(Base64.getEncoder().encodeToString(digest(script))))
@@ -57,6 +70,12 @@ public final class SingleHtmlReportGenerator {
         throw new IllegalArgumentException("manifest_sha256 格式錯誤");
       data.put("componentLibrary", library);
     }
+    if (target != null)
+      data.put(
+          "migrationTarget",
+          target.none()
+              ? null
+              : new TreeMap<>(Map.of("backend", target.backend(), "frontend", target.frontend())));
     data.put("toolVersion", resource("viewer.version").trim());
     data.put("fingerprint", HexFormat.of().formatHex(digest(json.writeValueAsString(graph))));
     String encoded =

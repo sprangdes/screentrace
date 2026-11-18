@@ -1,5 +1,15 @@
 import { endpointGroup, endpointMethod, endpointPath } from './endpoint-presentation';
-import { deriveApiUsage, screenDecision, componentDecision, ReviewState } from './shared/review';
+import {
+  deriveApiUsage,
+  screenDecision,
+  componentDecision,
+  apiDecision,
+  decisionNoteOf,
+  Decision,
+  DecisionNote,
+  ReviewState,
+} from './shared/review';
+import { decisionSwitch, decisionLabel, noteEditor } from './review-ui';
 import { componentLabelsForScreen } from './labels';
 import { callerKind, Caller } from './usage';
 import { Index } from './map';
@@ -127,6 +137,12 @@ export interface ApiPageOptions {
   selected?: string;
   onSelect?: (id: string) => void;
   onCaller: (screenId: string, componentId?: string) => void;
+  /** Marking an API directly; without it the page only reads. */
+  setApi?: (id: string, value: Decision) => void;
+  setNote?: (id: string, note: DecisionNote) => void;
+  commitNote?: () => void;
+  /** APIs whose note editor is open, so a rebuilt page keeps it open. */
+  notesOpen?: Set<string>;
 }
 type Filter = 'ALL' | 'ATTENTION' | 'IN_USE';
 type Grouping = 'controller' | 'url';
@@ -479,6 +495,12 @@ export function apiPage(index: Index, state: ReviewState, options: ApiPageOption
           ),
         );
         if (record.status !== 'IN_USE') meta.append(statusTag(record.status));
+        const direct = apiDecision(state, record.node.id);
+        if (direct !== 'UNDECIDED') {
+          const mark = element('span', decisionLabel(direct), 'api-decision-mark');
+          mark.dataset.apiDecision = direct;
+          meta.append(mark);
+        }
         if (record.external.length)
           meta.append(element('span', '外部呼叫（Webhook）', 'api-external-call'));
         row.append(methodBadge(record.method), pathCode(record.path, 'api-path'), meta);
@@ -789,7 +811,51 @@ export function apiPage(index: Index, state: ReviewState, options: ApiPageOption
     );
     const why = element('p', reason(record), record.note ? 'api-reason api-note' : 'api-reason');
     why.dataset.apiStatus = record.status;
-    inner.append(title, why, renderChain(record));
+    inner.append(title, why);
+    if (options.setApi) {
+      // The person's own decision on this API, shown beside the status its callers give it.
+      const id = record.node.id,
+        direct = apiDecision(state, id),
+        box = element('div', undefined, 'api-decision');
+      box.dataset.apiDecisionFor = id;
+      box.append(
+        element('span', '這個 API', 'api-decision-label'),
+        decisionSwitch(`這個 API`, direct, (value) => options.setApi!(id, value), {
+          screen: `api:${id}`,
+        }),
+      );
+      const disagree =
+        (direct === 'KEEP' && record.status === 'REMOVABLE') ||
+        (direct === 'REMOVE' && record.status === 'IN_USE');
+      if (disagree) {
+        const note = element(
+          'p',
+          direct === 'KEEP'
+            ? '已標記保留，但所有呼叫來源都已標記移除；請確認是否還有其他使用者。'
+            : '已標記移除，但仍有未移除的畫面或按鈕呼叫它；請一併確認這些呼叫來源。',
+          'notice conflict',
+        );
+        note.dataset.apiConflict = id;
+        box.append(note);
+      }
+      if (options.setNote)
+        box.append(
+          noteEditor({
+            label: '這個 API',
+            decision: direct,
+            note: decisionNoteOf(state, 'api', id),
+            open: !!options.notesOpen?.has(id),
+            onToggle: (open) => {
+              if (open) options.notesOpen?.add(id);
+              else options.notesOpen?.delete(id);
+            },
+            onInput: (note) => options.setNote!(id, note),
+            onCommit: () => options.commitNote?.(),
+          }),
+        );
+      inner.append(box);
+    }
+    inner.append(renderChain(record));
     // On a wide screen the handler and contract are the left column and the callers the right; narrower, one column.
     const columns = element('div', undefined, 'api-detail-columns'),
       main = element('div', undefined, 'api-detail-main'),

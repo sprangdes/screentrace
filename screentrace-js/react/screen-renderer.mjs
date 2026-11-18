@@ -1647,7 +1647,12 @@ class ScreenRenderer {
     if (this.inRoute) this.routeContent++;
     const attrs = this.staticAttributes(node, scope);
     const handlers = this.handlers(node, scope, state);
-    const kind = intrinsicKind(tag, attrs, state.form !== null, handlers.length > 0);
+    let kind = intrinsicKind(tag, attrs, state.form !== null, handlers.length > 0);
+    // An element that prints data and is nothing else is a display field (ADR 0157).
+    const display = kind
+      ? null
+      : displayOutputs(node, scope.module, tag, (expr) => this.evaluator.evaluate(expr, scope));
+    if (display) kind = 'DISPLAY_FIELD';
     const out = this.output(node, tag, scope, state, key);
     let next = { ...state, out, routeCandidate: false };
     if (kind) {
@@ -1659,6 +1664,19 @@ class ScreenRenderer {
         target: tag === 'a' ? (attrs.href ?? null) : null,
       });
       if (out.tag) out.attributes['data-st-expansion-anchor'] = component.anchor;
+      if (display) {
+        component.attrs = {
+          ...component.attrs,
+          expression: display.expression,
+          ...(display.property ? { property: display.property } : {}),
+        };
+        component.label = display.label ?? display.property ?? display.expression.slice(0, 80);
+        component.labelSource = display.label
+          ? 'leadingText'
+          : display.property
+            ? 'property'
+            : 'expression';
+      }
       if (tag === 'a' && attrs.href && !attrs.href.startsWith('#'))
         component.behaviors.push(
           this.effect('NAVIGATE', 'click', node, scope, unguarded(state), {
@@ -1951,3 +1969,67 @@ class ScreenRenderer {
 }
 
 export { ScreenRenderer };
+
+/** Elements that are not page text or never a field of their own. */
+const NOT_DISPLAY = new Set([
+  'html',
+  'head',
+  'title',
+  'body',
+  'script',
+  'style',
+  'option',
+  'optgroup',
+  'template',
+]);
+function containsJsx(node, depth = 0) {
+  if (!node || typeof node !== 'object' || depth > 40) return false;
+  if (node.type === 'JSXElement' || node.type === 'JSXFragment') return true;
+  for (const [key, value] of Object.entries(node)) {
+    if (['loc', 'start', 'end', 'extra', 'leadingComments', 'trailingComments'].includes(key))
+      continue;
+    if (Array.isArray(value)) {
+      if (value.some((item) => containsJsx(item, depth + 1))) return true;
+    } else if (value && typeof value === 'object' && value.type && containsJsx(value, depth + 1))
+      return true;
+  }
+  return false;
+}
+const PROPERTY_PATH = /^[A-Za-z_$][\w$]*(?:\??\.[A-Za-z_$][\w$]*|\[[^\]]{1,40}\])*$/;
+/** The data an element prints in its own children: `{owner.name}`, `{format(total)}`; JSX and literals are not data. */
+function displayOutputs(node, module, tag, evaluate) {
+  if (NOT_DISPLAY.has(tag)) return null;
+  const outputs = [];
+  let leading = '';
+  for (const child of node.children) {
+    if (child.type === 'JSXText') {
+      if (!outputs.length) leading += child.value;
+      continue;
+    }
+    if (child.type !== 'JSXExpressionContainer') continue;
+    const expr = child.expression;
+    if (!expr || expr.type === 'JSXEmptyExpression') continue;
+    const inner = unwrap(expr);
+    if (
+      !inner ||
+      ['StringLiteral', 'NumericLiteral', 'BooleanLiteral', 'NullLiteral'].includes(inner.type) ||
+      (inner.type === 'TemplateLiteral' && !inner.expressions.length) ||
+      containsJsx(inner)
+    )
+      continue;
+    // A value the source fixes (a constant, a lookup in a literal table) is page text; markup held in a
+    // variable or passed as children is content. Only what the source cannot fix is data.
+    const value = evaluate(expr);
+    if (['lit', 'jsx', 'children', 'array', 'fn'].includes(value?.t)) continue;
+    outputs.push(text(module, expr).trim());
+  }
+  if (!outputs.length) return null;
+  const first = outputs[0].replace(/\s+/g, ''),
+    expression = outputs.join(' ').slice(0, 300),
+    property = PROPERTY_PATH.test(first)
+      ? first.replace(/\?\./g, '.')
+      : (/[A-Za-z_$][\w$]*(?:\??\.[A-Za-z_$][\w$]*)+/.exec(outputs[0])?.[0].replace(/\?\./g, '.') ??
+        null),
+    label = /^(.{1,40})[:：]$/.exec(leading.replace(/\s+/g, ' ').trim())?.[1].trim() || null;
+  return { expression, property, label };
+}

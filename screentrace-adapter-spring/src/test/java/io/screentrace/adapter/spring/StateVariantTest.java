@@ -11,7 +11,7 @@ import java.util.*;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
-/** R77: a wizard whose steps are a proven page state becomes one screen variant per step. */
+/** R80: a wizard whose steps are a proven page state becomes one screen variant per step. */
 class StateVariantTest {
   @TempDir Path root;
 

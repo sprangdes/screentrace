@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { ownModule } from './module.mjs';
 import { node } from './fixture.mjs';
-test('R77 the steps of one page are named with the page state they show', async () => {
+test('R80 the steps of one page are named with the page state they show', async () => {
   const m = await ownModule('names');
   const steps = [1, 2, 3].map((v) =>
     node(`s${v}`, 'SCREEN', 'reservation/new', {

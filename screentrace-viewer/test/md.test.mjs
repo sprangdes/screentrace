@@ -438,7 +438,7 @@ test('code spans preserve comparison operators and ampersands while isolating ma
   assert.doesNotMatch(out, /&amp;|&lt;|&gt;/);
 });
 
-test('WP47 v3 files from earlier versions still import with validation, and re-exports are v1 without reasons or notes', async () => {
+test('WP47 v3 files from earlier versions still import with validation, and re-exports are v4 keeping reasons and notes (ADR 0155)', async () => {
   const m = await ownModule('shared/review-md'),
     data = mdFixture(),
     out = await readFile(new URL('golden/review-v3.md', import.meta.url), 'utf8');
@@ -487,13 +487,23 @@ test('WP47 v3 files from earlier versions still import with validation, and re-e
     machine = JSON.parse(again.split('```json screentrace-review-state\n')[1].split('\n```')[0]);
   assert.deepEqual(Object.keys(machine).sort(), [
     'analysis_fingerprint',
+    'api_decisions',
     'component_decisions',
+    'decision_notes',
     'format_version',
     'screen_decisions',
     'state_sha256',
   ]);
-  assert.equal(machine.format_version, 1);
+  assert.equal(machine.format_version, 4);
   assert.deepEqual(machine.screen_decisions, { b: 'REMOVE' });
   assert.deepEqual(machine.component_decisions, { a: { shared: 'KEEP' } });
-  assert.doesNotMatch(again, /原因|備註|業務單位確認已停用|仍提供必要功能/);
+  assert.deepEqual(machine.decision_notes, {
+    apis: {},
+    components: imported.state.decisionNotes.components,
+    screens: imported.state.decisionNotes.screens,
+  });
+  assert.deepEqual(machine.api_decisions, {});
+  assert.match(again, /業務單位確認已停用（DISCONTINUED）/);
+  assert.match(again, /仍提供必要功能/);
+  assert.doesNotMatch(again, /component_library|component_overrides/);
 });

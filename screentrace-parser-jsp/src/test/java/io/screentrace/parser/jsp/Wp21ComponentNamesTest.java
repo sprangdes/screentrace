@@ -121,7 +121,11 @@ class Wp21ComponentNamesTest {
             .sorted()
             .toList(),
         first.nodes().stream()
-            .filter(n -> n.type() == NodeType.COMPONENT)
+            // Display fields are added after this parse (ADR 0157); every other id is unchanged.
+            .filter(
+                n ->
+                    n.type() == NodeType.COMPONENT
+                        && !"DISPLAY_FIELD".equals(n.attributes().get("kind")))
             .map(GraphNode::id)
             .sorted()
             .toList());

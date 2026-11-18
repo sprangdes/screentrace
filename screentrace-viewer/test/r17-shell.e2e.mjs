@@ -257,7 +257,7 @@ test('R17 API page shows three statuses that follow decisions and callers open t
   }
 });
 
-test('R17 downloaded md is format v1 from the shared generator and retired stored fields are ignored without losing decisions', async () => {
+test('R17 downloaded md comes from the shared generator; retired library fields are ignored, decisions and notes are kept (ADR 0155)', async () => {
   const data = mdFixture(),
     { browser, page } = await open(data);
   try {
@@ -275,6 +275,14 @@ test('R17 downloaded md is format v1 from the shared generator and retired store
           screenDecisions: { a: 'KEEP' },
           componentDecisions: { a: { shared: 'KEEP' } },
           decisionNotes: { screens: { a: { reason: 'IN_USE', note: '舊備註' } }, components: {} },
+          orphan_component_overrides: [
+            {
+              screenId: 'a',
+              componentId: 'shared',
+              libraryComponentId: 'lib-button',
+              manifest_sha256: 'b'.repeat(64),
+            },
+          ],
         }),
       ],
     );
@@ -290,8 +298,10 @@ test('R17 downloaded md is format v1 from the shared generator and retired store
     const file = await pending,
       md = await readFile(await file.path(), 'utf8');
     assert.equal(file.suggestedFilename(), 'screentrace-review.md');
-    assert.match(md, /"format_version": ?1/);
-    assert.ok(!md.includes('舊備註'));
+    // Notes are kept since R77 and need format 4; the library mapping is still dropped.
+    assert.match(md, /"format_version": ?4/);
+    assert.ok(md.includes('舊備註'));
+    assert.ok(!md.includes('lib-button'));
     const expected = await generateMarkdown(
       { ...data, componentLibrary: undefined },
       {
@@ -302,6 +312,7 @@ test('R17 downloaded md is format v1 from the shared generator and retired store
         fingerprint: data.fingerprint,
         screenDecisions: { a: 'KEEP' },
         componentDecisions: { a: { shared: 'KEEP' } },
+        decisionNotes: { screens: { a: { reason: 'IN_USE', note: '舊備註' } }, components: {} },
       },
     );
     const normalize = (text) => text.replace(/^generated_at: .*$/m, 'generated_at: "TIME"');

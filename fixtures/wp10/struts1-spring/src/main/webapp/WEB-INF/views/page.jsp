@@ -40,4 +40,5 @@
 <script src="${undefinedPrefix}/js/context.js"></script><script src="${pageContext.servletContext.contextPath}/js/context.js"></script>
 <script src="${undefinedPrefix}/js/missing.js"></script><script src="/x${undefinedPrefix}/js/context.js"></script><script src="http://${undefinedPrefix}/js/context.js"></script><script src="//${undefinedPrefix}/js/context.js"></script><script src="${one}${two}/js/context.js"></script>
 <c:set var="definedPrefix" value="/different"/><script src="${definedPrefix}/js/context.js"></script>
+<p><bean:write name="editForm" property="email"/></p>
 </body></html>

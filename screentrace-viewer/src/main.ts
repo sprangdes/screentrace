@@ -12,6 +12,8 @@ import { prototypeViewer } from './prototype';
 import { PrototypeHistory } from './prototype-history';
 import { apiPage } from './api-page';
 import { screenPanel } from './screen-panel';
+import { featureMap } from './feature-map';
+import { features } from './shared/features';
 import { placeBadge, decisionLabel } from './review-ui';
 import { previewDocument, previewSelector } from './preview';
 import { generateMarkdown, importMarkdown, markdownSizeWarning } from './shared/review-md';
@@ -43,15 +45,23 @@ import { splitter, LIST_SPLIT } from './splitter';
 import {
   loadReview,
   saveReview,
-  screenDecision,
   componentDecision,
   effectiveComponent,
   setScreen,
   setComponent,
+  setApi,
+  setFeature,
+  featureDecision,
+  effectiveScreen,
+  screenInherited,
+  setDecisionNote,
+  exportableNotes,
   statistics,
   conflicts,
+  apiConflicts,
   ReviewState,
   Decision,
+  DecisionNote,
 } from './shared/review';
 
 /** How long a message that something worked stays beside the save menu before it fades. */
@@ -60,24 +70,30 @@ const STATUS_SHOWN_MS = 5000;
 type Filter = 'ALL' | 'UNDECIDED' | 'KEEP' | 'REMOVE';
 const root = document.querySelector<HTMLDivElement>('#app')!;
 
-/** Fields from earlier report versions (reasons, notes, component library) that this report no longer uses. */
+/** Fields from earlier report versions (the component library mapping) that this report no longer uses.
+ * Reasons and notes are used again (ADR 0155) and are kept. */
 function withoutRetiredFields(state: ReviewState): { state: ReviewState; dropped: boolean } {
-  const {
-    decisionNotes,
-    component_overrides,
-    orphan_component_overrides,
-    manifest_sha256,
-    ...rest
-  } = state as ReviewState & Record<string, unknown>;
-  const notes = decisionNotes as { screens?: object; components?: object } | undefined;
+  const { component_overrides, orphan_component_overrides, manifest_sha256, ...rest } =
+    state as ReviewState & Record<string, unknown>;
   const dropped =
-    !!(
-      notes &&
-      (Object.keys(notes.screens || {}).length || Object.keys(notes.components || {}).length)
-    ) ||
-    !!component_overrides ||
-    !!(orphan_component_overrides as unknown[] | undefined)?.length;
+    !!component_overrides || !!(orphan_component_overrides as unknown[] | undefined)?.length;
   return { state: rest as ReviewState, dropped };
+}
+/** Whether the state holds anything worth keeping: a keep／remove decision or a note. */
+function hasMarks(state: ReviewState): boolean {
+  const decided = (values: Record<string, Decision>) =>
+    Object.values(values).some((d) => d !== 'UNDECIDED');
+  const notes = exportableNotes(state);
+  return (
+    decided(state.screenDecisions) ||
+    Object.values(state.componentDecisions).some(decided) ||
+    decided(state.apiDecisions || {}) ||
+    decided(state.featureDecisions || {}) ||
+    Object.keys(notes.features).length > 0 ||
+    Object.keys(notes.screens).length > 0 ||
+    Object.keys(notes.components).length > 0 ||
+    Object.keys(notes.apis).length > 0
+  );
 }
 
 try {
@@ -116,6 +132,11 @@ try {
     payload.preview.elements || [],
   );
   const mdPayload: Payload = { ...payload, componentLibrary: undefined };
+  // Features by deterministic rules (ADR 0156); the same grouping the md and the review state use.
+  const featureList = features(index),
+    featureByScreen = new Map<string, (typeof featureList)[number]>();
+  for (const feature of featureList)
+    for (const id of feature.screens) featureByScreen.set(id, feature);
   const orderedScreens = [...index.screens].sort(
     (a, b) => a.name.localeCompare(b.name, 'zh-Hant') || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0),
   );
@@ -134,14 +155,22 @@ try {
   let page: 'screens' | 'api' | 'personas' = 'screens',
     current: string | undefined,
     filter: Filter = 'ALL',
-    listMode: 'list' | 'files' = 'list',
+    listMode: 'list' | 'files' | 'features' = 'list',
     query = '',
     canvasTransform: CanvasTransform | undefined;
   let buttonsOpen = false,
+    fieldsOpen = false,
     highlightComponent: string | undefined,
     selectedApi: string | undefined,
     personaId: string | undefined,
     showUnreached = false;
+  // Note editors left open (screen panel keys and API IDs), so rebuilding a panel keeps them open.
+  const notesOpen = new Set<string>(),
+    apiNotesOpen = new Set<string>(),
+    featureNotesOpen = new Set<string>(),
+    featuresCollapsed = new Set<string>();
+  /** A screen's own decision, or its feature's when it has none. */
+  const screenState = (id: string) => effectiveScreen(graph, reviewState, id);
   const activePersona = (): PersonaView | undefined =>
     personaViews.find((view) => view.persona.id === personaId);
   const history = new PrototypeHistory();
@@ -177,6 +206,10 @@ try {
   const download = element('button', undefined, 'primary download-md');
   download.append(icon('import'), element('span', '下載 md'));
   download.dataset.mdExport = 'true';
+  // A dot on the button while there are marks that are neither in a progress file nor in a downloaded md.
+  const unsavedDot = element('span', undefined, 'unsaved-dot');
+  unsavedDot.setAttribute('aria-hidden', 'true');
+  download.append(unsavedDot);
   const openMd = element('button', '開啟 md…', 'menu-row');
   openMd.dataset.mdImport = 'true';
   const saveMenu = element('details', undefined, 'save-menu'),
@@ -203,7 +236,7 @@ try {
     helpPanel.append(list);
   };
   helpList('快捷鍵', [
-    'k 保留、x 移除、u 未確認（作用於目前畫面，或右側欄中選取的按鈕）',
+    'k 保留、x 移除、u 未確認（作用於目前畫面，或右側欄中選取的按鈕、欄位）',
     'n 前往下一個未確認的畫面',
     '/ 搜尋畫面',
     'f 全螢幕預覽（展示用，再按一次或 Esc 結束）',
@@ -212,14 +245,16 @@ try {
   helpList('操作方式', [
     '觸控板兩指滑動或滑鼠拖曳移動畫布；兩指捏合或 ⌘／Ctrl＋滾輪縮放',
     '點一下畫面看它的關聯，點兩下查看完整預覽',
-    '在預覽中點連結或按鈕，會模擬前往的畫面',
-    '標記會自動暫存在這個瀏覽器；請用「下載 md」保存並交付',
+    '在預覽中點連結或按鈕，會模擬前往的畫面；點輸入欄位或表格，右側欄會標出對應的欄位',
+    '右側欄的「備註」可寫下修改意見或移除理由，會寫進 md 交給 AI',
+    'API 頁可直接標記 API；與畫面標記推導的狀態不一致時列為衝突',
+    '標記會自動暫存在這個瀏覽器，但換電腦或清除瀏覽資料就會遺失；請用「下載 md」保存並交付',
   ]);
   helpList('狀態', [
     '綠色勾：保留',
     '紅色叉：移除',
     '沒有標示：未確認',
-    '隨畫面移除：畫面標記移除時，沒有個別標記的按鈕一起移除',
+    '隨畫面移除：畫面標記移除時，沒有個別標記的按鈕與欄位一起移除',
   ]);
   helpList('ScreenTrace 看不到的事', [
     '書籤或 Email 連結直接進入的畫面',
@@ -258,10 +293,12 @@ try {
   searchBox.append(icon('search'), search, clearSearch);
   const modes = element('div', undefined, 'segmented'),
     listButton = element('button', '清單'),
-    filesButton = element('button', '檔案結構');
+    filesButton = element('button', '檔案結構'),
+    featuresButton = element('button', '功能');
+  featuresButton.dataset.listMode = 'features';
   modes.setAttribute('role', 'group');
   modes.setAttribute('aria-label', '清單顯示方式');
-  modes.append(listButton, filesButton);
+  modes.append(listButton, filesButton, featuresButton);
   const chips = element('div', undefined, 'chips');
   chips.setAttribute('role', 'group');
   chips.setAttribute('aria-label', '依狀態篩選');
@@ -382,7 +419,7 @@ try {
     notices.append(
       element(
         'p',
-        '先前的進度含已不再使用的欄位（原因、備註、元件庫對應），已略過；保留／移除標記不受影響。',
+        '先前的進度含已不再使用的欄位（元件庫對應），已略過；保留／移除標記與備註不受影響。',
         'notice',
       ),
     );
@@ -390,11 +427,7 @@ try {
   const visibleScreens = (): Set<string> | undefined =>
     filter === 'ALL'
       ? undefined
-      : new Set(
-          index.screens
-            .filter((s) => screenDecision(reviewState, s.id) === filter)
-            .map((s) => s.id),
-        );
+      : new Set(index.screens.filter((s) => screenState(s.id) === filter).map((s) => s.id));
   // A message that something worked fades after a few seconds; a failure stays until the next message.
   let sayTimer: number | undefined;
   const say = (message: string, state: 'saved' | 'error' = 'saved') => {
@@ -418,24 +451,59 @@ try {
     edits++;
     if (saveReview(storage, reviewState)) say('⚠ 無法暫存在瀏覽器，請下載 md', 'error');
   };
+  // ---- keeping the marks: when the md was last downloaded, and whether marks exist that no file holds
+  const exportKey = `screentrace:last-export:v1:${encodeURIComponent(graph.application.name)}:${payload.fingerprint}`;
+  /** A short fingerprint of the marks, to tell on the next visit whether the last download still holds them. */
+  const marksHash = (state: ReviewState) => {
+    let hash = 0x811c9dc5;
+    const text = JSON.stringify([
+      state.screenDecisions,
+      state.componentDecisions,
+      state.apiDecisions || {},
+      state.featureDecisions || {},
+      exportableNotes(state),
+    ]);
+    for (let i = 0; i < text.length; i++) hash = Math.imul(hash ^ text.charCodeAt(i), 0x01000193);
+    return (hash >>> 0).toString(16);
+  };
+  // -1: the marks restored from this browser are not known to be in any file.
+  let exportedEdits = -1,
+    lastExport: Date | undefined,
+    reminded = false;
+  try {
+    const saved = JSON.parse(storage?.getItem(exportKey) || 'null');
+    if (saved && typeof saved.at === 'string' && Number.isFinite(Date.parse(saved.at))) {
+      lastExport = new Date(saved.at);
+      if (saved.marks === marksHash(reviewState)) exportedEdits = 0;
+    }
+  } catch {
+    /* the time is only a convenience */
+  }
+  const exportTime = (date: Date) =>
+    date.toLocaleString('zh-TW', {
+      hour12: false,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
 
   const applyImported = (imported: Awaited<ReturnType<typeof importMarkdown>>) => {
     const clean = withoutRetiredFields(imported.state);
     reviewState = clean.state;
     persist();
+    // What was just opened is a file the person has; until the next mark there is nothing unsaved.
+    exportedEdits = edits;
     notices.querySelectorAll('[data-import-notice]').forEach((n) => n.remove());
     // A different analysis only matters when the file holds decisions that could now point elsewhere.
-    const decided =
-      Object.values(clean.state.screenDecisions).some((d) => d !== 'UNDECIDED') ||
-      Object.values(clean.state.componentDecisions).some((c) =>
-        Object.values(c).some((d) => d !== 'UNDECIDED'),
-      );
+    const decided = hasMarks(clean.state);
     const messages = [
       imported.changed && decided ? '分析結果已變更，部分標記可能對應不到目前的畫面。' : '',
       imported.orphans.length
-        ? `有 ${imported.orphans.length} 筆標記找不到對應的畫面或按鈕，已保留在檔案中。`
+        ? `有 ${imported.orphans.length} 筆標記找不到對應的畫面、按鈕、API 或功能，已保留在檔案中。`
         : '',
-      clean.dropped ? '檔案含已不再使用的欄位（原因、備註、元件庫對應），已略過。' : '',
+      clean.dropped ? '檔案含已不再使用的欄位（元件庫對應），已略過。' : '',
     ].filter(Boolean);
     for (const message of messages) {
       const note = element('p', message, 'notice');
@@ -458,7 +526,7 @@ try {
         list.append(
           element(
             'li',
-            `${orphan.screenId}${orphan.componentId ? ` / ${orphan.componentId}` : ''}${orphan.reason ? `：${orphan.reason}` : ''}`,
+            `${orphan.featureKey !== undefined ? `功能 ${orphan.featureKey}` : orphan.apiId !== undefined ? `API ${orphan.apiId}` : orphan.screenId}${orphan.componentId ? ` / ${orphan.componentId}` : ''}${orphan.reason ? `：${orphan.reason}` : ''}`,
           ),
         );
       notices.append(list);
@@ -482,6 +550,27 @@ try {
     saved: '已自動儲存',
     error: '儲存失敗',
   };
+  /** Marks exist that are neither written to a progress file nor in an md downloaded since the last change. */
+  const unsaved = () =>
+    edits !== exportedEdits &&
+    !(fileHandle && (fileState === 'saved' || fileState === 'saving')) &&
+    hasMarks(reviewState);
+  const renderExport = () => {
+    const pending = unsaved();
+    download.dataset.unsaved = String(pending);
+    download.title = [
+      pending ? '有尚未保存到檔案的標記' : '',
+      lastExport ? `上次下載 md：${exportTime(lastExport)}` : '尚未下載過 md',
+    ]
+      .filter(Boolean)
+      .join('\n');
+  };
+  const lastExportLine = () =>
+    element(
+      'p',
+      lastExport ? `上次下載 md：${exportTime(lastExport)}` : '這份報表尚未下載過 md。',
+      'muted last-export',
+    );
   const menuButton = (label: string, action: () => void, primary = false) => {
     const button = element('button', label, primary ? 'menu-row primary' : 'menu-row');
     button.onclick = () => {
@@ -491,6 +580,7 @@ try {
     return button;
   };
   const renderFile = () => {
+    renderExport();
     saveMenu.dataset.fileState = fileState;
     const dot = element('span', undefined, 'file-dot');
     saveSummary.replaceChildren(dot, element('span', fileLabels[fileState]), icon('more'));
@@ -501,16 +591,22 @@ try {
     const text = (value: string) => savePanel.append(element('p', value, 'muted'));
     if (fileState === 'unsupported') {
       text(
-        '這個瀏覽器不支援自動存檔。標記會暫存在這個瀏覽器；請用「下載 md」保存，之後用「開啟 md」接續。',
+        '這個瀏覽器不支援自動存檔。標記只暫存在這個瀏覽器，換電腦或清除瀏覽資料就會遺失；請用「下載 md」保存，之後用「開啟 md」接續。',
       );
-      savePanel.append(openMd);
+      savePanel.append(
+        lastExportLine(),
+        menuButton('下載 md', () => download.click(), true),
+        openMd,
+      );
       return;
     }
     if (fileState === 'none') {
       text('選擇一個 md 檔的存放位置，之後每次標記都會自動寫入。這個檔案就是要交給 AI 的 md。');
       savePanel.append(
         menuButton('選擇存放位置…', () => void choose(), true),
+        menuButton('下載 md', () => download.click()),
         openMd,
+        lastExportLine(),
       );
       if (!promptDismissed)
         savePanel.append(
@@ -659,6 +755,7 @@ try {
     persist();
     scheduleWrite();
     maybePrompt();
+    renderExport();
     render();
   };
   const decide = {
@@ -671,13 +768,74 @@ try {
       highlightComponent = componentId;
       changed();
     },
+    api: (id: string, value: Decision) => {
+      reviewState = setApi(reviewState, id, value);
+      selectedApi = id;
+      changed();
+    },
+    feature: (key: string, value: Decision) => {
+      reviewState = setFeature(reviewState, key, value);
+      changed();
+    },
   };
+  /** Typing a note keeps it and saves it, without rebuilding anything the person is typing in. */
+  let noteDirty = false;
+  const keepNote = (next: ReviewState) => {
+    reviewState = next;
+    noteDirty = true;
+    persist();
+    scheduleWrite();
+    renderExport();
+  };
+  const note = {
+    screen: (screenId: string, componentId: string | undefined, value: DecisionNote) => {
+      try {
+        keepNote(
+          componentId === undefined
+            ? setDecisionNote(reviewState, 'screen', screenId, value)
+            : setDecisionNote(reviewState, 'component', screenId, componentId, value),
+        );
+      } catch (error) {
+        say(`備註未儲存：${String(error instanceof Error ? error.message : error)}`, 'error');
+      }
+    },
+    api: (id: string, value: DecisionNote) => {
+      try {
+        keepNote(setDecisionNote(reviewState, 'api', id, value));
+      } catch (error) {
+        say(`備註未儲存：${String(error instanceof Error ? error.message : error)}`, 'error');
+      }
+    },
+    feature: (key: string, value: DecisionNote) => {
+      try {
+        keepNote(setDecisionNote(reviewState, 'feature', key, value));
+      } catch (error) {
+        say(`備註未儲存：${String(error instanceof Error ? error.message : error)}`, 'error');
+      }
+    },
+    /** Leaving a note field: show its new state (the 「已填」 mark, counts) once typing is done. */
+    commit: () => {
+      if (!noteDirty) return;
+      noteDirty = false;
+      maybePrompt();
+      // Rebuilding now would swallow the click that moved focus away; wait until it has landed.
+      setTimeout(render);
+    },
+  };
+  window.addEventListener('beforeunload', (event) => {
+    // Once per visit: marks only in this browser are lost with its data, so say so before leaving.
+    if (reminded || !unsaved()) return;
+    reminded = true;
+    event.preventDefault();
+    event.returnValue = '';
+  });
 
   const renderProgress = () => {
     const counts = statistics(graph, reviewState),
       done = counts.screens.KEEP + counts.screens.REMOVE,
       total = index.screens.length,
-      issues = conflicts(graph, reviewState);
+      issues = conflicts(graph, reviewState),
+      apiIssues = apiConflicts(graph, reviewState);
     progressSummary.replaceChildren(element('span', `已確認 ${done}／${total}`), icon('more'));
     progressSummary.dataset.done = String(done);
     progressPanel.replaceChildren(element('h2', '確認進度'));
@@ -707,10 +865,50 @@ try {
         'muted',
       ),
     );
-    const conflictBox = element('div', undefined, 'progress-conflicts');
-    conflictBox.dataset.conflictCount = String(issues.length);
-    conflictBox.append(element('h3', `衝突 ${issues.length} 個`));
-    if (!issues.length) conflictBox.append(element('p', '沒有衝突', 'muted'));
+    const fieldTotal = counts.fields.KEEP + counts.fields.REMOVE + counts.fields.UNDECIDED;
+    if (fieldTotal) {
+      const line = element(
+        'p',
+        `保留 ${counts.fields.KEEP} · 移除 ${counts.fields.REMOVE} · 隨畫面移除 ${counts.fieldsInherited}`,
+        'muted',
+      );
+      line.dataset.progressFields = 'true';
+      progressPanel.append(element('h3', '欄位'), line);
+    }
+    const apiLine = element('p', `保留 ${counts.apis.KEEP} · 移除 ${counts.apis.REMOVE}`, 'muted');
+    apiLine.dataset.progressApis = 'true';
+    progressPanel.append(element('h3', 'API（直接標記）'), apiLine);
+    const featureCounts = { KEEP: 0, REMOVE: 0 };
+    for (const feature of featureList) {
+      const value = featureDecision(reviewState, feature.key);
+      if (value !== 'UNDECIDED') featureCounts[value]++;
+    }
+    const featureLine = element(
+      'p',
+      `保留 ${featureCounts.KEEP} · 移除 ${featureCounts.REMOVE} · 畫面隨功能決定 ${counts.screensInherited}`,
+      'muted',
+    );
+    featureLine.dataset.progressFeatures = 'true';
+    progressPanel.append(element('h3', '功能'), featureLine);
+    const conflictBox = element('div', undefined, 'progress-conflicts'),
+      conflictCount = issues.length + apiIssues.length;
+    conflictBox.dataset.conflictCount = String(conflictCount);
+    conflictBox.append(element('h3', `衝突 ${conflictCount} 個`));
+    if (!conflictCount) conflictBox.append(element('p', '沒有衝突', 'muted'));
+    for (const issue of apiIssues) {
+      const api = index.nodes.get(issue.apiId),
+        link = element(
+          'button',
+          `API ${api ? `${api.attributes.httpMethod || api.attributes.method || ''} ${api.attributes.path || api.attributes.route || api.name}`.trim() : issue.apiId}：${issue.decision === 'KEEP' ? '標記保留，但呼叫來源都已移除' : '標記移除，但仍有呼叫來源'}`,
+          'link-row',
+        );
+      link.dataset.apiConflictLink = issue.apiId;
+      link.onclick = () => {
+        progress.open = false;
+        showApi(issue.apiId);
+      };
+      conflictBox.append(link);
+    }
     for (const issue of issues) {
       const link = element(
         'button',
@@ -745,6 +943,7 @@ try {
     }
     listButton.setAttribute('aria-pressed', String(listMode === 'list'));
     filesButton.setAttribute('aria-pressed', String(listMode === 'files'));
+    featuresButton.setAttribute('aria-pressed', String(listMode === 'features'));
     const visible = visibleScreens(),
       matches = searchScreens(index, query);
     if (listMode === 'files') {
@@ -755,7 +954,7 @@ try {
     const shown = (id: string) => !(visible && !visible.has(id)) && !(query && !matches.has(id));
     const row = (id: string, persona?: PersonaView) => {
       const screen = index.nodes.get(id)!,
-        status = screenDecision(reviewState, id),
+        status = screenState(id),
         button = element('button', undefined, 'screen-row');
       button.dataset.screenList = id;
       button.dataset.decision = status;
@@ -774,10 +973,18 @@ try {
         button.append(tag);
       }
       if (status !== 'UNDECIDED') {
-        const mark = icon(status === 'KEEP' ? 'check' : 'close');
+        const mark = icon(status === 'KEEP' ? 'check' : 'close'),
+          inherited = screenInherited(graph, reviewState, id);
         mark.classList.add('status-mark', `decision-${status}`);
+        if (inherited) {
+          mark.classList.add('is-inherited');
+          button.dataset.inherited = 'true';
+        }
         mark.setAttribute('role', 'img');
-        mark.setAttribute('aria-label', decisionLabel(status));
+        mark.setAttribute(
+          'aria-label',
+          inherited ? `隨功能${decisionLabel(status)}` : decisionLabel(status),
+        );
         button.append(mark);
       }
       button.onclick = () => openScreen(id);
@@ -818,6 +1025,39 @@ try {
           : element('h3', `${group.title} · ${ids.length}`);
         section.append(title);
         for (const id of ids) section.append(row(id, persona));
+        list.append(section);
+      }
+      if (!list.querySelector('.screen-row'))
+        list.append(element('p', '沒有符合的畫面', 'empty-list'));
+      return;
+    }
+    if (listMode === 'features') {
+      // Screens under their feature, in the order its flows reach them.
+      for (const feature of featureList) {
+        const ids = feature.flows.flatMap((flow) => flow.screens).filter(shown);
+        if (!ids.length) continue;
+        const section = element('details', undefined, 'feature-group'),
+          summary = element('summary'),
+          decision = featureDecision(reviewState, feature.key);
+        section.dataset.featureGroup = feature.key;
+        section.open = !featuresCollapsed.has(feature.key) || ids.includes(current || '');
+        summary.append(
+          element('span', feature.label),
+          element('span', String(ids.length), 'muted'),
+        );
+        if (decision !== 'UNDECIDED') {
+          const mark = icon(decision === 'KEEP' ? 'check' : 'close');
+          mark.classList.add('status-mark', `decision-${decision}`);
+          mark.setAttribute('role', 'img');
+          mark.setAttribute('aria-label', `功能${decisionLabel(decision)}`);
+          summary.append(mark);
+        }
+        section.addEventListener('toggle', () => {
+          if (section.open) featuresCollapsed.delete(feature.key);
+          else featuresCollapsed.add(feature.key);
+        });
+        section.append(summary);
+        for (const id of ids) section.append(row(id));
         list.append(section);
       }
       if (!list.querySelector('.screen-row'))
@@ -883,9 +1123,24 @@ try {
       `[data-screen-panel="${CSS.escape(current)}"] .panel-buttons`,
     );
     if (shown) buttonsOpen = shown.open || (buttonsOpen && !!highlightComponent);
+    const fieldsShown = panel.querySelector<HTMLDetailsElement>(
+      `[data-screen-panel="${CSS.escape(current)}"] .panel-fields`,
+    );
+    if (fieldsShown) fieldsOpen = fieldsShown.open;
+    const feature = featureByScreen.get(current);
     screenPanel(panelBody, index, reviewState, current, {
+      inherited: screenInherited(graph, reviewState, current)
+        ? { decision: screenState(current), feature: feature?.label || '' }
+        : undefined,
       setScreen: decide.screen,
       setComponent: decide.component,
+      setNote: note.screen,
+      commitNote: note.commit,
+      notesOpen,
+      fieldsOpen,
+      onFieldsToggle: (open) => {
+        fieldsOpen = open;
+      },
       focus: (id) => openScreen(id),
       api: (id) => showApi(id),
       buttonsOpen,
@@ -942,7 +1197,7 @@ try {
   const canvasState = () => ({
     query,
     visible: mapScreens(),
-    screenStatus: (id: string) => screenDecision(reviewState, id),
+    screenStatus: (id: string) => screenState(id),
     persona: activePersona(),
   });
   const nodesFor = (doc: Document, id: string, component: string) => {
@@ -1054,6 +1309,55 @@ try {
       if (current === id) view?.lightLines(undefined);
     });
   };
+  // ---- how far the preview can be trusted (ADR 0157): demo data and content shown only under conditions
+  let showTrust = false;
+  const TRUST_STYLE = `[data-st-viewer-trust~="demo"]:not([data-review-status]):not([data-spotlight]){outline:2px dashed #2563eb!important;outline-offset:1px}
+[data-st-viewer-trust~="conditional"]:not([data-review-status]):not([data-spotlight]){outline:2px dashed #d97706!important;outline-offset:3px}
+[data-st-viewer-trust~="demo"][data-st-viewer-trust~="conditional"]:not([data-review-status]):not([data-spotlight]){outline-style:dotted!important}
+.st-dynamic-placeholder{outline:2px solid #64748b!important}`;
+  /** Marks, inside the preview, what is demonstration data and what only shows under some condition. */
+  const applyTrust = (doc: Document, id: string) => {
+    doc
+      .querySelectorAll('[data-st-viewer-trust]')
+      .forEach((n) => n.removeAttribute('data-st-viewer-trust'));
+    doc.getElementById('st-viewer-trust-style')?.remove();
+    if (!showTrust) return;
+    const style = doc.createElement('style');
+    style.id = 'st-viewer-trust-style';
+    style.textContent = TRUST_STYLE;
+    (doc.head || doc.documentElement).append(style);
+    const mark = (node: Element | null, token: 'demo' | 'conditional') => {
+      if (!node) return;
+      const tokens = new Set(
+        (node.getAttribute('data-st-viewer-trust') || '').split(' ').filter(Boolean),
+      );
+      tokens.add(token);
+      node.setAttribute('data-st-viewer-trust', [...tokens].sort().join(' '));
+    };
+    // Demo data: rows and values the preview filled in, and every field that prints data.
+    doc
+      .querySelectorAll(
+        '[data-st-demo-row],[data-st-demo-text],[data-st-demo-parts],[data-st-demo-key]',
+      )
+      .forEach((node) => mark(node, 'demo'));
+    doc.querySelectorAll('[data-st-conditional]').forEach((node) => mark(node, 'conditional'));
+    for (const record of payload.preview.elements || []) {
+      if (record.graphScreenId !== id) continue;
+      const kind = record.graphComponentId
+          ? index.nodes.get(record.graphComponentId)?.attributes.kind
+          : undefined,
+        conditional = !!(record as { conditions?: unknown[] }).conditions?.length;
+      if (kind !== 'DISPLAY_FIELD' && !conditional) continue;
+      let node: Element | null = null;
+      try {
+        node = doc.querySelector(previewSelector(record.path));
+      } catch {
+        continue;
+      }
+      if (kind === 'DISPLAY_FIELD') mark(node, 'demo');
+      if (conditional) mark(node, 'conditional');
+    }
+  };
   /** Decision outlines and badges inside the preview, reapplied in place whenever decisions change. */
   const decorate = (doc: Document, id: string) => {
     doc.querySelectorAll('[data-review-badge]').forEach((node) => node.remove());
@@ -1081,7 +1385,7 @@ try {
         node.dataset.spotlight = 'true';
       }
       if (!decided) continue;
-      const effective = effectiveComponent(reviewState, id, record.graphComponentId),
+      const effective = effectiveComponent(reviewState, id, record.graphComponentId, graph),
         color = effective === 'KEEP' ? '#1d6b45' : '#9e3410';
       node.dataset.reviewStatus = effective;
       if (!spotlight) node.style.outline = `3px solid ${color}`;
@@ -1091,6 +1395,7 @@ try {
       badge.style.cssText = `display:inline-block;background:${color};color:white;font:600 11px system-ui;padding:2px 5px;border-radius:4px;pointer-events:none;`;
       placeBadge(node, badge);
     }
+    applyTrust(doc, id);
   };
   // Building a preview inlines its images and takes long enough to stall the zoom, so it is prepared as soon as
   // the person points at a screen; decisions are applied on load, so a prepared document never goes stale.
@@ -1117,7 +1422,30 @@ try {
   const renderFocus = (id: string, host: HTMLElement) =>
     new Promise<void>((shown) => {
       const preview = element('section', undefined, 'preview'),
-        notice = element('span', '示意畫面：資料為範例值，不是真實系統', 'preview-notice');
+        notice = element('span', '示意畫面：資料為範例值，不是真實系統', 'preview-notice'),
+        trust = element('button', undefined, 'trust-toggle'),
+        legend = element('div', undefined, 'trust-legend');
+      trust.type = 'button';
+      trust.dataset.trustToggle = 'true';
+      trust.append(icon('info'), element('span', '標示示範內容'));
+      trust.title = '框出示範資料與依條件才出現的內容';
+      legend.dataset.trustLegend = 'true';
+      legend.append(
+        element('span', '藍色虛線：示範資料，不是真實資料', 'trust-key trust-demo'),
+        element('span', '橘色虛線：依條件才顯示（權限、狀態等）', 'trust-key trust-conditional'),
+        element('span', '灰框：無法確定的動態內容', 'trust-key trust-dynamic'),
+      );
+      const syncTrust = () => {
+        trust.setAttribute('aria-pressed', String(showTrust));
+        legend.hidden = !showTrust;
+      };
+      syncTrust();
+      trust.onclick = () => {
+        showTrust = !showTrust;
+        syncTrust();
+        const doc = frame?.contentDocument;
+        if (doc && current) applyTrust(doc, current);
+      };
       frame = element('iframe');
       simulation = undefined;
       const own = frame;
@@ -1160,7 +1488,8 @@ try {
         scroll,
       });
       // The notice sits beside the URL, outside the page, so it never covers the page's own buttons.
-      viewer.querySelector('.prototype-present')?.before(notice);
+      viewer.querySelector('.prototype-present')?.before(notice, trust);
+      viewer.querySelector('.prototype-status')?.after(legend);
       host.replaceChildren(viewer);
       // A simulated click that requested APIs on the way here says so on the screen it arrived at.
       if (pendingNotice) {
@@ -1264,6 +1593,10 @@ try {
           selectedApi = id;
         },
         onCaller: (screenId, componentId) => openScreen(screenId, { component: componentId }),
+        setApi: decide.api,
+        setNote: note.api,
+        commitNote: note.commit,
+        notesOpen: apiNotesOpen,
       });
       const hint = (
         (graph.diagnostics as { code?: string; evidence?: unknown }[] | undefined) || []
@@ -1278,6 +1611,27 @@ try {
         apis.querySelector('.api-heading')?.append(note);
       }
       main.replaceChildren(apis);
+      view = undefined;
+      frame = undefined;
+      viewer = undefined;
+      simulation = undefined;
+      return;
+    }
+    if (listMode === 'features' && !current) {
+      main.replaceChildren(
+        featureMap(index, featureList, reviewState, {
+          open: (id) => openScreen(id),
+          setFeature: decide.feature,
+          setNote: note.feature,
+          commitNote: note.commit,
+          notesOpen: featureNotesOpen,
+          collapsed: featuresCollapsed,
+          status: (id) => ({
+            decision: screenState(id),
+            inherited: screenInherited(graph, reviewState, id),
+          }),
+        }),
+      );
       view = undefined;
       frame = undefined;
       viewer = undefined;
@@ -1365,11 +1719,15 @@ try {
   };
   listButton.onclick = () => {
     listMode = 'list';
-    renderSidebar();
+    render();
   };
   filesButton.onclick = () => {
     listMode = 'files';
-    renderSidebar();
+    render();
+  };
+  featuresButton.onclick = () => {
+    listMode = 'features';
+    render();
   };
   let searchTimer: ReturnType<typeof setTimeout> | undefined;
   const applySearch = () => {
@@ -1404,6 +1762,17 @@ try {
       link.click();
       link.remove();
       setTimeout(() => URL.revokeObjectURL(url), 1000);
+      exportedEdits = edits;
+      lastExport = new Date();
+      try {
+        storage?.setItem(
+          exportKey,
+          JSON.stringify({ at: lastExport.toISOString(), marks: marksHash(reviewState) }),
+        );
+      } catch {
+        /* the time is only a convenience */
+      }
+      renderFile();
       say(markdownSizeWarning(md) ? 'md 超過 5 MB，仍完整下載' : '已下載 md');
     } catch (error) {
       say(`下載失敗：${String(error)}`, 'error');
@@ -1437,7 +1806,7 @@ try {
       start = current ? ids.indexOf(current) : -1;
     for (let step = 1; step <= ids.length; step++) {
       const id = ids[(start + step + ids.length) % ids.length];
-      if (screenDecision(reviewState, id) === 'UNDECIDED') return id;
+      if (screenState(id) === 'UNDECIDED') return id;
     }
     return undefined;
   };

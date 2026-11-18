@@ -495,8 +495,24 @@
 - WP147：設定角色的分析圖（schema 2.4）在報表按「下載 md」時失敗，訊息為「schema 2.2 嚴格驗證：觸發者」。Java `GraphIntegrityValidator` 對 2.3 與 2.4 都允許行為由 `ENTRY_POINT` 觸發，viewer 的 `strictGraph` 只允許 2.3；改為與 Java 一致。
 - 驗證：`r76-entry-point-trigger.test.mjs` 新增 2 個測試（2.3／2.4 接受 ENTRY_POINT 觸發者、2.2 仍拒絕），修正前 2.4 案例以「觸發者」失敗；viewer 測試、建置、Prettier、ESLint 全數通過。
 
-## R77 精靈步驟拆成畫面變體
+## R77 改善計畫階段 1：標注備註、欄位與 API 標注、進度保存提醒
 
-- WP148：需求方回報 reservio `/reservation/new` 的預約精靈只看得到第 1 步，點「下一步」沒有反應。原因是步驟由元件狀態切換，網址不變，第 2、3 步只在圖上以條件元件存在，預覽固定畫初始值。需求方決定（OQ-052）：步驟成為畫布上的子畫面，API 歸到各步驟。實作可證明的頁面狀態變體：常值初始化、常值寫入、不同值顯示不同元件，且步驟內的元件會寫入其他值；初始值沿用原畫面 ID，setter 寫入成為導覽到該步驟的 `NAVIGATES_TO`，網址只開啟初始值。見 [ADR 0155](adr/0155-r77-page-state-variants.md)。
-- 驗證：Maven `StateVariantTest` 新增 4 個測試，JS `r77-state-variants.test.mjs` 新增 5 個（共 196 個，原有 191 個不變），viewer `r77-state-variant-name.test.mjs` 新增 1 個；Maven 除 `screentrace-cli` 6 個需要擷取產物的整合測試（本環境沒有 capture 的 Playwright 套件，改動前即失敗）外全數通過；viewer 除 3 個同樣需要 capture 套件的測試外全數通過。reservio 實測待需求方於 sandbox 外執行。
+- WP148：依 [改善計畫 2026-11-17](IMPROVEMENT_PLAN_20261117.md) 第 1、2（顯示欄位除外）、6 項，待決問題由需求方決定（OQ-052）。輸入欄位與表格可標注並在右側欄獨立成「欄位」分組，隨畫面移除；API 頁可直接標注 API，與推導狀態不一致列為衝突；畫面、按鈕、欄位、API 都可填原因（選填）與備註；有備註或 API 標注時 md 輸出 format_version 4（正文加原因／備註欄、API 直接標注與衝突表），否則仍為 v1 且位元組不變；「下載 md」在標記不在任何檔案中時顯示提示點與上次下載時間，第一次離開頁面時提醒。修正 `putNote` 對 `__proto__` ID 的處理。見 [ADR 0155](adr/0155-r77-notes-fields-api-decisions-and-save-reminder.md)。
+- 驗證：新增 `r77-annotation-scope.test`（4）、`r77-review-md.test`（6）、`r77-annotation.e2e`（4）；`md.test` 的 WP47 測試改為再匯出 v4 保留原因與備註（ADR 0155 說明）。
+- 未做：階段 2（功能心智圖、md 系統分析章節）與階段 3（顯示欄位、模擬可信度）待需求方決定 OQ-053、OQ-054。
+
+## R78 改善計畫階段 2：功能心智圖、後端呼叫鏈、md 系統分析章節
+
+- WP149：依改善計畫第 3、4 項，OQ-053 採建議方案。viewer 依確定性規則（Struts module、處理程式類別、Tiles 定義前綴、網址前綴）分組功能與流程，清單新增「功能」顯示方式與功能地圖，可標注整個功能並由未個別標記的畫面繼承；Java 新增 `BackendCallChains` 追蹤處理程式 → Service → DAO（最多 4 層，寫入 `backendCalls` attribute）；md 新增 §8 功能與流程、§9 後端呼叫鏈、§10 資料欄位對照、§11 移除影響範圍，功能標注輸出 format_version 5；`migration_target` 可依專案在工作區設定 `migrationTargets` 改寫或移除。見 [ADR 0156](adr/0156-r78-features-backend-calls-and-system-md.md)。
+- 驗證：新增 viewer 單元 6、e2e 2、Java 8 個測試；md golden 與 WP40 雜湊只因新增章節而變（刪去後逐位元組相同）。
+
+## R79 改善計畫階段 3：顯示欄位與預覽可信度標示
+
+- WP150：依改善計畫第 5、7 項，OQ-054 採建議方案。JSP／Thymeleaf（`DisplayFields`）與 React（`screentrace-js`）把印出資料的元素建模為 `DISPLAY_FIELD` 元件，名稱依表頭、前置標籤或屬性路徑，迴圈內為一個重複元件；capture 沿用元件 ID 對應預覽元素；viewer 把顯示欄位列入「欄位」分組，可標注、可從預覽點選；md §10 以屬性對照表單模型。預覽新增「標示示範內容」切換，框出示範資料、依條件顯示與無法確定的內容。見 [ADR 0157](adr/0157-r79-display-fields-and-preview-trust.md)。
+- 驗證：新增 Java 4、JS 1、viewer e2e 2 個測試；合成專案 `page.jsp` 結尾各加一行輸出；`MarkupAnalysisTest`、`Wp21ComponentNamesTest` 排除新 kind（ADR 0157 說明）。
+
+## R80 精靈步驟拆成畫面變體
+
+- WP151：需求方回報 reservio `/reservation/new` 的預約精靈只看得到第 1 步，點「下一步」沒有反應。原因是步驟由元件狀態切換，網址不變，第 2、3 步只在圖上以條件元件存在，預覽固定畫初始值。需求方決定（OQ-055）：步驟成為畫布上的子畫面，API 歸到各步驟。實作可證明的頁面狀態變體：常值初始化、常值寫入、不同值顯示不同元件，且步驟內的元件會寫入其他值；初始值沿用原畫面 ID，setter 寫入成為導覽到該步驟的 `NAVIGATES_TO`，網址只開啟初始值。見 [ADR 0158](adr/0158-r80-page-state-variants.md)。
+- 驗證：Maven `StateVariantTest` 新增 4 個測試，JS `r80-state-variants.test.mjs` 新增 5 個（共 197 個，原有測試都不需修改），viewer `r80-state-variant-name.test.mjs` 新增 1 個；Maven 除 `screentrace-cli` 6 個需要擷取產物的整合測試（本環境沒有 capture 的 Playwright 套件，改動前即失敗）外全數通過；viewer 除 3 個同樣需要 capture 套件的測試外全數通過。reservio 實測待需求方於 sandbox 外執行。
 

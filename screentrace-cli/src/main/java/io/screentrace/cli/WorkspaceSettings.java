@@ -15,6 +15,8 @@ final class WorkspaceSettings {
   private int contextPathsLine = 1;
   private int personasLine = 1;
   private final java.util.Map<String, java.util.List<PersonaSetting>> personas;
+  private final java.util.Map<String, io.screentrace.report.MigrationTarget> migrationTargets =
+      new java.util.TreeMap<>();
   private final Path projectRoot;
   private final Path outputRoot;
   private final java.util.Map<String, java.util.List<String>> contextPaths;
@@ -56,6 +58,11 @@ final class WorkspaceSettings {
 
   java.util.Optional<java.util.List<PersonaSetting>> personasFor(Path project) {
     return java.util.Optional.ofNullable(personas.get(canonicalKey(project)));
+  }
+
+  /** The analyst's migration target for the review md, or null for the default (ADR 0156). */
+  io.screentrace.report.MigrationTarget migrationTargetFor(Path project) {
+    return migrationTargets.get(canonicalKey(project));
   }
 
   java.util.Map<String, java.util.List<String>> contextPaths() {
@@ -147,6 +154,33 @@ final class WorkspaceSettings {
             java.util.List.copyOf(parsed));
       }
     }
+    if (stored.migrationTargets != null) {
+      // {"<project>": {"backend": "...", "frontend": "..."}} or {"<project>": "none"}
+      if (!stored.migrationTargets.isObject()) throw new IOException("遷移目標 migrationTargets 必須是物件");
+      var fields = stored.migrationTargets.fields();
+      while (fields.hasNext()) {
+        var entry = fields.next();
+        var value = entry.getValue();
+        io.screentrace.report.MigrationTarget target;
+        try {
+          if (value.isTextual() && value.asText().equals("none"))
+            target = io.screentrace.report.MigrationTarget.NONE;
+          else if (value.isObject()
+              && value.size() == 2
+              && value.path("backend").isTextual()
+              && value.path("frontend").isTextual())
+            target =
+                new io.screentrace.report.MigrationTarget(
+                    value.path("backend").asText().trim(), value.path("frontend").asText().trim());
+          else throw new IllegalArgumentException("格式錯誤");
+        } catch (IllegalArgumentException error) {
+          throw new IOException(
+              "專案 " + entry.getKey() + " 的遷移目標 migrationTargets 無效：" + error.getMessage());
+        }
+        settings.migrationTargets.put(
+            RealPaths.resolveAllowMissing(Path.of(entry.getKey())).toString(), target);
+      }
+    }
     try (var parser = new ObjectMapper().getFactory().createParser(file.toFile())) {
       while (parser.nextToken() != null)
         if (parser.currentToken() == com.fasterxml.jackson.core.JsonToken.FIELD_NAME
@@ -190,7 +224,8 @@ final class WorkspaceSettings {
             paths.outputRoot().toString(),
             canonicalContextPaths(contextPaths),
             browser(file),
-            personas(file)));
+            personas(file),
+            migrationTargets(file)));
   }
 
   /**
@@ -202,6 +237,15 @@ final class WorkspaceSettings {
       if (!Files.isRegularFile(file) || Files.isSymbolicLink(file)) return null;
       var value = new ObjectMapper().readTree(file.toFile()).path("browser");
       return value.isTextual() && !value.asText().isBlank() ? value.asText() : null;
+    } catch (IOException ignored) {
+      return null;
+    }
+  }
+
+  static com.fasterxml.jackson.databind.JsonNode migrationTargets(Path file) {
+    try {
+      if (!Files.isRegularFile(file) || Files.isSymbolicLink(file)) return null;
+      return new ObjectMapper().readTree(file.toFile()).get("migrationTargets");
     } catch (IOException ignored) {
       return null;
     }
@@ -288,6 +332,10 @@ final class WorkspaceSettings {
         com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)
     public com.fasterxml.jackson.databind.JsonNode personas;
 
+    @com.fasterxml.jackson.annotation.JsonInclude(
+        com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)
+    public com.fasterxml.jackson.databind.JsonNode migrationTargets;
+
     @SuppressWarnings("unused")
     public StoredSettings() {}
 
@@ -296,8 +344,10 @@ final class WorkspaceSettings {
         String outputRoot,
         java.util.Map<String, java.util.List<String>> contextPaths,
         String browser,
-        com.fasterxml.jackson.databind.JsonNode personas) {
+        com.fasterxml.jackson.databind.JsonNode personas,
+        com.fasterxml.jackson.databind.JsonNode migrationTargets) {
       this.personas = personas;
+      this.migrationTargets = migrationTargets;
       this.contextPaths = contextPaths;
       this.browser = browser;
       this.projectRoot = projectRoot;

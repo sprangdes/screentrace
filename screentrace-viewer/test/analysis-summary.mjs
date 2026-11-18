@@ -20,7 +20,7 @@ export function analysisSummary(payload) {
     screens: graph.nodes.filter((n) => n.type === 'SCREEN').length,
     components_by_kind: histogram(
       graph.nodes.filter((n) => n.type === 'COMPONENT').map((n) => n.attributes.kind),
-      'BUTTON LINK SUBMIT TEXT_INPUT TEXTAREA SELECT CHECKBOX RADIO DATE_PICKER FILE_INPUT MULTI_SELECT FORM MODAL TABLE OTHER'.split(
+      'BUTTON LINK SUBMIT TEXT_INPUT TEXTAREA SELECT CHECKBOX RADIO DATE_PICKER FILE_INPUT MULTI_SELECT FORM MODAL TABLE DISPLAY_FIELD OTHER'.split(
         ' ',
       ),
     ),
