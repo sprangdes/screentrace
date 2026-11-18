@@ -103,6 +103,7 @@ JSP、JSPF、tag file、Tiles 與有限的 Thymeleaf 以 `MarkupTag` 等 parser 
 | [0163](0163-r85-plain-screen-names.md) | R85 畫面名稱：網址參數與狀態變體寫成白話，同名畫面先以角色區分，沒有標題時用連到它的選單文字（OQ-057） | 有效 |
 | [0164](0164-r86-menu-features.md) | R86 功能地圖新增「選單」分組依據（同一份清單產生的連結），說明只列實際用到的依據（OQ-057） | 有效 |
 | [0165](0165-r87-api-purpose.md) | R87 API 詳情與清單顯示由呼叫來源組成的白話用途 | 有效 |
+| [0167](0167-r89-suggested-personas.md) | R89 沒有設定角色時依路由守衛自動建議角色，描述標「自動建議」（OQ-057） | 有效 |
 
 ## 角色（persona）流程
 

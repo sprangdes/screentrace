@@ -549,3 +549,7 @@
 
 - WP160：依 [reservio 評估](RESERVIO_EVALUATION_20261118.md) P8。外部登入的導回路徑讀值器支援有參數的輔助方法、條件運算式、`UriComponentsBuilder` 串接與 `@ConfigurationProperties` 設定值；reservio LINE 登入的導回路徑解析為 `/login`，`EXTERNAL_LOGIN_RETURN_UNRESOLVED` 消失。見 [ADR 0166](adr/0166-r88-login-return-through-helpers-and-configuration.md)。
 
+## R89 自動建議角色
+
+- WP161：依 [reservio 評估](RESERVIO_EVALUATION_20261118.md) P9，OQ-057 採 A。沒有設定角色的 React 專案，分析器依路由守衛的身分條件建議「未登入」與各角色值的角色（載入旗標與 `must…` 例外旗標設為否），描述標「自動建議」；有手動設定時不建議。見 [ADR 0167](adr/0167-r89-suggested-personas.md)。
+

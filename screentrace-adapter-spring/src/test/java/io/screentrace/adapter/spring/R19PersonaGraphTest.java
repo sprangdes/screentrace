@@ -23,11 +23,17 @@ class R19PersonaGraphTest {
   }
 
   @Test
-  void absentPersonasPreserveSchema() throws Exception {
+  void absentPersonasAreSuggestedFromRouteGuards() throws Exception {
+    // R89 (ADR 0167, OQ-057): without configured personas the analysis suggests them; before, the
+    // schema stayed 2.3 with no persona keys.
     fixture();
     var graph = new SpringBootAnalyzer().analyze(new ProjectScanner().scan(root));
-    assertEquals("2.3", graph.schemaVersion());
-    assertFalse(new ObjectMapper().writeValueAsString(graph).contains("persona"));
+    assertEquals("2.4", graph.schemaVersion());
+    assertFalse(graph.application().personas().isEmpty());
+    assertTrue(
+        graph.application().personas().stream()
+            .allMatch(p -> p.description() != null && p.description().startsWith("自動建議")));
+    assertTrue(new ObjectMapper().writeValueAsString(graph).contains("persona"));
   }
 
   @Test

@@ -3,7 +3,12 @@ import { Evaluator } from './values.mjs';
 import { atoms, unique, combinations, contradicts, simplify } from './audience.mjs';
 import { contextTransfers } from './context-transfer.mjs';
 import { stylesheets } from './styles.mjs';
-import { personaDimensions, normalizePersonas, applyPersonas } from './personas.mjs';
+import {
+  personaDimensions,
+  normalizePersonas,
+  applyPersonas,
+  suggestPersonas,
+} from './personas.mjs';
 import { expandScalarCondition } from './branches.mjs';
 import { jsxOccurrences } from './jsx.mjs';
 import {
@@ -21,7 +26,13 @@ import { chooseStateVariants, resolveStateTransitions } from './state-variants.m
  * Static React analysis: routes, the component tree each route renders, interactive elements and what
  * their handlers do. Target code is parsed, never run; values that cannot be proven stay unresolved.
  */
-export function analyzeReact({ files = [], maxDepth = 24, markup = false, personas } = {}) {
+export function analyzeReact({
+  files = [],
+  maxDepth = 24,
+  markup = false,
+  personas,
+  suggestPersonas: suggest = false,
+} = {}) {
   const { modules, diagnostics } = parseModules(files);
   const evaluator = new Evaluator(modules, maxDepth);
   evaluator.transferContext = contextTransfers(modules, evaluator);
@@ -386,6 +397,14 @@ export function analyzeReact({ files = [], maxDepth = 24, markup = false, person
     diagnostics.push(...found.diagnostics, ...normalized.diagnostics);
     applyPersonas(normalized.personas, screens, routeRedirects);
     personaResult = { personaDimensions: found.dimensions, personas: normalized.personas };
+  } else if (suggest) {
+    // Nothing configured: personas suggested from the route guards, marked as such (ADR 0167).
+    const found = personaDimensions(screens, routeRedirects);
+    const suggested = suggestPersonas(found.all, screens);
+    if (suggested.length) {
+      applyPersonas(suggested, screens, routeRedirects);
+      personaResult = { personaDimensions: found.dimensions, personas: suggested };
+    }
   }
   for (const screen of screens) delete screen.queryDefaults;
   const groups = combinations(screens.map((s) => s.audience));

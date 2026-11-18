@@ -206,6 +206,8 @@ public final class ReactGraphContribution {
     request.put("files", files);
     request.put("markup", markup);
     request.put("maxDepth", Integer.getInteger("screentrace.react.maxDepth", 24));
+    // Without configured personas the analyzer suggests some from the route guards (ADR 0167).
+    if (!inventory.personasConfigured()) request.put("suggestPersonas", true);
     if (inventory.personasConfigured())
       request.put(
           "personas",
@@ -340,7 +342,9 @@ public final class ReactGraphContribution {
             new ApplicationGraph.Persona(
                 p.path("id").asText(),
                 p.path("name").asText(),
-                personaDescriptions.get(p.path("id").asText()),
+                personaDescriptions.getOrDefault(
+                    p.path("id").asText(),
+                    p.path("description").isTextual() ? p.path("description").asText() : null),
                 facts,
                 starts,
                 Map.of(),
@@ -1016,7 +1020,7 @@ public final class ReactGraphContribution {
           graph.apiContracts(),
           screensByRoute.isEmpty()
               ? graph.schemaVersion()
-              : personasConfigured
+              : personasConfigured || !personas.isEmpty()
                   ? ApplicationGraph.PERSONA_SCHEMA_VERSION
                   : ApplicationGraph.AUDIENCE_SCHEMA_VERSION,
           List.copyOf(behaviors.values()),
