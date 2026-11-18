@@ -15,6 +15,7 @@ import {
   queryEntryTargets,
 } from './routes.mjs';
 import { ScreenRenderer } from './screen-renderer.mjs';
+import { chooseStateVariants, resolveStateTransitions } from './state-variants.mjs';
 
 /**
  * Static React analysis: routes, the component tree each route renders, interactive elements and what
@@ -46,10 +47,27 @@ export function analyzeReact({ files = [], maxDepth = 24, markup = false, person
       continue;
     }
     seen.set(route.path, route);
-    const base = new ScreenRenderer(evaluator, occurrences, diagnostics, maxDepth, false).render(
-      route,
-      shell,
-    );
+    const base = new ScreenRenderer(evaluator, occurrences, diagnostics, maxDepth, false, [], {
+      collectStates: true,
+    }).render(route, shell);
+    const stateSplit = base.redirectOnly
+      ? null
+      : chooseStateVariants(
+          base,
+          route,
+          (pins) =>
+            new ScreenRenderer(
+              evaluator,
+              occurrences,
+              diagnostics,
+              maxDepth,
+              false,
+              base.audienceOriginal,
+              { statePins: pins },
+            ).render(route, shell),
+          diagnostics,
+        );
+    delete base.stateCandidates;
     const ordinaryVariants = base.variantDecision ?? [null];
     const queryEntry = findQueryEntryInSources(base.audienceOriginal, modules, base.file);
     const variants = queryEntry
@@ -91,59 +109,84 @@ export function analyzeReact({ files = [], maxDepth = 24, markup = false, person
         .map((effect) => ({ route: route.path, file: route.file, effect })),
     );
     for (const variant of variants) {
-      const initial = new ScreenRenderer(
-        evaluator,
-        occurrences,
-        diagnostics,
-        maxDepth,
-        false,
-        variant?.facts ?? (base.redirectOnly ? [] : base.audienceOriginal),
-      ).render(route, shell);
-      const screen = new ScreenRenderer(
-        evaluator,
-        occurrences,
-        diagnostics,
-        maxDepth,
-        markup,
-        base.redirectOnly ? [] : initial.audienceOriginal,
-      ).render(route, shell);
-      if (queryEntry && variant) {
-        screen.audience = unique([
-          ...screen.audience.filter((fact) => fact.text !== queryEntry.atom.text),
-          ...variant.facts,
-        ]);
-        screen.audienceOriginal = unique([
-          ...screen.audienceOriginal.filter((fact) => fact.text !== queryEntry.atom.text),
-          ...variant.facts,
-        ]);
+      const stateScreens = [];
+      for (const stateValue of stateSplit?.values ?? [null]) {
+        const pins = stateSplit ? new Map([[stateSplit.key, { t: 'lit', v: stateValue }]]) : null;
+        const initial = new ScreenRenderer(
+          evaluator,
+          occurrences,
+          diagnostics,
+          maxDepth,
+          false,
+          variant?.facts ?? (base.redirectOnly ? [] : base.audienceOriginal),
+          { statePins: pins },
+        ).render(route, shell);
+        const screen = new ScreenRenderer(
+          evaluator,
+          occurrences,
+          diagnostics,
+          maxDepth,
+          markup,
+          base.redirectOnly ? [] : initial.audienceOriginal,
+          { statePins: pins },
+        ).render(route, shell);
+        if (stateSplit) {
+          screen.stateVariant = {
+            name: stateSplit.name,
+            value: stateValue,
+            values: stateSplit.values,
+            initial: stateValue === stateSplit.values[0],
+            source: stateSplit.source,
+            writes: stateSplit.writes,
+          };
+          if (stateValue !== stateSplit.values[0])
+            screen.stateKey = `${stateSplit.name}=${JSON.stringify(stateValue)}`;
+        }
+        if (queryEntry && variant) {
+          screen.audience = unique([
+            ...screen.audience.filter((fact) => fact.text !== queryEntry.atom.text),
+            ...variant.facts,
+          ]);
+          screen.audienceOriginal = unique([
+            ...screen.audienceOriginal.filter((fact) => fact.text !== queryEntry.atom.text),
+            ...variant.facts,
+          ]);
+        }
+        if (variant?.baseVariant)
+          screen.variantKey = JSON.stringify(
+            unique(variant.baseVariant.facts).map((a) => [a.text, a.truth]),
+          );
+        else if (variant && !variant.queryEntryPlain && !variant.entryQuery)
+          screen.variantKey = JSON.stringify(unique(variant.facts).map((a) => [a.text, a.truth]));
+        if (variant?.entryQuery) screen.entryQuery = variant.entryQuery;
+        if (variant?.queryEntryPlain) {
+          screen.queryEntryPlain = true;
+          screen.queryDefaults = variant.queryDefaults;
+        }
+        stateScreens.push(screen);
       }
-      if (variant?.baseVariant)
-        screen.variantKey = JSON.stringify(
-          unique(variant.baseVariant.facts).map((a) => [a.text, a.truth]),
-        );
-      else if (variant && !variant.queryEntryPlain && !variant.entryQuery)
-        screen.variantKey = JSON.stringify(unique(variant.facts).map((a) => [a.text, a.truth]));
-      if (variant?.entryQuery) screen.entryQuery = variant.entryQuery;
-      if (variant?.queryEntryPlain) {
-        screen.queryEntryPlain = true;
-        screen.queryDefaults = variant.queryDefaults;
+      // Components another state variant shows are hidden by the page state, not by the audience.
+      const present = new Set(stateScreens.flatMap((item) => item.components.map((c) => c.key)));
+      for (const screen of stateScreens) {
+        screen.excluded = base.components
+          .filter((c) => !present.has(c.key))
+          .map((component) => ({
+            ...component,
+            source: { file: component.file, line: component.line },
+            audience: screen.audience,
+            reason: '此身分下不顯示',
+          }));
+        screen.audienceSummary = simplify(screen.audience);
+        delete screen.variantDecision;
+        screens.push(screen);
       }
-      const present = new Set(screen.components.map((c) => c.key));
-      screen.excluded = base.components
-        .filter((c) => !present.has(c.key))
-        .map((component) => ({
-          ...component,
-          source: { file: component.file, line: component.line },
-          audience: screen.audience,
-          reason: '此身分下不顯示',
-        }));
-      screen.audienceSummary = simplify(screen.audience);
-      delete screen.variantDecision;
-      screens.push(screen);
     }
   }
+  resolveStateTransitions(screens);
   const navigationFacts = new WeakMap();
-  const patterns = screens.map((screen) => ({
+  // A URL opens a route in its initial page state; the other state variants are reached from inside it.
+  const entryScreens = screens.filter((screen) => !screen.stateKey);
+  const patterns = entryScreens.map((screen) => ({
     route: screen.route,
     pattern: routePattern(screen.route),
   }));
@@ -155,7 +198,7 @@ export function analyzeReact({ files = [], maxDepth = 24, markup = false, person
       ...screen.load,
       ...screen.components.flatMap((component) => component.behaviors),
     ])
-      if (effect.type === 'NAVIGATE') {
+      if (effect.type === 'NAVIGATE' && !effect.stateTransition) {
         const before = effect.status;
         Object.assign(
           effect,
@@ -175,13 +218,17 @@ export function analyzeReact({ files = [], maxDepth = 24, markup = false, person
           ...(effect.contextIdentity ? (effect.destinationFacts ?? []) : []),
         ];
         navigationFacts.set(effect, facts);
-        let candidates = screens.filter((s) => (effect.targetRoutes ?? []).includes(s.route));
+        let candidates = entryScreens.filter((s) => (effect.targetRoutes ?? []).includes(s.route));
         const entryTargets = queryEntryTargets(effect.entryUrls ?? effect.urls, candidates);
         if (entryTargets) {
           candidates = entryTargets;
           if (
-            screens.some((s) => (effect.targetRoutes ?? []).includes(s.route) && s.entryQuery) &&
-            screens.some((s) => (effect.targetRoutes ?? []).includes(s.route) && s.queryEntryPlain)
+            entryScreens.some(
+              (s) => (effect.targetRoutes ?? []).includes(s.route) && s.entryQuery,
+            ) &&
+            entryScreens.some(
+              (s) => (effect.targetRoutes ?? []).includes(s.route) && s.queryEntryPlain,
+            )
           )
             effect.targetScreens = entryTargets.map((s) => ({
               file: s.file,
@@ -269,7 +316,12 @@ export function analyzeReact({ files = [], maxDepth = 24, markup = false, person
   // A non-visual branch belongs to the URL EntryPoint, and forwards to its compatible page.
   for (const screen of screens)
     for (const effect of [...screen.load, ...screen.components.flatMap((c) => c.behaviors)]) {
-      if (effect.type !== 'NAVIGATE' || effect.targetScreens?.length !== 0) continue;
+      if (
+        effect.type !== 'NAVIGATE' ||
+        effect.stateTransition ||
+        effect.targetScreens?.length !== 0
+      )
+        continue;
       const facts = navigationFacts.get(effect) ?? [],
         ctx = evaluator.transferContext,
         targets = new Map(),
@@ -283,7 +335,7 @@ export function analyzeReact({ files = [], maxDepth = 24, markup = false, person
         const guard = redirect.effect.contextGuardFacts ?? [];
         if (!guard.length || contradicts([...facts, ...guard])) continue;
         const routes = matchRoute(redirect.effect.urls, patterns).targetRoutes ?? [];
-        for (const target of screens.filter((t) => routes.includes(t.route)))
+        for (const target of entryScreens.filter((t) => routes.includes(t.route)))
           if (!contradicts([...facts, ...guard, ...ctx.navigationFacts(target.audience)])) {
             const ref = {
               file: target.file,
@@ -303,7 +355,7 @@ export function analyzeReact({ files = [], maxDepth = 24, markup = false, person
         effect.entryPointRedirects = via;
         effect.status = 'INFERRED';
         effect.targetConditions = effect.targetScreens.map((ref) => {
-          const target = screens.find(
+          const target = entryScreens.find(
             (s) => s.file === ref.file && s.route === ref.route && s.variantKey === ref.variantKey,
           );
           return { ...ref, ...ctx.explain(screen.audience, target.audience), via };

@@ -521,3 +521,11 @@
 - 影響範圍：`screentrace-parser-jsp`、`screentrace-js`、core 元件 kind、capture 的元素位置對應、viewer、md。
 - 狀態：已決定（2026-11-17），R79 實作（[ADR 0157](adr/0157-r79-display-fields-and-preview-trust.md)）。
 - 決定：需求方回覆「依你的建議繼續實作」，採用建議方案：迴圈內重複輸出視為一個元件（以來源位置識別，預覽對應所有出現處）；命名用附近的標籤文字（表頭、label），找不到時用綁定的模型屬性，原始運算式另存為 attribute；core 新增元件 kind `DISPLAY_FIELD`，kind 是既有的 attribute 字串，schema 不升版。
+
+## OQ-055 — 由元件狀態切換的精靈步驟
+
+- 情境：reservio `/reservation/new` 的預約精靈以 `useState<Step>(1)` 切換三個步驟（`moveToStep(2)`、`moveToStep(3)`，時段衝突時 `setStep(2)`），網址不變。報表只有一個畫面，預覽只畫第 1 步，點「下一步」沒有反應。
+- 可選方案：A. 每個步驟成為畫布上的子畫面，「下一步」成為導覽，API 歸到各步驟；B. 維持一個畫面，預覽內加步驟切換，不改畫面數、角色流程與 API 歸屬。
+- 影響範圍：畫面 ID 與數量、導覽邊、角色流程、API 頁的呼叫畫面、viewer 命名。
+- 狀態：RESOLVED（2026-11-18）。需求方選 A，API 歸到各自的步驟；初始步驟沿用原畫面 ID。只拆可證明的常值狀態，`setStep(s => s + 1)` 等寫法不拆。見 [ADR 0158](adr/0158-r80-page-state-variants.md)。
+

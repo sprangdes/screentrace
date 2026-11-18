@@ -81,7 +81,8 @@ export function strictGraph(graph: Graph): Graph {
     if (n.type === 'SCREEN' && n.attributes.route) {
       const routeKey =
         n.attributes.route +
-        (n.attributes.audienceVariant ? '\u001f' + n.attributes.audienceVariant : '');
+        (n.attributes.audienceVariant ? '\u001f' + n.attributes.audienceVariant : '') +
+        (n.attributes.stateVariant ? '\u001e' + n.attributes.stateVariant : '');
       if (routes.has(routeKey)) fail('重複路由');
       routes.add(routeKey);
     }

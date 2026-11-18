@@ -510,3 +510,9 @@
 
 - WP150：依改善計畫第 5、7 項，OQ-054 採建議方案。JSP／Thymeleaf（`DisplayFields`）與 React（`screentrace-js`）把印出資料的元素建模為 `DISPLAY_FIELD` 元件，名稱依表頭、前置標籤或屬性路徑，迴圈內為一個重複元件；capture 沿用元件 ID 對應預覽元素；viewer 把顯示欄位列入「欄位」分組，可標注、可從預覽點選；md §10 以屬性對照表單模型。預覽新增「標示示範內容」切換，框出示範資料、依條件顯示與無法確定的內容。見 [ADR 0157](adr/0157-r79-display-fields-and-preview-trust.md)。
 - 驗證：新增 Java 4、JS 1、viewer e2e 2 個測試；合成專案 `page.jsp` 結尾各加一行輸出；`MarkupAnalysisTest`、`Wp21ComponentNamesTest` 排除新 kind（ADR 0157 說明）。
+
+## R80 精靈步驟拆成畫面變體
+
+- WP151：需求方回報 reservio `/reservation/new` 的預約精靈只看得到第 1 步，點「下一步」沒有反應。原因是步驟由元件狀態切換，網址不變，第 2、3 步只在圖上以條件元件存在，預覽固定畫初始值。需求方決定（OQ-055）：步驟成為畫布上的子畫面，API 歸到各步驟。實作可證明的頁面狀態變體：常值初始化、常值寫入、不同值顯示不同元件，且步驟內的元件會寫入其他值；初始值沿用原畫面 ID，setter 寫入成為導覽到該步驟的 `NAVIGATES_TO`，網址只開啟初始值。見 [ADR 0158](adr/0158-r80-page-state-variants.md)。
+- 驗證：Maven `StateVariantTest` 新增 4 個測試，JS `r80-state-variants.test.mjs` 新增 5 個（共 197 個，原有測試都不需修改），viewer `r80-state-variant-name.test.mjs` 新增 1 個；Maven 除 `screentrace-cli` 6 個需要擷取產物的整合測試（本環境沒有 capture 的 Playwright 套件，改動前即失敗）外全數通過；viewer 除 3 個同樣需要 capture 套件的測試外全數通過。reservio 實測待需求方於 sandbox 外執行。
+

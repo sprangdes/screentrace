@@ -190,6 +190,10 @@ viewer 只讀 schema 2.4 的 `application.personas`，不重新判定。每個�
 
 選了角色時，viewer 以該角色的流程重新排版畫布：每一步一欄，只畫從第 N 步到第 N+1 步的線，走不到與不適用的畫面放在最後兩欄且預設隱藏；排版只用圖中的 `flow`，不重新判定；報表上的步數只算畫面，經由網址入口的轉址不另算一步（圖中的 `depth` 不變）。角色可帶分析人員寫的 `description`（schema 2.4 選填欄位，未設定時不輸出）。見 [ADR 0112](adr/0112-r21-persona-presentation.md)。
 
+### R80：頁面狀態變體
+
+React 路由中以常值初始化、只有常值寫入的元件狀態，若不同值顯示不同元件，且步驟內的元件會寫入其他值（精靈步驟），每個值成為一個 SCREEN（`stateVariant`）。初始值沿用路由的畫面 ID 並由入口 RENDERS；其他值的 ID 加上 `:state:<名稱>=<值>`，只能經由 setter 寫入產生的 `NAVIGATES_TO` 到達。偵測與轉換在 `screentrace-js/react/state-variants.mjs`。見 [ADR 0158](adr/0158-r80-page-state-variants.md)。
+
 ### R35：放大畫面的關聯線左進右出、依區塊合併
 
 `canvas.ts` 的 `focusBundles` 依總覽的區塊（`grouped.groups`，角色流程為步驟欄）把進出的線分列，列依畫面位置排序；多畫面的列畫成一條合併線並附 `.focus-bundle` 標籤與畫面清單，單一畫面的列沿用原本的線。有合併線時預覽框左右留白加寬（R35 為固定 176px；R36 起改依標籤寬度計算，見下節）。見 [ADR 0126](adr/0126-r35-focus-line-bundles.md)。
