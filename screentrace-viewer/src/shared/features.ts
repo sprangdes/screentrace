@@ -6,7 +6,7 @@ import { indexGraph, Index } from '../map';
  * Nothing is guessed: each feature names the rule and the value that put its screens together,
  * with the source of that value. A screen no rule groups with another screen goes to 其他.
  */
-export type FeatureRule = 'MODULE' | 'HANDLER_CLASS' | 'TILES' | 'URL' | 'OTHER';
+export type FeatureRule = 'MODULE' | 'HANDLER_CLASS' | 'TILES' | 'MENU' | 'URL' | 'OTHER';
 export interface FeatureFlow {
   /** The screen the flow starts from: no other screen of the feature leads to it (or, in a loop, the first by name). */
   entry: string;
@@ -29,6 +29,7 @@ export const ruleLabels: Record<FeatureRule, string> = {
   MODULE: 'Struts module',
   HANDLER_CLASS: '處理程式類別',
   TILES: 'Tiles 定義名稱前綴',
+  MENU: '選單',
   URL: '網址前綴',
   OTHER: '沒有可共用的分組依據',
 };
@@ -99,6 +100,42 @@ function candidates(index: Index): Map<string, Candidate[]> {
       list.push({ rule: 'TILES', value: prefix, label: prefix, source: screen.source });
     }
   }
+  // A menu: links rendered from one element (a list of items) that lead to two or more screens (ADR 0164).
+  const menus = new Map<
+    string,
+    { targets: Set<string>; labels: [number, string][]; source: Source }
+  >();
+  // An item's place in its list, from the `[n]` of its expansion anchor; unknown places sort last.
+  const place = (link: Node) => {
+    const found = [...(link.attributes.expansionAnchor || '').matchAll(/\[(\d+)\]/g)].at(-1);
+    return found ? Number(found[1]) : Number.MAX_SAFE_INTEGER;
+  };
+  for (const relation of index.relations) {
+    if (relation.from === relation.to) continue;
+    for (const trigger of relation.triggers) {
+      const link = index.nodes.get(trigger);
+      if (link?.type !== 'COMPONENT' || link.attributes.kind !== 'LINK' || !link.source?.file)
+        continue;
+      const value = `${link.source.file}:${link.source.line}`,
+        menu = menus.get(value) || { targets: new Set(), labels: [], source: link.source };
+      menu.targets.add(relation.to);
+      if (link.name && !/^<.*>$/.test(link.name) && !menu.labels.some(([, l]) => l === link.name))
+        menu.labels.push([place(link), link.name]);
+      menus.set(value, menu);
+    }
+  }
+  for (const [value, menu] of [...menus].sort(([a], [b]) => order(a, b))) {
+    if (menu.targets.size < 2) continue;
+    const labels = menu.labels
+      .slice()
+      .sort((a, b) => a[0] - b[0] || order(a[1], b[1]))
+      .map(([, l]) => l);
+    const label = labels.length
+      ? `選單：${labels.slice(0, 3).join('、')}${labels.length > 3 ? ' 等' : ''}`
+      : `選單：${value}`;
+    for (const id of [...menu.targets].sort(order))
+      result.get(id)?.push({ rule: 'MENU', value, label, source: menu.source });
+  }
   // The URL area: the first path segment that tells screens apart (a shared context path is skipped).
   const routes = new Map(
     index.screens.map((s) => [s.id, segments(index.routes.get(s.id)?.[0] || '')]),
@@ -122,7 +159,12 @@ function candidates(index: Index): Map<string, Candidate[]> {
   return result;
 }
 
-const RULES: FeatureRule[] = ['MODULE', 'HANDLER_CLASS', 'TILES', 'URL'];
+const RULES: FeatureRule[] = ['MODULE', 'HANDLER_CLASS', 'TILES', 'MENU', 'URL'];
+
+/** The grouping rules a list of features actually used, in priority order, for the description. */
+export function usedRules(list: Feature[]): FeatureRule[] {
+  return RULES.filter((rule) => list.some((f) => f.rule === rule));
+}
 
 /** Navigation inside one feature, followed from its entry screens. */
 function flows(index: Index, members: string[]): FeatureFlow[] {

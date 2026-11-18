@@ -1,7 +1,7 @@
 import { Index } from './map';
 import { element, text } from './text';
 import { icon } from './shell-ui';
-import { Feature, ruleLabels } from './shared/features';
+import { Feature, ruleLabels, usedRules } from './shared/features';
 import {
   Decision,
   DecisionNote,
@@ -42,7 +42,15 @@ export function featureMap(
     element('h1', '功能地圖'),
     element(
       'p',
-      '依原始碼中的分組依據整理：Struts module、處理程式類別、Tiles 定義名稱、網址前綴，至少兩個畫面共用才成為一個功能。標記整個功能時，沒有個別標記的畫面跟著功能的決定。',
+      `依原始碼中的分組依據整理${
+        usedRules(list).length
+          ? `：${usedRules(list)
+              .map((rule) => ruleLabels[rule])
+              .join('、')}`
+          : ''
+      }，至少兩個畫面共用才成為一個功能${
+        usedRules(list).includes('MENU') ? '；「選單」是同一份清單產生的連結' : ''
+      }。標記整個功能時，沒有個別標記的畫面跟著功能的決定。`,
       'muted',
     ),
   );

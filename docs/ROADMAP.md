@@ -537,3 +537,7 @@
 
 - WP157：依 [reservio 評估](RESERVIO_EVALUATION_20261118.md) P5，OQ-057 採 A。viewer 顯示名稱的網址參數與狀態變體改寫成白話（「網址帶 lineLogin=failed 或 success」「step 為 1」），同名畫面先以角色名稱區分（「通知中心（商家）」），沒有標題的畫面改用連到它的選單文字（reservio `/dashboard` 由「Customer Dashboard Page」變為「概覽」）。見 [ADR 0163](adr/0163-r85-plain-screen-names.md)。
 
+## R86 功能地圖依選單分組
+
+- WP158：依 [reservio 評估](RESERVIO_EVALUATION_20261118.md) P6，OQ-057 採 A。功能分組新增「選單」依據（同一份清單產生、連到兩個以上畫面的連結），優先於網址前綴；功能地圖的說明只列實際用到的依據，md §8 說明加入選單。見 [ADR 0164](adr/0164-r86-menu-features.md)。
+
