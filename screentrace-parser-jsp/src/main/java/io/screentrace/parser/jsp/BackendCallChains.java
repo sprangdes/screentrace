@@ -46,6 +46,13 @@ public final class BackendCallChains {
   /** Calls deeper than this from the handler are not followed (the md says so). */
   public static final int MAX_DEPTH = 4;
 
+  /** State writes are looked for this deep, past the listed calls (ADR 0172). */
+  static final int STATE_DEPTH = 8;
+
+  /** A field holding a state as text or a number: `status`, `orderState`, `stage`, `phase`. */
+  private static final java.util.regex.Pattern STATE_FIELD =
+      java.util.regex.Pattern.compile("(?i).*(status|state|stage|phase)$");
+
   /** A handler with more calls than this keeps the first ones, in source order. */
   static final int MAX_CALLS = 200;
 
@@ -196,6 +203,10 @@ public final class BackendCallChains {
     row.put("enum", change.enumName());
     var type = enums.getOrDefault(change.enumName(), List.of());
     if (type.size() == 1) row.put("values", type.get(0).constants());
+    else if (textStates.containsKey(change.enumName())) {
+      row.put("values", List.copyOf(textStates.get(change.enumName())));
+      row.put("kind", "TEXT");
+    }
     row.put("field", change.field());
     if (change.value() != null) row.put("value", change.value());
     if (change.value() != null) {
@@ -349,6 +360,10 @@ public final class BackendCallChains {
       List<StateChange> changes,
       Set<String> written) {
     if (!helpers.add(method) || method.getBody().isEmpty()) return;
+    // Past the listed depth only state writes are looked for, once per method.
+    if (depth > MAX_DEPTH
+        && !seen.add("deep\u0000" + owner.qualified() + "#" + method.getSignature().asString()))
+      return;
     String from = owner.name() + "#" + method.getNameAsString();
     stateChanges(owner, method, depth - 1, from, changes, written);
     for (var call : method.getBody().get().findAll(MethodCallExpr.class)) {
@@ -447,7 +462,7 @@ public final class BackendCallChains {
               ResolutionStatus.CONFIRMED,
               deeper ? "已達深度上限,之後的呼叫未追蹤" : null,
               source));
-      if (depth < MAX_DEPTH)
+      if (depth < STATE_DEPTH)
         for (var callee : callees)
           follow(body, callee, depth + 1, calls, seen, new HashSet<>(), changes, written);
     }
@@ -497,6 +512,8 @@ public final class BackendCallChains {
         }
       } else {
         var c = constant(value, unit);
+        if (c == null && STATE_FIELD.matcher(field).matches())
+          c = textState(node, value, field, method, owner, unit);
         if (c != null) found.add(c);
         else if (value instanceof NameExpr variable) {
           String type = variableType(method, variable.getNameAsString());
@@ -512,13 +529,25 @@ public final class BackendCallChains {
         var type = enums.getOrDefault(found.get(0)[0], List.of());
         if (node instanceof MethodCallExpr call && builderChain(call))
           prior = new Prior(null, List.of(), true, List.of());
-        else if (type.size() == 1) {
+        else if (type.size() == 1 || textStates.containsKey(found.get(0)[0])) {
           Expression target =
               node instanceof MethodCallExpr call
                   ? call.getScope().orElse(null)
                   : ((FieldAccessExpr) ((AssignExpr) node).getTarget()).getScope();
           if (target != null)
-            prior = prior(node, method, target.toString(), field, type.get(0), unit);
+            prior =
+                prior(
+                    node,
+                    method,
+                    target.toString(),
+                    field,
+                    type.size() == 1
+                        ? type.get(0)
+                        : new EnumType(
+                            found.get(0)[0],
+                            "text:" + found.get(0)[0],
+                            List.copyOf(textStates.get(found.get(0)[0]))),
+                    unit);
         }
       }
       for (var item : found)
@@ -591,10 +620,18 @@ public final class BackendCallChains {
       current = parent;
     }
     if (only != null) only.removeAll(not);
+    // An enum keeps its declaration order; a text state has no declaration, so its values sort.
+    boolean text = type.qualified().startsWith("text:");
     List<String> ordered =
-        only == null ? null : type.constants().stream().filter(only::contains).toList();
+        only == null
+            ? null
+            : text
+                ? List.copyOf(new java.util.TreeSet<>(only))
+                : type.constants().stream().filter(only::contains).toList();
     List<String> excluded =
-        only != null ? List.of() : type.constants().stream().filter(not::contains).toList();
+        only != null
+            ? List.of()
+            : text ? List.copyOf(not) : type.constants().stream().filter(not::contains).toList();
     if (ordered == null && excluded.isEmpty()) return Prior.NONE;
     return new Prior(ordered, excluded, false, List.copyOf(lines));
   }
@@ -641,7 +678,7 @@ public final class BackendCallChains {
             read(binary.getLeft(), method, scope, field)
                 ? binary.getRight()
                 : read(binary.getRight(), method, scope, field) ? binary.getLeft() : null;
-        var c = other == null ? null : constant(other, unit);
+        var c = other == null ? null : stateConstant(other, unit, type);
         if (c == null || !c[0].equals(type.name())) return null;
         return new Test(
             Set.of(c[1]), op == com.github.javaparser.ast.expr.BinaryExpr.Operator.EQUALS);
@@ -666,7 +703,7 @@ public final class BackendCallChains {
           read(call.getScope().get(), method, scope, field)
               ? call.getArgument(0)
               : read(call.getArgument(0), method, scope, field) ? call.getScope().get() : null;
-      var c = other == null ? null : constant(other, unit);
+      var c = other == null ? null : stateConstant(other, unit, type);
       if (c == null || !c[0].equals(type.name())) return null;
       return new Test(Set.of(c[1]), true);
     }
@@ -716,6 +753,75 @@ public final class BackendCallChains {
     return false;
   }
 
+  /**
+   * A state kept as text or a number (ADR 0172): `order.setStatus("PAID")`, `setStatus(2)` or a
+   * `static final` constant holding such a literal, on a field named like a state. The state's name
+   * is the written object's type and the field, `Order.status`, or the field alone when the type is
+   * not declared nearby. Its values are every literal written to it across the project.
+   */
+  private String[] textState(
+      Node write,
+      Expression value,
+      String field,
+      MethodDeclaration method,
+      Type owner,
+      CompilationUnit unit) {
+    String literal = textLiteral(value, owner);
+    if (literal == null) return null;
+    Expression target =
+        write instanceof MethodCallExpr call
+            ? call.getScope().orElse(null)
+            : write instanceof AssignExpr assign && assign.getTarget() instanceof FieldAccessExpr f
+                ? f.getScope()
+                : null;
+    String type = target instanceof NameExpr n ? variableType(method, n.getNameAsString()) : null;
+    if (type == null && target instanceof NameExpr n) type = fieldType(owner, n.getNameAsString());
+    String name = (type == null ? "" : type + ".") + field;
+    textStates.computeIfAbsent(name, k -> new java.util.TreeSet<>()).add(literal);
+    return new String[] {name, literal};
+  }
+
+  /** An enum constant, or for a text state a string or integer literal. */
+  private String[] stateConstant(Expression expression, CompilationUnit unit, EnumType type) {
+    if (!type.qualified().startsWith("text:")) return constant(expression, unit);
+    if (expression instanceof com.github.javaparser.ast.expr.StringLiteralExpr s)
+      return new String[] {type.name(), s.asString()};
+    if (expression instanceof com.github.javaparser.ast.expr.IntegerLiteralExpr i)
+      return new String[] {type.name(), i.getValue()};
+    return null;
+  }
+
+  /** States kept as text: name → every value written, for the `values` of each row. */
+  private final Map<String, java.util.TreeSet<String>> textStates = new TreeMap<>();
+
+  private String textLiteral(Expression value, Type owner) {
+    if (value instanceof com.github.javaparser.ast.expr.StringLiteralExpr s) return s.asString();
+    if (value instanceof com.github.javaparser.ast.expr.IntegerLiteralExpr i) return i.getValue();
+    // A constant: `STATUS_PAID` in this class, or `Orders.STATUS_PAID` in another project class.
+    String holder = null, name = null;
+    if (value instanceof NameExpr n) {
+      holder = owner.name();
+      name = n.getNameAsString();
+    } else if (value instanceof FieldAccessExpr f) {
+      holder = f.getScope().toString();
+      holder = holder.substring(holder.lastIndexOf('.') + 1);
+      name = f.getNameAsString();
+    }
+    if (name == null) return null;
+    for (var type : bySimple.getOrDefault(holder, List.of()))
+      for (var declaration : type.declaration().getFields())
+        if (declaration.isStatic() && declaration.isFinal())
+          for (var variable : declaration.getVariables())
+            if (variable.getNameAsString().equals(name) && variable.getInitializer().isPresent()) {
+              var init = variable.getInitializer().get();
+              if (init instanceof com.github.javaparser.ast.expr.StringLiteralExpr s)
+                return s.asString();
+              if (init instanceof com.github.javaparser.ast.expr.IntegerLiteralExpr i)
+                return i.getValue();
+            }
+    return null;
+  }
+
   /** {@code Status.DONE} or a statically imported {@code DONE}: [enum, constant], else null. */
   private String[] constant(Expression expression, CompilationUnit unit) {
     if (expression instanceof FieldAccessExpr access) {
@@ -760,6 +866,7 @@ public final class BackendCallChains {
   }
 
   private static void add(List<Call> calls, Set<String> seen, Call call) {
+    if (call.depth() > MAX_DEPTH) return; // deeper calls are followed only for state writes
     if (seen.add(call.depth() + "\u0000" + call.from() + "\u0000" + call.to())) calls.add(call);
   }
 

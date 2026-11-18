@@ -581,3 +581,7 @@
 
 - WP168：背景作業偵測移到共用模組並套用 Struts 管線，新增 XML `task:scheduled`、程式排程（TaskScheduler、ScheduledExecutorService）、Quartz Job 與 `@Async`。見 [ADR 0171](adr/0171-r96-more-background-jobs.md)。
 
+## R97 文字狀態與較深的狀態寫入
+
+- WP169：狀態欄位（名稱以 status／state／stage／phase 結尾）的字串、整數與常數寫入也列為狀態並推論原狀態；狀態寫入追到 8 層（呼叫鏈仍列 4 層）。見 [ADR 0172](adr/0172-r97-text-states-and-deeper-writes.md)。
+
