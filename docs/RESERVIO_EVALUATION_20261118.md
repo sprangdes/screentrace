@@ -150,3 +150,19 @@ reservio 的權限守衛（`RequireCustomer`、`RequireBusiness`、`RequireBusin
 2. P3、P4：消除「示例值」與疊加狀態，讓預覽可信。
 3. P5、P6、P7：去除工程用語，依角色或導覽分組。
 4. P8、P9、P10。
+
+## 7. 處理狀態（2026-11-18）
+
+| 問題 | 輪次 | 處理結果 |
+|---|---|---|
+| P1 沒有畫面的功能 | R81（[ADR 0159](adr/0159-r81-background-jobs.md)） | API 頁「系統自動作業」列出 6 個排程與白話執行時機、後端呼叫；md §12 |
+| P2 狀態流程 | R82（[ADR 0160](adr/0160-r82-state-changes.md)） | API 頁「資料狀態」列出各狀態由哪個 API／作業設定，前端一致時並列中文；LINE 對話 9 個步驟可見；md §13 |
+| P3 示例值 | R83（[ADR 0161](adr/0161-r83-literal-alternatives-and-wrapped-labels.md)） | 首頁按鈕讀成「前往預約 / 開始預約」，預約間隔顯示 15／30／45／60 分鐘；訪客導覽列仍為示例值 |
+| P4 疊加狀態 | R84（[ADR 0162](adr/0162-r84-page-states-in-preview.md)） | 截圖與預覽預設只顯示有資料狀態，可切換載入中／錯誤／沒有資料 |
+| P5 畫面名稱 | R85（[ADR 0163](adr/0163-r85-plain-screen-names.md)） | 「網址帶 lineLogin=…」「step 為 1」「通知中心（商家）」「概覽」 |
+| P6 功能地圖 | R86（[ADR 0164](adr/0164-r86-menu-features.md)） | 依選單分組；說明只列實際用到的依據 |
+| P7 API 用途 | R87（[ADR 0165](adr/0165-r87-api-purpose.md)） | API 詳情與清單顯示由觸發按鈕組成的用途 |
+| P8 LINE 登入導回 | R88（[ADR 0166](adr/0166-r88-login-return-through-helpers-and-configuration.md)） | 解析為 `/login`，診斷消失 |
+| P9 角色 | R89（[ADR 0167](adr/0167-r89-suggested-personas.md)） | 沒有設定時自動建議未登入、BUSINESS、USER；BUSINESS 仍多為「可能走到」 |
+| P10 啟動腳本 | R90 | `doctor` 在設有 `JAVA_TOOL_OPTIONS` 的環境正確判斷 Java 版本 |
+

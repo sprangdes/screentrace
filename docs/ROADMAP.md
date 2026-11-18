@@ -553,3 +553,7 @@
 
 - WP161：依 [reservio 評估](RESERVIO_EVALUATION_20261118.md) P9，OQ-057 採 A。沒有設定角色的 React 專案，分析器依路由守衛的身分條件建議「未登入」與各角色值的角色（載入旗標與 `must…` 例外旗標設為否），描述標「自動建議」；有手動設定時不建議。見 [ADR 0167](adr/0167-r89-suggested-personas.md)。
 
+## R90 啟動腳本的 Java 版本判斷
+
+- WP162：依 [reservio 評估](RESERVIO_EVALUATION_20261118.md) P10。`bin/screentrace` 與 `bin/screentrace.ps1` 原本只讀 `java -version` 的第一行，環境設有 `JAVA_TOOL_OPTIONS` 時第一行是「Picked up …」，`doctor` 誤報缺 Java、`analyze` 無法執行；改為取含 `version "` 的那一行。新增 viewer `r90-launcher-java.test`（1）。
+
