@@ -160,7 +160,7 @@ reservio 的權限守衛（`RequireCustomer`、`RequireBusiness`、`RequireBusin
 | P3 示例值 | R83、R91（[ADR 0161](adr/0161-r83-literal-alternatives-and-wrapped-labels.md)、[0168](adr/0168-r91-screen-facts-through-props.md)） | 訪客首頁導覽列與按鈕與實際畫面一致（「我要預約…」「開始預約」），預約間隔顯示 15／30／45／60 分鐘 |
 | P4 疊加狀態 | R84（[ADR 0162](adr/0162-r84-page-states-in-preview.md)） | 截圖與預覽預設只顯示有資料狀態，可切換載入中／錯誤／沒有資料 |
 | P5 畫面名稱 | R85（[ADR 0163](adr/0163-r85-plain-screen-names.md)） | 「網址帶 lineLogin=…」「step 為 1」「通知中心（商家）」「概覽」 |
-| P6 功能地圖 | R86（[ADR 0164](adr/0164-r86-menu-features.md)） | 依選單分組；說明只列實際用到的依據 |
+| P6 功能地圖 | R86、R93（[ADR 0164](adr/0164-r86-menu-features.md)） | 依選單分組，變體與同元件畫面併入同一功能；「其他」由 14 個降為 8 個；說明只列實際用到的依據 |
 | P7 API 用途 | R87（[ADR 0165](adr/0165-r87-api-purpose.md)） | API 詳情與清單顯示由觸發按鈕組成的用途 |
 | P8 LINE 登入導回 | R88（[ADR 0166](adr/0166-r88-login-return-through-helpers-and-configuration.md)） | 解析為 `/login`，診斷消失 |
 | P9 角色 | R89、R92（[ADR 0167](adr/0167-r89-suggested-personas.md)） | 沒有設定時自動建議未登入、BUSINESS、USER，結果與手動設定相同 |

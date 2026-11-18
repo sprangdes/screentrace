@@ -233,6 +233,39 @@ export function features(input: Graph | Index): Feature[] {
     if (c) chosenCounts.set(key(c), (chosenCounts.get(key(c)) || 0) + 1);
   for (const [screenId, c] of chosen)
     if (c && chosenCounts.get(key(c))! < 2) chosen.set(screenId, undefined);
+  // A screen left out joins the feature of its siblings: versions of the same route first (a query or
+  // a wizard step), then screens drawn by the same page component (ADR 0169).
+  // Versions by audience (signed out / signed in) on one URL are different screens to people, so
+  // only a query or page-state version follows its route; a redirect-only route has no page of its own.
+  const attrs = (id: string) => index.nodes.get(id)?.attributes || {};
+  const siblingKeys: ((id: string) => string | undefined)[] = [
+    (id) =>
+      attrs(id).entryQuery || attrs(id).stateVariant ? index.routes.get(id)?.[0] : undefined,
+    (id) => (attrs(id).redirectTargets === undefined ? attrs(id).view || undefined : undefined),
+  ];
+  for (const siblingKey of siblingKeys) {
+    const joined = new Map<string, Candidate>();
+    for (const screen of index.screens) {
+      if (chosen.get(screen.id)) continue;
+      const own = siblingKey(screen.id);
+      if (!own) continue;
+      const votes = new Map<string, { candidate: Candidate; count: number }>();
+      for (const other of index.screens) {
+        const c = chosen.get(other.id);
+        const otherKey =
+          siblingKey === siblingKeys[0] ? index.routes.get(other.id)?.[0] : siblingKey(other.id);
+        if (!c || other.id === screen.id || otherKey !== own) continue;
+        const vote = votes.get(key(c)) || { candidate: c, count: 0 };
+        vote.count++;
+        votes.set(key(c), vote);
+      }
+      const best = [...votes.entries()].sort(
+        (a, b) => b[1].count - a[1].count || order(a[0], b[0]),
+      )[0];
+      if (best) joined.set(screen.id, best[1].candidate);
+    }
+    for (const [id, c] of joined) chosen.set(id, c);
+  }
   const groups = new Map<string, { candidate?: Candidate; screens: string[]; sources: Source[] }>();
   for (const [screenId, c] of chosen) {
     const k = c
