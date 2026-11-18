@@ -41,3 +41,57 @@ test('R89 a guest and one persona per role value are suggested, each saying so',
   // Without the request flag nothing is added (WP86).
   assert.ok(!('personas' in analyzeReact({ files })));
 });
+
+test('R92 a role persona takes the value of other flags most of its guarded screens require', () => {
+  const guarded = [
+    {
+      file: 'src/App.tsx',
+      code: `import { Routes, Route, Navigate } from 'react-router-dom'; import { useAuth } from './auth';
+        function RequireSeller({ children }){ const { me, loading } = useAuth(); if (loading) return null;
+          if (!me) return <Navigate to="/login"/>; if (me.role !== 'ROLE_SELLER') return <Navigate to="/"/>;
+          if (!me.shop) return <Navigate to="/setup"/>; return children; }
+        function RequireSetup({ children }){ const { me } = useAuth(); if (!me || me.role !== 'ROLE_SELLER' || me.shop) return <Navigate to="/"/>; return children; }
+        function RequireBuyer({ children }){ const { me } = useAuth(); if (!me || me.role !== 'ROLE_BUYER') return <Navigate to="/"/>; return children; }
+        const Page = ({ t }) => <main><h1>{t}</h1></main>;
+        export default function App(){ return <Routes>
+          <Route path="/" element={<Page t="首頁"/>}/>
+          <Route path="/orders" element={<RequireSeller><Page t="訂單"/></RequireSeller>}/>
+          <Route path="/items" element={<RequireSeller><Page t="商品"/></RequireSeller>}/>
+          <Route path="/setup" element={<RequireSetup><Page t="開店"/></RequireSetup>}/>
+          <Route path="/buy" element={<RequireBuyer><Page t="購物"/></RequireBuyer>}/></Routes>; }`,
+    },
+    {
+      file: 'src/auth.tsx',
+      code: `import { createContext, useContext, useEffect, useState } from 'react';
+        const AuthContext = createContext(null);
+        export function AuthProvider({ children }) { const [me, setMe] = useState(null); const [loading, setLoading] = useState(true);
+          useEffect(() => { fetch('/api/me').then(r => r.json()).then(u => setMe(u)).finally(() => setLoading(false)); }, []);
+          return <AuthContext.Provider value={{ me, loading }}>{children}</AuthContext.Provider>; }
+        export function useAuth() { return useContext(AuthContext); }`,
+    },
+    {
+      file: 'src/main.tsx',
+      code: `import { createRoot } from 'react-dom/client'; import { BrowserRouter } from 'react-router-dom'; import { AuthProvider } from './auth'; import App from './App';
+        createRoot(document.getElementById('root')).render(<BrowserRouter><AuthProvider><App/></AuthProvider></BrowserRouter>);`,
+    },
+  ];
+  const r = analyzeReact({ files: guarded, suggestPersonas: true });
+  const facts = (id) =>
+    r.personas
+      .find((p) => p.id === id)
+      .facts.filter((f) => f.text !== 'loading')
+      .map((f) => [f.text, f.truth])
+      .sort();
+  // Two of the three seller screens require a shop: an ordinary seller has one.
+  assert.deepEqual(facts('role-role-seller'), [
+    ['me', true],
+    ['me.role === "ROLE_SELLER"', true],
+    ['me.shop', true],
+  ]);
+  assert.deepEqual(facts('role-role-buyer'), [
+    ['me', true],
+    ['me.role === "ROLE_BUYER"', true],
+  ]);
+  const orders = r.screens.find((s) => s.route === '/orders');
+  assert.equal(orders.personas['role-role-seller'], 'APPLIES');
+});

@@ -163,6 +163,6 @@ reservio 的權限守衛（`RequireCustomer`、`RequireBusiness`、`RequireBusin
 | P6 功能地圖 | R86（[ADR 0164](adr/0164-r86-menu-features.md)） | 依選單分組；說明只列實際用到的依據 |
 | P7 API 用途 | R87（[ADR 0165](adr/0165-r87-api-purpose.md)） | API 詳情與清單顯示由觸發按鈕組成的用途 |
 | P8 LINE 登入導回 | R88（[ADR 0166](adr/0166-r88-login-return-through-helpers-and-configuration.md)） | 解析為 `/login`，診斷消失 |
-| P9 角色 | R89（[ADR 0167](adr/0167-r89-suggested-personas.md)） | 沒有設定時自動建議未登入、BUSINESS、USER；BUSINESS 仍多為「可能走到」 |
+| P9 角色 | R89、R92（[ADR 0167](adr/0167-r89-suggested-personas.md)） | 沒有設定時自動建議未登入、BUSINESS、USER，結果與手動設定相同 |
 | P10 啟動腳本 | R90 | `doctor` 在設有 `JAVA_TOOL_OPTIONS` 的環境正確判斷 Java 版本 |
 

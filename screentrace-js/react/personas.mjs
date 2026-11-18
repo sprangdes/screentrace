@@ -83,7 +83,8 @@ export function personaDimensions(screens, routeRedirects) {
  * the one with most values) is the role; its object, when it
  * is itself a condition (`me` for `me.role`), tells signed-in from signed-out; loading flags are
  * false for every persona, and exception flags of the signed-in object named `must…`, `force…`,
- * `needs…` or `requires…` are false for the role personas. Each persona says it is a suggestion and which condition defines it.
+ * `needs…` or `requires…` are false for the role personas; any other flag of that object takes
+ * the value most screens guarded by the role require. Each persona says it is a suggestion and which condition defines it.
  */
 export function suggestPersonas(dimensions, screens) {
   const uses = new Map();
@@ -130,6 +131,35 @@ export function suggestPersonas(dimensions, screens) {
       facts: unique([...fact(login.text, false, login.source), ...common]),
     });
   const ids = new Set(list.map((p) => p.id));
+  const flag = (text) =>
+    text.startsWith(`${base}.`) && /^[\w$.]+$/.test(text) && text !== role.text;
+  const isException = (text) => /^(must|force|needs?|requires?)[A-Z]/.test(text.split('.').at(-1));
+  /**
+   * Other flags of the signed-in object that screens guarded by this role require (`me.business`):
+   * the value most of those screens require, when it is a strict majority, is the role's ordinary
+   * state.
+   */
+  const ordinary = (value) => {
+    const roleFact = `${role.text} === ${value.replace(/^'(.*)'$/, '"$1"')}`,
+      tally = new Map();
+    for (const screen of screens) {
+      const atomsOf = screen.audience ?? [];
+      if (!atomsOf.some((a) => a.text === roleFact && a.truth)) continue;
+      for (const a of atomsOf)
+        if (flag(a.text) && !isException(a.text)) {
+          const count = tally.get(a.text) ?? { yes: 0, no: 0 };
+          count[a.truth ? 'yes' : 'no']++;
+          tally.set(a.text, count);
+        }
+    }
+    const facts = [];
+    for (const [text, { yes, no }] of [...tally].sort(([a], [b]) => (a < b ? -1 : 1)))
+      if (yes !== no) {
+        const dimension = dimensions.find((d) => d.text === text);
+        facts.push(...fact(text, yes > no, dimension?.source ?? role.source));
+      }
+    return facts;
+  };
   for (const value of words(role)) {
     const word = value.slice(1, -1);
     let id = `role-${
@@ -148,6 +178,7 @@ export function suggestPersonas(dimensions, screens) {
       facts: unique([
         ...(login ? fact(login.text, true, login.source) : []),
         ...fact(`${role.text} === ${value}`, true, role.source),
+        ...ordinary(value),
         ...exceptions,
         ...common,
       ]),
