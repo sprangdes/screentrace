@@ -419,6 +419,8 @@ public record ApplicationGraph(
     FORM,
     MODAL,
     TABLE,
+    /** An element whose content prints data (EL, c:out, bean:write, th:text, a JSX expression). */
+    DISPLAY_FIELD,
     OTHER
   }
 

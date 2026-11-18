@@ -162,7 +162,7 @@ JSP、JSPF、tag file、Tiles 與有限的 Thymeleaf 以 `MarkupTag` 等 parser 
 | [0070](0070-r14-design-system-and-review-layout.md) | R14 design tokens and review workspace alignment | 部分被取代：介面於 R17 重寫或移除，見 [0084](0084-r17-two-page-report-and-retired-tests.md) |
 | [0071](0071-r14-wp48-wp49-ui-assertion-migrations.md) | R14 WP48–WP49 UI 斷言遷移 | 部分被取代：介面於 R17 重寫或移除，見 [0084](0084-r17-two-page-report-and-retired-tests.md) |
 | [0072](0072-r15-api-method-and-category-labels.md) | R15 API 方法與分類標籤 | 有效 |
-| [0084](0084-r17-two-page-report-and-retired-tests.md) | R17 兩頁報表與退場測試 | 有效 |
+| [0084](0084-r17-two-page-report-and-retired-tests.md) | R17 兩頁報表與退場測試 | 部分被取代：第 3 點對原因與備註的略過，見 [0155](0155-r77-notes-fields-api-decisions-and-save-reminder.md) |
 | [0085](0085-r17-canvas-zoom-focus-and-click-simulation.md) | R17 畫布 zoom in 聚焦與點擊模擬 | 有效 |
 | [0090](0090-overview-areas-and-pinned-relations.md) | 總覽分區、單擊看關聯、雙擊開啟畫面 | 有效 |
 | [0119](0119-r28-visual-summaries.md) | R28 API 頁與角色頁加上數量的圖形摘要 | 部分被取代：角色頁每步直條改由 [0123](0123-r32-api-persona-graphics.md) |
@@ -176,7 +176,7 @@ JSP、JSPF、tag file、Tiles 與有限的 Thymeleaf 以 `MarkupTag` 等 parser 
 
 ## 審查 md 與決策
 
-確認結果以畫面／元件複合鍵保存，交付物是單一 md；R17 起使用 md v1 與自動存檔的進度檔（ADR 0086），決策原因與備註已退場。
+確認結果以畫面／元件複合鍵保存，交付物是單一 md；R17 起使用 md v1 與自動存檔的進度檔（ADR 0086）。R77 起輸入欄位、表格與 API 也可標注，每個標注可附原因與備註，有備註或 API 標注時輸出 md v4（ADR 0155）。R78 起可標注整個功能（md v5），md 另含功能、後端呼叫鏈、欄位對照與移除影響範圍（ADR 0156）。
 
 | ADR | 決定 | 狀態 |
 |---|---|---|
@@ -187,9 +187,12 @@ JSP、JSPF、tag file、Tiles 與有限的 Thymeleaf 以 `MarkupTag` 等 parser 
 | [0025](0025-retire-json-review-export.md) | 歷史 JSON review 匯出退場 | 有效 |
 | [0026](0026-review-md-unicode-and-code-span.md) | Review md 隱形字元隔離與 code span 忠實度 | 有效 |
 | [0062](0062-confirmation-dashboard-workflow.md) | 以既有決策模型擴充確認工作流 | 部分被取代：介面於 R17 重寫或移除，見 [0084](0084-r17-two-page-report-and-retired-tests.md) |
-| [0069](0069-r14-wp47-decision-notes-and-md-v3.md) | R14 WP47 決策原因、備註與 Markdown v3 | 部分被取代：決策原因與備註已退場（[0084](0084-r17-two-page-report-and-retired-tests.md)），md 改為 v1（[0086](0086-r17-progress-file-autosave-and-md-v1.md)） |
-| [0086](0086-r17-progress-file-autosave-and-md-v1.md) | R17 進度檔自動存檔與 md v1 | 有效 |
+| [0069](0069-r14-wp47-decision-notes-and-md-v3.md) | R14 WP47 決策原因、備註與 Markdown v3 | 部分被取代：決策原因與備註曾退場（[0084](0084-r17-two-page-report-and-retired-tests.md)），md 改為 v1（[0086](0086-r17-progress-file-autosave-and-md-v1.md)）；R77 恢復原因與備註並改用 md v4（[0155](0155-r77-notes-fields-api-decisions-and-save-reminder.md)） |
+| [0086](0086-r17-progress-file-autosave-and-md-v1.md) | R17 進度檔自動存檔與 md v1 | 部分被取代：有備註或 API 標注時輸出 md v4，見 [0155](0155-r77-notes-fields-api-decisions-and-save-reminder.md) |
 | [0153](0153-r70-review-md-trailing-empty-lines.md) | R70 review md 的附錄區塊之後允許空行 | 有效 |
+| [0155](0155-r77-notes-fields-api-decisions-and-save-reminder.md) | R77 標注備註、欄位與 API 標注、進度保存提醒（md v4） | 有效 |
+| [0156](0156-r78-features-backend-calls-and-system-md.md) | R78 功能分組與心智圖、後端呼叫鏈、md 系統分析章節（md v5、migration_target 設定） | 有效 |
+| [0157](0157-r79-display-fields-and-preview-trust.md) | R79 顯示欄位（DISPLAY_FIELD）與預覽可信度標示 | 有效 |
 
 ## 元件庫
 

@@ -1,6 +1,13 @@
 import { icon } from './shell-ui';
 import { element } from './text';
-import { Decision, EffectiveDecision } from './shared/review';
+import {
+  Decision,
+  DecisionNote,
+  EffectiveDecision,
+  ReasonCode,
+  reasonCodes,
+  reasonLabels,
+} from './shared/review';
 import { decisionTerm } from './terms';
 
 /** Elements that never show children: void elements, form controls that draw their own
@@ -89,4 +96,88 @@ export function decisionSwitch(
   });
   group.append(...buttons);
   return group;
+}
+
+/** Notes are capped at this many characters (Unicode code points), as the review state validates. */
+export const NOTE_LIMIT = 1000;
+export interface NoteEditorOptions {
+  /** What the note is about, for screen readers: 「這個畫面」, a button's name, an API. */
+  label: string;
+  decision: Decision;
+  note: DecisionNote;
+  open: boolean;
+  compact?: boolean;
+  onToggle: (open: boolean) => void;
+  /** Every keystroke: keep the text without rebuilding the panel, so typing is never interrupted. */
+  onInput: (note: DecisionNote) => void;
+  /** Leaving the field or choosing a reason: the panel may be rebuilt to show the new state. */
+  onCommit: () => void;
+}
+/** A foldable note: an optional reason fitting the current keep／remove decision, and free text.
+ * The toggle is a button (not <details>), so the panels' own <summary> sections stay the only ones. */
+export function noteEditor(options: NoteEditorOptions): HTMLDivElement {
+  const box = element('div', undefined, options.compact ? 'note-editor compact' : 'note-editor'),
+    body = element('div', undefined, 'note-body'),
+    filled = !!(options.note.note || options.note.reason),
+    toggle = element('button', undefined, 'note-toggle');
+  toggle.type = 'button';
+  toggle.dataset.noteToggle = 'true';
+  toggle.append(icon('note'), element('span', filled ? '備註（已填）' : '備註'));
+  toggle.setAttribute('aria-label', `${options.label}的備註${filled ? '（已填）' : ''}`);
+  toggle.title = filled ? '查看或修改備註' : '寫備註';
+  if (filled) box.dataset.noteFilled = 'true';
+  const show = (open: boolean) => {
+    box.dataset.open = String(open);
+    toggle.setAttribute('aria-expanded', String(open));
+    body.hidden = !open;
+  };
+  show(options.open);
+  toggle.onclick = () => {
+    const open = box.dataset.open !== 'true';
+    show(open);
+    options.onToggle(open);
+    if (open) body.querySelector<HTMLTextAreaElement>('textarea')?.focus();
+  };
+  box.append(toggle, body);
+  let current: DecisionNote = { ...options.note };
+  if (options.decision !== 'UNDECIDED') {
+    const codes = reasonCodes[options.decision] as readonly ReasonCode[],
+      field = element('label', undefined, 'note-reason'),
+      select = element('select');
+    select.dataset.noteReason = 'true';
+    select.append(new Option('不指定原因', ''));
+    for (const code of codes) select.append(new Option(reasonLabels[options.decision][code], code));
+    select.value = current.reason && codes.includes(current.reason) ? current.reason : '';
+    select.onchange = () => {
+      current = { ...current, reason: (select.value || undefined) as ReasonCode | undefined };
+      if (!current.reason) delete current.reason;
+      options.onInput(current);
+      options.onCommit();
+    };
+    field.append(element('span', options.decision === 'KEEP' ? '保留原因' : '移除原因'), select);
+    body.append(field);
+  }
+  const area = element('textarea');
+  area.dataset.noteText = 'true';
+  area.rows = 3;
+  area.maxLength = NOTE_LIMIT;
+  area.value = current.note || '';
+  area.placeholder = '例如：這個欄位改成必填、這個流程併到另一個畫面、移除的理由';
+  area.setAttribute('aria-label', `${options.label}的備註`);
+  const count = element('span', undefined, 'note-count');
+  const showCount = () => {
+    count.textContent = `${Array.from(area.value).length}／${NOTE_LIMIT}`;
+  };
+  showCount();
+  area.oninput = () => {
+    showCount();
+    current = { ...current, note: area.value };
+    if (!area.value) delete current.note;
+    options.onInput(current);
+  };
+  area.onchange = () => options.onCommit();
+  const help = element('p', undefined, 'muted note-help');
+  help.append(element('span', '備註會寫進 md，交給 AI 作為修改依據。'), count);
+  body.append(area, help);
+  return box;
 }

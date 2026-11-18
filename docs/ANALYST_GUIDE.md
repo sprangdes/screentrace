@@ -100,6 +100,19 @@ R17 起報表與 md 不顯示元件庫建議與覆寫；以下指令仍可驗證
 
 分析摘要會逐一印出各角色的可達、可能、未到達與未判定導覽數量。報表在圖中有角色時才顯示角色功能：畫布左上角的角色按鈕把畫布換成該角色的流程圖（由左到右依步數排列，走不到與不適用的畫面預設隱藏），清單也改成依步數列出，上方「角色」分頁比較所有角色。報表只讀 `application.personas`，不重新計算；要改變結果，請調整設定後重新分析。
 
+### md 的遷移目標（migration_target）
+
+審查 md 的檔頭預設寫 `backend: "Spring Boot 4"`、`frontend: "Angular"`。要改寫或移除時，在 `~/.screentrace/config.json` 的 `migrationTargets` 依專案路徑設定，重新分析後生效：
+
+```json
+"migrationTargets": {
+  "/workspace/shop": {"backend": "Spring Boot 3", "frontend": "React"},
+  "/workspace/legacy": "none"
+}
+```
+
+`"none"` 表示 md 不寫遷移目標。`backend`、`frontend` 都必須有值，每個 1～80 字、不含控制字元；格式錯誤時載入設定會失敗並指出專案。
+
 ### 缺少預覽或縮圖
 
 確認分析輸出完整，再重新分析或執行 `report` 重建 HTML。若仍缺少，檢視 `application-graph.json` 與 `preview-model.json` 中的診斷；不要以空白預覽推斷原畫面沒有內容。

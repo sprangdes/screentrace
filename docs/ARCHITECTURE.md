@@ -738,3 +738,11 @@ JSP 宣告編碼由 scanner 的受限位元組讀取處理，非 UTF-8 metadata 
 R18 WP81：React handler/load 的字面 prop 分支與渲染層共用確定性 evaluator；state 初值不作常值。有限物件分派表最多 20 屬性，未知 key 為 INFERRED，全 key 迭代須有同物件 Object.keys／for…in 證明。ReactDispatchTable evidence 隨跨函式傳遞，後端 matching 保留其推定狀態。audience 比對鍵保持正規化，顯示使用 optional 原式並省略未登入時必成立的 optional 子句。見 [ADR 0101](adr/0101-r18-dispatch-props-and-optional-display.md)。
 
 R18 WP82：SpringBootAnalyzer 明確啟用 Spring API 的字面路徑優先與有設定檔的 Boot 預設 context；傳統 JSP／MVC／Struts 入口不變。SpringExternalCalls 以唯一 Security builder 或 XML 等價設定的公開＋CSRF 忽略雙證據，為無 caller 端點加附註 metadata；不更動 ApiUsage、D4／D5、md、決策鍵或 schema。兩個設定來源在 API 頁顯示。詳見 [ADR 0102](adr/0102-r18-spring-api-paths-and-external-call-notes.md)。
+
+## R78 功能分組、後端呼叫鏈與 md 系統分析章節
+
+功能分組由 viewer 的 `shared/features.ts` 依圖中既有資訊推導（Struts module、處理程式類別、Tiles 定義前綴、網址前綴），不寫入 Application Graph；review state 以功能 key 保存功能標注，畫面未個別標記時繼承。`screentrace-parser-jsp` 的 `BackendCallChains` 以 JavaParser 追蹤處理程式經欄位呼叫的專案類別（最多 4 層），結果寫入 HANDLER 的 `backendCalls` attribute 與 `BackendCallChains` evidence，schema 不變；Spring 與 Struts adapter 完成分析後套用。md 的 §8～§11 由 viewer 共用模組產生。見 [ADR 0156](adr/0156-r78-features-backend-calls-and-system-md.md)。
+
+## R79 顯示欄位與預覽可信度
+
+印出資料的元素以 core 元件 kind `DISPLAY_FIELD` 表示（`ComponentKind` 新增值，schema 不升版），由 `screentrace-parser-jsp` 的 `DisplayFields`（JSP、Thymeleaf）與 `screentrace-js` 的 React 渲染器產生，attributes 含 `expression`、`property`、`displayName`、`labelSource`。元件 ID 沿用既有規則，capture 不需新增對應。viewer 的預覽可信度標示只讀 capture 既有的 `data-st-demo-*`、`data-st-conditional` 與預覽元素資料。見 [ADR 0157](adr/0157-r79-display-fields-and-preview-trust.md)。

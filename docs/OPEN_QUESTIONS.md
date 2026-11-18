@@ -2,7 +2,7 @@
 
 每項問題記錄：編號、情境、可選方案、影響範圍、狀態與需求方決定。未決問題不得由實作者自行選擇；依附件 §0.3 暫停受影響工作包。
 
-> 現況（2026-11）：OQ-001 至 OQ-049 皆已決定或已解決，沒有未決問題。文中引用的 `reports/*.md`、`docs/reports/*.md` 已於 commit df28b33 移除，僅能從 git 歷史查閱。
+> 現況（2026-11-17）：OQ-001 至 OQ-054 皆已決定；OQ-053、OQ-054 由需求方回覆「依建議方案實作」。OQ-054 已於 R79 實作（ADR 0157）。文中引用的 `reports/*.md`、`docs/reports/*.md` 已於 commit df28b33 移除，僅能從 git 歷史查閱。
 
 ## OQ-001 — 檢核來源層級與框架中立約束衝突
 
@@ -489,3 +489,35 @@
   ```
 - 同次執行的 `grep -c "Check Java formatting" .github/workflows/security.yml` 輸出 `1`；`npm --prefix screentrace-viewer run build` 輸出 `tsc --noEmit && node build.mjs`，結束狀態為 `0`。
 - 狀態：RESOLVED（2026-11-11）。`pom.xml` 中 Spotless 設定上方的註解也寫了兩次 `spotless-maven-plugin`（呼叫指令的說明），所以正確輸出是 `3`；R39 指示 v1.0 的檢查寫錯，patch 本身正確。決定：R39 指示 v1.1 改以 `grep -c "<artifactId>spotless-maven-plugin</artifactId>" pom.xml`（輸出 `1`）檢查，從 v1.0 停止時的工作樹繼續，並把 OQ-051 與 WP110 一起提交。
+
+## OQ-052 — 改善計畫階段 1：備註、欄位與 API 標注的格式與規則
+
+- 情境：[改善計畫 2026-11-17](IMPROVEMENT_PLAN_20261117.md) 第 1、2 項列出待決定事項：md `format_version` 是否升版、備註在正文是否沿用 OQ-007 隔離與 300 字截斷、API 直接標注與推導狀態不一致時以何者為準、欄位是否隨畫面移除。
+- 可選方案：(1) 新增 v4，無備註與 API 標注時仍輸出 v1；或一律升 v4 並更新 golden。(2) 直接標注為準並列衝突；或推導為準、直接標注僅參考。(3) 欄位隨畫面移除；或欄位各自獨立。
+- 影響範圍：`review.ts`、`review-md.ts`、REVIEW_MD_CONTRACT、REVIEW_STATE_CONTRACT、右側欄與 API 頁。
+- 狀態：已決定（2026-11-17）。
+- 決定：本次只做階段 1；新增 format_version 4，無備註與 API 標注時仍輸出 1、既有 golden 不變，備註沿用 code span 隔離與 300 字截斷；API 直接標注為準，不一致列入「衝突與警告」；欄位與按鈕相同隨畫面移除。見 [ADR 0155](adr/0155-r77-notes-fields-api-decisions-and-save-reminder.md)。
+
+## OQ-053 — 改善計畫階段 2：功能分組與 md 系統分析章節
+
+- 情境：改善計畫第 3 項（功能 → 流程 → 畫面的心智圖檢視）與第 4 項（md 補成系統分析文件）需要先定資料模型與 md 格式。
+- 待決定與可選方案：
+  - 功能分組放在哪裡：A. 放進 Application Graph（新節點類型或 attributes，schema 升版 2.5，adapter 提供分組依據並保留證據）；B. viewer 依圖中既有資訊（Struts module、Controller 類別、網址前綴、Tiles definition）推導，不改 schema。
+  - 使用者能否手動調整分組：A. 不能，只顯示確定性結果；B. 可以，調整存在 review 狀態並寫入 md（需再定鍵與格式）。
+  - 系統分析與審查結果：A. 同一份 md（新增章節，format 升版）；B. 拆成兩份 md（審查結果維持現行格式，系統分析另一份）。
+  - 後端呼叫鏈（Action／Controller → Service → DAO）的追蹤深度上限，以及超過時如何標示（例如 UNRESOLVED 並附最後一層來源）。
+  - `migration_target` 改為可設定（工作區設定或 CLI 參數）或移除。
+- 影響範圍：core（若選 A）、adapter、viewer 新檢視、`review-md.ts`、REVIEW_MD_CONTRACT、golden 測試。
+- 狀態：已決定（2026-11-17）。
+- 決定：需求方回覆「依你的建議繼續實作」，採用建議方案：功能分組由 viewer 依圖中既有資訊推導（B），不提供手動調整（A），系統分析與審查結果放同一份 md（A，新增 §8～§11），後端呼叫鏈最多 4 層、超過時註明未追蹤，`migration_target` 預設維持原始需求、可依專案在工作區設定改寫或移除。見 [ADR 0156](adr/0156-r78-features-backend-calls-and-system-md.md)。
+
+## OQ-054 — 改善計畫階段 3：顯示欄位建模與模擬可信度
+
+- 情境：改善計畫第 5 項（把 EL、`<bean:write>`、`<c:out>`、`th:text`、JSX 表達式等輸出點建模為顯示欄位）與第 7 項（預覽標出示範資料與無法確定的區塊）需要修改 parser 與 capture。
+- 待決定與可選方案：
+  - 迴圈內重複輸出的欄位：A. 視為一個元件（以來源位置識別，預覽對應到所有重複出現處）；B. 每次出現各為一個元件。
+  - 顯示欄位的命名：A. 用綁定的模型屬性（例如 `owner.lastName`）；B. 用附近的標籤文字（表頭、label），找不到時退回屬性名；C. 兩者並列。
+  - core 元件 kind 的名稱（例如新增 `DISPLAY_FIELD`）與 schema 是否升版。
+- 影響範圍：`screentrace-parser-jsp`、`screentrace-js`、core 元件 kind、capture 的元素位置對應、viewer、md。
+- 狀態：已決定（2026-11-17），R79 實作（[ADR 0157](adr/0157-r79-display-fields-and-preview-trust.md)）。
+- 決定：需求方回覆「依你的建議繼續實作」，採用建議方案：迴圈內重複輸出視為一個元件（以來源位置識別，預覽對應所有出現處）；命名用附近的標籤文字（表頭、label），找不到時用綁定的模型屬性，原始運算式另存為 attribute；core 新增元件 kind `DISPLAY_FIELD`，kind 是既有的 attribute 字串，schema 不升版。

@@ -70,6 +70,7 @@ public final class StrutsProjectAnalyzer {
                 inventory));
     enriched = projectDispatchBehaviors(enriched, state);
     enriched = linkValidatorFields(enriched, state);
-    return retainActionAndInlineEventEvidence(enriched, state);
+    return io.screentrace.parser.jsp.BackendCallChains.enrich(
+        retainActionAndInlineEventEvidence(enriched, state), inventory);
   }
 }
