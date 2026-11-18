@@ -114,6 +114,7 @@ JSP、JSPF、tag file、Tiles 與有限的 Thymeleaf 以 `MarkupTag` 等 parser 
 | [0177](0177-r102-presentation-fixes.md) | R102 畫面名稱以兩個事實組合區分、功能依「只有一個角色會用到」分組、建議角色採前端中文、處理中按鈕的用途 | 有效 |
 | [0178](0178-r103-role-names-partial-priors-and-role-peers.md) | R103 建議角色依建立帳號的畫面命名、部分呼叫端可推的原狀態、落單畫面依角色歸入功能、列舉 `.name()` 寫入 | 有效 |
 | [0179](0179-r104-tasks-written-in-place.md) | R104 多行 lambda 與匿名類別的排程工作成為作業，後端呼叫只追工作本身 | 有效 |
+| [0180](0180-r105-compared-text-fields-are-states.md) | R105 名稱不像狀態、但被拿來和代碼字比對且寫入代碼字的欄位也列為文字狀態 | 有效 |
 | [0165](0165-r87-api-purpose.md) | R87 API 詳情與清單顯示由呼叫來源組成的白話用途 | 有效 |
 | [0167](0167-r89-suggested-personas.md) | R89 沒有設定角色時依路由守衛自動建議角色，描述標「自動建議」（OQ-057） | 有效 |
 

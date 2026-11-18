@@ -274,6 +274,7 @@ public final class BackendCallChains {
           bySimple.computeIfAbsent(declaration.getNameAsString(), k -> new ArrayList<>()).add(type);
           byQualified.put(qualified, type);
         }
+        comparedFields(unit);
         for (var declaration : unit.findAll(EnumDeclaration.class)) {
           String qualified =
               declaration.getFullyQualifiedName().orElse(pkg + declaration.getNameAsString());
@@ -549,6 +550,9 @@ public final class BackendCallChains {
       } else {
         var c = constant(value, unit);
         if (c == null && STATE_FIELD.matcher(field).matches())
+          c = textState(node, value, field, method, owner, unit);
+        // Any other field the code branches on by a code-like word, written with such a word.
+        else if (c == null && compared.contains(field) && codeWordLiteral(value, owner))
           c = textState(node, value, field, method, owner, unit);
         if (c != null) found.add(c);
         else if (value instanceof NameExpr variable) {
@@ -887,6 +891,65 @@ public final class BackendCallChains {
       return new String[] {type.name(), s.asString()};
     if (expression instanceof com.github.javaparser.ast.expr.IntegerLiteralExpr i)
       return new String[] {type.name(), i.getValue()};
+    return null;
+  }
+
+  /** A word a program uses as a code: `PAID`, `paid`, `pending_review`. */
+  private static final java.util.regex.Pattern CODE_WORD =
+      java.util.regex.Pattern.compile("[A-Z][A-Z0-9_]*|[a-z][a-z0-9_]*");
+
+  /** Fields the project compares with a code word: `"PAID".equals(o.getPayment())`, ADR 0180. */
+  private final Set<String> compared = new HashSet<>();
+
+  private void comparedFields(CompilationUnit unit) {
+    for (var call : unit.findAll(MethodCallExpr.class)) {
+      if (!Set.of("equals", "equalsIgnoreCase").contains(call.getNameAsString())
+          || call.getArguments().size() != 1
+          || call.getScope().isEmpty()) continue;
+      Expression a = call.getScope().get(), b = call.getArgument(0);
+      String field = codeWord(a) ? readField(b) : codeWord(b) ? readField(a) : null;
+      if (field != null) compared.add(field);
+    }
+    for (var entry : unit.findAll(com.github.javaparser.ast.stmt.SwitchEntry.class)) {
+      if (entry.getLabels().isEmpty() || !entry.getLabels().stream().allMatch(this::codeWord))
+        continue;
+      Node parent = entry.getParentNode().orElse(null);
+      Expression selector =
+          parent instanceof com.github.javaparser.ast.stmt.SwitchStmt st
+              ? st.getSelector()
+              : parent instanceof com.github.javaparser.ast.expr.SwitchExpr se
+                  ? se.getSelector()
+                  : null;
+      String field = selector == null ? null : readField(selector);
+      if (field != null) compared.add(field);
+    }
+  }
+
+  /** A written value that is a code word, given as a string literal or a constant holding one. */
+  private boolean codeWordLiteral(Expression value, Type owner) {
+    if (value instanceof com.github.javaparser.ast.expr.IntegerLiteralExpr) return false;
+    String word = textLiteral(value, owner);
+    return word != null && CODE_WORD.matcher(word).matches();
+  }
+
+  private boolean codeWord(Expression e) {
+    return e instanceof com.github.javaparser.ast.expr.StringLiteralExpr s
+        && CODE_WORD.matcher(s.asString()).matches();
+  }
+
+  /** {@code o.getPayment()} or {@code o.payment}: the field read, else null. */
+  private static String readField(Expression e) {
+    if (e instanceof MethodCallExpr call
+        && call.getArguments().isEmpty()
+        && call.getScope().isPresent()) {
+      String name = call.getNameAsString();
+      if (name.length() > 3 && name.startsWith("get") && Character.isUpperCase(name.charAt(3)))
+        return Character.toLowerCase(name.charAt(3)) + name.substring(4);
+    }
+    if (e instanceof FieldAccessExpr access
+        && !(access.getScope() instanceof NameExpr n
+            && Character.isUpperCase(n.getNameAsString().charAt(0))))
+      return access.getNameAsString();
     return null;
   }
 

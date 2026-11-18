@@ -102,4 +102,37 @@ class R97TextStatesTest {
         rows(graph, "backendCalls").stream()
             .allMatch(c -> (Integer) c.get("depth") <= BackendCallChains.MAX_DEPTH));
   }
+
+  @Test
+  void r105AFieldTheCodeBranchesOnByAWordIsAStateWhateverItsName() throws Exception {
+    // R105 (ADR 0180): `payment` and `review` are not named like a state, but the code compares
+    // them
+    // with code words; `name` is written with a word and never compared, so it is not a state.
+    write(
+        "src/main/java/demo/Api.java",
+        """
+        package demo;
+        class Api {
+          void refund(Order order) {
+            if (!"PAID".equals(order.getPayment())) throw new IllegalStateException();
+            order.setPayment("REFUNDED");
+            order.setName("REFUNDED");
+            order.setNote("Refunded by staff");
+            order.review = "pending_review";
+          }
+          String label(Order order) {
+            return switch (order.review) { case "pending_review" -> "審核中"; default -> ""; };
+          }
+          boolean noted(Order order) { return order.getNote().equals("Refunded by staff"); }
+        }
+        """);
+    var rows = rows(enrich("Api", "refund"), "stateChanges");
+    assertEquals(2, rows.size(), rows.toString());
+    var payment = rows.get(0);
+    assertEquals("Order.payment", payment.get("enum"));
+    assertEquals("REFUNDED", payment.get("value"));
+    assertEquals(List.of("PAID"), payment.get("from"));
+    assertEquals("pending_review", rows.get(1).get("value"));
+    assertTrue(rows.get(1).get("enum").toString().endsWith("review"));
+  }
 }

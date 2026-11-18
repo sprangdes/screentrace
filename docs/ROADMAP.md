@@ -612,3 +612,7 @@
 ## R104 寫在呼叫處的排程工作
 
 - WP176：交給排程器的多行 lambda 與匿名 `Runnable`／`Callable`／`TimerTask` 成為「`類別.方法()` 的排程工作（第 N 行）」，後端呼叫只追工作本身。見 [ADR 0179](adr/0179-r104-tasks-written-in-place.md)。
+
+## R105 依比對認出的文字狀態
+
+- WP177：欄位名稱不像狀態時，若程式拿它和代碼字比對（`"PAID".equals(o.getPayment())`、`switch` 字串分支），而寫入的值也是代碼字，同樣列為文字狀態。見 [ADR 0180](adr/0180-r105-compared-text-fields-are-states.md)。
