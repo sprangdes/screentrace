@@ -551,5 +551,5 @@
   - P9 角色：A. 沒有設定時依路由守衛自動建議並寫入報表，標為自動建議；B. 只在 CLI 印出建議設定；C. 不做。
 - 影響範圍：screentrace-js、capture、viewer、CLI 角色設定。
 - 狀態：已決定（2026-11-18）。
-- 決定：四項都選 A。P4 見 [ADR 0162](adr/0162-r84-page-states-in-preview.md)（R84）。
+- 決定：四項都選 A。P4 見 [ADR 0162](adr/0162-r84-page-states-in-preview.md)（R84），P5 見 [ADR 0163](adr/0163-r85-plain-screen-names.md)（R85）。
 

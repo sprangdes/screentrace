@@ -20,7 +20,7 @@ test('OQ-038 a query-entry variant is named apart by its entry query while the p
     ]);
   const names = m.screenNames([plain, query], hints, routes);
   assert.equal(names.get('plain'), 'Sign in');
-  assert.equal(names.get('query'), 'Sign in（?sso=err|ok）');
+  assert.equal(names.get('query'), 'Sign in（網址帶 sso=err 或 ok）');
 });
 
 test('RV-607 plain screens sharing a name with a query-entry variant are still named apart', async () => {
@@ -43,7 +43,7 @@ test('RV-607 plain screens sharing a name with a query-entry variant are still n
       ['query', ['/login']],
     ]);
   const names = m.screenNames([login, admin, query], hints, routes);
-  assert.equal(names.get('query'), 'Sign in（?error=1）');
+  assert.equal(names.get('query'), 'Sign in（網址帶 error=1）');
   assert.notEqual(names.get('login'), names.get('admin'));
   assert.equal(new Set(names.values()).size, 3);
 });

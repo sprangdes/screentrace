@@ -117,7 +117,34 @@ try {
     )
       dynamicScreens.add(screen.id);
   }
-  const displayNames = screenNames(sourceIndex.screens, hints, sourceIndex.routes);
+  // Links that lead to a screen and the roles it is for name it in plain words (ADR 0163).
+  const linkLabels = new Map<string, { label: string; from: string }[]>();
+  for (const relation of sourceIndex.relations)
+    if (relation.from !== relation.to)
+      for (const trigger of relation.triggers) {
+        const component = sourceIndex.nodes.get(trigger);
+        if (
+          component?.type !== 'COMPONENT' ||
+          !['LINK', 'BUTTON'].includes(component.attributes.kind)
+        )
+          continue;
+        linkLabels.set(relation.to, [
+          ...(linkLabels.get(relation.to) || []),
+          { label: component.name, from: relation.from },
+        ]);
+      }
+  const roles = new Map<string, string[]>();
+  for (const persona of (sourceGraph.application.personas || []) as {
+    name?: string;
+    screens?: Record<string, string>;
+  }[])
+    for (const [id, status] of Object.entries(persona.screens || {}))
+      if (status === 'APPLIES' && persona.name)
+        roles.set(id, [...(roles.get(id) || []), persona.name]);
+  const displayNames = screenNames(sourceIndex.screens, hints, sourceIndex.routes, {
+    linkLabels,
+    roles,
+  });
   const graph = {
       ...sourceGraph,
       nodes: sourceGraph.nodes.map((node) =>

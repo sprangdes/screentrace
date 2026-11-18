@@ -533,3 +533,7 @@
 
 - WP156：依 [reservio 評估](RESERVIO_EVALUATION_20261118.md) P4，OQ-057 採 A。React 分析器以 AST 解析每個元素的顯示條件，辨識載入中、錯誤、沒有資料，在預覽 HTML 標 `data-st-state`；capture 加入預設隱藏規則，截圖只剩有資料狀態；viewer 預覽工具列新增「畫面狀態」切換。reservio 建立預約第 1 步不再疊出骨架、錯誤與空白訊息。見 [ADR 0162](adr/0162-r84-page-states-in-preview.md)。
 
+## R85 畫面名稱白話化
+
+- WP157：依 [reservio 評估](RESERVIO_EVALUATION_20261118.md) P5，OQ-057 採 A。viewer 顯示名稱的網址參數與狀態變體改寫成白話（「網址帶 lineLogin=failed 或 success」「step 為 1」），同名畫面先以角色名稱區分（「通知中心（商家）」），沒有標題的畫面改用連到它的選單文字（reservio `/dashboard` 由「Customer Dashboard Page」變為「概覽」）。見 [ADR 0163](adr/0163-r85-plain-screen-names.md)。
+
