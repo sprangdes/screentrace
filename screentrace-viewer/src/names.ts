@@ -82,6 +82,10 @@ export function screenNames(
       wildcard = (routes.get(screen.id) || []).some((route) => route.includes('*'));
     names.set(screen.id, target ? `${wildcard ? '其他網址' : ''}轉址到「${target}」` : '轉址頁');
   }
+  // The steps of one page share its title; each is named with the page state it shows.
+  for (const screen of sorted)
+    if (screen.attributes.stateVariant)
+      names.set(screen.id, `${names.get(screen.id)}（${screen.attributes.stateVariant}）`);
   const byId = new Map(screens.map((screen) => [screen.id, screen])),
     groups = new Map<string, string[]>();
   for (const [id, name] of names) groups.set(name, [...(groups.get(name) || []), id]);

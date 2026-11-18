@@ -242,6 +242,15 @@ public final class ReactGraphContribution {
   }
 
   private static String screenId(JsonNode screen) {
+    String id = audienceScreenId(screen);
+    // A page state other than the initial one is its own screen; the initial state keeps the
+    // route's screen ID, so earlier review decisions keep matching.
+    return screen.hasNonNull("stateKey")
+        ? ApplicationGraph.id(NodeType.SCREEN, id + ":state:" + screen.path("stateKey").asText())
+        : id;
+  }
+
+  private static String audienceScreenId(JsonNode screen) {
     String file = screen.path("file").asText(), route = screen.path("route").asText();
     if (screen.hasNonNull("entryQuery"))
       return ApplicationGraph.id(
@@ -250,6 +259,11 @@ public final class ReactGraphContribution {
         ? ApplicationGraph.id(
             NodeType.SCREEN, file + ":" + route + ":" + screen.path("variantKey").asText())
         : screenId(file, route);
+  }
+
+  /** `step = 2`: the page state and its value as the source writes it. */
+  private static String stateLabel(JsonNode stateVariant) {
+    return stateVariant.path("name").asText() + " = " + json(stateVariant.path("value"));
   }
 
   private static SourceLocation source(JsonNode item) {
@@ -393,6 +407,14 @@ public final class ReactGraphContribution {
         attributes.put("audienceVariant", screen.path("variantKey").asText());
         attributes.put("supersedesScreenId", screenId(routeFile, route));
       }
+      JsonNode stateVariant = screen.path("stateVariant");
+      boolean laterState = screen.hasNonNull("stateKey");
+      if (stateVariant.isObject()) {
+        attributes.put("stateVariant", stateLabel(stateVariant));
+        attributes.put("stateVariantName", stateVariant.path("name").asText());
+        attributes.put("stateVariantValues", json(stateVariant.path("values")));
+        if (laterState) attributes.put("stateVariantOf", audienceScreenId(screen));
+      }
       if (screen.has("audienceSummary"))
         attributes.put("audienceSummary", json(screen.path("audienceSummary")));
       if (screen.has("audienceOriginal"))
@@ -411,17 +433,20 @@ public final class ReactGraphContribution {
               source,
               Confidence.CONFIRMED,
               proof(source, Confidence.CONFIRMED, "網址入口")));
-      String renderedBy = ApplicationGraph.id(NodeType.ENTRY_POINT, entry + ":" + id);
-      edges.put(
-          renderedBy,
-          new Relationship(
-              renderedBy,
-              EdgeType.RENDERS,
-              entry,
-              id,
-              Confidence.INFERRED,
-              source,
-              proof(source, Confidence.INFERRED, "身分條件下渲染畫面")));
+      // The URL opens the initial page state; the other states are reached from inside the screen.
+      if (!laterState) {
+        String renderedBy = ApplicationGraph.id(NodeType.ENTRY_POINT, entry + ":" + id);
+        edges.put(
+            renderedBy,
+            new Relationship(
+                renderedBy,
+                EdgeType.RENDERS,
+                entry,
+                id,
+                Confidence.INFERRED,
+                source,
+                proof(source, Confidence.INFERRED, "身分條件下渲染畫面")));
+      }
       String name = route.equals("/") ? "Home" : route.substring(1);
       if (screen.hasNonNull("variantKey")) {
         List<String> summary = new ArrayList<>();
@@ -436,9 +461,28 @@ public final class ReactGraphContribution {
         }
         name += "（" + String.join(" && ", summary) + "）";
       }
+      if (stateVariant.isObject()) name += "（" + stateLabel(stateVariant) + "）";
       List<AnalysisEvidence> screenEvidence =
           new ArrayList<>(
               proof(source, Confidence.CONFIRMED, "路由宣告；畫面元件 " + screen.path("view").asText()));
+      if (stateVariant.isObject()) {
+        screenEvidence.addAll(
+            proof(
+                source(stateVariant),
+                Confidence.CONFIRMED,
+                "頁面狀態 "
+                    + stateLabel(stateVariant)
+                    + "；可能值 "
+                    + json(stateVariant.path("values"))
+                    + (stateVariant.path("initial").asBoolean() ? "（初始值）" : "")));
+        for (JsonNode write : stateVariant.path("writes"))
+          screenEvidence.addAll(
+              proof(
+                  new SourceLocation(
+                      write.path("file").asText("."), Math.max(1, write.path("line").asInt(1))),
+                  Confidence.CONFIRMED,
+                  "頁面狀態 " + stateVariant.path("name").asText() + " 的寫入點"));
+      }
       for (JsonNode atom : screen.path("audienceOriginal"))
         screenEvidence.addAll(
             proof(
@@ -465,7 +509,7 @@ public final class ReactGraphContribution {
               Confidence.CONFIRMED,
               screenEvidence,
               audience));
-      screensByRoute.computeIfAbsent(route, ignored -> new ArrayList<>()).add(id);
+      if (!laterState) screensByRoute.computeIfAbsent(route, ignored -> new ArrayList<>()).add(id);
       if (screen.path("redirectOnly").asBoolean()) {
         List<String> targets = new ArrayList<>();
         screen.path("redirectTo").forEach(item -> targets.add(item.asText()));

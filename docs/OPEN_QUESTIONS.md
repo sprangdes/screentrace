@@ -489,3 +489,11 @@
   ```
 - 同次執行的 `grep -c "Check Java formatting" .github/workflows/security.yml` 輸出 `1`；`npm --prefix screentrace-viewer run build` 輸出 `tsc --noEmit && node build.mjs`，結束狀態為 `0`。
 - 狀態：RESOLVED（2026-11-11）。`pom.xml` 中 Spotless 設定上方的註解也寫了兩次 `spotless-maven-plugin`（呼叫指令的說明），所以正確輸出是 `3`；R39 指示 v1.0 的檢查寫錯，patch 本身正確。決定：R39 指示 v1.1 改以 `grep -c "<artifactId>spotless-maven-plugin</artifactId>" pom.xml`（輸出 `1`）檢查，從 v1.0 停止時的工作樹繼續，並把 OQ-051 與 WP110 一起提交。
+
+## OQ-052 — 由元件狀態切換的精靈步驟
+
+- 情境：reservio `/reservation/new` 的預約精靈以 `useState<Step>(1)` 切換三個步驟（`moveToStep(2)`、`moveToStep(3)`，時段衝突時 `setStep(2)`），網址不變。報表只有一個畫面，預覽只畫第 1 步，點「下一步」沒有反應。
+- 可選方案：A. 每個步驟成為畫布上的子畫面，「下一步」成為導覽，API 歸到各步驟；B. 維持一個畫面，預覽內加步驟切換，不改畫面數、角色流程與 API 歸屬。
+- 影響範圍：畫面 ID 與數量、導覽邊、角色流程、API 頁的呼叫畫面、viewer 命名。
+- 狀態：RESOLVED（2026-11-18）。需求方選 A，API 歸到各自的步驟；初始步驟沿用原畫面 ID。只拆可證明的常值狀態，`setStep(s => s + 1)` 等寫法不拆。見 [ADR 0155](adr/0155-r77-page-state-variants.md)。
+

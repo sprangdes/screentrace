@@ -264,6 +264,9 @@ public final class GraphIntegrityValidator {
             route
                 + (node.attributes().containsKey("audienceVariant")
                     ? "\u001f" + node.attributes().get("audienceVariant")
+                    : "")
+                + (node.attributes().containsKey("stateVariant")
+                    ? "\u001e" + node.attributes().get("stateVariant")
                     : ""))) errors.add("Duplicate screen route: " + route);
   }
 

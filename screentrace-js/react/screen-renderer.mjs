@@ -39,9 +39,23 @@ import { hrefEntryUrls, cleanUrls, destinationCandidates } from './urls.mjs';
 const EFFECT_HOOKS = new Set(['useEffect', 'useLayoutEffect', 'useInsertionEffect']);
 const PASS_THROUGH = new Set(['Fragment', 'StrictMode', 'Suspense', 'Profiler']);
 const MAX_UNROLLED = 50;
+/** Identifies a `useState` declaration: file, line and state name. */
+export const stateKey = (file, lineNo, name) => `${file}:${lineNo}:${name}`;
+
 class ScreenRenderer {
-  constructor(evaluator, occurrences, diagnostics, maxDepth, markup = false, audience = []) {
+  constructor(
+    evaluator,
+    occurrences,
+    diagnostics,
+    maxDepth,
+    markup = false,
+    audience = [],
+    { statePins = null, collectStates = false } = {},
+  ) {
     this.evaluator = evaluator;
+    // A state variant fixes one page state to one value (`key` → literal); its setter calls become transitions.
+    this.statePins = statePins;
+    this.stateCandidates = collectStates ? [] : null;
     this.occurrences = occurrences.keys;
     this.anchorsOf = occurrences.anchors;
     this.markup = markup;
@@ -130,6 +144,7 @@ class ScreenRenderer {
       effect.guard = residualGuard(effect.guard, resolveRouteFacts(this.audience, this.evaluator));
     });
     return {
+      ...(this.stateCandidates ? { stateCandidates: this.stateCandidates } : {}),
       excludedBehaviors,
       variantDecision: this.variantDecision,
       audience: resolveRouteFacts(this.audience, this.evaluator),
@@ -799,7 +814,14 @@ class ScreenRenderer {
               ? this.evaluator.evaluate(node.init.arguments[0], scope)
               : { t: 'lit', v: undefined };
           if (name && setter && initial.t === 'lit')
-            states.set(setter, { name, values: [initial], writes: [] });
+            states.set(setter, {
+              name,
+              setter,
+              key: stateKey(scope.module.file, line(node), name),
+              source: { file: scope.module.file, line: line(node) },
+              values: [initial],
+              writes: [],
+            });
         }
       }
       for (const child of children(node)) collect(child, node);
@@ -947,10 +969,26 @@ class ScreenRenderer {
     };
     visit(body);
     for (const [, record] of states) {
-      const value = unknown.has(record)
-        ? { t: 'unknown' }
-        : { t: 'state-domain', values: record.values };
+      const pinned = this.statePins?.get(record.key);
+      const value = pinned
+        ? pinned
+        : unknown.has(record)
+          ? { t: 'unknown' }
+          : { t: 'state-domain', values: record.values };
       scope.bindings.set(record.name, { value });
+      if (this.statePins)
+        scope.bindings.set(record.setter, {
+          value: { t: 'state-setter', record: { key: record.key, name: record.name } },
+        });
+      if (this.stateCandidates && this.inRoute && !unknown.has(record))
+        this.stateCandidates.push({
+          key: record.key,
+          name: record.name,
+          source: record.source,
+          initial: record.values[0],
+          values: record.values,
+          writes: record.writes,
+        });
     }
   }
 
@@ -1032,11 +1070,17 @@ class ScreenRenderer {
           const initial = node.init.arguments[0]
             ? this.evaluator.evaluate(node.init.arguments[0], componentScope)
             : { t: 'lit', v: undefined };
-          const stateValue =
-            initial.t === 'lit' || initial.t === 'array' || initial.t === 'object'
+          const pinned = this.statePins?.get(
+            stateKey(componentScope.module.file, line(node), name),
+          );
+          const stateValue = pinned
+            ? pinned
+            : initial.t === 'lit' || initial.t === 'array' || initial.t === 'object'
               ? initial
               : { t: 'unknown' };
           const record = {
+            key: stateKey(componentScope.module.file, line(node), name),
+            pinned: Boolean(pinned),
             name,
             value: stateValue,
             file: componentScope.module.file,
@@ -1246,6 +1290,7 @@ class ScreenRenderer {
         if (callee.t === 'preview-setter') {
           const record = callee.record,
             arg = expression.arguments[0];
+          if (record.pinned) return false;
           let value;
           if (arg?.type === 'ArrowFunctionExpression' || arg?.type === 'FunctionExpression')
             value = { t: 'unknown' };

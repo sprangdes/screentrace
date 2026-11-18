@@ -141,10 +141,11 @@ function undecided(effect, screens) {
             t.file === s.file &&
             t.route === s.route &&
             t.variantKey === s.variantKey &&
-            t.entryQuery === s.entryQuery,
+            t.entryQuery === s.entryQuery &&
+            t.stateKey === s.stateKey,
         ),
       )
-    : screens.filter((s) => (effect.targetRoutes ?? []).includes(s.route));
+    : screens.filter((s) => !s.stateKey && (effect.targetRoutes ?? []).includes(s.route));
   return targets.some(
     (plain) =>
       plain.queryEntryPlain &&

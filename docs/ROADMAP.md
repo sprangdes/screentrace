@@ -494,3 +494,9 @@
 
 - WP147：設定角色的分析圖（schema 2.4）在報表按「下載 md」時失敗，訊息為「schema 2.2 嚴格驗證：觸發者」。Java `GraphIntegrityValidator` 對 2.3 與 2.4 都允許行為由 `ENTRY_POINT` 觸發，viewer 的 `strictGraph` 只允許 2.3；改為與 Java 一致。
 - 驗證：`r76-entry-point-trigger.test.mjs` 新增 2 個測試（2.3／2.4 接受 ENTRY_POINT 觸發者、2.2 仍拒絕），修正前 2.4 案例以「觸發者」失敗；viewer 測試、建置、Prettier、ESLint 全數通過。
+
+## R77 精靈步驟拆成畫面變體
+
+- WP148：需求方回報 reservio `/reservation/new` 的預約精靈只看得到第 1 步，點「下一步」沒有反應。原因是步驟由元件狀態切換，網址不變，第 2、3 步只在圖上以條件元件存在，預覽固定畫初始值。需求方決定（OQ-052）：步驟成為畫布上的子畫面，API 歸到各步驟。實作可證明的頁面狀態變體：常值初始化、常值寫入、不同值顯示不同元件，且步驟內的元件會寫入其他值；初始值沿用原畫面 ID，setter 寫入成為導覽到該步驟的 `NAVIGATES_TO`，網址只開啟初始值。見 [ADR 0155](adr/0155-r77-page-state-variants.md)。
+- 驗證：Maven `StateVariantTest` 新增 4 個測試，JS `r77-state-variants.test.mjs` 新增 5 個（共 196 個，原有 191 個不變），viewer `r77-state-variant-name.test.mjs` 新增 1 個；Maven 除 `screentrace-cli` 6 個需要擷取產物的整合測試（本環境沒有 capture 的 Playwright 套件，改動前即失敗）外全數通過；viewer 除 3 個同樣需要 capture 套件的測試外全數通過。reservio 實測待需求方於 sandbox 外執行。
+

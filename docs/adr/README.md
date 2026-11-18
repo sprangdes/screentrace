@@ -71,7 +71,7 @@ JSP、JSPF、tag file、Tiles 與有限的 Thymeleaf 以 `MarkupTag` 等 parser 
 
 ## JavaScript 與 React
 
-`screentrace-js` 以 AST 分析 JavaScript（Acorn）與 React／TSX（@babel/parser），不執行程式。React 畫面以靜態重建呈現，路由 Guard、身分條件、狀態值與網址參數都以可證明的事實建立變體；`react/analyzer.mjs` 已拆成多個模組（R44）。
+`screentrace-js` 以 AST 分析 JavaScript（Acorn）與 React／TSX（@babel/parser），不執行程式。React 畫面以靜態重建呈現，路由 Guard、身分條件、狀態值與網址參數都以可證明的事實建立變體，精靈步驟這類頁面狀態也拆成畫面變體（R77）；`react/analyzer.mjs` 已拆成多個模組（R44）。
 
 | ADR | 決定 | 狀態 |
 |---|---|---|
@@ -94,6 +94,7 @@ JSP、JSPF、tag file、Tiles 與有限的 Thymeleaf 以 `MarkupTag` 等 parser 
 | [0117](0117-r26-early-return-helpers.md) | R26 沿著提早回傳算出輔助函式的結果 | 有效 |
 | [0118](0118-r27-entry-renders-plain-version.md) | R27 入口只開啟不需要網址參數的畫面 | 有效 |
 | [0135](0135-r44-split-react-analyzer.md) | R44 拆分 react/analyzer.mjs | 有效 |
+| [0155](0155-r77-page-state-variants.md) | R77 可證明的頁面狀態（如精靈步驟）拆成畫面變體（OQ-052） | 有效 |
 
 ## 角色（persona）流程
 

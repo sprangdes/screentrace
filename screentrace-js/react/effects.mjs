@@ -233,6 +233,8 @@ class EffectRunner {
             expression: text(scope.module, node),
           }),
         );
+    } else if (value.t === 'state-setter' || value.t === 'preview-setter') {
+      this.stateTransition(node, value.record, scope, where, trace);
     } else if (value.t === 'fn' && !active.has(value.node)) {
       const step = {
         callee: text(scope.module, callee).slice(0, 120),
@@ -329,6 +331,25 @@ class EffectRunner {
         if (effect.status === 'CONFIRMED') effect.status = 'INFERRED';
     for (const arg of node.arguments) this.walk(arg, scope, active, trace, guards);
     return true;
+  }
+
+  /** A user event that sets the pinned page state to another literal moves to that state's variant. */
+  stateTransition(node, record, scope, where, trace) {
+    const pinned = this.renderer.statePins?.get(record.key);
+    if (!pinned || this.event === 'load') return;
+    const arg = node.arguments[0];
+    if (!arg || arg.type === 'ArrowFunctionExpression' || arg.type === 'FunctionExpression') return;
+    const value = this.evaluator.evaluate(arg, scope);
+    if (value.t !== 'lit' || value.v === pinned.v) return;
+    this.effects.push(
+      this.renderer.effect('NAVIGATE', this.event, node, scope, where, {
+        trace,
+        contextWrites: [...this.contextWrites],
+        urls: [],
+        expression: text(scope.module, node).slice(0, 400),
+        stateTransition: { key: record.key, name: record.name, value: value.v },
+      }),
+    );
   }
 
   fullPage(node, target, scope, guards, trace) {
