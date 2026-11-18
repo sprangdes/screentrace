@@ -54,6 +54,7 @@ Controller、回傳 view、表單綁定與伺服器端檢核以 JavaParser 靜�
 | [0159](0159-r81-background-jobs.md) | R81 排程、事件監聽與啟動時作業成為 HANDLER，API 頁「系統自動作業」與 md §12（OQ-056） | 有效 |
 | [0171](0171-r96-more-background-jobs.md) | R96 背景作業移到共用模組並套用 Struts 管線，新增 XML 排程、程式排程、Quartz 與 @Async | 有效 |
 | [0166](0166-r88-login-return-through-helpers-and-configuration.md) | R88 外部登入導回路徑可讀過有參數的輔助方法、UriComponentsBuilder 與 @ConfigurationProperties 設定 | 有效 |
+| [0175](0175-r100-more-return-url-shapes.md) | R100 登入導回路徑另認 String.format、URI、StringBuilder、path()、RedirectStrategy 與 defaultSuccessUrl | 有效 |
 | [0169](0169-r94-prior-state.md) | R94 由同一方法內同一物件的狀態比較推論寫入前的原狀態（推測），報表與 md §13 顯示（OQ-058） | 有效 |
 | [0170](0170-r95-every-frontend-word.md) | R95 前端對同一狀態的多種寫法依出現位置全部列出，取代只顯示常數名（OQ-058） | 有效 |
 | [0172](0172-r97-text-states-and-deeper-writes.md) | R97 狀態欄位的字串／數字寫入也列為狀態；狀態寫入追到 8 層 | 有效 |

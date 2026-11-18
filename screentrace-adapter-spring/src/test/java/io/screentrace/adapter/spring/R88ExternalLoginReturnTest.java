@@ -101,4 +101,41 @@ class R88ExternalLoginReturnTest {
     assertEquals("true", api.attributes().get("externalLoginReturnUnresolved"));
     assertEquals("/login?done=yes&role={role}", api.attributes().get("externalLoginReturns"));
   }
+
+  @Test
+  void r100FormatBuildersUriAndRedirectStrategy() throws Exception {
+    // R100 (ADR 0175): other ways to build the return URL.
+    var graph =
+        analyze(
+            """
+            private final RedirectStrategy strategy;
+            public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response, Authentication auth) {
+              if (auth == null) { strategy.sendRedirect(request, response, URI.create(String.format("%s?from=%s", "/login", "sso")).toString()); return; }
+              response.sendRedirect(new StringBuilder("/home").append("?welcome=1").toString());
+              response.sendRedirect(ServletUriComponentsBuilder.fromCurrentContextPath().path("/dashboard").build().toUriString());
+            }
+            """);
+    var returns = endpoint(graph).attributes().get("externalLoginReturns").split("\u001f");
+    assertEquals(
+        java.util.List.of("/dashboard", "/home?welcome=1", "/login?from=sso"),
+        java.util.Arrays.stream(returns).sorted().toList());
+    assertNull(endpoint(graph).attributes().get("externalLoginReturnUnresolved"));
+  }
+
+  @Test
+  void r100DefaultSuccessUrlWithoutAHandler() throws Exception {
+    analyze(
+        "public void onAuthenticationSuccess(HttpServletRequest a, HttpServletResponse b, Authentication c) {}");
+    // No custom handler: oauth2Login names where it returns.
+    Files.writeString(
+        root.resolve("Security.java"),
+        "import org.springframework.security.config.annotation.web.builders.HttpSecurity;class Security {Object security(HttpSecurity http){return http.oauth2Login(oauth->oauth.defaultSuccessUrl(\"/login\", true)).build();}}");
+    Files.delete(root.resolve("Callback.java"));
+    var graph = new SpringBootAnalyzer().analyze(new ProjectScanner().scan(root));
+    assertEquals("/login", endpoint(graph).attributes().get("externalLoginReturns"));
+    assertTrue(
+        graph.relationships().stream()
+            .anyMatch(
+                e -> e.from().equals(endpoint(graph).id()) && e.type() == EdgeType.FORWARDS_TO));
+  }
 }

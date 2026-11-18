@@ -31,7 +31,7 @@ final class SpringExternalLoginFlow {
       Map<String, List<io.screentrace.parser.jsp.BackgroundJobs.Setting>> settings) {}
 
   private static final Set<String> URI_FACTORIES =
-      Set.of("fromPath", "fromUriString", "fromHttpUrl");
+      Set.of("fromPath", "fromUriString", "fromHttpUrl", "fromCurrentContextPath");
   private static final Set<String> URI_PASS_THROUGH =
       Set.of("build", "toUriString", "toString", "encode", "normalize");
 
@@ -56,11 +56,20 @@ final class SpringExternalLoginFlow {
     var context =
         new Context(units.values(), io.screentrace.parser.jsp.BackgroundJobs.settings(inventory));
     List<Callback> callbacks = new ArrayList<>();
+    // `oauth2Login(o -> o.defaultSuccessUrl("/home"))`: the return without a custom handler (ADR
+    // 0175).
+    Map<String, SourceLocation> defaultSuccess = new TreeMap<>();
     boolean oauth = false, customAuthorizationBase = false;
     Set<String> authorizationUris = new TreeSet<>();
     for (Unit unit : units.values())
       for (MethodCallExpr call : unit.ast().findAll(MethodCallExpr.class)) {
         if (call.getNameAsString().equals("oauth2Login")) oauth = true;
+        if (call.getNameAsString().equals("defaultSuccessUrl")
+            && !call.getArguments().isEmpty()
+            && call.getArgument(0).isStringLiteralExpr()
+            && insideOAuth(call))
+          defaultSuccess.put(
+              call.getArgument(0).asStringLiteralExpr().asString(), source(unit.file(), call));
         if (call.getNameAsString().equals("baseUri") && insideCall(call, "authorizationEndpoint"))
           customAuthorizationBase = true;
         if (call.getNameAsString().equals("authorizationUri")
@@ -153,7 +162,26 @@ final class SpringExternalLoginFlow {
       attrs.put("externalLoginGateway", String.join("\u001f", gateways));
       var proof = new ArrayList<>(endpoint.evidence());
       for (var src : entryProof) proof.add(evidence(src, "整頁導向至登入授權入口"));
-      if (callbacks.size() != 1) {
+      if (callbacks.isEmpty() && !defaultSuccess.isEmpty()) {
+        attrs.put("externalLoginReturns", String.join("\u001f", defaultSuccess.keySet()));
+        for (var entry : defaultSuccess.entrySet()) {
+          proof.add(evidence(entry.getValue(), "oauth2Login defaultSuccessUrl 設定"));
+          String route = entry.getKey().split("[?#]", 2)[0];
+          for (GraphNode screen : graph.nodes())
+            if (screen.type() == NodeType.SCREEN && route.equals(screen.attributes().get("route")))
+              edges.add(
+                  new Relationship(
+                      ApplicationGraph.id(
+                          NodeType.ENTRY_POINT,
+                          endpoint.id() + ":" + screen.id() + ":" + entry.getKey()),
+                      EdgeType.FORWARDS_TO,
+                      endpoint.id(),
+                      screen.id(),
+                      Confidence.INFERRED,
+                      entry.getValue(),
+                      List.of(evidence(entry.getValue(), "外部登入導回；網址=" + entry.getKey()))));
+        }
+      } else if (callbacks.size() != 1) {
         attrs.put("externalLoginReturnUnresolved", "true");
         diagnostics.add(
             diagnostic(
@@ -168,10 +196,12 @@ final class SpringExternalLoginFlow {
         for (var success : callback.type().getMethodsByName("onAuthenticationSuccess"))
           for (var redirect : success.findAll(MethodCallExpr.class))
             if (redirect.getNameAsString().equals("sendRedirect")
-                && redirect.getArguments().size() == 1) {
+                && (redirect.getArguments().size() == 1 || redirect.getArguments().size() == 3)) {
+              // RedirectStrategy.sendRedirect(request, response, url) takes the URL last.
+              Expression target = redirect.getArgument(redirect.getArguments().size() - 1);
               Values value =
                   values(
-                      redirect.getArgument(0),
+                      target,
                       callback.unit(),
                       callback.type(),
                       success,
@@ -182,9 +212,7 @@ final class SpringExternalLoginFlow {
               returns.addAll(value.paths());
               unresolved |= value.unresolved();
               proof.add(
-                  evidence(
-                      source(callback.unit().file(), redirect),
-                      "登入完成後導回；表達式=" + redirect.getArgument(0)));
+                  evidence(source(callback.unit().file(), redirect), "登入完成後導回；表達式=" + target));
               for (var src : value.sources()) proof.add(evidence(src, "導回路徑回傳來源"));
             }
         if (returns.isEmpty()) unresolved = true;
@@ -318,7 +346,21 @@ final class SpringExternalLoginFlow {
       proof.addAll(b.sources());
       return new Values(paths, a.unresolved() || b.unresolved(), proof);
     }
+    if (expr.isObjectCreationExpr()) {
+      // new URI(x), new StringBuilder(x): the text they start from (ADR 0175).
+      var created = expr.asObjectCreationExpr();
+      String type = created.getType().getNameAsString();
+      if (type.equals("URI") && created.getArguments().size() == 1)
+        return values(created.getArgument(0), unit, owner, method, depth + 1, active, context, env);
+      if (type.equals("StringBuilder") || type.equals("StringBuffer"))
+        return created.getArguments().isEmpty()
+            ? new Values(Set.of(""), false, List.of(source(unit.file(), expr)))
+            : values(created.getArgument(0), unit, owner, method, depth + 1, active, context, env);
+    }
     if (expr.isMethodCallExpr()) {
+      var text =
+          textCall(expr.asMethodCallExpr(), unit, owner, method, depth, active, context, env);
+      if (text != null) return text;
       var builder =
           uriBuilder(expr.asMethodCallExpr(), unit, owner, method, depth, active, context, env);
       if (builder != null) return builder;
@@ -432,6 +474,10 @@ final class SpringExternalLoginFlow {
       Context context,
       Map<String, Values> env) {
     String name = call.getNameAsString();
+    if (name.equals("fromCurrentContextPath")
+        && call.getArguments().isEmpty()
+        && call.getScope().map(s -> s.toString().endsWith("UriComponentsBuilder")).orElse(false))
+      return new Values(Set.of(""), false, List.of(source(unit.file(), call)));
     if (URI_FACTORIES.contains(name)
         && call.getArguments().size() == 1
         && call.getScope().map(s -> s.toString().endsWith("UriComponentsBuilder")).orElse(false)) {
@@ -443,6 +489,19 @@ final class SpringExternalLoginFlow {
     if (call.getScope().isEmpty() || !chainOfUriBuilder(call)) return null;
     var base = values(call.getScope().get(), unit, owner, method, depth + 1, active, context, env);
     if (URI_PASS_THROUGH.contains(name)) return base;
+    if ((name.equals("path") || name.equals("pathSegment")) && call.getArguments().size() == 1) {
+      var part = values(call.getArgument(0), unit, owner, method, depth + 1, active, context, env);
+      Set<String> paths = new TreeSet<>();
+      for (String a : base.paths())
+        for (String b : part.paths())
+          paths.add(
+              name.equals("pathSegment")
+                  ? (a.endsWith("/") ? a : a + "/") + b
+                  : a.endsWith("/") && b.startsWith("/") ? a + b.substring(1) : a + b);
+      List<SourceLocation> proof = new ArrayList<>(base.sources());
+      proof.addAll(part.sources());
+      return new Values(paths, base.unresolved() || part.unresolved(), proof);
+    }
     if (name.equals("queryParam") && call.getArguments().size() >= 2) {
       var key = call.getArgument(0);
       if (!key.isStringLiteralExpr()) return base;
@@ -455,6 +514,77 @@ final class SpringExternalLoginFlow {
       for (String path : base.paths())
         paths.add(path + (path.contains("?") ? "&" : "?") + k + "=" + v);
       return new Values(paths, base.unresolved(), base.sources());
+    }
+    return null;
+  }
+
+  /**
+   * Text built from parts (ADR 0175): {@code String.format("%s?x=%s", a, b)}, {@code a.concat(b)},
+   * {@code append(b)} on a StringBuilder chain, {@code URI.create(x)}, and {@code toString()} /
+   * {@code toASCIIString()} of any of them. A part that cannot be read keeps the whole unresolved.
+   */
+  private static Values textCall(
+      MethodCallExpr call,
+      Unit unit,
+      ClassOrInterfaceDeclaration owner,
+      MethodDeclaration method,
+      int depth,
+      Set<String> active,
+      Context context,
+      Map<String, Values> env) {
+    String name = call.getNameAsString();
+    var scope = call.getScope().orElse(null);
+    java.util.function.Function<Expression, Values> read =
+        e -> values(e, unit, owner, method, depth + 1, active, context, env);
+    if (name.equals("format")
+        && scope != null
+        && scope.toString().equals("String")
+        && !call.getArguments().isEmpty()
+        && call.getArgument(0).isStringLiteralExpr()) {
+      Set<String> results =
+          new TreeSet<>(Set.of(call.getArgument(0).asStringLiteralExpr().asString()));
+      boolean unresolved = false;
+      List<SourceLocation> proof = new ArrayList<>(List.of(source(unit.file(), call)));
+      for (int i = 1; i < call.getArguments().size(); i++) {
+        var part = read.apply(call.getArgument(i));
+        unresolved |= part.unresolved();
+        proof.addAll(part.sources());
+        Set<String> next = new TreeSet<>();
+        for (String done : results) {
+          int at = done.indexOf('%');
+          while (at >= 0 && at + 1 < done.length() && done.charAt(at + 1) == '%')
+            at = done.indexOf('%', at + 2);
+          if (at < 0 || at + 1 >= done.length()) {
+            next.add(done);
+            continue;
+          }
+          for (String value : part.paths().isEmpty() ? Set.of("{" + i + "}") : part.paths())
+            next.add(done.substring(0, at) + value + done.substring(at + 2));
+        }
+        results = next;
+      }
+      return new Values(results, unresolved, proof);
+    }
+    if (name.equals("create")
+        && scope != null
+        && scope.toString().equals("URI")
+        && call.getArguments().size() == 1) return read.apply(call.getArgument(0));
+    if ((name.equals("toString") || name.equals("toASCIIString"))
+        && scope != null
+        && call.getArguments().isEmpty()
+        && !chainOfUriBuilder(call)
+        && (scope.isMethodCallExpr() || scope.isObjectCreationExpr())) return read.apply(scope);
+    if ((name.equals("concat") || name.equals("append"))
+        && scope != null
+        && call.getArguments().size() == 1
+        && (name.equals("concat") || scope.isObjectCreationExpr() || scope.isMethodCallExpr())) {
+      var left = read.apply(scope);
+      var right = read.apply(call.getArgument(0));
+      Set<String> paths = new TreeSet<>();
+      for (String a : left.paths()) for (String b : right.paths()) paths.add(a + b);
+      List<SourceLocation> proof = new ArrayList<>(left.sources());
+      proof.addAll(right.sources());
+      return new Values(paths, left.unresolved() || right.unresolved() || paths.isEmpty(), proof);
     }
     return null;
   }

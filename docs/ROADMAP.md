@@ -593,3 +593,7 @@
 
 - WP171：JSP 預覽依 EL 條件形狀（`empty 清單`、`not empty errors` 等）標出沒有資料與錯誤區塊，預設隱藏並可切換；React 的狀態命名另認 `isPending`、`isSubmitting`、`noResults` 等。見 [ADR 0174](adr/0174-r99-jsp-page-states-and-names.md)。
 
+## R100 登入導回的其他網址組法
+
+- WP172：外部登入導回路徑讀值器另認 `String.format`、`URI.create`／`new URI`、`concat`、`StringBuilder`、`path()`／`pathSegment()`、`fromCurrentContextPath()`、三參數 `RedirectStrategy.sendRedirect` 與沒有自訂 handler 時的 `defaultSuccessUrl`。見 [ADR 0175](adr/0175-r100-more-return-url-shapes.md)。
+
