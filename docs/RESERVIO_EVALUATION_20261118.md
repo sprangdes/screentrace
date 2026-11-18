@@ -166,3 +166,16 @@ reservio 的權限守衛（`RequireCustomer`、`RequireBusiness`、`RequireBusin
 | P9 角色 | R89、R92（[ADR 0167](adr/0167-r89-suggested-personas.md)） | 沒有設定時自動建議未登入、BUSINESS、USER，結果與手動設定相同 |
 | P10 啟動腳本 | R90 | `doctor` 在設有 `JAVA_TOOL_OPTIONS` 的環境正確判斷 Java 版本 |
 
+### 後續處理（R94～R102）
+
+| 項目 | 輪次 | 結果 |
+|---|---|---|
+| 狀態的原狀態（需求方改為推論） | R94、R101 | 「待確認 → 已取消」「取消申請中 → 已確認」等以推測標示；LINE 對話步驟以狀態轉換清單呈現 |
+| 前端多種寫法（需求方改為全部列出） | R95 | 「待確認／等待店家確認」，附每種寫法的來源 |
+| 背景作業範圍 | R96 | 另認 XML 排程、程式排程、Quartz、`@Async`，Struts 專案也套用 |
+| 文字狀態與深度 | R97 | 狀態欄位的字串／數字寫入列為狀態；狀態寫入追到 8 層 |
+| 畫面條件 | R98 | 改名解構的 props、Context 值與回傳條件的 hook 也能依畫面身分判斷 |
+| 疊加狀態 | R99 | JSP 的空清單／錯誤區塊也預設隱藏；React 狀態命名擴充 |
+| 登入導回 | R100 | 另認 `String.format`、`URI`、`StringBuilder`、`RedirectStrategy`、`defaultSuccessUrl` 等 |
+| 呈現瑕疵 | R102 | 「Settings Scaffold Page」消失；「其他」降為 6 個；處理中按鈕的用途；角色可採前端中文（reservio 沒有對照，仍為 BUSINESS、USER） |
+
