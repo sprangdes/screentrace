@@ -540,3 +540,16 @@
 - 影響範圍：Spring adapter、`BackendCallChains`、viewer API 頁、md。
 - 狀態：已決定（2026-11-18）。
 - 決定：需求方四項都選 A。系統作業見 [ADR 0159](adr/0159-r81-background-jobs.md)（R81）；狀態流程見 [ADR 0160](adr/0160-r82-state-changes.md)（R82）。
+
+## OQ-057 — reservio 評估：疊加狀態、畫面名稱、功能地圖與角色
+
+- 情境：[reservio 評估](RESERVIO_EVALUATION_20261118.md) P4、P5、P6、P9。
+- 待決定與可選方案：
+  - P4 疊加的載入中／錯誤／沒有資料：A. 依條件形狀辨識，預設只顯示有資料狀態，可切換；B. 全部保留，只加標示。
+  - P5 畫面名稱的程式用語：A. 白話條件，有角色設定時以角色名稱區分，沒有標題的畫面用連到它的選單文字；B. 只修沒有標題的畫面。
+  - P6 功能地圖：A. 說明依專案技術調整，React 專案先依選單分組；B. 只修說明文字。
+  - P9 角色：A. 沒有設定時依路由守衛自動建議並寫入報表，標為自動建議；B. 只在 CLI 印出建議設定；C. 不做。
+- 影響範圍：screentrace-js、capture、viewer、CLI 角色設定。
+- 狀態：已決定（2026-11-18）。
+- 決定：四項都選 A。P4 見 [ADR 0162](adr/0162-r84-page-states-in-preview.md)（R84）。
+

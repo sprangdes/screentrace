@@ -1311,6 +1311,12 @@ try {
   };
   // ---- how far the preview can be trusted (ADR 0157): demo data and content shown only under conditions
   let showTrust = false;
+  const PAGE_STATES: [string, string][] = [
+    ['', '有資料'],
+    ['loading', '載入中'],
+    ['error', '發生錯誤'],
+    ['empty', '沒有資料'],
+  ];
   const TRUST_STYLE = `[data-st-viewer-trust~="demo"]:not([data-review-status]):not([data-spotlight]){outline:2px dashed #2563eb!important;outline-offset:1px}
 [data-st-viewer-trust~="conditional"]:not([data-review-status]):not([data-spotlight]){outline:2px dashed #d97706!important;outline-offset:3px}
 [data-st-viewer-trust~="demo"][data-st-viewer-trust~="conditional"]:not([data-review-status]):not([data-spotlight]){outline-style:dotted!important}
@@ -1439,6 +1445,36 @@ try {
         trust.setAttribute('aria-pressed', String(showTrust));
         legend.hidden = !showTrust;
       };
+      // Loading, error and empty content stays hidden until asked for, one state at a time (ADR 0162).
+      const pageStates = element('div', undefined, 'segmented page-state-switch');
+      pageStates.dataset.pageStateSwitch = 'true';
+      pageStates.setAttribute('role', 'group');
+      pageStates.setAttribute('aria-label', '畫面狀態');
+      pageStates.title =
+        '依程式中的條件名稱（loading、error、清單長度為 0 等）判斷，可能不完全準確';
+      pageStates.hidden = true;
+      const fillPageStates = (doc: Document) => {
+        const present = new Set(
+          [...doc.querySelectorAll('[data-st-state]')].map((n) => n.getAttribute('data-st-state')),
+        );
+        const states = PAGE_STATES.filter(([value]) => !value || present.has(value));
+        pageStates.replaceChildren();
+        pageStates.hidden = states.length < 2;
+        const show = (value: string) => {
+          if (value) doc.documentElement.setAttribute('data-st-show-state', value);
+          else doc.documentElement.removeAttribute('data-st-show-state');
+          for (const button of pageStates.querySelectorAll('button'))
+            button.setAttribute('aria-pressed', String(button.dataset.pageState === value));
+        };
+        for (const [value, label] of states) {
+          const button = element('button', label);
+          button.type = 'button';
+          button.dataset.pageState = value;
+          button.onclick = () => show(value);
+          pageStates.append(button);
+        }
+        show('');
+      };
       syncTrust();
       trust.onclick = () => {
         showTrust = !showTrust;
@@ -1456,6 +1492,7 @@ try {
         const doc = own.contentDocument;
         if (!doc || !own.getAttribute('srcdoc')) return;
         projectSimulationData(payload, id, doc);
+        fillPageStates(doc);
         decorate(doc, id);
         selectFromPreview(doc, id);
         preview.setAttribute('aria-busy', 'false');
@@ -1488,7 +1525,7 @@ try {
         scroll,
       });
       // The notice sits beside the URL, outside the page, so it never covers the page's own buttons.
-      viewer.querySelector('.prototype-present')?.before(notice, trust);
+      viewer.querySelector('.prototype-present')?.before(notice, pageStates, trust);
       viewer.querySelector('.prototype-status')?.after(legend);
       host.replaceChildren(viewer);
       // A simulated click that requested APIs on the way here says so on the screen it arrived at.

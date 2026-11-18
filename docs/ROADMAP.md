@@ -529,3 +529,7 @@
 
 - WP155：依 [reservio 評估](RESERVIO_EVALUATION_20261118.md) P3。React 分析器讀取「條件選擇的物件字面值」的屬性（`primary.label` 讀成「前往預約 / 開始預約」，不再是「示例值」），`.map` 的字面陣列含 spread 時逐項展開已知項目（預約間隔顯示 15／30／45／60 分鐘四個選項），`<label>` 內沒有名稱的欄位以 label 文字命名。訪客導覽列由函式依身分回傳兩組陣列，仍無法展開，記於 ADR。見 [ADR 0161](adr/0161-r83-literal-alternatives-and-wrapped-labels.md)。
 
+## R84 預覽預設只顯示有資料狀態
+
+- WP156：依 [reservio 評估](RESERVIO_EVALUATION_20261118.md) P4，OQ-057 採 A。React 分析器以 AST 解析每個元素的顯示條件，辨識載入中、錯誤、沒有資料，在預覽 HTML 標 `data-st-state`；capture 加入預設隱藏規則，截圖只剩有資料狀態；viewer 預覽工具列新增「畫面狀態」切換。reservio 建立預約第 1 步不再疊出骨架、錯誤與空白訊息。見 [ADR 0162](adr/0162-r84-page-states-in-preview.md)。
+

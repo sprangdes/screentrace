@@ -23,6 +23,7 @@ import {
   branchIdentity,
 } from './branches.mjs';
 import { closeConditionalDialogs } from './dialogs.mjs';
+import { pageState } from './page-states.mjs';
 import { EffectRunner } from './effects.mjs';
 import { jsxName, attribute, attributeExpression } from './jsx.mjs';
 import { ROUTER, REACT, elementValue } from './routes.mjs';
@@ -1841,6 +1842,10 @@ class ScreenRenderer {
       const html = htmlAttribute(name, value);
       if (html && !html[0].startsWith('data-st-')) attributes[html[0]] = html[1];
     }
+    // Loading, error and empty content is marked so the preview can show one state at a time (ADR 0162).
+    const pageStateOf = pageState(state.guards);
+    if (pageStateOf && pageStateOf !== pageState(state.out.guards ?? []))
+      attributes['data-st-state'] = pageStateOf;
     const element = htmlElement(tag, attributes);
     element.guards = state.guards;
     state.out.children.push(element);

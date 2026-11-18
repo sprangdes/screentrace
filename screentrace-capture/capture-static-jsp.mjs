@@ -854,6 +854,17 @@ const CSP_META =
   "<meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'none'; img-src file: data:; style-src file: 'unsafe-inline'; font-src file:; script-src 'none'; connect-src 'none'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'\">";
 /** The document's own <head> start tag; `<header>` is not one (RV-510). */
 const HEAD_TAG = /<head(\s[^>]*)?>/i;
+/**
+ * Loading, error and empty content (`data-st-state`, ADR 0162) is hidden unless the viewer asks for
+ * that state on the root element, so the screenshot and the default preview show the data state.
+ */
+const pageStateCss = [
+  'html:not([data-st-show-state]) [data-st-state]{display:none!important}',
+  ...['loading', 'error', 'empty'].map(
+    (state) =>
+      `html[data-st-show-state="${state}"] [data-st-state]:not([data-st-state="${state}"]){display:none!important}`,
+  ),
+].join('');
 function dynamicExpressions(source) {
   return [...source.matchAll(/\$\{[^}]+}/g)].map((match) => match[0]);
 }
@@ -867,7 +878,14 @@ async function renderReact(screen) {
   // React previews get the same CSP as JSP ones (RV-513).
   source = source.replace(
     HEAD_TAG,
-    (head) => head + CSP_META + '<style data-st-preview-freeze>' + snapshotMotionCss + '</style>',
+    (head) =>
+      head +
+      CSP_META +
+      '<style data-st-preview-freeze>' +
+      snapshotMotionCss +
+      '</style><style data-st-page-states>' +
+      pageStateCss +
+      '</style>',
   );
   const htmlFile = await assertOutputPathWithin(
     output,

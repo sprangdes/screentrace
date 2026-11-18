@@ -727,3 +727,6 @@ button.persona-coverage-dot:hover{outline:2px solid var(--primary);outline-offse
 .state-badge{background:#eef1fb;border-color:#cfd6f0;color:#2b3a7a}
 .state-writer{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 10px;padding:4px 0}
 .state-writer-links{display:inline-flex;flex-wrap:wrap;gap:6px}
+.page-state-switch{flex:none}
+.page-state-switch[hidden]{display:none}
+.page-state-switch button{flex:none;font-size:12px;padding:3px 8px;white-space:nowrap}
