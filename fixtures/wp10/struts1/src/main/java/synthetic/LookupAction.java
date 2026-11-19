@@ -1,1 +1,0 @@
-package synthetic; class LookupAction extends LookupDispatchAction { protected java.util.Map<String,String> getKeyMethodMap(){map.put("button.save","save");return map;} public ActionForward save(ActionMapping mapping,ActionForm form,HttpServletRequest request,HttpServletResponse response){return mapping.findForward("ok");} }

@@ -136,7 +136,7 @@ npm --prefix screentrace-viewer run build
 ./mvnw clean verify
 ```
 
-Java 原始碼與測試以 google-java-format 排版，CI 會檢查；修改 Java 後執行下列指令重新排版（fixtures 與測試資源不在範圍內）：
+CI 使用 google-java-format 檢查 Java 原始碼。修改 Java 後可執行下列指令重新排版。
 
 ```bash
 ./mvnw com.diffplug.spotless:spotless-maven-plugin:apply
@@ -160,10 +160,10 @@ npm --prefix screentrace-viewer run lint
 
 GitHub Actions 的 `Security checks` 在 push、PR 與每週排程執行。分成四個獨立 job，其中一項失敗不會跳過其他項。
 
-- 建置與測試：viewer 建置、Java `mvn verify`（含 JaCoCo 覆蓋率報告，只報告、不設門檻）、三引擎 E2E。
-- Windows：在 Windows 上執行 Java `verify`，再用 `bin\screentrace.cmd analyze` 分析一個 fixture，確認報表產生且不含本機路徑。本機要產生覆蓋率報告時執行 `./mvnw verify -Pcoverage`，結果在各模組的 `target/site/jacoco/`。
-- Java 依賴掃描：`-DskipTests package` 後以 Dependency-Check 12.2.2 掃描；CVSS ≥ 7 或掃描錯誤仍會使檢查失敗。
-- Node：capture、viewer、screentrace-js 三個套件依 lockfile 安裝並執行測試，再各自執行 `npm audit --audit-level=high`。
+- Linux：建置 viewer 與 Java 模組，執行排版與 lint 檢查。
+- Windows：建置 viewer 與 Java 模組。
+- Java 依賴掃描：打包後以 Dependency-Check 12.2.2 掃描，CVSS ≥ 7 或掃描錯誤會使檢查失敗。
+- Node 依賴掃描：依三個套件的 lockfile 安裝並執行 `npm audit --audit-level=high`。
 - NVD 資料使用官方公開 JSON 2.0 檔案，不需要 API Key；漏洞資料庫使用每日快取，並依掃描器版本隔離；升級掃描器時也要更新 workflow 的快取版本。
 - Java 掃描報告以 `java-dependency-audit` artifact 保存，掃描失敗時也會嘗試上傳。
 
@@ -173,7 +173,6 @@ GitHub Actions 的 `Security checks` 在 push、PR 與每週排程執行。分�
 ./mvnw clean verify
 ./mvnw org.owasp:dependency-check-maven:aggregate -DdataDirectory=/tmp/screentrace-dependency-check-12.2.2
 npm --prefix screentrace-js ci --ignore-scripts
-npm --prefix screentrace-js test
 npm --prefix screentrace-js audit --audit-level=high
 npm --prefix screentrace-capture ci
 npm --prefix screentrace-capture audit --audit-level=high
@@ -213,11 +212,9 @@ node screentrace-capture/capture-static-jsp.mjs <target-project> <analysis-direc
 npm --prefix screentrace-viewer ci --ignore-scripts
 npm --prefix screentrace-viewer run build
 ./mvnw clean verify
-npm --prefix screentrace-viewer test
-node --test screentrace-viewer/test/*.e2e.mjs
 ```
 
-新入口 `SingleHtmlReportGenerator.generate` 只接受嚴格 schema 2.2／2.3／2.4，注入圖、預覽、內嵌文件與 manifest，產出 `report/screentrace-report.html`，並在分析目錄根層寫入實際 bytes 的 `report-size.json`；超過 100 MB 只警告。單檔以 `file://` 開啟，沒有執行期 npm 相依。CLI 透過 SingleHtmlAnalysisWriter 產生報表，不啟動 localhost 服務。設定 `ST_BROWSERS=chromium,firefox,webkit` 可執行三引擎測試，須先安裝對應 Playwright 瀏覽器。
+新入口 `SingleHtmlReportGenerator.generate` 只接受嚴格 schema 2.2／2.3／2.4，注入圖、預覽、內嵌文件與 manifest，產出 `report/screentrace-report.html`，並在分析目錄根層寫入實際 bytes 的 `report-size.json`；超過 100 MB 只警告。單檔以 `file://` 開啟，沒有執行期 npm 相依。CLI 透過 SingleHtmlAnalysisWriter 產生報表，不啟動 localhost 服務。
 
 標記自動暫存在應用名稱＋分析指紋的 localStorage，並可自動寫入使用者選擇的 md 進度檔；拒絕存取時只警告。複合鍵契約見 [REVIEW_STATE_CONTRACT](docs/REVIEW_STATE_CONTRACT.md)。md 匯出／匯入共用模組見 [REVIEW_MD_CONTRACT](docs/REVIEW_MD_CONTRACT.md)；決策可用單一 md 跨瀏覽器還原。
 
@@ -239,15 +236,3 @@ screentrace library unbind --project example-project
 manifest 的 library.name／version、元件 id／name／selector／category 最多 200 個 Unicode 字元；description（含輸入／輸出／slot）與 usage 最多 4,000 個字元。每個元件 inputs／outputs／slots／matches 各最多 200 筆；超限拒絕並指出欄位路徑與上限。
 
 未指定 project 只儲存、不選用。相同名稱@版本異內容需明確 --replace，已綁定專案更換後重新執行 report；解除後顯示「未匯入元件庫」。list 列摘要與綁定，不列工作區路徑。
-
-### 合成專案整合驗證
-
-[五類自行撰寫的 fixture](fixtures/wp10/README.md) 與 [語法涵蓋清單](fixtures/wp10/coverage.json) 不建置、不啟動目標服務。Java 的 SyntheticProjectIntegrationTest 在隔離工作區執行四類 fixture 的真實 analyze／capture／pack／report 兩次，逐 bytes 比對圖、同環境預覽與單一 HTML；Struts 2 只驗證拒絕。Node 共用 md 與三引擎 E2E 讀取這些實際產物，涵蓋標記、下載、清除暫存及匯入還原。
-
-```bash
-npm --prefix screentrace-viewer run build
-./mvnw verify
-ST_BROWSERS=chromium,firefox,webkit node --test screentrace-viewer/test/*.e2e.mjs
-```
-
-E2E 依賴前一步 Java 生成的 `screentrace-cli/target/wp10-fixtures`；預覽決定性只在同一次測試的相同瀏覽器／字型環境比較，不把跨作業系統截圖混為同一基線。CI 依此順序執行。

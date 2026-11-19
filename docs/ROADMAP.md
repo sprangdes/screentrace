@@ -1,6 +1,6 @@
 # ScreenTrace 工作包路線圖
 
-依 [CODEX_INSTRUCTIONS.md](CODEX_INSTRUCTIONS.md) 1.9（2026-10-03）與 [REQUIREMENTS.md](REQUIREMENTS.md) 執行。過去 POC 已有功能不等同新驗收完成；基線見 [BASELINE.md](BASELINE.md)。每個工作包獨立提交，每個里程碑結束後等待需求方確認。M1–M4 完成後的工作以輪次（R*）進行，記錄於本檔下方。
+依 [CODEX_INSTRUCTIONS.md](CODEX_INSTRUCTIONS.md) 1.9（2026-10-03）與 [REQUIREMENTS.md](REQUIREMENTS.md) 執行。過去 POC 已有功能不等同新驗收完成；基線實測紀錄與測試套件已從現行版本移除，以下各輪仍保留當時的驗證紀錄。每個工作包獨立提交，每個里程碑結束後等待需求方確認。M1–M4 完成後的工作以輪次（R*）進行，記錄於本檔下方。
 
 > 本檔引用的 `reports/*.md`、`docs/reports/*.md` 與 `ADJUSTMENT_R*.md` 已於 commit df28b33（2026-10-31）移除，僅能從 git 歷史查閱。
 

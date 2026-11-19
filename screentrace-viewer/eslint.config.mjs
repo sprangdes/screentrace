@@ -6,7 +6,7 @@ import globals from 'globals';
 
 export default [
   {
-    ignores: ['**/node_modules/**', '**/dist/**', '**/fixtures/**', '**/test/golden/**'],
+    ignores: ['**/node_modules/**', '**/dist/**'],
   },
   {
     files: ['**/*.js', '**/*.mjs'],

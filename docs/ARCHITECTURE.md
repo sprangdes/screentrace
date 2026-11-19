@@ -669,9 +669,9 @@ shared/review-md 與 strict-graph 供瀏覽器／Node 共用，建置同時提�
 
 CLI LibraryStore／LibraryCommands 使用工作區內容 SHA-256 定址、專案明確綁定／解除與 --replace；ComponentLibrary 在 report 邊界以打包的 draft 2020-12 Schema 驗證，不改 core。Java analyze／report 只注入選用 manifest 與摘要；viewer／Node 共用 library 精確比對／kind 涵蓋率與 review 可逆來源分區。外庫覆寫保留 orphan，不參與有效建議／API。md 動態 v1/v2 與同一分區往返。（R17 起 viewer 忽略元件庫與覆寫，`matchLibrary` 已無呼叫端；md 匯出固定 v1，v2／v3 僅匯入相容；Java 端驗證與注入不變。）契約見 REVIEW_STATE_CONTRACT／REVIEW_MD_CONTRACT；設計 ADR 0027–0031。WP10 合成整合驗證見下節。
 
-### WP10 合成來源與整合驗證
+### WP10 合成來源與整合驗證（歷史紀錄）
 
-fixtures/wp10 是自行撰寫的 source-only 分析資料，不是 Maven 模組或可啟動系統。coverage.json 以要求編號、檔案及原始 token 清單覆蓋 WP2–WP5。CLI 測試透過現有 analyze 入口使用隔離來源／工作區，綁定虛構 manifest，兩次經 adapter／嚴格 2.2／capture／pack／SingleHtmlAnalysisWriter，保存實際產物供 Node 使用；沒有替換 payload 的測試捷徑。每份目標來源分析前後 SHA-256 相同。
+WP10 當時使用自行撰寫的 source-only 分析資料，不是 Maven 模組或可啟動系統。coverage.json 以要求編號、檔案及原始 token 清單覆蓋 WP2–WP5。CLI 測試透過現有 analyze 入口使用隔離來源／工作區，綁定虛構 manifest，兩次經 adapter／嚴格 2.2／capture／pack／SingleHtmlAnalysisWriter，保存實際產物供 Node 使用；沒有替換 payload 的測試捷徑。每份目標來源分析前後 SHA-256 相同。
 
 screentrace-viewer/test/synthetic-project.e2e.mjs 直接讀取 Java 產物，Node md 決定性與 file:// 標記、下載、清暫存、匯入還原共用正式資料與模組（預設只跑 Chromium，`ST_BROWSERS` 可加 Firefox／WebKit；R17 起測試改為確認沒有元件庫／覆寫 UI 且 md 為 format_version 1，也不再綁定虛構 manifest）。預覽比較限定同次測試的相同 Chromium／viewport／字型環境；沒有跨環境圖片 golden。完整圖／預覽／HTML 不忽略任何欄位，md 只正規化 generated_at。
 

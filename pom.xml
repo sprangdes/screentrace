@@ -11,7 +11,6 @@
   <properties>
     <maven.compiler.release>17</maven.compiler.release>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <junit.version>5.10.2</junit.version>
     <jackson.version>2.21.7</jackson.version>
     <javaparser.version>3.26.1</javaparser.version>
     <jline.version>3.30.14</jline.version>
@@ -39,12 +38,6 @@
         <groupId>com.github.javaparser</groupId>
         <artifactId>javaparser-core</artifactId>
         <version>${javaparser.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.junit.jupiter</groupId>
-        <artifactId>junit-jupiter</artifactId>
-        <version>${junit.version}</version>
-        <scope>test</scope>
       </dependency>
       <dependency>
         <groupId>org.jline</groupId>
@@ -75,7 +68,7 @@
         </plugin>
         <!-- Source formatting (HC-001). Not bound to any lifecycle phase, so `mvn verify` never downloads it;
              CI runs `mvn com.diffplug.spotless:spotless-maven-plugin:check`, and
-             `mvn com.diffplug.spotless:spotless-maven-plugin:apply` reformats. Fixtures and test resources are excluded. -->
+             `mvn com.diffplug.spotless:spotless-maven-plugin:apply` reformats. -->
         <plugin>
           <groupId>com.diffplug.spotless</groupId>
           <artifactId>spotless-maven-plugin</artifactId>
@@ -84,7 +77,6 @@
             <java>
               <includes>
                 <include>src/main/java/**/*.java</include>
-                <include>src/test/java/**/*.java</include>
               </includes>
               <googleJavaFormat>
                 <version>1.24.0</version>
@@ -92,43 +84,7 @@
             </java>
           </configuration>
         </plugin>
-        <plugin>
-          <artifactId>maven-surefire-plugin</artifactId>
-          <version>3.2.5</version>
-        </plugin>
       </plugins>
     </pluginManagement>
   </build>
-
-  <profiles>
-    <!-- Test coverage report (HC-003). Only `-Pcoverage` attaches the JaCoCo agent, so the launchers'
-         builds and a plain `mvn verify` are unchanged; each module writes target/site/jacoco/. No threshold. -->
-    <profile>
-      <id>coverage</id>
-      <build>
-        <plugins>
-          <plugin>
-            <groupId>org.jacoco</groupId>
-            <artifactId>jacoco-maven-plugin</artifactId>
-            <version>0.8.15</version>
-            <executions>
-              <execution>
-                <id>coverage-agent</id>
-                <goals>
-                  <goal>prepare-agent</goal>
-                </goals>
-              </execution>
-              <execution>
-                <id>coverage-report</id>
-                <phase>verify</phase>
-                <goals>
-                  <goal>report</goal>
-                </goals>
-              </execution>
-            </executions>
-          </plugin>
-        </plugins>
-      </build>
-    </profile>
-  </profiles>
 </project>

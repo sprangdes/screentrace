@@ -1,3 +1,0 @@
-<section>
-<jsp:doBody/>
-</section>

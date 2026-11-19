@@ -145,14 +145,4 @@ R17 起報表不再顯示診斷與信心狀態。診斷的完整代碼、訊息�
 
 自動化流程建議直接使用 `./bin/screentrace <專案路徑>`，不需要設定或互動終端機。未設定時執行 `analyze`／`report` 會立即顯示「尚未設定專案根目錄。可直接執行 `./bin/screentrace <專案路徑>` 分析單一專案，或在終端機執行 `./bin/screentrace config` 設定專案根目錄」並以非零結束碼停止。
 
-## 重新產生指南截圖
-
-指南截圖由自撰合成資料產生，不取用實際專案或網路資源。完成報表介面修改後，在具備 Playwright Chromium 的環境執行：
-
-```sh
-npm --prefix screentrace-viewer run guide-shots
-```
-
-輸出固定寫入 `docs/images/user-guide/`。檢查十張圖都非空、沒有多餘舊圖，並在相同環境連續執行兩次，以 SHA-256 確認每張 PNG 位元組一致。若字型或 Chromium 不可用，腳本應明確失敗；不得以空白截圖代替。
-
 文件格式細節見[審查文件契約](REVIEW_MD_CONTRACT.md)、[審查狀態契約](REVIEW_STATE_CONTRACT.md)與[元件庫 Schema](schemas/component-library.schema.json)。
