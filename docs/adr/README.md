@@ -49,7 +49,8 @@ Controller、回傳 view、表單綁定與伺服器端檢核以 JavaParser 靜�
 |---|---|---|
 | [0013](0013-request-behavior-endpoint-correlation.md) | 請求行為與後端端點對應 | 有效 |
 | [0014](0014-server-contracts-and-validation.md) | API 契約與 SERVER 檢核的靜態來源 | 有效 |
-| [0037](0037-controller-return-flow.md) | Controller 回傳與表單畫面流程 | 有效 |
+| [0037](0037-controller-return-flow.md) | Controller 回傳與表單畫面流程 | 由 [0182](0182-spring-jsp-flow-resolution.md) 擴充 |
+| [0182](0182-spring-jsp-flow-resolution.md) | Spring MVC JSP 回傳分流、URL 樣板與 Tiles 共用頁身 | 有效 |
 | [0102](0102-r18-spring-api-paths-and-external-call-notes.md) | R18 WP82 的 Spring API 選路與外部呼叫附註 | 有效 |
 | [0159](0159-r81-background-jobs.md) | R81 排程、事件監聽與啟動時作業成為 HANDLER，API 頁「系統自動作業」與 md §12（OQ-056） | 有效 |
 | [0171](0171-r96-more-background-jobs.md) | R96 背景作業移到共用模組並套用 Struts 管線，新增 XML 排程、程式排程、Quartz 與 @Async | 有效 |
@@ -67,7 +68,7 @@ JSP、JSPF、tag file、Tiles 與有限的 Thymeleaf 以 `MarkupTag` 等 parser 
 
 | ADR | 決定 | 狀態 |
 |---|---|---|
-| [0005](0005-source-local-url-variable-exception.md) | 有證據的同來源 URL 變數例外 | 有效 |
+| [0005](0005-source-local-url-variable-exception.md) | 有證據的同來源 URL 變數例外 | 由 [0182](0182-spring-jsp-flow-resolution.md) 擴充 |
 | [0006](0006-shared-markup-graph-contribution.md) | 共用標記圖貢獻與來源所有權 | 有效 |
 | [0008](0008-script-context-prefix-and-static-dom.md) | script src 的 context 前綴例外與靜態 DOM | 有效 |
 | [0011](0011-url-resolution-context-and-yaml.md) | 共用 URL 對應與明確 context path | 有效 |

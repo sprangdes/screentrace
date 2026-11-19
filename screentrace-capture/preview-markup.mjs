@@ -224,7 +224,7 @@ export function annotateSource(source, file, nodes = [], parentAnchor = '') {
     .join('');
 }
 
-export function annotateConditions(source) {
+export function annotateConditions(source, truth = () => undefined) {
   const stack = [];
   return markupTokens(source)
     .map((token) => {
@@ -236,16 +236,27 @@ export function annotateConditions(source) {
           return '';
         }
         const test = attributes(token.text).test || '(未知條件)';
-        if (kind === 'choose') stack.push({ kind, seen: [] });
-        else if (kind === 'if') stack.push({ kind, condition: test });
+        if (kind === 'choose') stack.push({ kind, seen: [], decisions: [] });
+        else if (kind === 'if') stack.push({ kind, condition: test, decision: truth(test) });
         else {
           const choose = stack.findLast((s) => s.kind === 'choose');
           const condition =
             kind === 'when'
               ? test
               : `otherwise（前述條件皆不成立：${choose?.seen.join(' | ') || '未知條件'}）`;
-          if (kind === 'when') choose?.seen.push(test);
-          stack.push({ kind, condition });
+          const current = kind === 'when' ? truth(test) : true,
+            previous = choose?.decisions || [],
+            decision =
+              current === false || previous.includes(true)
+                ? false
+                : current === true && previous.every((value) => value === false)
+                  ? true
+                  : undefined;
+          if (kind === 'when') {
+            choose?.seen.push(test);
+            choose?.decisions.push(current);
+          }
+          stack.push({ kind, condition, decision });
         }
         if (token.selfClosing) stack.pop();
         return '';
@@ -258,15 +269,18 @@ export function annotateConditions(source) {
           if (index >= 0) stack.splice(index, 1);
         } else if (!token.selfClosing)
           stack.push({ logic: tag, state: strutsLogicPageState(tag, attributes(token.text)) });
-        return token.text;
+        return stack.some((s) => s.decision === false) ? '' : token.text;
       }
+      if (stack.some((s) => s.decision === false)) return '';
       if (!token.name || token.closing) return token.text;
       const text = removeReserved(token.text, [
         'data-st-conditional',
         'data-st-condition',
         'data-st-state',
       ]);
-      const conditions = stack.filter((s) => s.condition).map((s) => s.condition);
+      const conditions = stack
+        .filter((s) => s.condition && s.decision === undefined)
+        .map((s) => s.condition);
       // Empty-list and error blocks are marked so the preview shows the data state first (ADR 0174).
       const logic = ['loading', 'error', 'empty'].find((state) =>
           stack.some((s) => s.logic && s.state === state),
@@ -439,7 +453,7 @@ export function convertControls(source) {
       if (t.selfClosing && !['input', 'img'].includes(tag))
         text = text.replace(
           /\/\s*>$/,
-          `>${name === 'button' ? escape(a.value ?? '') : ''}</${tag}>`,
+          `>${name === 'button' ? escape(a.value ?? '') : name === 'option' ? escape(a.label ?? a.value ?? '') : ''}</${tag}>`,
         );
       return text;
     })

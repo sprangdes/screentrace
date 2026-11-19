@@ -609,6 +609,100 @@ export function analyze(request) {
         return { selector: arg, index: 0 };
       return null;
     }
+    function domVisibilityFilter(args, ctx) {
+      const [list, callback] = args;
+      const env = ctx.env ?? rootEnv;
+      if (
+        args.length !== 2 ||
+        lookup(env, 'Array') ||
+        lookup(env, 'Array', 'functions') ||
+        lookup(env, 'document') ||
+        lookup(env, 'document', 'functions') ||
+        list?.type !== 'CallExpression' ||
+        calleeName(list.callee) !== 'document.querySelectorAll' ||
+        list.arguments.length !== 1 ||
+        typeof list.arguments[0].value !== 'string' ||
+        !functionTypes.has(callback?.type) ||
+        callback.params.length !== 1 ||
+        callback.params[0].type !== 'Identifier'
+      )
+        return null;
+      const statements = callback.body.body;
+      const assignment =
+        callback.body.type === 'BlockStatement'
+          ? statements.length === 1
+            ? statements[0].expression
+            : null
+          : callback.body;
+      const row = callback.params[0].name;
+      if (
+        assignment?.type !== 'AssignmentExpression' ||
+        assignment.operator !== '=' ||
+        calleeName(assignment.left) !== row + '.hidden' ||
+        assignment.right.type !== 'BinaryExpression' ||
+        !['===', '!=='].includes(assignment.right.operator)
+      )
+        return null;
+      const { left, right, operator } = assignment.right;
+      if (
+        left.type !== 'CallExpression' ||
+        calleeName(left.callee) !== row + '.getAttribute' ||
+        left.arguments.length !== 1 ||
+        !/^data-[a-z][a-z0-9-]*$/.test(left.arguments[0].value || '')
+      )
+        return null;
+      const valueSelector = (node, count = 0) => {
+        if (count > 4) return null;
+        if (node?.type === 'Identifier') {
+          const found = lookup(env, node.name);
+          return found && !found.scope.invalid.has(node.name) && found.entry.at <= node.start
+            ? valueSelector(found.entry.node, count + 1)
+            : null;
+        }
+        if (node?.type === 'MemberExpression' && !node.computed && node.property.name === 'value') {
+          const ref = domReference(node.object);
+          return ref ? { inputSelector: ref.selector } : null;
+        }
+        if (
+          node?.type === 'ConditionalExpression' &&
+          node.test.type === 'BinaryExpression' &&
+          node.test.operator === '===' &&
+          node.test.left.type === 'MemberExpression' &&
+          !node.test.left.computed &&
+          node.test.left.property.name === 'tagName' &&
+          ['SELECT', 'INPUT', 'TEXTAREA'].includes(node.test.right.value)
+        ) {
+          const tested = domReference(node.test.left.object);
+          const yes = valueSelector(node.consequent, count + 1);
+          const no = valueSelector(node.alternate, count + 1);
+          if (yes && no && tested?.selector === yes.inputSelector)
+            return {
+              inputSelector: yes.inputSelector,
+              fallbackSelector: no.inputSelector,
+              inputTag: node.test.right.value,
+            };
+        }
+        return null;
+      };
+      const input = valueSelector(right);
+      const guard = ctx.guard?.match(
+        /^([A-Za-z_$][\w$]*)(?: && (?:\$\{[^{}]*}|c:otherwise\{\}))?$/,
+      );
+      const alias = guard && lookup(env, guard[1]);
+      return (
+        input && {
+          operation: 'filterVisibility',
+          selector: list.arguments[0].value,
+          ...input,
+          property: left.arguments[0].value,
+          value: operator,
+          guardChecked:
+            !!alias &&
+            !alias.scope.invalid.has(guard[1]) &&
+            domReference(alias.entry.node)?.selector === input.inputSelector,
+        }
+      );
+    }
     function visitNode(node, ctx) {
       if (!node?.type || functionTypes.has(node.type)) return;
       if (
@@ -937,6 +1031,14 @@ export function analyze(request) {
           if (execute(node.callee, args, ctx, node)) return;
           emit('UNKNOWN', node, ctx, { callee: name }, 'UNRESOLVED');
           return;
+        }
+        if (name === 'Array.prototype.forEach.call') {
+          const filter = domVisibilityFilter(args, ctx);
+          if (filter) {
+            if (selectNodes(filter.inputSelector, unitDom, ctx.triggerId).length)
+              emit('UI_STATE_CHANGE', node, ctx, filter, 'INFERRED');
+            return;
+          }
         }
         const ready = (name === '$' || name === 'jQuery') && functionTypes.has(args[0]?.type);
         // jQuery < 3 shorthand $(window).load(fn) is a load handler, not an ajax .load(url)
@@ -1342,7 +1444,13 @@ export function analyze(request) {
           ['JSON.stringify', 'JSON.parse', 'console.log', 'Object.keys', 'Object.values'].includes(
             name,
           ) ||
-          ['$', 'jQuery'].includes(name)
+          ['$', 'jQuery'].includes(name) ||
+          ([
+            'document.getElementById',
+            'document.querySelector',
+            'document.getElementsByName',
+          ].includes(name) &&
+            domReference(node))
         )
           return;
         if (execute(node.callee, args, ctx, node)) return;

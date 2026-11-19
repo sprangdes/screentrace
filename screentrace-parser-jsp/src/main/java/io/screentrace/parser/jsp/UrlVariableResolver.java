@@ -9,7 +9,14 @@ import java.util.regex.Pattern;
  */
 public final class UrlVariableResolver {
   public record Resolution(
-      String value, String originalExpression, List<AnalysisEvidence> definitions) {}
+      String value,
+      String originalExpression,
+      List<AnalysisEvidence> definitions,
+      List<ConditionalUrlTargets.Alternative> alternatives) {
+    Resolution(String value, String originalExpression, List<AnalysisEvidence> definitions) {
+      this(value, originalExpression, definitions, List.of());
+    }
+  }
 
   private record Definition(
       String value,
@@ -19,12 +26,20 @@ public final class UrlVariableResolver {
       List<Integer> loops,
       boolean valid) {}
 
-  private record Scope(String tag, int id, boolean loop) {}
+  private record Scope(String tag, int id, boolean loop, String test) {}
 
   private static final Pattern VARIABLE = Pattern.compile("[A-Za-z_][A-Za-z0-9_]*");
+  private static final String PROPERTY = "[A-Za-z_][A-Za-z0-9_]*(?:\\.[A-Za-z_][A-Za-z0-9_]*)*";
+  private static final Pattern PATH_TERNARY =
+      Pattern.compile(
+          "\\$\\{\\s*("
+              + PROPERTY
+              + ")\\s*\\?\\s*(['\"])(/[A-Za-z0-9_./-]*|)\\2"
+              + "\\s*:\\s*(['\"])(/[A-Za-z0-9_./-]*|)\\4\\s*}(.*)");
   private static final Set<String> CONTROL =
       Set.of(
           "c:if",
+          "c:choose",
           "c:when",
           "c:otherwise",
           "c:foreach",
@@ -42,6 +57,10 @@ public final class UrlVariableResolver {
   private final Map<Integer, List<Integer>> scopes = new HashMap<>();
   private final Map<Integer, List<Integer>> loops = new HashMap<>();
   private final Set<Integer> closedLoops = new HashSet<>();
+  private final Map<Integer, Scope> controls = new HashMap<>();
+  private final Map<Integer, List<Scope>> choices = new HashMap<>();
+  private final Map<Integer, Integer> closeOffsets = new HashMap<>();
+  private final Map<Integer, List<ConditionalUrlTargets.Alternative>> ternaries = new HashMap<>();
   private final String path;
   private boolean unknownWrite;
 
@@ -56,12 +75,14 @@ public final class UrlVariableResolver {
     List<Scope> stack = new ArrayList<>();
     List<MarkupTag> tokens = MarkupTag.scan(text);
     Map<Integer, Integer> completed = completedDefinitions(tokens, text);
-    for (MarkupTag tag : tokens) {
+    for (int index = 0; index < tokens.size(); index++) {
+      MarkupTag tag = tokens.get(index);
       String name = tag.name().toLowerCase(Locale.ROOT);
       if (tag.closing()) {
         for (int i = stack.size() - 1; i >= 0; i--)
           if (stack.get(i).tag().equals(name)) {
             if (i == stack.size() - 1 && stack.get(i).loop()) closedLoops.add(stack.get(i).id());
+            if (i == stack.size() - 1) closeOffsets.put(stack.get(i).id(), tag.end());
             stack.subList(i, stack.size()).clear();
             break;
           }
@@ -73,9 +94,16 @@ public final class UrlVariableResolver {
       loops.put(tag.end(), loopScope);
       if (Set.of("c:url", "spring:url").contains(name) && tag.attribute("var") != null) {
         String value = tag.attribute("value"), declaredScope = tag.attribute("scope");
+        if (name.equals("c:url") && tag.attribute("context") == null) {
+          var alternatives = pathAlternatives(value, tag.line());
+          if (!alternatives.isEmpty() && Objects.equals(completed.get(tag.end()), tag.end())) {
+            ternaries.put(tag.end(), alternatives);
+            value = alternatives.get(0).path();
+          }
+          value = jstlPath(value, tokens, index, completed.get(tag.end()));
+        }
         if (MarkupAnalysis.dynamic(tag.attribute("var"))) unknownWrite = true;
-        // OQ-013 permits spring:url only in statically known loop scopes. Unknown custom
-        // scopes and c:url keep ADR 0005's original single-assignment restriction.
+        // Only known loop scopes can consume a URL defined in that same iteration.
         boolean authorizedLoop =
             name.equals("spring:url")
                 && stack.stream()
@@ -85,7 +113,14 @@ public final class UrlVariableResolver {
             value != null
                 && !MarkupAnalysis.dynamic(value)
                 && (declaredScope == null || declaredScope.equals("page"))
-                && (loopScope.isEmpty() || authorizedLoop);
+                && (loopScope.isEmpty()
+                    || authorizedLoop
+                    || name.equals("c:url")
+                        && stack.stream()
+                            .filter(Scope::loop)
+                            .allMatch(s -> s.tag().equals("c:foreach"))
+                        && value.startsWith("/"))
+                && tag.attribute("context") == null;
         definitions
             .computeIfAbsent(tag.attribute("var"), k -> new ArrayList<>())
             .add(
@@ -110,18 +145,76 @@ public final class UrlVariableResolver {
               && !Set.of("spring:url", "spring:param", "c:url", "c:param", "c:choose")
                   .contains(name)
               && !CONTROL.contains(name);
-      if ((CONTROL.contains(name) || unknownCustom) && !selfClosing)
-        stack.add(
+      if ((CONTROL.contains(name) || unknownCustom) && !selfClosing) {
+        var control =
             new Scope(
                 name,
                 tag.end(),
-                unknownCustom || name.equals("c:foreach") || name.equals("logic:iterate")));
+                unknownCustom || name.equals("c:foreach") || name.equals("logic:iterate"),
+                tag.attribute("test"));
+        controls.put(control.id(), control);
+        if (!stack.isEmpty() && stack.get(stack.size() - 1).tag().equals("c:choose"))
+          choices
+              .computeIfAbsent(stack.get(stack.size() - 1).id(), ignored -> new ArrayList<>())
+              .add(control);
+        stack.add(control);
+      }
     }
     // Scriptlets can mutate page-scope attributes. Exclude JSP comments before checking the
     // delimiter.
     String withoutComments = text.replaceAll("(?s)<%--.*?--%>", "");
     for (int i = withoutComments.indexOf("<%"); i >= 0; i = withoutComments.indexOf("<%", i + 2))
       if (!withoutComments.startsWith("<%@", i)) unknownWrite = true;
+  }
+
+  private static String jstlPath(String value, List<MarkupTag> tokens, int index, Integer end) {
+    if (value == null || end == null) return null;
+    value = pathTemplate(value);
+    if (value == null) return null;
+    if (end == tokens.get(index).end()) return value;
+    if (!value.startsWith("/") || value.startsWith("//") || value.contains("#")) return value;
+    String withParams = value;
+    for (int child = index + 1; child < tokens.size() && tokens.get(child).end() < end; child++) {
+      var param = tokens.get(child);
+      String key = param.attribute("name"), argument = param.attribute("value");
+      if (param.closing()
+          || !param.name().equalsIgnoreCase("c:param")
+          || key == null
+          || !VARIABLE.matcher(key).matches()
+          || argument == null) return value + (value.contains("?") ? "&" : "?") + "{query}";
+      if (!argument.matches("[A-Za-z0-9_.~-]*")) argument = "{queryValue}";
+      withParams += (withParams.contains("?") ? "&" : "?") + key + "=" + argument;
+    }
+    return withParams;
+  }
+
+  private static String pathTemplate(String value) {
+    if (value.startsWith("/") && !value.startsWith("//") && MarkupAnalysis.dynamic(value)) {
+      for (String segment : value.split("/", -1))
+        if (MarkupAnalysis.dynamic(segment) && !segment.matches("\\$\\{" + PROPERTY + "}"))
+          return null;
+      value = value.replaceAll("\\$\\{(" + PROPERTY + ")}", "{$1}");
+    }
+    return MarkupAnalysis.dynamic(value) ? null : value;
+  }
+
+  private static List<ConditionalUrlTargets.Alternative> pathAlternatives(String value, int line) {
+    if (value == null) return List.of();
+    var match = PATH_TERNARY.matcher(value);
+    if (!match.matches() || !match.group(6).isEmpty() && !match.group(6).startsWith("/"))
+      return List.of();
+    String yes = pathTemplate(match.group(3) + match.group(6));
+    String no = pathTemplate(match.group(5) + match.group(6));
+    if (yes == null
+        || no == null
+        || !yes.startsWith("/")
+        || yes.startsWith("//")
+        || !no.startsWith("/")
+        || no.startsWith("//")) return List.of();
+    String guard = "${" + match.group(1) + "}";
+    return List.of(
+        new ConditionalUrlTargets.Alternative(yes, guard, line),
+        new ConditionalUrlTargets.Alternative(no, "!(" + guard + ")", line));
   }
 
   private static Map<Integer, Integer> completedDefinitions(List<MarkupTag> tokens, String text) {
@@ -144,6 +237,18 @@ public final class UrlVariableResolver {
 
   public Resolution resolve(String raw, MarkupTag use) {
     if (raw == null) return new Resolution(null, null, List.of());
+    String expression = raw;
+    if (raw.stripLeading().startsWith("<c:out")) {
+      var nested = MarkupTag.scan(raw);
+      if (nested.size() == 1
+          && nested.get(0).name().equalsIgnoreCase("c:out")
+          && !nested.get(0).closing()
+          && raw.stripTrailing().endsWith("/>")
+          && nested.get(0).attribute("value") != null
+          && nested.get(0).attribute("default") == null
+          && raw.substring(nested.get(0).end() + 1).isBlank())
+        expression = nested.get(0).attribute("value").strip();
+    }
     if (raw.stripLeading().startsWith("<c:url") || raw.stripLeading().startsWith("<spring:url")) {
       List<MarkupTag> nested = MarkupTag.scan(raw);
       if (nested.size() == 1
@@ -160,6 +265,11 @@ public final class UrlVariableResolver {
                     "巢狀 URL 常值定義；param 不解析")));
       if (nested.size() == 1 && nested.get(0).attribute("value") != null) {
         String value = nested.get(0).attribute("value");
+        if (nested.get(0).name().equalsIgnoreCase("c:url")
+            && nested.get(0).attribute("context") == null) {
+          var alternatives = pathAlternatives(value, use.line());
+          if (!alternatives.isEmpty()) return new Resolution(raw, raw, List.of(), alternatives);
+        }
         int delimiter = value.indexOf('?');
         if (delimiter > 0
             && value.substring(0, delimiter).matches("/[A-Za-z0-9_./-]*")
@@ -209,16 +319,18 @@ public final class UrlVariableResolver {
                     ResolutionStatus.INFERRED,
                     "查詢參數來自 bean:write；保留參數樣板，執行時值未知；原文=" + raw)));
     }
-    if (!raw.startsWith("${") || !raw.endsWith("}")) return new Resolution(raw, raw, List.of());
-    String expression = raw.substring(2, raw.length() - 1).trim();
+    if (!expression.startsWith("${") || !expression.endsWith("}"))
+      return new Resolution(raw, raw, List.of());
+    expression = expression.substring(2, expression.length() - 1).trim();
     if (expression.startsWith("fn:escapeXml(") && expression.endsWith(")"))
       expression = expression.substring(13, expression.length() - 1).trim();
     if (!VARIABLE.matcher(expression).matches() || unknownWrite || writes.contains(expression))
       return new Resolution(raw, raw, List.of());
     var values = definitions.getOrDefault(expression, List.of());
-    if (values.size() != 1) return new Resolution(raw, raw, List.of());
-    Definition definition = values.get(0);
     var useScopes = scopes.getOrDefault(use.end(), List.of());
+    if (values.size() != 1)
+      return new Resolution(raw, raw, List.of(), choose(values, use, useScopes));
+    Definition definition = values.get(0);
     if (!definition.valid()
         || definition.end() >= use.end()
         || useScopes.size() < definition.scopes().size()
@@ -228,10 +340,10 @@ public final class UrlVariableResolver {
         && (!definition.loops().equals(loops.getOrDefault(use.end(), List.of()))
             || !closedLoops.containsAll(definition.loops())))
       return new Resolution(raw, raw, List.of());
+    var alternatives = ternaries.get(definition.end());
+    if (alternatives != null) return new Resolution(raw, raw, List.of(), alternatives);
     String rule =
-        definition.loops().isEmpty()
-            ? "同來源、使用前、單一定義且作用域可證明"
-            : "OQ-013 spring:url 同來源、使用前、單一靜態定義且位於同一可證明迴圈作用域";
+        definition.loops().isEmpty() ? "同來源、使用前、單一定義且作用域可證明" : "同來源、使用前、單一定義且位於同一可證明迴圈作用域";
     return new Resolution(
         definition.value(),
         raw,
@@ -239,7 +351,56 @@ public final class UrlVariableResolver {
             new AnalysisEvidence(
                 definition.source(),
                 "JspUrlVariableResolver",
-                ResolutionStatus.CONFIRMED,
-                rule + "；原始運算式：" + raw + "；param 不解析")));
+                definition.value().contains("{")
+                    ? ResolutionStatus.INFERRED
+                    : ResolutionStatus.CONFIRMED,
+                rule + "；原始運算式：" + raw + "；路徑=" + definition.value())));
+  }
+
+  private List<ConditionalUrlTargets.Alternative> choose(
+      List<Definition> values, MarkupTag use, List<Integer> useScopes) {
+    if (values.size() < 2 || values.size() > 16) return List.of();
+    var first = values.get(0).scopes();
+    if (first.size() < 2) return List.of();
+    int chooseIndex = first.size() - 2;
+    int choose = first.get(chooseIndex);
+    if (!controls.get(choose).tag().equals("c:choose")
+        || closeOffsets.getOrDefault(choose, Integer.MAX_VALUE) >= use.start()
+        || useScopes.size() < chooseIndex
+        || !useScopes.subList(0, chooseIndex).equals(first.subList(0, chooseIndex)))
+      return List.of();
+    var branches = choices.getOrDefault(choose, List.of());
+    if (branches.size() != values.size()) return List.of();
+    List<ConditionalUrlTargets.Alternative> alternatives = new ArrayList<>();
+    List<String> prior = new ArrayList<>();
+    for (int i = 0; i < branches.size(); i++) {
+      var branch = branches.get(i);
+      var definition = values.get(i);
+      boolean last = i == branches.size() - 1;
+      if (!definition.valid()
+          || ternaries.containsKey(definition.end())
+          || !definition.loops().isEmpty()
+          || !definition.value().startsWith("/")
+          || definition.value().startsWith("//")
+          || definition.end() >= use.start()
+          || definition.scopes().size() != first.size()
+          || !definition
+              .scopes()
+              .subList(0, chooseIndex + 1)
+              .equals(first.subList(0, chooseIndex + 1))
+          || definition.scopes().get(chooseIndex + 1) != branch.id()
+          || !branch.tag().equals(last ? "c:otherwise" : "c:when")
+          || closeOffsets.getOrDefault(branch.id(), Integer.MAX_VALUE) >= use.start()
+          || (!last && branch.test() == null)) return List.of();
+      List<String> guards = new ArrayList<>(prior);
+      if (!last) {
+        guards.add("(" + branch.test() + ")");
+        prior.add("!(" + branch.test() + ")");
+      }
+      alternatives.add(
+          new ConditionalUrlTargets.Alternative(
+              definition.value(), String.join(" && ", guards), definition.source().line()));
+    }
+    return alternatives;
   }
 }

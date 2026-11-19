@@ -374,6 +374,26 @@ export function attachSimulation(
             : n.nextElementSibling,
         )
         .filter((n): n is Element => !!n);
+    if (effect.operation === 'filterVisibility') {
+      if (!effect.inputSelector || !/^data-[a-z][a-z0-9-]*$/.test(effect.property || '')) return;
+      try {
+        let input = doc.querySelector(effect.inputSelector);
+        if (
+          input &&
+          effect.inputTag &&
+          input.tagName !== effect.inputTag &&
+          effect.fallbackSelector
+        )
+          input = doc.querySelector(effect.fallbackSelector);
+        if (!input || !['select', 'input', 'textarea'].includes(input.localName)) return;
+        const value = (input as HTMLInputElement).value;
+        for (const target of targets) {
+          const equal = target.getAttribute(effect.property!) === value;
+          (target as HTMLElement).hidden = effect.value === '===' ? equal : !equal;
+        }
+      } catch {}
+      return;
+    }
     for (const target of targets) {
       if (effect.operation === 'toggleDisclosure' && effect.inputSelector) {
         let button: Element | null = null;

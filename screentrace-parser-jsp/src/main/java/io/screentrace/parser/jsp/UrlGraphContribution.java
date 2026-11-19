@@ -33,6 +33,9 @@ public final class UrlGraphContribution {
     graph.behaviors().forEach(b -> behaviors.put(b.id(), b));
     List<Diagnostic> diagnostics = new ArrayList<>(graph.diagnostics());
     var context = UrlResolution.context(inventory, List.of(), springApiPolicy);
+    boolean springOnly =
+        !graph.application().technologies().contains("Struts 1")
+            && graph.application().technologies().contains("Spring MVC");
     var extensions = extensions(inventory, diagnostics);
     var directories = new Lazy<>(() -> new RequestDirectories(graph));
     for (var node : graph.nodes())
@@ -175,6 +178,13 @@ public final class UrlGraphContribution {
                   || raw.startsWith("${pageContext.request.contextPath}")
                   || raw.startsWith("${pageContext.servletContext.contextPath}"));
       UrlResolution.Result result;
+      boolean jspSpring =
+          springOnly
+              && trigger.evidence().stream()
+                  .anyMatch(
+                      e ->
+                          Set.of("JspUrlVariableResolver", "JspConditionalUrl")
+                              .contains(e.parser()));
       if (trigger.attributes().containsKey("requestAlternatives")
           && trigger.evidence().stream()
               .anyMatch(e -> e.parser().equals("ConditionalUrlTargets"))) {
@@ -183,14 +193,20 @@ public final class UrlGraphContribution {
         List<String> paths = new ArrayList<>(), errors = new ArrayList<>();
         try {
           for (var alternative : JSON.readTree(trigger.attributes().get("requestAlternatives"))) {
+            String path = alternative.path("path").asText();
             var matched =
-                UrlResolution.resolve(
-                    alternative.path("path").asText(),
-                    method,
-                    context,
-                    endpoints,
-                    extensions,
-                    false);
+                jspSpring
+                    ? UrlResolution.resolveSpring(
+                        path, method, context, endpoints, extensions, false)
+                    : UrlResolution.resolve(path, method, context, endpoints, extensions, false);
+            if (jspSpring)
+              for (String endpoint : matched.candidates())
+                alternativeProof.add(
+                    new AnalysisEvidence(
+                        source,
+                        "JspRequestPath",
+                        ResolutionStatus.INFERRED,
+                        endpoint + " " + path));
             candidates.addAll(matched.candidates());
             paths.addAll(matched.paths());
             errors.addAll(matched.diagnostics());
@@ -248,7 +264,7 @@ public final class UrlGraphContribution {
       } else {
         String relative = relativeRequestPath(raw, b.triggerId(), graph, directories.get());
         var baseResult =
-            springApiPolicy
+            springApiPolicy || jspSpring
                 ? UrlResolution.resolveSpring(
                     relative == null ? raw : relative,
                     dynamicMethod ? "UNKNOWN" : method,

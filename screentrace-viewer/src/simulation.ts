@@ -1,5 +1,6 @@
 import { DataAction, behaviorDataAction } from './simulation-data';
 import { Payload, ElementRecord, Behavior, Evidence, Rule } from './contracts';
+import { permitsRender, requestPaths } from './request-outcomes';
 export interface Intent {
   event?: string;
   tag: string;
@@ -61,6 +62,8 @@ export interface Effect {
   flags?: string;
   days?: number;
   inputSelector?: string;
+  fallbackSelector?: string;
+  inputTag?: string;
   property?: string;
   relative?: string;
   when?: { selector: string; value: string };
@@ -117,7 +120,7 @@ function state(b: Behavior): string {
         ? 'INFERRED'
         : 'UNRESOLVED';
 }
-function screens(payload: Payload, targetId: string): Effect[] {
+function screens(payload: Payload, targetId: string, paths: string[]): Effect[] {
   const nodes = new Map(payload.graph.nodes.map((n) => [n.id, n])),
     edges = payload.graph.relationships || [],
     result = new Map<string, Effect>();
@@ -173,7 +176,9 @@ function screens(payload: Payload, targetId: string): Effect[] {
     next.add(id);
     for (const edge of edges.filter(
       (e) =>
-        e.from === id && ['HANDLED_BY', 'RENDERS', 'FORWARDS_TO', 'NAVIGATES_TO'].includes(e.type),
+        e.from === id &&
+        ['HANDLED_BY', 'RENDERS', 'FORWARDS_TO', 'NAVIGATES_TO'].includes(e.type) &&
+        permitsRender(e, targetId, paths),
     )) {
       const evidence = (edge as any).evidence || [];
       if (!['CONFIRMED', 'INFERRED', 'AMBIGUOUS'].includes(edge.confidence)) {
@@ -224,7 +229,17 @@ export function staticAction(b: Behavior): Effect | undefined {
     if (proof.parser === 'AcornStaticAnalyzer' && proof.detail)
       try {
         const item = JSON.parse(proof.detail);
-        if (!['CONFIRMED', 'INFERRED'].includes(item.status) || (b.guard && !b.parentId)) continue;
+        if (
+          !['CONFIRMED', 'INFERRED'].includes(item.status) ||
+          (b.guard &&
+            !b.parentId &&
+            !(
+              b.event === 'change' &&
+              item.operation === 'filterVisibility' &&
+              item.guardChecked === true
+            ))
+        )
+          continue;
         if (
           item.operation === 'workflowGate' &&
           Array.isArray(item.checks) &&
@@ -273,6 +288,7 @@ export function staticAction(b: Behavior): Effect | undefined {
             'setValue',
             'setText',
             'setStyle',
+            'filterVisibility',
             'datePicker',
             'reload',
             'print',
@@ -285,6 +301,8 @@ export function staticAction(b: Behavior): Effect | undefined {
             flags: item.flags,
             days: item.days,
             inputSelector: item.inputSelector,
+            fallbackSelector: item.fallbackSelector,
+            inputTag: item.inputTag,
             condition: b.guard,
             property: item.property,
             relative: item.relative,
@@ -345,7 +363,8 @@ function effect(
       : unknown(b.expression, '彈窗內容無法從靜態分析重建');
   if (!['NAVIGATE', 'SUBMIT_FORM'].includes(b.type))
     return unknown(b.expression, '這個操作的結果取決於頁面腳本，靜態分析無法確認');
-  const outcomes = screens(payload, targetId);
+  const trigger = payload.graph.nodes.find((n) => n.id === b.triggerId);
+  const outcomes = screens(payload, targetId, requestPaths(targetId, trigger, b.evidence || []));
   if (!outcomes.length)
     return {
       ...unknown(b.expression),
@@ -531,14 +550,39 @@ function simulateRaw(
     const resolution = state(b);
     if (resolution === 'AMBIGUOUS') {
       const ids = candidates(b);
+      const outcomes = ids.map((id) => effect(payload, b, id, intent, 'AMBIGUOUS'));
+      const leaves = choiceLeaves(outcomes);
+      if (
+        b.type === 'NAVIGATE' &&
+        !b.guard &&
+        !b.condition &&
+        ids.length > 1 &&
+        leaves.length &&
+        leaves.every(
+          (leaf) =>
+            leaf.kind === 'navigate' &&
+            leaf.targetId === leaves[0].targetId &&
+            !leaf.condition &&
+            !leaf.dataAction &&
+            !leaf.feedback &&
+            !leaf.inputProjection,
+        ) &&
+        b.evidence?.some((e) => e.parser === 'JspRequestPath')
+      ) {
+        effects.push({
+          ...leaves[0],
+          resolution: 'INFERRED',
+          evidence: leaves.flatMap((leaf) => leaf.evidence || []),
+        });
+        continue;
+      }
       effects.push({
         kind: 'choices',
         message: '有多個候選，請選擇；系統不會替你決定',
         expression: b.expression,
         evidence: b.evidence,
         reason: 'BEHAVIOR_AMBIGUOUS',
-        choices: ids.flatMap((id) => {
-          const outcome = effect(payload, b, id, intent, 'AMBIGUOUS');
+        choices: outcomes.flatMap((outcome) => {
           return b.type === 'SUBMIT_FORM' &&
             payload.graph.nodes.find((n) => n.id === b.triggerId)?.attributes.requestAlternatives &&
             outcome.kind === 'form' &&

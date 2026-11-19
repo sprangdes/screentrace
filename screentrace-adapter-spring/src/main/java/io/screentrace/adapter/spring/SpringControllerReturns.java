@@ -46,7 +46,16 @@ final class SpringControllerReturns {
 
   static List<Target> extract(
       MethodDeclaration method, String file, String className, Map<String, String> constants) {
-    constants = new HashMap<>(constants);
+    return extract(method, file, className, constants, Set.of(method));
+  }
+
+  private static List<Target> extract(
+      MethodDeclaration method,
+      String file,
+      String className,
+      Map<String, String> classConstants,
+      Set<MethodDeclaration> stack) {
+    var constants = new HashMap<>(classConstants);
     for (var parameter : method.getParameters()) constants.remove(parameter.getNameAsString());
     for (var variable : method.findAll(VariableDeclarator.class))
       constants.remove(variable.getNameAsString());
@@ -133,51 +142,192 @@ final class SpringControllerReturns {
           continue;
         }
       }
-      Value value = value(expression, method, statement, constants);
-      String detail =
-          "類別="
-              + className
-              + "；方法="
-              + className
-              + "."
-              + method.getNameAsString()
-              + "；原始運算式="
-              + raw
-              + "；目標="
-              + Objects.toString(value.value(), "UNRESOLVED")
-              + "；條件="
-              + guards(statement, method);
-      List<AnalysisEvidence> evidence = new ArrayList<>();
-      evidence.add(
-          new AnalysisEvidence(
-              source,
-              "SpringControllerReturns",
-              value.kind() == Kind.UNKNOWN
-                  ? ResolutionStatus.UNRESOLVED
-                  : value.kind() == Kind.VIEW
-                      ? ResolutionStatus.CONFIRMED
-                      : ResolutionStatus.INFERRED,
-              detail));
-      if (value.kind() == Kind.REDIRECT && expression.isNameExpr())
-        for (var setter : method.findAll(MethodCallExpr.class))
-          if (setter.getNameAsString().equals("setUrl")
-              && setter
-                  .getScope()
-                  .filter(v -> v.toString().equals(expression.toString()))
-                  .isPresent())
-            evidence.add(
-                new AnalysisEvidence(
-                    new SourceLocation(file, setter.getBegin().orElseThrow().line),
-                    "SpringControllerReturns",
-                    ResolutionStatus.INFERRED,
-                    "RedirectView setter 來源；column="
-                        + setter.getBegin().orElseThrow().column
-                        + "；原始運算式="
-                        + setter));
-      if (value.kind() != Kind.UNKNOWN) evidence.addAll(feedback(method, statement, file));
-      targets.add(new Target(value.kind(), value.value(), raw, source, evidence));
+      expand(
+          expression,
+          statement,
+          method,
+          source,
+          raw,
+          file,
+          className,
+          classConstants,
+          constants,
+          stack,
+          "",
+          "",
+          targets);
     }
     return List.copyOf(targets);
+  }
+
+  private static void expand(
+      Expression expression,
+      ReturnStmt statement,
+      MethodDeclaration method,
+      SourceLocation source,
+      String raw,
+      String file,
+      String className,
+      Map<String, String> classConstants,
+      Map<String, String> constants,
+      Set<MethodDeclaration> stack,
+      String branch,
+      String condition,
+      List<Target> targets) {
+    expression = unwrap(expression);
+    if (branch.isEmpty()) expression = conditionalView(expression, method, statement);
+    if (expression.isConditionalExpr() && branch.length() < 32) {
+      var conditional = expression.asConditionalExpr();
+      expand(
+          conditional.getThenExpr(),
+          statement,
+          method,
+          source,
+          raw,
+          file,
+          className,
+          classConstants,
+          constants,
+          stack,
+          branch + ":then",
+          join(condition, "(" + conditional.getCondition() + ")"),
+          targets);
+      expand(
+          conditional.getElseExpr(),
+          statement,
+          method,
+          source,
+          raw,
+          file,
+          className,
+          classConstants,
+          constants,
+          stack,
+          branch + ":else",
+          join(condition, "!(" + conditional.getCondition() + ")"),
+          targets);
+      return;
+    }
+    List<Target> forwarded = List.of();
+    if (expression.isMethodCallExpr() && stack.size() < 5) {
+      var helper = privateHelper(method, expression.asMethodCallExpr());
+      if (helper != null && !stack.contains(helper)) {
+        var next = new LinkedHashSet<>(stack);
+        next.add(helper);
+        forwarded = extract(helper, file, className, classConstants, next);
+      }
+    }
+    if (forwarded.isEmpty()) {
+      addTarget(
+          value(expression, method, statement, constants),
+          expression,
+          statement,
+          method,
+          source,
+          raw,
+          file,
+          className,
+          branch,
+          condition,
+          List.of(),
+          targets);
+    } else {
+      for (int i = 0; i < forwarded.size(); i++) {
+        Target target = forwarded.get(i);
+        addTarget(
+            new Value(target.kind(), target.value()),
+            expression,
+            statement,
+            method,
+            source,
+            raw,
+            file,
+            className,
+            branch + ":call:" + i,
+            condition,
+            target.evidence(),
+            targets);
+      }
+    }
+  }
+
+  private static MethodDeclaration privateHelper(MethodDeclaration method, MethodCallExpr call) {
+    if (call.getScope()
+        .filter(scope -> !scope.isThisExpr() || scope.asThisExpr().getTypeName().isPresent())
+        .isPresent()) return null;
+    if (!(method.getParentNode().orElse(null) instanceof ClassOrInterfaceDeclaration owner))
+      return null;
+    if (!owner.getExtendedTypes().isEmpty() || !owner.getImplementedTypes().isEmpty()) return null;
+    var overloads = owner.getMethodsByName(call.getNameAsString());
+    if (overloads.size() != 1) return null;
+    var helper = overloads.get(0);
+    if ((method.isStatic() && !helper.isStatic())
+        || !helper.isPrivate()
+        || !Set.of("String", "java.lang.String").contains(helper.getTypeAsString())
+        || helper.getParameters().size() != call.getArguments().size()
+        || helper.getParameters().stream().anyMatch(Parameter::isVarArgs)
+        || helper.findAll(TryStmt.class).stream().anyMatch(t -> t.getFinallyBlock().isPresent()))
+      return null;
+    return helper;
+  }
+
+  private static void addTarget(
+      Value value,
+      Expression expression,
+      ReturnStmt statement,
+      MethodDeclaration method,
+      SourceLocation source,
+      String raw,
+      String file,
+      String className,
+      String branch,
+      String condition,
+      List<AnalysisEvidence> forwarded,
+      List<Target> targets) {
+    String detail =
+        "類別="
+            + className
+            + "；方法="
+            + className
+            + "."
+            + method.getNameAsString()
+            + "；原始運算式="
+            + raw
+            + "；目標="
+            + Objects.toString(value.value(), "UNRESOLVED")
+            + "；條件="
+            + (condition.isEmpty()
+                ? guards(statement, method)
+                : join(guards(statement, method), condition));
+    List<AnalysisEvidence> evidence = new ArrayList<>(forwarded);
+    evidence.add(
+        new AnalysisEvidence(
+            source,
+            "SpringControllerReturns",
+            value.kind() == Kind.UNKNOWN
+                ? ResolutionStatus.UNRESOLVED
+                : value.kind() == Kind.VIEW && branch.isEmpty()
+                    ? ResolutionStatus.CONFIRMED
+                    : ResolutionStatus.INFERRED,
+            detail));
+    if (value.kind() == Kind.REDIRECT && expression.isNameExpr())
+      for (var setter : method.findAll(MethodCallExpr.class))
+        if (setter.getNameAsString().equals("setUrl")
+            && setter
+                .getScope()
+                .filter(v -> v.toString().equals(expression.toString()))
+                .isPresent())
+          evidence.add(
+              new AnalysisEvidence(
+                  new SourceLocation(file, setter.getBegin().orElseThrow().line),
+                  "SpringControllerReturns",
+                  ResolutionStatus.INFERRED,
+                  "RedirectView setter 來源；column="
+                      + setter.getBegin().orElseThrow().column
+                      + "；原始運算式="
+                      + setter));
+    if (value.kind() != Kind.UNKNOWN) evidence.addAll(feedback(method, statement, file));
+    targets.add(new Target(value.kind(), value.value(), raw, source, evidence, branch));
   }
 
   static String branchKey(Target target) {
@@ -496,83 +646,112 @@ final class SpringControllerReturns {
                   o.getType().getNameAsString().equals("RedirectView")
                       && o.getArguments().isEmpty())
           .isPresent()) return contextRedirect(name, definition, method, use, constants);
-      if (definition.getInitializer().isEmpty()
-          || !definition.getInitializer().get().isObjectCreationExpr()
-          || !definition
-              .getInitializer()
-              .get()
-              .asObjectCreationExpr()
-              .getType()
-              .getNameAsString()
-              .equals("ModelAndView")
-          || definition.getEnd().orElseThrow().isAfter(use.getBegin().orElseThrow()))
-        return unknown();
-      var block = definition.findAncestor(BlockStmt.class);
-      if (block.isEmpty() || !block.get().isAncestorOf(use)) return unknown();
-      if (method.findAll(VariableDeclarator.class).stream()
-          .anyMatch(
-              v ->
-                  v != definition
-                      && v.getInitializer().isPresent()
-                      && v.getInitializer().get().findAll(NameExpr.class).stream()
-                          .anyMatch(n -> n.getNameAsString().equals(name)))) return unknown();
-      if (method.findAll(AssignExpr.class).stream()
-          .anyMatch(
-              a ->
-                  a.getTarget().isNameExpr()
-                          && a.getTarget().asNameExpr().getNameAsString().equals(name)
-                      || a.getValue().findAll(NameExpr.class).stream()
-                          .anyMatch(n -> n.getNameAsString().equals(name)))) return unknown();
-      if (method.findAll(ObjectCreationExpr.class).stream()
-          .anyMatch(
-              o ->
-                  o.getArguments().stream()
-                      .anyMatch(
-                          a ->
-                              a.findAll(NameExpr.class).stream()
-                                  .anyMatch(n -> n.getNameAsString().equals(name)))))
-        return unknown();
-      for (MethodCallExpr call : method.findAll(MethodCallExpr.class)) {
-        if (call.getArguments().stream()
-            .anyMatch(
-                a ->
-                    a.findAll(NameExpr.class).stream()
-                        .anyMatch(n -> n.getNameAsString().equals(name)))) return unknown();
-        if (call.getScope().isPresent()
-            && call.getScope().get().findAll(NameExpr.class).stream()
-                .anyMatch(n -> n.getNameAsString().equals(name))
-            && !(call.getScope().get().isNameExpr()
-                && Set.of("addObject", "addAllObjects", "getModel", "getModelMap", "setViewName")
-                    .contains(call.getNameAsString()))) return unknown();
-      }
-      var setters =
-          method.findAll(MethodCallExpr.class).stream()
-              .filter(
-                  c ->
-                      c.getNameAsString().equals("setViewName")
-                          && c.getScope()
-                              .filter(
-                                  e ->
-                                      e.isNameExpr()
-                                          && e.asNameExpr().getNameAsString().equals(name))
-                              .isPresent())
-              .toList();
-      if (!setters.isEmpty()) {
-        if (setters.size() != 1) return unknown();
-        var setter = setters.get(0);
-        var statement = setter.findAncestor(ExpressionStmt.class);
-        if (setter.getArguments().size() != 1
-            || statement.isEmpty()
-            || statement.get().getParentNode().orElse(null) != block.get()
-            || !setter.getBegin().orElseThrow().isAfter(definition.getEnd().orElseThrow())
-            || !setter.getEnd().orElseThrow().isBefore(use.getBegin().orElseThrow()))
-          return unknown();
-        String view = literal(setter.getArgument(0), constants);
-        return view == null ? unknown() : classify(view);
-      }
-      return value(definition.getInitializer().get(), method, use, constants);
+      var view = modelViewExpression(name, definition, method, use);
+      if (view == null) return unknown();
+      String textView = literal(view, constants);
+      return textView != null
+          ? classify(textView)
+          : view.isObjectCreationExpr() ? value(view, method, use, constants) : unknown();
     }
     return unknown();
+  }
+
+  static Expression conditionalView(
+      Expression expression, MethodDeclaration method, ReturnStmt use) {
+    expression = unwrap(expression);
+    if (expression.isNameExpr()) {
+      String name = expression.asNameExpr().getNameAsString();
+      var definitions =
+          method.findAll(VariableDeclarator.class).stream()
+              .filter(v -> belongsTo(v, method) && v.getNameAsString().equals(name))
+              .toList();
+      if (definitions.size() == 1) {
+        var view = modelViewExpression(name, definitions.get(0), method, use);
+        if (view != null && unwrap(view).isConditionalExpr()) return unwrap(view);
+      }
+    } else if (expression.isObjectCreationExpr()) {
+      var object = expression.asObjectCreationExpr();
+      if (object.getType().getNameAsString().equals("ModelAndView")
+          && !object.getArguments().isEmpty()
+          && unwrap(object.getArgument(0)).isConditionalExpr())
+        return unwrap(object.getArgument(0));
+    }
+    return expression;
+  }
+
+  private static Expression modelViewExpression(
+      String name, VariableDeclarator definition, MethodDeclaration method, ReturnStmt use) {
+    if (definition.getInitializer().isEmpty()
+        || !definition.getInitializer().get().isObjectCreationExpr()
+        || !definition
+            .getInitializer()
+            .get()
+            .asObjectCreationExpr()
+            .getType()
+            .getNameAsString()
+            .equals("ModelAndView")
+        || definition.getEnd().orElseThrow().isAfter(use.getBegin().orElseThrow())) return null;
+    var block = definition.findAncestor(BlockStmt.class);
+    if (block.isEmpty() || !block.get().isAncestorOf(use)) return null;
+    if (method.findAll(VariableDeclarator.class).stream()
+        .anyMatch(
+            v ->
+                v != definition
+                    && v.getInitializer().isPresent()
+                    && v.getInitializer().get().findAll(NameExpr.class).stream()
+                        .anyMatch(n -> n.getNameAsString().equals(name)))) return null;
+    if (method.findAll(AssignExpr.class).stream()
+        .anyMatch(
+            a ->
+                a.getTarget().isNameExpr()
+                        && a.getTarget().asNameExpr().getNameAsString().equals(name)
+                    || a.getValue().findAll(NameExpr.class).stream()
+                        .anyMatch(n -> n.getNameAsString().equals(name)))) return null;
+    if (method.findAll(ObjectCreationExpr.class).stream()
+        .anyMatch(
+            o ->
+                o.getArguments().stream()
+                    .anyMatch(
+                        a ->
+                            a.findAll(NameExpr.class).stream()
+                                .anyMatch(n -> n.getNameAsString().equals(name))))) return null;
+    for (MethodCallExpr call : method.findAll(MethodCallExpr.class)) {
+      if (call.getArguments().stream()
+          .anyMatch(
+              a ->
+                  a.findAll(NameExpr.class).stream()
+                      .anyMatch(n -> n.getNameAsString().equals(name)))) return null;
+      if (call.getScope().isPresent()
+          && call.getScope().get().findAll(NameExpr.class).stream()
+              .anyMatch(n -> n.getNameAsString().equals(name))
+          && !(call.getScope().get().isNameExpr()
+              && Set.of("addObject", "addAllObjects", "getModel", "getModelMap", "setViewName")
+                  .contains(call.getNameAsString()))) return null;
+    }
+    var setters =
+        method.findAll(MethodCallExpr.class).stream()
+            .filter(
+                c ->
+                    c.getNameAsString().equals("setViewName")
+                        && c.getScope()
+                            .filter(
+                                e ->
+                                    e.isNameExpr() && e.asNameExpr().getNameAsString().equals(name))
+                            .isPresent())
+            .toList();
+    if (!setters.isEmpty()) {
+      if (setters.size() != 1) return null;
+      var setter = setters.get(0);
+      var statement = setter.findAncestor(ExpressionStmt.class);
+      if (setter.getArguments().size() != 1
+          || statement.isEmpty()
+          || statement.get().getParentNode().orElse(null) != block.get()
+          || !setter.getBegin().orElseThrow().isAfter(definition.getEnd().orElseThrow())
+          || !setter.getEnd().orElseThrow().isBefore(use.getBegin().orElseThrow())) return null;
+      return setter.getArgument(0);
+    }
+    var arguments = definition.getInitializer().orElseThrow().asObjectCreationExpr().getArguments();
+    return arguments.isEmpty() ? null : arguments.get(0);
   }
 
   private static Value contextRedirect(

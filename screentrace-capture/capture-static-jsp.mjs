@@ -583,6 +583,7 @@ function placeholder(expression) {
   const value = expression.trim();
   const escaped = value.match(/^fn:escapeXml\((.+)\)$/);
   if (escaped) return placeholder(escaped[1]);
+  if (/(^|[._])(premium|amount|total|price|fee)$/i.test(value)) return '1,000';
   if (value.includes('pageContext')) return '';
   if (/\.id$/.test(value)) return '1';
   if (/\.(firstName|givenName)$/.test(value)) return 'Alex';
@@ -597,11 +598,21 @@ function placeholder(expression) {
   if (/errorMessage/.test(value)) return 'Validation message';
   return value.split(/[.[' ]/)[0].replace(/^./, (c) => c.toUpperCase()) || 'Sample value';
 }
-function replaceExpressions(source, values = {}) {
+function replaceExpressions(source, values = {}, facts = {}) {
   if (previewV2)
     return replaceDynamicExpressions(source, (expression) => {
       const value = expression.trim(),
         escaped = value.match(/^fn:escapeXml\((.+)\)$/)?.[1];
+      const alternatives = value.match(
+        /^(.+?)\s*\?\s*(['"])([^'"\\]*)\2\s*:\s*(['"])([^'"\\]*)\4$/,
+      );
+      if (alternatives) {
+        const guard = alternatives[1].trim();
+        const decision =
+          jspBoolean(guard, facts) ??
+          (/^empty\s+[\w.]+$/.test(guard) || /^[\w.]+\s+(?:eq|==)\s*['"]/.test(guard));
+        return decision ? alternatives[3] : alternatives[5];
+      }
       return (
         values[value] ?? (escaped ? (values[escaped] ?? placeholder(escaped)) : placeholder(value))
       );
@@ -613,6 +624,159 @@ function replaceExpressions(source, values = {}) {
       values[value] ?? (escaped ? (values[escaped] ?? placeholder(escaped)) : placeholder(value))
     );
   });
+}
+
+function jspBoolean(guard, facts) {
+  const simple = guard.match(/^(?:(not\s+|!\s*))?([A-Za-z_][\w.]*)$/);
+  if (!simple || !Object.hasOwn(facts, simple[2])) return undefined;
+  return simple[1] ? !facts[simple[2]] : facts[simple[2]];
+}
+
+function screenModelFacts(screen) {
+  const renders = (graph.relationships || []).filter(
+    (edge) => edge.type === 'RENDERS' && edge.to === screen.id,
+  );
+  const facts = renders.map((edge) => {
+    const values = Object.create(null);
+    for (const item of edge.evidence || [])
+      if (item.parser === 'SpringRequestCondition')
+        try {
+          const condition = JSON.parse(item.detail);
+          if (condition.modelAttribute && ['true', 'false'].includes(condition.negated))
+            values[condition.modelAttribute] = condition.negated === 'false';
+        } catch {
+          // Model hints are optional.
+        }
+    return values;
+  });
+  return Object.fromEntries(
+    Object.entries(facts[0] || {}).filter(([key, value]) =>
+      facts.every((candidate) => candidate[key] === value),
+    ),
+  );
+}
+
+function stripJstlUrlDefinitions(source) {
+  let depth = 0;
+  return markupTokens(source)
+    .map((token) => {
+      if (token.name === 'c:url' && !token.closing && (depth || markupAttributes(token.text).var)) {
+        if (!token.selfClosing) depth++;
+        return '';
+      }
+      if (!depth) return token.text;
+      if (token.name === 'c:url' && token.closing) depth--;
+      return '';
+    })
+    .join('');
+}
+
+function sampleFilteredRows(source, screen, sampleGuards) {
+  const filter = (graph.behaviors || [])
+    .filter((b) => b.triggerId === screen.id && b.event === 'load')
+    .flatMap((b) => b.evidence || [])
+    .filter((e) => e.parser === 'AcornStaticAnalyzer')
+    .map((e) => {
+      try {
+        return JSON.parse(e.detail);
+      } catch {
+        return null;
+      }
+    })
+    .find(
+      (action) =>
+        action?.operation === 'filterVisibility' &&
+        /^\.[A-Za-z_][\w-]*$/.test(action.selector) &&
+        /^#[A-Za-z_][\w-]*$/.test(action.inputSelector) &&
+        /^data-[a-z][a-z0-9-]*$/.test(action.property),
+    );
+  if (!filter) return source;
+  const tokens = markupTokens(source);
+  const select = tokens.findIndex(
+    (token) =>
+      !token.closing &&
+      ['select', 'form:select'].includes(token.name) &&
+      markupAttributes(token.text).id === filter.inputSelector.slice(1),
+  );
+  if (select < 0) return source;
+  const end = tokens.findIndex(
+    (token, i) => i > select && token.closing && token.name === tokens[select].name,
+  );
+  if (end < 0) return source;
+  const options = [
+    ...new Set(
+      tokens
+        .slice(select + 1, end)
+        .filter((token) => !token.closing && ['option', 'form:option'].includes(token.name))
+        .map((token) => markupAttributes(token.text).value)
+        .filter((value) => /^[A-Za-z0-9_.-]{1,64}$/.test(value || '')),
+    ),
+  ];
+  if (options.length < 2 || options.length > 8) return source;
+  let result = '',
+    cursor = 0;
+  for (let i = 0; i < tokens.length; i++) {
+    const begin = tokens[i];
+    if (begin.name !== 'c:foreach' || begin.closing || begin.selfClosing) continue;
+    const variable = markupAttributes(begin.text).var;
+    if (!/^[A-Za-z_][\w]*$/.test(variable || '')) continue;
+    const close = tokens.findIndex((token, at) => at > i && token.name === 'c:foreach');
+    if (close < 0 || !tokens[close].closing) continue;
+    const rows = tokens
+      .slice(i + 1, close)
+      .filter(
+        (token) =>
+          token.name &&
+          !token.closing &&
+          (markupAttributes(token.text).class || '')
+            .split(/\s+/)
+            .includes(filter.selector.slice(1)),
+      );
+    if (
+      rows.length !== 1 ||
+      tokens
+        .slice(i + 1, close)
+        .some(
+          (token) =>
+            token.name &&
+            ['a', 'button', 'input', 'select', 'textarea', 'form'].includes(token.name),
+        )
+    )
+      continue;
+    const row = rows[0],
+      attributes = markupAttributes(row.text);
+    const expression = attributes[filter.property]?.match(
+      /(?:^|value\s*=\s*['"])\$\{([\w]+\.[\w]+)}(?:$|['"])/,
+    )?.[1];
+    if (!expression?.startsWith(variable + '.')) continue;
+    const start = begin.start + begin.text.length;
+    const body = source.slice(start, tokens[close].start);
+    result += source.slice(cursor, begin.start);
+    for (const [index, value] of options.entries()) {
+      const hidden = filter.value === '===' ? index === 0 : index !== 0;
+      const opening = replaceMarkupAttribute(row.text, filter.property, value).replace(
+        /\s*(\/?)>$/,
+        (_, slash) => (hidden ? ' hidden' : '') + slash + '>',
+      );
+      const sample =
+        body.slice(0, row.start - start) +
+        opening +
+        body.slice(row.start - start + row.text.length);
+      result += sample.replace(
+        /\$\{([\w]+\.[\w]+)\s+(?:eq|==)\s+(['"])([\w.-]+)\2\s*\?\s*(['"])([^'"\\]*)\4\s*:\s*(['"])([^'"\\]*)\6}/g,
+        (raw, property, _a, expected, _b, yes, _c, no) =>
+          property === expression ? escapeHtml(value === expected ? yes : no) : raw,
+      );
+    }
+    cursor = tokens[close].start + tokens[close].text.length;
+    i = close;
+  }
+  if (cursor > 0) {
+    const when = tokens.slice(0, select).findLast((token) => token.name === 'c:when');
+    const test = when && !when.closing && markupAttributes(when.text).test;
+    if (test && /^\$\{empty\s+[\w]+\.[\w]+}$/.test(test)) sampleGuards.add(test);
+  }
+  return result + source.slice(cursor);
 }
 let localTagDirs = new Map(),
   previewExpressions = new Set();
@@ -820,6 +984,10 @@ function htmlControls(source) {
       /<fmt:formatDate\b([^>]*)\/>/g,
       (_, attributeText) => attrs(attributeText).value || '2020-05-12',
     )
+    .replace(
+      /<fmt:formatNumber\b([^>]*)\/>/g,
+      (_, attributeText) => attrs(attributeText).value || '1,000',
+    )
     .replace(/<spring:url\s+value=["']([^"']+)["'][^>]*\/>/g, '$1')
     .replace(/<form:form\b([^>]*)>/g, '<form$1>')
     .replace(/<\/form:form>/g, '</form>')
@@ -949,6 +1117,7 @@ async function renderJsp(screen) {
   source = await expandTags(source, { customScript: custom });
   source = renderStrutsMessages(source, strutsMessages);
   source = renderUnsupportedJsfTags(source);
+  const modelFacts = previewV2 ? screenModelFacts(screen) : {};
   const urls = {};
   source = source.replace(/<spring:url\b([^>]*?)\/>/g, (_, attributeText) => {
     const attributes = attrs(attributeText);
@@ -965,11 +1134,20 @@ async function renderJsp(screen) {
     return '';
   });
   if (previewV2) {
-    source = convertControls(annotateConditions(source));
+    source = stripJstlUrlDefinitions(source);
+    const sampleGuards = new Set();
+    source = sampleFilteredRows(source, screen, sampleGuards);
+    source = convertControls(
+      annotateConditions(source, (guard) =>
+        sampleGuards.has(guard)
+          ? true
+          : jspBoolean(guard.replace(/^\$\{(.*)}$/, '$1').trim(), modelFacts),
+      ),
+    );
     source = source.replace(/<%(?!@|--)[\s\S]*?%>/g, '示例值');
   }
   if (previewV2) source = await projectRequestAssets(source, screen);
-  source = rewriteAssetUrls(htmlControls(replaceExpressions(source, urls)));
+  source = rewriteAssetUrls(htmlControls(replaceExpressions(source, urls, modelFacts)));
   if (!/<html[\s>]/i.test(source))
     source = `<!doctype html><html><head></head><body>${source}</body></html>`;
   source = source

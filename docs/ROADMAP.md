@@ -620,3 +620,7 @@
 ## R106 Struts 與 Thymeleaf 的疊加狀態
 
 - WP178：`logic:empty`、`logic:messagesPresent` 等 Struts 標籤與 Thymeleaf `th:if`／否定的 `th:unless`（含 `#lists.isEmpty`、`#fields.hasErrors`）標出沒有資料與錯誤區塊，預覽預設隱藏、可切換。見 [ADR 0181](adr/0181-r106-struts-and-thymeleaf-page-states.md)。
+
+## R107 Spring MVC JSP 實案驗收
+
+- WP179：以 `insure` 驗證 Spring MVC、JSTL、Tiles 的投保、續保、核保、繳費與查詢流程。新增 Controller 回傳分流、JSTL URL 樣板、共用 Tiles 的互動歸屬及離線預覽樣本。見 [ADR 0182](adr/0182-spring-jsp-flow-resolution.md)。

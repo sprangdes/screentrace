@@ -398,7 +398,9 @@ final class SpringControllerFlow {
             List<AnalysisEvidence> chain = new ArrayList<>(routeProof);
             chain.addAll(handled.evidence());
             for (var render : edges)
-              if (render.type() == EdgeType.RENDERS && render.from().equals(handler)) {
+              if (render.type() == EdgeType.RENDERS
+                  && render.from().equals(handler)
+                  && SpringRequestConditions.permits(render, endpoint, List.of(path))) {
                 List<AnalysisEvidence> proof = new ArrayList<>(chain);
                 proof.addAll(render.evidence());
                 destinations.add(
@@ -543,9 +545,12 @@ final class SpringControllerFlow {
                                         && request.evidence().containsAll(b.evidence()))
                             || fullPageLoad(b) && request.to().equals(b.targetId())));
         if (!navigation) continue;
+        var requestPaths = SpringRequestConditions.requestPaths(request, nodes.get(request.from()));
         for (var handled : handledBy.getOrDefault(request.to(), List.of()))
           for (var destination : destinations.getOrDefault(handled.to(), List.of()))
-            if (nodes.get(destination.to()).type() == NodeType.SCREEN) {
+            if (nodes.get(destination.to()).type() == NodeType.SCREEN
+                && (destination.type() != EdgeType.RENDERS
+                    || SpringRequestConditions.permits(destination, request.to(), requestPaths))) {
               String id =
                   ApplicationGraph.id(
                       NodeType.COMPONENT,

@@ -1,4 +1,5 @@
 import { Graph, Node, Behavior, requireGraph } from './contracts';
+import { permitsRender } from './request-outcomes';
 /** The behavior that starts `b`'s chain: `b` itself when it has a trigger, otherwise its
  * nearest ancestor with one (or the last one reachable), stopping at a cycle. */
 export function rootBehavior(behaviors: Map<string, Behavior>, b: Behavior): Behavior {
@@ -67,7 +68,10 @@ export function indexGraph(input: Graph): Index {
           continue;
         }
         for (const e of outgoing.get(current) || [])
-          if (['HANDLED_BY', 'RENDERS', 'FORWARDS_TO', 'NAVIGATES_TO'].includes(e.type))
+          if (
+            ['HANDLED_BY', 'RENDERS', 'FORWARDS_TO', 'NAVIGATES_TO'].includes(e.type) &&
+            permitsRender(e, id)
+          )
             queue.push(e.to);
       }
       const resolved = [...result].sort(order);
@@ -105,9 +109,19 @@ export function indexGraph(input: Graph): Index {
   // A request proven to be only an API call (e.g. fetch of a fragment) is not a page transition; the behavior loop below still adds external logins.
   const apiOnly = requests(['CALL_API']),
     navigations = requests(['NAVIGATE', 'SUBMIT_FORM']);
+  const narrowed = new Set(
+    edges
+      .filter(
+        (e) =>
+          e.type === 'NAVIGATES_TO' &&
+          e.evidence?.some((p) => p.parser === 'SpringRequestCondition'),
+      )
+      .map((e) => e.from),
+  );
   for (const e of edges)
     if (['NAVIGATES_TO', 'TRIGGERS', 'FORWARDS_TO'].includes(e.type)) {
       const key = JSON.stringify([e.from, e.to]);
+      if (e.type === 'TRIGGERS' && narrowed.has(e.from)) continue;
       if (e.type === 'TRIGGERS' && apiOnly.has(key) && !navigations.has(key)) continue;
       add(e.from, e.to);
     }
@@ -118,7 +132,7 @@ export function indexGraph(input: Graph): Index {
         (b.type === 'CALL_API' && nodes.get(b.targetId)?.attributes.externalLogin === 'true'))
     ) {
       const trigger = rootTrigger(b);
-      if (trigger) add(trigger, b.targetId, b.id);
+      if (trigger && !narrowed.has(trigger)) add(trigger, b.targetId, b.id);
     }
   const relations = [...pairs.values()].sort((a, b) => order(a.from, b.from) || order(a.to, b.to));
   for (const r of relations) {
@@ -131,7 +145,10 @@ export function indexGraph(input: Graph): Index {
       if (handled.type === 'HANDLED_BY') {
         const handlerEdges = outgoing.get(handled.to) || [],
           rendered = handlerEdges.filter(
-            (edge) => edge.type === 'RENDERS' && nodes.get(edge.to)?.type === 'SCREEN',
+            (edge) =>
+              edge.type === 'RENDERS' &&
+              nodes.get(edge.to)?.type === 'SCREEN' &&
+              permitsRender(edge, endpoint.id),
           ),
           outcomes = handlerEdges.filter((edge) =>
             ['RENDERS', 'FORWARDS_TO'].includes(edge.type),

@@ -47,6 +47,7 @@ public final class SpringMvcAnalyzer {
 
   public ApplicationGraph analyze(ProjectInventory inventory) throws IOException {
     State state = new State(inventory.root(), inventory.javaFiles());
+    state.rootDispatcher = SpringRequestConditions.rootDispatcher(inventory);
     ParsedJavaUnits units = new ParsedJavaUnits(inventory.root());
     for (String message : inventory.diagnostics())
       state.diagnostics.add(
@@ -66,6 +67,7 @@ public final class SpringMvcAnalyzer {
         addJspScreen(inventory.root().resolve(view.path()), state);
     addJspFragments(jsp, includedViews, state);
     addTilesDefinitions(jsp, state);
+    addServletErrorPages(inventory, state);
     discoverExceptionView(inventory, state);
     parseXmlControllers(inventory, state);
     addPropertiesViewResolvers(inventory, state);
@@ -117,6 +119,7 @@ public final class SpringMvcAnalyzer {
     completed =
         io.screentrace.parser.jsp.UrlGraphContribution.enrich(
             SpringSecurityProcessors.enrich(completed, inventory, units), inventory);
+    completed = SpringControllerFlow.project(completed);
     completed = SpringDataSimulation.enrich(completed, inventory, units);
     completed = SpringDtoSimulation.enrich(completed, inventory, units);
     return io.screentrace.core.GraphIntegrityValidator.requireAnalysis(
@@ -148,6 +151,56 @@ public final class SpringMvcAnalyzer {
         // path.
       }
     }
+  }
+
+  private static void addServletErrorPages(ProjectInventory inventory, State state) {
+    for (Path file : inventory.files()) {
+      String relative = inventory.root().relativize(file).toString().replace('\\', '/');
+      if (!relative.endsWith("WEB-INF/web.xml")) continue;
+      try {
+        String xml =
+            SafeProjectFiles.readUtf8Limited(
+                inventory.root(), file, SafeProjectFiles.MAX_XML_FILE_BYTES);
+        if (!xml.contains("<error-page")) continue;
+        var entries = SafeProjectFiles.parseXml(xml, false).getElementsByTagName("error-page");
+        var tags =
+            io.screentrace.parser.jsp.MarkupTag.scan(xml).stream()
+                .filter(t -> !t.closing() && t.name().equals("error-page"))
+                .toList();
+        for (int i = 0; i < entries.getLength(); i++) {
+          var entry = (Element) entries.item(i);
+          String location = childText(entry, "location");
+          String screen = location == null ? null : state.screensByView.get(location);
+          if (screen == null) continue;
+          String code = childText(entry, "error-code");
+          String exception = childText(entry, "exception-type");
+          String kind = Objects.toString(code, Objects.toString(exception, "default"));
+          String id =
+              ApplicationGraph.id(
+                  NodeType.ENTRY_POINT, relative + ":error:" + kind + ":" + location);
+          var source = new SourceLocation(relative, i < tags.size() ? tags.get(i).line() : 1);
+          addNode(
+              state,
+              new GraphNode(
+                  id,
+                  NodeType.ENTRY_POINT,
+                  "Servlet error " + kind,
+                  Map.of("category", "SERVLET_ERROR", "error", kind, "location", location),
+                  source,
+                  Confidence.CONFIRMED));
+          edge(state, EdgeType.RENDERS, id, screen, Confidence.CONFIRMED, source);
+        }
+      } catch (IOException error) {
+        state.diagnostics.add(
+            new Diagnostic(
+                "無法讀取 Servlet 錯誤頁設定", Confidence.UNRESOLVED, new SourceLocation(relative, 1)));
+      }
+    }
+  }
+
+  private static String childText(Element parent, String name) {
+    var children = parent.getElementsByTagName(name);
+    return children.getLength() == 1 ? children.item(0).getTextContent().strip() : null;
   }
 
   private static void addJspScreen(Path file, State state) {
@@ -278,6 +331,9 @@ public final class SpringMvcAnalyzer {
                 constants,
                 SpringMappings.respondsWithBody(type, method),
                 state);
+          else if (annotation(method, "ExceptionHandler") != null
+              && !SpringMappings.respondsWithBody(type, method))
+            addExceptionHandler(type, method, relative, constants, state);
         }
       }
     } catch (IOException | RuntimeException exception) {
@@ -286,6 +342,64 @@ public final class SpringMvcAnalyzer {
               "Unable to parse Java source: " + exception.getMessage(),
               Confidence.UNRESOLVED,
               new SourceLocation(relative, 1)));
+    }
+  }
+
+  private static void addExceptionHandler(
+      ClassOrInterfaceDeclaration type,
+      MethodDeclaration method,
+      String relative,
+      Map<String, String> constants,
+      State state) {
+    var annotation = annotation(method, "ExceptionHandler");
+    var source = new SourceLocation(relative, annotation.getBegin().map(p -> p.line).orElse(1));
+    String className = type.getNameAsString();
+    String id =
+        StableGraphIds.handler(
+            relative,
+            type.getFullyQualifiedName().orElse(className),
+            method.getSignature().asString());
+    addNode(
+        state,
+        new GraphNode(
+            id,
+            NodeType.HANDLER,
+            className + "." + method.getNameAsString() + "()",
+            Map.of(
+                "class",
+                className,
+                "method",
+                method.getNameAsString(),
+                "exceptionMapping",
+                annotation.toString()),
+            source,
+            Confidence.CONFIRMED));
+    for (var target : SpringControllerReturns.extract(method, relative, className, constants)) {
+      if (target.kind() != SpringControllerReturns.Kind.VIEW) {
+        SpringControllerFlow.unresolved(state.diagnostics, target, "@ExceptionHandler 回傳畫面無法證明");
+        continue;
+      }
+      String screen = screenForView(target.value(), target.source(), state);
+      var proof = new ArrayList<>(viewEvidence(target, target.value(), screen, state));
+      var condition = SpringRequestConditions.forTarget(method, target, state.rootDispatcher);
+      if (condition != null) proof.add(condition.evidence(target.source(), null));
+      state.addEdge(
+          new Relationship(
+              ApplicationGraph.id(
+                  NodeType.HANDLER,
+                  "exception-render:"
+                      + id
+                      + ":"
+                      + screen
+                      + ":"
+                      + target.source().line()
+                      + target.branch()),
+              EdgeType.RENDERS,
+              id,
+              screen,
+              Confidence.INFERRED,
+              target.source(),
+              proof));
     }
   }
 
@@ -391,6 +505,8 @@ public final class SpringMvcAnalyzer {
                   .filter(t -> t.kind() == SpringControllerReturns.Kind.VIEW)
                   .toList()) {
             String view = target.value();
+            var condition = SpringRequestConditions.forTarget(method, target, state.rootDispatcher);
+            if (condition != null && !condition.accepts(path)) continue;
             String screenId = screenForView(view, target.source(), state);
             Confidence confidence =
                 resolvedScreenId(view, state) != null
@@ -413,8 +529,13 @@ public final class SpringMvcAnalyzer {
                         + target.source().line()
                         + ":"
                         + target.expression()
-                        + SpringControllerReturns.branchKey(target));
-            if (!state.edgeIndex.containsKey(returnId))
+                        + SpringControllerReturns.branchKey(target)
+                        + (condition != null && condition.servletPrefix() != null
+                            ? ":" + endpointId
+                            : ""));
+            if (!state.edgeIndex.containsKey(returnId)) {
+              var proof = new ArrayList<>(viewEvidence(target, view, screenId, state));
+              if (condition != null) proof.add(condition.evidence(target.source(), endpointId));
               state.addEdge(
                   new Relationship(
                       returnId,
@@ -423,7 +544,8 @@ public final class SpringMvcAnalyzer {
                       screenId,
                       confidence,
                       target.source(),
-                      viewEvidence(target, view, screenId, state)));
+                      proof));
+            }
             state
                 .endpointsByScreen
                 .computeIfAbsent(screenId, ignored -> new ArrayList<>())
@@ -1046,91 +1168,99 @@ public final class SpringMvcAnalyzer {
           .anyMatch(e -> e.to().equals(bodyScreen) || e.from().equals(bodyScreen))) continue;
       state.nodes.removeIf(n -> n.id().equals(bodyScreen));
       state.nodeById.remove(bodyScreen);
-      String owner = entry.getValue().iterator().next();
-      // Several definitions fill the same body; its interactions follow the first one here, and
-      // the choice is reported instead of made silently (RV-209).
-      if (entry.getValue().size() > 1)
-        state.diagnostics.add(
-            new Diagnostic(
-                "Tiles body JSP 由多個 definition 共用，互動先歸到 " + owner + "；全部候選：" + entry.getValue(),
-                Confidence.AMBIGUOUS,
-                new SourceLocation(entry.getKey(), 1),
-                "TILES_BODY_AMBIGUOUS",
-                List.of()));
-      state.screensByView.replaceAll((view, screen) -> screen.equals(bodyScreen) ? owner : screen);
+      state.screensByView.values().removeIf(screen -> screen.equals(bodyScreen));
     }
   }
 
   private static void addJspInteractions(JspAnalysis jsp, State state) {
     for (JspAnalysis.Interaction rawInteraction : jsp.interactions()) {
-      JspAnalysis.Interaction interaction = resolveRelativeJspTarget(rawInteraction, state);
-      String screenId = state.screensByView.get(interaction.viewPath());
-      if (screenId == null) continue;
-      String id =
-          interaction.componentId() != null
-              ? interaction.componentId()
-              : ApplicationGraph.id(
-                  NodeType.COMPONENT,
-                  interaction.viewPath()
-                      + ":"
-                      + interaction.source().line()
-                      + ":"
-                      + interaction.target());
-      Map<String, String> attributes = new TreeMap<>();
-      attributes.put("componentType", interaction.type().name());
-      attributes.put("target", interaction.target());
-      attributes.put("targetStatus", interaction.confidence().name());
-      if (interaction.originalExpression() != null)
-        attributes.put("originalExpression", interaction.originalExpression());
-      if (!interaction.viewPath().equals(interaction.source().file()))
-        attributes.put("includedBy", interaction.viewPath());
-      if (interaction.httpMethod() != null) attributes.put("httpMethod", interaction.httpMethod());
-      addNode(
+      Set<String> owners = ownersForView(rawInteraction.viewPath(), state);
+      if (owners.isEmpty()) continue;
+      JspAnalysis.Interaction interaction = resolveRelativeJspTarget(rawInteraction, owners, state);
+      for (String screenId : owners) addJspInteraction(interaction, screenId, state);
+    }
+  }
+
+  private static Set<String> ownersForView(String view, State state) {
+    Set<String> owners = new TreeSet<>(state.tileOwnersByView.getOrDefault(view, Set.of()));
+    String direct = state.screensByView.get(view);
+    if (direct != null) owners.add(direct);
+    return owners;
+  }
+
+  private static void addJspInteraction(
+      JspAnalysis.Interaction interaction, String screenId, State state) {
+    String id =
+        interaction.componentId() != null
+            ? interaction.componentId()
+            : ApplicationGraph.id(
+                NodeType.COMPONENT,
+                interaction.viewPath()
+                    + ":"
+                    + interaction.source().line()
+                    + ":"
+                    + interaction.target());
+    Map<String, String> attributes = new TreeMap<>();
+    attributes.put("componentType", interaction.type().name());
+    attributes.put("target", interaction.target());
+    attributes.put("targetStatus", interaction.confidence().name());
+    if (interaction.originalExpression() != null)
+      attributes.put("originalExpression", interaction.originalExpression());
+    if (!interaction.viewPath().equals(interaction.source().file()))
+      attributes.put("includedBy", interaction.viewPath());
+    if (interaction.httpMethod() != null) attributes.put("httpMethod", interaction.httpMethod());
+    addNode(
+        state,
+        new GraphNode(
+            id,
+            NodeType.COMPONENT,
+            interaction.label(),
+            attributes,
+            interaction.source(),
+            interaction.confidence(),
+            interactionEvidence(interaction)));
+    edge(state, EdgeType.CONTAINS, screenId, id, Confidence.CONFIRMED, interaction.source());
+    if (interaction.confidence() == Confidence.UNRESOLVED
+        || !canTriggerEndpoint(interaction.type())
+        || interaction.definitionEvidence().stream()
+            .anyMatch(
+                e ->
+                    e.parser().equals("JspConditionalUrl")
+                        || e.parser().equals("JspUrlVariableResolver")
+                            && e.resolution() == ApplicationGraph.ResolutionStatus.INFERRED
+                            && interaction.target().contains("{"))) return;
+    for (EndpointMatch match : endpointsFor(interaction, screenId, state)) {
+      edge(
           state,
-          new GraphNode(
-              id,
-              NodeType.COMPONENT,
-              interaction.label(),
-              attributes,
-              interaction.source(),
-              interaction.confidence(),
-              interactionEvidence(interaction)));
-      edge(state, EdgeType.CONTAINS, screenId, id, Confidence.CONFIRMED, interaction.source());
-      if (interaction.confidence() == Confidence.UNRESOLVED
-          || !canTriggerEndpoint(interaction.type())) continue;
-      for (EndpointMatch match : endpointsFor(interaction, screenId, state)) {
+          EdgeType.TRIGGERS,
+          id,
+          match.endpointId(),
+          match.confidence(),
+          interaction.source());
+      List<String> targetScreens =
+          state.screensByEndpoint.getOrDefault(match.endpointId(), List.of()).stream()
+              .distinct()
+              .toList();
+      if (targetScreens.size() == 1)
         edge(
             state,
-            EdgeType.TRIGGERS,
+            EdgeType.NAVIGATES_TO,
             id,
-            match.endpointId(),
-            match.confidence(),
+            targetScreens.get(0),
+            Confidence.INFERRED,
             interaction.source());
-        List<String> targetScreens =
-            state.screensByEndpoint.getOrDefault(match.endpointId(), List.of()).stream()
-                .distinct()
-                .toList();
-        if (targetScreens.size() == 1)
-          edge(
-              state,
-              EdgeType.NAVIGATES_TO,
-              id,
-              targetScreens.get(0),
-              Confidence.INFERRED,
-              interaction.source());
-      }
-      String next = state.screensByView.get(interaction.target());
-      // A template's logical name is a view resolver key, never proof of a public URL.
-      String direct = next;
-      GraphNode directNode = next == null ? null : state.nodeById.get(direct);
-      if (directNode != null
-          && directNode
-              .attributes()
-              .getOrDefault("view", "")
-              .transform(view -> templateRoot(view) != null)) next = null;
-      if (next != null)
-        edge(state, EdgeType.NAVIGATES_TO, id, next, Confidence.CONFIRMED, interaction.source());
     }
+    String next = state.screensByView.get(interaction.target());
+    // A template's logical name is a view resolver key, never proof of a public URL.
+    String direct = next;
+    GraphNode directNode = next == null ? null : state.nodeById.get(direct);
+    if (directNode != null
+        && directNode
+            .attributes()
+            .getOrDefault("view", "")
+            .transform(view -> templateRoot(view) != null)) next = null;
+    if (next != null)
+      edge(state, EdgeType.NAVIGATES_TO, id, next, Confidence.CONFIRMED, interaction.source());
   }
 
   /**
@@ -1161,7 +1291,7 @@ public final class SpringMvcAnalyzer {
   }
 
   private static JspAnalysis.Interaction resolveRelativeJspTarget(
-      JspAnalysis.Interaction interaction, State state) {
+      JspAnalysis.Interaction interaction, Set<String> owners, State state) {
     String raw = interaction.target();
     if (raw == null
         || raw.isBlank()
@@ -1174,10 +1304,9 @@ public final class SpringMvcAnalyzer {
         || raw.contains("#{")
         || raw.contains("<%")
         || raw.matches("(?i)^[a-z][a-z0-9+.-]*:.*")) return interaction;
-    String screenId = state.screensByView.get(interaction.viewPath());
-    if (screenId == null) return unresolvedRelative(interaction, state, List.of(), "找不到來源畫面");
     List<EndpointReference> routes =
-        state.endpointsByScreen.getOrDefault(screenId, List.of()).stream()
+        owners.stream()
+            .flatMap(screen -> state.endpointsByScreen.getOrDefault(screen, List.of()).stream())
             .collect(
                 java.util.stream.Collectors.toMap(
                     EndpointReference::path, e -> e, (a, b) -> a, TreeMap::new))
@@ -1418,11 +1547,16 @@ public final class SpringMvcAnalyzer {
 
   private static void addJspIncludes(JspAnalysis jsp, State state) {
     for (JspAnalysis.Include include : jsp.includes()) {
-      String screenId = state.screensByView.get(include.sourceViewPath());
       String fragmentId = state.fragmentsByPath.get(include.targetPath());
-      if (screenId != null && fragmentId != null)
-        edge(
-            state, EdgeType.INCLUDES, screenId, fragmentId, include.confidence(), include.source());
+      if (fragmentId != null)
+        for (String screenId : ownersForView(include.sourceViewPath(), state))
+          edge(
+              state,
+              EdgeType.INCLUDES,
+              screenId,
+              fragmentId,
+              include.confidence(),
+              include.source());
     }
   }
 
@@ -1624,6 +1758,7 @@ public final class SpringMvcAnalyzer {
     private final Map<String, String> fragmentsByPath = new HashMap<>();
     private final List<ViewResolver> viewResolvers = new ArrayList<>();
     private final Map<String, Set<String>> tileOwnersByView = new TreeMap<>();
+    private boolean rootDispatcher;
     private final List<SpringControllerFlow.Pending> returnTargets = new ArrayList<>();
     private String defaultExceptionView;
 
