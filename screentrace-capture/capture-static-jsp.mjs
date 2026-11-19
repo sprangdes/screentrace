@@ -609,12 +609,14 @@ function replaceExpressions(source, values = {}, facts = {}) {
       if (alternatives) {
         const guard = alternatives[1].trim();
         const decision =
-          jspBoolean(guard, facts) ??
+          jspBoolean(guard, facts, false) ??
           (/^empty\s+[\w.]+$/.test(guard) || /^[\w.]+\s+(?:eq|==)\s*['"]/.test(guard));
         return decision ? alternatives[3] : alternatives[5];
       }
       return (
-        values[value] ?? (escaped ? (values[escaped] ?? placeholder(escaped)) : placeholder(value))
+        values[value] ??
+        (Object.hasOwn(facts, value) ? facts[value] : undefined) ??
+        (escaped ? (values[escaped] ?? placeholder(escaped)) : placeholder(value))
       );
     });
   return source.replace(/\$\{([^}]+)\}/g, (_, expression) => {
@@ -626,15 +628,36 @@ function replaceExpressions(source, values = {}, facts = {}) {
   });
 }
 
-function jspBoolean(guard, facts) {
-  const simple = guard.match(/^(?:(not\s+|!\s*))?([A-Za-z_][\w.]*)$/);
-  if (!simple || !Object.hasOwn(facts, simple[2])) return undefined;
-  return simple[1] ? !facts[simple[2]] : facts[simple[2]];
+function jspBoolean(guard, facts, snapshot) {
+  const atom = (text) => {
+    const compare = text.match(/^([A-Za-z_][\w.]*)\s+(eq|ne|==|!=)\s+(['"])([A-Z][A-Z0-9_]*)\3$/);
+    if (compare && Object.hasOwn(facts, compare[1]))
+      return (facts[compare[1]] === compare[4]) === ['eq', '=='].includes(compare[2]);
+    const simple = text.match(/^(?:(not\s+|!\s*))?([A-Za-z_][\w.]*)$/);
+    if (simple && typeof facts[simple[2]] === 'boolean')
+      return simple[1] ? !facts[simple[2]] : facts[simple[2]];
+    if (snapshot && /^not\s+empty\s+[A-Za-z_][\w.]*$/.test(text)) return false;
+    return undefined;
+  };
+  const results = guard.split(/\s+(?:or|\|\|)\s+/).map((terms) => {
+    const values = terms.split(/\s+(?:and|&&)\s+/).map((text) => atom(text.trim()));
+    return values.includes(false)
+      ? false
+      : values.every((value) => value === true)
+        ? true
+        : undefined;
+  });
+  return results.includes(true)
+    ? true
+    : results.every((value) => value === false)
+      ? false
+      : undefined;
 }
 
 function screenModelFacts(screen) {
   const renders = (graph.relationships || []).filter(
-    (edge) => edge.type === 'RENDERS' && edge.to === screen.id,
+    (edge) =>
+      edge.type === 'RENDERS' && edge.to === (screen.attributes?.stateVariantOf || screen.id),
   );
   const facts = renders.map((edge) => {
     const values = Object.create(null);
@@ -1118,6 +1141,13 @@ async function renderJsp(screen) {
   source = renderStrutsMessages(source, strutsMessages);
   source = renderUnsupportedJsfTags(source);
   const modelFacts = previewV2 ? screenModelFacts(screen) : {};
+  const stateField = screen.attributes?.jspStateField;
+  if (stateField) {
+    modelFacts[stateField] = screen.attributes.jspStateValue;
+    if (stateField.endsWith('.code'))
+      modelFacts[stateField.replace(/\.code$/, '.label')] =
+        screen.attributes.jspStateLabel || screen.attributes.jspStateValue;
+  }
   const urls = {};
   source = source.replace(/<spring:url\b([^>]*?)\/>/g, (_, attributeText) => {
     const attributes = attrs(attributeText);
@@ -1141,7 +1171,7 @@ async function renderJsp(screen) {
       annotateConditions(source, (guard) =>
         sampleGuards.has(guard)
           ? true
-          : jspBoolean(guard.replace(/^\$\{(.*)}$/, '$1').trim(), modelFacts),
+          : jspBoolean(guard.replace(/^\$\{(.*)}$/, '$1').trim(), modelFacts, !!stateField),
       ),
     );
     source = source.replace(/<%(?!@|--)[\s\S]*?%>/g, '示例值');
@@ -1335,19 +1365,29 @@ async function captureScreen(screen, page, context, r) {
     }));
     const width = Math.min(4096, Math.max(1, dimensions.width));
     const height = Math.min(16384, Math.max(1, dimensions.height), Math.floor(16_000_000 / width));
-    r.interactions = { width, height, items };
     const file = `static-${screen.id.replace(/[^a-z0-9-]/gi, '_')}.png`;
     const screenshot = await page.screenshot({
       timeout: 5_000,
+      // With fullPage, Playwright applies the clip to the document rather than the viewport.
+      fullPage: true,
       clip: { x: 0, y: 0, width, height },
+      scale: 'css',
       animations: 'disabled',
     });
+    const capturedWidth = screenshot.readUInt32BE(16);
+    const capturedHeight = screenshot.readUInt32BE(20);
+    r.interactions = { width: capturedWidth, height: capturedHeight, items };
     await writeBufferWithin(output, path.join(screenshotRootReal, file), screenshot);
     r.screenshots = `screenshots/${file}`;
     if (previewV2) {
-      r.styleScreen.thumbnail = await thumbnailDataUri(context, screenshot, width, height);
-      r.styleScreen.width = width;
-      r.styleScreen.height = height;
+      r.styleScreen.thumbnail = await thumbnailDataUri(
+        context,
+        screenshot,
+        capturedWidth,
+        capturedHeight,
+      );
+      r.styleScreen.width = capturedWidth;
+      r.styleScreen.height = capturedHeight;
       if (width < dimensions.width || height < dimensions.height) {
         const diagnostic = {
           code: 'SCREENSHOT_DIMENSION_LIMIT',

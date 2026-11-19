@@ -624,3 +624,7 @@
 ## R107 Spring MVC JSP 實案驗收
 
 - WP179：以 `insure` 驗證 Spring MVC、JSTL、Tiles 的投保、續保、核保、繳費與查詢流程。新增 Controller 回傳分流、JSTL URL 樣板、共用 Tiles 的互動歸屬及離線預覽樣本。見 [ADR 0182](adr/0182-spring-jsp-flow-resolution.md)。
+
+## R108 JSP 流程狀態預覽
+
+- WP180：辨識 Spring MVC JSP 的條件式表單狀態，沿用既有畫面變體契約建立獨立截圖，並依送出的按鈕切換至對應畫面。見 [ADR 0183](adr/0183-jsp-form-state-variants.md)。

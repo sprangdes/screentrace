@@ -364,7 +364,10 @@ function effect(
   if (!['NAVIGATE', 'SUBMIT_FORM'].includes(b.type))
     return unknown(b.expression, '這個操作的結果取決於頁面腳本，靜態分析無法確認');
   const trigger = payload.graph.nodes.find((n) => n.id === b.triggerId);
-  const outcomes = screens(payload, targetId, requestPaths(targetId, trigger, b.evidence || []));
+  const transitions = jspTransitions(payload, b, targetId);
+  const outcomes = transitions.length
+    ? transitions.flatMap((edge) => screens(payload, edge.to, []))
+    : screens(payload, targetId, requestPaths(targetId, trigger, b.evidence || []));
   if (!outcomes.length)
     return {
       ...unknown(b.expression),
@@ -481,6 +484,14 @@ function componentBehaviors(payload: Payload, component: string): Behavior[] {
 
   return (payload.graph.behaviors || []).filter((b) => root(b) === component);
 }
+function jspTransitions(payload: Payload, b: Behavior, endpoint: string) {
+  return (payload.graph.relationships || []).filter(
+    (edge) =>
+      edge.from === b.triggerId &&
+      edge.type === 'NAVIGATES_TO' &&
+      edge.evidence?.some((e) => e.parser === 'JspStateTransition' && e.detail === endpoint),
+  );
+}
 function applicable(b: Behavior, intent: Intent): boolean {
   if (intent.event && !b.parentId)
     return !b.event || b.event === intent.event || b.event.split('.')[0] === intent.event;
@@ -489,7 +500,10 @@ function applicable(b: Behavior, intent: Intent): boolean {
     !!b.parentId ||
     (intent.tag === 'form'
       ? b.event === 'submit' || (b.type === 'SUBMIT_FORM' && b.event === 'click')
-      : ['click', 'change'].includes(b.event))
+      : ['click', 'change'].includes(b.event) ||
+        (['button', 'input'].includes(intent.tag) &&
+          b.type === 'SUBMIT_FORM' &&
+          b.event === 'submit'))
   );
 }
 function simulateRaw(
@@ -598,7 +612,7 @@ function simulateRaw(
     } else if (['CONFIRMED', 'INFERRED'].includes(resolution) && b.targetId) {
       const resolved = effect(payload, b, b.targetId, intent, resolution);
       effects.push(
-        b.guard || b.condition
+        (b.guard || b.condition) && !jspTransitions(payload, b, b.targetId).length
           ? {
               kind: 'choices',
               message: `條件尚未求值，請選擇可能結果：${b.guard || b.condition}`,

@@ -106,7 +106,7 @@ export function screenNames(
     if (screen.attributes.stateVariant)
       names.set(
         screen.id,
-        `${names.get(screen.id)}（${stateText(screen.attributes.stateVariant)}）`,
+        `${names.get(screen.id)}（${screen.attributes.jspStateLabel || stateText(screen.attributes.stateVariant)}）`,
       );
   const byId = new Map(screens.map((screen) => [screen.id, screen])),
     groups = new Map<string, string[]>();

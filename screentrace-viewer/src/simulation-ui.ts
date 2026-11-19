@@ -59,6 +59,12 @@ export function simulateElement(
     submitter =
       payload.graph.nodes.find((n) => n.id === own?.graphComponentId)?.attributes
         .submitterAction === 'true' ||
+      payload.graph.relationships?.some(
+        (edge) =>
+          edge.from === own?.graphComponentId &&
+          edge.type === 'NAVIGATES_TO' &&
+          edge.evidence?.some((e) => e.parser === 'JspStateTransition'),
+      ) ||
       payload.graph.behaviors?.some(
         (b) =>
           b.triggerId === own?.graphComponentId && staticAction(b)?.operation === 'preventSubmit',

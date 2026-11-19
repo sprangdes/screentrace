@@ -196,6 +196,8 @@ viewer 只讀 schema 2.4 的 `application.personas`，不重新判定。每個�
 
 React 路由中以常值初始化、只有常值寫入的元件狀態，若不同值顯示不同元件，且步驟內的元件會寫入其他值（精靈步驟），每個值成為一個 SCREEN（`stateVariant`）。初始值沿用路由的畫面 ID 並由入口 RENDERS；其他值的 ID 加上 `:state:<名稱>=<值>`，只能經由 setter 寫入產生的 `NAVIGATES_TO` 到達。偵測與轉換在 `screentrace-js/react/state-variants.mjs`。見 [ADR 0158](adr/0158-r80-page-state-variants.md)。
 
+R108 將此變體契約延伸到 Spring MVC JSP 的有限表單流程。Adapter 以 JSTL 條件、提交的常值與轉址關聯建立狀態畫面。捕捉器分別渲染各狀態，報表依使用的提交按鈕選取對應畫面。見 [ADR 0183](adr/0183-jsp-form-state-variants.md)。
+
 ### R35：放大畫面的關聯線左進右出、依區塊合併
 
 `canvas.ts` 的 `focusBundles` 依總覽的區塊（`grouped.groups`，角色流程為步驟欄）把進出的線分列，列依畫面位置排序；多畫面的列畫成一條合併線並附 `.focus-bundle` 標籤與畫面清單，單一畫面的列沿用原本的線。有合併線時預覽框左右留白加寬（R35 為固定 176px；R36 起改依標籤寬度計算，見下節）。見 [ADR 0126](adr/0126-r35-focus-line-bundles.md)。

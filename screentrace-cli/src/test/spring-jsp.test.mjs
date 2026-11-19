@@ -54,6 +54,9 @@ test('Spring JSP resolves request branches and shared Tiles bodies', () => {
         @RequestMapping(value="/item", method=RequestMethod.POST)
         String submit(@RequestParam("id") String id) { return "redirect:/item/" + id; }
 
+        @RequestMapping(value="/manage/item/{id}/change", method=RequestMethod.POST)
+        String update(@RequestParam("state") String state) { return "redirect:/manage/item/{id}"; }
+
         @RequestMapping(value="/unknown", method=RequestMethod.GET)
         String unknown(@RequestParam("view") String view) { return view; }
 
@@ -112,6 +115,18 @@ test('Spring JSP resolves request branches and shared Tiles bodies', () => {
         <c:url var="detail" value="@{manage ? '/manage' : ''}/item/@{item.id}"/>
         <a href="<c:out value='@{detail}'/>">item link</a>
       </c:forEach>
+      <c:choose>
+        <c:when test="@{itemState.code eq 'NEW'}">
+          <form method="post" action="<c:url value='/manage/item/1/change'/>">
+            <button name="state" value="OPEN">open item</button>
+          </form>
+        </c:when>
+        <c:when test="@{itemState.code eq 'OPEN'}">
+          <form method="post" action="<c:url value='/manage/item/1/change'/>">
+            <button name="state" value="CLOSED">close item</button>
+          </form>
+        </c:when>
+      </c:choose>
     `,
     );
     jsp(
@@ -176,6 +191,36 @@ test('Spring JSP resolves request branches and shared Tiles bodies', () => {
       'staffError',
     ]);
     assert.deepEqual(targets(find('ENTRY_POINT', 'Servlet error 500'), 'RENDERS'), ['server']);
+    const variants = Object.fromEntries(
+      graph.nodes
+        .filter((node) => node.attributes.jspStateValue)
+        .map((node) => [node.attributes.jspStateValue, node]),
+    );
+    assert.deepEqual(Object.keys(variants).sort(), ['CLOSED', 'NEW', 'OPEN']);
+    assert.equal(variants.NEW.attributes.stateVariantOf, undefined);
+    assert.equal(variants.OPEN.attributes.stateVariantOf, variants.NEW.id);
+    assert.ok(targets(variants.NEW, 'CONTAINS').includes('open item'));
+    assert.ok(!targets(variants.NEW, 'CONTAINS').includes('close item'));
+    assert.ok(!targets(variants.OPEN, 'CONTAINS').includes('open item'));
+    assert.ok(targets(variants.OPEN, 'CONTAINS').includes('close item'));
+    assert.ok(!targets(variants.CLOSED, 'CONTAINS').includes('close item'));
+    for (const [label, state] of [
+      ['open item', 'OPEN'],
+      ['close item', 'CLOSED'],
+    ]) {
+      const button = graph.nodes.find(
+        (node) => node.name === label && node.attributes.kind === 'SUBMIT',
+      );
+      assert.ok(button);
+      assert.ok(
+        graph.relationships.some(
+          (edge) =>
+            edge.from === button.id &&
+            edge.to === variants[state].id &&
+            edge.type === 'NAVIGATES_TO',
+        ),
+      );
+    }
     assert.ok(
       graph.diagnostics.some(
         (d) => d.code === 'SPRING_RETURN_UNRESOLVED' && d.message.includes('view'),

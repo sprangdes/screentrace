@@ -123,7 +123,8 @@ public final class SpringMvcAnalyzer {
     completed = SpringDataSimulation.enrich(completed, inventory, units);
     completed = SpringDtoSimulation.enrich(completed, inventory, units);
     return io.screentrace.core.GraphIntegrityValidator.requireAnalysis(
-        SpringSubmittedModel.enrich(completed, inventory, units));
+        JspStateVariants.enrich(
+            SpringSubmittedModel.enrich(completed, inventory, units), inventory, units));
   }
 
   private static void discoverExceptionView(ProjectInventory inventory, State state) {

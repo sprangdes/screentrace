@@ -87,6 +87,10 @@ export function indexGraph(input: Graph): Index {
         for (const value of [n.attributes.path, n.attributes.route, n.attributes.url])
           if (value) routes.get(id)!.add(value);
   const pairs = new Map<string, Relation>();
+  for (const screen of screens) {
+    const base = screen.attributes.stateVariantOf;
+    if (base) for (const route of routes.get(base) || []) routes.get(screen.id)!.add(route);
+  }
   const add = (trigger: string, target: string, behavior?: string) => {
     const sources = nodes.get(trigger)?.type === 'SCREEN' ? [trigger] : owners.get(trigger) || [];
     for (const from of sources)
@@ -109,18 +113,31 @@ export function indexGraph(input: Graph): Index {
   // A request proven to be only an API call (e.g. fetch of a fragment) is not a page transition; the behavior loop below still adds external logins.
   const apiOnly = requests(['CALL_API']),
     navigations = requests(['NAVIGATE', 'SUBMIT_FORM']);
+  const stateForms = new Set<string>();
+  for (const edge of edges) {
+    if (edge.type !== 'NAVIGATES_TO') continue;
+    const request = edge.evidence?.find((p) => p.parser === 'JspStateTransition')?.detail;
+    const form = nodes.get(edge.from)?.attributes.formId;
+    const base = nodes.get(edge.to)?.attributes.stateVariantOf;
+    if (!form || !request || !base) continue;
+    stateForms.add(JSON.stringify([form, request]));
+    stateForms.add(JSON.stringify([form, base]));
+  }
   const narrowed = new Set(
     edges
       .filter(
         (e) =>
           e.type === 'NAVIGATES_TO' &&
-          e.evidence?.some((p) => p.parser === 'SpringRequestCondition'),
+          e.evidence?.some((p) =>
+            ['SpringRequestCondition', 'JspStateTransition'].includes(p.parser),
+          ),
       )
       .map((e) => e.from),
   );
   for (const e of edges)
     if (['NAVIGATES_TO', 'TRIGGERS', 'FORWARDS_TO'].includes(e.type)) {
       const key = JSON.stringify([e.from, e.to]);
+      if (stateForms.has(key)) continue;
       if (e.type === 'TRIGGERS' && narrowed.has(e.from)) continue;
       if (e.type === 'TRIGGERS' && apiOnly.has(key) && !navigations.has(key)) continue;
       add(e.from, e.to);
@@ -132,7 +149,12 @@ export function indexGraph(input: Graph): Index {
         (b.type === 'CALL_API' && nodes.get(b.targetId)?.attributes.externalLogin === 'true'))
     ) {
       const trigger = rootTrigger(b);
-      if (trigger && !narrowed.has(trigger)) add(trigger, b.targetId, b.id);
+      if (
+        trigger &&
+        !narrowed.has(trigger) &&
+        !stateForms.has(JSON.stringify([trigger, b.targetId]))
+      )
+        add(trigger, b.targetId, b.id);
     }
   const relations = [...pairs.values()].sort((a, b) => order(a.from, b.from) || order(a.to, b.to));
   for (const r of relations) {
