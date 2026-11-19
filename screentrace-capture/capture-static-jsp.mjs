@@ -628,6 +628,23 @@ function replaceExpressions(source, values = {}, facts = {}) {
   });
 }
 
+/**
+ * Boolean attributes written as EL (`readonly="${not empty form.previousId}"`) take any value as
+ * true in HTML, so sample text would lock the field. Decide them from the screen's facts; an
+ * undecided one is left off so the preview stays usable (ADR 0187).
+ */
+function booleanAttributes(source, facts) {
+  return source.replace(
+    /(\s)(readonly|disabled|checked|selected|multiple|hidden|required)\s*=\s*(["'])\s*\$\{([^}]*)\}\s*\3/gi,
+    (_, space, name, quote, guard) => {
+      const text = guard.trim();
+      const value =
+        text === 'true' ? true : text === 'false' ? false : jspBoolean(text, facts, false);
+      return value ? `${space}${name}=${quote}${name}${quote}` : '';
+    },
+  );
+}
+
 function jspBoolean(guard, facts, snapshot) {
   const atom = (text) => {
     const compare = text.match(/^([A-Za-z_][\w.]*)\s+(eq|ne|==|!=)\s+(['"])([A-Z][A-Z0-9_]*)\3$/);
@@ -1195,7 +1212,9 @@ async function renderJsp(screen) {
     source = source.replace(/<%(?!@|--)[\s\S]*?%>/g, '示例值');
   }
   if (previewV2) source = await projectRequestAssets(source, screen);
-  source = rewriteAssetUrls(htmlControls(replaceExpressions(source, urls, modelFacts)));
+  source = rewriteAssetUrls(
+    htmlControls(replaceExpressions(booleanAttributes(source, modelFacts), urls, modelFacts)),
+  );
   if (!/<html[\s>]/i.test(source))
     source = `<!doctype html><html><head></head><body>${source}</body></html>`;
   source = source

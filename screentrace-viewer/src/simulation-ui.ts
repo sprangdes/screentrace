@@ -5,6 +5,7 @@ import { previewElement, previewSelector, registerPreviewClone } from './preview
 import { Payload, ElementRecord } from './contracts';
 import { element } from './text';
 import { revealInPreview } from './reveal';
+import { rememberSubmission } from './journey-data';
 
 const operable = 'a,button,form,select,input,textarea';
 const eventElement = (target: EventTarget | null): Element | null => {
@@ -683,6 +684,13 @@ export function attachSimulation(
           return;
         }
       }
+      const submitted =
+        node.localName === 'form'
+          ? (node as HTMLFormElement)
+          : submitControl(node)
+            ? (node as HTMLButtonElement).form
+            : null;
+      if (submitted) rememberSubmission(submitted);
       setModelFeedback(payload, effect.targetId, effect.feedback ?? {});
       setSubmittedValues(payload, effect.targetId, effect.inputProjection ?? {}, node);
       options.focus(

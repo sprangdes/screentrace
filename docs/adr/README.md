@@ -55,6 +55,7 @@ Controller、回傳 view、表單綁定與伺服器端檢核以 JavaParser 靜�
 | [0184](0184-spring-form-success-replay.md) | Spring 表單成功回放與重複目的合併 | 由 [0186](0186-spring-jsp-journey-replay.md) 擴充 |
 | [0185](0185-jsp-screen-model-facts.md) | JSP 畫面的模型事實、共用狀態與條件連結 | 有效 |
 | [0186](0186-spring-jsp-journey-replay.md) | Spring JSP 操作回放：正常流程、請求模式與流程延續 | 有效 |
+| [0187](0187-simulated-journey-data.md) | 模擬流程中輸入的資料與返回上一頁 | 有效 |
 | [0102](0102-r18-spring-api-paths-and-external-call-notes.md) | R18 WP82 的 Spring API 選路與外部呼叫附註 | 有效 |
 | [0159](0159-r81-background-jobs.md) | R81 排程、事件監聽與啟動時作業成為 HANDLER，API 頁「系統自動作業」與 md §12（OQ-056） | 有效 |
 | [0171](0171-r96-more-background-jobs.md) | R96 背景作業移到共用模組並套用 Struts 管線，新增 XML 排程、程式排程、Quartz 與 @Async | 有效 |

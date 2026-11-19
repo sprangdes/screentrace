@@ -1,6 +1,7 @@
 import { projectSimulationData } from './simulation-data';
 import { attachSimulation } from './simulation-ui';
 import { setJourney } from './simulation';
+import { applyJourney, resetJourney, restoreInputs, snapshotInputs } from './journey-data';
 import { inertDocument } from './inert-document';
 import { iconSprite, icon, iconButton } from './shell-ui';
 import { initializeComponentLabels } from './labels';
@@ -1513,7 +1514,7 @@ try {
         );
         button.type = 'button';
         button.setAttribute('aria-pressed', String(state.id === id));
-        if (state.id !== id) button.onclick = () => openScreen(state.id);
+        if (state.id !== id) button.onclick = () => openScreen(state.id, { simulated: true });
         screenStates.append(button);
       }
       const fillPageStates = (doc: Document) => {
@@ -1556,6 +1557,11 @@ try {
         if (!doc || !own.getAttribute('srcdoc')) return;
         projectSimulationData(payload, id, doc);
         setJourney(payload, [...history.trail, id]);
+        // Typed values follow the simulated flow; going back shows what was typed there.
+        if (arrival !== 'direct')
+          applyJourney(payload, id, doc, index.routes.get(id)?.[0] || '', arrival === 'history');
+        const saved = arrival === 'history' ? history.current?.inputs : undefined;
+        if (saved) restoreInputs(doc, saved);
         fillPageStates(doc);
         decorate(doc, id);
         selectFromPreview(doc, id);
@@ -1563,7 +1569,7 @@ try {
         shown();
         doc.addEventListener('keydown', onKey);
         simulation = attachSimulation(payload, id, own, viewer!, {
-          focus: (target, notice) => openScreen(target, { notice, refresh: true }),
+          focus: (target, notice) => openScreen(target, { notice, refresh: true, simulated: true }),
           api: (target) => showApi(target),
           thumbnail,
         });
@@ -1583,6 +1589,7 @@ try {
         back: () => showCanvas(),
         focus: (target) => openScreen(target),
         move: (delta) => {
+          rememberInputs();
           const visit = history.move(delta, viewerScroll());
           if (visit) openScreen(visit.screenId, { push: false });
         },
@@ -1747,11 +1754,27 @@ try {
   };
 
   let pendingNotice: string | undefined;
+  // How the shown screen was reached: by a simulated action, by the history buttons, or directly.
+  let arrival: 'simulated' | 'history' | 'direct' = 'direct';
+  const rememberInputs = () => {
+    const doc = frame?.contentDocument;
+    if (history.current && doc && current === history.current.screenId)
+      history.current.inputs = snapshotInputs(doc);
+  };
   const openScreen = (
     id: string,
-    options: { component?: string; push?: boolean; notice?: string; refresh?: boolean } = {},
+    options: {
+      component?: string;
+      push?: boolean;
+      notice?: string;
+      refresh?: boolean;
+      simulated?: boolean;
+    } = {},
   ) => {
     const refreshing = options.refresh && current === id;
+    arrival = options.simulated ? 'simulated' : options.push === false ? 'history' : 'direct';
+    if (options.push !== false) rememberInputs();
+    if (arrival === 'direct') resetJourney();
     pendingNotice = options.notice;
     if (pendingNotice && current === id && viewer) {
       const status = viewer.querySelector('.prototype-status');
@@ -1926,6 +1949,7 @@ try {
       current
     ) {
       event.preventDefault();
+      rememberInputs();
       const visit = history.move(event.key === 'ArrowLeft' ? -1 : 1, viewerScroll());
       if (visit) openScreen(visit.screenId, { push: false });
       return;
