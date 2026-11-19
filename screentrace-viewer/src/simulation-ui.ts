@@ -4,6 +4,7 @@ import { assessSimulation, Effect, staticAction, choiceLeaves } from './simulati
 import { previewElement, previewSelector, registerPreviewClone } from './preview';
 import { Payload, ElementRecord } from './contracts';
 import { element } from './text';
+import { revealInPreview } from './reveal';
 
 const operable = 'a,button,form,select,input,textarea';
 const eventElement = (target: EventTarget | null): Element | null => {
@@ -514,10 +515,55 @@ export function attachSimulation(
       }
     }
   };
+  // Like a browser's own check: show the first unchecked required box where it is (ADR 0186).
+  let bubble: HTMLElement | undefined;
+  const clearRequired = () => {
+    bubble?.remove();
+    bubble = undefined;
+    doc.querySelectorAll<HTMLElement>('[data-st-required-mark]').forEach((n) => {
+      n.style.outline = n.dataset.stRequiredMark || '';
+      delete n.dataset.stRequiredMark;
+    });
+  };
+  const markRequired = (node: Element) => {
+    clearRequired();
+    const form =
+      node.localName === 'form'
+        ? (node as HTMLFormElement)
+        : (node as HTMLButtonElement | HTMLInputElement).form || node.closest('form');
+    const missing = Array.from(form?.elements || []).filter(
+      (field) =>
+        field.matches('input[type="checkbox"][required]:not(:disabled)') &&
+        !(field as HTMLInputElement).checked &&
+        field.getClientRects().length > 0,
+    ) as HTMLInputElement[];
+    if (!missing.length) return;
+    for (const field of missing) {
+      const box = (field.closest('label') || field) as HTMLElement;
+      box.dataset.stRequiredMark = box.style.outline;
+      box.style.outline = '2px solid #c62828';
+      box.style.outlineOffset = '3px';
+    }
+    const first = missing[0];
+    bubble = doc.createElement('div');
+    bubble.dataset.stSimulationUi = 'true';
+    bubble.setAttribute('role', 'alert');
+    bubble.textContent = '請勾選此方塊';
+    const rect = first.getBoundingClientRect(),
+      win = doc.defaultView!;
+    bubble.style.cssText = `position:absolute;left:${rect.left + win.scrollX}px;top:${rect.bottom + win.scrollY + 8}px;z-index:2147483647;background:#fff;color:#1b1e22;border:1px solid #c62828;border-radius:6px;padding:6px 10px;font:14px/1.4 system-ui,sans-serif;box-shadow:0 2px 8px #0003;`;
+    doc.body.append(bubble);
+    first.focus({ preventScroll: true });
+    revealInPreview(first, frame, viewer.querySelector('.prototype-scroll'), 'smooth');
+  };
+  doc.addEventListener('change', (event) => {
+    if ((event.target as Element | null)?.matches?.('input[type="checkbox"]')) clearRequired();
+  });
   const render = (effect: Effect, record: ElementRecord | undefined, node: Element) => {
     status.replaceChildren();
     if (effect.kind === 'invalid') {
       say(effect.message || '請確認必填項目');
+      markRequired(node);
       return;
     }
     if (effect.kind === 'confirm') {
