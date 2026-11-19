@@ -633,6 +633,9 @@ function jspBoolean(guard, facts, snapshot) {
     const compare = text.match(/^([A-Za-z_][\w.]*)\s+(eq|ne|==|!=)\s+(['"])([A-Z][A-Z0-9_]*)\3$/);
     if (compare && Object.hasOwn(facts, compare[1]))
       return (facts[compare[1]] === compare[4]) === ['eq', '=='].includes(compare[2]);
+    const empty = text.match(/^(not\s+|!\s*)?empty\s+([A-Za-z_][\w.]*)$/);
+    if (empty && typeof facts['#empty:' + empty[2]] === 'boolean')
+      return empty[1] ? !facts['#empty:' + empty[2]] : facts['#empty:' + empty[2]];
     const simple = text.match(/^(?:(not\s+|!\s*))?([A-Za-z_][\w.]*)$/);
     if (simple && typeof facts[simple[2]] === 'boolean')
       return simple[1] ? !facts[simple[2]] : facts[simple[2]];
@@ -655,10 +658,16 @@ function jspBoolean(guard, facts, snapshot) {
 }
 
 function screenModelFacts(screen) {
-  const renders = (graph.relationships || []).filter(
-    (edge) =>
-      edge.type === 'RENDERS' && edge.to === (screen.attributes?.stateVariantOf || screen.id),
+  // A request-mode screen has renders of its own (ADR 0186); a JSP state screen uses its base's.
+  const own = (graph.relationships || []).filter(
+    (edge) => edge.type === 'RENDERS' && edge.to === screen.id,
   );
+  const renders = own.length
+    ? own
+    : (graph.relationships || []).filter(
+        (edge) =>
+          edge.type === 'RENDERS' && edge.to === (screen.attributes?.stateVariantOf || screen.id),
+      );
   const facts = renders.map((edge) => {
     const values = Object.create(null);
     for (const item of edge.evidence || [])
@@ -674,11 +683,18 @@ function screenModelFacts(screen) {
         }
     return values;
   });
-  return Object.fromEntries(
+  const common = Object.fromEntries(
     Object.entries(facts[0] || {}).filter(([key, value]) =>
       facts.every((candidate) => candidate[key] === value),
     ),
   );
+  try {
+    for (const [key, value] of Object.entries(JSON.parse(screen.attributes?.requestFacts || '{}')))
+      if (typeof value?.empty === 'boolean') common['#empty:' + key] = value.empty;
+  } catch {
+    // No request mode.
+  }
+  return common;
 }
 
 function stripJstlUrlDefinitions(source) {

@@ -32,7 +32,8 @@ final class JspScreenFacts {
     boolean changed = false;
     for (GraphNode screen : graph.nodes()) {
       if (screen.type() != NodeType.SCREEN) continue;
-      var facts = facts(incoming.getOrDefault(screen.id(), List.of()));
+      var facts = new TreeMap<>(facts(incoming.getOrDefault(screen.id(), List.of())));
+      facts.putAll(requestFacts(screen));
       if (facts.isEmpty()) continue;
       for (var edge : outgoing.getOrDefault(screen.id(), List.of())) {
         if (edge.type() != EdgeType.CONTAINS) continue;
@@ -71,6 +72,26 @@ final class JspScreenFacts {
         graph.schemaVersion(),
         graph.behaviors(),
         graph.validationRules());
+  }
+
+  /** The emptiness a request-mode screen stands for (ADR 0186). */
+  static Map<String, Object> requestFacts(GraphNode screen) {
+    String raw = screen.attributes().get("requestFacts");
+    if (raw == null) return Map.of();
+    Map<String, Object> facts = new TreeMap<>();
+    try {
+      JSON.readTree(raw)
+          .fields()
+          .forEachRemaining(
+              f -> {
+                var empty = f.getValue().path("empty");
+                if (empty.isBoolean())
+                  facts.put(f.getKey(), empty.asBoolean() ? "" : JspGuards.NON_EMPTY);
+              });
+    } catch (IOException unreadable) {
+      // No mode fact.
+    }
+    return facts;
   }
 
   /** Boolean model facts shared by every conditional render of the screen. */
@@ -144,7 +165,9 @@ final class JspScreenFacts {
     if (endpoints.isEmpty()) return null;
     try {
       var detail = new LinkedHashMap<String, Object>();
-      detail.put("facts", facts);
+      var shown = new TreeMap<String, Object>();
+      facts.forEach((k, v) -> shown.put(k, v == JspGuards.NON_EMPTY ? "（有值）" : v));
+      detail.put("facts", shown);
       detail.put("paths", kept);
       detail.put("endpoints", endpoints);
       return JSON.writeValueAsString(detail);

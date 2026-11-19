@@ -37,6 +37,8 @@ final class JspGuards {
         negate = true;
         text = text.substring(2, text.length() - 1).strip();
       }
+      while (text.startsWith("(") && text.endsWith(")"))
+        text = text.substring(1, text.length() - 1).strip();
       Boolean value =
           text.startsWith("${") && text.endsWith("}")
               ? expression(text.substring(2, text.length() - 1), facts)
@@ -94,6 +96,9 @@ final class JspGuards {
   }
 
   private static final Object UNKNOWN = new Object();
+
+  /** A fact value known to be non-empty, with the value itself unknown. */
+  static final Object NON_EMPTY = new Object();
 
   private static List<String> tokens(String text) {
     List<String> tokens = new ArrayList<>();
@@ -168,7 +173,7 @@ final class JspGuards {
         else break;
         Object other = unary();
         value =
-            value == UNKNOWN || other == UNKNOWN
+            value == UNKNOWN || other == UNKNOWN || value == NON_EMPTY || other == NON_EMPTY
                 ? UNKNOWN
                 : (Objects.equals(value, other) == equal);
       }
@@ -181,8 +186,9 @@ final class JspGuards {
         return value == null ? UNKNOWN : !value;
       }
       if (take("empty")) {
-        unary();
-        return UNKNOWN;
+        Object value = unary();
+        if (value == NON_EMPTY) return Boolean.FALSE;
+        return value instanceof String text ? (Object) text.isEmpty() : UNKNOWN;
       }
       return primary();
     }

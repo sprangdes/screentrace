@@ -299,7 +299,11 @@ final class SpringControllerReturns {
             + (condition.isEmpty()
                 ? guards(statement, method)
                 : join(guards(statement, method), condition));
-    List<AnalysisEvidence> evidence = new ArrayList<>(forwarded);
+    // A helper's own main return counts only when the call is itself the method's main return.
+    boolean helperMain =
+        forwarded.isEmpty() || forwarded.stream().anyMatch(e -> e.parser().equals(MAIN_PATH));
+    List<AnalysisEvidence> evidence =
+        new ArrayList<>(forwarded.stream().filter(e -> !e.parser().equals(MAIN_PATH)).toList());
     evidence.add(
         new AnalysisEvidence(
             source,
@@ -332,7 +336,36 @@ final class SpringControllerReturns {
         && statement.findAncestor(IfStmt.class).isEmpty()
         && statement.findAncestor(CatchClause.class).isEmpty())
       successRedirect(method, statement, file).ifPresent(evidence::add);
+    if (value.kind() != Kind.UNKNOWN
+        && helperMain
+        && condition.isEmpty()
+        && unconditional(statement, method))
+      evidence.add(
+          new AnalysisEvidence(
+              source,
+              MAIN_PATH,
+              ResolutionStatus.INFERRED,
+              "方法=" + className + "." + method.getNameAsString() + "；沒有 if、catch、switch 或迴圈包覆的回傳"));
     targets.add(new Target(value.kind(), value.value(), raw, source, evidence, branch));
+  }
+
+  static final String MAIN_PATH = "SpringMainPath";
+
+  /** The return a request reaches when no guard, catch, switch case or loop intervenes. */
+  private static boolean unconditional(Node node, MethodDeclaration method) {
+    for (Node parent = node.getParentNode().orElse(null);
+        parent != null && parent != method;
+        parent = parent.getParentNode().orElse(null))
+      if (parent instanceof IfStmt
+          || parent instanceof CatchClause
+          || parent instanceof com.github.javaparser.ast.stmt.SwitchEntry
+          || parent instanceof com.github.javaparser.ast.expr.SwitchExpr
+          || parent instanceof com.github.javaparser.ast.stmt.ForStmt
+          || parent instanceof com.github.javaparser.ast.stmt.ForEachStmt
+          || parent instanceof com.github.javaparser.ast.stmt.WhileStmt
+          || parent instanceof com.github.javaparser.ast.stmt.DoStmt
+          || parent instanceof LambdaExpr) return false;
+    return true;
   }
 
   private static Optional<AnalysisEvidence> successRedirect(
@@ -350,8 +383,17 @@ final class SpringControllerReturns {
     if (flash.isEmpty() || !(use.getParentNode().orElse(null) instanceof BlockStmt block))
       return Optional.empty();
     List<MethodCallExpr> matches = new ArrayList<>();
+    List<com.github.javaparser.ast.stmt.Statement> statements = new ArrayList<>();
     for (var statement : block.getStatements()) {
       if (statement == use) break;
+      statements.add(statement);
+      // try { work; flash success } catch { flash error } followed by this redirect: the try
+      // block is the success path (ADR 0186).
+      if (statement instanceof com.github.javaparser.ast.stmt.TryStmt attempt
+          && attempt.getFinallyBlock().isEmpty())
+        statements.addAll(attempt.getTryBlock().getStatements());
+    }
+    for (var statement : statements) {
       if (statement instanceof ExpressionStmt expr
           && expr.getExpression() instanceof MethodCallExpr call
           && call.getNameAsString().equals("addFlashAttribute")

@@ -167,7 +167,8 @@ function screens(payload: Payload, targetId: string, paths: string[]): Effect[] 
       result.set(key, {
         kind: 'navigate',
         targetId: id,
-        label: node.name,
+        label:
+          node.name + (node.attributes.jspStateLabel ? `（${node.attributes.jspStateLabel}）` : ''),
         resolution,
         evidence: proof,
       });
@@ -183,7 +184,12 @@ function screens(payload: Payload, targetId: string, paths: string[]): Effect[] 
     )) {
       const evidence = (edge.evidence || []).filter(
         (item) =>
-          item.parser !== 'SpringSuccessRedirect' ||
+          (item.parser !== 'SpringSuccessRedirect' && item.parser !== 'SpringMainPath') ||
+          (item.parser === 'SpringMainPath' &&
+            depth === 1 &&
+            (item.detail || '').startsWith(
+              `方法=${node.attributes.class}.${node.attributes.method}；`,
+            )) ||
           (depth === 1 &&
             edge.type === 'FORWARDS_TO' &&
             item.source?.file === edge.source?.file &&
@@ -373,9 +379,13 @@ function effect(
     return unknown(b.expression, '這個操作的結果取決於頁面腳本，靜態分析無法確認');
   const trigger = payload.graph.nodes.find((n) => n.id === b.triggerId);
   const transitions = jspTransitions(payload, b, targetId);
-  const outcomes = transitions.length
-    ? transitions.flatMap((edge) => screens(payload, edge.to, []))
-    : screens(payload, targetId, requestPaths(targetId, trigger, b.evidence || []));
+  const transitionNotice = transitions.length ? successNotice(payload, targetId) : undefined;
+  const outcomes = continueJourney(
+    payload,
+    transitions.length
+      ? transitions.flatMap((edge) => screens(payload, edge.to, []))
+      : screens(payload, targetId, requestPaths(targetId, trigger, b.evidence || [])),
+  );
   if (!outcomes.length)
     return {
       ...unknown(b.expression),
@@ -386,6 +396,7 @@ function effect(
       reason: 'DESTINATION_UNRESOLVED',
     };
   for (const item of outcomes) {
+    if (transitionNotice && !item.message) item.message = transitionNotice;
     item.dataAction = behaviorDataAction(payload, b, targetId);
     item.resolution = item.resolution === 'CONFIRMED' ? resolution : item.resolution;
     item.evidence = [...(b.evidence || []), ...(item.evidence || [])];
@@ -478,6 +489,12 @@ function effect(
           ?.detail,
       };
     }
+    const main = mainPath(choices);
+    if (!success.length && main) {
+      if (intent.uncheckedRequired)
+        return { kind: 'invalid', message: '請勾選必填的確認項目後再送出。' };
+      return main;
+    }
     return {
       kind: 'form',
       targetId,
@@ -496,6 +513,8 @@ function effect(
       (resolution === 'AMBIGUOUS' && node.type === 'SCREEN'))
   )
     return outcomes[0];
+  const main = mainPath(outcomes);
+  if (main) return main;
   // Outcomes split by the handler's own branches say which branch leads where (ADR 0185).
   const branches = outcomes.map((item) => handlerBranch(item.evidence || []));
   const labelled = branches.some(Boolean);
@@ -508,6 +527,38 @@ function effect(
     choices: outcomes,
     expression: labelled ? undefined : b.expression,
     message: '有多個可能目的，請選擇；系統不會替你決定',
+  };
+}
+/**
+ * The handler's unguarded return (no if, catch, switch or loop around it) is what the request does
+ * normally; guard and error branches are named in the notice (ADR 0186).
+ */
+function mainPath(outcomes: Effect[]): Effect | undefined {
+  const main = outcomes.filter(
+    (o) =>
+      o.kind === 'navigate' &&
+      o.resolution !== 'AMBIGUOUS' &&
+      !o.condition &&
+      !o.dataAction?.conditional &&
+      o.evidence?.some((proof) => proof.parser === 'SpringMainPath'),
+  );
+  if (new Set(main.map((o) => o.targetId)).size !== 1) return undefined;
+  const others = [
+    ...new Set(
+      outcomes
+        .filter((o) => o.targetId !== main[0].targetId || o.feedback)
+        .filter((o) => !main.includes(o))
+        .map((o) => o.label || o.targetId || ''),
+    ),
+  ].filter(Boolean);
+  const success = main[0].evidence?.find((p) => p.parser === 'SpringSuccessRedirect')?.detail;
+  return {
+    ...main[0],
+    message: success
+      ? success + (others.length ? `（其他情況可能前往：${others.join('、')}）` : '')
+      : others.length
+        ? `正常流程；其他情況可能前往：${others.join('、')}`
+        : undefined,
   };
 }
 /** The first controller return condition on the way to an outcome, when the source states one. */
@@ -650,10 +701,16 @@ function simulateRaw(
         });
         continue;
       }
+      const named = alternativeConditions(b, ids);
+      if (named)
+        outcomes.forEach((outcome, i) => {
+          for (const item of outcome.kind === 'choices' ? outcome.choices || [] : [outcome])
+            item.label = `${item.label || ''}（${named[i]}）`;
+        });
       effects.push({
         kind: 'choices',
         message: '有多個候選，請選擇；系統不會替你決定',
-        expression: b.expression,
+        expression: named ? undefined : b.expression,
         evidence: b.evidence,
         reason: 'BEHAVIOR_AMBIGUOUS',
         choices: outcomes.flatMap((outcome) => {
@@ -672,7 +729,9 @@ function simulateRaw(
     } else if (['CONFIRMED', 'INFERRED'].includes(resolution) && b.targetId) {
       const resolved = effect(payload, b, b.targetId, intent, resolution);
       effects.push(
-        (b.guard || b.condition) && !jspTransitions(payload, b, b.targetId).length
+        (b.guard || b.condition) &&
+          !ownGuard(payload, screenId, component, b) &&
+          !jspTransitions(payload, b, b.targetId).length
           ? {
               kind: 'choices',
               message: `條件尚未求值，請選擇可能結果：${b.guard || b.condition}`,
@@ -826,4 +885,99 @@ export function assessSimulation(
     possible: result.simulatable === true,
     reason: result.simulatable ? undefined : result.reason || 'UNSUPPORTED_SIMULATION',
   };
+}
+/** A JSP guard around the clicked element held, or the element would not be on the page. */
+function ownGuard(payload: Payload, screenId: string, component: string, b: Behavior): boolean {
+  if (!b.guard || b.condition) return false;
+  const node = payload.graph.nodes.find((n) => n.id === component);
+  if (node?.attributes.guard === b.guard) return true;
+  return (payload.graph.relationships || []).some(
+    (e) =>
+      e.type === 'CONTAINS' &&
+      e.from === screenId &&
+      e.to === component &&
+      e.evidence?.some((p) => (p.detail || '').includes('guard=' + b.guard)),
+  );
+}
+/** The JSP condition that selects each candidate endpoint's literal URL, in plain words. */
+function alternativeConditions(b: Behavior, ids: string[]): string[] | undefined {
+  let alternatives: { path?: string; guard?: string }[] = [];
+  try {
+    const raw = (b.evidence || []).find((e) => e.parser === 'JspConditionalUrl')?.detail;
+    alternatives = raw ? JSON.parse(raw) : [];
+  } catch {
+    return undefined;
+  }
+  if (!Array.isArray(alternatives) || !alternatives.length) return undefined;
+  const words = (guard: string) =>
+    guard === 'otherwise'
+      ? '其他情況'
+      : '當 ' + guard.replace(/\$\{\s*([^}]*?)\s*}/g, '$1').replace(/^!\((.*)\)$/, 'not $1');
+  const names = ids.map((id) => {
+    const paths = (b.evidence || [])
+      .filter((e) => e.parser === 'JspRequestPath' && e.detail?.startsWith(id + ' '))
+      .map((e) => e.detail!.slice(id.length + 1));
+    const found = alternatives.filter((a) => a.path && paths.includes(a.path) && a.guard);
+    return found.length === 1 ? words(found[0].guard!) : '';
+  });
+  return names.every(Boolean) ? names : undefined;
+}
+
+/** Request modes (ADR 0186) of the latest screens of this simulated journey, e.g. a renewal. */
+let journey: Record<string, boolean> = {};
+export function setJourney(payload: Payload, screens: string[]) {
+  const nodes = new Map(payload.graph.nodes.map((n) => [n.id, n]));
+  journey = {};
+  for (const id of [...screens].reverse()) {
+    const mode = requestMode(nodes.get(id));
+    if (mode && !(mode.property in journey)) journey[mode.property] = mode.empty;
+  }
+}
+function requestMode(node: { attributes: Record<string, string> } | undefined) {
+  const property = node?.attributes.requestProperty;
+  if (!property) return undefined;
+  try {
+    const facts = Object.values(JSON.parse(node.attributes.requestFacts || '{}')) as {
+      empty?: unknown;
+    }[];
+    return typeof facts[0]?.empty === 'boolean'
+      ? { property, empty: facts[0].empty as boolean }
+      : undefined;
+  } catch {
+    return undefined;
+  }
+}
+/** Where a request may open either mode of a page, the journey's mode is the one it continues. */
+function continueJourney(payload: Payload, outcomes: Effect[]): Effect[] {
+  const nodes = new Map(payload.graph.nodes.map((n) => [n.id, n]));
+  const family = (id?: string) => {
+    const node = id ? nodes.get(id) : undefined;
+    return node?.attributes.requestProperty ? node.attributes.stateVariantOf || node.id : undefined;
+  };
+  const fits = (id?: string) => {
+    const mode = requestMode(id ? nodes.get(id) : undefined);
+    return !!mode && mode.property in journey && journey[mode.property] === mode.empty;
+  };
+  return outcomes.filter((outcome) => {
+    const home = family(outcome.targetId);
+    if (!home || fits(outcome.targetId)) return true;
+    return !outcomes.some(
+      (other) => other !== outcome && family(other.targetId) === home && fits(other.targetId),
+    );
+  });
+}
+/** The success message an endpoint's handler flashes before redirecting back, when unique. */
+function successNotice(payload: Payload, endpoint: string): string | undefined {
+  const edges = payload.graph.relationships || [];
+  const handlers = edges
+    .filter((e) => e.type === 'HANDLED_BY' && e.from === endpoint)
+    .map((e) => e.to);
+  const messages = new Set(
+    edges
+      .filter((e) => handlers.includes(e.from) && e.type === 'FORWARDS_TO')
+      .flatMap((e) => e.evidence || [])
+      .filter((p) => p.parser === 'SpringSuccessRedirect' && p.detail)
+      .map((p) => p.detail!),
+  );
+  return messages.size === 1 ? [...messages][0] : undefined;
 }

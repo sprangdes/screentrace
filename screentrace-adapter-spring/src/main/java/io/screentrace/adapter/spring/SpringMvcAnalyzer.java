@@ -124,7 +124,9 @@ public final class SpringMvcAnalyzer {
     completed = SpringDtoSimulation.enrich(completed, inventory, units);
     return io.screentrace.core.GraphIntegrityValidator.requireAnalysis(
         JspStateVariants.enrich(
-            JspScreenFacts.enrich(SpringSubmittedModel.enrich(completed, inventory, units)),
+            JspScreenFacts.enrich(
+                SpringRequestVariants.enrich(
+                    SpringSubmittedModel.enrich(completed, inventory, units), inventory, units)),
             inventory,
             units));
   }

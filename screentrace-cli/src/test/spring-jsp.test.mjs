@@ -63,6 +63,19 @@ test('Spring JSP resolves request branches and shared Tiles bodies', () => {
         @RequestMapping(value="/manage/item/{id}/change", method=RequestMethod.POST)
         String update(@RequestParam("state") String state) { return "redirect:/manage/item/{id}"; }
 
+        private final DraftService drafts = new DraftService();
+
+        @RequestMapping(value="/draft/new", method=RequestMethod.GET)
+        String newDraft(Model m) { Draft draft = new Draft(); return page(draft, m); }
+
+        @RequestMapping(value="/draft/{id}/renew", method=RequestMethod.GET)
+        String renewDraft(@PathVariable("id") String id, Model m) {
+          Draft draft = drafts.renewal(id);
+          return page(draft, m);
+        }
+
+        private String page(Draft draft, Model m) { m.addAttribute("draft", draft); return "draft"; }
+
         @RequestMapping(value="/unknown", method=RequestMethod.GET)
         String unknown(@RequestParam("view") String view) { return view; }
 
@@ -75,6 +88,22 @@ test('Spring JSP resolves request branches and shared Tiles bodies', () => {
         }
       }
     `,
+    );
+    file(
+      'src/main/java/demo/Draft.java',
+      `package demo;
+      public class Draft {
+        private String previousId = "";
+        public String getPreviousId() { return previousId; }
+        public void setPreviousId(String v) { previousId = v; }
+      }`,
+    );
+    file(
+      'src/main/java/demo/DraftService.java',
+      `package demo;
+      public class DraftService {
+        public Draft renewal(String id) { Draft d = new Draft(); d.setPreviousId(id); return d; }
+      }`,
     );
     file(
       'src/main/webapp/WEB-INF/web.xml',
@@ -144,6 +173,11 @@ test('Spring JSP resolves request branches and shared Tiles bodies', () => {
       <form method="post" action="<c:out value='@{save}'/>"><button>save</button></form>`,
     );
     for (const name of ['server', 'error', 'staffError']) jsp(name, '<h1>' + name + '</h1>');
+    jsp(
+      'draft',
+      `<h1>@{empty draft.previousId ? 'New draft' : 'Renew draft'}</h1>
+      <c:if test="@{empty draft.previousId}"><a href="<c:url value='/'/>">home link</a></c:if>`,
+    );
     mkdirSync(path.join(root, '.screentrace'), { recursive: true });
     writeFileSync(
       path.join(root, '.screentrace', 'config.json'),
@@ -212,6 +246,32 @@ test('Spring JSP resolves request branches and shared Tiles bodies', () => {
       'staffError',
     ]);
     assert.deepEqual(targets(find('ENTRY_POINT', 'Servlet error 500'), 'RENDERS'), ['server']);
+    // The unguarded return is the handler's normal path (ADR 0186).
+    assert.deepEqual(
+      submitRedirects.map((edge) => edge.evidence.some((e) => e.parser === 'SpringMainPath')).sort(),
+      [false, true],
+    );
+    // One JSP page in two request modes, proven from where the model object comes from.
+    const drafts = Object.fromEntries(
+      graph.nodes
+        .filter((node) => node.type === 'SCREEN' && node.name === 'draft')
+        .map((node) => [node.attributes.jspStateLabel, node]),
+    );
+    assert.deepEqual(Object.keys(drafts).sort(), ['New draft', 'Renew draft']);
+    assert.equal(drafts['Renew draft'].attributes.stateVariantOf, drafts['New draft'].id);
+    assert.deepEqual(targets(find('HANDLER', 'ControllerSource.renewDraft()'), 'RENDERS'), [
+      'draft',
+    ]);
+    assert.ok(
+      graph.relationships.some(
+        (edge) =>
+          edge.type === 'RENDERS' &&
+          edge.from === find('HANDLER', 'ControllerSource.renewDraft()').id &&
+          edge.to === drafts['Renew draft'].id,
+      ),
+    );
+    assert.ok(targets(drafts['New draft'], 'CONTAINS').includes('home link'));
+    assert.ok(!targets(drafts['Renew draft'], 'CONTAINS').includes('home link'));
     const states = (name) =>
       Object.fromEntries(
         graph.nodes

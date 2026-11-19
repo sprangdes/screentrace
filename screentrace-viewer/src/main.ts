@@ -1,5 +1,6 @@
 import { projectSimulationData } from './simulation-data';
 import { attachSimulation } from './simulation-ui';
+import { setJourney } from './simulation';
 import { inertDocument } from './inert-document';
 import { iconSprite, icon, iconButton } from './shell-ui';
 import { initializeComponentLabels } from './labels';
@@ -1554,6 +1555,7 @@ try {
         const doc = own.contentDocument;
         if (!doc || !own.getAttribute('srcdoc')) return;
         projectSimulationData(payload, id, doc);
+        setJourney(payload, [...history.trail, id]);
         fillPageStates(doc);
         decorate(doc, id);
         selectFromPreview(doc, id);
