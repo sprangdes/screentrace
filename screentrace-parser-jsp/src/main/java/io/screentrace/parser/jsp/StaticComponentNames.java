@@ -152,6 +152,23 @@ final class StaticComponentNames {
   }
 
   private static String literalExpressions(String source) {
+    // A condition choosing between two quoted constants names both, e.g. 「返回總覽／返回首頁」.
+    Matcher choice =
+        Pattern.compile(
+                "\\$\\{\\s*[^'\"{}?:]+\\?\\s*(['\"])([^'\"\\\\{}]*?)\\1\\s*:\\s*(['\"])([^'\"\\\\{}]*?)\\3\\s*}")
+            .matcher(source);
+    StringBuffer chosen = new StringBuffer();
+    while (choice.find())
+      choice.appendReplacement(
+          chosen,
+          Matcher.quoteReplacement(
+              "${'"
+                  + (choice.group(2).equals(choice.group(4))
+                      ? choice.group(2)
+                      : choice.group(2) + "／" + choice.group(4))
+                  + "'}"));
+    choice.appendTail(chosen);
+    source = chosen.toString();
     // Only quoted constants, optionally wrapped in the known escapeXml function.
     Matcher m =
         Pattern.compile(

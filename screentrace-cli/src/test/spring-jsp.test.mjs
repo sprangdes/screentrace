@@ -49,6 +49,7 @@ test('Spring JSP resolves request branches and shared Tiles bodies', () => {
         String detail(HttpServletRequest request, Model m) {
           boolean manage = request.getServletPath().startsWith("/manage/");
           m.addAttribute("manage", manage);
+          m.addAttribute("customer", !manage && request.getParameter("owner") != null);
           return manage ? "staff" : "detail";
         }
 
@@ -116,6 +117,9 @@ test('Spring JSP resolves request branches and shared Tiles bodies', () => {
     jsp(
       'detail',
       `
+      <a class="back" href="<c:url value="@{manage ? '/manage/item/1' : '/'}"/>">← @{manage ? 'staff home' : 'home'}</a>
+      <c:if test="@{manage}"><a href="<c:url value='/'/>">staff only</a></c:if>
+      <c:if test="@{customer}"><a href="<c:url value='/'/>">customer only</a></c:if>
       <c:forEach items="@{items}" var="item">
         <c:url var="detail" value="@{manage ? '/manage' : ''}/item/@{item.id}"/>
         <a href="<c:out value='@{detail}'/>">item link</a>
@@ -208,11 +212,49 @@ test('Spring JSP resolves request branches and shared Tiles bodies', () => {
       'staffError',
     ]);
     assert.deepEqual(targets(find('ENTRY_POINT', 'Servlet error 500'), 'RENDERS'), ['server']);
-    const variants = Object.fromEntries(
-      graph.nodes
-        .filter((node) => node.attributes.jspStateValue)
-        .map((node) => [node.attributes.jspStateValue, node]),
+    const states = (name) =>
+      Object.fromEntries(
+        graph.nodes
+          .filter((node) => node.name === name && node.attributes.jspStateValue)
+          .map((node) => [node.attributes.jspStateValue, node]),
+      );
+    const variants = states('staff');
+    assert.deepEqual(
+      ['NEW', 'OPEN', 'CLOSED'].map((value) => variants[value].attributes.jspStateOrder),
+      ['0', '1', '2'],
     );
+    // Model facts of each controller branch decide ownership on the shared Tiles body (ADR 0185).
+    const detail = find('SCREEN', 'detail');
+    assert.ok(targets(variants.NEW, 'CONTAINS').includes('staff only'));
+    assert.ok(!targets(variants.NEW, 'CONTAINS').includes('customer only'));
+    assert.ok(!targets(detail, 'CONTAINS').includes('staff only'));
+    assert.ok(targets(detail, 'CONTAINS').includes('customer only'));
+    const back = find('COMPONENT', '← staff home／home');
+    const scope = (screen) =>
+      JSON.parse(
+        graph.relationships
+          .find((edge) => edge.from === screen.id && edge.to === back.id && edge.type === 'CONTAINS')
+          .evidence.find((e) => e.parser === 'JspScreenFacts').detail,
+      );
+    assert.deepEqual(scope(detail).paths, ['/']);
+    assert.deepEqual(scope(detail).facts, { manage: false });
+    assert.deepEqual(scope(variants.NEW).paths, ['/manage/item/1']);
+    assert.deepEqual(scope(variants.NEW).facts, { customer: false, manage: true });
+    assert.deepEqual(
+      scope(variants.NEW).endpoints.map((id) => nodes.get(id).name),
+      ['GET /manage/item/{id}'],
+    );
+    // The customer page of the same JSP shows the same states, entered at the same value.
+    const shared = states('detail');
+    assert.deepEqual(Object.keys(shared).sort(), ['CLOSED', 'NEW', 'OPEN']);
+    assert.equal(shared.NEW.id, detail.id);
+    assert.equal(shared.OPEN.attributes.stateVariantOf, detail.id);
+    assert.ok(
+      shared.OPEN.evidence.some(
+        (e) => e.parser === 'JspStateVariant' && e.detail.includes('共用 JSP 內容的畫面'),
+      ),
+    );
+    assert.ok(!targets(shared.CLOSED, 'CONTAINS').includes('close item'));
     assert.deepEqual(Object.keys(variants).sort(), ['CLOSED', 'NEW', 'OPEN']);
     assert.equal(variants.NEW.attributes.stateVariantOf, undefined);
     assert.equal(variants.OPEN.attributes.stateVariantOf, variants.NEW.id);

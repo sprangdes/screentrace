@@ -667,6 +667,8 @@ function screenModelFacts(screen) {
           const condition = JSON.parse(item.detail);
           if (condition.modelAttribute && ['true', 'false'].includes(condition.negated))
             values[condition.modelAttribute] = condition.negated === 'false';
+          for (const [key, value] of Object.entries(condition.derivedFacts || {}))
+            if (typeof value === 'boolean') values[key] = value;
         } catch {
           // Model hints are optional.
         }

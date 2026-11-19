@@ -64,3 +64,29 @@ export function requestPaths(endpoint: string, trigger: Node | undefined, eviden
     ? [target]
     : [];
 }
+
+/**
+ * Endpoints a shared component can still request on one screen, from the screen's model facts
+ * (ADR 0185). Keyed by `screen\u0000component`; a missing key means no narrowing.
+ */
+const scopeCache = new WeakMap<Edge[], Map<string, Set<string>>>();
+export function screenScopes(edges: Edge[]): Map<string, Set<string>> {
+  const cached = scopeCache.get(edges);
+  if (cached) return cached;
+  const scopes = new Map<string, Set<string>>();
+  scopeCache.set(edges, scopes);
+  for (const edge of edges) {
+    if (edge.type !== 'CONTAINS') continue;
+    for (const proof of edge.evidence || []) {
+      if (proof.parser !== 'JspScreenFacts') continue;
+      try {
+        const endpoints = JSON.parse(proof.detail || 'null')?.endpoints;
+        if (Array.isArray(endpoints) && endpoints.length)
+          scopes.set(edge.from + '\u0000' + edge.to, new Set(endpoints.map(String)));
+      } catch {
+        // Unreadable evidence never narrows a component.
+      }
+    }
+  }
+  return scopes;
+}

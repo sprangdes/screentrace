@@ -1486,6 +1486,35 @@ try {
       pageStates.title =
         '依程式中的條件名稱（loading、error、清單長度為 0 等）判斷，可能不完全準確';
       pageStates.hidden = true;
+      // States of one JSP page are separate screens (ADR 0183); the switch moves between them (ADR 0185).
+      const screenStates = element('div', undefined, 'segmented page-state-switch');
+      screenStates.dataset.screenStateSwitch = 'true';
+      screenStates.setAttribute('role', 'group');
+      screenStates.setAttribute('aria-label', '流程狀態');
+      screenStates.title = '依原始碼中的狀態條件與送出按鈕推論；每個狀態是獨立的畫面';
+      const stateBase = index.nodes.get(id)?.attributes.stateVariantOf || id,
+        family = [...index.nodes.values()]
+          .filter(
+            (n) =>
+              n.type === 'SCREEN' &&
+              n.attributes.stateVariant &&
+              (n.id === stateBase || n.attributes.stateVariantOf === stateBase),
+          )
+          .sort(
+            (a, b) =>
+              Number(a.attributes.jspStateOrder ?? 99) - Number(b.attributes.jspStateOrder ?? 99),
+          );
+      screenStates.hidden = family.length < 2;
+      for (const state of family) {
+        const button = element(
+          'button',
+          state.attributes.jspStateLabel || state.attributes.stateVariant,
+        );
+        button.type = 'button';
+        button.setAttribute('aria-pressed', String(state.id === id));
+        if (state.id !== id) button.onclick = () => openScreen(state.id);
+        screenStates.append(button);
+      }
       const fillPageStates = (doc: Document) => {
         const present = new Set(
           [...doc.querySelectorAll('[data-st-state]')].map((n) => n.getAttribute('data-st-state')),
@@ -1558,7 +1587,7 @@ try {
         scroll,
       });
       // The notice sits beside the URL, outside the page, so it never covers the page's own buttons.
-      viewer.querySelector('.prototype-present')?.before(notice, pageStates, trust);
+      viewer.querySelector('.prototype-present')?.before(notice, screenStates, pageStates, trust);
       viewer.querySelector('.prototype-status')?.after(legend);
       host.replaceChildren(viewer);
       // A simulated click that requested APIs on the way here says so on the screen it arrived at.

@@ -26,7 +26,8 @@ final class SpringRequestConditions {
       String value,
       String defaultValue,
       boolean negated,
-      String modelAttribute) {
+      String modelAttribute,
+      Map<String, Boolean> derived) {
     boolean accepts(String route) {
       if (servletPrefix == null) return true;
       int dynamic = route.length();
@@ -41,11 +42,12 @@ final class SpringRequestConditions {
     }
 
     AnalysisEvidence evidence(SourceLocation source, String endpoint) {
-      var details = new TreeMap<String, String>();
+      var details = new TreeMap<String, Object>();
       if (servletPrefix != null) {
         if (endpoint != null) details.put("endpointId", endpoint);
         details.put("servletPrefix", servletPrefix);
         if (modelAttribute != null) details.put("modelAttribute", modelAttribute);
+        if (derived != null && !derived.isEmpty()) details.put("derivedFacts", derived);
       } else {
         details.put("parameter", parameter);
         details.put("value", value);
@@ -89,9 +91,17 @@ final class SpringRequestConditions {
     boolean negated = branch.startsWith(":else");
     if (rootDispatcher) {
       String prefix = servletPrefix(condition, method, returns.get(0));
-      if (prefix != null)
+      if (prefix != null) {
+        String model = modelAttribute(method, condition, returns.get(0));
         return new Condition(
-            prefix, null, null, null, negated, modelAttribute(method, condition, returns.get(0)));
+            prefix,
+            null,
+            null,
+            null,
+            negated,
+            model,
+            model == null ? Map.of() : derived(method, condition, !negated, model, returns.get(0)));
+      }
     }
     if (!(condition instanceof MethodCallExpr call)
         || !call.getNameAsString().equals("equals")
@@ -126,7 +136,8 @@ final class SpringRequestConditions {
             call.getScope().orElseThrow().asStringLiteralExpr().asString(),
             fallback,
             negated,
-            null);
+            null,
+            Map.of());
     }
     return null;
   }
@@ -177,6 +188,64 @@ final class SpringRequestConditions {
                 == 1
         ? key
         : null;
+  }
+
+  /**
+   * Other boolean model attributes of the same method that the branch decides on its own, e.g.
+   * {@code addAttribute("customer", !admin && allowed(...))} is false wherever {@code admin} holds.
+   */
+  private static Map<String, Boolean> derived(
+      MethodDeclaration method,
+      Expression condition,
+      boolean value,
+      String modelAttribute,
+      ReturnStmt use) {
+    String name = condition.asNameExpr().getNameAsString();
+    Map<String, Integer> counts = new HashMap<>();
+    Map<String, Boolean> facts = new TreeMap<>();
+    for (var call : method.findAll(MethodCallExpr.class)) {
+      if (!Set.of("addAttribute", "addObject").contains(call.getNameAsString())
+          || call.getArguments().size() != 2
+          || !call.getArgument(0).isStringLiteralExpr()
+          || call.getBegin().isEmpty()
+          || use.getBegin().isEmpty()
+          || !call.getBegin().get().isBefore(use.getBegin().get())) continue;
+      String key = call.getArgument(0).asStringLiteralExpr().asString();
+      counts.merge(key, 1, Integer::sum);
+      Boolean result = decide(call.getArgument(1), name, value);
+      if (result != null && !key.equals(modelAttribute)) facts.put(key, result);
+    }
+    facts.keySet().removeIf(key -> counts.getOrDefault(key, 0) != 1);
+    return facts;
+  }
+
+  private static Boolean decide(Expression expression, String name, boolean value) {
+    expression = unwrap(expression);
+    if (expression.isNameExpr())
+      return expression.asNameExpr().getNameAsString().equals(name) ? value : null;
+    if (expression.isBooleanLiteralExpr()) return expression.asBooleanLiteralExpr().getValue();
+    if (expression.isUnaryExpr()
+        && expression.asUnaryExpr().getOperator()
+            == com.github.javaparser.ast.expr.UnaryExpr.Operator.LOGICAL_COMPLEMENT) {
+      Boolean inner = decide(expression.asUnaryExpr().getExpression(), name, value);
+      return inner == null ? null : !inner;
+    }
+    if (expression.isBinaryExpr()) {
+      var binary = expression.asBinaryExpr();
+      Boolean left = decide(binary.getLeft(), name, value),
+          right = decide(binary.getRight(), name, value);
+      switch (binary.getOperator()) {
+        case AND:
+          if (Boolean.FALSE.equals(left) || Boolean.FALSE.equals(right)) return false;
+          return left != null && right != null ? Boolean.TRUE : null;
+        case OR:
+          if (Boolean.TRUE.equals(left) || Boolean.TRUE.equals(right)) return true;
+          return left != null && right != null ? Boolean.FALSE : null;
+        default:
+          return null;
+      }
+    }
+    return null;
   }
 
   static boolean permits(Relationship render, String endpoint, List<String> requests) {

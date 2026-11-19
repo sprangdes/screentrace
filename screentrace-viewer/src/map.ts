@@ -1,5 +1,5 @@
 import { Graph, Node, Behavior, requireGraph } from './contracts';
-import { permitsRender } from './request-outcomes';
+import { permitsRender, screenScopes } from './request-outcomes';
 /** The behavior that starts `b`'s chain: `b` itself when it has a trigger, otherwise its
  * nearest ancestor with one (or the last one reachable), stopping at a cycle. */
 export function rootBehavior(behaviors: Map<string, Behavior>, b: Behavior): Behavior {
@@ -91,10 +91,19 @@ export function indexGraph(input: Graph): Index {
     const base = screen.attributes.stateVariantOf;
     if (base) for (const route of routes.get(base) || []) routes.get(screen.id)!.add(route);
   }
+  const scopes = screenScopes(edges);
+  // A shared component narrowed on one screen reaches only what its kept endpoints reach there.
+  const scoped = (from: string, trigger: string, target: string, to: string) => {
+    const allowed = scopes.get(from + '\u0000' + trigger);
+    if (!allowed) return true;
+    if (nodes.get(target)?.type === 'ENDPOINT') return allowed.has(target);
+    return [...allowed].some((endpoint) => destinations(endpoint).includes(to));
+  };
   const add = (trigger: string, target: string, behavior?: string) => {
     const sources = nodes.get(trigger)?.type === 'SCREEN' ? [trigger] : owners.get(trigger) || [];
     for (const from of sources)
       for (const to of destinations(target)) {
+        if (!scoped(from, trigger, target, to)) continue;
         const key = JSON.stringify([from, to]),
           r = pairs.get(key) || { from, to, triggers: [], behaviorIds: [] };
         if (nodes.get(trigger)?.type !== 'SCREEN') r.triggers.push(trigger);
@@ -186,7 +195,10 @@ export function indexGraph(input: Graph): Index {
       }
   const displayRoutes = new Map<string, string[]>();
   for (const screen of screens) {
-    const candidates = endpointCandidates.get(screen.id) || new Map<string, number>(),
+    const candidates =
+        endpointCandidates.get(screen.id) ||
+        endpointCandidates.get(screen.attributes.stateVariantOf || '') ||
+        new Map<string, number>(),
       explicit = screen.attributes.route || screen.attributes.url || screen.attributes.path;
     displayRoutes.set(
       screen.id,

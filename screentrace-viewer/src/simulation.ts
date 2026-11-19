@@ -1,6 +1,6 @@
 import { DataAction, behaviorDataAction } from './simulation-data';
 import { Payload, ElementRecord, Behavior, Evidence, Rule } from './contracts';
-import { permitsRender, requestPaths } from './request-outcomes';
+import { permitsRender, requestPaths, screenScopes } from './request-outcomes';
 export interface Intent {
   event?: string;
   tag: string;
@@ -490,16 +490,32 @@ function effect(
       rules: serverRules(payload, targetId),
     };
   }
-  return outcomes.length === 1 &&
+  if (
+    outcomes.length === 1 &&
     (outcomes[0].resolution !== 'AMBIGUOUS' ||
       (resolution === 'AMBIGUOUS' && node.type === 'SCREEN'))
-    ? outcomes[0]
-    : {
-        kind: 'choices',
-        choices: outcomes,
-        expression: b.expression,
-        message: '有多個可能目的，請選擇；系統不會替你決定',
-      };
+  )
+    return outcomes[0];
+  // Outcomes split by the handler's own branches say which branch leads where (ADR 0185).
+  const branches = outcomes.map((item) => handlerBranch(item.evidence || []));
+  const labelled = branches.some(Boolean);
+  if (labelled)
+    outcomes.forEach((item, i) => {
+      item.label = `${item.label || ''}（${branches[i] ? '當 ' + branches[i] : '其他情況'}）`;
+    });
+  return {
+    kind: 'choices',
+    choices: outcomes,
+    expression: labelled ? undefined : b.expression,
+    message: '有多個可能目的，請選擇；系統不會替你決定',
+  };
+}
+/** The first controller return condition on the way to an outcome, when the source states one. */
+function handlerBranch(evidence: Evidence[]): string | undefined {
+  const proof = evidence.find((item) => item.parser === 'SpringControllerReturns');
+  const condition = /；條件=(.+)$/.exec(proof?.detail || '')?.[1]?.trim();
+  if (!condition || condition.includes('未求值')) return undefined;
+  return condition.replace(/^\((.*)\)$/, '$1');
 }
 /** Same bounded callback-root and event selection used by simulation and explanation. */
 function componentBehaviors(payload: Payload, component: string): Behavior[] {
@@ -597,8 +613,17 @@ function simulateRaw(
       continue;
     }
     const resolution = state(b);
+    const allowed = screenScopes(payload.graph.relationships || []).get(
+      screenId + '\u0000' + component,
+    );
+    const narrowed = allowed && candidates(b).filter((id) => allowed.has(id));
+    if (resolution === 'AMBIGUOUS' && narrowed?.length === 1) {
+      // The screen's model facts leave one literal URL alternative (ADR 0185).
+      effects.push(effect(payload, b, narrowed[0], intent, 'INFERRED'));
+      continue;
+    }
     if (resolution === 'AMBIGUOUS') {
-      const ids = candidates(b);
+      const ids = narrowed?.length ? narrowed : candidates(b);
       const outcomes = ids.map((id) => effect(payload, b, id, intent, 'AMBIGUOUS'));
       const leaves = choiceLeaves(outcomes);
       if (
