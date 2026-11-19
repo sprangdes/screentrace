@@ -628,3 +628,7 @@
 ## R108 JSP 流程狀態預覽
 
 - WP180：辨識 Spring MVC JSP 的條件式表單狀態，沿用既有畫面變體契約建立獨立截圖，並依送出的按鈕切換至對應畫面。見 [ADR 0183](adr/0183-jsp-form-state-variants.md)。
+
+## R109 Spring 表單成功路徑回放
+
+- WP181：表單回放合併相同目的及呈現結果，依原始碼中的成功轉址證據直接回放正常流程。保留各回傳分支的圖證據。見 [ADR 0184](adr/0184-spring-form-success-replay.md)。

@@ -6,6 +6,7 @@ export interface Intent {
   tag: string;
   href?: string;
   valid?: boolean;
+  uncheckedRequired?: boolean;
   dialogIds?: string[];
   componentId?: string;
 }
@@ -180,7 +181,14 @@ function screens(payload: Payload, targetId: string, paths: string[]): Effect[] 
         ['HANDLED_BY', 'RENDERS', 'FORWARDS_TO', 'NAVIGATES_TO'].includes(e.type) &&
         permitsRender(e, targetId, paths),
     )) {
-      const evidence = (edge as any).evidence || [];
+      const evidence = (edge.evidence || []).filter(
+        (item) =>
+          item.parser !== 'SpringSuccessRedirect' ||
+          (depth === 1 &&
+            edge.type === 'FORWARDS_TO' &&
+            item.source?.file === edge.source?.file &&
+            item.source?.line === edge.source?.line),
+      );
       if (!['CONFIRMED', 'INFERRED', 'AMBIGUOUS'].includes(edge.confidence)) {
         const target = nodes.get(edge.to);
         result.set(edge.id, {
@@ -443,7 +451,33 @@ function effect(
         item.label += ' · 示範成功路徑';
       }
   }
-  if (b.type === 'SUBMIT_FORM')
+  if (b.type === 'SUBMIT_FORM') {
+    const distinct = new Map<string, Effect>();
+    for (const outcome of outcomes) {
+      const { evidence, ...presentation } = outcome;
+      const key = JSON.stringify(presentation);
+      const previous = distinct.get(key);
+      if (previous) previous.evidence = [...(previous.evidence || []), ...(evidence || [])];
+      else distinct.set(key, outcome);
+    }
+    const choices = [...distinct.values()];
+    const success = choices.filter(
+      (outcome) =>
+        outcome.kind === 'navigate' &&
+        outcome.resolution !== 'AMBIGUOUS' &&
+        !outcome.condition &&
+        !outcome.dataAction?.conditional &&
+        outcome.evidence?.some((proof) => proof.parser === 'SpringSuccessRedirect'),
+    );
+    if (node.attributes.httpMethod === 'POST' && success.length === 1) {
+      if (intent.uncheckedRequired)
+        return { kind: 'invalid', message: '請勾選必填的確認項目後再送出。' };
+      return {
+        ...success[0],
+        message: success[0].evidence?.find((proof) => proof.parser === 'SpringSuccessRedirect')
+          ?.detail,
+      };
+    }
     return {
       kind: 'form',
       targetId,
@@ -452,9 +486,10 @@ function effect(
       path: node.attributes.path || node.attributes.route || node.name,
       resolution,
       evidence: b.evidence,
-      choices: outcomes,
+      choices,
       rules: serverRules(payload, targetId),
     };
+  }
   return outcomes.length === 1 &&
     (outcomes[0].resolution !== 'AMBIGUOUS' ||
       (resolution === 'AMBIGUOUS' && node.type === 'SCREEN'))
@@ -679,7 +714,9 @@ export function choiceLeaves(choices: Effect[], depth = 0): Effect[] {
 function finalize(effect: Effect): Effect {
   if (effect.choices) effect.choices = effect.choices.map(finalize);
   effect.simulatable =
-    ['navigate', 'dialog', 'api', 'ui', 'message', 'confirm', 'gate'].includes(effect.kind) ||
+    ['navigate', 'dialog', 'api', 'ui', 'message', 'confirm', 'gate', 'invalid'].includes(
+      effect.kind,
+    ) ||
     (['form', 'choices', 'sequence'].includes(effect.kind) &&
       !!effect.choices?.some((choice) => choice.simulatable));
   if (!effect.simulatable && !effect.reason)

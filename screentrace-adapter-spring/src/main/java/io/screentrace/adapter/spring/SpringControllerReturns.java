@@ -327,7 +327,52 @@ final class SpringControllerReturns {
                       + "；原始運算式="
                       + setter));
     if (value.kind() != Kind.UNKNOWN) evidence.addAll(feedback(method, statement, file));
+    if ((value.kind() == Kind.REDIRECT || value.kind() == Kind.REDIRECT_VIEW)
+        && condition.isEmpty()
+        && statement.findAncestor(IfStmt.class).isEmpty()
+        && statement.findAncestor(CatchClause.class).isEmpty())
+      successRedirect(method, statement, file).ifPresent(evidence::add);
     targets.add(new Target(value.kind(), value.value(), raw, source, evidence, branch));
+  }
+
+  private static Optional<AnalysisEvidence> successRedirect(
+      MethodDeclaration method, ReturnStmt use, String file) {
+    var flash =
+        method.getParameters().stream()
+            .filter(
+                p ->
+                    Set.of(
+                            "RedirectAttributes",
+                            "org.springframework.web.servlet.mvc.support.RedirectAttributes")
+                        .contains(p.getTypeAsString()))
+            .map(Parameter::getNameAsString)
+            .collect(java.util.stream.Collectors.toSet());
+    if (flash.isEmpty() || !(use.getParentNode().orElse(null) instanceof BlockStmt block))
+      return Optional.empty();
+    List<MethodCallExpr> matches = new ArrayList<>();
+    for (var statement : block.getStatements()) {
+      if (statement == use) break;
+      if (statement instanceof ExpressionStmt expr
+          && expr.getExpression() instanceof MethodCallExpr call
+          && call.getNameAsString().equals("addFlashAttribute")
+          && call.getScope()
+              .filter(Expression::isNameExpr)
+              .map(scope -> flash.contains(scope.asNameExpr().getNameAsString()))
+              .orElse(false)
+          && call.getArguments().size() == 2
+          && call.getArgument(0).isStringLiteralExpr()
+          && call.getArgument(0).asStringLiteralExpr().asString().equals("success")
+          && call.getArgument(1).isStringLiteralExpr()
+          && !call.getArgument(1).asStringLiteralExpr().asString().isBlank()) matches.add(call);
+    }
+    if (matches.size() != 1) return Optional.empty();
+    var call = matches.get(0);
+    return Optional.of(
+        new AnalysisEvidence(
+            new SourceLocation(file, use.getBegin().orElseThrow().line),
+            "SpringSuccessRedirect",
+            ResolutionStatus.INFERRED,
+            call.getArgument(1).asStringLiteralExpr().asString()));
   }
 
   static String branchKey(Target target) {

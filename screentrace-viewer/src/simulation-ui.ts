@@ -46,7 +46,7 @@ function submitControl(node: Element): boolean {
   );
 }
 
-/** Simulates a click as the real page would: a submit control acts for its form, and forms are always treated as valid. */
+/** Maps the click to its graph component or containing form and reads checkbox state for replay. */
 export function simulateElement(
   payload: Payload,
   id: string,
@@ -56,9 +56,11 @@ export function simulateElement(
   event?: string,
 ) {
   const own = previewElement(payload, id, node),
+    attributes = payload.graph.nodes.find((n) => n.id === own?.graphComponentId)?.attributes,
     submitter =
-      payload.graph.nodes.find((n) => n.id === own?.graphComponentId)?.attributes
-        .submitterAction === 'true' ||
+      attributes?.submitterAction === 'true' ||
+      attributes?.formaction != null ||
+      attributes?.formmethod != null ||
       payload.graph.relationships?.some(
         (edge) =>
           edge.from === own?.graphComponentId &&
@@ -81,6 +83,22 @@ export function simulateElement(
       : null;
   const target = form || parentLink || node,
     record = previewElement(payload, id, target);
+  const submittedForm = submitControl(node)
+    ? (node as HTMLButtonElement | HTMLInputElement).form
+    : node.localName === 'form'
+      ? (node as HTMLFormElement)
+      : undefined;
+  const uncheckedRequired =
+    !!submittedForm &&
+    !submittedForm.noValidate &&
+    !node.hasAttribute('formnovalidate') &&
+    Array.from(submittedForm.elements).some(
+      (field) =>
+        field.matches('input[type="checkbox"][required]:not(:disabled)') &&
+        !(field as HTMLInputElement).checked &&
+        !field.closest('[hidden]') &&
+        field.getClientRects().length > 0,
+    );
   const identity = target.getAttribute('data-st-component-id');
   if (
     !componentId &&
@@ -93,6 +111,7 @@ export function simulateElement(
     tag: target.localName,
     href: target.getAttribute('href') || undefined,
     valid: true,
+    uncheckedRequired,
     dialogIds,
     componentId,
     event,
@@ -497,6 +516,10 @@ export function attachSimulation(
   };
   const render = (effect: Effect, record: ElementRecord | undefined, node: Element) => {
     status.replaceChildren();
+    if (effect.kind === 'invalid') {
+      say(effect.message || '請確認必填項目');
+      return;
+    }
     if (effect.kind === 'confirm') {
       message(effect.message || '');
       const modal = doc.querySelector('.simulation-modal')!,
@@ -618,7 +641,12 @@ export function attachSimulation(
       setSubmittedValues(payload, effect.targetId, effect.inputProjection ?? {}, node);
       options.focus(
         effect.targetId,
-        dataNotice || (effect.inputProjection ? '已回放提交欄位；其他資料為來源範例' : undefined),
+        dataNotice ||
+          (effect.message
+            ? `模擬結果：${effect.message}`
+            : effect.inputProjection
+              ? '已回放提交欄位；其他資料為來源範例'
+              : undefined),
       );
       return;
     }
@@ -671,7 +699,7 @@ export function attachSimulation(
       const submission = event as SubmitEvent;
       submit(
         event.target as HTMLFormElement,
-        submission.submitter instanceof Element ? submission.submitter : null,
+        submission.submitter?.nodeType === 1 ? submission.submitter : null,
       );
     },
     true,

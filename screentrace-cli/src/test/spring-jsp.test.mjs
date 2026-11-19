@@ -32,6 +32,7 @@ test('Spring JSP resolves request branches and shared Tiles bodies', () => {
       import org.springframework.ui.Model;
       import org.springframework.web.bind.annotation.*;
       import org.springframework.web.servlet.ModelAndView;
+      import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
       @Controller class ControllerSource {
         @RequestMapping(value="/", method=RequestMethod.GET)
@@ -52,7 +53,11 @@ test('Spring JSP resolves request branches and shared Tiles bodies', () => {
         }
 
         @RequestMapping(value="/item", method=RequestMethod.POST)
-        String submit(@RequestParam("id") String id) { return "redirect:/item/" + id; }
+        String submit(@RequestParam("id") String id, RedirectAttributes flash) {
+          if ("saved".equals(id)) return "redirect:/item/" + id;
+          flash.addFlashAttribute("success", "Saved.");
+          return "redirect:/item/" + id;
+        }
 
         @RequestMapping(value="/manage/item/{id}/change", method=RequestMethod.POST)
         String update(@RequestParam("state") String state) { return "redirect:/manage/item/{id}"; }
@@ -180,6 +185,18 @@ test('Spring JSP resolves request branches and shared Tiles bodies', () => {
     ]);
     assert.deepEqual(sorted(targets(find('COMPONENT', 'edit item'), 'NAVIGATES_TO')), ['form']);
     assert.deepEqual(sorted(targets(find('COMPONENT', 'save'), 'NAVIGATES_TO')), ['detail']);
+    const submitRedirects = graph.relationships.filter(
+      (edge) =>
+        edge.from === find('HANDLER', 'ControllerSource.submit()').id &&
+        edge.type === 'FORWARDS_TO',
+    );
+    assert.equal(submitRedirects.length, 2);
+    assert.equal(
+      submitRedirects.filter((edge) =>
+        edge.evidence.some((e) => e.parser === 'SpringSuccessRedirect' && e.detail === 'Saved.'),
+      ).length,
+      1,
+    );
     assert.ok(targets(find('SCREEN', 'detail'), 'CONTAINS').includes('item link'));
     assert.ok(targets(find('SCREEN', 'staff'), 'CONTAINS').includes('item link'));
     assert.deepEqual(sorted(targets(find('COMPONENT', 'item link'), 'TRIGGERS')), [
