@@ -1,5 +1,6 @@
 import { Index } from './map';
 import { element, text } from './text';
+import { icon } from './shell-ui';
 import {
   PersonaView,
   reachLabel,
@@ -103,6 +104,8 @@ export const PERSONA_SPLIT: SplitRange = { initial: 28, min: 20, max: 45 };
 
 export interface PersonaPageOptions {
   selected?: string;
+  /** A screen's review decision, shown as the same corner mark as on the map. */
+  status?: (screenId: string) => string;
   onOpen: (screenId: string, personaId: string) => void;
   onPersona: (personaId: string) => void;
 }
@@ -221,6 +224,15 @@ export function personaPage(
       element('span', name(id), 'persona-card-name'),
       element('code', route(id), 'persona-card-route'),
     );
+    const status = options.status?.(id);
+    if (status === 'KEEP' || status === 'REMOVE') {
+      button.dataset.screenStatus = status;
+      const decided = icon(status === 'KEEP' ? 'check' : 'close');
+      decided.classList.add('review-status-icon');
+      decided.setAttribute('role', 'img');
+      decided.setAttribute('aria-label', status === 'KEEP' ? text.keep : text.remove);
+      button.append(decided);
+    }
     if (reach === 'POSSIBLE') {
       const mark = element('span', reachLabel.POSSIBLE, 'persona-pill');
       mark.dataset.reach = reach;

@@ -166,6 +166,11 @@ main{position:relative;overflow:hidden;min-width:0}
 .review-status-icon{position:absolute;right:8px;top:8px;width:26px;height:26px;padding:4px;border-radius:50%;color:white;stroke-width:2.6}
 .screen-card[data-screen-status=KEEP] .review-status-icon{background:var(--keep)}
 .screen-card[data-screen-status=REMOVE] .review-status-icon{background:var(--remove)}
+.persona-card{position:relative}
+.persona-card[data-screen-status]{padding-right:32px}
+.persona-card .review-status-icon{right:6px;top:6px;width:20px;height:20px;padding:3px}
+.persona-card[data-screen-status=KEEP] .review-status-icon{background:var(--keep)}
+.persona-card[data-screen-status=REMOVE] .review-status-icon{background:var(--remove)}
 .canvas[data-semantic-zoom=compact] .screen-caption strong{font-size:16px}
 .canvas-controls{position:absolute;right:16px;bottom:16px;z-index:5;display:flex;gap:4px;padding:4px;background:white;border:1px solid var(--gray-200);border-radius:8px;box-shadow:var(--shadow-float)}
 .relation-tooltip{position:absolute;z-index:20;min-width:200px;max-width:280px;padding:12px;background:white;border:1px solid var(--gray-200);border-radius:var(--radius);box-shadow:var(--shadow-float);pointer-events:none;font-size:13px}
