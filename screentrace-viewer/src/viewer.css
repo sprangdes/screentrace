@@ -549,7 +549,6 @@ body[data-presenting=true] .focus-layer{position:fixed!important;inset:0!importa
 .persona-row-about{color:var(--gray-500);font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .persona-row .api-screen-count{padding-top:1px}
 .persona-detail-name{margin:0;font-size:18px}
-.persona-flow-button{margin-left:auto;font-size:13px}
 .persona-fact{display:inline-block;margin:0 8px 4px 0;font-size:13px}
 .persona-step-title{margin:0 0 2px;font-size:13px;font-weight:600;color:var(--gray-700)}
 .persona-pill{padding:1px 8px;border-radius:999px;background:white;color:var(--gray-700);box-shadow:inset 0 0 0 1px var(--gray-300);font-size:12px;font-weight:600;white-space:nowrap}
@@ -598,10 +597,6 @@ body[data-presenting=true] .focus-layer{position:fixed!important;inset:0!importa
 .api-chain-link{flex:none;align-self:center;width:28px;height:2px;margin:16px 4px 0;background:var(--gray-300);position:relative}
 .api-chain-link::after{content:'';position:absolute;right:-1px;top:-4px;border:5px solid transparent;border-left:6px solid var(--gray-300);border-right:0}
 @media (max-width:900px){.api-chain{flex-direction:column}.api-chain-link{width:2px;height:16px;margin:4px 0 4px 16px;align-self:flex-start}.api-chain-link::after{right:auto;top:auto;left:-4px;bottom:-6px;border:5px solid transparent;border-top:6px solid var(--gray-300);border-bottom:0}}
-.persona-overlap-bar{flex:0 0 120px;height:6px;align-self:center;margin-left:auto;border-radius:999px;background:var(--gray-200);overflow:hidden}
-.persona-overlap-fill{display:block;height:100%;background:var(--gray-500)}
-.persona-overlap-bar[data-overlap=only] .persona-overlap-fill{background:var(--keep)}
-[data-persona-section=compare] summary .persona-overlap-bar+.muted{min-width:64px;text-align:right;white-space:nowrap}
 /* R32: method colors, path parameters, caller counts as bars, and which persona reaches which screen. */
 .method-badge[data-method=GET]{background:#e9effc;border-color:#c4d2f3;color:#1d3b9e}
 .method-badge[data-method=POST]{background:#f0ebfb;border-color:#d5c8f2;color:#4f2fa8}
@@ -650,9 +645,24 @@ button.persona-coverage-dot:hover{outline:2px solid var(--primary);outline-offse
 .persona-cards .persona-row[data-role-tint].is-current{background:var(--tint);border-color:var(--tint-ink);box-shadow:inset 0 0 0 1px var(--tint-ink)}
 .persona-compare-all{margin-left:auto}
 .persona-compare-all[aria-pressed=true]{background:var(--primary);border-color:var(--primary);color:white}
-.persona-detail{flex:1;min-height:0;overflow:auto;padding:20px 24px 48px}
+.persona-body{flex:1;min-height:0;display:flex}
+.persona-detail{flex:1;min-width:0;min-height:0;overflow:auto;padding:20px 24px 48px}
+.persona-drawer{flex:none;width:0;overflow:hidden;display:flex;flex-direction:column;background:white;border-left:1px solid transparent;transition:width .2s ease,border-color .2s}
+.persona-body[data-drawer=open] .persona-drawer{width:min(480px,45%);border-left-color:var(--gray-200);box-shadow:-8px 0 24px #1b1e2212}
+.persona-drawer-head{flex:none;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:14px 16px 8px 20px;min-width:300px}
+.persona-drawer-head h2{margin:0;font-size:16px}
+.persona-drawer-body{flex:1;min-height:0;overflow:auto;padding:0 20px 32px;min-width:300px}
+.persona-drawer .persona-all{max-width:none}
+.persona-drawer [data-persona-section=coverage]>h3{display:none}
+.persona-drawer .persona-coverage-table{width:100%}
+@media (prefers-reduced-motion:reduce){.persona-drawer{transition:none}}
 .persona-layout{display:grid;grid-template-columns:minmax(0,1fr) 12px max(260px,var(--split,28%));column-gap:6px;row-gap:24px;align-items:stretch}
 .persona-main{align-self:start}
+.persona-layout:not(:has(.persona-side)){grid-template-columns:minmax(0,1fr)}
+.persona-meta{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;margin-top:-8px;font-size:13px}
+.persona-meta .persona-fact{margin:0}
+.persona-meta-label{color:var(--gray-500);font-weight:600}
+.persona-meta-label:not(:first-child){margin-left:10px}
 .persona-side{align-self:start}
 .persona-main,.persona-side{display:flex;flex-direction:column;gap:16px;min-width:0}
 .persona-side{padding:16px;border:1px solid var(--gray-200);border-radius:var(--radius);background:white}

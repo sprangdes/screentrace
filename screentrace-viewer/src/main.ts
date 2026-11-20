@@ -1749,11 +1749,6 @@ try {
             showUnreached = !activePersona()?.depth.has(screenId);
             openScreen(screenId);
           },
-          onPersona: (id) => {
-            personaId = id;
-            showUnreached = false;
-            showCanvas();
-          },
         }),
       );
       view = undefined;

@@ -13,64 +13,7 @@ import {
   reachCountsLabel,
   roleTint,
 } from './personas';
-import { proportionBar, sharePercent } from './proportion';
-import { splitter, SplitRange } from './splitter';
-
-export interface PersonaOverlap {
-  key: string;
-  label: string;
-  screens: string[];
-}
-/**
- * The screens this persona reaches, split by which other personas also reach them: its own screens first, then
- * screens shared with more personas before fewer, in persona order.
- */
-export function personaOverlap(
-  index: Index,
-  views: PersonaView[],
-  view: PersonaView,
-): PersonaOverlap[] {
-  const others = views.filter((other) => other !== view),
-    order = new Map(views.map((v, i) => [v.persona.id, i]));
-  const name = (id: string) => index.nodes.get(id)?.name || id;
-  const groups = new Map<string, { with: PersonaView[]; screens: string[] }>();
-  for (const screen of index.screens) {
-    if (!view.depth.has(screen.id)) continue;
-    const sharing = others.filter((other) => other.depth.has(screen.id)),
-      key = sharing.map((other) => other.persona.id).join('+') || 'only';
-    const group = groups.get(key) || groups.set(key, { with: sharing, screens: [] }).get(key)!;
-    group.screens.push(screen.id);
-  }
-  const rank = (list: PersonaView[]) => list.map((v) => order.get(v.persona.id)!);
-  const compare = (a: number[], b: number[]) => {
-    for (let i = 0; i < Math.min(a.length, b.length); i++) if (a[i] !== b[i]) return a[i] - b[i];
-    return a.length - b.length;
-  };
-  const byStep = (a: string, b: string) =>
-    view.depth.get(a)! - view.depth.get(b)! ||
-    name(a).localeCompare(name(b), 'zh-Hant') ||
-    (a < b ? -1 : a > b ? 1 : 0);
-  return [...groups]
-    .sort(
-      ([ka, a], [kb, b]) =>
-        Number(kb === 'only') - Number(ka === 'only') ||
-        b.with.length - a.with.length ||
-        compare(rank(a.with), rank(b.with)),
-    )
-    .map(([key, group]) => ({
-      key,
-      label:
-        key === 'only'
-          ? '只有這個角色'
-          : group.with.length === others.length
-            ? '所有角色共用'
-            : `和${group.with.map((v) => v.persona.name).join('、')}共用`,
-      screens: group.screens.sort(byStep),
-    }));
-}
-
-/** A group's share of the persona's screens as a bar length, rounded to a whole percent and never below 1. */
-export const overlapPercent = sharePercent;
+import { proportionBar } from './proportion';
 
 /**
  * The screens any persona reaches, for the coverage table: grouped by the first persona (in persona order) that
@@ -97,17 +40,13 @@ export function coverageScreens(index: Index, views: PersonaView[]): string[] {
 const memory = {
   selected: undefined as string | undefined,
   all: false,
-  split: undefined as number | undefined,
 };
-/** The side column's share of the layout: 28% at first, between 20% and 45%, and never narrower than 260px (CSS). */
-export const PERSONA_SPLIT: SplitRange = { initial: 28, min: 20, max: 45 };
 
 export interface PersonaPageOptions {
   selected?: string;
   /** A screen's review decision, shown as the same corner mark as on the map. */
   status?: (screenId: string) => string;
   onOpen: (screenId: string, personaId: string) => void;
-  onPersona: (personaId: string) => void;
 }
 
 /**
@@ -147,7 +86,18 @@ export function personaPage(
   };
   top.append(title, list);
   if (canCompare) top.append(compareAll);
-  root.append(top, detail);
+  // The comparison slides in beside the role's flow instead of replacing it.
+  const body = element('div', undefined, 'persona-body'),
+    drawer = element('aside', undefined, 'persona-drawer'),
+    drawerHead = element('div', undefined, 'persona-drawer-head'),
+    drawerBody = element('div', undefined, 'persona-drawer-body');
+  drawer.setAttribute('aria-label', '全部角色對照');
+  drawer.dataset.personaDrawer = 'true';
+  // The 全部角色對照 button opens and closes it; the column has no close button of its own.
+  drawerHead.append(element('h2', '全部角色對照'));
+  drawer.append(drawerHead, drawerBody);
+  body.append(detail, drawer);
+  root.append(top, body);
   const name = (id: string) => index.nodes.get(id)?.name || id;
   const route = (id: string) => index.routes.get(id)?.[0] || text.noUrl;
 
@@ -155,20 +105,21 @@ export function personaPage(
   const sync = (focus = false) => {
     for (const row of list.querySelectorAll<HTMLElement>('.persona-row')) {
       const on = row.dataset.personaRow === selected;
-      row.setAttribute('aria-selected', String(on && !all));
-      row.classList.toggle('is-current', on && !all);
+      row.setAttribute('aria-selected', String(on));
+      row.classList.toggle('is-current', on);
       row.tabIndex = on ? 0 : -1;
       if (on && focus) row.focus();
     }
     compareAll.setAttribute('aria-pressed', String(all));
+    compareAll.setAttribute('aria-expanded', String(all));
+    body.dataset.drawer = all ? 'open' : 'closed';
+    drawer.inert = !all;
     if (all) renderAll();
-    else renderDetail();
+    renderDetail();
   };
   const select = (id: string, focus = false) => {
     selected = id;
     memory.selected = id;
-    all = false;
-    memory.all = false;
     sync(focus);
   };
   for (const view of views) {
@@ -242,31 +193,6 @@ export function personaPage(
     button.onclick = () => options.onOpen(id, view.persona.id);
     return button;
   };
-  /** Screens as compact chips, for the comparison and the screens outside the flow. */
-  const chips = (view: PersonaView, ids: string[]) => {
-    const box = element('div', undefined, 'api-caller-list');
-    for (const id of ids) {
-      const chip = element('button', name(id), 'api-caller');
-      chip.type = 'button';
-      chip.dataset.personaScreen = id;
-      chip.title = route(id);
-      chip.onclick = () => options.onOpen(id, view.persona.id);
-      box.append(chip);
-    }
-    return box;
-  };
-  const fold = (label: string, count: number, key: string, body: HTMLElement) => {
-    const box = element('details', undefined, 'api-shared');
-    box.dataset.personaFold = key;
-    const summary = element('summary');
-    summary.append(
-      element('span', label, 'api-shared-name'),
-      element('span', `${count} 個畫面`, 'muted'),
-    );
-    box.append(summary, body);
-    return box;
-  };
-
   /** Every reached screen against every persona: a dot per cell; a reached cell opens the screen as that persona. */
   const coverage = () => {
     const box = section('畫面 × 角色', 'coverage');
@@ -333,12 +259,10 @@ export function personaPage(
     return box;
   };
   const renderAll = () => {
-    detail.replaceChildren();
     const inner = element('div', undefined, 'persona-all');
     inner.dataset.personaAll = 'true';
     inner.append(coverage());
-    detail.append(inner);
-    detail.scrollTop = 0;
+    drawerBody.replaceChildren(inner);
   };
 
   const renderDetail = () => {
@@ -351,15 +275,22 @@ export function personaPage(
     const inner = element('div', undefined, 'persona-layout');
     inner.dataset.personaDetail = view.persona.id;
     inner.dataset.roleTint = roleTint(index.graph, view.persona.id);
-    const main = element('div', undefined, 'persona-main'),
-      side = element('aside', undefined, 'persona-side');
-    side.setAttribute('aria-label', '條件與比較');
-    const heading = element('div', undefined, 'api-detail-title'),
-      flow = element('button', '在畫布上看流程', 'persona-flow-button');
-    flow.type = 'button';
-    flow.dataset.personaFlow = view.persona.id;
-    flow.onclick = () => options.onPersona(view.persona.id);
-    heading.append(element('h2', view.persona.name, 'persona-detail-name'), flow);
+    const main = element('div', undefined, 'persona-main');
+    const heading = element('div', undefined, 'api-detail-title');
+    heading.append(element('h2', view.persona.name, 'persona-detail-name'));
+    // Who the role is, in one line under its name: its conditions and where it starts.
+    const meta = element('div', undefined, 'persona-meta');
+    meta.append(element('span', '判定條件', 'persona-meta-label'));
+    for (const fact of view.persona.facts) {
+      const chip = element('code', factLabel(fact), 'persona-fact');
+      chip.dataset.truth = String(fact.truth);
+      meta.append(chip);
+    }
+    if (!view.persona.facts.length) meta.append(element('span', '（沒有條件）', 'muted'));
+    meta.append(
+      element('span', '起點', 'persona-meta-label'),
+      element('code', (view.persona.startPaths || []).join('、') || '/', 'persona-fact'),
+    );
     main.append(
       heading,
       element(
@@ -367,6 +298,7 @@ export function personaPage(
         `${personaDescription(view.persona) ? personaDescription(view.persona) + '。' : ''}${reachSummary(view)}。`,
         'api-reason',
       ),
+      meta,
     );
 
     // The flow as a board: one column per step, each screen a card; a column's heading says how many screens it has.
@@ -403,52 +335,8 @@ export function personaPage(
     }
     main.append(flowBox);
 
-    const conditions = section('判定條件', 'conditions');
-    for (const fact of view.persona.facts) {
-      const chip = element('code', factLabel(fact), 'persona-fact');
-      chip.dataset.truth = String(fact.truth);
-      conditions.append(chip);
-    }
-    if (!view.persona.facts.length) conditions.append(element('p', '（沒有條件）', 'muted'));
-    const starts = section('起點', 'starts');
-    starts.append(
-      element('code', (view.persona.startPaths || []).join('、') || '/', 'persona-fact'),
-    );
-    side.append(conditions, starts);
-    if (views.length > 1 && view.depth.size) {
-      const compare = section('和其他角色比較', 'compare');
-      // Each group's bar is as long as its share of this persona's screens, so the groups compare at a glance.
-      for (const overlap of personaOverlap(index, views, view)) {
-        const box = fold(
-          overlap.label,
-          overlap.screens.length,
-          overlap.key,
-          chips(view, overlap.screens),
-        );
-        const bar = element('span', undefined, 'persona-overlap-bar'),
-          fill = element('span', undefined, 'persona-overlap-fill');
-        bar.setAttribute('aria-hidden', 'true');
-        bar.dataset.overlap = overlap.key === 'only' ? 'only' : 'shared';
-        fill.style.width = `${overlapPercent(overlap.screens.length, view.depth.size)}%`;
-        bar.append(fill);
-        box.querySelector('summary')!.insertBefore(bar, box.querySelector('summary .muted'));
-        compare.append(box);
-      }
-      side.append(compare);
-    }
-    inner.append(
-      main,
-      splitter(inner, {
-        label: '條件與比較欄寬度',
-        side: 'end',
-        range: PERSONA_SPLIT,
-        value: memory.split ?? PERSONA_SPLIT.initial,
-        onChange: (value) => {
-          memory.split = value;
-        },
-      }),
-      side,
-    );
+    // The flow board takes the whole width (no side column).
+    inner.append(main);
     detail.append(inner);
     detail.scrollTop = 0;
   };
