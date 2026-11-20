@@ -583,7 +583,7 @@ body[data-presenting=true] .focus-layer{position:fixed!important;inset:0!importa
 .api-chain{display:flex;align-items:stretch;gap:0;margin:12px 0 4px;padding:12px;border:1px solid var(--gray-200);border-radius:var(--radius);background:var(--gray-100)}
 .api-chain-stage{display:flex;flex-direction:column;gap:6px;min-width:0;flex:1 1 0}
 .api-chain-stage[data-chain-stage=api]{flex:1.2 1 0}
-.api-chain-heading{font-size:12px;font-weight:600;color:var(--gray-500)}
+.api-chain-heading{font-size:12px;line-height:18px;font-weight:600;color:var(--gray-500)}
 .api-chain-items{display:flex;flex-direction:column;justify-content:center;gap:4px;flex:1}
 .api-chain-node{display:flex;flex-direction:column;align-items:flex-start;gap:1px;min-width:0;padding:4px 8px;border:1px solid var(--gray-300);border-radius:6px;background:white;font-size:13px;text-align:left}
 .api-chain-node.is-self{flex-direction:row;align-items:center;gap:6px;border-width:2px}
@@ -595,7 +595,8 @@ body[data-presenting=true] .focus-layer{position:fixed!important;inset:0!importa
 .api-chain-name{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}
 .api-chain-trigger{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;color:var(--gray-500)}
 .api-chain-more{font-size:12px;color:var(--gray-500);padding:0 8px}
-.api-chain-link{flex:none;align-self:center;width:28px;height:2px;margin:16px 4px 0;background:var(--gray-300);position:relative}
+/* margin-top = heading line (18px) + stage gap (6px), so the arrow centres on the boxes below the headings. */
+.api-chain-link{flex:none;align-self:center;width:28px;height:2px;margin:24px 4px 0;background:var(--gray-300);position:relative}
 .api-chain-link::after{content:'';position:absolute;right:-1px;top:-4px;border:5px solid transparent;border-left:6px solid var(--gray-300);border-right:0}
 @media (max-width:900px){.api-chain{flex-direction:column}.api-chain-link{width:2px;height:16px;margin:4px 0 4px 16px;align-self:flex-start}.api-chain-link::after{right:auto;top:auto;left:-4px;bottom:-6px;border:5px solid transparent;border-top:6px solid var(--gray-300);border-bottom:0}}
 /* R32: method colors, path parameters, caller counts as bars, and which persona reaches which screen. */
