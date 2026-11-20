@@ -133,14 +133,14 @@ export function featureMap(
       row.dataset.flowEntry = flow.entry;
       row.append(element('span', `流程 ${at + 1}`, 'fm-flow-label'));
       const steps = element('ol', undefined, 'fm-steps');
+      // Every step is the same size (arrow slot + box) so wrapped steps line up in columns.
       flow.screens.forEach((id, step) => {
-        if (step) {
-          const arrow = element('li', undefined, 'fm-arrow');
-          arrow.setAttribute('aria-hidden', 'true');
-          arrow.append(icon('arrow'));
-          steps.append(arrow);
-        }
-        steps.append(chip(id));
+        const item = chip(id),
+          arrow = element('span', undefined, 'fm-arrow');
+        arrow.setAttribute('aria-hidden', 'true');
+        if (step) arrow.append(icon('arrow'));
+        item.prepend(arrow);
+        steps.append(item);
       });
       row.append(steps);
       flows.append(row);
@@ -152,16 +152,15 @@ export function featureMap(
   function chip(id: string): HTMLLIElement {
     const screen = index.nodes.get(id)!,
       { decision, inherited } = actions.status(id),
-      item = element('li'),
+      item = element('li', undefined, 'fm-step'),
       button = element('button', undefined, 'fm-screen');
     button.type = 'button';
     button.dataset.featureScreen = id;
     button.dataset.decision = decision;
     if (inherited) button.dataset.inherited = 'true';
-    button.append(
-      element('strong', screen.name),
-      element('code', index.routes.get(id)?.[0] || text.noUrl),
-    );
+    const route = index.routes.get(id)?.[0] || text.noUrl;
+    button.title = `${screen.name}\n${route}`;
+    button.append(element('strong', screen.name), element('code', route));
     if (decision !== 'UNDECIDED')
       button.append(
         element(

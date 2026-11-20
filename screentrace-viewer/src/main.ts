@@ -1076,10 +1076,10 @@ try {
           decision = featureDecision(reviewState, feature.key);
         section.dataset.featureGroup = feature.key;
         section.open = !featuresCollapsed.has(feature.key) || ids.includes(current || '');
-        summary.append(
-          element('span', feature.label),
-          element('span', String(ids.length), 'muted'),
-        );
+        // Written like the canvas group titles: 「/admin · 3 個畫面」.
+        const name = element('span', undefined, 'feature-group-name');
+        name.append(feature.label, element('span', ` · ${ids.length} 個畫面`, 'muted'));
+        summary.append(name);
         if (decision !== 'UNDECIDED') {
           const mark = icon(decision === 'KEEP' ? 'check' : 'close');
           mark.classList.add('status-mark', `decision-${decision}`);
@@ -1087,12 +1087,16 @@ try {
           mark.setAttribute('aria-label', `功能${decisionLabel(decision)}`);
           summary.append(mark);
         }
+        const chevron = icon('chevronRight');
+        chevron.classList.add('feature-group-chevron');
+        summary.append(chevron);
         section.addEventListener('toggle', () => {
           if (section.open) featuresCollapsed.delete(feature.key);
           else featuresCollapsed.add(feature.key);
         });
-        section.append(summary);
-        for (const id of ids) section.append(row(id));
+        const items = element('div', undefined, 'feature-group-items');
+        for (const id of ids) items.append(row(id));
+        section.append(summary, items);
         list.append(section);
       }
       if (!list.querySelector('.screen-row'))
