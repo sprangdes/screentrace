@@ -526,7 +526,6 @@ body[data-presenting=true] .focus-layer{position:fixed!important;inset:0!importa
 .persona-group{margin:6px 0}
 .persona-group>h3,.persona-group>summary{margin:0 0 2px;padding:2px 8px;font-size:13px;font-weight:600;color:var(--gray-500)}
 .persona-group>summary{cursor:pointer}
-.persona-reach{flex:none;padding:1px 6px;border-radius:999px;font-size:12px;background:var(--gray-50);color:var(--gray-500)}
 .persona-reach[data-reach=REACHABLE]{background:var(--keep-soft);color:var(--keep)}
 .persona-reach[data-reach=POSSIBLE]{background:white;color:var(--gray-700);box-shadow:inset 0 0 0 1px var(--gray-300)}
 .screen-row[data-persona-reach=EXCLUDED] strong,.screen-row[data-persona-reach=UNREACHED] strong{color:var(--gray-500)}
@@ -573,6 +572,7 @@ body[data-presenting=true] .focus-layer{position:fixed!important;inset:0!importa
 .api-group-header .api-group-bar{flex:none;width:48px;height:6px;margin-left:auto}
 .api-group-header .api-group-attention+.api-group-bar{margin-left:0}
 .persona-reach-bar{height:6px;margin-top:4px}
+.persona-reach{flex:none;padding:1px 6px;border-radius:999px;font-size:12px;background:var(--gray-50);color:var(--gray-500)}
 .persona-fact[data-truth]{padding:1px 8px;border-radius:999px}
 .persona-fact[data-truth=true]{background:var(--keep-soft);color:var(--keep)}
 .persona-fact[data-truth=false]{background:var(--gray-50);color:var(--gray-700);box-shadow:inset 0 0 0 1px var(--gray-200)}
@@ -637,12 +637,10 @@ button.persona-coverage-dot:hover{outline:2px solid var(--primary);outline-offse
 .persona-top{display:flex;align-items:center;flex-wrap:wrap;gap:12px 16px;padding:12px 24px;background:white;border-bottom:1px solid var(--gray-200)}
 .persona-top h1{display:flex;align-items:baseline;gap:6px;font-size:18px}
 .persona-cards{display:flex;flex-wrap:wrap;gap:8px;flex:1;min-width:0}
-.persona-cards .persona-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 8px;align-items:baseline;width:250px;padding:8px 10px;border:1px solid var(--gray-200);border-radius:var(--radius);background:white}
+.persona-cards .persona-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 8px;align-items:baseline;width:auto;min-width:120px;padding:8px 14px;border:1px solid var(--gray-200);border-radius:var(--radius);background:white}
 .persona-cards .persona-row-text{display:contents}
 .persona-cards .persona-row strong{grid-row:1;grid-column:1}
-.persona-cards .persona-row .api-screen-count{grid-row:1;grid-column:2;padding:0}
 .persona-cards .persona-row-about{grid-row:2;grid-column:1/3}
-.persona-cards .persona-reach-bar{grid-row:3;grid-column:1/3;width:100%}
 .persona-cards .persona-row.is-current{border-color:var(--primary);box-shadow:inset 0 0 0 1px var(--primary);background:var(--primary-soft)}
 .persona-cards .persona-row[data-role-tint].is-current{background:var(--tint);border-color:var(--tint-ink);box-shadow:inset 0 0 0 1px var(--tint-ink)}
 .persona-compare-all{margin-left:auto}
@@ -661,10 +659,6 @@ button.persona-coverage-dot:hover{outline:2px solid var(--primary);outline-offse
 .persona-layout{display:grid;grid-template-columns:minmax(0,1fr) 12px max(260px,var(--split,28%));column-gap:6px;row-gap:24px;align-items:stretch}
 .persona-main{align-self:start}
 .persona-layout:not(:has(.persona-side)){grid-template-columns:minmax(0,1fr)}
-.persona-meta{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;margin-top:-8px;font-size:13px}
-.persona-meta .persona-fact{margin:0}
-.persona-meta-label{color:var(--gray-500);font-weight:600}
-.persona-meta-label:not(:first-child){margin-left:10px}
 .persona-side{align-self:start}
 .persona-main,.persona-side{display:flex;flex-direction:column;gap:16px;min-width:0}
 .persona-side{padding:16px;border:1px solid var(--gray-200);border-radius:var(--radius);background:white}
@@ -854,3 +848,15 @@ button.api-chain-node:hover{border-color:var(--gray-500)}
 .api-caller-kind{flex:none;padding:1px 6px;border-radius:4px;background:var(--gray-100);color:var(--gray-700);font-size:11px;font-weight:700;letter-spacing:.02em}
 .api-caller.is-trigger[data-trigger-kind=按鈕] .api-caller-kind{background:var(--primary-soft);color:var(--primary)}
 .api-caller.is-screen .icon{width:14px;height:14px;color:var(--tint-ink,var(--gray-500))}
+
+/* Role summary under its name: labels in one column, values in the next. */
+.persona-facts{display:grid;grid-template-columns:max-content minmax(0,1fr);column-gap:16px;row-gap:8px;align-items:center;margin:-6px 0 4px;font-size:13px}
+.persona-facts dt{color:var(--gray-500);font-weight:600}
+.persona-facts dd{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;margin:0;min-width:0}
+.persona-facts .persona-fact{margin:0}
+.persona-facts .persona-reach-bar{flex:0 1 220px;margin:0}
+.persona-reach-legend{display:inline-flex;gap:12px;color:var(--gray-700)}
+.persona-reach-key{display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
+.persona-reach-key::before{content:'';width:8px;height:8px;border-radius:2px}
+.persona-reach-key[data-reach=REACHABLE]::before{background:var(--keep)}
+.persona-reach-key[data-reach=POSSIBLE]::before{background:var(--keep-light)}

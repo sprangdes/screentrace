@@ -5,7 +5,6 @@ import {
   PersonaView,
   reachLabel,
   reachHelp,
-  reachSummary,
   personaDescription,
   factLabel,
   flowGroups,
@@ -132,10 +131,8 @@ export function personaPage(
     const about = personaDescription(view.persona);
     label.append(element('strong', view.persona.name));
     if (about) label.append(element('span', about, 'persona-row-about'));
-    label.append(
-      proportionBar(reachShares(view), reachCountsLabel(view), 'persona-reach-bar', true),
-    );
-    row.append(label, element('span', reachSummary(view), 'api-screen-count'));
+    // The card names the role; how far it gets is shown under its title below.
+    row.append(label);
     row.onclick = () => select(view.persona.id);
     list.append(row);
   }
@@ -278,28 +275,42 @@ export function personaPage(
     const main = element('div', undefined, 'persona-main');
     const heading = element('div', undefined, 'api-detail-title');
     heading.append(element('h2', view.persona.name, 'persona-detail-name'));
-    // Who the role is, in one line under its name: its conditions and where it starts.
-    const meta = element('div', undefined, 'persona-meta');
-    meta.append(element('span', '判定條件', 'persona-meta-label'));
-    for (const fact of view.persona.facts) {
+    // Under the role's name, an aligned summary: how far it gets, its conditions, where it starts.
+    const facts = element('dl', undefined, 'persona-facts');
+    const row = (label: string, ...value: (HTMLElement | string)[]) => {
+      const dd = element('dd');
+      dd.append(...value);
+      facts.append(element('dt', label), dd);
+    };
+    const legend = element('span', undefined, 'persona-reach-legend');
+    for (const reach of ['REACHABLE', 'POSSIBLE'] as const) {
+      const key = element(
+        'span',
+        `${reachLabel[reach]} ${view.counts[reach]}`,
+        'persona-reach-key',
+      );
+      key.dataset.reach = reach;
+      legend.append(key);
+    }
+    row(
+      '走到的畫面',
+      legend,
+      proportionBar(reachShares(view), reachCountsLabel(view), 'persona-reach-bar', true),
+    );
+    const conditions = view.persona.facts.map((fact) => {
       const chip = element('code', factLabel(fact), 'persona-fact');
       chip.dataset.truth = String(fact.truth);
-      meta.append(chip);
-    }
-    if (!view.persona.facts.length) meta.append(element('span', '（沒有條件）', 'muted'));
-    meta.append(
-      element('span', '起點', 'persona-meta-label'),
-      element('code', (view.persona.startPaths || []).join('、') || '/', 'persona-fact'),
+      return chip;
+    });
+    row(
+      '判定條件',
+      ...(conditions.length ? conditions : [element('span', '（沒有條件）', 'muted')]),
     );
-    main.append(
-      heading,
-      element(
-        'p',
-        `${personaDescription(view.persona) ? personaDescription(view.persona) + '。' : ''}${reachSummary(view)}。`,
-        'api-reason',
-      ),
-      meta,
-    );
+    row('起點', element('code', (view.persona.startPaths || []).join('、') || '/', 'persona-fact'));
+    main.append(heading);
+    if (personaDescription(view.persona))
+      main.append(element('p', personaDescription(view.persona), 'api-reason'));
+    main.append(facts);
 
     // The flow as a board: one column per step, each screen a card; a column's heading says how many screens it has.
     const groups = flowGroups(index, view),
