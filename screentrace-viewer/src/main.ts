@@ -41,6 +41,9 @@ import {
   personaDescription,
   personaLayout,
   PersonaView,
+  featuresByRole,
+  rolePartition,
+  roleTint,
 } from './personas';
 import { personaPage } from './persona-page';
 import { suggestedPersonaNames, withSuggestedPersonaNames } from './shared/persona-names';
@@ -355,6 +358,7 @@ try {
   ].map((option) => {
     const button = element('button', option.name);
     button.dataset.personaOption = option.id;
+    if (option.id) button.dataset.roleTint = roleTint(graph, option.id);
     button.onclick = () => {
       if ((personaId || '') === option.id) return;
       personaId = option.id || undefined;
@@ -378,7 +382,9 @@ try {
     render();
   };
   showAll.append(showAllBox, showAllText);
-  personaLegend.append(personaKeys, showAll);
+  // A role's map shows its own flow only; screens it does not reach are not offered (ADR 0188).
+  showAll.hidden = true;
+  personaLegend.append(personaKeys);
   personaInfo.append(personaWho, personaLegend, personaNote);
   const renderPersonaBar = () => {
     for (const button of personaButtons)
@@ -390,10 +396,9 @@ try {
     personaInfo.hidden = !persona;
     if (!persona) return;
     personaWho.dataset.personaDescription = persona.persona.id;
-    personaWho.replaceChildren(
-      element('strong', persona.persona.name),
-      element('span', personaDescription(persona.persona)),
-    );
+    const about = personaDescription(persona.persona);
+    personaWho.replaceChildren(element('strong', persona.persona.name));
+    if (about) personaWho.append(element('span', about));
     personaKeys.replaceChildren(
       ...(['REACHABLE', 'POSSIBLE'] as const).map((reach) => {
         const key = element('span', `${reachLabel[reach]} ${persona.counts[reach]}`, 'persona-key');
@@ -402,11 +407,6 @@ try {
         return key;
       }),
     );
-    const hidden = persona.counts.UNREACHED + persona.counts.EXCLUDED;
-    showAll.hidden = !hidden;
-    showAllBox.disabled = !hidden;
-    showAllBox.checked = showUnreached;
-    showAllText.textContent = `顯示走不到、不適用的畫面 ${hidden}`;
     personaNote.textContent = !persona.depth.size
       ? '這個角色從起點走不到任何畫面；請確認設定中的起點網址與條件。'
       : persona.unevaluated
@@ -1030,11 +1030,11 @@ try {
       // The persona's flow: what it is, then its screens step by step from the start URL.
       const summary = element('section', undefined, 'persona-summary');
       summary.dataset.personaSummary = persona.persona.id;
-      summary.append(
-        element('strong', persona.persona.name),
-        element('p', personaDescription(persona.persona)),
-        element('p', reachSummary(persona), 'muted'),
-      );
+      summary.dataset.roleTint = roleTint(graph, persona.persona.id);
+      const about = personaDescription(persona.persona);
+      summary.append(element('strong', persona.persona.name));
+      if (about) summary.append(element('p', about));
+      summary.append(element('p', reachSummary(persona), 'muted'));
       const facts = element('details', undefined, 'persona-conditions');
       facts.append(
         element('summary', '判定條件'),
@@ -1047,17 +1047,13 @@ try {
       summary.append(facts);
       list.append(summary);
       for (const group of flowGroups(index, persona)) {
+        // The list is the role's flow, step by step; screens it does not reach are left out.
+        if (group.reach === 'UNREACHED' || group.reach === 'EXCLUDED') continue;
         const ids = group.screens.filter(shown);
         if (!ids.length) continue;
-        // Screens the persona never reaches stay folded: the list reads as the flow, step by step.
-        const folded = group.reach === 'UNREACHED' || group.reach === 'EXCLUDED';
-        const section = folded
-          ? element('details', undefined, 'persona-group')
-          : element('div', undefined, 'persona-group');
+        const section = element('div', undefined, 'persona-group');
         section.dataset.personaGroup = group.key;
-        const title = folded
-          ? element('summary', `${group.title} ${ids.length}`)
-          : element('h3', `${group.title} · ${ids.length}`);
+        const title = element('h3', `${group.title} · ${ids.length}`);
         section.append(title);
         for (const id of ids) section.append(row(id, persona));
         list.append(section);
@@ -1066,16 +1062,53 @@ try {
         list.append(element('p', '沒有符合的畫面', 'empty-list'));
       return;
     }
+    // With roles, each role heads its own part of the list (ADR 0188).
+    const roles = rolePartition(index);
+    const roleHeading = (key: string, label: string, count: number) => {
+      const heading = element('div', undefined, 'role-heading');
+      heading.dataset.roleTint = roleTint(graph, key);
+      heading.append(icon('persona'), element('span', label), element('span', `${count}`, 'muted'));
+      return heading;
+    };
     if (listMode === 'features') {
+      const byRole = roles
+        ? featuresByRole(featureList, roles)
+        : [{ key: '', label: '', screens: 0, features: featureList }];
+      for (const group of byRole) {
+        if (group.key) {
+          const shownCount = group.features.flatMap((f) => f.screens).filter(shown).length;
+          if (shownCount) list.append(roleHeading(group.key, group.label, shownCount));
+        }
+        appendFeatures(group.features, group.key);
+      }
+      if (!list.querySelector('.screen-row'))
+        list.append(element('p', '沒有符合的畫面', 'empty-list'));
+      return;
+    }
+    if (roles) {
+      for (const key of roles.keys) {
+        const ids = orderedScreens.filter((s) => roles.of.get(s.id) === key && shown(s.id));
+        if (!ids.length) continue;
+        list.append(roleHeading(key, roles.label(key), ids.length));
+        for (const screen of ids) list.append(row(screen.id));
+      }
+      if (!list.childElementCount) list.append(element('p', '沒有符合的畫面', 'empty-list'));
+      return;
+    }
+    for (const screen of orderedScreens) if (shown(screen.id)) list.append(row(screen.id));
+    if (!list.childElementCount) list.append(element('p', '沒有符合的畫面', 'empty-list'));
+    return;
+    function appendFeatures(features: typeof featureList, roleKey: string) {
       // Screens under their feature, in the order its flows reach them.
-      for (const feature of featureList) {
+      for (const feature of features) {
         const ids = feature.flows.flatMap((flow) => flow.screens).filter(shown);
         if (!ids.length) continue;
+        const fold = roleKey ? `${roleKey}\u0000${feature.key}` : feature.key;
         const section = element('details', undefined, 'feature-group'),
           summary = element('summary'),
           decision = featureDecision(reviewState, feature.key);
         section.dataset.featureGroup = feature.key;
-        section.open = !featuresCollapsed.has(feature.key) || ids.includes(current || '');
+        section.open = !featuresCollapsed.has(fold) || ids.includes(current || '');
         // Written like the canvas group titles: 「/admin · 3 個畫面」.
         const name = element('span', undefined, 'feature-group-name');
         name.append(feature.label, element('span', ` · ${ids.length} 個畫面`, 'muted'));
@@ -1091,20 +1124,15 @@ try {
         chevron.classList.add('feature-group-chevron');
         summary.append(chevron);
         section.addEventListener('toggle', () => {
-          if (section.open) featuresCollapsed.delete(feature.key);
-          else featuresCollapsed.add(feature.key);
+          if (section.open) featuresCollapsed.delete(fold);
+          else featuresCollapsed.add(fold);
         });
         const items = element('div', undefined, 'feature-group-items');
         for (const id of ids) items.append(row(id));
         section.append(summary, items);
         list.append(section);
       }
-      if (!list.querySelector('.screen-row'))
-        list.append(element('p', '沒有符合的畫面', 'empty-list'));
-      return;
     }
-    for (const screen of orderedScreens) if (shown(screen.id)) list.append(row(screen.id));
-    if (!list.childElementCount) list.append(element('p', '沒有符合的畫面', 'empty-list'));
   };
 
   // The screen list folds into a rail on its own edge; zooming into a screen folds it, returning restores it.

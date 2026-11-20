@@ -227,6 +227,11 @@ final class SpringRequestVariants {
     return decided && !text.isEmpty() && !text.contains("${") ? text : null;
   }
 
+  /** The JSP a screen's page is written in (its Tiles body, else its view). */
+  static String bodyText(GraphNode screen, ProjectInventory inventory) {
+    return body(screen, inventory);
+  }
+
   private static String body(GraphNode screen, ProjectInventory inventory) {
     String path = null;
     String tiles = screen.attributes().get("tilesAttributes");

@@ -3,6 +3,8 @@ import { iconButton } from './shell-ui';
 import { Index } from './map';
 import { Payload } from './contracts';
 import { PrototypeHistory } from './prototype-history';
+import { rolePartition, roleTint } from './personas';
+import { icon } from './shell-ui';
 
 export interface PrototypeOptions {
   back: () => void;
@@ -52,7 +54,19 @@ export function prototypeViewer(
   present.classList.add('prototype-present');
   present.setAttribute('aria-pressed', String(options.presenting));
   present.onclick = options.present;
-  toolbar.append(back, previous, next, url, present);
+  toolbar.append(back, previous, next, url);
+  // Who uses this screen, from the roles' flows (ADR 0188).
+  const roles = rolePartition(index),
+    role = roles?.of.get(id);
+  if (roles && role) {
+    const tag = element('span', undefined, 'prototype-role');
+    tag.dataset.role = role;
+    tag.dataset.roleTint = roleTint(index.graph, role);
+    tag.title = '依角色流程判斷誰會用到這個畫面';
+    tag.append(icon('persona'), element('span', roles.label(role)));
+    toolbar.append(tag);
+  }
+  toolbar.append(present);
   root.append(toolbar, status, scroller);
   frame.style.width = `${width}px`;
   frame.style.height = `${height}px`;

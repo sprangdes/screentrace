@@ -10,6 +10,7 @@ import {
   flowGroups,
   reachShares,
   reachCountsLabel,
+  roleTint,
 } from './personas';
 import { proportionBar, sharePercent } from './proportion';
 import { splitter, SplitRange } from './splitter';
@@ -172,10 +173,12 @@ export function personaPage(
     row.type = 'button';
     row.setAttribute('role', 'option');
     row.dataset.personaRow = view.persona.id;
+    row.dataset.roleTint = roleTint(index.graph, view.persona.id);
     const label = element('span', undefined, 'persona-row-text');
+    const about = personaDescription(view.persona);
+    label.append(element('strong', view.persona.name));
+    if (about) label.append(element('span', about, 'persona-row-about'));
     label.append(
-      element('strong', view.persona.name),
-      element('span', personaDescription(view.persona), 'persona-row-about'),
       proportionBar(reachShares(view), reachCountsLabel(view), 'persona-reach-bar', true),
     );
     row.append(label, element('span', reachSummary(view), 'api-screen-count'));
@@ -264,14 +267,8 @@ export function personaPage(
       ),
     );
     const legend = element('p', undefined, 'persona-coverage-legend');
-    for (const reach of ['REACHABLE', 'POSSIBLE', 'UNREACHED'] as const) {
-      const key = element(
-        'span',
-        reach === 'UNREACHED'
-          ? `${reachLabel.UNREACHED}／${reachLabel.EXCLUDED}`
-          : reachLabel[reach],
-        'persona-coverage-key',
-      );
+    for (const reach of ['REACHABLE', 'POSSIBLE'] as const) {
+      const key = element('span', reachLabel[reach], 'persona-coverage-key');
       key.dataset.reach = reach;
       legend.append(key);
     }
@@ -313,14 +310,8 @@ export function personaPage(
           dot.setAttribute('aria-label', `${name(id)}，${words}`);
           dot.onclick = () => options.onOpen(id, view.persona.id);
           cell.append(dot);
-        } else {
-          const dot = element('span', undefined, 'persona-coverage-dot');
-          dot.dataset.reach = reach;
-          dot.title = words;
-          dot.setAttribute('role', 'img');
-          dot.setAttribute('aria-label', words);
-          cell.append(dot);
         }
+        // A role that does not reach the screen leaves its cell empty.
         row.append(cell);
       }
       tbody.append(row);
@@ -347,6 +338,7 @@ export function personaPage(
     }
     const inner = element('div', undefined, 'persona-layout');
     inner.dataset.personaDetail = view.persona.id;
+    inner.dataset.roleTint = roleTint(index.graph, view.persona.id);
     const main = element('div', undefined, 'persona-main'),
       side = element('aside', undefined, 'persona-side');
     side.setAttribute('aria-label', '條件與比較');
@@ -358,7 +350,11 @@ export function personaPage(
     heading.append(element('h2', view.persona.name, 'persona-detail-name'), flow);
     main.append(
       heading,
-      element('p', `${personaDescription(view.persona)}。${reachSummary(view)}。`, 'api-reason'),
+      element(
+        'p',
+        `${personaDescription(view.persona) ? personaDescription(view.persona) + '。' : ''}${reachSummary(view)}。`,
+        'api-reason',
+      ),
     );
 
     // The flow as a board: one column per step, each screen a card; a column's heading says how many screens it has.
@@ -427,16 +423,6 @@ export function personaPage(
         compare.append(box);
       }
       side.append(compare);
-    }
-    const outside = groups.filter((g) => g.reach === 'UNREACHED' || g.reach === 'EXCLUDED');
-    if (outside.length) {
-      const rest = section('流程以外', 'outside');
-      for (const group of outside) {
-        const box = fold(group.title, group.screens.length, group.key, chips(view, group.screens));
-        box.title = reachHelp[group.reach];
-        rest.append(box);
-      }
-      side.append(rest);
     }
     inner.append(
       main,

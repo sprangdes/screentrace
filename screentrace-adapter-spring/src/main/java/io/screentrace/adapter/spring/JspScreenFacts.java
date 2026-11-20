@@ -34,13 +34,38 @@ final class JspScreenFacts {
       if (screen.type() != NodeType.SCREEN) continue;
       var facts = new TreeMap<>(facts(incoming.getOrDefault(screen.id(), List.of())));
       facts.putAll(requestFacts(screen));
+      facts.putAll(sessionFacts(screen));
       if (facts.isEmpty()) continue;
       for (var edge : outgoing.getOrDefault(screen.id(), List.of())) {
         if (edge.type() != EdgeType.CONTAINS) continue;
         var component = nodes.get(edge.to());
         if (component == null) continue;
         if (Boolean.FALSE.equals(JspGuards.evaluate(JspGuards.guard(edge, component), facts))) {
-          edges.remove(edge.id());
+          long owners =
+              incoming.getOrDefault(component.id(), List.of()).stream()
+                  .filter(e -> e.type() == EdgeType.CONTAINS && edges.containsKey(e.id()))
+                  .count();
+          if (owners > 1) edges.remove(edge.id());
+          else {
+            // Its only page: keep the ownership, noting the condition never holds there.
+            var proof = new ArrayList<>(edge.evidence());
+            proof.add(
+                new AnalysisEvidence(
+                    component.source(),
+                    PARSER,
+                    ResolutionStatus.INFERRED,
+                    "此畫面條件不成立，不顯示；facts=" + facts.keySet()));
+            edges.put(
+                edge.id(),
+                new Relationship(
+                    edge.id(),
+                    edge.type(),
+                    edge.from(),
+                    edge.to(),
+                    edge.confidence(),
+                    edge.source(),
+                    proof));
+          }
           changed = true;
           continue;
         }
@@ -72,6 +97,24 @@ final class JspScreenFacts {
         graph.schemaVersion(),
         graph.behaviors(),
         graph.validationRules());
+  }
+
+  /** Session values a role rule proves for the screen (ADR 0188). */
+  static Map<String, Object> sessionFacts(GraphNode screen) {
+    String raw = screen.attributes().get(SpringSessionRoles.SESSION_FACTS);
+    if (raw == null) return Map.of();
+    Map<String, Object> facts = new TreeMap<>();
+    try {
+      JSON.readTree(raw)
+          .fields()
+          .forEachRemaining(
+              f -> {
+                if (f.getValue().isBoolean()) facts.put(f.getKey(), f.getValue().asBoolean());
+              });
+    } catch (IOException unreadable) {
+      // No session fact.
+    }
+    return facts;
   }
 
   /** The emptiness a request-mode screen stands for (ADR 0186). */

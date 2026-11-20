@@ -122,13 +122,22 @@ public final class SpringMvcAnalyzer {
     completed = SpringControllerFlow.project(completed);
     completed = SpringDataSimulation.enrich(completed, inventory, units);
     completed = SpringDtoSimulation.enrich(completed, inventory, units);
+    // The application's own access rule decides who sees which screen (ADR 0188).
+    var roles = SpringSessionRoles.rule(inventory, units);
     return io.screentrace.core.GraphIntegrityValidator.requireAnalysis(
-        JspStateVariants.enrich(
-            JspScreenFacts.enrich(
-                SpringRequestVariants.enrich(
-                    SpringSubmittedModel.enrich(completed, inventory, units), inventory, units)),
-            inventory,
-            units));
+        SpringSessionRoles.personas(
+            JspStateVariants.enrich(
+                JspScreenFacts.enrich(
+                    SpringSessionRoles.annotate(
+                        SpringRequestVariants.enrich(
+                            SpringSubmittedModel.enrich(completed, inventory, units),
+                            inventory,
+                            units),
+                        roles)),
+                inventory,
+                units),
+            roles,
+            inventory));
   }
 
   private static void discoverExceptionView(ProjectInventory inventory, State state) {

@@ -63,6 +63,18 @@ test('Spring JSP resolves request branches and shared Tiles bodies', () => {
         @RequestMapping(value="/manage/item/{id}/change", method=RequestMethod.POST)
         String update(@RequestParam("state") String state) { return "redirect:/manage/item/{id}"; }
 
+        @RequestMapping(value="/back/login", method=RequestMethod.GET)
+        String backLogin() { return "backLogin"; }
+
+        @RequestMapping(value="/back/login", method=RequestMethod.POST)
+        String signIn(javax.servlet.http.HttpSession session) {
+          session.setAttribute("staff", Boolean.TRUE);
+          return "redirect:/back";
+        }
+
+        @RequestMapping(value="/back", method=RequestMethod.GET)
+        String backHome() { return "backHome"; }
+
         private final DraftService drafts = new DraftService();
 
         @RequestMapping(value="/draft/new", method=RequestMethod.GET)
@@ -88,6 +100,25 @@ test('Spring JSP resolves request branches and shared Tiles bodies', () => {
         }
       }
     `,
+    );
+    file(
+      'src/main/java/demo/Guard.java',
+      `package demo;
+      import javax.servlet.*;
+      import javax.servlet.http.*;
+      public class Guard implements Filter {
+        public void doFilter(ServletRequest input, ServletResponse output, FilterChain chain) throws java.io.IOException, ServletException {
+          HttpServletRequest r = (HttpServletRequest) input;
+          HttpServletResponse response = (HttpServletResponse) output;
+          String path = r.getServletPath();
+          HttpSession session = r.getSession(true);
+          if (path.startsWith("/back") && !"/back/login".equals(path) && !Boolean.TRUE.equals(session.getAttribute("staff"))) {
+            response.sendRedirect(r.getContextPath() + "/back/login");
+            return;
+          }
+          chain.doFilter(r, response);
+        }
+      }`,
     );
     file(
       'src/main/java/demo/Draft.java',
@@ -174,6 +205,17 @@ test('Spring JSP resolves request branches and shared Tiles bodies', () => {
     );
     for (const name of ['server', 'error', 'staffError']) jsp(name, '<h1>' + name + '</h1>');
     jsp(
+      'backLogin',
+      `<h1>員工登入</h1>
+      <c:if test="@{sessionScope.staff eq true}"><a href="<c:url value='/back'/>">staff nav</a></c:if>
+      <form method="post" action="<c:url value='/back/login'/>"><button>sign in</button></form>`,
+    );
+    jsp(
+      'backHome',
+      `<h1>Back office</h1>
+      <c:if test="@{sessionScope.staff eq true}"><a href="<c:url value='/back'/>">staff nav</a></c:if>`,
+    );
+    jsp(
       'draft',
       `<h1>@{empty draft.previousId ? 'New draft' : 'Renew draft'}</h1>
       <c:if test="@{empty draft.previousId}"><a href="<c:url value='/'/>">home link</a></c:if>`,
@@ -251,6 +293,26 @@ test('Spring JSP resolves request branches and shared Tiles bodies', () => {
       submitRedirects.map((edge) => edge.evidence.some((e) => e.parser === 'SpringMainPath')).sort(),
       [false, true],
     );
+    // Roles from the application's own access rule (ADR 0188).
+    assert.equal(graph.schemaVersion, '2.4');
+    const personas = Object.fromEntries(graph.application.personas.map((p) => [p.id, p]));
+    assert.deepEqual(Object.keys(personas).sort(), ['guest', 'signed-in']);
+    assert.equal(personas['signed-in'].name, '員工');
+    assert.deepEqual(personas['signed-in'].startPaths, ['/back/login']);
+    const backLogin = find('SCREEN', 'backLogin'),
+      backHome = find('SCREEN', 'backHome');
+    assert.deepEqual(JSON.parse(backHome.attributes.sessionFacts), { 'sessionScope.staff': true });
+    assert.deepEqual(JSON.parse(backLogin.attributes.sessionFacts), { 'sessionScope.staff': false });
+    const staffNav = graph.relationships.find(
+      (e) => e.from === backLogin.id && e.type === 'CONTAINS' && nodes.get(e.to).name === 'staff nav',
+    );
+    assert.ok(staffNav.evidence.some((e) => e.detail?.startsWith('此畫面條件不成立')));
+    assert.ok(targets(backHome, 'CONTAINS').includes('staff nav'));
+    assert.equal(personas.guest.screens[backHome.id], 'EXCLUDED');
+    const reached = (p) => p.flow.reached.filter((r) => r.reach === 'REACHABLE').map((r) => r.screenId);
+    assert.ok(reached(personas['signed-in']).includes(backLogin.id));
+    assert.ok(reached(personas['signed-in']).includes(backHome.id));
+    assert.ok(!reached(personas.guest).includes(backHome.id));
     // One JSP page in two request modes, proven from where the model object comes from.
     const drafts = Object.fromEntries(
       graph.nodes

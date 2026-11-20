@@ -1,4 +1,5 @@
 import { Index, Relation, Position } from './map';
+import { rolePartition, roleTint } from './personas';
 import {
   CARD,
   COMMON_DESTINATION_MIN_SCREENS,
@@ -13,6 +14,8 @@ const TRACK = 10;
 export interface ScreenGroup {
   key: string;
   label: string;
+  /** With roles: the role's tint (1, 2, … by role order), `shared`, or `none` (ADR 0188). */
+  tint?: string;
   members: string[];
   box: { x: number; y: number; width: number; height: number };
 }
@@ -90,10 +93,14 @@ export function screenGroups(index: Index): Map<string, string> | undefined {
 /** The overview laid out as areas: each area keeps the flow layout of its own screens; flows between areas are bundled. */
 export function groupedLayout(index: Index): GroupedLayout | undefined {
   if (index.screens.length > 150 || index.relations.length > 600) return undefined;
-  const membership = screenGroups(index);
+  // With roles, the areas are the roles: each role's screens together, shared and unused apart.
+  const roles = rolePartition(index);
+  const membership = roles?.of || screenGroups(index);
   if (!membership) return undefined;
+  const rank = (key: string) => (roles ? roles.keys.indexOf(key) : 0);
   const keys = [...new Set(membership.values())].sort(
-    (a, b) => Number(a === OTHER_GROUP) - Number(b === OTHER_GROUP) || order(a, b),
+    (a, b) =>
+      rank(a) - rank(b) || Number(a === OTHER_GROUP) - Number(b === OTHER_GROUP) || order(a, b),
   );
   const inner = keys
     .map((key) => {
@@ -102,6 +109,7 @@ export function groupedLayout(index: Index): GroupedLayout | undefined {
     })
     .sort(
       (a, b) =>
+        rank(a.key) - rank(b.key) ||
         Number(a.key === OTHER_GROUP) - Number(b.key === OTHER_GROUP) ||
         b.members.size - a.members.size ||
         order(a.key, b.key),
@@ -145,8 +153,9 @@ export function groupedLayout(index: Index): GroupedLayout | undefined {
     const count = group.members.size;
     groups.push({
       key: group.key,
-      label: `${group.key === OTHER_GROUP ? OTHER_GROUP : group.key === '/' ? '/（首頁）' : group.key} · ${count} 個畫面`,
+      label: `${roles ? roles.label(group.key) : group.key === OTHER_GROUP ? OTHER_GROUP : group.key === '/' ? '/（首頁）' : group.key} · ${count} 個畫面`,
       members: [...group.members].sort(order),
+      tint: roles ? roleTint(index.graph, group.key) : undefined,
       box: { x, y, width: group.layout.width, height: group.layout.height + TITLE },
     });
   }

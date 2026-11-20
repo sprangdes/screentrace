@@ -48,6 +48,11 @@ public final class PersonaFlows {
     List<Persona> personas = new ArrayList<>();
     List<Diagnostic> diagnostics = new ArrayList<>(graph.diagnostics());
     for (var p : graph.application().personas()) {
+      // An adapter that followed its own framework's requests already gave the flow (ADR 0188).
+      if (p.flow() != null) {
+        personas.add(p);
+        continue;
+      }
       var starts = new TreeSet<String>();
       for (String path : p.startPaths()) {
         var found = entries.getOrDefault(path, List.of());

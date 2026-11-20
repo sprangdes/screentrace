@@ -10,6 +10,7 @@ import {
   featureDecision,
 } from './shared/review';
 import { decisionSwitch, decisionLabel, noteEditor } from './review-ui';
+import { featuresByRole, rolePartition, roleTint } from './personas';
 
 export interface FeatureMapActions {
   open: (screenId: string) => void;
@@ -60,7 +61,25 @@ export function featureMap(
   trunk.append(icon('screen'), element('strong', index.graph.application.name));
   trunk.append(element('span', `${list.length} 個功能 · ${index.screens.length} 個畫面`, 'muted'));
   const branches = element('ul', undefined, 'fm-features');
-  for (const feature of list) branches.append(branch(feature));
+  // With roles, each role is a branch of its own and its features hang under it (ADR 0188).
+  const roles = rolePartition(index);
+  if (roles)
+    for (const group of featuresByRole(list, roles)) {
+      const item = element('li', undefined, 'fm-role-branch'),
+        node = element('div', undefined, 'fm-role'),
+        inner = element('ul', undefined, 'fm-features');
+      item.dataset.role = group.key;
+      node.dataset.roleTint = roleTint(index.graph, group.key);
+      node.append(
+        icon('persona'),
+        element('strong', group.label),
+        element('span', `${group.features.length} 個功能 · ${group.screens} 個畫面`, 'muted'),
+      );
+      for (const feature of group.features) inner.append(branch(feature));
+      item.append(node, inner);
+      branches.append(item);
+    }
+  else for (const feature of list) branches.append(branch(feature));
   tree.append(trunk, branches);
   root.append(tree);
   return root;

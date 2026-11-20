@@ -650,6 +650,9 @@ function jspBoolean(guard, facts, snapshot) {
     const compare = text.match(/^([A-Za-z_][\w.]*)\s+(eq|ne|==|!=)\s+(['"])([A-Z][A-Z0-9_]*)\3$/);
     if (compare && Object.hasOwn(facts, compare[1]))
       return (facts[compare[1]] === compare[4]) === ['eq', '=='].includes(compare[2]);
+    const flag = text.match(/^([A-Za-z_][\w.]*)\s+(eq|ne|==|!=)\s+(true|false)$/);
+    if (flag && typeof facts[flag[1]] === 'boolean')
+      return (facts[flag[1]] === (flag[3] === 'true')) === ['eq', '=='].includes(flag[2]);
     const empty = text.match(/^(not\s+|!\s*)?empty\s+([A-Za-z_][\w.]*)$/);
     if (empty && typeof facts['#empty:' + empty[2]] === 'boolean')
       return empty[1] ? !facts['#empty:' + empty[2]] : facts['#empty:' + empty[2]];
@@ -705,6 +708,13 @@ function screenModelFacts(screen) {
       facts.every((candidate) => candidate[key] === value),
     ),
   );
+  try {
+    // Session values the application's access rule proves for this screen (ADR 0188).
+    for (const [key, value] of Object.entries(JSON.parse(screen.attributes?.sessionFacts || '{}')))
+      if (typeof value === 'boolean') common[key] = value;
+  } catch {
+    // No session facts.
+  }
   try {
     for (const [key, value] of Object.entries(JSON.parse(screen.attributes?.requestFacts || '{}')))
       if (typeof value?.empty === 'boolean') common['#empty:' + key] = value.empty;

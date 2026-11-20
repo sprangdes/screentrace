@@ -375,6 +375,7 @@ export function canvas(index: Index, payload: Payload, options: CanvasOptions): 
     for (const group of grouped.groups) {
       const frame = element('div', undefined, 'screen-group');
       frame.dataset.group = group.key;
+      if (group.tint) frame.dataset.roleTint = group.tint;
       frame.title = `${group.label}：點一下放大這一區`;
       Object.assign(frame.style, {
         left: `${group.box.x}px`,
