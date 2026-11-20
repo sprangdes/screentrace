@@ -125,10 +125,12 @@ main{position:relative;overflow:hidden;min-width:0}
 .screen-row[aria-current=page],.file-entry[aria-current=page]{background:var(--primary-soft)}
 .screen-row-text{display:flex;flex-direction:column;min-width:0;flex:1}
 .screen-row strong,.file-entry strong{font-size:14px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.screen-row code,.file-entry span{color:var(--gray-500);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.screen-row code,.file-entry code,.file-entry span{color:var(--gray-500);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .file-entry{flex-direction:column;align-items:flex-start;gap:0}
 .file-tree summary{font-size:13px;color:var(--gray-500);padding:4px}
 .folder{padding-left:12px}
+.file-group{margin:2px 0 6px}
+.file-name{padding:4px 8px 2px;font-size:12px;font-weight:600;color:var(--gray-500);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .status-mark{width:16px;height:16px;stroke-width:2.4}
 .decision-KEEP{color:var(--keep)}
 .decision-REMOVE{color:var(--remove)}

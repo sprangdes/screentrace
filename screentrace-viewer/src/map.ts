@@ -380,8 +380,43 @@ export function searchScreens(index: Index, query: string): Set<string> {
       .map((s) => s.id),
   );
 }
-export function fileEntries(index: Index): { path: string; screenId: string }[] {
+/**
+ * The source file each screen is written in. A Tiles screen's `view` is its shared layout; the page
+ * itself is the definition's body (or its only JSP attribute), which is what the file list shows.
+ */
+export function fileEntries(index: Index): { path: string; screenId: string; layout?: string }[] {
   return index.screens
-    .map((s) => ({ path: s.attributes.view || s.source?.file || s.name, screenId: s.id }))
-    .sort((a, b) => order(a.path, b.path) || order(a.screenId, b.screenId));
+    .map((s) => {
+      const view = s.attributes.view || s.source?.file || s.name;
+      const body = tilesBody(s.attributes.tilesAttributes);
+      return body && body !== view
+        ? { path: body, screenId: s.id, layout: view }
+        : { path: view, screenId: s.id };
+    })
+    .sort((a, b) => {
+      // Within one file: each screen together, its states in flow order.
+      const x = index.nodes.get(a.screenId)!,
+        y = index.nodes.get(b.screenId)!;
+      const state = (n: typeof x) => Number(n.attributes.jspStateOrder ?? 0);
+      return (
+        order(a.path, b.path) ||
+        order(x.attributes.tilesDefinitionName || '', y.attributes.tilesDefinitionName || '') ||
+        state(x) - state(y) ||
+        order(a.screenId, b.screenId)
+      );
+    });
+}
+function tilesBody(raw: string | undefined): string | undefined {
+  if (!raw) return undefined;
+  try {
+    const attributes = JSON.parse(raw)?.attributes || {};
+    const pages = Object.entries(attributes as Record<string, { path?: unknown }>)
+      .map(([name, value]) => [name, value?.path] as const)
+      .filter((entry): entry is readonly [string, string] => typeof entry[1] === 'string')
+      .filter(([, path]) => path.endsWith('.jsp') || path.endsWith('.jspf'));
+    return (pages.find(([name]) => name === 'body') ||
+      (pages.length === 1 ? pages[0] : undefined))?.[1];
+  } catch {
+    return undefined;
+  }
 }

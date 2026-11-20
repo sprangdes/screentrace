@@ -1717,37 +1717,63 @@ export function fileTree(
   options: { visible?: Set<string>; current?: string } = {},
 ): HTMLElement {
   const root = element('div', undefined, 'file-tree'),
-    folders = new Map<string, HTMLElement>([['', root]]),
     matches = searchScreens(index, query);
+  // Folders → files → the screens each file shows. Folder chains with nothing else in them
+  // read as one path (`src/main/webapp/WEB-INF/views`).
+  interface Folder {
+    folders: Map<string, Folder>;
+    files: Map<string, { screenId: string; layout?: string }[]>;
+  }
+  const tree: Folder = { folders: new Map(), files: new Map() };
   for (const item of fileEntries(index)) {
     if (options.visible && !options.visible.has(item.screenId)) continue;
     if (query && !matches.has(item.screenId)) continue;
     const parts = item.path.split('/');
-    let current = '',
-      parent: HTMLElement = root;
-    for (const folder of parts.slice(0, -1)) {
-      current = current ? `${current}/${folder}` : folder;
-      if (!folders.has(current)) {
-        const details = element('details'),
-          children = element('div', undefined, 'folder');
-        details.open = true;
-        details.append(element('summary', folder), children);
-        parent.append(details);
-        folders.set(current, children);
-      }
-      parent = folders.get(current)!;
+    let folder = tree;
+    for (const name of parts.slice(0, -1)) {
+      if (!folder.folders.has(name))
+        folder.folders.set(name, { folders: new Map(), files: new Map() });
+      folder = folder.folders.get(name)!;
     }
-    const button = element('button', undefined, 'file-entry');
-    button.dataset.screen = item.screenId;
-    button.dataset.screenList = item.screenId;
-    button.setAttribute('aria-current', options.current === item.screenId ? 'page' : 'false');
-    button.append(
-      element('strong', parts.at(-1)!),
-      element('span', index.nodes.get(item.screenId)!.name),
-    );
-    button.onclick = () => onFocus(item.screenId);
-    parent.append(button);
+    const file = parts.at(-1)!;
+    folder.files.set(file, [...(folder.files.get(file) || []), item]);
   }
+  const render = (folder: Folder, parent: HTMLElement) => {
+    for (const [name, child] of folder.folders) {
+      let label = name,
+        inner = child;
+      while (!inner.files.size && inner.folders.size === 1) {
+        const [next, nested] = [...inner.folders][0];
+        label += '/' + next;
+        inner = nested;
+      }
+      const details = element('details'),
+        children = element('div', undefined, 'folder');
+      details.open = true;
+      details.append(element('summary', label), children);
+      parent.append(details);
+      render(inner, children);
+    }
+    for (const [file, screens] of folder.files) {
+      const group = element('div', undefined, 'file-group');
+      group.append(element('div', file, 'file-name'));
+      for (const item of screens) {
+        const button = element('button', undefined, 'file-entry');
+        button.dataset.screen = item.screenId;
+        button.dataset.screenList = item.screenId;
+        button.setAttribute('aria-current', options.current === item.screenId ? 'page' : 'false');
+        button.append(
+          element('strong', index.nodes.get(item.screenId)!.name),
+          element('code', index.routes.get(item.screenId)?.[0] || '沒有已知 URL'),
+        );
+        if (item.layout) button.title = `版型：${item.layout}`;
+        button.onclick = () => onFocus(item.screenId);
+        group.append(button);
+      }
+      parent.append(group);
+    }
+  };
+  render(tree, root);
   if (!root.childElementCount) root.append(element('p', '沒有符合的畫面', 'empty-list'));
   return root;
 }
