@@ -409,7 +409,7 @@ body[data-presenting=true] .focus-layer{position:fixed!important;inset:0!importa
 .api-shared-name{font-weight:600}
 .api-shared .api-caller-list{margin-top:8px}
 .api-contract{border:1px solid var(--gray-200);border-radius:var(--radius);background:white}
-.api-contract summary{padding:10px 12px;font-size:14px;font-weight:600;cursor:pointer}
+.api-contract-title{margin:0;padding:10px 12px 4px;font-size:14px;font-weight:600}
 .api-contract-part{padding:4px 12px 12px}
 .api-contract-part h4{margin:4px 0 6px;font-size:13px;color:var(--gray-500)}
 .api-contract-type{margin:0 0 8px;font-size:13px}
@@ -699,7 +699,16 @@ button.persona-coverage-dot:hover{outline:2px solid var(--primary);outline-offse
 .shell:has(.sidebar>.splitter.is-dragging){transition:none}
 
 /* Direct decisions on an API, and the reminder that marks are not in any file yet */
-.api-decision{display:flex;flex-direction:column;gap:8px;margin:8px 0 12px;padding:10px 12px;border:1px solid var(--gray-200);border-radius:var(--radius);background:var(--gray-100)}
+.api-decision{display:flex;flex-direction:column;gap:6px;margin:0 0 12px}
+.api-decision:empty{display:none}
+.api-title-decision{position:relative;margin-left:auto;flex:none;display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-end;gap:4px 8px;max-width:100%}
+/* The note opens as a floating panel under its button, so the title and text below never move. */
+.api-title-decision .note-editor[data-open=true]{flex:none;align-items:center}
+.api-title-decision .note-body{position:absolute;right:0;top:calc(100% + 6px);z-index:20;width:min(420px,70vw);padding:12px;background:white;border:1px solid var(--gray-200);border-radius:var(--radius);box-shadow:var(--shadow-float)}
+.api-title-decision .note-editor[data-open=true] .note-toggle{background:var(--gray-200);color:var(--gray-900)}
+.api-title-decision .note-editor.compact .note-toggle span{position:static;width:auto;height:auto;overflow:visible;clip:auto}
+
+.api-title-decision .decision-option{white-space:nowrap}
 .api-decision-label{font-size:13px;font-weight:700;color:var(--gray-700)}
 .api-decision .notice{margin:0}
 .api-decision-mark{padding:1px 6px;border-radius:4px;font-size:12px;font-weight:600}

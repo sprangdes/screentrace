@@ -1208,8 +1208,9 @@ export function apiPage(index: Index, state: ReviewState, options: ApiPageOption
     if (!contract) return undefined;
     const request = (contract.request || {}) as Body,
       responses = (Array.isArray(contract.responses) ? contract.responses : []) as Body[];
-    const fold = element('details', undefined, 'api-contract');
-    fold.append(element('summary', 'Request／Response'));
+    // Always open: the request and responses are what a reader comes to the API for.
+    const fold = element('section', undefined, 'api-contract');
+    fold.append(element('h3', 'Request／Response', 'api-contract-title'));
     fold.append(bodyBlock('Request', request));
     for (const response of responses)
       fold.append(bodyBlock(`Response ${text(response.status)}`.trim(), response));
@@ -1269,17 +1270,36 @@ export function apiPage(index: Index, state: ReviewState, options: ApiPageOption
     }
     inner.append(why);
     if (options.setApi) {
-      // The person's own decision on this API, shown beside the status its callers give it.
+      // The person's own decision on this API and its note sit at the end of its title row; a
+      // conflict follows right under the title, without a box of its own.
       const id = record.node.id,
         direct = apiDecision(state, id),
         box = element('div', undefined, 'api-decision');
       box.dataset.apiDecisionFor = id;
-      box.append(
-        element('span', '這個 API', 'api-decision-label'),
+      const decision = element('div', undefined, 'api-title-decision');
+      decision.dataset.apiDecisionFor = id;
+      decision.append(
         decisionSwitch(`這個 API`, direct, (value) => options.setApi!(id, value), {
           screen: `api:${id}`,
         }),
       );
+      title.append(decision);
+      // The floating note closes on a click elsewhere or Esc; its text is saved as it loses focus.
+      const closeNote = () => {
+        const toggle = decision.querySelector<HTMLButtonElement>('[data-note-toggle]');
+        if (toggle?.getAttribute('aria-expanded') === 'true') toggle.click();
+      };
+      const outside = (event: PointerEvent) => {
+        if (!decision.isConnected) document.removeEventListener('pointerdown', outside);
+        else if (!decision.contains(event.target as globalThis.Node)) closeNote();
+      };
+      document.addEventListener('pointerdown', outside);
+      decision.addEventListener('keydown', (event) => {
+        if (event.key !== 'Escape') return;
+        event.stopPropagation();
+        closeNote();
+        decision.querySelector<HTMLButtonElement>('[data-note-toggle]')?.focus();
+      });
       const disagree =
         (direct === 'KEEP' && record.status === 'REMOVABLE') ||
         (direct === 'REMOVE' && record.status === 'IN_USE');
@@ -1294,9 +1314,11 @@ export function apiPage(index: Index, state: ReviewState, options: ApiPageOption
         note.dataset.apiConflict = id;
         box.append(note);
       }
+      // The note belongs with the decision, in the title row.
       if (options.setNote)
-        box.append(
+        decision.append(
           noteEditor({
+            compact: true,
             label: '這個 API',
             decision: direct,
             note: decisionNoteOf(state, 'api', id),
