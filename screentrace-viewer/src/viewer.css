@@ -158,8 +158,6 @@ main{position:relative;overflow:hidden;min-width:0}
 .screen-card:hover,.screen-card.is-highlighted{box-shadow:0 0 0 max(2px,calc(2px / var(--zoom))) var(--primary),var(--shadow-card)}
 .screen-card.is-muted{opacity:.35}
 .screen-card.search-match{box-shadow:0 0 0 max(4px,calc(3px / var(--zoom))) #eab308}
-.screen-card[data-screen-status=KEEP]{border-left:max(6px,calc(3px / var(--zoom))) solid var(--keep)}
-.screen-card[data-screen-status=REMOVE]{border-left:max(6px,calc(3px / var(--zoom))) solid var(--remove)}
 .card-preview{display:block;width:100%;height:176px;object-fit:contain;object-position:top;background:white}
 .missing-preview{display:flex;align-items:center;justify-content:center;color:var(--gray-500);font-size:13px;background:var(--gray-100)}
 .screen-caption{position:absolute;left:0;bottom:0;width:100%;height:44px;padding:4px 10px;background:#fffffff2;border-top:1px solid var(--gray-200);text-align:left}
