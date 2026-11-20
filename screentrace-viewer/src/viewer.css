@@ -1,7 +1,7 @@
 :root{
  --gray-50:#f6f6f3;--gray-100:#fafaf8;--gray-200:#e2e3df;--gray-300:#d5d7d2;--gray-500:#5b6168;--gray-700:#3a3f45;--gray-900:#1b1e22;
  --primary:#2347c5;--primary-soft:#ebeef8;
- --keep:#1d6b45;--keep-soft:#e6f2eb;--remove:#9e3410;--remove-soft:#fbeae3;--warning:#7a5000;--warning-soft:#fbf1dc;--warning-fill:#e0a526;
+ --keep:#1d6b45;--keep-soft:#e6f2eb;--keep-light:#9fc9b0;--remove:#9e3410;--remove-soft:#fbeae3;--warning:#7a5000;--warning-soft:#fbf1dc;--warning-fill:#e0a526;
  --canvas:#ecece7;--area:#f8f8f5;--card-edge:#cfd1cb;
  --radius:8px;--shadow-card:0 2px 8px #1b1e220c;--shadow-float:0 12px 40px #1b1e2226;
  --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
@@ -540,8 +540,9 @@ body[data-presenting=true] .focus-layer{position:fixed!important;inset:0!importa
 .proportion-part{flex:1 1 0;min-width:3px}
 .proportion-part[data-share=IN_USE],.proportion-part[data-share=REACHABLE]{background:var(--keep)}
 .proportion-part[data-share=UNREFERENCED]{background:var(--warning-fill)}
-.proportion-part[data-share=REMOVABLE],.api-summary-key[data-share=REMOVABLE]::before{background:repeating-linear-gradient(135deg,var(--remove) 0 3px,var(--remove-soft) 3px 5px)}
-.proportion-part[data-share=POSSIBLE]{background:repeating-linear-gradient(135deg,var(--gray-500) 0 3px,var(--gray-300) 3px 6px)}
+.proportion-part[data-share=REMOVABLE],.api-summary-key[data-share=REMOVABLE]::before{background:var(--remove)}
+/* 可能走到: a lighter shade of 會走到, solid like every other status. */
+.proportion-part[data-share=POSSIBLE]{background:var(--keep-light)}
 .proportion-part[data-share=UNREACHED]{background:var(--gray-300)}
 .proportion-part[data-share=EXCLUDED]{box-shadow:inset 0 0 0 1px var(--gray-300)}
 .api-summary{display:flex;flex-direction:column;gap:6px}
