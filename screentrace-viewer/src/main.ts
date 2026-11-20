@@ -337,9 +337,35 @@ try {
   modes.setAttribute('role', 'group');
   modes.setAttribute('aria-label', '清單顯示方式');
   modes.append(listButton, filesButton, featuresButton);
-  const chips = element('div', undefined, 'chips');
+  // The status filter folds into one button beside the search box; it opens a short menu.
+  const searchRow = element('div', undefined, 'search-row'),
+    filterButton = element('button', undefined, 'filter-button'),
+    filterLabel = element('span'),
+    chips = element('div', undefined, 'filter-pop');
+  filterButton.type = 'button';
+  filterButton.dataset.filterToggle = 'true';
+  filterButton.setAttribute('aria-haspopup', 'true');
+  filterButton.setAttribute('aria-expanded', 'false');
+  filterButton.append(icon('filter'), filterLabel);
   chips.setAttribute('role', 'group');
   chips.setAttribute('aria-label', '依狀態篩選');
+  chips.hidden = true;
+  const showFilter = (open: boolean) => {
+    chips.hidden = !open;
+    filterButton.setAttribute('aria-expanded', String(open));
+  };
+  filterButton.onclick = () => showFilter(chips.hidden === true);
+  document.addEventListener('pointerdown', (event) => {
+    if (!chips.hidden && !searchRow.contains(event.target as Node)) showFilter(false);
+  });
+  searchRow.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && !chips.hidden) {
+      event.stopPropagation();
+      showFilter(false);
+      filterButton.focus();
+    }
+  });
+  searchRow.append(searchBox, filterButton, chips);
   const notices = element('div', undefined, 'sidebar-notices'),
     list = element('div', undefined, 'screen-list');
   // The persona bar sits on the map: one button per persona turns the map into that persona's flow, step by step.
@@ -424,7 +450,7 @@ try {
   expandList.classList.add('rail-toggle');
   rail.append(expandList, railSearch);
   const sidebarBody = element('div', undefined, 'sidebar-body');
-  sidebarBody.append(sidebarHeader, searchBox, modes, chips, notices, list);
+  sidebarBody.append(sidebarHeader, searchRow, modes, notices, list);
   nav.append(
     rail,
     sidebarBody,
@@ -962,20 +988,29 @@ try {
   const renderSidebar = () => {
     const counts = statistics(graph, reviewState).screens;
     chips.replaceChildren();
+    const filterName = (value: 'ALL' | 'UNDECIDED' | 'KEEP' | 'REMOVE') =>
+      value === 'ALL' ? '全部' : decisionLabel(value);
     for (const value of ['ALL', 'UNDECIDED', 'KEEP', 'REMOVE'] as const) {
-      const chip = element(
-        'button',
-        `${value === 'ALL' ? '全部' : decisionLabel(value)} ${value === 'ALL' ? index.screens.length : counts[value]}`,
-        'chip',
+      const chip = element('button', undefined, 'filter-option');
+      chip.type = 'button';
+      chip.append(
+        element('span', filterName(value)),
+        element('span', String(value === 'ALL' ? index.screens.length : counts[value]), 'muted'),
       );
       chip.dataset.stateFilter = value;
       chip.setAttribute('aria-pressed', String(filter === value));
       chip.onclick = () => {
         filter = value;
+        showFilter(false);
         render();
       };
       chips.append(chip);
     }
+    // The button says which filter is on when it is not 全部.
+    filterLabel.textContent = filter === 'ALL' ? '' : filterName(filter);
+    filterButton.dataset.active = String(filter !== 'ALL');
+    filterButton.title = `依狀態篩選：${filterName(filter)}`;
+    filterButton.setAttribute('aria-label', `依狀態篩選：${filterName(filter)}`);
     listButton.setAttribute('aria-pressed', String(listMode === 'list'));
     filesButton.setAttribute('aria-pressed', String(listMode === 'files'));
     featuresButton.setAttribute('aria-pressed', String(listMode === 'features'));
