@@ -15,6 +15,8 @@ import { callerKind, Caller } from './usage';
 import { Index } from './map';
 import { Node, Evidence } from './contracts';
 import { element } from './text';
+import { icon, iconButton } from './shell-ui';
+import { rolePartition, roleTint } from './personas';
 import { proportionBar, sharePercent } from './proportion';
 import { splitter, SplitRange } from './splitter';
 import { backgroundJobs, jobTriggerLabels, BackgroundJob } from './shared/jobs';
@@ -411,25 +413,63 @@ export function apiPage(index: Index, state: ReviewState, options: ApiPageOption
   const head = element('div', undefined, 'api-heading'),
     title = element('h1', 'API');
   title.append(element('span', String(records.length), 'api-total'));
-  head.append(title, element('p', '狀態依目前的保留／移除標記即時計算。', 'api-intro'));
+  head.append(title);
   if (records.length) head.append(statusSummary(apiStatusCounts(records.map((r) => r.status))));
+  // Search and status filter look and work like the screen list's (search box + filter menu).
   const search = element('input'),
+    searchBox = element('div', undefined, 'search-box'),
+    clearSearch = iconButton('清除搜尋', 'close'),
+    searchRow = element('div', undefined, 'search-row'),
+    filterButton = element('button', undefined, 'filter-button'),
+    filterLabel = element('span'),
     grouping = element('div', undefined, 'segmented api-grouping'),
-    chips = element('div', undefined, 'chips');
+    chips = element('div', undefined, 'filter-pop');
   search.type = 'search';
   search.placeholder = '搜尋網址、處理程式或畫面';
   search.setAttribute('aria-label', '搜尋 API');
   search.value = memory.query;
+  searchBox.append(icon('search'), search, clearSearch);
+  filterButton.type = 'button';
+  filterButton.dataset.filterToggle = 'true';
+  filterButton.setAttribute('aria-haspopup', 'true');
+  filterButton.setAttribute('aria-expanded', 'false');
+  filterButton.append(icon('filter'), filterLabel);
   grouping.setAttribute('role', 'group');
   grouping.setAttribute('aria-label', '分組方式');
   chips.setAttribute('role', 'group');
   chips.setAttribute('aria-label', 'API 狀態篩選');
+  chips.hidden = true;
+  const showFilter = (open: boolean) => {
+    chips.hidden = !open;
+    filterButton.setAttribute('aria-expanded', String(open));
+  };
+  filterButton.onclick = () => showFilter(chips.hidden === true);
+  const closeOutside = (event: PointerEvent) => {
+    if (!searchRow.isConnected) document.removeEventListener('pointerdown', closeOutside);
+    else if (!chips.hidden && !searchRow.contains(event.target as globalThis.Node))
+      showFilter(false);
+  };
+  document.addEventListener('pointerdown', closeOutside);
+  searchRow.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && !chips.hidden) {
+      event.stopPropagation();
+      showFilter(false);
+      filterButton.focus();
+    }
+  });
+  clearSearch.onclick = () => {
+    search.value = '';
+    memory.query = '';
+    renderList();
+    search.focus();
+  };
+  searchRow.append(searchBox, filterButton, chips);
   const toolbar = element('div', undefined, 'api-toolbar');
-  toolbar.append(chips, grouping);
+  toolbar.append(grouping);
   const list = element('div', undefined, 'api-list');
   list.setAttribute('role', 'listbox');
   list.setAttribute('aria-label', 'API 清單');
-  head.append(search, toolbar);
+  head.append(searchRow, toolbar);
   master.append(head, list);
   root.append(
     master,
@@ -831,23 +871,32 @@ export function apiPage(index: Index, state: ReviewState, options: ApiPageOption
     }
     chips.replaceChildren();
     const attention = records.filter((r) => r.status !== 'IN_USE').length;
-    for (const [value, label, count] of [
+    const filters = [
       ['ALL', '全部', records.length],
       ['ATTENTION', '需要注意', attention],
       ['IN_USE', '使用中', records.length - attention],
-    ] as const) {
-      const chip = element('button', `${label} ${count}`, 'chip');
+    ] as const;
+    for (const [value, label, count] of filters) {
+      const chip = element('button', undefined, 'filter-option');
       chip.type = 'button';
+      chip.append(element('span', label), element('span', String(count), 'muted'));
       chip.dataset.apiFilter = value;
       chip.setAttribute('aria-pressed', String(memory.filter === value));
       if (value === 'ATTENTION' && count) chip.classList.add('is-attention');
       chip.onclick = () => {
         memory.filter = value;
+        showFilter(false);
         renderControls();
         renderList();
       };
       chips.append(chip);
     }
+    // The button says which filter is on when it is not 全部.
+    const current = filters.find(([value]) => value === memory.filter)?.[1] || '全部';
+    filterLabel.textContent = memory.filter === 'ALL' ? '' : current;
+    filterButton.dataset.active = String(memory.filter !== 'ALL');
+    filterButton.title = `API 狀態篩選：${current}`;
+    filterButton.setAttribute('aria-label', `API 狀態篩選：${current}`);
   };
 
   const renderList = () => {
@@ -937,9 +986,8 @@ export function apiPage(index: Index, state: ReviewState, options: ApiPageOption
         if (record.external.length)
           meta.append(element('span', '外部呼叫（Webhook）', 'api-external-call'));
         const main = element('span', undefined, 'api-row-main');
+        // The list shows only the API itself; what it is for is in the detail.
         main.append(pathCode(record.path, 'api-path'));
-        const purpose = apiPurpose(index, record.callers, record.external.length > 0);
-        if (purpose) main.append(element('span', purpose.short, 'api-row-purpose'));
         row.append(methodBadge(record.method), main, meta);
         row.onclick = () => select(record.node.id);
         body.append(row);
@@ -982,6 +1030,11 @@ export function apiPage(index: Index, state: ReviewState, options: ApiPageOption
     screenDecision(state, caller.screenId) === 'REMOVE' ||
     (!!caller.componentId &&
       componentDecision(state, caller.screenId, caller.componentId) === 'REMOVE');
+  // A screen shows its role's tint here as everywhere else (ADR 0188).
+  const roles = rolePartition(index);
+  const tint = (el: HTMLElement, screenId: string) => {
+    if (roles) el.dataset.roleTint = roleTint(index.graph, roles.of.get(screenId));
+  };
   const callerButton = (caller: Caller, label: string) => {
     const link = element('button', undefined, 'api-caller');
     link.type = 'button';
@@ -1029,6 +1082,7 @@ export function apiPage(index: Index, state: ReviewState, options: ApiPageOption
       const node = element('button', undefined, 'api-chain-node');
       node.type = 'button';
       node.dataset.chainScreen = item.screenId;
+      tint(node, item.screenId);
       node.append(
         element('span', index.nodes.get(item.screenId)?.name || '畫面', 'api-chain-name'),
         element(
@@ -1139,19 +1193,34 @@ export function apiPage(index: Index, state: ReviewState, options: ApiPageOption
       const perScreen = new Map<string, Caller>();
       for (const caller of callers)
         if (!perScreen.has(caller.screenId)) perScreen.set(caller.screenId, caller);
-      for (const [screenId, caller] of [...perScreen].sort((a, b) => byName(a[0], b[0])))
-        triggers.append(callerButton(caller, name(screenId)));
+      for (const [screenId, caller] of [...perScreen].sort((a, b) => byName(a[0], b[0]))) {
+        const chip = callerButton(caller, name(screenId));
+        tint(chip, screenId);
+        triggers.append(chip);
+      }
       fold.append(summary, triggers);
       box.append(fold);
     }
     for (const [screenId, callers] of [...own].sort((a, b) => byName(a[0], b[0]))) {
+      // Each calling screen is a card: its header opens the screen, the buttons below it call the API.
       const group = element('div', undefined, 'api-caller-screen'),
-        link = element('button', name(screenId), 'api-screen-link');
+        link = element('button', undefined, 'api-screen-link');
+      tint(group, screenId);
       link.type = 'button';
       link.dataset.callerScreen = screenId;
+      link.title = `開啟畫面「${name(screenId)}」`;
+      const label = element('span', undefined, 'api-screen-text');
+      label.append(
+        element('strong', name(screenId)),
+        element('code', index.routes.get(screenId)?.[0] || '沒有已知 URL'),
+      );
+      const open = element('span', '開啟畫面', 'api-screen-open');
+      open.append(icon('arrow'));
+      link.append(icon('screen'), label, open);
       link.onclick = () => options.onCaller(screenId);
       if (screenDecision(state, screenId) === 'REMOVE') group.classList.add('is-removed');
       const triggers = element('div', undefined, 'api-caller-list');
+      triggers.append(element('span', '觸發', 'api-caller-heading'));
       for (const caller of callers)
         triggers.append(callerButton(caller, callerLabel(index, caller)));
       group.append(link, triggers);
@@ -1264,11 +1333,12 @@ export function apiPage(index: Index, state: ReviewState, options: ApiPageOption
     inner.append(title);
     const purpose = apiPurpose(index, record.callers, record.external.length > 0);
     if (purpose) {
-      const line = element('p', `用途：${purpose.sentence}`, 'api-purpose');
+      const line = element('p', purpose.sentence, 'api-purpose');
       line.dataset.apiPurpose = 'true';
       inner.append(line);
     }
-    inner.append(why);
+    // 「N 個畫面會呼叫這個 API」 repeats the callers below; other statuses keep their warning.
+    if (record.status !== 'IN_USE' || record.note) inner.append(why);
     if (options.setApi) {
       // The person's own decision on this API and its note sit at the end of its title row; a
       // conflict follows right under the title, without a box of its own.
