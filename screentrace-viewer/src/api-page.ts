@@ -1035,6 +1035,25 @@ export function apiPage(index: Index, state: ReviewState, options: ApiPageOption
   const tint = (el: HTMLElement, screenId: string) => {
     if (roles) el.dataset.roleTint = roleTint(index.graph, roles.of.get(screenId));
   };
+  /** What kind of element triggers the call, as a short tag (a submit button reads 按鈕). */
+  const triggerKind = (caller: Caller) => {
+    if (!caller.componentId) return callerKind(index, caller) === 'unresolved' ? '不明' : '載入';
+    const kind = index.nodes.get(caller.componentId)?.attributes.kind || '';
+    return kind === 'SUBMIT' ? '按鈕' : kindNames[kind] || '元件';
+  };
+  /** A trigger on a screen: its kind tag, then its own words without the kind repeated. */
+  const triggerButton = (caller: Caller) => {
+    const kind = triggerKind(caller);
+    let label = callerLabel(index, caller);
+    if (label.startsWith(kind))
+      label = label.slice(kind.length).replace(/^（(.*)）$/, '$1') || label;
+    const chip = callerButton(caller, label);
+    chip.classList.add('is-trigger');
+    chip.dataset.triggerKind = kind;
+    chip.prepend(element('span', kind, 'api-caller-kind'));
+    chip.title = `${kind}：${callerLabel(index, caller)}`;
+    return chip;
+  };
   const callerButton = (caller: Caller, label: string) => {
     const link = element('button', undefined, 'api-caller');
     link.type = 'button';
@@ -1162,8 +1181,19 @@ export function apiPage(index: Index, state: ReviewState, options: ApiPageOption
         own.set(caller.screenId, [...(own.get(caller.screenId) || []), caller]);
     const name = (id: string) => index.nodes.get(id)?.name || '畫面';
     const byName = (a: string, b: string) => name(a).localeCompare(name(b), 'zh-Hant');
+    // A shared form whose own submit button is also shared is the same action: keep the button.
+    const sharedForms = new Set(
+      record.callers
+        .filter((c) => c.componentId && isShared(c))
+        .map((c) => index.nodes.get(c.componentId!)?.attributes.formId)
+        .filter((id): id is string => !!id),
+    );
+    const isSharedForm = (key: string) =>
+      record.callers.some(
+        (c) => sharedKey(c) === key && !!c.componentId && sharedForms.has(c.componentId),
+      );
     for (const [key, screens] of [...screensOf]
-      .filter(([key]) => shared.has(key))
+      .filter(([key]) => shared.has(key) && !isSharedForm(key))
       .sort((a, b) => b[1].size - a[1].size || a[0].localeCompare(b[0], 'en'))) {
       const callers = record.callers.filter((c) => sharedKey(c) === key),
         first = callers[0],
@@ -1193,8 +1223,12 @@ export function apiPage(index: Index, state: ReviewState, options: ApiPageOption
       const perScreen = new Map<string, Caller>();
       for (const caller of callers)
         if (!perScreen.has(caller.screenId)) perScreen.set(caller.screenId, caller);
+      // These are the screens the shared button appears on, not triggers.
+      triggers.append(element('span', '出現在', 'api-caller-heading'));
       for (const [screenId, caller] of [...perScreen].sort((a, b) => byName(a[0], b[0]))) {
         const chip = callerButton(caller, name(screenId));
+        chip.classList.add('is-screen');
+        chip.prepend(icon('screen'));
         tint(chip, screenId);
         triggers.append(chip);
       }
@@ -1220,9 +1254,18 @@ export function apiPage(index: Index, state: ReviewState, options: ApiPageOption
       link.onclick = () => options.onCaller(screenId);
       if (screenDecision(state, screenId) === 'REMOVE') group.classList.add('is-removed');
       const triggers = element('div', undefined, 'api-caller-list');
-      triggers.append(element('span', '觸發', 'api-caller-heading'));
+      triggers.append(element('span', '觸發元件', 'api-caller-heading'));
+      // A form whose own submit buttons are listed is the same action: show the buttons only.
+      const submitted = new Set(
+        callers
+          .map((c) =>
+            c.componentId ? index.nodes.get(c.componentId)?.attributes.formId : undefined,
+          )
+          .filter((id): id is string => !!id),
+      );
       for (const caller of callers)
-        triggers.append(callerButton(caller, callerLabel(index, caller)));
+        if (!caller.componentId || !submitted.has(caller.componentId))
+          triggers.append(triggerButton(caller));
       group.append(link, triggers);
       box.append(group);
     }

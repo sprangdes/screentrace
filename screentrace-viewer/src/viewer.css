@@ -847,3 +847,9 @@ button.api-chain-node:hover{border-color:var(--gray-500)}
 .api-caller-screen .api-caller-list{align-items:center;padding:8px 10px}
 .api-caller-heading{font-size:12px;color:var(--gray-500);margin-right:2px}
 .api-caller[data-role-tint]:not([data-role-tint=none]){background:var(--tint);border-color:var(--tint-edge)}
+
+/* Triggers read as controls (square, kind tag); shared-button screens read as screens (icon, role tint). */
+.api-caller.is-trigger{border-radius:6px;padding:2px 8px 2px 3px;box-shadow:0 1px 0 var(--gray-200)}
+.api-caller-kind{flex:none;padding:1px 6px;border-radius:4px;background:var(--gray-100);color:var(--gray-700);font-size:11px;font-weight:700;letter-spacing:.02em}
+.api-caller.is-trigger[data-trigger-kind=按鈕] .api-caller-kind{background:var(--primary-soft);color:var(--primary)}
+.api-caller.is-screen .icon{width:14px;height:14px;color:var(--tint-ink,var(--gray-500))}
