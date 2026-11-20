@@ -3,7 +3,7 @@
  --primary:#2347c5;--primary-soft:#ebeef8;
  --keep:#1d6b45;--keep-soft:#e6f2eb;--keep-light:#9fc9b0;--remove:#9e3410;--remove-soft:#fbeae3;--warning:#7a5000;--warning-soft:#fbf1dc;--warning-fill:#e0a526;
  --canvas:#ecece7;--area:#f8f8f5;--card-edge:#cfd1cb;
- --radius:8px;--shadow-card:0 2px 8px #1b1e220c;--shadow-float:0 12px 40px #1b1e2226;
+ --radius:8px;--shadow-card:0 2px 8px #1b1e220c;--shadow-float:0 12px 40px #1b1e2226;--shadow-bar:0 1px 2px #1b1e2214,0 4px 14px #1b1e220f;--shadow-edge-right:4px 0 18px #1b1e2214;--shadow-edge-left:-4px 0 18px #1b1e2214;--shadow-lift:0 1px 2px #1b1e2214,0 2px 6px #1b1e220a;
  --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
  font-family:system-ui,-apple-system,"Segoe UI","PingFang TC","Microsoft JhengHei",sans-serif;font-size:15px;color:var(--gray-900);background:var(--gray-50)
 }
@@ -805,3 +805,14 @@ button.persona-coverage-dot:hover{outline:2px solid var(--primary);outline-offse
 .api-purpose{margin:4px 0 0;font-weight:600}
 .job-badge[data-job-trigger=ASYNC]{background:#f3eefb;border-color:#d9cdf0;color:#4b2f86}
 .state-flow{margin:0;padding-left:20px;display:grid;gap:4px}.state-flow li{display:flex;flex-wrap:wrap;gap:8px;align-items:baseline}
+
+/* Depth (R114): edge bars sit above the work area, cards lift off their background, floating layers float. */
+.topbar{position:relative;z-index:6;box-shadow:var(--shadow-bar)}
+.sidebar{z-index:3;box-shadow:var(--shadow-edge-right)}
+.details-panel{z-index:3;box-shadow:var(--shadow-edge-left)}
+.api-master{position:relative;z-index:2;box-shadow:var(--shadow-edge-right)}
+.persona-top{position:relative;z-index:2;box-shadow:var(--shadow-bar)}
+.persona-card{box-shadow:var(--shadow-lift)}
+.persona-card[data-reach=POSSIBLE]{box-shadow:none}
+.prototype-stage{box-shadow:0 2px 12px #1b1e2214}
+.persona-drawer{position:relative;z-index:1}
