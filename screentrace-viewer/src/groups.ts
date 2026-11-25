@@ -38,17 +38,11 @@ export interface GroupedLayout {
 
 export const OTHER_GROUP = '其他';
 
-/** The line under an area's title on the zoomed-out map: its first screens' names, so the area says what it is for. */
-export function areaPreview(names: readonly string[], count = 3): string {
-  const named = names.filter((name) => name.trim()),
-    shown = named.slice(0, count);
-  return shown.join('、') + (named.length > shown.length ? '…' : '');
-}
-// TITLE is the band at the top of an area that holds its label: tall enough for the label's two lines at the
-// zoomed-out overview, where the label is scaled back up to stay readable (see .screen-group-label).
-const TITLE = 200,
-  GAP = 170,
-  ORIGIN = 60;
+// TITLE is the band at the top of an area that holds its one-line label 「投保人 · 5」 above the cards' own margin
+// (ORIGIN in overview.ts); GAP separates the areas and holds the corridors of the links between them.
+const TITLE = 18,
+  GAP = 64,
+  ORIGIN = 20;
 const order = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);
 
 const segments = (route: string) =>
@@ -117,19 +111,18 @@ export function groupedLayout(index: Index): GroupedLayout | undefined {
   // Shelf packing: rows of areas, the row width chosen so the whole map is roughly 16:10.
   const area = inner.reduce((sum, g) => sum + g.layout.width * (g.layout.height + TITLE), 0),
     target = Math.max(...inner.map((g) => g.layout.width), Math.sqrt(area * 1.6));
-  // Lines that cross more than one row run down a spine left of every area; it widens with the links it carries.
-  const spine = ORIGIN + TRACK * (Math.min(30, keys.length * keys.length) + 2);
+  // Areas are packed from x = 0 first; the spine left of them is added once it is known whether any link needs it.
   const placed: { group: (typeof inner)[number]; x: number; y: number; row: number }[] = [],
     rows: { top: number; bottom: number }[] = [];
-  let x = spine,
+  let x = 0,
     y = ORIGIN,
     rowHeight = 0;
   for (const group of inner) {
     const w = group.layout.width,
       h = group.layout.height + TITLE;
-    if (x > spine && x + w > spine + target) {
+    if (x > 0 && x + w > target) {
       rows.push({ top: y, bottom: y + rowHeight });
-      x = spine;
+      x = 0;
       y += rowHeight + GAP;
       rowHeight = 0;
     }
@@ -138,6 +131,15 @@ export function groupedLayout(index: Index): GroupedLayout | undefined {
     rowHeight = Math.max(rowHeight, h);
   }
   rows.push({ top: y, bottom: y + rowHeight });
+  // Lines that cross more than one row run down a spine left of every area; it widens with the links it carries.
+  const rowOfKey = new Map(placed.map((p) => [p.group.key, p.row])),
+    spans = overviewFlows(index).some(
+      (r) =>
+        membership.get(r.from) !== membership.get(r.to) &&
+        Math.abs(rowOfKey.get(membership.get(r.from)!)! - rowOfKey.get(membership.get(r.to)!)!) > 1,
+    );
+  const spine = spans ? ORIGIN + TRACK * (Math.min(30, keys.length * keys.length) + 2) : ORIGIN;
+  for (const p of placed) p.x += spine;
   const positions = new Map<string, Position>(),
     routes: RoutedRelation[] = [],
     groups: ScreenGroup[] = [];
@@ -153,7 +155,7 @@ export function groupedLayout(index: Index): GroupedLayout | undefined {
     const count = group.members.size;
     groups.push({
       key: group.key,
-      label: `${roles ? roles.label(group.key) : group.key === OTHER_GROUP ? OTHER_GROUP : group.key === '/' ? '/（首頁）' : group.key} · ${count} 個畫面`,
+      label: `${roles ? roles.label(group.key) : group.key === OTHER_GROUP ? OTHER_GROUP : group.key === '/' ? '/（首頁）' : group.key} · ${count}`,
       members: [...group.members].sort(order),
       tint: roles ? roleTint(index.graph, group.key) : undefined,
       box: { x, y, width: group.layout.width, height: group.layout.height + TITLE },
@@ -167,7 +169,7 @@ export function groupedLayout(index: Index): GroupedLayout | undefined {
     const key = `${membership.get(r.from)}\u0000${membership.get(r.to)}`;
     pairs.set(key, [...(pairs.get(key) || []), r]);
   }
-  const rowOf = new Map(placed.map((p) => [p.group.key, p.row])),
+  const rowOf = rowOfKey,
     boxes = new Map(groups.map((g) => [g.key, g.box]));
   const links = routeLinks(
     [...pairs]

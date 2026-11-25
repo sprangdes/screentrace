@@ -4,7 +4,7 @@ import { Node } from './contracts';
 import { element, text } from './text';
 import { componentLabelsForScreen, kindName } from './labels';
 import { callSources } from './usage';
-import { methodBadge, pathCode } from './api-page';
+import { methodBadge } from './api-page';
 import { jsfLimitation } from './unsupported-framework';
 import { apiEndpoints } from './api-page';
 import { decisionSwitch, decisionLabel, noteEditor } from './review-ui';
@@ -69,7 +69,7 @@ const endpointLabel = (node: Node) => {
   return `${method === 'ANY' ? '任何方法' : method} ${endpointPath(node)}`;
 };
 
-/** What a component leads to, phrased for people: destination screens and called APIs. */
+/** What a component leads to, phrased for people: the APIs it calls, then the screens it opens. */
 function outcomes(index: Index, componentId: string, apis: Set<string>): string[] {
   const targets = [
     ...(index.graph.relationships || []).filter((e) => e.from === componentId).map((e) => e.to),
@@ -77,13 +77,14 @@ function outcomes(index: Index, componentId: string, apis: Set<string>): string[
       .filter((b) => b.triggerId === componentId && b.targetId)
       .map((b) => b.targetId!),
   ];
-  const result = new Set<string>();
+  const calls = new Set<string>(),
+    opens = new Set<string>();
   for (const id of targets) {
     const node = index.nodes.get(id);
-    if (node?.type === 'SCREEN') result.add(`前往「${node.name}」`);
-    else if (node && apis.has(node.id)) result.add(endpointLabel(node));
+    if (node?.type === 'SCREEN') opens.add(`前往「${node.name}」`);
+    else if (node && apis.has(node.id)) calls.add(endpointLabel(node));
   }
-  return [...result];
+  return [[...calls].join(' · '), [...opens].join(' · ')].filter(Boolean);
 }
 
 /** Identifies one note editor across rebuilds of the panel. */
@@ -137,28 +138,19 @@ export function screenPanel(
       keys: true,
     }),
   );
-  const notes = (componentId?: string, label = '這個畫面') => {
-    const key = noteKey(screenId, componentId),
-      editor = noteEditor({
-        label,
-        compact: componentId !== undefined,
-        alwaysOpen: componentId === undefined,
-        decision:
-          componentId === undefined ? decision : componentDecision(state, screenId, componentId),
-        note:
-          componentId === undefined
-            ? decisionNoteOf(state, 'screen', screenId)
-            : decisionNoteOf(state, 'component', screenId, componentId),
-        open: !!actions.notesOpen?.has(key),
-        onToggle: (open) => {
-          if (open) actions.notesOpen?.add(key);
-          else actions.notesOpen?.delete(key);
-        },
-        onInput: (note) => actions.setNote?.(screenId, componentId, note),
-        onCommit: () => actions.commitNote?.(),
-      });
-    editor.dataset.noteFor = componentId === undefined ? 'screen' : 'component';
-    if (componentId !== undefined) editor.dataset.componentId = componentId;
+  // Only the screen takes a note here; notes on buttons and fields come in from an md and are kept as they are.
+  const notes = () => {
+    const editor = noteEditor({
+      label: '這個畫面',
+      alwaysOpen: true,
+      decision,
+      note: decisionNoteOf(state, 'screen', screenId),
+      open: true,
+      onToggle: () => {},
+      onInput: (note) => actions.setNote?.(screenId, undefined, note),
+      onCommit: () => actions.commitNote?.(),
+    });
+    editor.dataset.noteFor = 'screen';
     return editor;
   };
   if (actions.inherited) {
@@ -265,30 +257,34 @@ export function screenPanel(
   // Each list sits on its own tab and is always unfolded there.
   buttons.open = true;
   buttons.dataset.section = 'buttons';
-  const decided = keys.filter(
-    (k) => componentDecision(state, screenId, k.componentId) !== 'UNDECIDED',
-  ).length;
-  buttons.append(
-    element('summary', `按鈕 ${keys.length} 個${decided ? ` · 已標記 ${decided}` : ''}`),
-  );
+  buttons.append(element('summary', `按鈕 ${keys.length} 個`));
   buttons.addEventListener('toggle', () => actions.onButtonsToggle(buttons.open));
-  if (!keys.length) buttons.append(element('p', '這個畫面沒有可標記的按鈕', 'muted'));
-  else
-    buttons.append(
-      element(
-        'p',
-        effective === 'REMOVE'
-          ? '畫面已標記移除，未個別標記的按鈕隨畫面移除。'
-          : '沒有個別標記的按鈕跟著畫面的決定。',
-        'muted',
-      ),
-    );
+  buttons.append(
+    element(
+      'p',
+      keys.length
+        ? '沒有個別標記的按鈕跟著畫面的決定。點一列可在預覽中標出。'
+        : '這個畫面沒有可標記的按鈕',
+      'panel-hint',
+    ),
+  );
+  // What a row follows when it has no decision of its own, in words.
+  const follows = (value: Decision) =>
+    value === 'KEEP'
+      ? '個別標記：保留'
+      : value === 'REMOVE'
+        ? '個別標記：移除'
+        : effective === 'KEEP'
+          ? '隨畫面保留'
+          : effective === 'REMOVE'
+            ? '隨畫面移除'
+            : '隨畫面 · 未確認';
   const row = (componentId: string) => {
     const field = fieldIds.has(componentId),
       node = index.nodes.get(componentId),
       value = componentDecision(state, screenId, componentId),
       name = labels.get(componentId) || (field && node ? kindName(node) : '沒有文字的按鈕'),
-      item = element('div', undefined, 'button-row');
+      item = element('div', undefined, field ? 'button-row is-field' : 'button-row');
     item.dataset.componentRow = componentId;
     item.tabIndex = -1;
     if (actions.highlight === componentId) item.classList.add('is-highlighted');
@@ -300,35 +296,43 @@ export function screenPanel(
     info.title = actions.positions?.has(componentId)
       ? `在預覽中標示這個${what}`
       : `這個${what}在預覽中看不到`;
-    if (field) item.dataset.field = 'true';
-    info.append(
-      element('strong', name),
-      element(
-        'span',
-        field
-          ? [node ? kindName(node) : '欄位', ...result].join(' · ')
-          : result.length
-            ? result.join(' · ')
-            : '目的地無法確定',
-        'muted',
-      ),
-    );
     item.onmouseenter = () => actions.hover?.(componentId);
     item.onmouseleave = () => actions.hover?.(undefined);
     info.onfocus = () => actions.hover?.(componentId);
     info.onblur = () => actions.hover?.(undefined);
     info.onclick = () => actions.locate?.(componentId);
-    if (effective === 'REMOVE' && value === 'UNDECIDED')
-      info.append(element('span', decisionLabel('INHERITED_REMOVE'), 'inherited-tag'));
+    if (field) {
+      // Fields are read here, not decided: a decision from an earlier md is still shown.
+      item.dataset.field = 'true';
+      info.append(
+        element('strong', name),
+        element('span', node ? kindName(node) : '欄位', 'button-effect is-kind'),
+      );
+      const pill = element(
+        'span',
+        value === 'UNDECIDED' ? '隨畫面' : follows(value),
+        'field-follow',
+      );
+      pill.dataset.decision = value;
+      item.append(info, pill);
+      return item;
+    }
+    const status = element('span', follows(value), 'button-follow');
+    if (value !== 'UNDECIDED') status.dataset.own = 'true';
+    info.append(
+      element('strong', name),
+      element('span', result.length ? result.join(' → ') : '無法確定前往哪個畫面', 'button-effect'),
+      status,
+    );
     item.append(
       info,
       decisionSwitch(name, value, (next) => actions.setComponent(screenId, componentId, next), {
         compact: true,
         screen: screenId,
         component: componentId,
+        follows: effective,
       }),
     );
-    if (actions.setNote) item.append(notes(componentId, name));
     return item;
   };
   const positions = actions.positions,
@@ -373,22 +377,7 @@ export function screenPanel(
     const fields = element('details', undefined, 'panel-section panel-fields');
     fields.open = true;
     fields.dataset.section = 'fields';
-    const decidedFields = fieldKeys.filter(
-      (k) => componentDecision(state, screenId, k.componentId) !== 'UNDECIDED',
-    ).length;
-    fields.append(
-      element(
-        'summary',
-        `欄位 ${fieldKeys.length} 個${decidedFields ? ` · 已標記 ${decidedFields}` : ''}`,
-      ),
-      element(
-        'p',
-        effective === 'REMOVE'
-          ? '畫面已標記移除，未個別標記的欄位隨畫面移除。'
-          : '輸入欄位、顯示資料的欄位與表格；沒有個別標記的欄位跟著畫面的決定。',
-        'muted',
-      ),
-    );
+    fields.append(element('summary', `欄位 ${fieldKeys.length} 個`));
     fields.addEventListener('toggle', () => actions.onFieldsToggle?.(fields.open));
     for (const key of fieldKeys.filter(placed).sort(byPosition))
       fields.append(row(key.componentId));
@@ -401,20 +390,42 @@ export function screenPanel(
     root.append(fields);
   }
 
-  const called = [...callSources(index.graph)]
+  const sources = callSources(index.graph);
+  const called = [...sources]
     .filter(([api, callers]) => apis.has(api) && callers.some((c) => c.screenId === screenId))
     .map(([api]) => index.nodes.get(api)!)
     .sort((a, b) => endpointLabel(a).localeCompare(endpointLabel(b), 'en'));
-  const apiSection = element('section', undefined, 'panel-section');
+  const apiSection = element('section', undefined, 'panel-section panel-apis');
   apiSection.dataset.section = 'apis';
-  apiSection.append(element('h3', `呼叫的 API ${called.length} 個`));
-  if (!called.length) apiSection.append(element('p', '沒有已知的 API 呼叫', 'muted'));
-  // Each API reads as on the API page: the same colored method tag, then the path with its parameters marked.
+  if (!called.length) apiSection.append(element('p', '沒有已知的 API 呼叫', 'panel-hint'));
+  // Each API with the method tag the API page uses, its path, and the buttons on this screen that call it.
   for (const node of called) {
-    const link = element('button', undefined, 'link-row api-link');
+    const link = element('button', undefined, 'api-row-link'),
+      text = element('span', undefined, 'api-row-text'),
+      by = [
+        ...new Set(
+          (sources.get(node.id) || [])
+            .filter((c) => c.screenId === screenId && c.componentId)
+            .map((c) => labels.get(c.componentId!))
+            .filter((label): label is string => !!label),
+        ),
+      ];
+    link.type = 'button';
     link.dataset.api = node.id;
     link.setAttribute('aria-label', endpointLabel(node));
-    link.append(methodBadge(endpointMethod(node)), pathCode(endpointPath(node), 'api-link-path'));
+    text.append(
+      element('code', endpointPath(node), 'api-row-path'),
+      element(
+        'span',
+        by.length
+          ? `由「${by.slice(0, 3).join('」「')}」${by.length > 3 ? ' 等' : ''}觸發`
+          : '畫面載入時呼叫',
+        'api-row-via',
+      ),
+    );
+    const arrow = element('span', '→', 'api-row-arrow');
+    arrow.setAttribute('aria-hidden', 'true');
+    link.append(methodBadge(endpointMethod(node)), text, arrow);
     link.onclick = () => actions.api(node.id);
     apiSection.append(link);
   }

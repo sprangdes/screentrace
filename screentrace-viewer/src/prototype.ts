@@ -1,10 +1,9 @@
 import { element } from './text';
-import { iconButton } from './shell-ui';
+import { icon, iconButton } from './shell-ui';
 import { Index } from './map';
 import { Payload } from './contracts';
 import { PrototypeHistory } from './prototype-history';
 import { rolePartition, roleTint } from './personas';
-import { icon } from './shell-ui';
 
 export interface PrototypeOptions {
   back: () => void;
@@ -13,9 +12,17 @@ export interface PrototypeOptions {
   scroll: number;
   presenting: boolean;
   present: () => void;
+  /** The row above the preview card: the way back, the history and the trail; filled here. */
+  top: HTMLElement;
 }
 
-/** Full-size static preview of one screen with its own history toolbar and zoom controls. */
+const ghost = (label: string, name: string) => {
+  const button = iconButton(label, name);
+  button.classList.add('ghost-button');
+  return button;
+};
+
+/** Full-size static preview of one screen in a browser-like card, with its history row above it and zoom controls. */
 export function prototypeViewer(
   index: Index,
   payload: Payload,
@@ -33,46 +40,75 @@ export function prototypeViewer(
     scroller = element('div', undefined, 'prototype-scroll'),
     stage = element('div', undefined, 'prototype-stage'),
     status = element('div', undefined, 'prototype-status');
+  root.setAttribute('aria-label', '畫面預覽');
   status.setAttribute('role', 'status');
-  const back = iconButton('返回總覽', 'back'),
-    previous = iconButton('上一頁', 'back'),
-    next = iconButton('下一頁', 'arrow');
+  const name = index.nodes.get(id)?.name || id,
+    address = index.routes.get(id)?.[0] || '沒有已知 URL';
+  // The history: back to the overview, then the previous／next screen seen, as quiet buttons before the trail.
+  const back = ghost('返回總覽', 'back'),
+    previous = ghost('上一個看過的畫面', 'chevronLeft'),
+    next = ghost('下一個看過的畫面', 'chevronRight');
   back.classList.add('prototype-back');
   back.append(element('span', '返回總覽'));
-  const url = element('code', index.routes.get(id)?.[0] || '沒有已知 URL', 'prototype-url');
-  url.setAttribute('aria-label', '主要 URL');
-  url.title = url.textContent!;
   back.onclick = options.back;
-  previous.disabled = !history.canBack;
-  next.disabled = !history.canForward;
-  previous.onclick = () => options.move(-1);
-  next.onclick = () => options.move(1);
-  const present = iconButton(
-    options.presenting ? '結束全螢幕' : '全螢幕預覽',
-    options.presenting ? 'minimize' : 'maximize',
-  );
+  const arrows = (a: HTMLButtonElement, b: HTMLButtonElement) => {
+    a.disabled = !history.canBack;
+    b.disabled = !history.canForward;
+    a.onclick = () => options.move(-1);
+    b.onclick = () => options.move(1);
+  };
+  arrows(previous, next);
+  // The browser bar: three dots, the address, what the page is, and the full-window button.
+  const dots = element('span', undefined, 'browser-dots');
+  dots.setAttribute('aria-hidden', 'true');
+  dots.append(element('span'), element('span'), element('span'));
+  const url = element('code', address, 'prototype-url');
+  url.setAttribute('aria-label', '主要 URL');
+  url.title = address;
+  const present = iconButton('全螢幕預覽（f）', 'corners');
   present.classList.add('prototype-present');
   present.setAttribute('aria-pressed', String(options.presenting));
   present.onclick = options.present;
-  toolbar.append(back, previous, next, url);
+  toolbar.append(dots, url, element('span', '示意畫面 · 範例資料', 'prototype-caption'), present);
+  // Full window: the same history arrows, the screen's name and address, whose screen it is, and the way out.
+  const head = element('div', undefined, 'present-head'),
+    fullPrevious = ghost('上一個看過的畫面', 'chevronLeft'),
+    fullNext = ghost('下一個看過的畫面', 'chevronRight'),
+    title = element('div', undefined, 'present-title');
+  arrows(fullPrevious, fullNext);
+  const arrowsBox = element('div', undefined, 'present-arrows');
+  arrowsBox.setAttribute('role', 'group');
+  arrowsBox.setAttribute('aria-label', '瀏覽歷程');
+  arrowsBox.append(fullPrevious, fullNext);
+  title.append(element('strong', name), element('code', address));
+  head.append(arrowsBox, title);
   // Who uses this screen, from the roles' flows (ADR 0188).
   const roles = rolePartition(index),
     role = roles?.of.get(id);
   if (roles && role) {
-    const tag = element('span', undefined, 'prototype-role');
+    const tag = element('span', roles.label(role), 'prototype-role');
     tag.dataset.role = role;
     tag.dataset.roleTint = roleTint(index.graph, role);
     tag.title = '依角色流程判斷誰會用到這個畫面';
-    tag.append(icon('persona'), element('span', roles.label(role)));
-    toolbar.append(tag);
+    head.append(tag);
   }
-  toolbar.append(present);
+  const exit = element('button', undefined, 'present-exit');
+  exit.type = 'button';
+  exit.dataset.presentExit = 'true';
+  const escape = element('kbd', 'Esc');
+  escape.setAttribute('aria-hidden', 'true');
+  exit.append(icon('cornersIn'), element('span', '結束全螢幕'), escape);
+  exit.onclick = options.present;
+  head.append(
+    element('span', undefined, 'present-spacer'),
+    element('div', undefined, 'present-controls'),
+    exit,
+  );
   // The way here, as a breadcrumb beside the back／forward arrows: the last few screens, each a step back (ADR 0189).
   const crumbs = element('nav', undefined, 'prototype-trail');
   crumbs.setAttribute('aria-label', '瀏覽歷程');
   const trail = history.trail,
     shown = trail.slice(-3);
-  crumbs.hidden = !trail.length;
   crumbs.append(element('span', '歷程', 'prototype-trail-label'));
   if (trail.length > shown.length) crumbs.append(element('span', '…', 'prototype-trail-sep'));
   shown.forEach((screenId, i) => {
@@ -86,8 +122,24 @@ export function prototypeViewer(
     step.onclick = () => options.move(trail.length - shown.length + i - trail.length);
     crumbs.append(step, element('span', '›', 'prototype-trail-sep'));
   });
-  crumbs.append(element('strong', index.nodes.get(id)?.name || id, 'prototype-trail-here'));
-  root.append(toolbar, crumbs, status, scroller);
+  crumbs.append(element('strong', name, 'prototype-trail-here'));
+  const nav = element('div', undefined, 'stage-nav');
+  nav.append(back, previous, next);
+  options.top.replaceChildren(
+    nav,
+    crumbs,
+    element('span', undefined, 'stage-spacer'),
+    element('div', undefined, 'stage-controls'),
+  );
+  // Under the page: how to use it, and what the dashed outlines mean.
+  const footer = element('div', undefined, 'prototype-footer'),
+    legend = element('span', undefined, 'prototype-legend');
+  legend.append(
+    element('span', '示範資料', 'legend-key is-demo'),
+    element('span', '依條件出現', 'legend-key is-conditional'),
+  );
+  footer.append(element('span', '點預覽中的按鈕＝模擬前往下一個畫面'), legend);
+  root.append(toolbar, head, status, scroller, footer);
   frame.style.width = `${width}px`;
   frame.style.height = `${height}px`;
   frame.style.maxWidth = 'none';
@@ -99,7 +151,8 @@ export function prototypeViewer(
   scroller.append(stage);
   let scaleMode: 'fit' | 'manual' = 'fit',
     scale = 1;
-  const fitScale = () => Math.min(1, Math.max(1, scroller.clientWidth - 16) / width);
+  // Fit to the card's width, edge to edge.
+  const fitScale = () => Math.min(1, Math.max(1, scroller.clientWidth) / width);
   const resize = () => {
     if (!root.isConnected) {
       observer.disconnect();

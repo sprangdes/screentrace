@@ -106,13 +106,14 @@ export interface FlowLayout {
   isolated: string[];
   fallback: boolean;
 }
-export const CARD = { width: 250, height: 220 };
-const ORIGIN = 60,
-  MIN_CHANNEL = 90,
-  MIN_GUTTER = 95,
-  MAX_GAP = 260,
+/** The overview's text cards (name, route, one more line), as in the 自由畫布 design. */
+export const CARD = { width: 150, height: 84 };
+const ORIGIN = 30,
+  MIN_CHANNEL = 40,
+  MIN_GUTTER = 40,
+  MAX_GAP = 200,
   TRACK = 10,
-  PAD = 18;
+  PAD = 12;
 
 /** Stable grid keeps cyclic applications spread across both axes. */
 export function gridCells(index: Index): Map<string, Cell> {
@@ -392,7 +393,10 @@ export function routeDiagram(
     const side = list[0].side,
       vertical = side === 'R' || side === 'L',
       center = vertical ? CARD.height / 2 : CARD.width / 2,
-      step = Math.min(vertical ? 18 : 20, (vertical ? 180 : 230) / list.length);
+      step = Math.min(
+        vertical ? 12 : 18,
+        ((vertical ? CARD.height : CARD.width) - 20) / list.length,
+      );
     list.forEach((p, i) => {
       p.offset = Math.round(center + (i - (list.length - 1) / 2) * step);
     });

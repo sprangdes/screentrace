@@ -1,6 +1,6 @@
 import { Index } from './map';
 import { element, text } from './text';
-import { icon, iconButton } from './shell-ui';
+import { icon } from './shell-ui';
 import { partitionNavigation } from './overview';
 import { sharedNavigation } from './relations';
 import { componentLabelsForScreen } from './labels';
@@ -28,6 +28,8 @@ export interface Stage {
   element: HTMLElement;
   /** Where the preview goes, between the rails. */
   host: HTMLElement;
+  /** The row above the preview and the rails: history, trail, states and the demo-content switch. */
+  top: HTMLElement;
   /** Marks the cards a button of the open screen leads along; undefined clears them. */
   light(component: string | undefined): void;
   /** Rebuilds the rails (decisions or rail state changed) without touching the preview. */
@@ -95,6 +97,8 @@ function gather(index: Index, items: { other: string; triggers: string[] }[]): C
  */
 export function reviewStage(index: Index, id: string, options: StageOptions): Stage {
   const root = element('div', undefined, 'review-stage'),
+    top = element('div', undefined, 'review-top'),
+    row = element('div', undefined, 'review-body'),
     host = element('div', undefined, 'review-preview');
   const labelsOf = (screen: string) => componentLabelsForScreen(index, screen);
   const via = (screen: string, triggers: string[]) => {
@@ -192,11 +196,11 @@ export function reviewStage(index: Index, id: string, options: StageOptions): St
     toggle.setAttribute('aria-expanded', String(open));
     toggle.setAttribute('aria-label', `${open ? '收起' : '展開'}「${title}」（${count} 個）`);
     toggle.title = `${title} ${count}`;
-    toggle.append(
-      icon('arrow'),
-      element('span', title, 'flow-rail-title'),
-      element('span', String(count), 'flow-rail-count'),
-    );
+    // Read in the direction of travel: in comes from the arrow, out leaves by it.
+    const label = element('span', title, 'flow-rail-title'),
+      number = element('span', String(count), 'flow-rail-count');
+    if (side === 'in') toggle.append(icon('arrow'), label, number);
+    else toggle.append(label, number, icon('arrow'));
     toggle.onclick = () => {
       options.onRails({ ...state, [side]: !open });
       update();
@@ -207,29 +211,27 @@ export function reviewStage(index: Index, id: string, options: StageOptions): St
       return box;
     }
     const head = element('div', undefined, 'flow-rail-head'),
-      close = iconButton(`收起「${title}」`, side === 'in' ? 'chevronLeft' : 'chevronRight');
-    close.classList.add('flow-rail-close');
+      close = element('button', side === 'in' ? '收起 ‹' : '› 收起', 'flow-rail-close');
+    close.type = 'button';
+    close.setAttribute('aria-label', `收起「${title}」`);
     close.onclick = () => {
       options.onRails({ ...state, [side]: false });
       update();
       root.querySelector<HTMLElement>(`[data-flow-rail="${side}"] .flow-rail-tab`)?.focus();
     };
     const heading = element('h3', undefined);
-    heading.append(icon('arrow'), element('span', `${title} · ${count}`));
-    if (side === 'in') head.append(close, heading);
-    else head.append(heading, close);
+    if (side === 'in') heading.append(icon('arrow'), element('span', `${title} · ${count}`));
+    else heading.append(element('span', `${title} · ${count}`), icon('arrow'));
+    head.append(close, heading);
     const body = element('div', undefined, 'flow-rail-body');
     if (side === 'in') {
       for (const card of incoming) body.append(screenCard(card, 'in'));
       if (shared.into.length) body.append(sharedGroup(shared.into, shared.intoLabels, 'in'));
-      if (!count)
-        body.append(
-          element(
-            'p',
-            '起點畫面：畫面中找不到前往這裡的連結，可能由網址、書籤或其他系統直接進入。',
-            'flow-empty',
-          ),
-        );
+      if (!count) {
+        const start = element('p', '起點畫面：直接以網址進入', 'flow-empty');
+        start.title = '畫面中找不到前往這裡的連結，可能由網址、書籤或其他系統直接進入。';
+        body.append(start);
+      }
     } else {
       for (const card of outgoing) body.append(screenCard(card, 'out'));
       if (stays.length) {
@@ -245,9 +247,12 @@ export function reviewStage(index: Index, id: string, options: StageOptions): St
       if (unknown.length) {
         const note = element('div', undefined, 'flow-note is-unresolved');
         note.dataset.flowUnresolved = 'true';
-        note.append(element('strong', text.unresolved));
+        note.append(element('strong', '無法確定去向'));
         const how = via(id, unknown);
-        if (how) note.append(element('span', how, 'flow-card-via'));
+        note.append(
+          element('span', how ? `${how} · 程式組成的網址` : '程式組成的網址', 'flow-card-via'),
+        );
+        note.title = text.unresolved;
         body.append(note);
       }
       if (shared.out.length) body.append(sharedGroup(shared.out, shared.outLabels, 'out'));
@@ -258,7 +263,8 @@ export function reviewStage(index: Index, id: string, options: StageOptions): St
   };
   let before = rail('in'),
     after = rail('out');
-  root.append(before, host, after);
+  row.append(before, host, after);
+  root.append(top, row);
   function update() {
     lit.length = 0;
     const left = rail('in'),
@@ -271,6 +277,7 @@ export function reviewStage(index: Index, id: string, options: StageOptions): St
   return {
     element: root,
     host,
+    top,
     update,
     counts: {
       in: incoming.length + shared.into.length,

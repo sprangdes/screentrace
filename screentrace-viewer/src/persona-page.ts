@@ -84,10 +84,10 @@ export function personaPage(
     main = element('div', undefined, 'role-main');
   summary.setAttribute('aria-label', '摘要');
   main.setAttribute('aria-label', '角色流程');
-  // The page scrolls below a band that leaves room for the layout switch floating at the top right.
+  // The page starts right under the header (the layout switch lives there) and scrolls as one.
   const body = element('div', undefined, 'role-overview-body');
   body.append(summary, main);
-  root.append(element('div', undefined, 'role-overview-band'), body);
+  root.append(body);
 
   // ---- Summary: what the review has settled ----
   const overviewCard = element('section', undefined, 'role-panel');
@@ -234,6 +234,8 @@ export function personaPage(
   detail.setAttribute('aria-live', 'polite');
   const roleButtons: HTMLButtonElement[] = [];
 
+  // Screens whose kept control leads to a removed screen are framed orange, as in 需要你注意.
+  const conflicted = new Set((options.conflicts || []).map((c) => c.screenId));
   /** A screen in a role's row: opens it as that role. */
   const card = (view: PersonaView, id: string) => {
     const reach = view.reach.get(id)!,
@@ -243,6 +245,7 @@ export function personaPage(
     button.dataset.personaScreen = id;
     button.dataset.reach = reach;
     button.dataset.screenStatus = decision;
+    if (conflicted.has(id)) button.dataset.conflict = 'true';
     const head = element('span', undefined, 'role-card-head'),
       glyph = element('span', undefined, 'role-status');
     glyph.dataset.status = decision;

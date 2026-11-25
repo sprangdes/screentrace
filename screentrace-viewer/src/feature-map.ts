@@ -1,6 +1,5 @@
 import { Index } from './map';
 import { element, text } from './text';
-import { icon } from './shell-ui';
 import { Feature, OTHER_FEATURE, ruleLabels, usedRules } from './shared/features';
 import {
   Decision,
@@ -9,6 +8,7 @@ import {
   conflicts,
   decisionNoteOf,
   featureDecision,
+  reasonLabels,
 } from './shared/review';
 import { decisionSwitch, decisionLabel, noteEditor } from './review-ui';
 import { rolePartition, roleTint } from './personas';
@@ -116,10 +116,14 @@ export function featureMap(
       element('span', isOther ? '其他（看不出分組）' : feature.label, 'fo-jump-name'),
       element('span', String(feature.screens.length), 'fo-jump-count'),
     );
+    const decided = feature.screens.filter(
+      (id) => actions.status(id).decision !== 'UNDECIDED',
+    ).length;
     button.setAttribute(
       'aria-label',
-      `${isOther ? '其他' : feature.label}，${feature.screens.length} 個畫面`,
+      `${isOther ? '其他' : feature.label}，${feature.screens.length} 個畫面，已確認 ${decided}`,
     );
+    button.title = `${feature.screens.length} 個畫面 · 已確認 ${decided}`;
     button.onclick = () => {
       const target = cards.get(feature.key);
       if (!target) return;
@@ -166,12 +170,6 @@ export function featureMap(
       default:
         line.append('原始碼看不出分組的畫面');
     }
-    const decided = feature.screens.filter(
-      (id) => actions.status(id).decision !== 'UNDECIDED',
-    ).length;
-    line.append(
-      element('span', ` · ${feature.screens.length} 個畫面 · 已確認 ${decided}`, 'fo-count'),
-    );
     return line;
   }
 
@@ -235,26 +233,26 @@ export function featureMap(
           },
         ),
       );
-    const toggle = element('button', undefined, 'icon-button fo-toggle');
+    // Folding is offered on real features only; 其他 is a plain strip of screens.
+    const toggle = element('button', undefined, 'fo-toggle');
     toggle.type = 'button';
-    toggle.append(icon('chevronRight'));
-    controls.append(toggle);
+    if (!isOther) controls.append(toggle);
     head.append(title, info, controls);
 
     const flows = element('ol', undefined, 'fo-flows');
     feature.flows.forEach((flow, at) => {
       const row = element('li', undefined, 'fo-flow');
       row.dataset.flowEntry = flow.entry;
-      if (feature.flows.length > 1 || !isOther)
-        row.append(element('span', `流程 ${at + 1}`, 'fo-flow-label'));
+      if (feature.flows.length > 1) row.append(element('span', `流程 ${at + 1}`, 'fo-flow-label'));
+      // One horizontal row per flow, scrolling sideways inside the card when it is longer than the card.
       const steps = element('ol', undefined, 'fo-steps');
       flow.screens.forEach((id, step) => {
-        const item = element('li', undefined, 'fo-step'),
-          arrow = element('span', undefined, 'fo-arrow');
-        // Every step has the same arrow slot, so wrapped steps line up in columns.
-        arrow.setAttribute('aria-hidden', 'true');
-        if (step) arrow.append(icon('arrow'));
-        item.append(arrow);
+        const item = element('li', undefined, 'fo-step');
+        if (step) {
+          const arrow = element('span', '→', 'fo-arrow');
+          arrow.setAttribute('aria-hidden', 'true');
+          item.append(arrow);
+        }
         item.append(tile(id));
         steps.append(item);
       });
@@ -263,6 +261,7 @@ export function featureMap(
     });
 
     const show = (open: boolean) => {
+      toggle.textContent = open ? '⌃' : '⌄';
       toggle.setAttribute('aria-expanded', String(open));
       toggle.setAttribute('aria-label', `${open ? '收合' : '展開'}「${label}」的流程`);
       toggle.title = open ? '收合流程' : '展開流程';
@@ -276,25 +275,67 @@ export function featureMap(
     };
 
     article.append(head, flows);
-    if (!isOther || decision !== 'UNDECIDED' || note.note || note.reason) {
-      const foot = element('div', undefined, 'fo-note');
-      foot.append(
-        noteEditor({
-          label: `功能「${label}」`,
-          decision,
-          note,
-          open: actions.notesOpen.has(feature.key),
-          onToggle: (open) => {
-            if (open) actions.notesOpen.add(feature.key);
-            else actions.notesOpen.delete(feature.key);
-          },
-          onInput: (value) => actions.setNote(feature.key, value),
-          onCommit: actions.commitNote,
-        }),
-      );
-      article.append(foot);
-    }
+    if (!isOther || decision !== 'UNDECIDED' || note.note || note.reason)
+      article.append(noteArea(feature.key, label, decision, note));
     return article;
+  }
+
+  /**
+   * The feature's note: shown as the 功能備註 block when there is one, a small 寫備註 button when there is not, and the
+   * note editor while it is open.
+   */
+  function noteArea(key: string, label: string, decision: Decision, initial: DecisionNote) {
+    const foot = element('div', undefined, 'fo-note');
+    let current = initial;
+    const render = () => {
+      foot.replaceChildren();
+      if (actions.notesOpen.has(key)) {
+        foot.append(
+          noteEditor({
+            label: `功能「${label}」`,
+            decision,
+            note: current,
+            open: true,
+            onToggle: (open) => {
+              if (open) actions.notesOpen.add(key);
+              else {
+                actions.notesOpen.delete(key);
+                render();
+              }
+            },
+            onInput: (value) => {
+              current = value;
+              actions.setNote(key, value);
+            },
+            onCommit: actions.commitNote,
+          }),
+        );
+        return;
+      }
+      const edit = (text: string, kind: string) => {
+        const button = element('button', text, kind);
+        button.type = 'button';
+        button.setAttribute('aria-label', `${text}：功能「${label}」`);
+        button.onclick = () => {
+          actions.notesOpen.add(key);
+          render();
+          foot.querySelector<HTMLTextAreaElement>('textarea')?.focus();
+        };
+        return button;
+      };
+      const reason =
+        current.reason && decision !== 'UNDECIDED'
+          ? reasonLabels[decision][current.reason]
+          : undefined;
+      const words = [reason, current.note?.trim()].filter(Boolean).join(' · ');
+      if (words) {
+        const headRow = element('div', undefined, 'fo-note-head');
+        headRow.append(element('span', '功能備註', 'fo-note-label'), edit('修改', 'fo-note-edit'));
+        foot.append(headRow, element('p', words, 'fo-note-text'));
+      } else foot.append(edit('寫備註', 'fo-note-add'));
+    };
+    render();
+    return foot;
   }
 
   function tile(id: string): HTMLButtonElement {

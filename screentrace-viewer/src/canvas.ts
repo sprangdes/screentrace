@@ -1,11 +1,19 @@
 import { iconButton, icon } from './shell-ui';
-import { partitionNavigation, flowLayout, roundedPath, commonDestinations } from './overview';
-import { groupedLayout, crossPoints, areaPreview, frameLink, GroupedLayout } from './groups';
+import { CARD, partitionNavigation, flowLayout, roundedPath, commonDestinations } from './overview';
+import { groupedLayout, crossPoints, frameLink, GroupedLayout, screenGroups } from './groups';
 import { focusedRelations, FocusRelation, sharedNavigation } from './relations';
-import { Index, Position, Relation, fileEntries, searchScreens } from './map';
+import { Index, Position, Relation, searchScreens } from './map';
 import { Payload } from './contracts';
 import { element, text } from './text';
-import { PersonaView, lineKey, reachLabel, reachHelp, rolePartition, roleTint } from './personas';
+import {
+  PersonaView,
+  graphPersonas,
+  lineKey,
+  personaView,
+  rolePartition,
+  roleTint,
+} from './personas';
+import { stateCounts } from './role-handoffs';
 import {
   Arrangement,
   Box,
@@ -18,7 +26,13 @@ import {
   sameBox,
 } from './canvas-arrange';
 import { minimap } from './canvas-minimap';
-import { Decision, PinnedSummary, pinnedPanel, selectionPanel } from './canvas-panel';
+import {
+  Decision,
+  PinnedSummary,
+  emptySelectionPanel,
+  pinnedPanel,
+  selectionPanel,
+} from './canvas-panel';
 
 export interface CanvasTransform {
   zoom: number;
@@ -47,8 +61,6 @@ export interface CanvasOptions extends CanvasState {
   onIntent?: (id: string) => void;
   /** Lays the map out this way instead of by URL areas, e.g. a persona's flow by step. */
   layout?: GroupedLayout;
-  /** Shown in the top-left corner of the overview, e.g. the persona switch. */
-  toolbar?: HTMLElement;
   /** One decision for every screen in a box selection. Without it, the bulk buttons are disabled. */
   onDecideMany?: (ids: string[], decision: Decision) => void;
   /**
@@ -62,8 +74,9 @@ export interface CanvasView {
   update(state: CanvasState): void;
 }
 
-const CARD = { width: 250, height: 220 },
-  MOTION_MS = 450,
+const MOTION_MS = 450,
+  /** The smallest zoom the first view uses, so the 13px card names stay readable. */
+  READABLE_ZOOM = 0.85,
   DENSE_SCREENS = 20;
 /** Same curve as the side panels' width transition, so the canvas and the panels move as one. */
 const ease = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
@@ -109,6 +122,7 @@ export function canvas(index: Index, payload: Payload, options: CanvasOptions): 
   viewport.tabIndex = 0;
   viewport.setAttribute('aria-label', text.canvas);
   viewport.dataset.mode = 'overview';
+  viewport.dataset.panel = 'open';
   let state: CanvasState = {
     query: options.query,
     visible: options.visible,
@@ -125,10 +139,10 @@ export function canvas(index: Index, payload: Payload, options: CanvasOptions): 
   const cardTip = element('div', undefined, 'card-tip');
   cardTip.hidden = true;
   cardTip.setAttribute('aria-hidden', 'true');
-  // The selection summary sits inside the canvas on its right edge; fitting and the minimap leave its width out.
+  // The selection summary is docked inside the canvas on its right edge, also with nothing selected; fitting and the
+  // minimap leave its width out.
   const panel = element('aside', undefined, 'canvas-panel');
   panel.setAttribute('aria-label', '選取的畫面');
-  panel.hidden = true;
   const inset = () => (panel.hidden ? 0 : panel.offsetWidth);
   const mini = minimap((p) => {
     cancelAnimationFrame(frameId);
@@ -179,7 +193,11 @@ export function canvas(index: Index, payload: Payload, options: CanvasOptions): 
       y: above + (room - h * z) / 2 - (top - 40) * z,
     };
   };
-  const fit = () => {
+  /**
+   * Fits the shown screens into the view. readable (the first view and refits after a resize or filter) keeps the cards
+   * at a readable size and starts the map at the top left, as in the design; the 顯示全部畫面 button shows everything.
+   */
+  const fit = (readable = false) => {
     if (!viewport.clientWidth || !viewport.clientHeight) return;
     const shown = index.screens.filter((s) => visible(s.id)).map((s) => positions.get(s.id)!);
     if (!shown.length) return;
@@ -196,6 +214,11 @@ export function canvas(index: Index, payload: Payload, options: CanvasOptions): 
     const w = right - left + 80,
       h = bottom - top + 80;
     ({ zoom, x, y } = frameRect(left, top, w, h));
+    if (readable && zoom < READABLE_ZOOM) {
+      zoom = READABLE_ZOOM;
+      x = 20 - left * zoom;
+      y = reserved() + 6 - top * zoom;
+    }
     viewport.dataset.fitted = 'true';
     apply();
   };
@@ -220,7 +243,7 @@ export function canvas(index: Index, payload: Payload, options: CanvasOptions): 
   for (const [label, name, action] of [
     [text.zoomIn, 'zoom', () => change(1.2)],
     [text.zoomOut, 'minus', () => change(1 / 1.2)],
-    [text.reset, 'fit', fit],
+    [text.reset, 'fit', () => fit()],
   ] as const) {
     const button = iconButton(label, name);
     button.onclick = action;
@@ -231,7 +254,7 @@ export function canvas(index: Index, payload: Payload, options: CanvasOptions): 
   const svg = document.createElementNS(svgNs, 'svg');
   // Arrowheads keep one size and take the colour of their line's state (see .relation-line in viewer.css).
   const marker = (id: string) =>
-    `<marker id="${id}" class="flow-marker" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="16" markerHeight="16" markerUnits="userSpaceOnUse" orient="auto"><path d="M1,1 L9,5 L1,9 Z"/></marker>`;
+    `<marker id="${id}" class="flow-marker" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="10" markerHeight="10" markerUnits="userSpaceOnUse" orient="auto"><path d="M1,1 L9,5 L1,9 Z"/></marker>`;
   svg.setAttribute('width', String(width));
   svg.setAttribute('height', String(height));
   svg.classList.add('relations');
@@ -260,10 +283,15 @@ export function canvas(index: Index, payload: Payload, options: CanvasOptions): 
         raised.append(copy);
       }
     });
+    // Cards stay fully visible: the ones a highlighted line leaves from are framed as incoming, the ones it reaches as
+    // outgoing (the design's orange and blue rings); a screen on both sides keeps the outgoing frame.
+    const sources = new Set([...into].map((line) => (line as SVGElement).dataset.from!)),
+      targets = new Set([...out].map((line) => (line as SVGElement).dataset.to!));
     world.querySelectorAll<HTMLElement>('.screen-card').forEach((card) => {
-      const on = ids.has(card.dataset.screen!);
-      card.classList.toggle('is-highlighted', on);
-      card.classList.toggle('is-muted', !on);
+      const id = card.dataset.screen!;
+      card.classList.toggle('is-highlighted', ids.has(id));
+      card.classList.toggle('is-out-card', targets.has(id));
+      card.classList.toggle('is-in-card', sources.has(id) && !targets.has(id));
     });
   };
   // A screen chosen with a single click keeps its lines drawn until a blank click or Esc.
@@ -281,7 +309,7 @@ export function canvas(index: Index, payload: Payload, options: CanvasOptions): 
       .forEach((line) => line.classList.remove('is-out', 'is-in', 'is-muted'));
     world
       .querySelectorAll('.screen-card')
-      .forEach((card) => card.classList.remove('is-highlighted', 'is-muted'));
+      .forEach((card) => card.classList.remove('is-highlighted', 'is-out-card', 'is-in-card'));
   };
   // Every drawn line, kept with its computed path so moving a card can redraw the lines it touches and putting the
   // card back restores them.
@@ -310,6 +338,9 @@ export function canvas(index: Index, payload: Payload, options: CanvasOptions): 
     hit.setAttribute('aria-hidden', 'true');
     line.setAttribute('d', d);
     line.setAttribute('class', 'relation-line');
+    // A line that runs back against the reading direction (right to left) is drawn dashed, as a loop back.
+    if (points.length > 1 && points[points.length - 1].x < points[0].x - 1)
+      line.classList.add('is-back');
     line.dataset.from = relation.from;
     line.dataset.to = relation.to;
     line.setAttribute('tabindex', '0');
@@ -345,22 +376,11 @@ export function canvas(index: Index, payload: Payload, options: CanvasOptions): 
         width: `${group.box.width}px`,
         height: `${group.box.height}px`,
       });
-      // The label keeps a readable size however far the map is zoomed out (see .screen-group-label); its second line,
-      // the area's first screens in reading order, is shown only while the cards are too small to read.
-      const names = group.members
-        .filter((id) => positions.has(id))
-        .sort(
-          (a, b) =>
-            positions.get(a)!.y - positions.get(b)!.y || positions.get(a)!.x - positions.get(b)!.x,
-        )
-        .map((id) => index.nodes.get(id)?.name || '');
-      // Only the overview's URL areas have the taller band (TITLE in groups.ts) these need; a supplied layout, such as a
-      // persona's step columns, keeps its plain title at the map's own scale.
+      // The area's name and how many screens it holds (「投保人 · 5」), in the role's ink colour.
       const label = element('div', undefined, 'screen-group-label');
-      label.style.setProperty('--label-room', `${group.box.width - 40}px`);
+      label.style.setProperty('--label-room', `${group.box.width - 32}px`);
       label.append(element('span', group.label, 'screen-group-title'));
       if (options.layout) label.classList.add('is-plain');
-      else label.append(element('span', areaPreview(names), 'screen-group-names'));
       frame.append(label);
       world.append(frame);
       frames.set(group.key, {
@@ -458,21 +478,65 @@ export function canvas(index: Index, payload: Payload, options: CanvasOptions): 
   svg.append(raised);
   world.append(svg);
   const cards = new Map<string, HTMLButtonElement>();
-  /** Shown below the card (above it near the bottom edge), only while the map is zoomed out. */
-  const showCardTip = (card: HTMLElement, name: string, route: string) => {
-    if (viewport.dataset.semanticZoom !== 'compact') {
-      cardTip.hidden = true;
-      return;
-    }
-    cardTip.replaceChildren(element('strong', name), element('span', route));
+  const thumbnails = new Map(
+    (payload.preview.screens || [])
+      .filter((s) => s.thumbnail?.startsWith('data:image/'))
+      .map((s) => [s.graphScreenId, s.thumbnail!]),
+  );
+  /**
+   * The pointed card's name, route and screenshot (cards are text only), below the card or above it near the
+   * bottom edge.
+   */
+  const showCardTip = (card: HTMLElement, id: string, name: string, route: string) => {
+    if (carrying?.moving) return;
+    cardTip.replaceChildren();
+    const shot = thumbnails.get(id);
+    if (shot) {
+      const img = element('img', undefined, 'card-tip-shot');
+      img.src = shot;
+      img.alt = '';
+      cardTip.append(img);
+    } else cardTip.append(element('span', text.noPreview, 'card-tip-missing'));
+    cardTip.append(element('strong', name), element('span', route, 'card-tip-route'));
+    cardTip.hidden = false;
     const r = card.getBoundingClientRect(),
       v = viewport.getBoundingClientRect(),
-      half = Math.min(150, v.width / 2);
-    const below = r.bottom - v.top + 72 < v.height;
-    cardTip.style.left = `${Math.min(v.width - half, Math.max(half, r.left - v.left + r.width / 2))}px`;
+      half = Math.min(130, v.width / 2),
+      tall = cardTip.offsetHeight || 220;
+    const below = r.bottom - v.top + tall + 12 < v.height;
+    cardTip.style.left = `${Math.min(v.width - inset() - half, Math.max(half, r.left - v.left + r.width / 2))}px`;
     cardTip.style.top = `${below ? r.bottom - v.top + 6 : r.top - v.top - 6}px`;
     cardTip.dataset.side = below ? 'below' : 'above';
-    cardTip.hidden = false;
+  };
+  // What the third line of a card says: how many states the page has, that a role may reach it, or that a role
+  // starts there; otherwise an abstract strip stands in for the page.
+  const states = stateCounts(index),
+    views = graphPersonas(index.graph)
+      .filter((p) => p.flow?.reached?.length)
+      .map((p) => personaView(index, p));
+  const possible = (id: string) =>
+    state.persona
+      ? state.persona.reach.get(id) === 'POSSIBLE'
+      : !views.some((v) => v.reach.get(id) === 'REACHABLE') &&
+        views.some((v) => v.reach.get(id) === 'POSSIBLE');
+  const start = (id: string) =>
+    state.persona ? state.persona.depth.get(id) === 1 : views.some((v) => v.depth.get(id) === 1);
+  const blocks = (id: string) => {
+    let hash = 0;
+    for (const c of id) hash = (hash * 31 + c.charCodeAt(0)) | 0;
+    return 1 + (Math.abs(hash) % 3);
+  };
+  const thirdLine = (id: string): HTMLElement => {
+    const count = states.get(id) || 0;
+    if (count >= 2) return element('span', `${count} 種狀態 ▾`, 'card-meta');
+    if (possible(id)) return element('span', '可能走到', 'card-meta');
+    if (start(id)) return element('span', '起點', 'card-meta');
+    const strip = element('span', undefined, 'card-thumb');
+    strip.setAttribute('aria-hidden', 'true');
+    const n = blocks(id);
+    for (let i = 0; i < n; i++) strip.append(element('span'));
+    if (n === 2) (strip.firstChild as HTMLElement).style.flex = '2';
+    return strip;
   };
   for (const screen of index.screens) {
     const p = positions.get(screen.id)!,
@@ -481,26 +545,12 @@ export function canvas(index: Index, payload: Payload, options: CanvasOptions): 
     card.dataset.screen = screen.id;
     card.style.left = `${p.x}px`;
     card.style.top = `${p.y}px`;
-    const thumb = payload.preview.screens?.find((s) => s.graphScreenId === screen.id)?.thumbnail;
-    if (thumb?.startsWith('data:image/')) {
-      const img = element('img', undefined, 'card-preview');
-      img.src = thumb;
-      img.alt = screen.name;
-      if (index.screens.length > 150) {
-        img.loading = 'lazy';
-        img.decoding = 'async';
-      }
-      card.append(img);
-    } else {
-      const missing = element('div', undefined, 'card-preview missing-preview');
-      missing.append(element('span', text.noPreview));
-      card.append(missing);
-    }
-    const caption = element('div', undefined, 'screen-caption'),
-      routeLabel = element('span', route, 'screen-route');
-    routeLabel.title = route;
-    caption.append(element('strong', screen.name), routeLabel);
-    card.append(caption);
+    const head = element('span', undefined, 'card-head'),
+      dot = element('span', undefined, 'card-dot');
+    dot.setAttribute('role', 'img');
+    head.append(element('strong', screen.name, 'card-name'), dot);
+    const routeLabel = element('span', route, 'card-route');
+    card.append(head, routeLabel, thirdLine(screen.id));
     // Header/footer links are not drawn on the overview; a badge still tells that this screen is reachable from them.
     const entries = sharedNavigation(index, screen.id, false).into.length;
     const common = commonDestinations(index).get(screen.id)?.length || 0;
@@ -528,12 +578,15 @@ export function canvas(index: Index, payload: Payload, options: CanvasOptions): 
     }
     card.onmouseenter = card.onfocus = () => linkedFor(screen.id);
     card.onmouseleave = card.onblur = () => settle();
-    const tip = () => showCardTip(card, screen.name, route),
+    const tip = () => showCardTip(card, screen.id, screen.name, route),
       untip = () => {
         cardTip.hidden = true;
       };
     card.addEventListener('mouseenter', tip);
-    card.addEventListener('focus', tip);
+    // A mouse press focuses the card too; only keyboard focus shows the tooltip, so a click does not leave it open.
+    card.addEventListener('focus', () => {
+      if (card.matches(':focus-visible') && !card.matches(':hover')) tip();
+    });
     card.addEventListener('mouseleave', untip);
     card.addEventListener('blur', untip);
     card.addEventListener('pointerenter', () => {
@@ -583,6 +636,7 @@ export function canvas(index: Index, payload: Payload, options: CanvasOptions): 
   /** Pins a screen; zoomIn false keeps the view still, for a screen picked while building a selection. */
   const pin = (id: string, zoomIn = true) => {
     pinned = id;
+    cardTip.hidden = true;
     lastClick = zoomIn ? { id, time: performance.now() } : undefined;
     markSelected(new Set());
     for (const [cardId, card] of cards) card.classList.toggle('is-pinned', cardId === id);
@@ -591,13 +645,17 @@ export function canvas(index: Index, payload: Payload, options: CanvasOptions): 
     const ids = linkedFor(id),
       shown = [...ids].map((other) => positions.get(other)).filter((p): p is Position => !!p);
     if (zoomIn)
-      zoomTo({
-        x: Math.min(...shown.map((p) => p.x)),
-        y: Math.min(...shown.map((p) => p.y)),
-        width: Math.max(...shown.map((p) => p.x + CARD.width)) - Math.min(...shown.map((p) => p.x)),
-        height:
-          Math.max(...shown.map((p) => p.y + CARD.height)) - Math.min(...shown.map((p) => p.y)),
-      });
+      zoomTo(
+        {
+          x: Math.min(...shown.map((p) => p.x)),
+          y: Math.min(...shown.map((p) => p.y)),
+          width:
+            Math.max(...shown.map((p) => p.x + CARD.width)) - Math.min(...shown.map((p) => p.x)),
+          height:
+            Math.max(...shown.map((p) => p.y + CARD.height)) - Math.min(...shown.map((p) => p.y)),
+        },
+        { ...positions.get(id)!, ...CARD },
+      );
   };
   const unpin = () => {
     pinned = undefined;
@@ -662,9 +720,8 @@ export function canvas(index: Index, payload: Payload, options: CanvasOptions): 
     open: (id: string) => options.onOpen(id),
     decide: options.onDecideMany,
   });
-  /** Fills the right-hand panel for what is selected now, or hides it. */
+  /** Fills the right-hand panel for what is selected now. */
   const showPanel = () => {
-    const was = !panel.hidden;
     if (selected.size > 1) {
       const name = (id: string) => index.nodes.get(id)?.name || id;
       selectionPanel(
@@ -674,7 +731,6 @@ export function canvas(index: Index, payload: Payload, options: CanvasOptions): 
           .map((id) => ({ id, name: name(id), status: state.screenStatus(id) })),
         panelActions(),
       );
-      panel.hidden = false;
     } else if (pinned) {
       const id = pinned;
       pinnedPanel(
@@ -689,11 +745,7 @@ export function canvas(index: Index, payload: Payload, options: CanvasOptions): 
         },
         panelActions(),
       );
-      panel.hidden = false;
-    } else panel.hidden = true;
-    if (panel.hidden) delete viewport.dataset.panel;
-    else viewport.dataset.panel = 'open';
-    if (was !== !panel.hidden) apply();
+    } else emptySelectionPanel(panel);
   };
 
   // ---- cards moved by hand
@@ -803,9 +855,20 @@ export function canvas(index: Index, payload: Payload, options: CanvasOptions): 
     options.onArrange?.({});
   };
   /** Eases the overview onto a world rectangle, with the same margins as fitting the whole map. */
-  const zoomTo = (rect: { x: number; y: number; width: number; height: number }) => {
+  const zoomTo = (rect: Box, focus: Box = rect) => {
     if (!viewport.clientWidth || !viewport.clientHeight) return;
-    const target = frameRect(rect.x, rect.y, rect.width + 80, rect.height + 80);
+    let target = frameRect(rect.x, rect.y, rect.width + 80, rect.height + 80);
+    // A wide neighbourhood is not shrunk below a readable size: the view centres on it instead.
+    if (target.zoom < READABLE_ZOOM) {
+      const z = READABLE_ZOOM,
+        above = reserved(),
+        across = viewport.clientWidth - inset();
+      target = {
+        zoom: z,
+        x: across / 2 - (focus.x + focus.width / 2) * z,
+        y: above + (viewport.clientHeight - above) / 2 - (focus.y + focus.height / 2) * z,
+      };
+    }
     viewport.dataset.fitted = 'true';
     if (reducedMotion()) {
       ({ zoom, x, y } = target);
@@ -873,28 +936,19 @@ export function canvas(index: Index, payload: Payload, options: CanvasOptions): 
     for (const [id, card] of cards) {
       card.hidden = !visible(id);
       card.classList.toggle('search-match', !!state.query && matches.has(id));
-      const status = state.screenStatus(id);
-      card.querySelector('.review-status-icon')?.remove();
-      if (status === 'KEEP' || status === 'REMOVE') {
-        card.dataset.screenStatus = status;
-        const mark = icon(status === 'KEEP' ? 'check' : 'close');
-        mark.classList.add('review-status-icon');
-        mark.setAttribute('role', 'img');
-        mark.setAttribute('aria-label', status === 'KEEP' ? text.keep : text.remove);
-        card.append(mark);
-      } else delete card.dataset.screenStatus;
-      // The chosen persona's view of the screen: its frame says whether it is reached; a badge names anything less than certain.
-      card.querySelector('.persona-badge')?.remove();
-      if (state.persona) {
-        const reach = state.persona.reach.get(id)!;
-        card.dataset.personaReach = reach;
-        if (reach !== 'REACHABLE') {
-          const badge = element('span', reachLabel[reach], 'persona-badge');
-          badge.dataset.reach = reach;
-          badge.title = reachHelp[reach];
-          card.append(badge);
-        }
-      } else delete card.dataset.personaReach;
+      const status = state.screenStatus(id),
+        dot = card.querySelector<HTMLElement>('.card-dot')!;
+      // The decision dot at the top right: filled green to keep, red to remove, a dashed ring while undecided.
+      if (status === 'KEEP' || status === 'REMOVE') card.dataset.screenStatus = status;
+      else delete card.dataset.screenStatus;
+      dot.setAttribute(
+        'aria-label',
+        status === 'KEEP' ? text.keep : status === 'REMOVE' ? text.remove : text.undecided,
+      );
+      if (state.persona) card.dataset.personaReach = state.persona.reach.get(id)!;
+      else delete card.dataset.personaReach;
+      card.querySelector('.card-meta,.card-thumb')?.replaceWith(thirdLine(id));
+      card.classList.toggle('is-possible', possible(id));
     }
     // A supplied layout drops the areas whose screens are all hidden, so hidden columns leave no empty frame.
     if (options.layout)
@@ -919,7 +973,7 @@ export function canvas(index: Index, payload: Payload, options: CanvasOptions): 
       select(new Set([...selected].filter(visible)));
     else showPanel();
     drawMinimap();
-    if (refit) fit();
+    if (refit) fit(true);
   };
 
   const origin = () => {
@@ -1012,12 +1066,18 @@ export function canvas(index: Index, payload: Payload, options: CanvasOptions): 
     const r = viewport.getBoundingClientRect();
     return { x: event.clientX - r.left, y: event.clientY - r.top };
   };
+  // Focusing a card near the edge must not scroll the clipped canvas itself: the map moves only by its transform.
+  viewport.addEventListener('scroll', () => {
+    viewport.scrollTop = 0;
+    viewport.scrollLeft = 0;
+  });
   // A card's preview image would otherwise start the browser's own image drag and cancel moving the card.
   viewport.addEventListener('dragstart', (event) => event.preventDefault());
   viewport.addEventListener('pointerdown', (event) => {
     dragged = false;
     travel = 0;
     swallowClick = false;
+    cardTip.hidden = true;
     if (event.button !== 0) return;
     const target = event.target as Element;
     if (target.closest('.canvas-panel,.canvas-dock')) return;
@@ -1175,9 +1235,32 @@ export function canvas(index: Index, payload: Payload, options: CanvasOptions): 
   const dock = element('div', undefined, 'canvas-dock');
   dock.append(resetLayout, mini.element, controls);
   viewport.append(world, cardTip, panel, dock);
-  const top = element('div', undefined, 'canvas-top');
-  if (options.toolbar) top.append(options.toolbar);
-  top.append(element('span', '拖曳卡片可自由排版 · 位置會存進進度檔', 'canvas-hint'));
+  // Top left: how the map is divided into areas, the two line colours of a picked screen, and how arranging works.
+  const top = element('div', undefined, 'canvas-top'),
+    chip = (...content: (Node | string)[]) => {
+      const node = element('span', undefined, 'canvas-chip');
+      node.append(...content);
+      top.append(node);
+      return node;
+    },
+    swatch = (side: 'out' | 'in') => {
+      const line = element('span', undefined, `canvas-chip-line is-${side}`);
+      line.setAttribute('aria-hidden', 'true');
+      return line;
+    };
+  const division = options.layout
+    ? '依角色流程'
+    : grouped
+      ? rolePartition(index)
+        ? '依角色'
+        : screenGroups(index)
+          ? '依網址'
+          : undefined
+      : undefined;
+  if (division) chip(`分區：${division}`);
+  chip(swatch('out'), '出去');
+  chip(swatch('in'), '進來');
+  chip('拖曳卡片可自由排版 · 位置會存進進度檔');
   viewport.append(top);
   update(state);
   apply();
@@ -1189,85 +1272,16 @@ export function canvas(index: Index, payload: Payload, options: CanvasOptions): 
       !!observed && (size.width !== observed.width || size.height !== observed.height);
     observed = { width: size.width, height: size.height };
     if (!changed || frameId) return;
-    if (!options.transform) fit();
+    if (!options.transform) fit(true);
   }).observe(viewport);
   requestAnimationFrame(() => {
     if (options.transform) {
       viewport.dataset.fitted = 'true';
       apply();
-    } else fit();
+    } else fit(true);
   });
   return {
     element: viewport,
     update,
   };
-}
-
-/** File structure view of the screens, grouped by their source folders. */
-export function fileTree(
-  index: Index,
-  query: string,
-  onFocus: (id: string) => void,
-  options: { visible?: Set<string>; current?: string } = {},
-): HTMLElement {
-  const root = element('div', undefined, 'file-tree'),
-    matches = searchScreens(index, query);
-  // Folders → files → the screens each file shows. Folder chains with nothing else in them
-  // read as one path (`src/main/webapp/WEB-INF/views`).
-  interface Folder {
-    folders: Map<string, Folder>;
-    files: Map<string, { screenId: string; layout?: string }[]>;
-  }
-  const tree: Folder = { folders: new Map(), files: new Map() };
-  for (const item of fileEntries(index)) {
-    if (options.visible && !options.visible.has(item.screenId)) continue;
-    if (query && !matches.has(item.screenId)) continue;
-    const parts = item.path.split('/');
-    let folder = tree;
-    for (const name of parts.slice(0, -1)) {
-      if (!folder.folders.has(name))
-        folder.folders.set(name, { folders: new Map(), files: new Map() });
-      folder = folder.folders.get(name)!;
-    }
-    const file = parts.at(-1)!;
-    folder.files.set(file, [...(folder.files.get(file) || []), item]);
-  }
-  const render = (folder: Folder, parent: HTMLElement) => {
-    for (const [name, child] of folder.folders) {
-      let label = name,
-        inner = child;
-      while (!inner.files.size && inner.folders.size === 1) {
-        const [next, nested] = [...inner.folders][0];
-        label += '/' + next;
-        inner = nested;
-      }
-      const details = element('details'),
-        children = element('div', undefined, 'folder');
-      details.open = true;
-      details.append(element('summary', label), children);
-      parent.append(details);
-      render(inner, children);
-    }
-    for (const [file, screens] of folder.files) {
-      const group = element('div', undefined, 'file-group');
-      group.append(element('div', file, 'file-name'));
-      for (const item of screens) {
-        const button = element('button', undefined, 'file-entry');
-        button.dataset.screen = item.screenId;
-        button.dataset.screenList = item.screenId;
-        button.setAttribute('aria-current', options.current === item.screenId ? 'page' : 'false');
-        button.append(
-          element('strong', index.nodes.get(item.screenId)!.name),
-          element('code', index.routes.get(item.screenId)?.[0] || '沒有已知 URL'),
-        );
-        if (item.layout) button.title = `版型：${item.layout}`;
-        button.onclick = () => onFocus(item.screenId);
-        group.append(button);
-      }
-      parent.append(group);
-    }
-  };
-  render(tree, root);
-  if (!root.childElementCount) root.append(element('p', '沒有符合的畫面', 'empty-list'));
-  return root;
 }

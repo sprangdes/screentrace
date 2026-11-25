@@ -4,20 +4,21 @@ import {
   screenDecision,
   componentDecision,
   apiDecision,
-  decisionNoteOf,
+  effectiveScreen,
   Decision,
   DecisionNote,
   ReviewState,
 } from './shared/review';
-import { decisionSwitch, decisionLabel, noteEditor } from './review-ui';
+import { decisionSwitch, decisionLabel } from './review-ui';
 import { componentLabelsForScreen, kindNames } from './labels';
 import { callerKind, Caller } from './usage';
 import { Index } from './map';
 import { Node, Evidence } from './contracts';
 import { element } from './text';
-import { icon, iconButton } from './shell-ui';
 import { rolePartition, roleTint } from './personas';
-import { proportionBar, sharePercent } from './proportion';
+import { proportionBar } from './proportion';
+import { requestFieldSources, responseSummary } from './api-fields';
+import { copySource } from './api-copy';
 import { splitter, SplitRange } from './splitter';
 import { backgroundJobs, jobTriggerLabels, BackgroundJob } from './shared/jobs';
 import { backendCalls } from './shared/review-md';
@@ -212,8 +213,6 @@ export interface ApiPageOptions {
   /** APIs whose note editor is open, so a rebuilt page keeps it open. */
   notesOpen?: Set<string>;
 }
-type Filter = 'ALL' | 'ATTENTION' | 'IN_USE';
-type Grouping = 'controller' | 'url';
 interface ApiRecord {
   node: Node;
   method: string;
@@ -226,7 +225,6 @@ interface ApiRecord {
   external: Evidence[];
   searchable: string;
   controller: string;
-  prefix: string;
 }
 
 /** A component calling from this many screens is a shared one (a header, a layout), listed once instead of per screen. */
@@ -234,18 +232,16 @@ const SHARED_SCREENS = 3;
 const NO_HANDLER = '找不到處理程式';
 /** What the page keeps while the report is open: leaving for a screen and coming back finds the list as it was. */
 const memory = {
-  filter: 'ALL' as Filter,
-  grouping: 'controller' as Grouping,
   query: '',
-  collapsed: new Set<string>(),
   split: undefined as number | undefined,
 };
-/** The API list's share of the page width: 30% at first, between 20% and 50%, and never narrower than 280px (CSS). */
-export const API_SPLIT: SplitRange = { initial: 30, min: 20, max: 50 };
+/** The API list's share of the page width: 340px on a 1440px window at first; the CSS keeps it between 340px and 400px. */
+export const API_SPLIT: SplitRange = { initial: 23.6, min: 20, max: 50 };
 
 const controllerOf = (handlers: Node[]) => {
   const handler = handlers
-    .map((h) => h.attributes.class || h.name.split('.')[0])
+    // The list names a controller by its simple class name.
+    .map((h) => (h.attributes.class || h.name.split('.')[0]).split('.').pop()!)
     .filter(Boolean)
     .sort()[0];
   return handler || NO_HANDLER;
@@ -282,17 +278,14 @@ export function pathCode(path: string, className: string): HTMLElement {
     );
   return code;
 }
-/** How many screens call this API next to the API with the most callers, as a short bar beside the count. */
-const callerBar = (screens: number, most: number) => {
-  const bar = element('span', undefined, 'api-caller-bar');
-  bar.setAttribute('aria-hidden', 'true');
-  const width = sharePercent(screens, most);
-  if (width) {
-    const fill = element('span', undefined, 'api-caller-fill');
-    fill.style.width = `${width}%`;
-    bar.append(fill);
-  }
-  return bar;
+/** A path as plain text that may wrap only after a `/`, so a long path breaks between its segments. */
+const breakablePath = (path: string, className: string) => {
+  const span = element('span', undefined, className);
+  path.split(/(?<=\/)/).forEach((part, i) => {
+    if (i) span.append(element('wbr'));
+    span.append(part);
+  });
+  return span;
 };
 /** The method tag the API page uses everywhere, colored by method; the screen panel's API list uses it too. */
 export const methodBadge = (method: string) => {
@@ -300,8 +293,13 @@ export const methodBadge = (method: string) => {
   badge.dataset.method = method;
   return badge;
 };
-const statusTag = (status: ApiStatus) => {
-  const tag = element('span', apiStatusLabels[status], 'api-status');
+/** The status pill; an unused API with proven outside callers says so (「未被使用 · Webhook」). */
+const statusTag = (status: ApiStatus, external = false) => {
+  const tag = element(
+    'span',
+    `${apiStatusLabels[status]}${status === 'UNREFERENCED' && external ? ' · Webhook' : ''}`,
+    'api-status',
+  );
   tag.dataset.apiStatus = status;
   return tag;
 };
@@ -363,11 +361,9 @@ export function apiPage(index: Index, state: ReviewState, options: ApiPageOption
       note: systemEntry(node, index),
       searchable,
       controller: controllerOf(handlers),
-      prefix: urlPrefix(path),
     };
   });
-  const byId = new Map(records.map((r) => [r.node.id, r])),
-    mostScreens = Math.max(0, ...records.map((r) => r.screens));
+  const byId = new Map(records.map((r) => [r.node.id, r]));
   // Code that runs without a screen: listed under the APIs, never counted as one (ADR 0159).
   const jobs = backgroundJobs(index.graph),
     jobById = new Map(jobs.map((j) => [j.node.id, j])),
@@ -401,7 +397,6 @@ export function apiPage(index: Index, state: ReviewState, options: ApiPageOption
   const known = (id: string) => byId.has(id) || jobById.has(id) || stateById.has(id);
   // Arriving from a screen for one API: show it whatever the list was narrowed to before.
   if (options.selected && known(options.selected)) {
-    memory.filter = 'ALL';
     memory.query = '';
   }
   let selected = options.selected && known(options.selected) ? options.selected : undefined;
@@ -410,66 +405,19 @@ export function apiPage(index: Index, state: ReviewState, options: ApiPageOption
     master = element('div', undefined, 'api-master'),
     detail = element('aside', undefined, 'api-detail');
   detail.setAttribute('aria-label', 'API 詳情');
+  // The list: a labelled search box, the status bar with its counts, then the APIs by controller.
   const head = element('div', undefined, 'api-heading'),
-    title = element('h1', 'API');
-  title.append(element('span', String(records.length), 'api-total'));
-  head.append(title);
-  if (records.length) head.append(statusSummary(apiStatusCounts(records.map((r) => r.status))));
-  // Search and status filter look and work like the screen list's (search box + filter menu).
-  const search = element('input'),
-    searchBox = element('div', undefined, 'search-box'),
-    clearSearch = iconButton('清除搜尋', 'close'),
-    searchRow = element('div', undefined, 'search-row'),
-    filterButton = element('button', undefined, 'filter-button'),
-    filterLabel = element('span'),
-    grouping = element('div', undefined, 'segmented api-grouping'),
-    chips = element('div', undefined, 'filter-pop');
+    searchLabel = element('label', '搜尋網址、處理程式或畫面', 'api-search'),
+    search = element('input');
   search.type = 'search';
-  search.placeholder = '搜尋網址、處理程式或畫面';
-  search.setAttribute('aria-label', '搜尋 API');
+  search.placeholder = '/api/applications';
   search.value = memory.query;
-  searchBox.append(icon('search'), search, clearSearch);
-  filterButton.type = 'button';
-  filterButton.dataset.filterToggle = 'true';
-  filterButton.setAttribute('aria-haspopup', 'true');
-  filterButton.setAttribute('aria-expanded', 'false');
-  filterButton.append(icon('filter'), filterLabel);
-  grouping.setAttribute('role', 'group');
-  grouping.setAttribute('aria-label', '分組方式');
-  chips.setAttribute('role', 'group');
-  chips.setAttribute('aria-label', 'API 狀態篩選');
-  chips.hidden = true;
-  const showFilter = (open: boolean) => {
-    chips.hidden = !open;
-    filterButton.setAttribute('aria-expanded', String(open));
-  };
-  filterButton.onclick = () => showFilter(chips.hidden === true);
-  const closeOutside = (event: PointerEvent) => {
-    if (!searchRow.isConnected) document.removeEventListener('pointerdown', closeOutside);
-    else if (!chips.hidden && !searchRow.contains(event.target as globalThis.Node))
-      showFilter(false);
-  };
-  document.addEventListener('pointerdown', closeOutside);
-  searchRow.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape' && !chips.hidden) {
-      event.stopPropagation();
-      showFilter(false);
-      filterButton.focus();
-    }
-  });
-  clearSearch.onclick = () => {
-    search.value = '';
-    memory.query = '';
-    renderList();
-    search.focus();
-  };
-  searchRow.append(searchBox, filterButton, chips);
-  const toolbar = element('div', undefined, 'api-toolbar');
-  toolbar.append(grouping);
+  searchLabel.append(search);
+  head.append(searchLabel);
+  if (records.length) head.append(statusSummary(apiStatusCounts(records.map((r) => r.status))));
   const list = element('div', undefined, 'api-list');
   list.setAttribute('role', 'listbox');
   list.setAttribute('aria-label', 'API 清單');
-  head.append(searchRow, toolbar);
   master.append(head, list);
   root.append(
     master,
@@ -487,25 +435,15 @@ export function apiPage(index: Index, state: ReviewState, options: ApiPageOption
 
   const visible = (r: ApiRecord) => {
     const q = memory.query.trim().toLowerCase();
-    return (
-      (memory.filter === 'ALL' ||
-        (memory.filter === 'IN_USE' ? r.status === 'IN_USE' : r.status !== 'IN_USE')) &&
-      (!q || r.searchable.includes(q))
-    );
+    return !q || r.searchable.includes(q);
   };
-  const rows = () =>
-    [...list.querySelectorAll<HTMLButtonElement>('.api-row')].filter(
-      (row) => !row.closest('.api-group.is-collapsed'),
-    );
+  const rows = () => [...list.querySelectorAll<HTMLButtonElement>('.api-row')];
 
-  /** Scrolls only the list, never the page, and keeps the row clear of its group's sticky header. */
+  /** Scrolls only the list, never the page. */
   const keepInView = (row: HTMLElement) => {
     const view = list.getBoundingClientRect(),
-      box = row.getBoundingClientRect(),
-      header =
-        row.closest('.api-group')?.querySelector('.api-group-header')?.getBoundingClientRect()
-          .height || 0;
-    if (box.top < view.top + header) list.scrollTop -= view.top + header - box.top;
+      box = row.getBoundingClientRect();
+    if (box.top < view.top) list.scrollTop -= view.top - box.top;
     else if (box.bottom > view.bottom) list.scrollTop += box.bottom - view.bottom;
   };
   const select = (id: string, focus = false) => {
@@ -524,34 +462,27 @@ export function apiPage(index: Index, state: ReviewState, options: ApiPageOption
     renderDetail();
   };
 
-  /** The schedules, event listeners and startup code, as one group after the APIs. */
-  const jobGroup = (items: BackgroundJob[], searching: boolean) => {
-    const key = '系統自動作業',
-      memoryKey = `jobs:${key}`,
-      collapsed =
-        !searching && memory.collapsed.has(memoryKey) && !items.some((j) => j.node.id === selected);
-    const group = element('section', undefined, 'api-group api-job-group'),
-      header = element('button', undefined, 'api-group-header'),
+  /** A group of rows under a plain header: its name and how many rows it holds. */
+  const group = (key: string, count: number, mono: boolean) => {
+    const box = element('section', undefined, 'api-group'),
+      header = element('div', undefined, 'api-group-header'),
       body = element('div', undefined, 'api-group-items');
-    group.dataset.apiGroup = key;
-    group.dataset.jobGroup = 'true';
-    group.classList.toggle('is-collapsed', collapsed);
+    box.dataset.apiGroup = key;
     body.setAttribute('role', 'group');
     body.setAttribute('aria-label', key);
-    header.type = 'button';
-    header.setAttribute('aria-expanded', String(!collapsed));
     header.append(
-      element('span', undefined, 'api-group-caret'),
-      element('span', key, 'api-group-name'),
-      element('span', String(items.length), 'api-group-count'),
+      element('span', key, mono ? 'api-group-name is-mono' : 'api-group-name'),
+      element('span', String(count), 'api-group-count'),
     );
-    header.onclick = () => {
-      const now = !group.classList.contains('is-collapsed');
-      group.classList.toggle('is-collapsed', now);
-      header.setAttribute('aria-expanded', String(!now));
-      if (now) memory.collapsed.add(memoryKey);
-      else memory.collapsed.delete(memoryKey);
-    };
+    box.append(header, body);
+    return { box, body };
+  };
+
+  /** The schedules, event listeners and startup code, as one group after the APIs. */
+  const jobGroup = (items: BackgroundJob[]) => {
+    const { box, body } = group('系統自動作業', items.length, false);
+    box.classList.add('api-job-group');
+    box.dataset.jobGroup = 'true';
     for (const job of items) {
       const row = element('button', undefined, 'api-row api-job-row');
       row.type = 'button';
@@ -571,40 +502,14 @@ export function apiPage(index: Index, state: ReviewState, options: ApiPageOption
       row.onclick = () => select(job.node.id);
       body.append(row);
     }
-    group.append(header, body);
-    return group;
+    return box;
   };
 
   /** The enum states, as one group after the jobs. */
-  const stateGroup = (items: StateType[], searching: boolean) => {
-    const key = '資料狀態',
-      memoryKey = `states:${key}`,
-      collapsed =
-        !searching &&
-        memory.collapsed.has(memoryKey) &&
-        !items.some((t) => `state:${t.name}` === selected);
-    const group = element('section', undefined, 'api-group api-state-group'),
-      header = element('button', undefined, 'api-group-header'),
-      body = element('div', undefined, 'api-group-items');
-    group.dataset.apiGroup = key;
-    group.dataset.stateGroup = 'true';
-    group.classList.toggle('is-collapsed', collapsed);
-    body.setAttribute('role', 'group');
-    body.setAttribute('aria-label', key);
-    header.type = 'button';
-    header.setAttribute('aria-expanded', String(!collapsed));
-    header.append(
-      element('span', undefined, 'api-group-caret'),
-      element('span', key, 'api-group-name'),
-      element('span', String(items.length), 'api-group-count'),
-    );
-    header.onclick = () => {
-      const now = !group.classList.contains('is-collapsed');
-      group.classList.toggle('is-collapsed', now);
-      header.setAttribute('aria-expanded', String(!now));
-      if (now) memory.collapsed.add(memoryKey);
-      else memory.collapsed.delete(memoryKey);
-    };
+  const stateGroup = (items: StateType[]) => {
+    const { box, body } = group('資料狀態', items.length, false);
+    box.classList.add('api-state-group');
+    box.dataset.stateGroup = 'true';
     for (const type of items) {
       const id = `state:${type.name}`,
         row = element('button', undefined, 'api-row api-job-row');
@@ -625,11 +530,8 @@ export function apiPage(index: Index, state: ReviewState, options: ApiPageOption
       row.onclick = () => select(id);
       body.append(row);
     }
-    group.append(header, body);
-    return group;
+    return box;
   };
-
-  /** Buttons that open the APIs or job behind a write, or the handler's name when there is neither. */
   const writerLinks = (writer: StateType['unresolved'][number]) => {
     const box = element('span', undefined, 'state-writer-links');
     const go = (id: string, label: string) => {
@@ -850,116 +752,44 @@ export function apiPage(index: Index, state: ReviewState, options: ApiPageOption
     detail.scrollTop = 0;
   };
 
-  const renderControls = () => {
-    grouping.replaceChildren();
-    for (const [value, label, description] of [
-      ['controller', 'Controller', '依 Controller 分組'],
-      ['url', '網址', '依網址分組'],
-    ] as const) {
-      const button = element('button', label);
-      button.type = 'button';
-      button.dataset.apiGrouping = value;
-      button.title = description;
-      button.setAttribute('aria-label', description);
-      button.setAttribute('aria-pressed', String(memory.grouping === value));
-      button.onclick = () => {
-        memory.grouping = value;
-        renderControls();
-        renderList();
-      };
-      grouping.append(button);
+  /** What a row shows on its right: the number of calling screens, or the status when it is not in use. */
+  const rowMeta = (record: ApiRecord) => {
+    const meta = element('span', undefined, 'api-row-meta');
+    if (record.status === 'IN_USE')
+      meta.append(element('span', `${record.screens} 畫面`, 'api-screen-count'));
+    else meta.append(statusTag(record.status, record.external.length > 0));
+    const direct = apiDecision(state, record.node.id);
+    if (direct !== 'UNDECIDED') {
+      const mark = element('span', decisionLabel(direct), 'api-decision-mark');
+      mark.dataset.apiDecision = direct;
+      meta.append(mark);
     }
-    chips.replaceChildren();
-    const attention = records.filter((r) => r.status !== 'IN_USE').length;
-    const filters = [
-      ['ALL', '全部', records.length],
-      ['ATTENTION', '需要注意', attention],
-      ['IN_USE', '使用中', records.length - attention],
-    ] as const;
-    for (const [value, label, count] of filters) {
-      const chip = element('button', undefined, 'filter-option');
-      chip.type = 'button';
-      chip.append(element('span', label), element('span', String(count), 'muted'));
-      chip.dataset.apiFilter = value;
-      chip.setAttribute('aria-pressed', String(memory.filter === value));
-      if (value === 'ATTENTION' && count) chip.classList.add('is-attention');
-      chip.onclick = () => {
-        memory.filter = value;
-        showFilter(false);
-        renderControls();
-        renderList();
-      };
-      chips.append(chip);
-    }
-    // The button says which filter is on when it is not 全部.
-    const current = filters.find(([value]) => value === memory.filter)?.[1] || '全部';
-    filterLabel.textContent = memory.filter === 'ALL' ? '' : current;
-    filterButton.dataset.active = String(memory.filter !== 'ALL');
-    filterButton.title = `API 狀態篩選：${current}`;
-    filterButton.setAttribute('aria-label', `API 狀態篩選：${current}`);
+    return meta;
   };
 
   const renderList = () => {
     const shown = records.filter(visible),
       groups = new Map<string, ApiRecord[]>();
-    for (const record of shown) {
-      const key = memory.grouping === 'controller' ? record.controller : record.prefix;
-      groups.set(key, [...(groups.get(key) || []), record]);
-    }
+    for (const record of shown)
+      groups.set(record.controller, [...(groups.get(record.controller) || []), record]);
     const keys = [...groups.keys()].sort(
       (a, b) => (a === NO_HANDLER ? 1 : 0) - (b === NO_HANDLER ? 1 : 0) || a.localeCompare(b, 'en'),
     );
     list.replaceChildren();
     const query = memory.query.trim().toLowerCase(),
-      shownJobs =
-        memory.filter === 'ALL'
-          ? jobs.filter((j) => !query || jobSearch.get(j.node.id)!.includes(query))
-          : [],
-      shownStates =
-        memory.filter === 'ALL'
-          ? states.filter((t) => !query || stateSearch.get(`state:${t.name}`)!.includes(query))
-          : [];
+      shownJobs = jobs.filter((j) => !query || jobSearch.get(j.node.id)!.includes(query)),
+      shownStates = states.filter(
+        (t) => !query || stateSearch.get(`state:${t.name}`)!.includes(query),
+      );
     if (!shown.length && !shownJobs.length && !shownStates.length)
       list.append(element('p', '沒有符合的 API', 'empty-list'));
-    const searching = !!memory.query.trim();
     for (const key of keys) {
       const items = groups
         .get(key)!
         .sort(
           (a, b) => a.path.localeCompare(b.path, 'en') || a.method.localeCompare(b.method, 'en'),
         );
-      const memoryKey = `${memory.grouping}:${key}`,
-        collapsed =
-          !searching &&
-          memory.collapsed.has(memoryKey) &&
-          !items.some((r) => r.node.id === selected);
-      const group = element('section', undefined, 'api-group'),
-        header = element('button', undefined, 'api-group-header'),
-        body = element('div', undefined, 'api-group-items');
-      group.dataset.apiGroup = key;
-      group.classList.toggle('is-collapsed', collapsed);
-      body.setAttribute('role', 'group');
-      body.setAttribute('aria-label', key);
-      header.type = 'button';
-      header.setAttribute('aria-expanded', String(!collapsed));
-      const attention = items.filter((r) => r.status !== 'IN_USE').length;
-      const counts = apiStatusCounts(items.map((r) => r.status));
-      header.append(
-        element('span', undefined, 'api-group-caret'),
-        element('span', key, 'api-group-name'),
-        element('span', String(items.length), 'api-group-count'),
-      );
-      if (attention) header.append(element('span', `${attention} 需要注意`, 'api-group-attention'));
-      header.append(
-        proportionBar(statusShares(counts), statusCountsLabel(counts), 'api-group-bar', true),
-      );
-      header.onclick = () => {
-        const now = !group.classList.contains('is-collapsed');
-        group.classList.toggle('is-collapsed', now);
-        header.setAttribute('aria-expanded', String(!now));
-        if (now) memory.collapsed.add(memoryKey);
-        else memory.collapsed.delete(memoryKey);
-      };
+      const { box, body } = group(key, items.length, key !== NO_HANDLER);
       for (const record of items) {
         const row = element('button', undefined, 'api-row');
         row.type = 'button';
@@ -967,43 +797,25 @@ export function apiPage(index: Index, state: ReviewState, options: ApiPageOption
         row.dataset.apiRow = record.node.id;
         row.dataset.apiStatus = record.status;
         row.title = `${record.method} ${record.path}`;
-        const meta = element('span', undefined, 'api-row-meta');
-        meta.append(
-          callerBar(record.screens, mostScreens),
-          element(
-            'span',
-            record.screens ? `${record.screens} 個畫面` : '沒有呼叫來源',
-            'api-screen-count',
-          ),
-        );
-        if (record.status !== 'IN_USE') meta.append(statusTag(record.status));
-        const direct = apiDecision(state, record.node.id);
-        if (direct !== 'UNDECIDED') {
-          const mark = element('span', decisionLabel(direct), 'api-decision-mark');
-          mark.dataset.apiDecision = direct;
-          meta.append(mark);
-        }
-        if (record.external.length)
-          meta.append(element('span', '外部呼叫（Webhook）', 'api-external-call'));
-        const main = element('span', undefined, 'api-row-main');
         // The list shows only the API itself; what it is for is in the detail.
-        main.append(pathCode(record.path, 'api-path'));
-        row.append(methodBadge(record.method), main, meta);
+        row.append(
+          methodBadge(record.method),
+          breakablePath(record.path, 'api-path'),
+          rowMeta(record),
+        );
         row.onclick = () => select(record.node.id);
         body.append(row);
       }
-      group.append(header, body);
-      list.append(group);
+      list.append(box);
     }
-    if (shownJobs.length) list.append(jobGroup(shownJobs, searching));
-    if (shownStates.length) list.append(stateGroup(shownStates, searching));
+    if (shownJobs.length) list.append(jobGroup(shownJobs));
+    if (shownStates.length) list.append(stateGroup(shownStates));
     // Keep the selection on a visible API; when it is filtered away, the first one shown takes its place.
     const ids = rows().map((row) => row.dataset.apiRow!);
     if (!selected || !ids.includes(selected)) selected = ids[0];
     if (selected) select(selected);
     else renderDetail();
   };
-
   list.addEventListener('keydown', (event) => {
     const all = rows(),
       at = all.findIndex((row) => row.dataset.apiRow === selected);
@@ -1032,148 +844,272 @@ export function apiPage(index: Index, state: ReviewState, options: ApiPageOption
       componentDecision(state, caller.screenId, caller.componentId) === 'REMOVE');
   // A screen shows its role's tint here as everywhere else (ADR 0188).
   const roles = rolePartition(index);
+  const tintOf = (screenId: string) =>
+    roles ? roleTint(index.graph, roles.of.get(screenId)) : 'none';
   const tint = (el: HTMLElement, screenId: string) => {
-    if (roles) el.dataset.roleTint = roleTint(index.graph, roles.of.get(screenId));
+    if (roles) el.dataset.roleTint = tintOf(screenId);
   };
+  const name = (id: string) => index.nodes.get(id)?.name || '畫面';
   /** What kind of element triggers the call, as a short tag (a submit button reads 按鈕). */
   const triggerKind = (caller: Caller) => {
     if (!caller.componentId) return callerKind(index, caller) === 'unresolved' ? '不明' : '載入';
     const kind = index.nodes.get(caller.componentId)?.attributes.kind || '';
     return kind === 'SUBMIT' ? '按鈕' : kindNames[kind] || '元件';
   };
-  /** A trigger on a screen: its kind tag, then its own words without the kind repeated. */
-  const triggerButton = (caller: Caller) => {
+  /** A trigger's own words, without the kind word the label may start or end with. */
+  const triggerText = (caller: Caller) => {
     const kind = triggerKind(caller);
     let label = callerLabel(index, caller);
     if (label.startsWith(kind))
       label = label.slice(kind.length).replace(/^（(.*)）$/, '$1') || label;
-    const chip = callerButton(caller, label);
-    chip.classList.add('is-trigger');
-    chip.dataset.triggerKind = kind;
-    chip.prepend(element('span', kind, 'api-caller-kind'));
-    chip.title = `${kind}：${callerLabel(index, caller)}`;
-    return chip;
+    const named = kindNames[index.nodes.get(caller.componentId || '')?.attributes.kind || ''];
+    if (named && label.endsWith(` ${named}`)) label = label.slice(0, -named.length - 1);
+    return label;
   };
-  const callerButton = (caller: Caller, label: string) => {
-    const link = element('button', undefined, 'api-caller');
-    link.type = 'button';
-    link.dataset.callerScreen = caller.screenId;
-    if (caller.componentId) link.dataset.callerComponent = caller.componentId;
-    link.append(element('span', label, 'api-caller-label'));
-    if (removed(caller)) {
-      link.classList.add('is-removed');
-      link.append(element('span', '已標記移除', 'api-removed-tag'));
-    }
-    link.onclick = () => options.onCaller(caller.screenId, caller.componentId);
-    return link;
+  /** Where a trigger is written: its component's source line, or the evidence of its load call. */
+  const triggerSource = (caller: Caller) => {
+    if (caller.componentId) return index.nodes.get(caller.componentId)?.source;
+    return index.behaviors.get(caller.behaviorId || '')?.evidence?.find((e) => e.source?.file)
+      ?.source;
   };
-  /** Screen → what triggers it → this API → handler, as three linked stages; each screen opens it at the caller. */
-  const renderChain = (record: ApiRecord) => {
-    const screens = chainScreens(index, record.callers),
-      handlerCount = record.handlers.length;
-    const chain = element('div', undefined, 'api-chain');
-    chain.dataset.apiSection = 'chain';
-    chain.setAttribute('role', 'group');
-    chain.setAttribute(
-      'aria-label',
-      `呼叫鏈：${screens.length ? `${screens.length} 個畫面` : '沒有呼叫來源'} → ${record.method} ${record.path} → ${handlerCount ? `${handlerCount} 個處理程式` : NO_HANDLER}`,
+  /** A form whose own submit buttons are listed among the callers is the same action: keep the buttons. */
+  const withoutSubmittedForms = (callers: Caller[]) => {
+    const submitted = new Set(
+      callers
+        .map((c) => (c.componentId ? index.nodes.get(c.componentId)?.attributes.formId : undefined))
+        .filter((id): id is string => !!id),
     );
-    const stage = (key: string, heading: string) => {
-      const box = element('div', undefined, 'api-chain-stage');
-      box.dataset.chainStage = key;
-      box.append(element('span', heading, 'api-chain-heading'));
-      const items = element('div', undefined, 'api-chain-items');
-      box.append(items);
-      return { box, items };
-    };
-    const more = (items: HTMLElement, rest: number, unit: string) => {
-      if (rest > 0) items.append(element('span', `還有 ${rest} 個${unit}`, 'api-chain-more'));
-    };
-    const arrow = () => {
-      const link = element('span', undefined, 'api-chain-link');
-      link.setAttribute('aria-hidden', 'true');
-      return link;
-    };
-    const from = stage('screens', `畫面 ${screens.length}`);
-    if (!screens.length)
-      from.items.append(element('span', '沒有呼叫來源', 'api-chain-node is-empty'));
-    for (const item of screens.slice(0, CHAIN_LIMIT)) {
-      const node = element('button', undefined, 'api-chain-node');
+    return callers.filter((c) => !c.componentId || !submitted.has(c.componentId));
+  };
+  const location = (source?: { file?: string; line?: number }) =>
+    source?.file && source.file !== '.'
+      ? `${source.file}${source.line ? `:${source.line}` : ''}`
+      : undefined;
+  const shortLocation = (source?: { file?: string; line?: number }) =>
+    location(source)?.split('/').pop();
+
+  interface Cell {
+    label: string;
+    name: string;
+    mono?: boolean;
+    sub?: string;
+    subMono?: boolean;
+    source?: string;
+    /** Not proven by the analysis: drawn dashed. */
+    unproven?: boolean;
+    kind?: 'screen' | 'api';
+    screenId?: string;
+    removed?: boolean;
+    title?: string;
+  }
+  const chainNode = (cell: Cell) => {
+    const node = element(cell.source ? 'button' : 'div', undefined, 'api-chain-node');
+    if (node instanceof HTMLButtonElement) {
       node.type = 'button';
-      node.dataset.chainScreen = item.screenId;
-      tint(node, item.screenId);
+      node.dataset.copySource = cell.source;
+      node.title = `${cell.title ? `${cell.title}\n` : ''}${cell.source}（點擊複製路徑）`;
+      node.onclick = () => copySource(cell.source!, node);
+    } else if (cell.title) node.title = cell.title;
+    if (cell.kind) node.dataset.chainKind = cell.kind;
+    if (cell.screenId) {
+      node.dataset.chainScreen = cell.screenId;
+      tint(node, cell.screenId);
+    }
+    if (cell.unproven) node.classList.add('is-unproven');
+    if (cell.removed) node.classList.add('is-removed');
+    node.append(
+      element('span', cell.label, 'api-chain-label'),
+      element('span', cell.name, cell.mono ? 'api-chain-name is-mono' : 'api-chain-name'),
+    );
+    if (cell.sub)
       node.append(
-        element('span', index.nodes.get(item.screenId)?.name || '畫面', 'api-chain-name'),
-        element(
-          'span',
-          item.triggers.length > 1 ? `${item.triggers.length} 個觸發` : item.triggers[0],
-          'api-chain-trigger',
-        ),
+        element('span', cell.sub, cell.subMono ? 'api-chain-sub is-mono' : 'api-chain-sub'),
       );
-      node.title = item.triggers.join('、');
-      if (
-        screenDecision(state, item.screenId) === 'REMOVE' ||
-        record.callers.filter((c) => c.screenId === item.screenId).every(removed)
-      )
-        node.classList.add('is-removed');
-      node.onclick = () => options.onCaller(item.screenId);
-      from.items.append(node);
+    return node;
+  };
+  const column = (key: string, cells: Cell[], unit: string) => {
+    const box = element('div', undefined, 'api-chain-col');
+    box.dataset.chainStage = key;
+    for (const cell of cells.slice(0, CHAIN_LIMIT)) box.append(chainNode(cell));
+    if (cells.length > CHAIN_LIMIT)
+      box.append(element('span', `還有 ${cells.length - CHAIN_LIMIT} 個${unit}`, 'api-chain-more'));
+    return box;
+  };
+
+  /** Screen → trigger → API → handler → Service → DAO, six equal columns; each node with a source copies it. */
+  const renderChain = (record: ApiRecord) => {
+    const card = element('section', undefined, 'api-card api-chain-card');
+    card.dataset.apiSection = 'chain';
+    card.append(element('h2', '呼叫鏈：從畫面一路到資料表'));
+    const screens = chainScreens(index, record.callers);
+    const screenCells: Cell[] = screens.map((item) => {
+      const node = index.nodes.get(item.screenId),
+        role =
+          roles && tintOf(item.screenId) !== 'none'
+            ? roles.label(roles.of.get(item.screenId)!)
+            : '';
+      return {
+        label: role ? `畫面 · ${role}` : '畫面',
+        name: name(item.screenId),
+        sub: index.routes.get(item.screenId)?.[0],
+        subMono: true,
+        source: location(node?.source),
+        kind: 'screen',
+        screenId: item.screenId,
+        removed:
+          screenDecision(state, item.screenId) === 'REMOVE' ||
+          record.callers.filter((c) => c.screenId === item.screenId).every(removed),
+        title: item.triggers.join('、'),
+      };
+    });
+    const triggerCells: Cell[] = [];
+    const seen = new Set<string>();
+    for (const caller of withoutSubmittedForms(record.callers)) {
+      const source = triggerSource(caller),
+        key = caller.componentId
+          ? location(source) || caller.componentId
+          : `${caller.screenId}|${caller.behaviorId || ''}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      triggerCells.push({
+        label: `觸發 · ${triggerKind(caller)}`,
+        name: triggerText(caller),
+        sub: shortLocation(source),
+        subMono: true,
+        source: location(source),
+        unproven: !caller.componentId && callerKind(index, caller) === 'unresolved',
+        removed: removed(caller),
+        title: `${name(caller.screenId)}：${callerLabel(index, caller)}`,
+      });
     }
-    more(from.items, screens.length - CHAIN_LIMIT, '畫面');
-    const api = stage('api', 'API'),
-      self = element('span', undefined, 'api-chain-node is-self');
-    self.dataset.apiStatus = record.status;
-    self.append(methodBadge(record.method), pathCode(record.path, 'api-chain-name'));
-    api.items.append(self);
-    const to = stage('handlers', `處理程式 ${handlerCount}`);
-    if (!handlerCount) to.items.append(element('span', NO_HANDLER, 'api-chain-node is-empty'));
-    for (const handler of record.handlers.slice(0, CHAIN_LIMIT)) {
-      const node = element('span', undefined, 'api-chain-node');
-      node.append(element('span', handler.name, 'api-chain-name'));
-      // Where it is written, so the chain can be followed into the source (traceability).
-      if (handler.source?.file)
-        node.append(
-          element(
-            'span',
-            `${handler.source.file.split('/').pop()}${handler.source.line ? `:${handler.source.line}` : ''}`,
-            'api-chain-source',
-          ),
-        );
-      node.title = handler.source?.file || handler.name;
-      to.items.append(node);
-    }
-    more(to.items, handlerCount - CHAIN_LIMIT, '處理程式');
-    chain.append(from.box, arrow(), api.box, arrow(), to.box);
-    // The handler's own calls into the project's services and DAOs, as the analysis proved them (ADR 0156, 0189).
+    const empty = (label: string, text: string): Cell => ({ label, name: text, unproven: true });
+    const contract = (index.graph.apiContracts || []).find((c) => c.endpointId === record.node.id);
+    const apiSource = record.node.source?.file ? record.node.source : contract?.source;
+    const apiCell: Cell = {
+      label: 'API',
+      name: `${record.method === 'ANY' ? '任何' : record.method} ${record.path}`,
+      mono: true,
+      source: location(apiSource),
+      kind: 'api',
+    };
+    const handlerCells: Cell[] = record.handlers.map((handler) => ({
+      label: '處理程式',
+      name: handler.name,
+      mono: true,
+      sub: shortLocation(handler.source),
+      subMono: true,
+      source: location(handler.source),
+    }));
+    // The handlers' own calls into the project's services and DAOs, as the analysis proved them (ADR 0156, 0189).
     const calls = record.handlers
       .flatMap((handler) => backendCalls(handler))
       .sort((a, b) => a.depth - b.depth || (a.to < b.to ? -1 : a.to > b.to ? 1 : 0))
       .filter((call, i, all) => all.findIndex((c) => c.to === call.to) === i);
-    if (calls.length) {
-      const backend = stage('backend', `Service／DAO ${calls.length}`);
-      for (const call of calls.slice(0, CHAIN_LIMIT)) {
-        const node = element('span', undefined, 'api-chain-node');
-        node.dataset.resolution = call.resolution;
-        node.append(
-          element('span', call.to, 'api-chain-name'),
-          element('span', `${call.layer} · 第 ${call.depth} 層`, 'api-chain-trigger'),
-        );
-        node.title = `${call.from} → ${call.to}（${call.resolution}${call.reason ? `：${call.reason}` : ''}）`;
-        backend.items.append(node);
-      }
-      more(backend.items, calls.length - CHAIN_LIMIT, '呼叫');
-      chain.append(arrow(), backend.box);
-    }
-    return chain;
+    const callCells = (layers: string[], label: string): Cell[] =>
+      calls
+        .filter((call) => layers.includes(call.layer))
+        .map((call) => ({
+          label,
+          name: call.to,
+          mono: true,
+          sub: shortLocation(call.source),
+          subMono: true,
+          source: location(call.source),
+          unproven: call.resolution !== 'CONFIRMED',
+          title: `${call.from} → ${call.to}（第 ${call.depth} 層・${call.resolution}${call.reason ? `：${call.reason}` : ''}）`,
+        }));
+    const services = callCells(['SERVICE'], 'Service'),
+      daos = callCells(['DAO', 'REPOSITORY'], 'DAO');
+    const grid = element('div', undefined, 'api-chain-grid'),
+      scroll = element('div', undefined, 'api-chain-scroll');
+    grid.setAttribute('role', 'group');
+    grid.setAttribute(
+      'aria-label',
+      `呼叫鏈：${screens.length ? `${screens.length} 個畫面` : '沒有呼叫來源'} → ${record.method} ${record.path} → ${record.handlers.length ? `${record.handlers.length} 個處理程式` : NO_HANDLER}`,
+    );
+    grid.append(
+      column('screens', screenCells.length ? screenCells : [empty('畫面', '沒有呼叫來源')], '畫面'),
+      column(
+        'triggers',
+        triggerCells.length ? triggerCells : [empty('觸發', '沒有呼叫來源')],
+        '觸發',
+      ),
+      column('api', [apiCell], 'API'),
+      column(
+        'handlers',
+        handlerCells.length ? handlerCells : [empty('處理程式', NO_HANDLER)],
+        '處理程式',
+      ),
+      column(
+        'service',
+        services.length ? services : [empty('Service', '沒有可證明的呼叫')],
+        '呼叫',
+      ),
+      column('dao', daos.length ? daos : [empty('DAO', '沒有可證明的呼叫')], '呼叫'),
+    );
+    // One node per column: the nodes share the row's height, as one line across the card.
+    if ([...grid.children].every((col) => col.childElementCount === 1))
+      grid.dataset.singleRow = 'true';
+    scroll.append(grid);
+    card.append(
+      scroll,
+      element(
+        'p',
+        '每一格都附原始碼位置，點擊可複製路徑。靜態分析無法證明的環節以虛線呈現，不猜測。',
+        'api-chain-note',
+      ),
+    );
+    return card;
   };
   const section = (heading: string) => {
-    const box = element('section', undefined, 'api-section');
-    box.append(element('h3', heading));
+    const box = element('section', undefined, 'api-card api-section');
+    box.append(element('h2', heading));
     return box;
   };
 
+  /** A calling screen's card: a header strip that opens the screen, then the triggers on it. */
+  const screenCard = (screenId: string, heading?: string) => {
+    const card = element('div', undefined, 'api-caller-screen'),
+      link = element('button', undefined, 'api-screen-link');
+    tint(card, screenId);
+    link.type = 'button';
+    link.dataset.callerScreen = screenId;
+    link.title = `開啟畫面「${name(screenId)}」`;
+    const label = element('span', undefined, 'api-screen-text');
+    label.append(element('strong', heading || name(screenId)));
+    const url = index.routes.get(screenId)?.[0];
+    if (url) label.append(element('code', url));
+    link.append(label, element('span', '開啟畫面 →', 'api-screen-open'));
+    link.onclick = () => options.onCaller(screenId);
+    if (screenDecision(state, screenId) === 'REMOVE') card.classList.add('is-removed');
+    const body = element('div', undefined, 'api-caller-list');
+    card.append(link, body);
+    return { card, body };
+  };
+  /** One trigger line: its kind tag, its words, and the screen's (or the trigger's) current mark. */
+  const triggerLine = (caller: Caller) => {
+    const line = element('button', undefined, 'api-caller');
+    line.type = 'button';
+    line.dataset.callerScreen = caller.screenId;
+    if (caller.componentId) line.dataset.callerComponent = caller.componentId;
+    line.title = `${triggerKind(caller)}：${callerLabel(index, caller)}`;
+    const mark =
+      caller.componentId &&
+      componentDecision(state, caller.screenId, caller.componentId) === 'REMOVE'
+        ? '· 已標記移除'
+        : `· 畫面${decisionLabel(effectiveScreen(index.graph, state, caller.screenId))}`;
+    line.append(
+      element('span', triggerKind(caller), 'api-caller-kind'),
+      element('span', triggerText(caller), 'api-caller-label'),
+      element('span', mark, 'api-caller-mark'),
+    );
+    if (removed(caller)) line.classList.add('is-removed');
+    line.onclick = () => options.onCaller(caller.screenId, caller.componentId);
+    return line;
+  };
+
   const renderCallers = (record: ApiRecord) => {
-    const box = section(`呼叫來源 ${record.screens} 個畫面`);
+    const box = section(`呼叫來源 · ${record.screens} 個畫面`);
     box.dataset.apiSection = 'callers';
     if (!record.callers.length) {
       box.append(element('p', '畫面中找不到呼叫這個 API 的地方。', 'muted'));
@@ -1209,7 +1145,6 @@ export function apiPage(index: Index, state: ReviewState, options: ApiPageOption
     for (const caller of record.callers)
       if (!isShared(caller))
         own.set(caller.screenId, [...(own.get(caller.screenId) || []), caller]);
-    const name = (id: string) => index.nodes.get(id)?.name || '畫面';
     const byName = (a: string, b: string) => name(a).localeCompare(name(b), 'zh-Hant');
     // A shared form whose own submit button is also shared is the same action: keep the button.
     const sharedForms = new Set(
@@ -1228,137 +1163,113 @@ export function apiPage(index: Index, state: ReviewState, options: ApiPageOption
       const callers = record.callers.filter((c) => sharedKey(c) === key),
         first = callers[0],
         component = first.componentId ? index.nodes.get(first.componentId) : undefined;
-      const fold = element('details', undefined, 'api-shared'),
-        summary = element('summary');
-      fold.dataset.apiShared = key;
-      summary.append(
+      // Styled like a screen card: the header names the shared trigger, the lines are the screens it is on.
+      const card = element('div', undefined, 'api-caller-screen api-shared'),
+        header = element('div', undefined, 'api-screen-link is-static'),
+        label = element('span', undefined, 'api-screen-text');
+      card.dataset.apiShared = key;
+      label.append(
         element(
-          'span',
+          'strong',
           component
-            ? `共用按鈕「${callerLabel(index, first).replace(/（第 \d+ 個）$/, '')}」`
+            ? `共用${triggerKind(first)}「${triggerText(first)}」`
             : `${callerLabel(index, first)}（共用程式）`,
-          'api-shared-name',
         ),
-        element('span', `${screens.size} 個畫面`, 'muted'),
       );
-      if (component?.source?.file && component.source.file !== '.')
-        summary.append(
-          element(
-            'code',
-            `${component.source.file}${component.source.line ? `:${component.source.line}` : ''}`,
-            'api-source',
-          ),
-        );
-      const triggers = element('div', undefined, 'api-caller-list');
+      const where = location(component?.source);
+      if (where) label.append(element('code', where));
+      header.append(label, element('span', `${screens.size} 個畫面`, 'api-screen-open is-count'));
+      const body = element('div', undefined, 'api-caller-list');
       const perScreen = new Map<string, Caller>();
       for (const caller of callers)
         if (!perScreen.has(caller.screenId)) perScreen.set(caller.screenId, caller);
-      // These are the screens the shared button appears on, not triggers.
-      triggers.append(element('span', '出現在', 'api-caller-heading'));
       for (const [screenId, caller] of [...perScreen].sort((a, b) => byName(a[0], b[0]))) {
-        const chip = callerButton(caller, name(screenId));
-        chip.classList.add('is-screen');
-        chip.prepend(icon('screen'));
-        tint(chip, screenId);
-        triggers.append(chip);
+        const line = element('button', undefined, 'api-caller');
+        line.type = 'button';
+        line.dataset.callerScreen = screenId;
+        if (caller.componentId) line.dataset.callerComponent = caller.componentId;
+        line.append(
+          element('span', '畫面', 'api-caller-kind'),
+          element('span', name(screenId), 'api-caller-label'),
+          element(
+            'span',
+            `· 畫面${decisionLabel(effectiveScreen(index.graph, state, screenId))}`,
+            'api-caller-mark',
+          ),
+        );
+        if (removed(caller)) line.classList.add('is-removed');
+        line.onclick = () => options.onCaller(screenId, caller.componentId);
+        body.append(line);
       }
-      fold.append(summary, triggers);
-      box.append(fold);
+      card.append(header, body);
+      box.append(card);
     }
     for (const [screenId, callers] of [...own].sort((a, b) => byName(a[0], b[0]))) {
-      // Each calling screen is a card: its header opens the screen, the buttons below it call the API.
-      const group = element('div', undefined, 'api-caller-screen'),
-        link = element('button', undefined, 'api-screen-link');
-      tint(group, screenId);
-      link.type = 'button';
-      link.dataset.callerScreen = screenId;
-      link.title = `開啟畫面「${name(screenId)}」`;
-      const label = element('span', undefined, 'api-screen-text');
-      label.append(
-        element('strong', name(screenId)),
-        element('code', index.routes.get(screenId)?.[0] || '沒有已知 URL'),
-      );
-      const open = element('span', '開啟畫面', 'api-screen-open');
-      open.append(icon('arrow'));
-      link.append(icon('screen'), label, open);
-      link.onclick = () => options.onCaller(screenId);
-      if (screenDecision(state, screenId) === 'REMOVE') group.classList.add('is-removed');
-      const triggers = element('div', undefined, 'api-caller-list');
-      triggers.append(element('span', '觸發元件', 'api-caller-heading'));
-      // A form whose own submit buttons are listed is the same action: show the buttons only.
-      const submitted = new Set(
-        callers
-          .map((c) =>
-            c.componentId ? index.nodes.get(c.componentId)?.attributes.formId : undefined,
-          )
-          .filter((id): id is string => !!id),
-      );
-      for (const caller of callers)
-        if (!caller.componentId || !submitted.has(caller.componentId))
-          triggers.append(triggerButton(caller));
-      group.append(link, triggers);
-      box.append(group);
+      const { card, body } = screenCard(screenId);
+      for (const caller of withoutSubmittedForms(callers)) body.append(triggerLine(caller));
+      box.append(card);
     }
     return box;
   };
-
-  type Field = { name?: unknown; type?: unknown; location?: unknown; required?: unknown };
+  type Field = { name?: unknown; type?: unknown };
   type Body = { contentType?: unknown; bodyType?: unknown; fields?: unknown; status?: unknown };
   const text = (value: unknown) =>
     typeof value === 'string' || typeof value === 'number' ? String(value) : '';
-  const fieldTable = (fields: Field[]) => {
-    const table = element('table', undefined, 'api-fields'),
-      head = element('tr');
-    for (const label of ['欄位', '型別', '位置', '必填']) head.append(element('th', label));
-    const thead = element('thead');
-    thead.append(head);
-    const tbody = element('tbody');
+  /** Request fields with the screen field proven to feed each one (「—」 when none is proven). */
+  const fieldTable = (fields: Field[], sources: Map<string, string[]>) => {
+    const table = element('div', undefined, 'api-fields');
+    table.setAttribute('role', 'table');
+    table.setAttribute('aria-label', 'Request 欄位');
+    const cell = (value: string, className: string, role = 'cell') => {
+      const item = element('span', value, className);
+      item.setAttribute('role', role);
+      return item;
+    };
+    for (const label of ['欄位', '型別', '來自畫面欄位'])
+      table.append(cell(label, 'api-fields-head', 'columnheader'));
     for (const field of fields) {
-      const row = element('tr');
-      const name = element('td');
-      name.append(element('code', text(field.name)));
-      row.append(
-        name,
-        element('td', text(field.type)),
-        element('td', text(field.location)),
-        element('td', field.required === true ? '是' : field.required === false ? '否' : ''),
+      const from = sources.get(text(field.name));
+      table.append(
+        cell(text(field.name), 'api-fields-cell is-mono'),
+        cell(text(field.type), 'api-fields-cell is-mono'),
+        cell(from?.length ? from.join('、') : '—', 'api-fields-cell'),
       );
-      tbody.append(row);
     }
-    table.append(thead, tbody);
     return table;
   };
-  const bodyBlock = (heading: string, body: Body) => {
-    const block = element('div', undefined, 'api-contract-part'),
-      fields = Array.isArray(body.fields) ? (body.fields as Field[]) : [];
-    block.append(element('h4', heading));
-    const facts = [text(body.bodyType), text(body.contentType)].filter(Boolean);
-    if (facts.length) {
-      const line = element('p', undefined, 'api-contract-type');
-      facts.forEach((fact, i) => {
-        if (i) line.append(' · ');
-        line.append(element('code', fact));
-      });
-      block.append(line);
-    }
-    if (fields.length) block.append(fieldTable(fields));
-    else if (!facts.length) block.append(element('p', '沒有分析到內容。', 'muted'));
-    return block;
-  };
   const renderContract = (record: ApiRecord) => {
+    const box = section('Request ／ Response');
+    box.dataset.apiSection = 'contract';
     const contract = (index.graph.apiContracts || []).find((c) => c.endpointId === record.node.id);
-    if (!contract) return undefined;
+    if (!contract) {
+      box.append(element('p', '沒有分析到 Request／Response。', 'muted'));
+      return box;
+    }
     const request = (contract.request || {}) as Body,
-      responses = (Array.isArray(contract.responses) ? contract.responses : []) as Body[];
-    // Always open: the request and responses are what a reader comes to the API for.
-    const fold = element('section', undefined, 'api-contract');
-    fold.append(element('h3', 'Request／Response', 'api-contract-title'));
-    fold.append(bodyBlock('Request', request));
-    for (const response of responses)
-      fold.append(bodyBlock(`Response ${text(response.status)}`.trim(), response));
-    return fold;
+      responses = (Array.isArray(contract.responses) ? contract.responses : []) as Body[],
+      fields = Array.isArray(request.fields) ? (request.fields as Field[]) : [];
+    const requestType = [text(request.bodyType), text(request.contentType)].filter(Boolean);
+    if (requestType.length) {
+      const line = element('span', 'Request ', 'api-contract-line');
+      line.append(element('code', requestType.join(' · ')));
+      box.append(line);
+    }
+    if (fields.length) box.append(fieldTable(fields, requestFieldSources(index, record.node.id)));
+    else box.append(element('p', 'Request 沒有分析到欄位。', 'muted'));
+    if (!responses.length) box.append(element('p', '沒有分析到回應。', 'muted'));
+    for (const response of responses) {
+      const summary = responseSummary(
+          text(response.status),
+          text(response.bodyType),
+          text(response.contentType),
+        ),
+        line = element('span', '回應 ', 'api-contract-line');
+      if (summary.type) line.append(element('code', summary.type));
+      if (summary.outcome) line.append(`${summary.type ? ' · ' : ''}${summary.outcome}`);
+      box.append(line);
+    }
+    return box;
   };
-
   const reason = (record: ApiRecord) =>
     record.note
       ? `${record.note}：由系統設定進入，視為使用中。`
@@ -1395,30 +1306,35 @@ export function apiPage(index: Index, state: ReviewState, options: ApiPageOption
           'notice',
         ),
       );
-    const title = element('div', undefined, 'api-detail-title');
-    title.append(
+    // The title row: method, path and status, what the API is for right below, the decision on the right.
+    const title = element('div', undefined, 'api-detail-title'),
+      heading = element('div', undefined, 'api-detail-heading'),
+      line = element('div', undefined, 'api-detail-line'),
+      path = element('h1', record.path, 'api-detail-path');
+    line.append(
       methodBadge(record.method),
-      pathCode(record.path, 'api-detail-path'),
-      statusTag(record.status),
+      path,
+      statusTag(record.status, record.external.length > 0),
     );
-    const why = element('p', reason(record), record.note ? 'api-reason api-note' : 'api-reason');
-    why.dataset.apiStatus = record.status;
+    heading.append(line);
+    title.append(heading);
     inner.append(title);
     const purpose = apiPurpose(index, record.callers, record.external.length > 0);
     if (purpose) {
-      const line = element('p', purpose.sentence, 'api-purpose');
-      line.dataset.apiPurpose = 'true';
-      inner.append(line);
+      const sentence = element('p', purpose.sentence, 'api-purpose');
+      sentence.dataset.apiPurpose = 'true';
+      heading.append(sentence);
     }
     // 「N 個畫面會呼叫這個 API」 repeats the callers below; other statuses keep their warning.
-    if (record.status !== 'IN_USE' || record.note) inner.append(why);
+    if (record.status !== 'IN_USE' || record.note) {
+      const why = element('p', reason(record), record.note ? 'api-reason api-note' : 'api-reason');
+      why.dataset.apiStatus = record.status;
+      heading.append(why);
+    }
     if (options.setApi) {
-      // The person's own decision on this API and its note sit at the end of its title row; a
-      // conflict follows right under the title, without a box of its own.
+      // The person's own decision on this API sits at the end of its title row; a conflict follows right under it.
       const id = record.node.id,
-        direct = apiDecision(state, id),
-        box = element('div', undefined, 'api-decision');
-      box.dataset.apiDecisionFor = id;
+        direct = apiDecision(state, id);
       const decision = element('div', undefined, 'api-title-decision');
       decision.dataset.apiDecisionFor = id;
       decision.append(
@@ -1427,22 +1343,6 @@ export function apiPage(index: Index, state: ReviewState, options: ApiPageOption
         }),
       );
       title.append(decision);
-      // The floating note closes on a click elsewhere or Esc; its text is saved as it loses focus.
-      const closeNote = () => {
-        const toggle = decision.querySelector<HTMLButtonElement>('[data-note-toggle]');
-        if (toggle?.getAttribute('aria-expanded') === 'true') toggle.click();
-      };
-      const outside = (event: PointerEvent) => {
-        if (!decision.isConnected) document.removeEventListener('pointerdown', outside);
-        else if (!decision.contains(event.target as globalThis.Node)) closeNote();
-      };
-      document.addEventListener('pointerdown', outside);
-      decision.addEventListener('keydown', (event) => {
-        if (event.key !== 'Escape') return;
-        event.stopPropagation();
-        closeNote();
-        decision.querySelector<HTMLButtonElement>('[data-note-toggle]')?.focus();
-      });
       const disagree =
         (direct === 'KEEP' && record.status === 'REMOVABLE') ||
         (direct === 'REMOVE' && record.status === 'IN_USE');
@@ -1455,33 +1355,13 @@ export function apiPage(index: Index, state: ReviewState, options: ApiPageOption
           'notice conflict',
         );
         note.dataset.apiConflict = id;
-        box.append(note);
+        inner.append(note);
       }
-      // The note belongs with the decision, in the title row.
-      if (options.setNote)
-        decision.append(
-          noteEditor({
-            compact: true,
-            label: '這個 API',
-            decision: direct,
-            note: decisionNoteOf(state, 'api', id),
-            open: !!options.notesOpen?.has(id),
-            onToggle: (open) => {
-              if (open) options.notesOpen?.add(id);
-              else options.notesOpen?.delete(id);
-            },
-            onInput: (note) => options.setNote!(id, note),
-            onCommit: () => options.commitNote?.(),
-          }),
-        );
-      inner.append(box);
     }
     inner.append(renderChain(record));
-    // On a wide screen the handler and contract are the left column and the callers the right; narrower, one column.
-    const columns = element('div', undefined, 'api-detail-columns'),
-      main = element('div', undefined, 'api-detail-main'),
-      side = element('div', undefined, 'api-detail-side');
-    columns.append(main, side);
+    // Callers on the left, request and response on the right; one column when narrow.
+    const columns = element('div', undefined, 'api-detail-columns');
+    columns.append(renderCallers(record), renderContract(record));
     inner.append(columns);
     if (record.external.length) {
       const box = section('外部呼叫（Webhook）');
@@ -1498,33 +1378,14 @@ export function apiPage(index: Index, state: ReviewState, options: ApiPageOption
         );
         box.append(line);
       }
-      main.append(box);
+      inner.append(box);
     }
-
-    const handlers = section('處理程式');
-    handlers.dataset.apiSection = 'handlers';
-    if (!record.handlers.length) handlers.append(element('p', NO_HANDLER, 'muted'));
-    for (const handler of record.handlers) {
-      const line = element('div', undefined, 'api-handler');
-      line.append(element('strong', handler.name));
-      const source = handler.source || record.node.source;
-      if (source?.file)
-        line.append(
-          element('code', `${source.file}${source.line ? `:${source.line}` : ''}`, 'api-source'),
-        );
-      handlers.append(line);
-    }
-    main.append(handlers);
     const changed = changesSection(record.handlers);
-    if (changed) main.append(changed);
-    side.append(renderCallers(record));
-    const contract = renderContract(record);
-    if (contract) main.append(contract);
+    if (changed) inner.append(changed);
     detail.append(inner);
     detail.scrollTop = 0;
   };
 
-  renderControls();
   renderList();
   return root;
 }
