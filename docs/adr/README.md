@@ -161,13 +161,13 @@ JSP、JSPF、tag file、Tiles 與有限的 Thymeleaf 以 `MarkupTag` 等 parser 
 
 ## 報表檢視器（viewer）
 
-報表是單一離線 HTML（ADR 0019），R17 起只保留「畫面」「API」兩頁（ADR 0084），之前許多頁面與介面已退場。畫布、聚焦關聯線、API 頁與方法標籤、模擬與覆蓋率依下列 ADR；API 狀態的保留／移除標記只在 viewer 判定（R30）。
+報表是單一離線 HTML（ADR 0019），R17 起只保留「畫面」「API」兩頁（ADR 0084），之前許多頁面與介面已退場。R115 起開啟的畫面在審查舞台上審查，關聯改為可收合的卡片欄（ADR 0189）。畫布、API 頁與方法標籤、模擬與覆蓋率依下列 ADR；API 狀態的保留／移除標記只在 viewer 判定（R30）。
 
 | ADR | 決定 | 狀態 |
 |---|---|---|
 | [0019](0019-viewer-build-and-csp.md) | 單檔檢視器建置、資料注入與 CSP | 有效 |
 | [0021](0021-retire-historical-viewer.md) | WP7 E 舊檢視器與 HTTP 入口退場 | 部分被取代：保留的 `packDocuments` 已由 [0122](0122-r31-retire-inline-css-pack.md) 移除 |
-| [0035](0035-focused-screen-relations.md) | 聚焦畫面的四周 SVG 關聯 | 有效 |
+| [0035](0035-focused-screen-relations.md) | 聚焦畫面的四周 SVG 關聯 | 已被取代：改為審查舞台的卡片欄，見 [0189](0189-review-stage-redesign.md) |
 | [0038](0038-screen-names-and-oq014-assertions.md) | 畫面名稱與 OQ-014 限定呈現斷言 | 有效 |
 | [0039](0039-navigation-layout-diagnostics-and-tag-labels.md) | 全站導覽、格狀流程與可讀明細 | 有效 |
 | [0040](0040-viewer-redesign-assertions.md) | R4 UI1 外殼與被取代的呈現斷言 | 部分被取代：介面於 R17 重寫或移除，見 [0084](0084-r17-two-page-report-and-retired-tests.md) |
@@ -194,16 +194,17 @@ JSP、JSPF、tag file、Tiles 與有限的 Thymeleaf 以 `MarkupTag` 等 parser 
 | [0071](0071-r14-wp48-wp49-ui-assertion-migrations.md) | R14 WP48–WP49 UI 斷言遷移 | 部分被取代：介面於 R17 重寫或移除，見 [0084](0084-r17-two-page-report-and-retired-tests.md) |
 | [0072](0072-r15-api-method-and-category-labels.md) | R15 API 方法與分類標籤 | 有效 |
 | [0084](0084-r17-two-page-report-and-retired-tests.md) | R17 兩頁報表與退場測試 | 部分被取代：第 3 點對原因與備註的略過，見 [0155](0155-r77-notes-fields-api-decisions-and-save-reminder.md) |
-| [0085](0085-r17-canvas-zoom-focus-and-click-simulation.md) | R17 畫布 zoom in 聚焦與點擊模擬 | 有效 |
+| [0085](0085-r17-canvas-zoom-focus-and-click-simulation.md) | R17 畫布 zoom in 聚焦與點擊模擬 | 部分被取代：開啟畫面改為審查舞台，見 [0189](0189-review-stage-redesign.md)；點擊模擬不變 |
 | [0090](0090-overview-areas-and-pinned-relations.md) | 總覽分區、單擊看關聯、雙擊開啟畫面 | 有效 |
 | [0119](0119-r28-visual-summaries.md) | R28 API 頁與角色頁加上數量的圖形摘要 | 部分被取代：角色頁每步直條改由 [0123](0123-r32-api-persona-graphics.md) |
-| [0120](0120-r29-call-chain-and-overlap-bars.md) | R29 API 詳情的呼叫鏈圖與角色比較的重疊長條 | 有效 |
+| [0120](0120-r29-call-chain-and-overlap-bars.md) | R29 API 詳情的呼叫鏈圖與角色比較的重疊長條 | 有效；呼叫鏈由 [0189](0189-review-stage-redesign.md) 延伸到 Service／DAO |
 | [0121](0121-r30-api-decisions-viewer-only.md) | R30 API 狀態的標記判定只留在 viewer | 有效 |
 | [0123](0123-r32-api-persona-graphics.md) | R32 API 方法色標、路徑參數、呼叫數長條，與角色頁改版 | 有效 |
 | [0124](0124-r33-overview-labels.md) | R33 縮小的總覽上看得出每一區與每個畫面 | 有效 |
-| [0126](0126-r35-focus-line-bundles.md) | R35 放大畫面時的關聯線左進右出、依區塊合併 | 部分被取代：R35-4 的固定標籤寬度改由 [0127](0127-r36-focus-label-layout.md) |
-| [0127](0127-r36-focus-label-layout.md) | R36 放大畫面的關聯線標籤對齊與預覽比例 | 有效 |
+| [0126](0126-r35-focus-line-bundles.md) | R35 放大畫面時的關聯線左進右出、依區塊合併 | 已被取代：改為審查舞台的卡片欄，見 [0189](0189-review-stage-redesign.md) |
+| [0127](0127-r36-focus-label-layout.md) | R36 放大畫面的關聯線標籤對齊與預覽比例 | 已被取代：見 [0189](0189-review-stage-redesign.md) |
 | [0128](0128-r37-panel-method-tags.md) | R37 畫面側欄的 API 清單使用與 API 頁相同的方法標籤 | 有效 |
+| [0189](0189-review-stage-redesign.md) | R115 審查工作台：開啟的畫面是主體，關聯改為可收合的卡片欄；決定面板分頁、進度條、全螢幕工具列、總覽版面切換、呼叫鏈延伸到 Service／DAO | 有效 |
 
 ## 審查 md 與決策
 

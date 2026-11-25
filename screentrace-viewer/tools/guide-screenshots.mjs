@@ -129,22 +129,19 @@ async function main() {
     await screenshot('role-canvas.png');
     await persona('不套用角色');
     await settle();
-    // 4. A screen opened, with a relation line hovered.
+    // 4. A screen opened on the review stage, both flow rails unfolded and a way out pointed at.
     await open('adminDetail（核保中）');
-    const line = page.locator('.focus-line-hit[data-kind="known"]').first();
-    if (await line.count()) {
-      const point = await line.evaluate((hit) => {
-        const at = hit.getPointAtLength(hit.getTotalLength() * 0.5),
-          box = hit.ownerSVGElement.getBoundingClientRect();
-        return { x: box.left + at.x, y: box.top + at.y };
-      });
-      await page.mouse.move(point.x, point.y);
-      await page.locator('.focus-tooltip:not([hidden])').waitFor();
-    }
+    for (const side of ['in', 'out'])
+      await page.locator(`[data-flow-rail="${side}"] .flow-rail-tab`).click();
+    const card = page.locator('[data-flow-rail="out"] .flow-card').first();
+    if (await card.count()) await card.hover();
+    await settle();
     await screenshot('zoom-focus.png', true);
+    for (const side of ['in', 'out'])
+      await page.locator(`[data-flow-rail="${side}"] .flow-rail-close`).click();
     // 5. The screen's buttons in the side panel.
     const panel = page.locator('[data-screen-panel]').first();
-    await panel.locator('.panel-buttons>summary').click();
+    await panel.locator('[data-panel-tab="buttons"]').click();
     await screenshot('screen-buttons.png');
     // 6. The progress file prompt on the first mark.
     await panel.locator('.panel-header [data-decision="REMOVE"]').click();
