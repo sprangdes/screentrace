@@ -193,61 +193,14 @@ main{position:relative;overflow:hidden;min-width:0}
 .relation-tooltip img{display:block;max-width:100%;margin:6px 0;border:1px solid var(--gray-200)}
 .relation-tooltip[hidden]{display:none}
 
-/* canvas focus: the same canvas zoomed onto one screen */
+/* overview cards and lines */
 .screen-card{transition:opacity .25s,box-shadow .15s}
-.screen-card.is-dim,.screen-card.is-under-focus{opacity:0;pointer-events:none}
-.screen-card.is-under-focus{transition:none}
-/* The zooming card sheds its frame and caption so only its thumbnail travels into the preview box. */
-.screen-card.is-morphing{background:transparent;border-color:transparent;box-shadow:none!important;transition:opacity .25s,background-color .15s,border-color .15s,box-shadow .15s}
 .screen-card :is(.screen-caption,.review-status-icon){transition:opacity .15s}
-.screen-card.is-morphing :is(.screen-caption,.review-status-icon){opacity:0}
 .relations{transition:opacity .25s}
-.relations.is-dim{opacity:0}
-/* Neighbours fade over the whole zoom, so they are seen flying out of view rather than vanishing. */
-.canvas[data-mode=focus] .screen-card.is-dim,.canvas[data-mode=focus] .relations.is-dim{transition-duration:.45s}
-.canvas[data-mode=focus] .canvas-controls{display:none}
-.focus-layer{position:absolute;z-index:6;overflow:hidden;background:white;border:1px solid var(--gray-200);border-radius:12px;box-shadow:var(--shadow-float)}
-.focus-layer[hidden]{display:none}
-.focus-layer,.focus-lines{transition:opacity .18s ease-out}
-.focus-layer.is-entering,.focus-lines.is-entering{opacity:0;pointer-events:none}
-.focus-lines.is-entering .focus-line-hit{pointer-events:none}
-.canvas[data-mode=focus] :is(.screen-card:hover,.screen-card.is-highlighted){box-shadow:var(--shadow-card)}
-.focus-lines{position:absolute;left:0;top:0;z-index:5;pointer-events:none;overflow:visible}
-.focus-line{fill:none;stroke-width:2.5;stroke-linecap:round}
-.focus-line.is-out{stroke:var(--flow-out);marker-end:url(#focus-arrow-out)}
-.focus-line.is-in{stroke:var(--flow-in);marker-end:url(#focus-arrow-in)}
-.focus-line.unresolved{stroke:#64748b;stroke-dasharray:6 5;marker-end:url(#focus-arrow-unresolved)}
-#focus-arrow-out path{fill:var(--flow-out)}
-#focus-arrow-in path{fill:var(--flow-in)}
-#focus-arrow-unresolved path{fill:#64748b}
-.focus-line.shared{stroke-dasharray:5 4}
-.shared-link,.shared-popover,.focus-bundle{pointer-events:auto}
-/* An area's lines around an open screen, merged: the label names the area and counts its screens, and opens their list. */
-.focus-bundle{position:absolute;z-index:7;display:inline-flex;align-items:center;gap:6px;min-height:24px;padding:2px 3px 2px 10px;border:1px solid currentColor;border-radius:12px;background:white;font-size:13px;font-weight:600;line-height:18px;cursor:pointer}
-.focus-bundle.is-in{color:var(--flow-in)}
-.focus-bundle.is-out{color:var(--flow-out)}
-.focus-bundle:hover,.focus-bundle[aria-expanded=true]{background:var(--gray-100)}
-.focus-bundle.is-screen{padding-right:10px}
-/* A screen name too long for the margin wraps onto a second line, and only then ends in an ellipsis; an area name (a path) stays on one line. */
-.focus-bundle-name{flex:1;min-width:0;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;overflow-wrap:break-word;text-align:left}
-.focus-bundle:not(.is-screen) .focus-bundle-name{display:block;white-space:nowrap;text-overflow:ellipsis}
-.focus-bundle-count{flex:none;min-width:18px;padding:0 6px;border-radius:9px;color:white;text-align:center;line-height:18px}
-.focus-bundle.is-in .focus-bundle-count{background:var(--flow-in)}
-.focus-bundle.is-out .focus-bundle-count{background:var(--flow-out)}
-.shared-link{position:absolute;z-index:7;display:inline-flex;align-items:center;height:24px;padding:0 10px;border:1px solid currentColor;border-radius:12px;background:white;font-size:13px;font-weight:600;white-space:nowrap;cursor:pointer}
-.shared-link.is-in{color:var(--flow-in)}
-.shared-link.is-out{color:var(--flow-out)}
-.shared-link:hover,.shared-link[aria-expanded=true]{background:var(--gray-100)}
-.shared-popover{position:absolute;z-index:21;width:260px;max-height:60%;overflow:auto;padding:10px;background:white;border:1px solid var(--gray-200);border-radius:var(--radius);box-shadow:var(--shadow-float);font-size:14px}
-.shared-popover[hidden]{display:none}
-.shared-popover strong{display:block;margin-bottom:4px}
-.shared-popover p{margin:0 0 6px;color:var(--gray-500);font-size:13px}
 .shared-entry{position:absolute;left:8px;top:8px;width:30px;height:30px;padding:6px;border-radius:50%;background:var(--gray-700);color:white;stroke-width:2.4;box-shadow:0 0 0 2px white;transition:opacity .15s}
-.screen-card.is-morphing .shared-entry{opacity:0}
 .common-entry{position:absolute;left:8px;top:8px;min-width:30px;height:30px;padding:0 9px;display:flex;align-items:center;justify-content:center;gap:2px;border-radius:15px;background:var(--flow-in);color:white;font:700 13px/1 system-ui,sans-serif;box-shadow:0 0 0 2px white;transition:opacity .15s}
 .common-entry::before{content:'→';font-weight:700}
 .common-entry.after-shared{left:46px}
-.screen-card.is-morphing .common-entry{opacity:0}
 .relations.is-dense .relation-line{opacity:.28}
 .relations.is-dense .relation-line.is-out,.relations.is-dense .relation-line.is-in,.relations.is-dense .relation-line:focus,.relations.is-dense .relation-raised .relation-line{opacity:1}
 .relations.is-dense .relation-line.is-muted{opacity:.12}
@@ -255,16 +208,6 @@ main{position:relative;overflow:hidden;min-width:0}
 .tooltip-direction.is-out{background:var(--flow-out)}
 .tooltip-direction.is-in{background:var(--flow-in)}
 .relation-tooltip .tooltip-direction+strong{display:block}
-.focus-line-hit{fill:none;stroke:transparent;stroke-width:20;pointer-events:stroke;cursor:pointer}
-.focus-line-hit[data-kind=unresolved],.focus-line-hit[data-kind=loop]{cursor:help}
-.focus-line-hit:focus-visible{outline:0}
-g.is-active .focus-line{stroke-width:4}
-/* Focus lines stay faded so direction and count still read without crowding the preview; pointing at a line,
-   tabbing to it or pointing at one of its buttons brings it back. The shared-link labels are HTML and stay solid. */
-.focus-lines g{opacity:.3;transition:opacity .15s ease-out}
-.focus-lines g:is(.is-active,.is-lit,:has(.focus-line-hit:hover),:has(.focus-line-hit:focus-visible)){opacity:1}
-.focus-tips{position:absolute;inset:0;z-index:7;pointer-events:none}
-.focus-tooltip{position:absolute}
 
 /* screen preview */
 .prototype-viewer{position:absolute;inset:0;display:flex;flex-direction:column;gap:8px;padding:10px}
@@ -483,22 +426,20 @@ g.is-active .focus-line{stroke-width:4}
 .group-link-count{position:absolute;transform:translate(-50%,-50%);min-width:40px;padding:3px 12px;border-radius:20px;background:white;border:2px solid var(--gray-500);font:700 22px/1.3 system-ui,sans-serif;color:var(--gray-700);text-align:center;z-index:1}
 .relation-line.cross{visibility:hidden;pointer-events:none}
 .relation-raised .relation-line.cross{visibility:visible}
-.canvas[data-mode=focus] :is(.group-link-count,.screen-group-label){opacity:0;transition:opacity .15s}
 .screen-card.is-pinned{box-shadow:0 0 0 max(3px,calc(3px / var(--zoom))) var(--primary),var(--shadow-card)}
 
-/* Print only the currently focused inert preview. */
+/* Print only the open screen preview. */
 @media print {
  body * { visibility:hidden !important; }
- .focus-layer .prototype-viewer, .focus-layer .prototype-viewer * { visibility:visible !important; }
+ .review-preview .prototype-viewer, .review-preview .prototype-viewer * { visibility:visible !important; }
  .prototype-toolbar,.prototype-status,.simulation-picker { display:none !important; }
- .focus-layer,.prototype-viewer,.prototype-scroll { transform:none !important;position:static !important;overflow:visible !important;max-height:none !important; }
+ .review-preview,.prototype-viewer,.prototype-scroll { transform:none !important;position:static !important;overflow:visible !important;max-height:none !important; }
  .prototype-viewer iframe { border:0 !important; }
 }
 /* Personas: the bar on the map, the flow list, the flow map and the comparison page */
 .shell[data-page=personas]{grid-template-columns:minmax(0,1fr)}
 .shell[data-page=personas] .sidebar,.shell[data-page=personas] .details-panel{display:none}
 .canvas-top{position:absolute;left:16px;top:16px;right:16px;z-index:5;display:flex;flex-direction:column;align-items:flex-start;gap:8px;pointer-events:none}
-.canvas[data-mode=focus] .canvas-top{display:none}
 .persona-bar{display:flex;flex-direction:column;gap:6px;max-width:100%;padding:8px 10px;background:white;border:1px solid var(--gray-200);border-radius:10px;box-shadow:var(--shadow-card);pointer-events:auto}
 .persona-switch{display:flex;flex-wrap:wrap;gap:4px}
 .persona-switch button{padding:5px 12px;border-radius:999px;font-size:14px}
@@ -534,7 +475,6 @@ g.is-active .focus-line{stroke-width:4}
 .canvas[data-mode=overview] .screen-card[data-persona-reach=REACHABLE]::after{border:max(4px,calc(3px / var(--zoom))) solid var(--keep)}
 .canvas[data-mode=overview] .screen-card[data-persona-reach=POSSIBLE]::after{border:max(4px,calc(3px / var(--zoom))) dashed var(--gray-500)}
 .canvas[data-mode=overview] .screen-card:is([data-persona-reach=UNREACHED],[data-persona-reach=EXCLUDED]):not(:hover,:focus-visible,.is-highlighted){opacity:.55}
-.canvas[data-mode=focus] .persona-badge{display:none}
 .relations.has-persona:not(.is-highlighting) .relation-line[data-persona=OFF]{opacity:.06}
 .relations.has-persona:not(.is-highlighting) .relation-line[data-persona=APPLIES]{stroke:var(--keep);stroke-width:3;opacity:1}
 .relations.has-persona:not(.is-highlighting) .relation-line[data-persona=UNKNOWN]{stroke:var(--gray-500);stroke-dasharray:8 5;opacity:1}

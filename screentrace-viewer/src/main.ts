@@ -1751,11 +1751,7 @@ try {
         canvasTransform = state;
       },
       onOpen: (id) => openScreen(id),
-      renderFocus,
-      presenting: () => presenting,
-      onLineHover: highlightTriggers,
       onIntent: prepare,
-      onExitRequest: () => showCanvas(),
       layout: persona ? personaLayout(index, persona) : undefined,
       toolbar: personaViews.length ? personaBar : undefined,
     });

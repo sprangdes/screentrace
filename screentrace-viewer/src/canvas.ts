@@ -1,7 +1,7 @@
 import { iconButton, icon } from './shell-ui';
 import { partitionNavigation, flowLayout, roundedPath, commonDestinations } from './overview';
 import { groupedLayout, crossPoints, areaPreview, GroupedLayout } from './groups';
-import { relationTooltip, focusedRelations, FocusRelation, sharedNavigation } from './relations';
+import { focusedRelations, FocusRelation, sharedNavigation } from './relations';
 import { Index, Position, fileEntries, searchScreens } from './map';
 import { Payload } from './contracts';
 import { element, text } from './text';
@@ -21,17 +21,10 @@ export interface CanvasState {
 export interface CanvasOptions extends CanvasState {
   transform?: CanvasTransform;
   onTransformChange?: (state: CanvasTransform) => void;
-  /** The person picked a screen: a card, an overview line or a focus line. */
+  /** The person picked a screen: a card or an overview line. */
   onOpen: (id: string) => void;
-  /** Builds the full preview of the focused screen inside the given box; resolves once it can be shown. */
-  renderFocus: (id: string, host: HTMLElement) => Promise<void> | void;
-  /** True while the open preview covers the whole window: moving to another screen then stays full-window. */
-  presenting?: () => boolean;
   /** The person is pointing at a screen they may open next, so its preview can be prepared ahead. */
   onIntent?: (id: string) => void;
-  /** A focus line is hovered (its trigger components) or left (undefined). */
-  onLineHover?: (triggers: string[] | undefined) => void;
-  onExitRequest: () => void;
   /** Lays the map out this way instead of by URL areas, e.g. a persona's flow by step. */
   layout?: GroupedLayout;
   /** Shown in the top-left corner of the overview, e.g. the persona switch. */
@@ -40,118 +33,15 @@ export interface CanvasOptions extends CanvasState {
 export interface CanvasView {
   element: HTMLElement;
   update(state: CanvasState): void;
-  focus(id: string): void;
-  exit(): void;
-  /** Brings back the faded focus lines that this component of the focused screen leads along; undefined fades them again. */
-  lightLines(component: string | undefined): void;
-  readonly focused: string | undefined;
 }
 
 const CARD = { width: 250, height: 220 },
   MOTION_MS = 450,
-  DENSE_SCREENS = 20,
-  BOX_MARGIN = { side: 56, top: 48, bottom: 56 };
-/** When some line around the preview stands for a whole area, each side with lines widens to fit its labels, up to this; a longer screen name wraps onto a second line, a longer area name ends in an ellipsis. */
-const LABEL_SIDE_MAX = 140;
-/** The preview box is never taller than a 1440×900 desktop screen for its width; any spare height is left above and below. */
-const SCREEN_RATIO = 1440 / 900;
-/** Room kept between a margin label and the preview box for the line and its arrow. */
-const LABEL_GAP = 20;
-/** The preview fades in over this part of the zoom; if it is still loading, it waits at most READY_MS more. */
-const REVEAL = { from: 0.3, span: 0.45 },
-  LEAVE_SPAN = 0.3,
-  READY_MS = 600,
-  FADE_MS = 180;
+  DENSE_SCREENS = 20;
 /** Same curve as the side panels' width transition, so the canvas and the panels move as one. */
 const ease = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
-const clamp = (value: number) => Math.max(0, Math.min(1, value));
-const wait = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
-/** Resolves once the element's running transitions have ended or were cancelled. */
-const settled = (element: Element) =>
-  Promise.allSettled(element.getAnimations().map((animation) => animation.finished)).then(() => {});
 const svgNs = 'http://www.w3.org/2000/svg';
 const reducedMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
-type Edge = 'right' | 'bottom' | 'left' | 'top';
-type Spot = { x: number; y: number; edge: Edge };
-const LOOP = { width: 30, height: 38, corner: 40, step: 16 };
-/** The point on the box edge farthest from every taken point; ties keep the first edge in right, bottom, left, top order. The top edge is skipped while header-link pills occupy the space above it. */
-function freeSpot(
-  b: { left: number; top: number; right: number; bottom: number },
-  taken: { x: number; y: number }[],
-  useTop: boolean,
-): Spot {
-  const candidates: Spot[] = [];
-  const along = (from: number, to: number, place: (v: number) => Spot) => {
-    for (let v = from + LOOP.corner; v <= to - LOOP.corner; v += LOOP.step)
-      candidates.push(place(v));
-  };
-  along(b.top, b.bottom, (y) => ({ x: b.right, y, edge: 'right' }));
-  along(b.left, b.right, (x) => ({ x, y: b.bottom, edge: 'bottom' }));
-  along(b.top, b.bottom, (y) => ({ x: b.left, y, edge: 'left' }));
-  if (useTop) along(b.left, b.right, (x) => ({ x, y: b.top, edge: 'top' }));
-  let best = candidates[0] || { x: b.right, y: (b.top + b.bottom) / 2, edge: 'right' as Edge },
-    score = -1;
-  for (const spot of candidates) {
-    const near = taken.length
-      ? Math.min(...taken.map((p) => Math.hypot(p.x - spot.x, p.y - spot.y)))
-      : Infinity;
-    if (near > score + 0.5) {
-      score = near;
-      best = spot;
-    }
-  }
-  return best;
-}
-/** A small arc leaving the box at the spot and returning beside it, bowed outward from that edge. */
-function loopPath(spot: Spot, b: { top: number }) {
-  const normal = {
-      right: { x: 1, y: 0 },
-      left: { x: -1, y: 0 },
-      bottom: { x: 0, y: 1 },
-      top: { x: 0, y: -1 },
-    }[spot.edge],
-    tangent = { x: -normal.y, y: normal.x };
-  // The top edge has only the margin above the box; stay clear of the header-link pills there.
-  const height =
-      spot.edge === 'top' ? Math.min(LOOP.height, Math.max(18, b.top - 12)) : LOOP.height,
-    half = LOOP.width / 2;
-  const sx = spot.x - tangent.x * half,
-    sy = spot.y - tangent.y * half,
-    ex = spot.x + tangent.x * half,
-    ey = spot.y + tangent.y * half;
-  const c1 = {
-      x: sx + normal.x * height - tangent.x * 8,
-      y: sy + normal.y * height - tangent.y * 8,
-    },
-    c2 = { x: ex + normal.x * height + tangent.x * 8, y: ey + normal.y * height + tangent.y * 8 };
-  // The curve arrives against the normal; its arrow's point lands on the box edge.
-  return {
-    sx,
-    sy,
-    ex,
-    ey,
-    d: `M${sx},${sy} C${c1.x},${c1.y} ${c2.x},${c2.y} ${ex + normal.x * ARROW_TIP},${ey + normal.y * ARROW_TIP}`,
-  };
-}
-/*
- * Focus arrows sit a little past the line's end, so the line (and its round cap) stops inside the arrowhead
- * instead of poking through its point. Every focus line ends ARROW_TIP short of where the point should land.
- */
-const ARROW_REF = 6,
-  ARROW_TIP = (14 * (9 - ARROW_REF)) / 10;
-const focusMarkers = ['focus-arrow-out', 'focus-arrow-in', 'focus-arrow-unresolved']
-  .map(
-    (id) =>
-      `<marker id="${id}" viewBox="0 0 10 10" refX="${ARROW_REF}" refY="5" markerWidth="14" markerHeight="14" markerUnits="userSpaceOnUse" orient="auto"><path d="M1,1 L9,5 L1,9 Z"/></marker>`,
-  )
-  .join('');
-/** The end of a straight line pulled back by ARROW_TIP, so its arrow's point lands on the original end. */
-function arrowEnd(sx: number, sy: number, ex: number, ey: number) {
-  const dx = ex - sx,
-    dy = ey - sy,
-    length = Math.hypot(dx, dy) || 1;
-  return { x: ex - (dx / length) * ARROW_TIP, y: ey - (dy / length) * ARROW_TIP };
-}
 
 /** Lines leaving the focused screen: its screen-specific flows (as drawn on the overview) plus one stub per trigger whose destination is unknown. */
 export function focusLines(index: Index, id: string): FocusRelation[] {
@@ -166,7 +56,7 @@ export function focusLines(index: Index, id: string): FocusRelation[] {
   return [...flows, ...unresolved];
 }
 
-/** Screen Map: every screen as a card on one pannable canvas. Opening a screen zooms the same canvas into it. */
+/** Screen Map: every screen as a card on one pannable canvas; opening a screen is left to onOpen. */
 export function canvas(index: Index, payload: Payload, options: CanvasOptions): CanvasView {
   const viewport = element('div', undefined, 'canvas'),
     world = element('div', undefined, 'world'),
@@ -183,32 +73,18 @@ export function canvas(index: Index, payload: Payload, options: CanvasOptions): 
   let zoom = options.transform?.zoom ?? 1,
     x = options.transform?.x ?? 0,
     y = options.transform?.y ?? 0;
-  let focused: string | undefined,
-    overview: (CanvasTransform & { left: number; top: number }) | undefined,
-    sequence = 0,
-    frameId = 0;
-  // Where the canvas sat on the page while showing the overview; a zoom may already have moved it by the time focus() runs.
-  let rest: { left: number; top: number } | undefined;
-  // Back on the overview a side panel may still be sliding; until the canvas is moved, it stays where the overview was.
-  let settling: (CanvasTransform & { target: () => CanvasTransform }) | undefined;
+  let frameId = 0;
   // The name and route of a screen pointed at on the zoomed-out map, where the cards are too small to read.
   const cardTip = element('div', undefined, 'card-tip');
   cardTip.hidden = true;
   cardTip.setAttribute('aria-hidden', 'true');
-  const keepRest = () => {
-    if (!focused && viewport.isConnected) {
-      const r = viewport.getBoundingClientRect();
-      rest = { left: r.left, top: r.top };
-    }
-  };
   const apply = () => {
-    keepRest();
     cardTip.hidden = true;
     world.style.transform = `translate(${x}px, ${y}px) scale(${zoom})`;
     // Card and area borders divide by this so they stay one screen pixel at any zoom instead of vanishing when zoomed out.
     world.style.setProperty('--zoom', String(zoom));
     viewport.dataset.semanticZoom = zoom < 0.7 ? 'compact' : 'detail';
-    if (!focused && viewport.dataset.fitted === 'true') options.onTransformChange?.({ zoom, x, y });
+    if (viewport.dataset.fitted === 'true') options.onTransformChange?.({ zoom, x, y });
   };
   // Many screens are shown as areas by URL; a small map keeps one flow layout.
   const grouped = options.layout ?? groupedLayout(index),
@@ -222,7 +98,7 @@ export function canvas(index: Index, payload: Payload, options: CanvasOptions): 
   // Fitting keeps the map below the toolbar in the top-left corner so it never covers an area's title.
   const reserved = () => {
     const top = viewport.querySelector<HTMLElement>('.canvas-top');
-    return top && !focused ? Math.max(24, top.offsetTop + top.offsetHeight + 8) : 24;
+    return top ? Math.max(24, top.offsetTop + top.offsetHeight + 8) : 24;
   };
   const frameRect = (left: number, top: number, w: number, h: number): CanvasTransform => {
     const above = reserved(),
@@ -235,7 +111,7 @@ export function canvas(index: Index, payload: Payload, options: CanvasOptions): 
     };
   };
   const fit = () => {
-    if (!viewport.clientWidth || !viewport.clientHeight || focused) return;
+    if (!viewport.clientWidth || !viewport.clientHeight) return;
     const shown = index.screens.filter((s) => visible(s.id)).map((s) => positions.get(s.id)!);
     if (!shown.length) return;
     const boxes = (grouped?.groups || []).filter((g) => g.members.some(visible)).map((g) => g.box);
@@ -253,14 +129,12 @@ export function canvas(index: Index, payload: Payload, options: CanvasOptions): 
     apply();
   };
   const change = (ratio: number) => {
-    if (focused) return;
     zoom = Math.max(0.1, Math.min(4, zoom * ratio));
     viewport.dataset.fitted = 'true';
     apply();
   };
   /** Zooms keeping the world point under (clientX, clientY) where it is, so a pinch zooms into what the fingers are on. */
   const zoomAt = (ratio: number, clientX: number, clientY: number) => {
-    if (focused) return;
     const r = viewport.getBoundingClientRect(),
       px = clientX - r.left,
       py = clientY - r.top,
@@ -325,7 +199,7 @@ export function canvas(index: Index, payload: Payload, options: CanvasOptions): 
   let pinned: string | undefined,
     dragged = false;
   const settle = () => {
-    if (pinned && !focused) linkedFor(pinned);
+    if (pinned) linkedFor(pinned);
     else clear();
   };
   const clear = () => {
@@ -479,9 +353,9 @@ export function canvas(index: Index, payload: Payload, options: CanvasOptions): 
   svg.append(raised);
   world.append(svg);
   const cards = new Map<string, HTMLButtonElement>();
-  /** Shown below the card (above it near the bottom edge), only while the map is zoomed out and no screen is open. */
+  /** Shown below the card (above it near the bottom edge), only while the map is zoomed out. */
   const showCardTip = (card: HTMLElement, name: string, route: string) => {
-    if (focused || viewport.dataset.semanticZoom !== 'compact') {
+    if (viewport.dataset.semanticZoom !== 'compact') {
       cardTip.hidden = true;
       return;
     }
@@ -547,10 +421,7 @@ export function canvas(index: Index, payload: Payload, options: CanvasOptions): 
       badge.dataset.count = String(entries);
       card.append(badge);
     }
-    const linked = () => {
-      if (!focused) linkedFor(screen.id);
-    };
-    card.onmouseenter = card.onfocus = linked;
+    card.onmouseenter = card.onfocus = () => linkedFor(screen.id);
     card.onmouseleave = card.onblur = () => settle();
     const tip = () => showCardTip(card, screen.name, route),
       untip = () => {
@@ -602,7 +473,6 @@ export function canvas(index: Index, payload: Payload, options: CanvasOptions): 
   const DOUBLE_CLICK_MS = 300;
   let lastClick: { id: string; time: number } | undefined;
   const pin = (id: string) => {
-    if (focused) return;
     pinned = id;
     lastClick = { id, time: performance.now() };
     for (const [cardId, card] of cards) card.classList.toggle('is-pinned', cardId === id);
@@ -646,7 +516,6 @@ export function canvas(index: Index, payload: Payload, options: CanvasOptions): 
       if (
         !onMap(event) ||
         !lastClick ||
-        focused ||
         event.detail < 2 ||
         performance.now() - lastClick.time > DOUBLE_CLICK_MS
       )
@@ -664,7 +533,6 @@ export function canvas(index: Index, payload: Payload, options: CanvasOptions): 
   viewport.addEventListener('click', (event) => {
     if (
       !onMap(event) ||
-      focused ||
       frameId ||
       dragged ||
       (event.target as Element).closest('.screen-card,.relation,.group-link,.group-link-count')
@@ -678,7 +546,7 @@ export function canvas(index: Index, payload: Payload, options: CanvasOptions): 
     if (group) zoomTo(group.box);
   });
   viewport.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape' && pinned && !focused) {
+    if (event.key === 'Escape' && pinned) {
       event.stopPropagation();
       unpin();
     }
@@ -732,626 +600,9 @@ export function canvas(index: Index, payload: Payload, options: CanvasOptions): 
           state.persona.lines.get(lineKey(line.dataset.from!, line.dataset.to!)) || 'OFF';
       else delete line.dataset.persona;
     });
-    if (refit && !focused) fit();
+    if (refit) fit();
   };
 
-  // ---- focus: the same canvas zoomed onto one screen, with that screen's outgoing lines
-  const newLayer = (): HTMLElement => {
-    const host = element('div', undefined, 'focus-layer');
-    host.hidden = true;
-    return host;
-  };
-  let layer = newLayer(),
-    leaving: HTMLElement | undefined;
-  const lines = document.createElementNS(svgNs, 'svg') as SVGSVGElement,
-    tips = element('div', undefined, 'focus-tips');
-  lines.classList.add('focus-lines');
-  lines.innerHTML = `<defs>${focusMarkers}</defs>`;
-  lines.style.display = 'none';
-  const box = (id = focused) => {
-    const w = viewport.clientWidth,
-      h = viewport.clientHeight,
-      side = margins(id),
-      width = Math.max(1, w - side.left - side.right),
-      room = Math.max(1, h - BOX_MARGIN.top - BOX_MARGIN.bottom);
-    const height = Math.max(1, Math.min(room, Math.round(width / SCREEN_RATIO))),
-      top = BOX_MARGIN.top + Math.round((room - height) / 2);
-    return { left: side.left, top, right: w - side.right, bottom: top + height, width, height };
-  };
-  const transformFor = (id: string): CanvasTransform => {
-    const p = positions.get(id)!,
-      b = box(id),
-      z = Math.min(b.width / CARD.width, b.height / CARD.height);
-    return {
-      zoom: z,
-      x: b.left + b.width / 2 - (p.x + CARD.width / 2) * z,
-      y: b.top + b.height / 2 - (p.y + CARD.height / 2) * z,
-    };
-  };
-  const placeLayer = (host: HTMLElement = layer, id = focused) => {
-    const b = box(id);
-    Object.assign(host.style, {
-      left: `${b.left}px`,
-      top: `${b.top}px`,
-      width: `${b.width}px`,
-      height: `${b.height}px`,
-    });
-  };
-  const center = (id: string) => {
-    const p = positions.get(id)!;
-    return { x: p.x + CARD.width / 2, y: p.y + CARD.height / 2 };
-  };
-  // Around an open screen, lines arrive on the left and leave on the right, one row per area of the map (per screen
-  // when the map has no areas), in the order those screens sit on the map from top to bottom. An area with several
-  // screens is one line whose label names the area and its count, and opens the list of its screens.
-  type Bundle = { key: string; label: string; relations: FocusRelation[]; others: string[] };
-  const areaOf = new Map<string, { key: string; label: string }>();
-  if (grouped)
-    for (const g of grouped.groups)
-      for (const member of g.members)
-        areaOf.set(member, { key: g.key, label: g.label.split(' · ')[0] });
-  const bundleCache = new Map<string, { known: Bundle[]; incoming: Bundle[] }>();
-  const focusBundles = (id: string) => {
-    const cached = bundleCache.get(id);
-    if (cached) return cached;
-    const gather = (items: { relation: FocusRelation; other: string }[]) => {
-      const map = new Map<string, Bundle>();
-      for (const { relation, other } of items) {
-        const area = areaOf.get(other),
-          key = area ? `area:${area.key}` : `screen:${other}`;
-        const bundle =
-          map.get(key) ??
-          map
-            .set(key, {
-              key,
-              label: area?.label ?? (index.nodes.get(other)?.name || other),
-              relations: [],
-              others: [],
-            })
-            .get(key)!;
-        bundle.relations.push(relation);
-        if (!bundle.others.includes(other)) bundle.others.push(other);
-      }
-      const middle = (bundle: Bundle) => {
-        const points = bundle.others.map(center);
-        return {
-          x: points.reduce((s, p) => s + p.x, 0) / points.length,
-          y: points.reduce((s, p) => s + p.y, 0) / points.length,
-        };
-      };
-      return [...map.values()]
-        .map((bundle) => ({ bundle, at: middle(bundle) }))
-        .sort(
-          (a, b) =>
-            a.at.y - b.at.y ||
-            a.at.x - b.at.x ||
-            (a.bundle.key < b.bundle.key ? -1 : a.bundle.key > b.bundle.key ? 1 : 0),
-        )
-        .map((item) => item.bundle);
-    };
-    const result = {
-      known: gather(
-        focusLines(index, id)
-          .filter((r) => !r.unresolved && r.to !== id)
-          .map((relation) => ({ relation, other: relation.to })),
-      ),
-      incoming: gather(
-        partitionNavigation(index)
-          .flows.filter((r) => r.to === id && r.from !== id)
-          .map((relation) => ({ relation, other: relation.from })),
-      ),
-    };
-    bundleCache.set(id, result);
-    return result;
-  };
-  const labelled = (id: string | undefined) => {
-    if (!id) return false;
-    const b = focusBundles(id);
-    return [...b.known, ...b.incoming].some((bundle) => bundle.others.length > 1);
-  };
-  /** What a row's label says: the area, or the one screen's name. */
-  const rowName = (bundle: Bundle) =>
-    bundle.others.length > 1
-      ? bundle.label
-      : index.nodes.get(bundle.others[0])?.name || bundle.others[0];
-  // A side's labels share the width its widest label needs on one line (measured from the text, so the box is known
-  // before anything is drawn), up to LABEL_SIDE_MAX; a side without lines keeps the usual margin.
-  let measure: CanvasRenderingContext2D | null | undefined;
-  const textWidth = (value: string) => {
-    measure ??= document.createElement('canvas').getContext('2d');
-    if (!measure) return value.length * 13;
-    measure.font = `600 13px ${getComputedStyle(viewport).fontFamily}`;
-    return measure.measureText(value).width;
-  };
-  const labelWidth = (bundle: Bundle) => {
-    const merged = bundle.others.length > 1;
-    return Math.ceil(
-      textWidth(rowName(bundle)) +
-        (merged ? 10 + 6 + Math.max(18, textWidth(String(bundle.others.length)) + 12) + 3 : 20) +
-        2 +
-        2,
-    );
-  };
-  const marginCache = new Map<string, { left: number; right: number }>();
-  const margins = (id: string | undefined) => {
-    const plain = { left: BOX_MARGIN.side, right: BOX_MARGIN.side };
-    if (!id || !labelled(id)) return plain;
-    const cached = marginCache.get(id);
-    if (cached) return cached;
-    const b = focusBundles(id),
-      side = (list: Bundle[]) =>
-        list.length
-          ? Math.max(
-              BOX_MARGIN.side,
-              Math.min(LABEL_SIDE_MAX, 8 + Math.max(...list.map(labelWidth)) + LABEL_GAP),
-            )
-          : BOX_MARGIN.side;
-    const result = { left: side(b.incoming), right: side(b.known) };
-    marginCache.set(id, result);
-    return result;
-  };
-  // Shared navigation (header/footer links) is summarised as one dashed line each way above the preview box;
-  // its label opens the list of screens behind it.
-  const drawShared = (id: string, b: ReturnType<typeof box>) => {
-    const shared = sharedNavigation(index, id);
-    const sides = [
-      {
-        direction: 'in' as const,
-        ids: shared.into,
-        labels: shared.intoLabels,
-        x: b.left + b.width * 0.3,
-        text: `頁首／頁尾連結進來 · ${shared.into.length} 個畫面`,
-        heading: '經由頁首／頁尾連結到這裡',
-      },
-      {
-        direction: 'out' as const,
-        ids: shared.out,
-        labels: shared.outLabels,
-        x: b.left + b.width * 0.7,
-        text: `頁首／頁尾連結前往 · ${shared.out.length} 個畫面`,
-        heading: '這個畫面的頁首／頁尾可前往',
-      },
-    ];
-    for (const side of sides) {
-      if (!side.ids.length) continue;
-      const pill = element('button', side.text, `shared-link is-${side.direction}`);
-      pill.dataset.direction = side.direction;
-      pill.dataset.count = String(side.ids.length);
-      pill.setAttribute('aria-haspopup', 'true');
-      pill.setAttribute('aria-expanded', 'false');
-      tips.append(pill);
-      const top = 8,
-        height = pill.offsetHeight || 24,
-        width = pill.offsetWidth || 200,
-        left = Math.round(side.x - width / 2);
-      Object.assign(pill.style, { left: `${left}px`, top: `${top}px` });
-      const path = document.createElementNS(svgNs, 'path'),
-        group = document.createElementNS(svgNs, 'g'),
-        [y1, y2] = side.direction === 'in' ? [top + height, b.top] : [b.top, top + height];
-      path.setAttribute('d', `M${side.x},${y1} L${side.x},${arrowEnd(side.x, y1, side.x, y2).y}`);
-      path.setAttribute(
-        'class',
-        `focus-line shared ${side.direction === 'in' ? 'is-in' : 'is-out'}`,
-      );
-      path.dataset.kind = `shared-${side.direction}`;
-      group.append(path);
-      lines.append(group);
-      const menu = element('div', undefined, 'shared-popover');
-      menu.hidden = true;
-      menu.setAttribute('role', 'menu');
-      menu.dataset.direction = side.direction;
-      menu.append(element('strong', side.heading));
-      if (side.labels.length) menu.append(element('p', `連結：${side.labels.join('、')}`));
-      for (const other of side.ids) {
-        const item = element('button', index.nodes.get(other)?.name || other, 'link-row');
-        item.setAttribute('role', 'menuitem');
-        item.dataset.sharedScreen = other;
-        item.onclick = () => options.onOpen(other);
-        item.onpointerenter = () => {
-          if (!frameId) options.onIntent?.(other);
-        };
-        menu.append(item);
-      }
-      const close = () => {
-        menu.hidden = true;
-        pill.setAttribute('aria-expanded', 'false');
-      };
-      pill.onclick = (event) => {
-        event.stopPropagation();
-        const open = menu.hidden;
-        tips.querySelectorAll<HTMLElement>('.shared-popover').forEach((m) => {
-          m.hidden = true;
-        });
-        tips
-          .querySelectorAll('.shared-link')
-          .forEach((p) => p.setAttribute('aria-expanded', 'false'));
-        if (!open) return;
-        menu.hidden = false;
-        pill.setAttribute('aria-expanded', 'true');
-        menu.style.left = `${Math.max(8, Math.min(viewport.clientWidth - menu.offsetWidth - 8, left))}px`;
-        menu.style.top = `${top + height + 6}px`;
-        menu.querySelector<HTMLElement>('button')?.focus();
-      };
-      menu.addEventListener('keydown', (event) => {
-        if (event.key === 'Escape') {
-          event.stopPropagation();
-          close();
-          pill.focus();
-        }
-      });
-      menu.addEventListener('click', (event) => event.stopPropagation());
-      tips.append(menu);
-    }
-  };
-  viewport.addEventListener('click', () =>
-    tips.querySelectorAll<HTMLElement>('.shared-popover:not([hidden])').forEach((menu) => {
-      menu.hidden = true;
-    }),
-  );
-  // Focus lines are faded until pointed at; each outgoing line remembers the buttons that take it.
-  let triggerLines: { group: SVGGElement; triggers: string[] }[] = [];
-  const lightLines = (component: string | undefined) => {
-    for (const { group, triggers } of triggerLines)
-      group.classList.toggle('is-lit', !!component && triggers.includes(component));
-  };
-  const drawLines = (id: string) => {
-    lines.querySelectorAll('g').forEach((g) => g.remove());
-    tips.replaceChildren();
-    triggerLines = [];
-    const b = box(id),
-      w = viewport.clientWidth,
-      h = viewport.clientHeight;
-    lines.setAttribute('width', String(w));
-    lines.setAttribute('height', String(h));
-    // Lines leave toward each destination and arrive from each source, in the directions the overview draws them.
-    const relations = focusLines(index, id),
-      loops = relations.filter((r) => r.to === id),
-      stubs = relations.filter((r) => r.unresolved);
-    type Kind = 'known' | 'incoming' | 'loop' | 'unresolved';
-    type Segment = {
-      relation: FocusRelation;
-      sx: number;
-      sy: number;
-      ex: number;
-      ey: number;
-      d?: string;
-      kind: Kind;
-    };
-    const segments: Segment[] = [];
-    const bundles = focusBundles(id),
-      wide = labelled(id);
-    type Row = { bundle: Bundle; kind: 'known' | 'incoming'; y: number };
-    const rows: Row[] = [];
-    for (const kind of ['incoming', 'known'] as const) {
-      const list = bundles[kind];
-      list.forEach((bundle, i) =>
-        rows.push({
-          bundle,
-          kind,
-          y: Math.round(b.top + (b.height * (i + 1)) / (list.length + 1)),
-        }),
-      );
-    }
-    // When the margins hold labels, every row has one: an area with its count, or a single screen's name. Every label
-    // fills its margin up to a short gap, so every line runs the same short way from a label's inner edge to the box.
-    const pills = new Map<Row, HTMLElement>();
-    if (wide) {
-      for (const row of rows) {
-        const arriving = row.kind === 'incoming',
-          merged = row.bundle.others.length > 1,
-          name = rowName(row.bundle);
-        const pill = element(
-          'button',
-          undefined,
-          `focus-bundle${merged ? '' : ' is-screen'} ${arriving ? 'is-in' : 'is-out'}`,
-        );
-        pill.append(element('span', name, 'focus-bundle-name'));
-        if (merged)
-          pill.append(element('span', String(row.bundle.others.length), 'focus-bundle-count'));
-        pill.title = name;
-        tips.append(pill);
-        pills.set(row, pill);
-      }
-      for (const [row, pill] of pills)
-        pill.style.width = `${Math.max(24, (row.kind === 'incoming' ? b.left : w - b.right) - 8 - LABEL_GAP)}px`;
-    }
-    const outer = (row: Row) => {
-      const pill = pills.get(row),
-        pw = pill ? pill.offsetWidth || parseFloat(pill.style.width) || 120 : -2;
-      return row.kind === 'incoming' ? 8 + pw : w - 8 - pw;
-    };
-    // One screen: one line per flow, side by side.
-    for (const row of rows) {
-      if (row.bundle.others.length > 1) continue;
-      const edge = row.kind === 'incoming' ? b.left : b.right,
-        start = outer(row);
-      row.bundle.relations.forEach((relation, j) => {
-        const ly = row.y + (j - (row.bundle.relations.length - 1) / 2) * 10;
-        segments.push(
-          row.kind === 'incoming'
-            ? { relation, kind: row.kind, sx: start, sy: ly, ex: edge, ey: ly }
-            : { relation, kind: row.kind, sx: edge, sy: ly, ex: start, ey: ly },
-        );
-      });
-    }
-    drawShared(id, b);
-    stubs.forEach((relation, i) => {
-      const sx = b.left + (b.width * (i + 1)) / (stubs.length + 1);
-      segments.push({
-        relation,
-        kind: 'unresolved',
-        sx,
-        sy: b.bottom,
-        ex: sx,
-        ey: Math.min(h - 8, b.bottom + 44),
-      });
-    });
-    // Lines back to this screen sit where the box edge is free: away from every other line's end and the shared links.
-    const shared = sharedNavigation(index, id),
-      taken = [
-        ...segments.map((segment) =>
-          segment.kind === 'incoming'
-            ? { x: segment.ex, y: segment.ey }
-            : { x: segment.sx, y: segment.sy },
-        ),
-        ...rows
-          .filter((row) => row.bundle.others.length > 1)
-          .map((row) => ({ x: row.kind === 'incoming' ? b.left : b.right, y: row.y })),
-      ];
-    if (shared.into.length) taken.push({ x: b.left + b.width * 0.3, y: b.top });
-    if (shared.out.length) taken.push({ x: b.left + b.width * 0.7, y: b.top });
-    loops.forEach((relation) => {
-      const spot = freeSpot(b, taken, !shared.into.length && !shared.out.length);
-      taken.push(spot);
-      segments.push({ relation, kind: 'loop', ...loopPath(spot, b) });
-    });
-    for (const segment of segments) {
-      const { relation } = segment,
-        arriving = segment.kind === 'incoming',
-        other = arriving ? relation.from : relation.to,
-        target = index.nodes.get(other),
-        group = document.createElementNS(svgNs, 'g'),
-        end = arrowEnd(segment.sx, segment.sy, segment.ex, segment.ey),
-        path = segment.d || `M${segment.sx},${segment.sy} L${end.x},${end.y}`;
-      const visibleLine = document.createElementNS(svgNs, 'path') as SVGPathElement,
-        hit = document.createElementNS(svgNs, 'path') as SVGPathElement;
-      visibleLine.setAttribute('d', path);
-      visibleLine.setAttribute(
-        'class',
-        `focus-line ${segment.kind === 'unresolved' ? 'unresolved' : arriving ? 'is-in' : 'is-out'}`,
-      );
-      hit.setAttribute('d', path);
-      hit.setAttribute('class', 'focus-line-hit');
-      hit.setAttribute('tabindex', '0');
-      hit.setAttribute('role', 'button');
-      for (const node of [visibleLine, hit]) {
-        node.dataset.from = relation.from;
-        node.dataset.to = relation.to;
-        node.dataset.kind = segment.kind;
-      }
-      hit.setAttribute(
-        'aria-label',
-        segment.kind === 'unresolved'
-          ? text.unresolved
-          : segment.kind === 'loop'
-            ? `回到「${target?.name || ''}」`
-            : arriving
-              ? `來自「${target?.name || ''}」`
-              : `前往「${target?.name || ''}」`,
-      );
-      // An incoming line describes its source screen and the buttons there that lead here.
-      const tip = relationTooltip(
-        index,
-        payload,
-        arriving ? { ...relation, to: relation.from } : relation,
-      );
-      tip.hidden = true;
-      tip.classList.add('focus-tooltip');
-      tip.dataset.to = relation.to;
-      tip.dataset.kind = segment.kind;
-      if (segment.kind === 'known' || arriving)
-        tip.prepend(
-          element(
-            'span',
-            arriving ? '來自' : '前往',
-            `tooltip-direction ${arriving ? 'is-in' : 'is-out'}`,
-          ),
-        );
-      tips.append(tip);
-      const placeTip = (px: number, py: number) => {
-        tip.hidden = false;
-        const tw = tip.offsetWidth || 260,
-          th = tip.offsetHeight || 200;
-        tip.style.left = `${Math.max(8, Math.min(w - tw - 8, px + 14))}px`;
-        tip.style.top = `${Math.max(8, Math.min(h - th - 8, py + 14))}px`;
-      };
-      const show = (px: number, py: number) => {
-        if ((segment.kind === 'known' || arriving) && !frameId) options.onIntent?.(other);
-        group.classList.add('is-active');
-        placeTip(px, py);
-        options.onLineHover?.(arriving ? undefined : relation.triggers);
-      };
-      const hide = () => {
-        group.classList.remove('is-active');
-        tip.hidden = true;
-        options.onLineHover?.(undefined);
-      };
-      hit.addEventListener('mousemove', (event) => {
-        const r = viewport.getBoundingClientRect();
-        show(event.clientX - r.left, event.clientY - r.top);
-      });
-      hit.addEventListener('mouseleave', hide);
-      hit.addEventListener('blur', hide);
-      hit.addEventListener('focus', () =>
-        show((segment.sx + segment.ex) / 2, (segment.sy + segment.ey) / 2),
-      );
-      const open = () => {
-        if (segment.kind === 'known' || arriving) options.onOpen(other);
-      };
-      hit.addEventListener('click', open);
-      hit.addEventListener('keydown', (event) => {
-        const key = (event as KeyboardEvent).key;
-        if (key === 'Enter' || key === ' ') {
-          event.preventDefault();
-          open();
-        }
-      });
-      group.append(visibleLine, hit);
-      lines.append(group);
-      if (!arriving) triggerLines.push({ group, triggers: relation.triggers });
-    }
-    for (const [row, pill] of pills) {
-      const { bundle, kind, y } = row,
-        arriving = kind === 'incoming',
-        pw = pill.offsetWidth || parseFloat(pill.style.width) || 120,
-        ph = pill.offsetHeight || 24,
-        left = arriving ? 8 : w - 8 - pw;
-      Object.assign(pill.style, { left: `${left}px`, top: `${y - ph / 2}px` });
-      if (bundle.others.length === 1) {
-        const other = bundle.others[0],
-          name = index.nodes.get(other)?.name || other;
-        pill.dataset.kind = arriving ? 'incoming-screen' : 'known-screen';
-        pill.dataset.screen = other;
-        pill.setAttribute('aria-label', `${arriving ? '來自' : '前往'}「${name}」`);
-        pill.onpointerenter = () => {
-          if (!frameId) options.onIntent?.(other);
-        };
-        pill.onclick = (event) => {
-          event.stopPropagation();
-          options.onOpen(other);
-        };
-        continue;
-      }
-      const count = bundle.others.length,
-        dataKind = arriving ? 'incoming-bundle' : 'known-bundle';
-      pill.dataset.group = bundle.key;
-      pill.dataset.kind = dataKind;
-      pill.dataset.count = String(count);
-      pill.setAttribute('aria-haspopup', 'true');
-      pill.setAttribute('aria-expanded', 'false');
-      pill.setAttribute(
-        'aria-label',
-        `${arriving ? '來自' : '前往'}「${bundle.label}」的 ${count} 個畫面`,
-      );
-      const [sx, ex] = arriving ? [left + pw, b.left] : [b.right, left],
-        end = arrowEnd(sx, y, ex, y);
-      const group = document.createElementNS(svgNs, 'g'),
-        line = document.createElementNS(svgNs, 'path') as SVGPathElement;
-      line.setAttribute('d', `M${sx},${y} L${end.x},${end.y}`);
-      line.setAttribute('class', `focus-line bundle ${arriving ? 'is-in' : 'is-out'}`);
-      line.style.strokeWidth = String(Math.min(8, 2.5 + Math.log2(count) * 1.5));
-      line.dataset.kind = dataKind;
-      line.dataset.group = bundle.key;
-      line.dataset.count = String(count);
-      group.append(line);
-      lines.append(group);
-      const triggers = arriving ? [] : bundle.relations.flatMap((relation) => relation.triggers);
-      if (!arriving) triggerLines.push({ group, triggers });
-      const menu = element('div', undefined, 'shared-popover focus-bundle-menu');
-      menu.hidden = true;
-      menu.setAttribute('role', 'menu');
-      menu.dataset.group = bundle.key;
-      menu.append(
-        element('strong', `${arriving ? '從' : '前往'}「${bundle.label}」的 ${count} 個畫面`),
-      );
-      for (const other of bundle.others) {
-        const item = element('button', index.nodes.get(other)?.name || other, 'link-row');
-        item.setAttribute('role', 'menuitem');
-        item.dataset.bundleScreen = other;
-        item.onclick = () => options.onOpen(other);
-        item.onpointerenter = () => {
-          if (!frameId) options.onIntent?.(other);
-        };
-        menu.append(item);
-      }
-      const close = () => {
-        menu.hidden = true;
-        pill.setAttribute('aria-expanded', 'false');
-      };
-      pill.onpointerenter = pill.onfocus = () => {
-        group.classList.add('is-active');
-        if (!arriving) options.onLineHover?.(triggers);
-      };
-      pill.onpointerleave = pill.onblur = () => {
-        group.classList.remove('is-active');
-        options.onLineHover?.(undefined);
-      };
-      pill.onclick = (event) => {
-        event.stopPropagation();
-        const open = menu.hidden;
-        tips.querySelectorAll<HTMLElement>('.shared-popover').forEach((m) => {
-          m.hidden = true;
-        });
-        tips
-          .querySelectorAll('.shared-link,.focus-bundle')
-          .forEach((p) => p.setAttribute('aria-expanded', 'false'));
-        if (!open) return;
-        menu.hidden = false;
-        pill.setAttribute('aria-expanded', 'true');
-        const mw = menu.offsetWidth || 260,
-          mh = menu.offsetHeight || 200;
-        menu.style.left = `${arriving ? left : Math.max(8, w - 8 - mw)}px`;
-        menu.style.top = `${Math.max(8, Math.min(h - mh - 8, y + ph / 2 + 6))}px`;
-        menu.querySelector<HTMLElement>('button')?.focus();
-      };
-      menu.addEventListener('keydown', (event) => {
-        if (event.key === 'Escape') {
-          event.stopPropagation();
-          close();
-          pill.focus();
-        }
-      });
-      menu.addEventListener('click', (event) => event.stopPropagation());
-      tips.append(menu);
-    }
-  };
-  // Zooming is a shared-element move: the card's thumbnail lands exactly where the page appears in the preview box,
-  // and the box travels with the card, so only its frame fades in around a picture that never jumps.
-  const aligned = (id: string, host: HTMLElement): CanvasTransform => {
-    const card = cards.get(id),
-      image = card?.querySelector<HTMLImageElement>('img.card-preview'),
-      scroller = host.querySelector<HTMLElement>('.prototype-scroll'),
-      frame = scroller?.offsetParent as HTMLElement | null;
-    if (!card || !image?.naturalWidth || !image.naturalHeight || !scroller || !frame || host.hidden)
-      return transformFor(id);
-    const page = Math.max(
-        1,
-        payload.preview.screens?.find((s) => s.graphScreenId === id)?.width || 1440,
-      ),
-      b = box(id),
-      p = positions.get(id)!;
-    const boxWidth = image.clientWidth,
-      boxHeight = image.clientHeight,
-      shown =
-        boxWidth / boxHeight < image.naturalWidth / image.naturalHeight
-          ? boxWidth
-          : (boxHeight * image.naturalWidth) / image.naturalHeight;
-    const thumbX = p.x + card.clientLeft + image.offsetLeft + (boxWidth - shown) / 2,
-      thumbY = p.y + card.clientTop + image.offsetTop;
-    const inner = scroller.clientWidth,
-      scale = Math.min(1, Math.max(1, inner - 16) / page);
-    const stageX =
-        b.left +
-        frame.offsetLeft +
-        scroller.offsetLeft +
-        scroller.clientLeft +
-        (inner - page * scale) / 2,
-      stageY = b.top + frame.offsetTop + scroller.offsetTop + scroller.clientTop;
-    const z = (page * scale) / shown;
-    return { zoom: z, x: stageX - thumbX * z, y: stageY - thumbY * z };
-  };
-  /** Keeps a preview box glued to its card while the world moves. */
-  const glue = (host: HTMLElement, id: string) => {
-    placeLayer(host, id);
-    const a = aligned(id, host),
-      k = zoom / a.zoom,
-      b = box(id);
-    host.style.transformOrigin = '0 0';
-    host.style.transform =
-      Math.abs(k - 1) < 1e-4 && Math.abs(x - a.x) < 0.5 && Math.abs(y - a.y) < 0.5
-        ? ''
-        : `translate(${x + (b.left - a.x) * k - b.left}px, ${y + (b.top - a.y) * k - b.top}px) scale(${k})`;
-  };
   const origin = () => {
     const r = viewport.getBoundingClientRect();
     return { left: r.left, top: r.top };
@@ -1398,203 +649,8 @@ export function canvas(index: Index, payload: Payload, options: CanvasOptions): 
     };
     frameId = requestAnimationFrame(step);
   };
-  const dropLeaving = () => {
-    leaving?.remove();
-    leaving = undefined;
-  };
-  // A box on its way out is only a picture: it takes no input and is not the current preview.
-  const markLeaving = (host: HTMLElement | undefined) => {
-    if (host) {
-      host.classList.add('is-leaving');
-      host.inert = true;
-    }
-  };
-  /** The box that is leaving keeps following its card while it fades out. */
-  const fadeLeaving = (id: string, t: number, startOpacity: number) => {
-    if (!leaving) return;
-    glue(leaving, id);
-    leaving.style.opacity = String(startOpacity * (1 - clamp(t / LEAVE_SPAN)));
-    if (t >= LEAVE_SPAN) dropLeaving();
-  };
-  const showLines = (id: string, token: number) => {
-    if (token !== sequence || focused !== id) return;
-    lines.style.display = '';
-    drawLines(id);
-    lines.classList.add('is-entering');
-    requestAnimationFrame(() => lines.classList.remove('is-entering'));
-  };
-  const focus = (id: string) => {
-    // Opening a screen ends any single-click zoom still in motion and drops the pinned lines.
-    cancelAnimationFrame(frameId);
-    frameId = 0;
-    pinned = undefined;
-    for (const card of cards.values()) card.classList.remove('is-pinned');
-    settling = undefined;
-    const token = ++sequence,
-      previous = focused,
-      old = previous ? layer : undefined,
-      oldOpacity = old ? Number(getComputedStyle(old).opacity) || 0 : 0;
-    // Full-window previews skip the zoom: the old one stays in place until the new one has faded in over it.
-    const crossfade = !!previous && !!options.presenting?.();
-    if (!previous) {
-      const o = rest ?? origin();
-      overview = { zoom, x, y, left: o.left, top: o.top };
-    }
-    focused = id;
-    viewport.dataset.mode = 'focus';
-    viewport.dataset.focused = id;
-    options.onLineHover?.(undefined);
-    clear();
-    svg.classList.add('is-dim');
-    lines.style.display = 'none';
-    tips.replaceChildren();
-    for (const [cardId, card] of cards) {
-      card.classList.toggle('is-dim', cardId !== id && cardId !== previous);
-      card.classList.remove('is-under-focus');
-      card.classList.toggle('is-morphing', cardId === id || cardId === previous);
-    }
-    dropLeaving();
-    leaving = old;
-    markLeaving(old);
-    if (!old) layer.remove();
-    layer = newLayer();
-    viewport.insertBefore(layer, tips);
-    placeLayer();
-    layer.classList.add('is-entering');
-    layer.style.transition = 'none';
-    layer.style.opacity = '0';
-    const host = layer;
-    let loaded = false,
-      ready: Promise<void> | undefined;
-    // Build the preview after the zoom's first frame so the work never delays its start; the motion is still
-    // nearly at rest then, so switching from the approximate to the exact target is invisible.
-    const build = () => {
-      if (ready || token !== sequence) return;
-      host.hidden = false;
-      ready = Promise.resolve(options.renderFocus(id, host)).then(() => {
-        loaded = true;
-      });
-    };
-    const finish = () => {
-      if (token !== sequence) return;
-      build();
-      if (!crossfade) dropLeaving();
-      ({ zoom, x, y } = aligned(id, host));
-      apply();
-      glue(host, id);
-      for (const [cardId, card] of cards) {
-        card.classList.toggle('is-dim', cardId !== id);
-        if (cardId !== id) card.classList.remove('is-morphing');
-      }
-      const reveal = () => {
-        if (token !== sequence) return;
-        host.style.transition = '';
-        host.style.opacity = '';
-        host.classList.remove('is-entering');
-        const hide = () => {
-          if (token === sequence) cards.get(id)?.classList.add('is-under-focus');
-        };
-        if (loaded || reducedMotion()) hide();
-        else wait(FADE_MS).then(hide);
-        showLines(id, token);
-        // The old preview goes only once the new one has fully faded in, however late the fade started.
-        if (crossfade)
-          settled(host).then(() => {
-            if (token === sequence) dropLeaving();
-          });
-      };
-      if (loaded || reducedMotion()) reveal();
-      else Promise.race([ready!, wait(READY_MS)]).then(reveal);
-    };
-    if (reducedMotion() || crossfade) {
-      finish();
-      return;
-    }
-    animate(
-      () => {
-        placeLayer(host, id);
-        return aligned(id, host);
-      },
-      center(id),
-      (t) => {
-        if (t > 0) build();
-        if (previous) fadeLeaving(previous, t, oldOpacity);
-        glue(host, id);
-        host.style.opacity = loaded ? String(clamp((t - REVEAL.from) / REVEAL.span)) : '0';
-      },
-      finish,
-    );
-  };
-  const exit = () => {
-    if (!focused) return;
-    const token = ++sequence,
-      id = focused,
-      host = layer;
-    focused = undefined;
-    viewport.dataset.mode = 'overview';
-    delete viewport.dataset.focused;
-    options.onLineHover?.(undefined);
-    lines.style.display = 'none';
-    tips.replaceChildren();
-    dropLeaving();
-    leaving = host.hidden ? undefined : host;
-    markLeaving(leaving);
-    if (host.hidden) host.remove();
-    layer = newLayer();
-    viewport.insertBefore(layer, tips);
-    const oldOpacity = leaving ? Number(getComputedStyle(leaving).opacity) || 0 : 0;
-    if (leaving) leaving.style.transition = 'none';
-    for (const [cardId, card] of cards) {
-      card.classList.remove('is-dim', 'is-under-focus');
-      card.classList.toggle('is-morphing', cardId === id);
-    }
-    svg.classList.remove('is-dim');
-    // Keyboard focus returns to the card only once the canvas has settled, so its highlighted lines appear at overview scale.
-    const end = () => {
-      if (token !== sequence) return;
-      dropLeaving();
-      cards.get(id)?.classList.remove('is-morphing');
-      viewport.dataset.fitted = 'true';
-      apply();
-      cards.get(id)?.focus({ preventScroll: true });
-    };
-    const saved = overview;
-    if (!saved) {
-      dropLeaving();
-      cards.get(id)?.classList.remove('is-morphing');
-      fit();
-      cards.get(id)?.focus({ preventScroll: true });
-    } else {
-      const target = () => {
-        const o = origin();
-        return {
-          zoom: saved.zoom,
-          x: saved.x + (saved.left - o.left),
-          y: saved.y + (saved.top - o.top),
-        };
-      };
-      const land = () => {
-        if (token !== sequence) return;
-        ({ zoom, x, y } = target());
-        settling = { zoom, x, y, target };
-        end();
-      };
-      if (reducedMotion()) land();
-      else
-        animate(
-          target,
-          center(id),
-          (t) => {
-            fadeLeaving(id, t, oldOpacity);
-            if (t >= 0.5) cards.get(id)?.classList.remove('is-morphing');
-          },
-          land,
-        );
-    }
-  };
-
   viewport.addEventListener('keydown', (event) => {
-    if (event.target !== viewport || focused) return;
+    if (event.target !== viewport) return;
     const step = 50;
     if (event.key === '+' || event.key === '=') change(1.2);
     else if (event.key === '-') change(1 / 1.2);
@@ -1611,7 +667,7 @@ export function canvas(index: Index, payload: Payload, options: CanvasOptions): 
   viewport.addEventListener('pointerdown', (event) => {
     dragged = false;
     travel = 0;
-    if (focused || (event.target as Element).closest('button,.relation,.canvas-top')) return;
+    if ((event.target as Element).closest('button,.relation,.canvas-top')) return;
     dragging = { x: event.clientX, y: event.clientY };
     viewport.setPointerCapture(event.pointerId);
   });
@@ -1634,14 +690,8 @@ export function canvas(index: Index, payload: Payload, options: CanvasOptions): 
       // A pinch arrives as a wheel event with ctrlKey; ⌘/Ctrl with a mouse wheel zooms the same way. Any other scroll —
       // two fingers on a trackpad, or a mouse wheel — moves the map.
       const zooming = event.ctrlKey || event.metaKey;
-      if (focused) {
-        if (layer.contains(event.target as Node) && !zooming) return;
-        event.preventDefault();
-        if (zooming && event.deltaY > 0) options.onExitRequest();
-        return;
-      }
       event.preventDefault();
-      if (frameId) return; // the map is easing somewhere (back from a screen, onto an area); let it arrive
+      if (frameId) return; // the map is easing somewhere (onto a pinned screen or an area); let it arrive
       const unit = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? viewport.clientHeight : 1;
       if (zooming) {
         zoomAt(
@@ -1658,7 +708,7 @@ export function canvas(index: Index, payload: Payload, options: CanvasOptions): 
     },
     { passive: false },
   );
-  viewport.append(world, lines, layer, tips, cardTip, controls);
+  viewport.append(world, cardTip, controls);
   if (options.toolbar) {
     const top = element('div', undefined, 'canvas-top');
     top.append(options.toolbar);
@@ -1674,23 +724,7 @@ export function canvas(index: Index, payload: Payload, options: CanvasOptions): 
       !!observed && (size.width !== observed.width || size.height !== observed.height);
     observed = { width: size.width, height: size.height };
     if (!changed || frameId) return;
-    keepRest();
-    if (focused) {
-      // Opening or folding a side panel resizes the canvas: keep the screen glued to its preview box.
-      placeLayer();
-      ({ zoom, x, y } = aligned(focused, layer));
-      apply();
-      glue(layer, focused);
-      if (lines.style.display !== 'none') drawLines(focused);
-    } else {
-      if (settling && (settling.zoom !== zoom || settling.x !== x || settling.y !== y))
-        settling = undefined;
-      if (settling) {
-        ({ zoom, x, y } = settling.target());
-        Object.assign(settling, { zoom, x, y });
-        apply();
-      } else if (!options.transform && !overview) fit();
-    }
+    if (!options.transform) fit();
   }).observe(viewport);
   requestAnimationFrame(() => {
     if (options.transform) {
@@ -1701,12 +735,6 @@ export function canvas(index: Index, payload: Payload, options: CanvasOptions): 
   return {
     element: viewport,
     update,
-    focus,
-    exit,
-    lightLines,
-    get focused() {
-      return focused;
-    },
   };
 }
 
