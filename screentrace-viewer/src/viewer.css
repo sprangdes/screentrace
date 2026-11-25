@@ -4,8 +4,8 @@
  --keep:#13795b;--keep-soft:#e3f2ec;--keep-light:#9fcfba;--remove:#b42318;--remove-soft:#fbe9e7;--warning:#7a4a00;--warning-soft:#fdf1df;--warning-fill:#e0a526;
  --canvas:#eceef2;--area:#f8f9fb;--card-edge:#cfd4dc;
  --radius:8px;--shadow-card:0 1px 3px #1518210f;--shadow-float:0 12px 40px #15182124;--shadow-bar:0 1px 2px #15182114,0 4px 14px #1518210f;--shadow-edge-right:4px 0 18px #15182114;--shadow-edge-left:-4px 0 18px #15182114;--shadow-lift:0 1px 2px #15182114,0 2px 6px #1518210a;
- --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
- font-family:system-ui,-apple-system,"Segoe UI","PingFang TC","Microsoft JhengHei",sans-serif;font-size:14px;color:var(--gray-900);background:var(--gray-50)
+ --mono:"JetBrains Mono",ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+ font-family:Inter,system-ui,-apple-system,"Segoe UI","PingFang TC","Microsoft JhengHei",sans-serif;font-size:14px;color:var(--gray-900);background:var(--gray-50)
 }
 *{box-sizing:border-box}
 body{margin:0;height:100vh;overflow:hidden;background:var(--gray-50)}
