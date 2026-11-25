@@ -4,7 +4,7 @@ import { setJourney } from './simulation';
 import { applyJourney, resetJourney, restoreInputs, snapshotInputs } from './journey-data';
 import { inertDocument } from './inert-document';
 import { iconSprite, icon, iconButton } from './shell-ui';
-import { initializeComponentLabels } from './labels';
+import { initializeComponentLabels, componentLabelsForScreen } from './labels';
 import { screenNames, NameHint } from './names';
 import { Payload, requireGraph, requirePreview } from './contracts';
 import { element, text } from './text';
@@ -63,6 +63,7 @@ import {
   effectiveScreen,
   screenInherited,
   setDecisionNote,
+  setCanvasLayout,
   exportableNotes,
   statistics,
   conflicts,
@@ -1380,11 +1381,23 @@ try {
         .map((s) => s.id),
     );
   };
+  // Hand-placed cards are kept per layout: each persona's flow map, the role areas, or the URL areas (ADR 0189).
+  const canvasLayoutKey = () => {
+    const persona = activePersona();
+    return persona ? `persona:${persona.persona.id}` : rolePartition(index) ? 'roles' : 'areas';
+  };
   const canvasState = () => ({
     query,
     visible: mapScreens(),
     screenStatus: (id: string) => screenState(id),
     persona: activePersona(),
+    arranged: reviewState.canvasLayouts?.[canvasLayoutKey()] || {},
+    conflict: (id: string) => {
+      const issue = conflicts(graph, reviewState).find((c) => c.screenId === id);
+      if (!issue) return undefined;
+      const label = componentLabelsForScreen(index, id).get(issue.componentId);
+      return `${label ? `「${label}」` : '保留的按鈕'}會前往已標記移除的「${index.nodes.get(issue.targetScreenId)?.name || '畫面'}」。`;
+    },
   });
   const nodesFor = (doc: Document, id: string, component: string) => {
     const nodes = new Set<HTMLElement>(
@@ -1802,6 +1815,18 @@ try {
       },
       onOpen: (id) => openScreen(id),
       onIntent: prepare,
+      onArrange: (positions) => {
+        try {
+          reviewState = setCanvasLayout(reviewState, canvasLayoutKey(), positions);
+          changed();
+        } catch (error) {
+          say(`排版未儲存：${String(error instanceof Error ? error.message : error)}`, 'error');
+        }
+      },
+      onDecideMany: (ids, value) => {
+        for (const id of ids) reviewState = setScreen(reviewState, id, value);
+        changed();
+      },
       layout: persona ? personaLayout(index, persona) : undefined,
       toolbar: personaViews.length ? personaBar : undefined,
     });

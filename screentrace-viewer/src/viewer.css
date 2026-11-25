@@ -1134,3 +1134,74 @@ body[data-presenting=true] .review-preview .prototype-trail-here{color:#e6e9ef}
 .fo-note{padding:0 16px 12px}
 /* Too narrow for two columns: the list goes above the cards and scrolls away with them. */
 @container (max-width:720px){.fo-layout{grid-template-columns:minmax(0,1fr)}.fo-side{position:static;max-height:none}}
+
+/* R115 batch 3: canvas summary panel, minimap, selection, arranging */
+/* Overview canvas extras (canvas.ts, canvas-panel.ts, canvas-minimap.ts): the selection panel, the minimap, box
+   selection and cards moved by hand. */
+.canvas-panel{position:absolute;top:0;right:0;bottom:0;z-index:7;width:288px;display:flex;flex-direction:column;gap:14px;padding:64px 18px 16px;overflow-y:auto;background:white;border-left:1px solid var(--gray-200);box-shadow:var(--shadow-edge-left);cursor:auto;touch-action:auto}
+.canvas-panel[hidden]{display:none}
+.canvas-panel-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:-4px -6px -6px 0}
+.canvas-panel-count{font-size:12px;color:var(--gray-500)}
+.canvas-panel-head .icon-button{border-radius:6px;color:var(--gray-500)}
+.canvas-panel-head .icon-button:hover{color:var(--gray-900)}
+.canvas-panel-title{display:flex;flex-direction:column;gap:4px;min-width:0}
+.canvas-panel-title h2{margin:0;font-size:18px;line-height:1.3;overflow-wrap:anywhere}
+.canvas-panel-route{font-family:var(--mono);font-size:12px;color:var(--gray-700);overflow-wrap:anywhere}
+.canvas-panel-chip{align-self:flex-start;margin-top:4px;padding:3px 9px;border-radius:999px;font-size:12px;font-weight:600;background:var(--tint,var(--gray-50));color:var(--tint-ink,var(--gray-700));box-shadow:inset 0 0 0 1px var(--tint-edge,var(--gray-200))}
+.canvas-panel-counts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.canvas-panel-number{display:flex;flex-direction:column;gap:2px;padding:10px;border:1px solid;border-radius:10px}
+.canvas-panel-number strong{font-size:20px;line-height:1.2}
+.canvas-panel-number span{font-size:12px;color:var(--gray-700)}
+.canvas-panel-number.is-in{border-color:#f5c9a3;background:#fff8f2}
+.canvas-panel-number.is-in strong{color:var(--flow-in)}
+.canvas-panel-number.is-out{border-color:#b9c8f5;background:#f5f8ff}
+.canvas-panel-number.is-out strong{color:var(--flow-out)}
+.canvas-panel-conflict{display:flex;gap:8px;padding:8px 10px;border:1px solid #f5c9a3;border-radius:var(--radius);background:#fff4eb;font-size:12px;color:#7c2d12}
+.canvas-panel-conflict .icon{flex:none;width:14px;height:14px;margin-top:1px}
+.canvas-panel-open{display:flex;align-items:center;justify-content:center;gap:6px;min-height:44px;border:0;border-radius:var(--radius);background:var(--gray-900);color:white;font-size:13px;font-weight:600;cursor:pointer}
+.canvas-panel-open:hover{background:var(--gray-700)}
+.canvas-panel-help{padding-top:12px;border-top:1px solid var(--gray-200);font-size:12px;color:var(--gray-700)}
+.canvas-panel-help strong{display:block;margin-bottom:6px;color:var(--gray-900)}
+.canvas-panel-help ul{display:flex;flex-direction:column;gap:6px;margin:0;padding:0;list-style:none}
+.canvas-panel-list{flex:none;max-height:min(320px,40vh);margin:0;padding:4px;overflow-y:auto;list-style:none;border:1px solid var(--gray-200);border-radius:var(--radius)}
+.canvas-panel-item{display:flex;align-items:center;gap:8px;padding:6px 8px;font-size:13px}
+.canvas-panel-item+.canvas-panel-item{border-top:1px solid var(--gray-100)}
+.canvas-panel-status{flex:none;width:10px;height:10px;border:2px dashed var(--gray-500);border-radius:50%}
+.canvas-panel-status[data-status=KEEP]{border:0;background:var(--keep)}
+.canvas-panel-status[data-status=REMOVE]{border:0;background:var(--remove)}
+.canvas-panel-actions{display:flex;flex-direction:column;gap:8px}
+.canvas-panel-actions button{min-height:36px;padding:6px 12px;border:1px solid var(--gray-300);border-radius:var(--radius);background:white;font-size:13px;font-weight:600;cursor:pointer}
+.canvas-panel-actions button:hover:not(:disabled){background:var(--gray-50)}
+.canvas-panel-decide.is-keep{border-color:var(--keep);background:var(--keep-soft);color:var(--keep)}
+.canvas-panel-decide.is-remove{border-color:#f0b8b1;background:var(--remove-soft);color:var(--remove)}
+.canvas-panel-decide.is-keep:hover:not(:disabled){background:#d3eadf}
+.canvas-panel-decide.is-remove:hover:not(:disabled){background:#f7d9d5}
+.canvas-panel-actions button:disabled{opacity:.5;cursor:not-allowed}
+.canvas-panel-actions .canvas-panel-cancel{border-color:transparent;background:transparent;color:var(--gray-700)}
+.canvas-panel button:focus-visible,.canvas-reset-layout:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
+/* The controls and the toolbar keep clear of the panel. */
+.canvas[data-panel] .canvas-dock{right:304px}
+.canvas[data-panel] .canvas-top{right:304px}
+.canvas-dock{position:absolute;right:16px;bottom:16px;z-index:5;display:flex;align-items:flex-end;gap:12px}
+.canvas-dock .canvas-controls{position:static}
+.canvas-reset-layout{min-height:36px;padding:6px 14px;border:1px solid var(--gray-300);border-radius:var(--radius);background:white;font-size:13px;font-weight:600;box-shadow:var(--shadow-card);cursor:pointer}
+.canvas-reset-layout:hover{background:var(--gray-50)}
+.canvas-reset-layout[hidden]{display:none}
+.canvas-minimap{width:168px;height:100px;overflow:hidden;background:white;border:1px solid var(--gray-200);border-radius:10px;box-shadow:var(--shadow-card);cursor:pointer;touch-action:none}
+.canvas-minimap svg{display:block}
+.minimap-frame{fill:var(--tint,var(--gray-100));stroke:var(--tint-edge,var(--gray-300));stroke-width:.6}
+.minimap-card{fill:#b8bfca}
+.minimap-card[data-status=KEEP]{fill:var(--keep)}
+.minimap-card[data-status=REMOVE]{fill:var(--remove)}
+.minimap-view{fill:#2450d314;stroke:var(--primary);stroke-width:1.5}
+.canvas-hint{padding:5px 12px;font-size:12px;color:var(--gray-700);background:white;border:1px solid var(--gray-200);border-radius:999px;box-shadow:var(--shadow-card)}
+/* Box selection (Shift + drag) and the cards it chose. */
+.canvas-marquee{position:absolute;z-index:6;border:1.5px dashed var(--primary);border-radius:4px;background:#2450d314;pointer-events:none}
+.screen-card.is-selected{outline:max(2px,calc(2px / var(--zoom))) dashed var(--primary);outline-offset:max(3px,calc(4px / var(--zoom)))}
+/* A card being moved rides above the others. */
+.screen-card.is-carried{z-index:3;box-shadow:0 0 0 max(2px,calc(2px / var(--zoom))) var(--primary),var(--shadow-float)}
+.canvas[data-carrying],.canvas[data-carrying] *{cursor:grabbing}
+@media (prefers-reduced-motion:no-preference){
+ .canvas-panel:not([hidden]){animation:canvas-panel-in .18s ease-out}
+}
+@keyframes canvas-panel-in{from{opacity:0;transform:translateX(12px)}}

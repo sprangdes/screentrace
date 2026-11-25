@@ -302,6 +302,11 @@ function connect(a: Box, b: Box, offset: number): Position[] {
   return [clip(a, ca, dx / length, dy / length), clip(b, cb, -dx / length, -dy / length)];
 }
 
+/** A straight line between two area frames, used for an area link once a card moved by hand changed a frame. */
+export function frameLink(a: Box, b: Box): Position[] {
+  return connect(a, b, 0);
+}
+
 /** A straight line between two cards for a flow between areas, shown only while one of its ends is pointed at. */
 export function crossPoints(positions: Map<string, Position>, r: Relation): Position[] {
   const a = positions.get(r.from)!,
