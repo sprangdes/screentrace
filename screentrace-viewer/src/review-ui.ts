@@ -49,7 +49,7 @@ export function decisionSwitch(
   label: string,
   value: Decision,
   onChange: (value: Decision) => void,
-  options: { compact?: boolean; screen?: string; component?: string } = {},
+  options: { compact?: boolean; screen?: string; component?: string; keys?: boolean } = {},
 ): HTMLElement {
   const group = element(
     'div',
@@ -75,6 +75,12 @@ export function decisionSwitch(
       button.setAttribute('aria-label', `${label}：${decisionLabel(decision)}`);
       button.title = decisionLabel(decision);
     } else button.append(element('span', decisionLabel(decision)));
+    // The shortcut that makes the same choice, shown where the choice is made.
+    if (options.keys) {
+      const key = element('kbd', { KEEP: 'K', REMOVE: 'X', UNDECIDED: 'U' }[decision]);
+      key.setAttribute('aria-hidden', 'true');
+      button.append(key);
+    }
     button.onclick = () => {
       if (value !== decision) onChange(decision);
     };

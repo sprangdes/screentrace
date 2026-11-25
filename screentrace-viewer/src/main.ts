@@ -13,10 +13,11 @@ import { canvas, fileTree, CanvasTransform, CanvasView } from './canvas';
 import { prototypeViewer } from './prototype';
 import { PrototypeHistory } from './prototype-history';
 import { apiPage } from './api-page';
-import { screenPanel } from './screen-panel';
+import { screenPanel, PanelTab, showPanelTab } from './screen-panel';
+import { reviewStage, RailState, Stage } from './review-stage';
 import { featureMap } from './feature-map';
 import { features } from './shared/features';
-import { placeBadge, decisionLabel } from './review-ui';
+import { placeBadge, decisionLabel, decisionSwitch } from './review-ui';
 import { previewDocument, previewSelector } from './preview';
 import { generateMarkdown, importMarkdown, markdownSizeWarning } from './shared/review-md';
 import {
@@ -52,6 +53,7 @@ import {
   loadReview,
   saveReview,
   componentDecision,
+  screenDecision,
   effectiveComponent,
   setScreen,
   setComponent,
@@ -201,7 +203,10 @@ try {
     highlightComponent: string | undefined,
     selectedApi: string | undefined,
     personaId: string | undefined,
-    showUnreached = false;
+    showUnreached = false,
+    panelTab: PanelTab = 'buttons';
+  // The flow rails beside an open screen start folded; the person's choice holds while moving between screens.
+  let rails: RailState = { in: false, out: false };
   // Note editors left open (screen panel keys and API IDs), so rebuilding a panel keeps them open.
   const notesOpen = new Set<string>(),
     apiNotesOpen = new Set<string>(),
@@ -450,7 +455,12 @@ try {
   expandList.classList.add('rail-toggle');
   rail.append(expandList, railSearch);
   const sidebarBody = element('div', undefined, 'sidebar-body');
-  sidebarBody.append(sidebarHeader, searchRow, modes, notices, list);
+  // The way through the review: the next screen nobody has decided on, always at the foot of the list.
+  const nextButton = element('button', undefined, 'next-undecided');
+  nextButton.type = 'button';
+  nextButton.dataset.nextUndecided = 'true';
+  nextButton.append(element('span', '下一個未確認'), element('kbd', 'n'));
+  sidebarBody.append(sidebarHeader, searchRow, modes, notices, list, nextButton);
   nav.append(
     rail,
     sidebarBody,
@@ -897,7 +907,25 @@ try {
       total = index.screens.length,
       issues = conflicts(graph, reviewState),
       apiIssues = apiConflicts(graph, reviewState);
-    progressSummary.replaceChildren(element('span', `已確認 ${done}／${total}`), icon('more'));
+    // The count, a bar of what is kept and removed, and the conflicts, always in sight (ADR 0189).
+    const meter = element('span', undefined, 'progress-meter'),
+      bar = element('span', undefined, 'progress-bar');
+    for (const value of ['KEEP', 'REMOVE'] as const) {
+      const part = element('span', undefined, `progress-part decision-${value}`);
+      part.style.width = `${total ? (counts.screens[value] / total) * 100 : 0}%`;
+      bar.append(part);
+    }
+    bar.setAttribute('aria-hidden', 'true');
+    meter.append(element('span', `已確認 ${done}／${total}`, 'progress-count'), bar);
+    progressSummary.replaceChildren(meter);
+    const conflictTotal = issues.length + apiIssues.length;
+    if (conflictTotal) {
+      const pill = element('span', undefined, 'conflict-pill');
+      pill.dataset.conflictPill = String(conflictTotal);
+      pill.append(icon('warning'), element('span', `${conflictTotal} 衝突`));
+      progressSummary.append(pill);
+    }
+    progressSummary.append(icon('more'));
     progressSummary.dataset.done = String(done);
     progressPanel.replaceChildren(element('h2', '確認進度'));
     const row = (label: string, value: Filter, count: number) => {
@@ -1056,6 +1084,12 @@ try {
           inherited ? `隨功能${decisionLabel(status)}` : decisionLabel(status),
         );
         button.append(mark);
+      } else {
+        // Undecided screens show an empty dashed ring, so every row says where it stands.
+        const open = element('span', undefined, 'status-open');
+        open.setAttribute('role', 'img');
+        open.setAttribute('aria-label', decisionLabel('UNDECIDED'));
+        button.append(open);
       }
       button.onclick = () => openScreen(id);
       return button;
@@ -1170,14 +1204,10 @@ try {
     }
   };
 
-  // The screen list folds into a rail on its own edge; zooming into a screen folds it, returning restores it.
-  // While zoomed in, opening it floats the list over the canvas so the preview keeps its size.
-  let listCollapsed = false,
-    overviewCollapsed = false,
-    wasZoomed = false;
-  const overlayOpen = () => wasZoomed && !listCollapsed;
+  // The screen list is the review queue: it stays beside an open screen and folds into a rail only when asked (ADR 0189).
+  let listCollapsed = false;
   const syncList = () => {
-    shell.dataset.sidebar = listCollapsed ? 'collapsed' : wasZoomed ? 'overlay' : 'expanded';
+    shell.dataset.sidebar = listCollapsed ? 'collapsed' : 'expanded';
     sidebarBody.inert = listCollapsed;
     expandList.setAttribute('aria-expanded', 'false');
     collapseList.setAttribute('aria-expanded', 'true');
@@ -1187,19 +1217,13 @@ try {
     focus: HTMLElement = collapsed ? expandList : collapseList,
   ) => {
     listCollapsed = collapsed;
-    if (!wasZoomed) overviewCollapsed = collapsed;
     syncList();
     focus.focus();
   };
   expandList.onclick = () => setList(false);
   railSearch.onclick = () => setList(false, search);
   collapseList.onclick = () => setList(true);
-  document.addEventListener('click', (event) => {
-    if (overlayOpen() && !nav.contains(event.target as Node)) {
-      listCollapsed = true;
-      syncList();
-    }
-  });
+  nextButton.onclick = () => nextUndecided();
   let detailsCollapsed = false;
   const syncDetails = () => {
     shell.dataset.details =
@@ -1243,8 +1267,11 @@ try {
       onFieldsToggle: (open) => {
         fieldsOpen = open;
       },
-      focus: (id) => openScreen(id),
       api: (id) => showApi(id),
+      tab: panelTab,
+      onTab: (tab) => {
+        panelTab = tab;
+      },
       buttonsOpen,
       onButtonsToggle: (open) => {
         buttonsOpen = open;
@@ -1268,17 +1295,24 @@ try {
       note.dataset.personaStatus = reach;
       panelBody.querySelector('.panel-header')?.append(note);
     }
-    if (highlightComponent)
-      requestAnimationFrame(() =>
-        panel
-          .querySelector(`[data-component-row="${CSS.escape(highlightComponent!)}"]`)
-          ?.scrollIntoView({ block: 'nearest' }),
-      );
+    if (highlightComponent) {
+      const row = panel.querySelector<HTMLElement>(
+          `[data-component-row="${CSS.escape(highlightComponent)}"]`,
+        ),
+        tab = row?.closest<HTMLElement>('[data-tab-panel]')?.dataset.tabPanel as
+          PanelTab | undefined;
+      if (tab && tab !== panelTab) {
+        panelTab = tab;
+        showPanelTab(panel, tab);
+      }
+      requestAnimationFrame(() => row?.scrollIntoView({ block: 'nearest' }));
+    }
   };
 
   // ---- main area: the canvas (zooming into the open screen) or the API page
   let simulation: ReturnType<typeof attachSimulation> | undefined,
     view: CanvasView | undefined,
+    stage: (Stage & { id: string }) | undefined,
     frame: HTMLIFrameElement | undefined,
     viewer: HTMLElement | undefined;
   const thumbnail = (id: string) => {
@@ -1335,7 +1369,7 @@ try {
   };
   /** A dashed frame drawn over the button, so the page's own styles and decision outlines stay untouched. */
   const pointAt = (component: string | undefined) => {
-    view?.lightLines(component);
+    stage?.light(component);
     const doc = frame?.contentDocument;
     if (!doc || !current) return;
     doc.querySelectorAll('[data-st-viewer-pointer]').forEach((node) => node.remove());
@@ -1356,6 +1390,13 @@ try {
     const row = panel.querySelector<HTMLElement>(`[data-component-row="${CSS.escape(component)}"]`);
     if (!row) return;
     row.classList.add('is-highlighted');
+    // A field's row is on the fields tab: show that tab first.
+    const tab = row.closest<HTMLElement>('[data-tab-panel]')?.dataset.tabPanel as
+      PanelTab | undefined;
+    if (tab && tab !== panelTab) {
+      panelTab = tab;
+      showPanelTab(panel, tab);
+    }
     for (let parent = row.parentElement; parent && parent !== panel; parent = parent.parentElement)
       if (parent instanceof HTMLDetailsElement) parent.open = true;
     buttonsOpen = true;
@@ -1403,12 +1444,12 @@ try {
       },
       true,
     );
-    // Pointing at a button in the preview brings back the focus lines it leads along.
+    // Pointing at a button in the preview marks the flow cards it leads to.
     doc.addEventListener('mouseover', (event) => {
-      if (current === id) view?.lightLines(ownerOf(event.target));
+      if (current === id) stage?.light(ownerOf(event.target));
     });
     doc.documentElement.addEventListener('mouseleave', () => {
-      if (current === id) view?.lightLines(undefined);
+      if (current === id) stage?.light(undefined);
     });
   };
   // ---- how far the preview can be trusted (ADR 0157): demo data and content shown only under conditions
@@ -1494,7 +1535,7 @@ try {
       }
       if (!decided) continue;
       const effective = effectiveComponent(reviewState, id, record.graphComponentId, graph),
-        color = effective === 'KEEP' ? '#1d6b45' : '#9e3410';
+        color = effective === 'KEEP' ? '#13795b' : '#b42318';
       node.dataset.reviewStatus = effective;
       if (!spotlight) node.style.outline = `3px solid ${color}`;
       const badge = doc.createElement('span');
@@ -1692,7 +1733,11 @@ try {
   const ensureCanvas = () => {
     const persona = activePersona(),
       key = persona?.persona.id || '';
-    if (view && main.contains(view.element) && canvasKey === key) return view;
+    // Returning from a screen puts the same map back, where the person left it.
+    if (view && canvasKey === key) {
+      if (!main.contains(view.element)) main.replaceChildren(view.element);
+      return view;
+    }
     if (canvasKey !== undefined && canvasKey !== key) canvasTransform = undefined;
     canvasKey = key;
     // The persona bar moves into the new map; whatever in it had keyboard focus keeps it.
@@ -1719,16 +1764,41 @@ try {
     return view;
   };
   const viewerScroll = () => viewer?.querySelector('.prototype-scroll')?.scrollTop || 0;
+  // Full-window preview keeps the review going: a floating bar to decide, move on and leave (ADR 0189).
+  const presentBar = element('div', undefined, 'present-bar');
+  presentBar.setAttribute('role', 'toolbar');
+  presentBar.setAttribute('aria-label', '審查工具');
+  const renderPresentBar = () => {
+    if (!current) return;
+    const id = current,
+      counts = statistics(graph, reviewState).screens,
+      next = element('button', undefined, 'present-next'),
+      exit = element('button', undefined, 'present-exit');
+    next.type = exit.type = 'button';
+    next.append(element('span', '下一個未確認'), element('kbd', 'n'));
+    next.onclick = () => nextUndecided();
+    exit.append(icon('minimize'), element('span', '結束全螢幕'), element('kbd', 'Esc'));
+    exit.onclick = () => setPresenting(false);
+    presentBar.replaceChildren(
+      decisionSwitch('這個畫面', screenDecision(reviewState, id), (v) => decide.screen(id, v), {
+        screen: id,
+        keys: true,
+      }),
+      element(
+        'span',
+        `已確認 ${counts.KEEP + counts.REMOVE}／${index.screens.length}`,
+        'present-count',
+      ),
+      next,
+      exit,
+    );
+  };
 
   const render = () => {
     shell.dataset.page = page;
     const zoomed = page === 'screens' && !!current;
-    if (zoomed && !wasZoomed) {
-      overviewCollapsed = listCollapsed;
-      listCollapsed = true;
-    } else if (!zoomed && wasZoomed) listCollapsed = overviewCollapsed;
+    shell.dataset.review = String(zoomed);
     if (!zoomed) detailsCollapsed = false;
-    wasZoomed = zoomed;
     syncList();
     syncDetails();
     screensTab.setAttribute('aria-current', page === 'screens' ? 'page' : 'false');
@@ -1809,11 +1879,36 @@ try {
       simulation = undefined;
       return;
     }
+    // An open screen is the main body of the review: its preview between two foldable flow rails (ADR 0189).
+    if (current) {
+      if (!stage || stage.id !== current || !main.contains(stage.element)) {
+        const id = current;
+        stage = {
+          id,
+          ...reviewStage(index, id, {
+            rails: () => rails,
+            onRails: (next) => {
+              rails = next;
+            },
+            open: (target) => openScreen(target),
+            intent: prepare,
+            triggers: highlightTriggers,
+            status: screenState,
+          }),
+        };
+        stage.element.append(presentBar);
+        main.replaceChildren(stage.element);
+        void renderFocus(id, stage.host);
+      } else {
+        stage.update();
+        if (frame?.contentDocument) decorate(frame.contentDocument, current);
+      }
+      renderPresentBar();
+      return;
+    }
+    stage = undefined;
     const canvasView = ensureCanvas();
     canvasView.update(canvasState());
-    if (current && canvasView.focused !== current) canvasView.focus(current);
-    else if (!current && canvasView.focused) canvasView.exit();
-    else if (current && frame?.contentDocument) decorate(frame.contentDocument, current);
   };
 
   let pendingNotice: string | undefined;
@@ -1856,11 +1951,11 @@ try {
       viewer = undefined;
       simulation = undefined;
     }
-    if (overlayOpen()) listCollapsed = true;
+    // A simulated action that lands on the same screen shows it afresh.
+    if (refreshing) stage = undefined;
     page = 'screens';
     current = id;
     render();
-    if (refreshing) view?.focus(id);
   };
   // Presenting lays the preview over the whole window, top bar and side panels included; the layout underneath stays.
   let presenting = false;
@@ -2018,11 +2113,6 @@ try {
       return;
     }
     if (event.altKey || event.ctrlKey || event.metaKey) return;
-    if (event.key === 'Escape' && overlayOpen()) {
-      event.preventDefault();
-      setList(true);
-      return;
-    }
     if (event.key === 'Escape' && editable) {
       (target as HTMLElement).blur();
       return;

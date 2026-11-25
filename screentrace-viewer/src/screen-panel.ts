@@ -7,7 +7,6 @@ import { callSources } from './usage';
 import { methodBadge, pathCode } from './api-page';
 import { jsfLimitation } from './unsupported-framework';
 import { apiEndpoints } from './api-page';
-import { sharedNavigation } from './relations';
 import { decisionSwitch, decisionLabel, noteEditor } from './review-ui';
 import {
   ReviewState,
@@ -21,12 +20,28 @@ import {
   conflicts,
 } from './shared/review';
 
+/** The panel shows one of its lists at a time (ADR 0189). */
+export type PanelTab = 'buttons' | 'fields' | 'apis';
+
+/** Shows one tab's list and marks its tab, without rebuilding the panel. */
+export function showPanelTab(panel: HTMLElement, tab: PanelTab): void {
+  for (const section of panel.querySelectorAll<HTMLElement>('[data-tab-panel]'))
+    section.hidden = section.dataset.tabPanel !== tab;
+  for (const button of panel.querySelectorAll<HTMLElement>('[data-panel-tab]')) {
+    const on = button.dataset.panelTab === tab;
+    button.setAttribute('aria-selected', String(on));
+    button.tabIndex = on ? 0 : -1;
+  }
+}
+
 export interface ScreenPanelActions {
+  /** Which list the panel shows; the caller keeps it so a rebuilt panel stays on it. */
+  tab?: PanelTab;
+  onTab?: (tab: PanelTab) => void;
   /** Set when the screen has no decision of its own and follows its feature's. */
   inherited?: { decision: Decision; feature: string };
   setScreen: (screenId: string, value: Decision) => void;
   setComponent: (screenId: string, componentId: string, value: Decision) => void;
-  focus: (screenId: string) => void;
   api: (endpointId: string) => void;
   buttonsOpen: boolean;
   onButtonsToggle: (open: boolean) => void;
@@ -119,6 +134,7 @@ export function screenPanel(
   header.append(
     decisionSwitch('這個畫面', decision, (value) => actions.setScreen(screenId, value), {
       screen: screenId,
+      keys: true,
     }),
   );
   const notes = (componentId?: string, label = '這個畫面') => {
@@ -245,7 +261,8 @@ export function screenPanel(
     fieldKeys = markable.filter((k) => fieldIds.has(k.componentId)),
     fragments = fragmentFiles(index, screenId);
   const buttons = element('details', undefined, 'panel-section panel-buttons');
-  buttons.open = actions.buttonsOpen;
+  // Each list sits on its own tab and is always unfolded there.
+  buttons.open = true;
   buttons.dataset.section = 'buttons';
   const decided = keys.filter(
     (k) => componentDecision(state, screenId, k.componentId) !== 'UNDECIDED',
@@ -353,8 +370,7 @@ export function screenPanel(
   // Input fields and tables: marked like buttons, listed in their own section in page order.
   if (fieldKeys.length) {
     const fields = element('details', undefined, 'panel-section panel-fields');
-    fields.open =
-      !!actions.fieldsOpen || fieldKeys.some((k) => k.componentId === actions.highlight);
+    fields.open = true;
     fields.dataset.section = 'fields';
     const decidedFields = fieldKeys.filter(
       (k) => componentDecision(state, screenId, k.componentId) !== 'UNDECIDED',
@@ -403,39 +419,46 @@ export function screenPanel(
   }
   root.append(apiSection);
 
-  const sources = [
-    ...new Set(
-      index.relations.filter((r) => r.to === screenId && r.from !== screenId).map((r) => r.from),
-    ),
-  ]
-    .map((id) => index.nodes.get(id)!)
-    .sort((a, b) => a.name.localeCompare(b.name, 'zh-Hant'));
-  const inbound = element('section', undefined, 'panel-section');
-  inbound.dataset.section = 'inbound';
-  inbound.append(element('h3', `從哪些畫面可來到這裡 ${sources.length} 個`));
-  if (!sources.length)
-    inbound.append(
-      element('p', '畫面中找不到前往這裡的連結；可能由網址、書籤或其他系統直接進入。', 'muted'),
+  // One tab per list, in the order a review goes through them; the chosen one is shown.
+  const tabs = element('div', undefined, 'panel-tabs');
+  tabs.setAttribute('role', 'tablist');
+  tabs.setAttribute('aria-label', '畫面內容');
+  const lists: { tab: PanelTab; label: string; count: number; section: HTMLElement }[] = [
+    { tab: 'buttons', label: '按鈕', count: keys.length, section: buttons },
+  ];
+  const fieldSection = root.querySelector<HTMLElement>('.panel-fields');
+  if (fieldSection)
+    lists.push({ tab: 'fields', label: '欄位', count: fieldKeys.length, section: fieldSection });
+  lists.push({ tab: 'apis', label: 'API', count: called.length, section: apiSection });
+  const chosen = lists.some((l) => l.tab === actions.tab) ? actions.tab! : 'buttons';
+  for (const list of lists) {
+    const button = element('button', undefined, 'panel-tab');
+    button.type = 'button';
+    button.setAttribute('role', 'tab');
+    button.dataset.panelTab = list.tab;
+    button.append(
+      element('span', list.label),
+      element('span', String(list.count), 'panel-tab-count'),
     );
-  // Sources reached only through header/footer links are grouped, matching the single shared line on the preview.
-  const navigation = sharedNavigation(index, screenId),
-    viaShared = new Set(navigation.into);
-  const sourceRow = (source: Node) => {
-    const link = element('button', source.name, 'link-row');
-    link.dataset.inbound = source.id;
-    link.onclick = () => actions.focus(source.id);
-    return link;
-  };
-  for (const source of sources) if (!viaShared.has(source.id)) inbound.append(sourceRow(source));
-  if (viaShared.size) {
-    const group = element('details', undefined, 'fragment-group inbound-shared'),
-      summary = element('summary', `透過頁首／頁尾連結 ${viaShared.size} 個畫面`);
-    group.append(summary);
-    if (navigation.intoLabels.length)
-      group.append(element('p', `連結：${navigation.intoLabels.join('、')}`, 'muted'));
-    for (const source of sources) if (viaShared.has(source.id)) group.append(sourceRow(source));
-    inbound.append(group);
+    button.onclick = () => {
+      showPanelTab(root, list.tab);
+      actions.onTab?.(list.tab);
+    };
+    button.onkeydown = (event) => {
+      if (!['ArrowLeft', 'ArrowRight'].includes(event.key)) return;
+      event.preventDefault();
+      const at = lists.indexOf(list),
+        next = lists[(at + (event.key === 'ArrowRight' ? 1 : -1) + lists.length) % lists.length];
+      showPanelTab(root, next.tab);
+      actions.onTab?.(next.tab);
+      root.querySelector<HTMLElement>(`[data-panel-tab="${next.tab}"]`)?.focus();
+    };
+    list.section.dataset.tabPanel = list.tab;
+    list.section.setAttribute('role', 'tabpanel');
+    tabs.append(button);
   }
-  root.append(inbound);
+  buttons.before(tabs);
+  showPanelTab(root, chosen);
+
   panel.replaceChildren(root);
 }
