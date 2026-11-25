@@ -199,7 +199,7 @@ JSP、JSPF、tag file、Tiles 與有限的 Thymeleaf 以 `MarkupTag` 等 parser 
 | [0119](0119-r28-visual-summaries.md) | R28 API 頁與角色頁加上數量的圖形摘要 | 部分被取代：角色頁每步直條改由 [0123](0123-r32-api-persona-graphics.md) |
 | [0120](0120-r29-call-chain-and-overlap-bars.md) | R29 API 詳情的呼叫鏈圖與角色比較的重疊長條 | 有效；呼叫鏈由 [0189](0189-review-stage-redesign.md) 延伸到 Service／DAO |
 | [0121](0121-r30-api-decisions-viewer-only.md) | R30 API 狀態的標記判定只留在 viewer | 有效 |
-| [0123](0123-r32-api-persona-graphics.md) | R32 API 方法色標、路徑參數、呼叫數長條，與角色頁改版 | 有效 |
+| [0123](0123-r32-api-persona-graphics.md) | R32 API 方法色標、路徑參數、呼叫數長條，與角色頁改版 | 部分被取代：角色頁改為所有角色的同一張表，見 [0189](0189-review-stage-redesign.md) |
 | [0124](0124-r33-overview-labels.md) | R33 縮小的總覽上看得出每一區與每個畫面 | 有效 |
 | [0126](0126-r35-focus-line-bundles.md) | R35 放大畫面時的關聯線左進右出、依區塊合併 | 已被取代：改為審查舞台的卡片欄，見 [0189](0189-review-stage-redesign.md) |
 | [0127](0127-r36-focus-label-layout.md) | R36 放大畫面的關聯線標籤對齊與預覽比例 | 已被取代：見 [0189](0189-review-stage-redesign.md) |

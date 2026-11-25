@@ -212,6 +212,8 @@ R108 將此變體契約延伸到 Spring MVC JSP 的有限表單流程。Adapter 
 
 開啟畫面不再放大畫布：`main.ts` 在主區域放 `review-stage.ts` 建立的舞台（「從哪裡來」欄、預覽、「會去哪裡」欄），預覽由同一個 `renderFocus` 建立；畫布元件留在記憶體，返回時直接放回。兩欄的資料來自 `overview.ts` 的 `partitionNavigation` 流程、`canvas.ts` 的 `focusLines` 與 `relations.ts` 的 `sharedNavigation`；決定改變時只重建兩欄，不重新載入預覽的 iframe。`screen-panel.ts` 以 `PanelTab` 分頁顯示按鈕、欄位與 API。見 [ADR 0189](adr/0189-review-stage-redesign.md)。
 
+總覽的三種版面：`persona-page.ts` 把所有角色排成「角色 × 步驟」的表（取代 R32 的角色卡片與全部角色對照，`coverageScreens` 已移除），跨角色交接點與無法確定去向的來源由 `role-handoffs.ts` 依圖計算；`feature-map.ts` 改為功能卡片清單。
+
 `screen-panel.ts` 的「呼叫的 API」每一列使用 `api-page.ts` 匯出的 `methodBadge` 與 `pathCode`，與 API 頁的方法標籤共用同一個元件與樣式。見 [ADR 0128](adr/0128-r37-panel-method-tags.md)。
 
 ### R34：React 預覽分析與 graph 分析同時執行

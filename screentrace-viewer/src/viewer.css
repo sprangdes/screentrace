@@ -959,3 +959,178 @@ body[data-presenting=true] .review-preview .prototype-trail-here{color:#e6e9ef}
 .filter-chip{flex:1 1 auto;justify-content:center;padding:2px 6px;white-space:nowrap}
 .filter-chips{flex-wrap:wrap;gap:3px}
 .filter-chip{padding:2px 5px}
+
+/* R115 batch 2: role overview (依角色步驟) */
+/* Role overview (依角色步驟): a summary column beside one grid of every role's flow by step. */
+.role-overview{position:absolute;inset:0;display:flex;flex-direction:column;overflow:hidden;background:var(--gray-50)}
+.role-overview-band{flex:none;height:60px}
+.role-overview-body{flex:1;min-height:0;overflow:auto;display:flex;flex-wrap:wrap;align-items:flex-start;gap:20px;padding:4px 20px 32px}
+.role-summary{flex:1 1 260px;max-width:300px;min-width:0;display:flex;flex-direction:column;gap:14px}
+.role-main{flex:999 1 560px;min-width:0;display:flex;flex-direction:column;gap:16px}
+.role-panel{display:flex;flex-direction:column;gap:10px;min-width:0;padding:16px;background:white;border:1px solid var(--gray-200);border-radius:12px;box-shadow:var(--shadow-card)}
+.role-title{margin:0;font-size:18px;line-height:1.3}
+.role-panel-title{margin:0;font-size:14px}
+.role-lead{margin:0;font-size:13px;line-height:1.6;color:var(--gray-700);overflow-wrap:anywhere}
+.role-muted{margin:0;font-size:13px;line-height:1.6;color:var(--gray-500);overflow-wrap:anywhere}
+.role-footnote{margin:0;font-size:12px;line-height:1.6;color:var(--gray-500)}
+
+/* 審查進度 */
+.role-progress{display:flex;flex-direction:column;gap:6px;margin-top:2px}
+.role-progress-head{display:flex;justify-content:space-between;gap:8px;font-size:12px}
+.role-progress-head span{color:var(--gray-500)}
+.role-progress-bar{display:flex;height:8px;border-radius:4px;overflow:hidden;background:var(--gray-200)}
+.role-progress-part[data-decision=KEEP]{background:var(--keep)}
+.role-progress-part[data-decision=REMOVE]{background:var(--remove)}
+.role-progress-legend{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:12px;color:var(--gray-700)}
+.role-progress-key{display:inline-flex;align-items:center;gap:5px}
+.role-progress-key::before{content:'';width:8px;height:8px;border-radius:2px;box-sizing:border-box}
+.role-progress-key[data-decision=KEEP]::before{background:var(--keep)}
+.role-progress-key[data-decision=REMOVE]::before{background:var(--remove)}
+.role-progress-key[data-decision=UNDECIDED]::before{border:1.5px dashed var(--gray-500)}
+
+/* 需要你注意 */
+.role-attention{display:flex;gap:10px;align-items:flex-start;width:100%;min-height:44px;padding:10px;border:0;border-radius:8px;background:var(--gray-50);text-align:left;color:var(--gray-900)}
+.role-attention:hover{background:var(--gray-200)}
+.role-attention[data-attention=conflict]{background:var(--warning-soft)}
+.role-attention[data-attention=conflict]:hover{background:#fae4c4}
+.role-attention-mark{flex:none;width:16px;height:16px;margin-top:2px;box-sizing:border-box}
+.role-attention-mark .icon{width:16px;height:16px;color:var(--warning);stroke-width:2.2}
+.role-attention[data-attention=unresolved] .role-attention-mark{border:2px dashed var(--gray-500);border-radius:50%}
+.role-attention[data-attention=possible] .role-attention-mark{border:2px dashed var(--gray-500);border-radius:4px}
+.role-attention-text{display:flex;flex-direction:column;gap:2px;min-width:0}
+.role-attention-text strong{font-size:13px}
+.role-attention-text span{font-size:12px;line-height:1.5;color:var(--gray-700);overflow-wrap:anywhere}
+
+/* The grid: role column, then one column per step; it scrolls sideways inside its own box. */
+.role-grid-scroll{overflow-x:auto;background:white;border:1px solid var(--gray-200);border-radius:12px;box-shadow:var(--shadow-card)}
+.role-grid{display:grid;grid-template-columns:160px repeat(var(--steps),minmax(176px,1fr));min-width:calc(160px + var(--steps) * 176px)}
+.role-grid-head{padding:10px 12px;font-size:12px;color:var(--gray-500);border-bottom:1px solid var(--gray-200);background:white}
+.role-grid-head:first-child{padding-left:14px}
+.role-grid-role,.role-grid-cell{background:var(--tint,var(--gray-50));border-bottom:1px solid var(--gray-200);min-width:0}
+.role-grid-cell{display:flex;flex-direction:column;gap:8px;padding:12px;background:color-mix(in srgb,var(--tint,var(--gray-50)) 55%,white)}
+.role-grid-empty{justify-content:center;font-size:13px;color:var(--gray-700)}
+.role-grid-role{padding:6px}
+.role-name{display:flex;flex-direction:column;align-items:flex-start;gap:6px;width:100%;min-height:44px;padding:8px;border:1px solid transparent;border-radius:8px;background:transparent;text-align:left}
+.role-name:hover{background:#ffffff99;border-color:var(--tint-edge,var(--gray-300))}
+.role-name[aria-expanded=true]{background:white;border-color:var(--tint-ink,var(--primary));box-shadow:inset 0 0 0 1px var(--tint-ink,var(--primary))}
+.role-name-text{font-size:14px;font-weight:700;color:var(--tint-ink,var(--gray-900));overflow-wrap:anywhere}
+.role-name-counts{font-size:12px;color:var(--gray-700)}
+.role-name-start{font-size:11px;color:var(--gray-700);overflow-wrap:anywhere;min-width:0;max-width:100%}
+.role-name-start code{font-size:11px}
+
+/* A screen card in a role's row. */
+.role-card{display:flex;flex-direction:column;align-items:stretch;gap:4px;width:100%;min-width:0;min-height:44px;padding:9px 10px;border:1px solid var(--card-edge);border-radius:8px;background:white;text-align:left;color:var(--gray-900);box-shadow:var(--shadow-lift)}
+.role-card:hover{background:white;border-color:var(--gray-500)}
+.role-card[data-reach=POSSIBLE]{border:1.5px dashed var(--gray-500);background:#fbfbfc;box-shadow:none}
+.role-card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:6px;min-width:0}
+.role-card-name{min-width:0;font-size:13px;font-weight:600;line-height:1.35;overflow-wrap:anywhere}
+.role-card[data-screen-status=REMOVE] .role-card-name{text-decoration:line-through;color:var(--gray-500)}
+.role-card-route{min-width:0;font-size:11px;line-height:1.35;color:var(--gray-500);overflow-wrap:anywhere}
+.role-card-note{font-size:11px;line-height:1.35;color:var(--gray-700);overflow-wrap:anywhere}
+.role-card-shared{font-size:11px;line-height:1.35;color:#246b6b}
+.role-status{flex:none;display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;margin-top:1px;border-radius:50%;box-sizing:border-box;color:white}
+.role-status .icon{width:10px;height:10px;stroke-width:3.4}
+.role-status[data-status=KEEP]{background:var(--keep)}
+.role-status[data-status=REMOVE]{background:var(--remove)}
+.role-status[data-status=UNDECIDED]{width:14px;height:14px;margin-top:2px;border:1.5px dashed var(--gray-500)}
+
+/* A role's details, opened from its name in the grid. */
+.role-detail{display:flex;flex-direction:column;gap:10px;padding:16px;background:var(--tint,white);border:1px solid var(--tint-edge,var(--gray-200));border-radius:12px}
+.role-detail[hidden]{display:none}
+.role-detail-head{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.role-detail-name{margin:0;font-size:16px;color:var(--tint-ink,var(--gray-900))}
+.role-detail-close{min-height:32px;font-size:13px}
+.role-detail-about{margin:0;font-size:13px;line-height:1.6;color:var(--gray-700);overflow-wrap:anywhere}
+.role-detail-facts{display:grid;grid-template-columns:max-content minmax(0,1fr);column-gap:16px;row-gap:8px;align-items:center;margin:0;font-size:13px}
+.role-detail-facts dt{color:var(--gray-500)}
+.role-detail-facts dd{margin:0;min-width:0;overflow-wrap:anywhere}
+.role-detail-reach{display:flex;flex-direction:column;gap:4px;max-width:360px}
+.role-detail-bar{height:6px}
+.role-fact{display:inline-block;margin:0 8px 4px 0;padding:1px 6px;border-radius:4px;background:white;font-size:12px;overflow-wrap:anywhere}
+
+/* Below the grid: where roles meet, and what no role reaches. */
+.role-lower{display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start}
+.role-lower>.role-panel{flex:1 1 320px}
+.role-handoff-list{display:flex;flex-direction:column;gap:10px;margin:0;padding:0;list-style:none}
+.role-handoff{display:flex;flex-direction:column;gap:4px;min-width:0}
+.role-handoff-pair{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;min-width:0}
+.role-handoff-arrow{color:var(--gray-500)}
+.role-handoff-evidence{font-size:12px;color:var(--gray-700);overflow-wrap:anywhere}
+.role-chips{display:flex;flex-wrap:wrap;gap:6px}
+.role-chip{min-height:32px;max-width:100%;padding:4px 10px;border:1px solid var(--tint-edge,var(--gray-300));border-radius:6px;background:var(--tint,white);color:var(--tint-ink,var(--gray-900));font-size:12px;font-weight:600;text-align:left;overflow-wrap:anywhere}
+.role-chip:hover{border-color:var(--gray-500);background:var(--tint,var(--gray-100))}
+.role-chip[data-role-tint=none]{border-style:dashed;border-color:var(--gray-500);color:var(--gray-700);font-weight:500}
+
+/* R115 batch 2: feature overview (依功能) */
+/* Feature overview: jump list and legend on the left, one card per feature (ADR 0156, 0188). */
+.feature-map.feature-overview{padding:60px 24px 48px;container-type:inline-size}
+.fo-layout{display:grid;grid-template-columns:260px minmax(0,1fr);align-items:start;gap:20px;min-width:0}
+.fo-side{display:flex;flex-direction:column;gap:12px;min-width:0;position:sticky;top:0;max-height:calc(100vh - 140px);overflow:auto}
+.fo-cards{min-width:0;display:flex;flex-direction:column;gap:12px}
+.fo-summary{background:white;border:1px solid var(--gray-200);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:8px}
+.fo-summary h1{margin:0;font-size:18px;overflow-wrap:anywhere}
+.fo-summary p{margin:0;font-size:13px;line-height:1.6;color:var(--gray-700);overflow-wrap:anywhere}
+.fo-jump{background:white;border:1px solid var(--gray-200);border-radius:12px;padding:6px;display:flex;flex-direction:column;gap:2px}
+.fo-jump-item{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:36px;padding:6px 10px;border:0;border-radius:8px;background:transparent;text-align:left;font-size:13px}
+.fo-jump-item:hover{background:var(--gray-100)}
+.fo-jump-item[aria-current]{background:var(--primary-soft)}
+.fo-jump-item[aria-current] .fo-jump-name{font-weight:600}
+.fo-jump-item[data-other] .fo-jump-name{color:var(--gray-500)}
+.fo-jump-name{min-width:0;overflow-wrap:anywhere}
+.fo-jump-count{flex:none;color:var(--gray-500);font-variant-numeric:tabular-nums}
+.fo-legend{list-style:none;margin:0;padding:0 4px;display:flex;flex-direction:column;gap:6px;font-size:12px;color:var(--gray-700)}
+.fo-legend li{display:flex;align-items:center;gap:8px}
+.fo-swatch{flex:none;width:22px;height:14px;border-radius:4px;box-sizing:border-box}
+.fo-swatch[data-kind=own-keep]{border:1px solid var(--keep);background:var(--keep-soft)}
+.fo-swatch[data-kind=follow-keep]{border:1.5px dashed var(--keep)}
+.fo-swatch[data-kind=follow-remove]{border:1.5px dashed var(--remove)}
+
+.fo-card{background:white;border:1px solid var(--gray-200);border-radius:12px;min-width:0;scroll-margin-top:56px;transition:box-shadow .2s,border-color .2s}
+.fo-card:focus{outline:0}
+.fo-card[data-highlight]{border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-soft)}
+.fo-card[data-other]{background:transparent;border:1.5px dashed var(--gray-300)}
+.fo-head{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;padding:12px 16px;border-bottom:1px solid var(--gray-100)}
+.fo-flows[hidden]+.fo-note,.fo-card:has(.fo-flows[hidden]) .fo-head{border-bottom:0}
+.fo-title{display:flex;align-items:center;gap:10px;min-width:0}
+.fo-mark{flex:none;width:10px;height:10px;border-radius:3px;background:var(--card-edge)}
+.fo-mark[data-role-tint]:not([data-role-tint=none]){background:var(--tint-ink)}
+.fo-title h2{margin:0;font-size:15px;min-width:0;overflow-wrap:anywhere}
+.fo-card[data-other] .fo-title h2{font-size:14px;color:var(--gray-700)}
+.fo-info{flex:1 1 220px;display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;min-width:0}
+.fo-basis{margin:0;font-size:12px;color:var(--gray-500);min-width:0;overflow-wrap:anywhere}
+.fo-basis code{font-family:var(--mono);color:var(--gray-700)}
+.fo-roles{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:4px}
+.fo-role{font-size:11px;padding:2px 8px;border-radius:999px;background:var(--gray-100);color:var(--gray-700);overflow-wrap:anywhere}
+.fo-role[data-role-tint]:not([data-role-tint=none]){background:var(--tint);color:var(--tint-ink);box-shadow:inset 0 0 0 1px var(--tint-edge)}
+.fo-controls{display:flex;align-items:center;gap:6px;margin-left:auto}
+.fo-controls .decision-option{white-space:nowrap;min-height:32px;padding:4px 10px;font-size:13px}
+.fo-toggle{border:1px solid var(--gray-300);background:white}
+.fo-toggle .icon{transition:transform .15s}
+.fo-toggle[aria-expanded=true] .icon{transform:rotate(90deg)}
+
+.fo-flows{list-style:none;margin:0;padding:14px 16px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.fo-flows[hidden]{display:none}
+.fo-flow{display:flex;align-items:flex-start;gap:10px;min-width:0}
+.fo-flow-label{flex:none;width:46px;font-size:12px;font-weight:700;color:var(--gray-500);line-height:20px;padding-top:10px}
+.fo-steps{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;align-items:stretch;gap:8px 0;min-width:0}
+.fo-step{display:flex;align-items:center}
+.fo-arrow{flex:none;width:26px;display:flex;justify-content:center;color:var(--flow)}
+.fo-arrow .icon{width:16px;height:16px}
+.fo-tile{display:flex;flex-direction:column;align-items:stretch;gap:3px;width:170px;min-height:72px;height:100%;box-sizing:border-box;padding:9px 12px;text-align:left;background:white;border:1px solid var(--gray-300);border-radius:10px;overflow:hidden}
+.fo-tile:hover{background:white;border-color:var(--gray-500)}
+.fo-tile>*{min-width:0;overflow-wrap:anywhere;line-height:1.35}
+.fo-tile-name{font-size:13px;font-weight:600;color:var(--gray-900)}
+.fo-tile-url{font-family:var(--mono);font-size:11px;color:var(--gray-500)}
+.fo-tile-status{font-size:11px;color:var(--gray-500)}
+.fo-tile[data-decision=KEEP]{border-color:var(--keep);background:var(--keep-soft)}
+.fo-tile[data-decision=REMOVE]{border-color:var(--remove);background:var(--remove-soft)}
+.fo-tile[data-decision=KEEP] .fo-tile-status{color:var(--keep);font-weight:600}
+.fo-tile[data-decision=REMOVE] .fo-tile-status{color:var(--remove);font-weight:600}
+.fo-tile[data-inherited]{border-style:dashed;border-width:1.5px;background:white}
+.fo-tile[data-inherited] .fo-tile-status{font-weight:400}
+.fo-tile[data-decision=REMOVE] .fo-tile-name{text-decoration:line-through;color:var(--gray-500)}
+.fo-tile[data-conflict]:not([data-decision=REMOVE]){border-color:#e8a46d}
+.fo-tile[data-conflict] .fo-tile-status{color:#9a3412;font-weight:600}
+.fo-note{padding:0 16px 12px}
+/* Too narrow for two columns: the list goes above the cards and scrolls away with them. */
+@container (max-width:720px){.fo-layout{grid-template-columns:minmax(0,1fr)}.fo-side{position:static;max-height:none}}

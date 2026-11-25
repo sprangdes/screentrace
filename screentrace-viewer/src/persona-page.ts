@@ -11,346 +11,456 @@ import {
   reachShares,
   reachCountsLabel,
   roleTint,
+  rolePartition,
+  SHARED_ROLE,
+  NO_ROLE,
 } from './personas';
 import { proportionBar } from './proportion';
-
-/**
- * The screens any persona reaches, for the coverage table: grouped by the first persona (in persona order) that
- * reaches them, then by that persona's step, then by name, so each persona's own screens sit together.
- */
-export function coverageScreens(index: Index, views: PersonaView[]): string[] {
-  const name = (id: string) => index.nodes.get(id)?.name || id,
-    first = new Map<string, number>();
-  for (const screen of index.screens) {
-    const at = views.findIndex((view) => view.depth.has(screen.id));
-    if (at >= 0) first.set(screen.id, at);
-  }
-  const step = (id: string) => views[first.get(id)!].depth.get(id)!;
-  return [...first.keys()].sort(
-    (a, b) =>
-      first.get(a)! - first.get(b)! ||
-      step(a) - step(b) ||
-      name(a).localeCompare(name(b), 'zh-Hant') ||
-      (a < b ? -1 : a > b ? 1 : 0),
-  );
-}
+import { handoffs, stateCounts, unresolvedSources } from './role-handoffs';
+import { componentLabelsForScreen } from './labels';
 
 /** What the page keeps while the report is open: leaving for a screen and coming back finds the same view. */
 const memory = {
-  selected: undefined as string | undefined,
-  all: false,
+  expanded: undefined as string | undefined,
 };
 
-export interface PersonaPageOptions {
-  selected?: string;
-  /** A screen's review decision, shown as the same corner mark as on the map. */
-  status?: (screenId: string) => string;
-  onOpen: (screenId: string, personaId: string) => void;
+/** A kept control that leads to a removed screen (`conflicts` in shared/review.ts). */
+export interface PersonaPageConflict {
+  screenId: string;
+  componentId: string;
+  targetScreenId: string;
 }
 
+export interface PersonaPageOptions {
+  /** The role last opened; screens no role reaches open as this role. */
+  selected?: string;
+  /** A screen's effective review decision: 'KEEP', 'REMOVE' or anything else for not yet decided. */
+  status?: (screenId: string) => string;
+  onOpen: (screenId: string, personaId: string) => void;
+  /** Kept controls leading to removed screens, listed under 需要你注意. */
+  conflicts?: PersonaPageConflict[];
+}
+
+const HANDOFF_LIMIT = 8,
+  UNREACHED_LIMIT = 40;
+
 /**
- * The persona page: the personas as cards across the top; below, the chosen persona's flow as a board with one
- * column per step and its conditions and comparison beside it, or every persona against every screen.
+ * The role overview: on the left what the review has settled and what needs a look; beside it every role as a row
+ * of its flow, one column per step from its start URL; below, where the roles' flows meet as far as the source
+ * proves it, and the screens no role reaches.
  */
 export function personaPage(
   index: Index,
   views: PersonaView[],
   options: PersonaPageOptions,
 ): HTMLElement {
-  const byId = new Map(views.map((view) => [view.persona.id, view]));
-  let selected = [options.selected, memory.selected, views[0]?.persona.id].find(
-    (id) => !!id && byId.has(id),
-  );
-  const canCompare = views.length > 1 && views.some((view) => view.depth.size);
-  let all = canCompare && memory.all;
-  const root = element('section', undefined, 'persona-page'),
-    top = element('div', undefined, 'persona-top'),
-    detail = element('div', undefined, 'persona-detail');
+  const root = element('section', undefined, 'role-overview');
   root.dataset.personaPage = 'true';
-  detail.setAttribute('aria-label', '角色詳情');
-  const title = element('h1', '角色');
-  title.append(element('span', String(views.length), 'api-total'));
-  const list = element('div', undefined, 'persona-cards');
-  list.setAttribute('role', 'listbox');
-  list.setAttribute('aria-label', '角色清單');
-  list.setAttribute('aria-orientation', 'horizontal');
-  const compareAll = element('button', '全部角色對照', 'persona-compare-all');
-  compareAll.type = 'button';
-  compareAll.dataset.personaCompareAll = 'true';
-  compareAll.title = '每個畫面哪些角色走得到';
-  compareAll.onclick = () => {
-    all = !all;
-    memory.all = all;
-    sync();
-  };
-  top.append(title, list);
-  if (canCompare) top.append(compareAll);
-  // The comparison slides in beside the role's flow instead of replacing it.
-  const body = element('div', undefined, 'persona-body'),
-    drawer = element('aside', undefined, 'persona-drawer'),
-    drawerHead = element('div', undefined, 'persona-drawer-head'),
-    drawerBody = element('div', undefined, 'persona-drawer-body');
-  drawer.setAttribute('aria-label', '全部角色對照');
-  drawer.dataset.personaDrawer = 'true';
-  // The 全部角色對照 button opens and closes it; the column has no close button of its own.
-  drawerHead.append(element('h2', '全部角色對照'));
-  drawer.append(drawerHead, drawerBody);
-  body.append(detail, drawer);
-  root.append(top, body);
+  if (!views.length) {
+    root.append(element('p', '沒有角色', 'empty-list'));
+    return root;
+  }
+  const byId = new Map(views.map((view) => [view.persona.id, view]));
+  const fallbackRole = [options.selected, views[0].persona.id].find((id) => !!id && byId.has(id))!;
   const name = (id: string) => index.nodes.get(id)?.name || id;
   const route = (id: string) => index.routes.get(id)?.[0] || text.noUrl;
+  const status = (id: string) => {
+    const value = options.status?.(id);
+    return value === 'KEEP' || value === 'REMOVE' ? value : 'UNDECIDED';
+  };
+  /** The role a screen opens as when the item is not tied to one: the first whose flow reaches it. */
+  const roleFor = (id: string) =>
+    views.find((view) => view.depth.has(id))?.persona.id || fallbackRole;
+  const partition = rolePartition(index);
+  const roleOf = (id: string) => {
+    if (partition) return partition.of.get(id) || NO_ROLE;
+    const users = views.filter((view) => view.depth.has(id));
+    return users.length > 1 ? SHARED_ROLE : users.length ? users[0].persona.id : NO_ROLE;
+  };
+  const states = stateCounts(index);
+  const tint = (role: string) => roleTint(index.graph, role);
 
-  /** Marks the chosen card (and the table button) and draws the view below. */
-  const sync = (focus = false) => {
-    for (const row of list.querySelectorAll<HTMLElement>('.persona-row')) {
-      const on = row.dataset.personaRow === selected;
-      row.setAttribute('aria-selected', String(on));
-      row.classList.toggle('is-current', on);
-      row.tabIndex = on ? 0 : -1;
-      if (on && focus) row.focus();
+  const summary = element('aside', undefined, 'role-summary'),
+    main = element('div', undefined, 'role-main');
+  summary.setAttribute('aria-label', '摘要');
+  main.setAttribute('aria-label', '角色流程');
+  // The page scrolls below a band that leaves room for the layout switch floating at the top right.
+  const body = element('div', undefined, 'role-overview-body');
+  body.append(summary, main);
+  root.append(element('div', undefined, 'role-overview-band'), body);
+
+  // ---- Summary: what the review has settled ----
+  const overviewCard = element('section', undefined, 'role-panel');
+  overviewCard.append(
+    element('h1', `${index.screens.length} 個畫面 · ${views.length} 個角色`, 'role-title'),
+    element(
+      'p',
+      '每個角色從起點網址出發，往右是第 1、2、3 步。實線框＝一定會走到，虛線框＝途中有無法判定的條件。',
+      'role-lead',
+    ),
+  );
+  if (options.status) {
+    const counts = { KEEP: 0, REMOVE: 0, UNDECIDED: 0 };
+    for (const screen of index.screens) counts[status(screen.id)]++;
+    const total = index.screens.length || 1,
+      progress = element('div', undefined, 'role-progress'),
+      head = element('div', undefined, 'role-progress-head'),
+      bar = element('div', undefined, 'role-progress-bar');
+    head.append(
+      element('strong', '審查進度'),
+      element('span', `${counts.KEEP + counts.REMOVE} / ${index.screens.length} 已確認`),
+    );
+    bar.setAttribute('role', 'img');
+    bar.setAttribute(
+      'aria-label',
+      `${text.keep} ${counts.KEEP}、${text.remove} ${counts.REMOVE}、${text.undecided} ${counts.UNDECIDED}`,
+    );
+    for (const key of ['KEEP', 'REMOVE'] as const) {
+      const part = element('span', undefined, 'role-progress-part');
+      part.dataset.decision = key;
+      part.style.width = `${(counts[key] / total) * 100}%`;
+      bar.append(part);
     }
-    compareAll.setAttribute('aria-pressed', String(all));
-    compareAll.setAttribute('aria-expanded', String(all));
-    body.dataset.drawer = all ? 'open' : 'closed';
-    drawer.inert = !all;
-    if (all) renderAll();
-    renderDetail();
-  };
-  const select = (id: string, focus = false) => {
-    selected = id;
-    memory.selected = id;
-    sync(focus);
-  };
-  for (const view of views) {
-    const row = element('button', undefined, 'api-row persona-row');
-    row.type = 'button';
-    row.setAttribute('role', 'option');
-    row.dataset.personaRow = view.persona.id;
-    row.dataset.roleTint = roleTint(index.graph, view.persona.id);
-    const label = element('span', undefined, 'persona-row-text');
-    const about = personaDescription(view.persona);
-    label.append(element('strong', view.persona.name));
-    if (about) label.append(element('span', about, 'persona-row-about'));
-    // The card names the role; how far it gets is shown under its title below.
-    row.append(label);
-    row.onclick = () => select(view.persona.id);
-    list.append(row);
+    const legend = element('div', undefined, 'role-progress-legend');
+    for (const [key, label] of [
+      ['KEEP', text.keep],
+      ['REMOVE', text.remove],
+      ['UNDECIDED', text.undecided],
+    ] as const) {
+      const item = element('span', `${label} ${counts[key]}`, 'role-progress-key');
+      item.dataset.decision = key;
+      legend.append(item);
+    }
+    progress.append(head, bar, legend);
+    overviewCard.append(progress);
   }
-  list.addEventListener('keydown', (event) => {
-    const ids = views.map((v) => v.persona.id),
-      at = ids.indexOf(selected || '');
-    const next = event.key === 'ArrowDown' || event.key === 'ArrowRight',
-      back = event.key === 'ArrowUp' || event.key === 'ArrowLeft';
-    const target = next
-      ? ids[Math.min(ids.length - 1, at + 1)]
-      : back
-        ? ids[Math.max(0, at - 1)]
-        : event.key === 'Home'
-          ? ids[0]
-          : event.key === 'End'
-            ? ids.at(-1)
-            : undefined;
-    if (!target) return;
-    event.preventDefault();
-    select(target, true);
-  });
 
-  const section = (heading: string, key: string) => {
-    const box = element('section', undefined, 'api-section');
-    box.dataset.personaSection = key;
-    box.append(element('h3', heading));
-    return box;
+  // ---- Summary: what needs a look ----
+  const attention = element('section', undefined, 'role-panel');
+  attention.append(element('h2', '需要你注意', 'role-panel-title'));
+  const attentionItem = (
+    kind: string,
+    heading: string,
+    detail: string,
+    open: () => void,
+  ): HTMLButtonElement => {
+    const button = element('button', undefined, 'role-attention');
+    button.type = 'button';
+    button.dataset.attention = kind;
+    const mark = element('span', undefined, 'role-attention-mark');
+    mark.setAttribute('aria-hidden', 'true');
+    if (kind === 'conflict') mark.append(icon('warning'));
+    const words = element('span', undefined, 'role-attention-text');
+    words.append(element('strong', heading), element('span', detail));
+    button.append(mark, words);
+    button.onclick = open;
+    return button;
   };
-  /** A screen card on the board: its name opens it as this persona; a dashed card is one it may only possibly reach. */
+  const items: HTMLElement[] = [];
+  const conflictList = options.conflicts || [];
+  if (conflictList.length) {
+    const first = conflictList[0],
+      label = componentLabelsForScreen(index, first.screenId).get(first.componentId);
+    items.push(
+      attentionItem(
+        'conflict',
+        `${conflictList.length} 個衝突`,
+        label
+          ? `「${name(first.screenId)}」保留的「${label}」會前往已移除的「${name(first.targetScreenId)}」`
+          : `保留的「${name(first.screenId)}」會前往已移除的「${name(first.targetScreenId)}」`,
+        () => options.onOpen(first.screenId, roleFor(first.screenId)),
+      ),
+    );
+  }
+  const unresolved = unresolvedSources(index),
+    unresolvedScreens = index.screens.map((s) => s.id).filter((id) => unresolved.has(id));
+  if (unresolvedScreens.length) {
+    const first = unresolvedScreens[0],
+      label = (unresolved.get(first) || [])
+        .map((trigger) => componentLabelsForScreen(index, first).get(trigger) || '')
+        .find(Boolean);
+    items.push(
+      attentionItem(
+        'unresolved',
+        `${unresolvedScreens.length} 個畫面無法確定去向`,
+        label
+          ? `${name(first)} ›「${label}」${text.unresolved}`
+          : `「${name(first)}」${text.unresolved}`,
+        () => options.onOpen(first, roleFor(first)),
+      ),
+    );
+  }
+  const possible = index.screens
+    .map((s) => s.id)
+    .filter((id) => views.some((view) => view.reach.get(id) === 'POSSIBLE'));
+  if (possible.length) {
+    const first = possible[0],
+      view = views.find((v) => v.reach.get(first) === 'POSSIBLE')!;
+    items.push(
+      attentionItem(
+        'possible',
+        `${possible.length} 個${reachLabel.POSSIBLE}`,
+        `「${name(first)}」對「${view.persona.name}」是${reachLabel.POSSIBLE}：${reachHelp.POSSIBLE}`,
+        () => options.onOpen(first, view.persona.id),
+      ),
+    );
+  }
+  if (items.length) attention.append(...items);
+  else attention.append(element('p', '目前沒有需要注意的地方', 'role-muted'));
+  summary.append(
+    overviewCard,
+    attention,
+    element(
+      'p',
+      '未被使用不等於可刪除：書籤、排程或其他系統直接呼叫的畫面，報表看不到。',
+      'role-footnote',
+    ),
+  );
+
+  // ---- The grid: one row per role, one column per step ----
+  const steps = Math.max(1, ...views.map((view) => Math.max(0, ...view.depth.values())));
+  const scroller = element('div', undefined, 'role-grid-scroll');
+  scroller.setAttribute('role', 'region');
+  scroller.setAttribute('aria-label', '各角色依步驟的畫面');
+  scroller.tabIndex = 0;
+  const grid = element('div', undefined, 'role-grid');
+  grid.style.setProperty('--steps', String(steps));
+  grid.append(element('div', '角色', 'role-grid-head'));
+  for (let step = 1; step <= steps; step++)
+    grid.append(element('div', `第 ${step} 步`, 'role-grid-head'));
+  scroller.append(grid);
+  const detail = element('section', undefined, 'role-detail');
+  detail.id = 'role-detail';
+  detail.setAttribute('aria-live', 'polite');
+  const roleButtons: HTMLButtonElement[] = [];
+
+  /** A screen in a role's row: opens it as that role. */
   const card = (view: PersonaView, id: string) => {
     const reach = view.reach.get(id)!,
-      button = element('button', undefined, 'persona-card');
+      decision = status(id),
+      button = element('button', undefined, 'role-card');
     button.type = 'button';
     button.dataset.personaScreen = id;
     button.dataset.reach = reach;
-    button.append(
-      element('span', name(id), 'persona-card-name'),
-      element('code', route(id), 'persona-card-route'),
+    button.dataset.screenStatus = decision;
+    const head = element('span', undefined, 'role-card-head'),
+      glyph = element('span', undefined, 'role-status');
+    glyph.dataset.status = decision;
+    glyph.setAttribute('role', 'img');
+    glyph.setAttribute(
+      'aria-label',
+      decision === 'KEEP' ? text.keep : decision === 'REMOVE' ? text.remove : text.undecided,
     );
-    const status = options.status?.(id);
-    if (status === 'KEEP' || status === 'REMOVE') {
-      button.dataset.screenStatus = status;
-      const decided = icon(status === 'KEEP' ? 'check' : 'close');
-      decided.classList.add('review-status-icon');
-      decided.setAttribute('role', 'img');
-      decided.setAttribute('aria-label', status === 'KEEP' ? text.keep : text.remove);
-      button.append(decided);
-    }
-    if (reach === 'POSSIBLE') {
-      const mark = element('span', reachLabel.POSSIBLE, 'persona-pill');
-      mark.dataset.reach = reach;
-      button.append(mark);
-      button.title = reachHelp.POSSIBLE;
-    }
+    if (decision !== 'UNDECIDED') glyph.append(icon(decision === 'KEEP' ? 'check' : 'close'));
+    head.append(element('span', name(id), 'role-card-name'), glyph);
+    button.append(head, element('code', route(id), 'role-card-route'));
+    const notes: string[] = [];
+    if (reach === 'POSSIBLE') notes.push(reachLabel.POSSIBLE);
+    if ((states.get(id) || 0) >= 2) notes.push(`${states.get(id)} 種狀態`);
+    if (notes.length) button.append(element('span', notes.join(' · '), 'role-card-note'));
+    if (roleOf(id) === SHARED_ROLE) button.append(element('span', '共用畫面', 'role-card-shared'));
+    button.title = `以「${view.persona.name}」打開「${name(id)}」${reach === 'POSSIBLE' ? `（${reachHelp.POSSIBLE}）` : ''}`;
     button.onclick = () => options.onOpen(id, view.persona.id);
     return button;
   };
-  /** Every reached screen against every persona: a dot per cell; a reached cell opens the screen as that persona. */
-  const coverage = () => {
-    const box = section('畫面 × 角色', 'coverage');
-    box.classList.add('persona-coverage');
-    box.append(
+
+  for (const view of views) {
+    const roleTintKey = tint(view.persona.id),
+      cell = element('div', undefined, 'role-grid-role'),
+      button = element('button', undefined, 'role-name');
+    cell.dataset.roleTint = roleTintKey;
+    button.type = 'button';
+    button.dataset.personaRow = view.persona.id;
+    button.setAttribute('aria-expanded', 'false');
+    button.setAttribute('aria-controls', detail.id);
+    button.title = '顯示這個角色的判定條件與起點';
+    button.append(
+      element('strong', view.persona.name, 'role-name-text'),
       element(
-        'p',
-        '每一列是一個畫面，每一欄是一個角色；點角色名稱看它的流程，點圓點以那個角色打開畫面。',
-        'muted',
+        'span',
+        `${reachLabel.REACHABLE} ${view.counts.REACHABLE} · 可能 ${view.counts.POSSIBLE}`,
+        'role-name-counts',
       ),
     );
-    const legend = element('p', undefined, 'persona-coverage-legend');
-    for (const reach of ['REACHABLE', 'POSSIBLE'] as const) {
-      const key = element('span', reachLabel[reach], 'persona-coverage-key');
-      key.dataset.reach = reach;
-      legend.append(key);
+    const start = (view.persona.startPaths || []).join('、');
+    if (start) {
+      const line = element('span', '起點 ', 'role-name-start');
+      line.append(element('code', start));
+      button.append(line);
     }
-    const table = element('table', undefined, 'persona-coverage-table'),
-      head = element('tr');
-    table.style.setProperty('--personas', String(views.length));
-    head.append(element('th', undefined));
-    for (const view of views) {
-      const cell = element('th', undefined),
-        button = element('button', view.persona.name, 'persona-coverage-persona');
-      cell.scope = 'col';
-      button.type = 'button';
-      button.dataset.coveragePersona = view.persona.id;
-      button.title = `看「${view.persona.name}」的流程`;
-      button.onclick = () => select(view.persona.id);
-      cell.append(button);
-      head.append(cell);
+    button.onclick = () => toggle(view.persona.id);
+    roleButtons.push(button);
+    cell.append(button);
+    grid.append(cell);
+    const byStep = new Map(
+      flowGroups(index, view)
+        .filter((group) => group.key.startsWith('step-'))
+        .map((group) => [Number(group.key.slice(5)), group.screens]),
+    );
+    if (!byStep.size) {
+      const empty = element(
+        'div',
+        '這個角色從起點走不到任何畫面；請確認設定中的起點網址與條件。',
+        'role-grid-cell role-grid-empty',
+      );
+      empty.dataset.roleTint = roleTintKey;
+      empty.style.gridColumn = `span ${steps}`;
+      grid.append(empty);
+      continue;
     }
-    const thead = element('thead');
-    thead.append(head);
-    const tbody = element('tbody');
-    for (const id of coverageScreens(index, views)) {
-      const row = element('tr'),
-        label = element('th', name(id));
-      row.dataset.coverageScreen = id;
-      label.scope = 'row';
-      label.title = route(id);
-      row.append(label);
-      for (const view of views) {
-        const reach = view.reach.get(id)!,
-          cell = element('td'),
-          words = `${view.persona.name}：${reachLabel[reach]}`;
-        cell.dataset.coveragePersona = view.persona.id;
-        if (reach === 'REACHABLE' || reach === 'POSSIBLE') {
-          const dot = element('button', undefined, 'persona-coverage-dot');
-          dot.type = 'button';
-          dot.dataset.reach = reach;
-          dot.title = words;
-          dot.setAttribute('aria-label', `${name(id)}，${words}`);
-          dot.onclick = () => options.onOpen(id, view.persona.id);
-          cell.append(dot);
+    for (let step = 1; step <= steps; step++) {
+      const cellBox = element('div', undefined, 'role-grid-cell');
+      cellBox.dataset.roleTint = roleTintKey;
+      cellBox.dataset.personaStep = `step-${step}`;
+      const screens = byStep.get(step) || [];
+      if (screens.length) {
+        cellBox.setAttribute('role', 'list');
+        cellBox.setAttribute('aria-label', `${view.persona.name} 第 ${step} 步`);
+        for (const id of screens) {
+          const item = card(view, id);
+          item.setAttribute('role', 'listitem');
+          cellBox.append(item);
         }
-        // A role that does not reach the screen leaves its cell empty.
-        row.append(cell);
       }
-      tbody.append(row);
+      grid.append(cellBox);
     }
-    table.append(thead, tbody);
-    box.append(legend, table);
-    return box;
-  };
-  const renderAll = () => {
-    const inner = element('div', undefined, 'persona-all');
-    inner.dataset.personaAll = 'true';
-    inner.append(coverage());
-    drawerBody.replaceChildren(inner);
-  };
+  }
 
+  /** The chosen role's details under the grid: who it is, its conditions and where it starts. */
   const renderDetail = () => {
+    const view = memory.expanded ? byId.get(memory.expanded) : undefined;
+    for (const button of roleButtons)
+      button.setAttribute('aria-expanded', String(button.dataset.personaRow === view?.persona.id));
     detail.replaceChildren();
-    const view = selected ? byId.get(selected) : undefined;
-    if (!view) {
-      detail.append(element('p', '沒有角色', 'empty-list'));
-      return;
-    }
-    const inner = element('div', undefined, 'persona-layout');
-    inner.dataset.personaDetail = view.persona.id;
-    inner.dataset.roleTint = roleTint(index.graph, view.persona.id);
-    const main = element('div', undefined, 'persona-main');
-    const heading = element('div', undefined, 'api-detail-title');
-    heading.append(element('h2', view.persona.name, 'persona-detail-name'));
-    // Under the role's name, an aligned summary: how far it gets, its conditions, where it starts.
-    const facts = element('dl', undefined, 'persona-facts');
+    detail.hidden = !view;
+    if (!view) return;
+    detail.dataset.roleTint = tint(view.persona.id);
+    detail.dataset.personaDetail = view.persona.id;
+    const head = element('div', undefined, 'role-detail-head');
+    head.append(element('h2', view.persona.name, 'role-detail-name'));
+    const close = element('button', '收合', 'role-detail-close');
+    close.type = 'button';
+    close.onclick = () => toggle(view.persona.id, true);
+    head.append(close);
+    detail.append(head);
+    if (personaDescription(view.persona))
+      detail.append(element('p', personaDescription(view.persona), 'role-detail-about'));
+    const facts = element('dl', undefined, 'role-detail-facts');
     const row = (label: string, ...value: (HTMLElement | string)[]) => {
       const dd = element('dd');
       dd.append(...value);
       facts.append(element('dt', label), dd);
     };
-    const legend = element('span', undefined, 'persona-reach-legend');
-    for (const reach of ['REACHABLE', 'POSSIBLE'] as const) {
-      const key = element(
-        'span',
-        `${reachLabel[reach]} ${view.counts[reach]}`,
-        'persona-reach-key',
-      );
-      key.dataset.reach = reach;
-      legend.append(key);
-    }
-    row(
-      '走到的畫面',
-      legend,
-      proportionBar(reachShares(view), reachCountsLabel(view), 'persona-reach-bar', true),
+    const reached = element('span', undefined, 'role-detail-reach');
+    reached.append(
+      element('span', reachCountsLabel(view)),
+      proportionBar(reachShares(view), reachCountsLabel(view), 'role-detail-bar', true),
     );
+    row('走到的畫面', reached);
     const conditions = view.persona.facts.map((fact) => {
-      const chip = element('code', factLabel(fact), 'persona-fact');
+      const chip = element('code', factLabel(fact), 'role-fact');
       chip.dataset.truth = String(fact.truth);
       return chip;
     });
     row(
       '判定條件',
-      ...(conditions.length ? conditions : [element('span', '（沒有條件）', 'muted')]),
+      ...(conditions.length ? conditions : [element('span', '（沒有條件）', 'role-muted')]),
     );
-    row('起點', element('code', (view.persona.startPaths || []).join('、') || '/', 'persona-fact'));
-    main.append(heading);
-    if (personaDescription(view.persona))
-      main.append(element('p', personaDescription(view.persona), 'api-reason'));
-    main.append(facts);
-
-    // The flow as a board: one column per step, each screen a card; a column's heading says how many screens it has.
-    const groups = flowGroups(index, view),
-      steps = groups.filter((g) => g.key.startsWith('step-'));
-    const flowBox = section(`流程 ${view.depth.size} 個畫面`, 'flow');
-    if (!steps.length)
-      flowBox.append(
-        element('p', '這個角色從起點走不到任何畫面；請確認設定中的起點網址與條件。', 'muted'),
-      );
+    row('起點', element('code', (view.persona.startPaths || []).join('、') || '/', 'role-fact'));
+    detail.append(facts);
     if (view.unevaluated)
-      flowBox.append(
+      detail.append(
         element(
           'p',
           `有 ${view.unevaluated} 個導覽的條件程式無法判定，經過它們的畫面以虛線框標為「${reachLabel.POSSIBLE}」。`,
-          'muted',
+          'role-muted',
         ),
       );
-    if (steps.length) {
-      const board = element('div', undefined, 'persona-board');
-      board.setAttribute('role', 'list');
-      board.setAttribute('aria-label', '依步數排列的畫面');
-      for (const group of steps) {
-        const column = element('div', undefined, 'persona-step-group');
-        column.dataset.personaStep = group.key;
-        column.setAttribute('role', 'listitem');
-        column.append(
-          element('h4', `${group.title} · ${group.screens.length}`, 'persona-step-title'),
-        );
-        for (const id of group.screens) column.append(card(view, id));
-        board.append(column);
-      }
-      flowBox.append(board);
-    }
-    main.append(flowBox);
-
-    // The flow board takes the whole width (no side column).
-    inner.append(main);
-    detail.append(inner);
-    detail.scrollTop = 0;
   };
-  sync();
+  const toggle = (id: string, focus = false) => {
+    memory.expanded = memory.expanded === id ? undefined : id;
+    renderDetail();
+    if (focus) roleButtons.find((b) => b.dataset.personaRow === id)?.focus();
+  };
+  if (memory.expanded && !byId.has(memory.expanded)) memory.expanded = undefined;
+  renderDetail();
+
+  // ---- Below the grid: where roles meet, and what no role reaches ----
+  const lower = element('div', undefined, 'role-lower');
+  const chip = (id: string, role: string) => {
+    const button = element('button', name(id), 'role-chip');
+    button.type = 'button';
+    button.dataset.roleTint = tint(role);
+    button.dataset.chipScreen = id;
+    const view = byId.get(role);
+    button.title = view ? `以「${view.persona.name}」打開「${name(id)}」` : `打開「${name(id)}」`;
+    button.onclick = () => options.onOpen(id, view ? role : fallbackRole);
+    return button;
+  };
+  const handoffCard = element('section', undefined, 'role-panel role-handoffs');
+  handoffCard.dataset.roleHandoffs = 'true';
+  handoffCard.append(element('h2', '跨角色的交接點', 'role-panel-title'));
+  const found = handoffs(index, views);
+  if (!found.length) handoffCard.append(element('p', '沒有原始碼可證明的交接點', 'role-muted'));
+  else {
+    handoffCard.append(
+      element(
+        'p',
+        '只列原始碼能證明的關係：一個角色的畫面有連結或按鈕直接前往另一個角色才走得到的畫面，或兩個角色走到同一頁面的不同狀態。',
+        'role-lead',
+      ),
+    );
+    const list = element('ul', undefined, 'role-handoff-list');
+    for (const item of found.slice(0, HANDOFF_LIMIT)) {
+      const li = element('li', undefined, 'role-handoff');
+      li.dataset.handoff = item.kind;
+      const pair = element('span', undefined, 'role-handoff-pair'),
+        arrow = element('span', item.kind === 'link' ? '→' : '↔', 'role-handoff-arrow');
+      arrow.setAttribute('aria-hidden', 'true');
+      pair.append(
+        chip(item.from.screen, item.from.role),
+        arrow,
+        chip(item.to.screen, item.to.role),
+      );
+      const evidence =
+        item.kind === 'state'
+          ? '同一頁面的不同狀態'
+          : item.labels.length
+            ? `按${item.labels.map((label) => `「${label}」`).join('、')}前往`
+            : '有連結前往';
+      li.append(pair, element('span', evidence, 'role-handoff-evidence'));
+      list.append(li);
+    }
+    handoffCard.append(list);
+    if (found.length > HANDOFF_LIMIT)
+      handoffCard.append(
+        element('p', `還有 ${found.length - HANDOFF_LIMIT} 個交接點未列出`, 'role-muted'),
+      );
+  }
+  const nobody = index.screens.map((s) => s.id).filter((id) => roleOf(id) === NO_ROLE);
+  const unreachedCard = element('section', undefined, 'role-panel role-unreached');
+  unreachedCard.dataset.roleUnreached = 'true';
+  unreachedCard.append(
+    element('h2', `任何角色都走不到 · ${nobody.length}`, 'role-panel-title'),
+    element(
+      'p',
+      '只能用網址直接進入的畫面會列在這裡，通常是移除候選，但仍需確認是否有書籤或外部系統連入。',
+      'role-lead',
+    ),
+  );
+  if (nobody.length) {
+    const chips = element('div', undefined, 'role-chips');
+    for (const id of [...nobody]
+      .sort((a, b) => name(a).localeCompare(name(b), 'zh-Hant') || (a < b ? -1 : 1))
+      .slice(0, UNREACHED_LIMIT))
+      chips.append(chip(id, NO_ROLE));
+    unreachedCard.append(chips);
+    if (nobody.length > UNREACHED_LIMIT)
+      unreachedCard.append(
+        element('p', `還有 ${nobody.length - UNREACHED_LIMIT} 個畫面未列出`, 'role-muted'),
+      );
+  }
+  lower.append(handoffCard, unreachedCard);
+  main.append(scroller, detail, lower);
   return root;
 }

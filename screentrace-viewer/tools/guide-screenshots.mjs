@@ -195,7 +195,7 @@ async function main() {
     await toCanvas();
     // 11. The role overview.
     await page.locator('[data-overview-layout="personas"]').click();
-    await page.locator('.persona-step-group').first().waitFor();
+    await page.locator('.role-overview').first().waitFor();
     await screenshot('role-page.png');
     // 12. The API page.
     await tab('API');

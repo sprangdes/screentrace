@@ -1908,6 +1908,7 @@ try {
         personaPage(index, personaViews, {
           selected: personaId,
           status: screenState,
+          conflicts: conflicts(graph, reviewState),
           // A screen opens as that persona; a screen its flow does not reach is shown with the rest of the map.
           onOpen: (screenId, id) => {
             personaId = id;
