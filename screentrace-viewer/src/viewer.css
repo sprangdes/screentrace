@@ -968,3 +968,11 @@ body[data-presenting=true] .present-bar{flex-wrap:nowrap;white-space:nowrap;max-
 body[data-presenting=true] .review-preview .segmented{background:#232833}
 body[data-presenting=true] .review-preview .segmented button{color:#c9ced8;background:transparent;box-shadow:none}
 body[data-presenting=true] .review-preview .segmented button[aria-pressed=true]{background:#3a4150;color:white}
+/* the overview's three layouts, top right of the work area */
+.layout-switch{position:absolute;top:14px;right:16px;z-index:8;background:white;border:1px solid var(--gray-200);box-shadow:var(--shadow-card)}
+.layout-switch button{flex:none;padding:5px 12px;font-size:13px;white-space:nowrap;color:var(--gray-700)}
+.layout-switch button[aria-pressed=true]{background:var(--gray-900);color:white;box-shadow:none}
+/* the API call chain goes on into the backend */
+.api-chain-source{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:var(--mono);font-size:11px;color:var(--gray-500)}
+.api-chain-node:is([data-resolution=UNRESOLVED],[data-resolution=AMBIGUOUS]){border-style:dashed}
+.api-chain-node :is(.api-chain-name,.api-chain-source,.api-chain-trigger){white-space:normal;overflow-wrap:anywhere;text-overflow:clip}

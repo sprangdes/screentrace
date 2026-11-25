@@ -1764,6 +1764,39 @@ try {
     return view;
   };
   const viewerScroll = () => viewer?.querySelector('.prototype-scroll')?.scrollTop || 0;
+  // The overview offers its three layouts in one place (ADR 0189): the free map, by feature, and by role step.
+  const layoutSwitch = element('div', undefined, 'segmented layout-switch');
+  layoutSwitch.setAttribute('role', 'group');
+  layoutSwitch.setAttribute('aria-label', '總覽版面');
+  const layouts: { key: 'canvas' | 'features' | 'personas'; label: string }[] = [
+    ...(personaViews.length ? [{ key: 'personas' as const, label: '依角色步驟' }] : []),
+    { key: 'features', label: '依功能' },
+    { key: 'canvas', label: '自由畫布' },
+  ];
+  const layoutButtons = layouts.map((layout) => {
+    const button = element('button', layout.label);
+    button.type = 'button';
+    button.dataset.overviewLayout = layout.key;
+    button.onclick = () => {
+      setPresenting(false);
+      current = undefined;
+      if (layout.key === 'personas') page = 'personas';
+      else {
+        page = 'screens';
+        if (layout.key === 'features') listMode = 'features';
+        else if (listMode === 'features') listMode = 'list';
+      }
+      render();
+    };
+    layoutSwitch.append(button);
+    return button;
+  });
+  const mountLayoutSwitch = () => {
+    const on = page === 'personas' ? 'personas' : listMode === 'features' ? 'features' : 'canvas';
+    for (const button of layoutButtons)
+      button.setAttribute('aria-pressed', String(button.dataset.overviewLayout === on));
+    if (!main.contains(layoutSwitch)) main.append(layoutSwitch);
+  };
   // Full-window preview keeps the review going: a floating bar to decide, move on and leave (ADR 0189).
   const presentBar = element('div', undefined, 'present-bar');
   presentBar.setAttribute('role', 'toolbar');
@@ -1821,6 +1854,7 @@ try {
           },
         }),
       );
+      mountLayoutSwitch();
       view = undefined;
       frame = undefined;
       viewer = undefined;
@@ -1873,6 +1907,7 @@ try {
           }),
         }),
       );
+      mountLayoutSwitch();
       view = undefined;
       frame = undefined;
       viewer = undefined;
@@ -1909,6 +1944,7 @@ try {
     stage = undefined;
     const canvasView = ensureCanvas();
     canvasView.update(canvasState());
+    mountLayoutSwitch();
   };
 
   let pendingNotice: string | undefined;

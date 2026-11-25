@@ -1130,10 +1130,40 @@ export function apiPage(index: Index, state: ReviewState, options: ApiPageOption
     for (const handler of record.handlers.slice(0, CHAIN_LIMIT)) {
       const node = element('span', undefined, 'api-chain-node');
       node.append(element('span', handler.name, 'api-chain-name'));
+      // Where it is written, so the chain can be followed into the source (traceability).
+      if (handler.source?.file)
+        node.append(
+          element(
+            'span',
+            `${handler.source.file.split('/').pop()}${handler.source.line ? `:${handler.source.line}` : ''}`,
+            'api-chain-source',
+          ),
+        );
+      node.title = handler.source?.file || handler.name;
       to.items.append(node);
     }
     more(to.items, handlerCount - CHAIN_LIMIT, '處理程式');
     chain.append(from.box, arrow(), api.box, arrow(), to.box);
+    // The handler's own calls into the project's services and DAOs, as the analysis proved them (ADR 0156, 0189).
+    const calls = record.handlers
+      .flatMap((handler) => backendCalls(handler))
+      .sort((a, b) => a.depth - b.depth || (a.to < b.to ? -1 : a.to > b.to ? 1 : 0))
+      .filter((call, i, all) => all.findIndex((c) => c.to === call.to) === i);
+    if (calls.length) {
+      const backend = stage('backend', `Service／DAO ${calls.length}`);
+      for (const call of calls.slice(0, CHAIN_LIMIT)) {
+        const node = element('span', undefined, 'api-chain-node');
+        node.dataset.resolution = call.resolution;
+        node.append(
+          element('span', call.to, 'api-chain-name'),
+          element('span', `${call.layer} · 第 ${call.depth} 層`, 'api-chain-trigger'),
+        );
+        node.title = `${call.from} → ${call.to}（${call.resolution}${call.reason ? `：${call.reason}` : ''}）`;
+        backend.items.append(node);
+      }
+      more(backend.items, calls.length - CHAIN_LIMIT, '呼叫');
+      chain.append(arrow(), backend.box);
+    }
     return chain;
   };
   const section = (heading: string) => {
