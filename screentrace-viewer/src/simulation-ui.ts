@@ -4,6 +4,8 @@ import { assessSimulation, Effect, staticAction, choiceLeaves } from './simulati
 import { previewElement, previewSelector, registerPreviewClone } from './preview';
 import { Payload, ElementRecord } from './contracts';
 import { element } from './text';
+import { revealInPreview } from './reveal';
+import { rememberSubmission } from './journey-data';
 
 const operable = 'a,button,form,select,input,textarea';
 const eventElement = (target: EventTarget | null): Element | null => {
@@ -46,7 +48,7 @@ function submitControl(node: Element): boolean {
   );
 }
 
-/** Simulates a click as the real page would: a submit control acts for its form, and forms are always treated as valid. */
+/** Maps the click to its graph component or containing form and reads checkbox state for replay. */
 export function simulateElement(
   payload: Payload,
   id: string,
@@ -56,9 +58,17 @@ export function simulateElement(
   event?: string,
 ) {
   const own = previewElement(payload, id, node),
+    attributes = payload.graph.nodes.find((n) => n.id === own?.graphComponentId)?.attributes,
     submitter =
-      payload.graph.nodes.find((n) => n.id === own?.graphComponentId)?.attributes
-        .submitterAction === 'true' ||
+      attributes?.submitterAction === 'true' ||
+      attributes?.formaction != null ||
+      attributes?.formmethod != null ||
+      payload.graph.relationships?.some(
+        (edge) =>
+          edge.from === own?.graphComponentId &&
+          edge.type === 'NAVIGATES_TO' &&
+          edge.evidence?.some((e) => e.parser === 'JspStateTransition'),
+      ) ||
       payload.graph.behaviors?.some(
         (b) =>
           b.triggerId === own?.graphComponentId && staticAction(b)?.operation === 'preventSubmit',
@@ -75,6 +85,22 @@ export function simulateElement(
       : null;
   const target = form || parentLink || node,
     record = previewElement(payload, id, target);
+  const submittedForm = submitControl(node)
+    ? (node as HTMLButtonElement | HTMLInputElement).form
+    : node.localName === 'form'
+      ? (node as HTMLFormElement)
+      : undefined;
+  const uncheckedRequired =
+    !!submittedForm &&
+    !submittedForm.noValidate &&
+    !node.hasAttribute('formnovalidate') &&
+    Array.from(submittedForm.elements).some(
+      (field) =>
+        field.matches('input[type="checkbox"][required]:not(:disabled)') &&
+        !(field as HTMLInputElement).checked &&
+        !field.closest('[hidden]') &&
+        field.getClientRects().length > 0,
+    );
   const identity = target.getAttribute('data-st-component-id');
   if (
     !componentId &&
@@ -87,6 +113,7 @@ export function simulateElement(
     tag: target.localName,
     href: target.getAttribute('href') || undefined,
     valid: true,
+    uncheckedRequired,
     dialogIds,
     componentId,
     event,
@@ -374,6 +401,26 @@ export function attachSimulation(
             : n.nextElementSibling,
         )
         .filter((n): n is Element => !!n);
+    if (effect.operation === 'filterVisibility') {
+      if (!effect.inputSelector || !/^data-[a-z][a-z0-9-]*$/.test(effect.property || '')) return;
+      try {
+        let input = doc.querySelector(effect.inputSelector);
+        if (
+          input &&
+          effect.inputTag &&
+          input.tagName !== effect.inputTag &&
+          effect.fallbackSelector
+        )
+          input = doc.querySelector(effect.fallbackSelector);
+        if (!input || !['select', 'input', 'textarea'].includes(input.localName)) return;
+        const value = (input as HTMLInputElement).value;
+        for (const target of targets) {
+          const equal = target.getAttribute(effect.property!) === value;
+          (target as HTMLElement).hidden = effect.value === '===' ? equal : !equal;
+        }
+      } catch {}
+      return;
+    }
     for (const target of targets) {
       if (effect.operation === 'toggleDisclosure' && effect.inputSelector) {
         let button: Element | null = null;
@@ -469,8 +516,57 @@ export function attachSimulation(
       }
     }
   };
+  // Like a browser's own check: show the first unchecked required box where it is (ADR 0186).
+  let bubble: HTMLElement | undefined;
+  const clearRequired = () => {
+    bubble?.remove();
+    bubble = undefined;
+    doc.querySelectorAll<HTMLElement>('[data-st-required-mark]').forEach((n) => {
+      n.style.outline = n.dataset.stRequiredMark || '';
+      delete n.dataset.stRequiredMark;
+    });
+  };
+  const markRequired = (node: Element) => {
+    clearRequired();
+    const form =
+      node.localName === 'form'
+        ? (node as HTMLFormElement)
+        : (node as HTMLButtonElement | HTMLInputElement).form || node.closest('form');
+    const missing = Array.from(form?.elements || []).filter(
+      (field) =>
+        field.matches('input[type="checkbox"][required]:not(:disabled)') &&
+        !(field as HTMLInputElement).checked &&
+        field.getClientRects().length > 0,
+    ) as HTMLInputElement[];
+    if (!missing.length) return;
+    for (const field of missing) {
+      const box = (field.closest('label') || field) as HTMLElement;
+      box.dataset.stRequiredMark = box.style.outline;
+      box.style.outline = '2px solid #c62828';
+      box.style.outlineOffset = '3px';
+    }
+    const first = missing[0];
+    bubble = doc.createElement('div');
+    bubble.dataset.stSimulationUi = 'true';
+    bubble.setAttribute('role', 'alert');
+    bubble.textContent = '請勾選此方塊';
+    const rect = first.getBoundingClientRect(),
+      win = doc.defaultView!;
+    bubble.style.cssText = `position:absolute;left:${rect.left + win.scrollX}px;top:${rect.bottom + win.scrollY + 8}px;z-index:2147483647;background:#fff;color:#1b1e22;border:1px solid #c62828;border-radius:6px;padding:6px 10px;font:14px/1.4 system-ui,sans-serif;box-shadow:0 2px 8px #0003;`;
+    doc.body.append(bubble);
+    first.focus({ preventScroll: true });
+    revealInPreview(first, frame, viewer.querySelector('.prototype-scroll'), 'smooth');
+  };
+  doc.addEventListener('change', (event) => {
+    if ((event.target as Element | null)?.matches?.('input[type="checkbox"]')) clearRequired();
+  });
   const render = (effect: Effect, record: ElementRecord | undefined, node: Element) => {
     status.replaceChildren();
+    if (effect.kind === 'invalid') {
+      say(effect.message || '請確認必填項目');
+      markRequired(node);
+      return;
+    }
     if (effect.kind === 'confirm') {
       message(effect.message || '');
       const modal = doc.querySelector('.simulation-modal')!,
@@ -588,11 +684,23 @@ export function attachSimulation(
           return;
         }
       }
+      const submitted =
+        node.localName === 'form'
+          ? (node as HTMLFormElement)
+          : submitControl(node)
+            ? (node as HTMLButtonElement).form
+            : null;
+      if (submitted) rememberSubmission(submitted);
       setModelFeedback(payload, effect.targetId, effect.feedback ?? {});
       setSubmittedValues(payload, effect.targetId, effect.inputProjection ?? {}, node);
       options.focus(
         effect.targetId,
-        dataNotice || (effect.inputProjection ? '已回放提交欄位；其他資料為來源範例' : undefined),
+        dataNotice ||
+          (effect.message
+            ? `模擬結果：${effect.message}`
+            : effect.inputProjection
+              ? '已回放提交欄位；其他資料為來源範例'
+              : undefined),
       );
       return;
     }
@@ -645,7 +753,7 @@ export function attachSimulation(
       const submission = event as SubmitEvent;
       submit(
         event.target as HTMLFormElement,
-        submission.submitter instanceof Element ? submission.submitter : null,
+        submission.submitter?.nodeType === 1 ? submission.submitter : null,
       );
     },
     true,

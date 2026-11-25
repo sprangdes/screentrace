@@ -583,6 +583,7 @@ function placeholder(expression) {
   const value = expression.trim();
   const escaped = value.match(/^fn:escapeXml\((.+)\)$/);
   if (escaped) return placeholder(escaped[1]);
+  if (/(^|[._])(premium|amount|total|price|fee)$/i.test(value)) return '1,000';
   if (value.includes('pageContext')) return '';
   if (/\.id$/.test(value)) return '1';
   if (/\.(firstName|givenName)$/.test(value)) return 'Alex';
@@ -597,13 +598,25 @@ function placeholder(expression) {
   if (/errorMessage/.test(value)) return 'Validation message';
   return value.split(/[.[' ]/)[0].replace(/^./, (c) => c.toUpperCase()) || 'Sample value';
 }
-function replaceExpressions(source, values = {}) {
+function replaceExpressions(source, values = {}, facts = {}) {
   if (previewV2)
     return replaceDynamicExpressions(source, (expression) => {
       const value = expression.trim(),
         escaped = value.match(/^fn:escapeXml\((.+)\)$/)?.[1];
+      const alternatives = value.match(
+        /^(.+?)\s*\?\s*(['"])([^'"\\]*)\2\s*:\s*(['"])([^'"\\]*)\4$/,
+      );
+      if (alternatives) {
+        const guard = alternatives[1].trim();
+        const decision =
+          jspBoolean(guard, facts, false) ??
+          (/^empty\s+[\w.]+$/.test(guard) || /^[\w.]+\s+(?:eq|==)\s*['"]/.test(guard));
+        return decision ? alternatives[3] : alternatives[5];
+      }
       return (
-        values[value] ?? (escaped ? (values[escaped] ?? placeholder(escaped)) : placeholder(value))
+        values[value] ??
+        (Object.hasOwn(facts, value) ? facts[value] : undefined) ??
+        (escaped ? (values[escaped] ?? placeholder(escaped)) : placeholder(value))
       );
     });
   return source.replace(/\$\{([^}]+)\}/g, (_, expression) => {
@@ -613,6 +626,225 @@ function replaceExpressions(source, values = {}) {
       values[value] ?? (escaped ? (values[escaped] ?? placeholder(escaped)) : placeholder(value))
     );
   });
+}
+
+/**
+ * Boolean attributes written as EL (`readonly="${not empty form.previousId}"`) take any value as
+ * true in HTML, so sample text would lock the field. Decide them from the screen's facts; an
+ * undecided one is left off so the preview stays usable (ADR 0187).
+ */
+function booleanAttributes(source, facts) {
+  return source.replace(
+    /(\s)(readonly|disabled|checked|selected|multiple|hidden|required)\s*=\s*(["'])\s*\$\{([^}]*)\}\s*\3/gi,
+    (_, space, name, quote, guard) => {
+      const text = guard.trim();
+      const value =
+        text === 'true' ? true : text === 'false' ? false : jspBoolean(text, facts, false);
+      return value ? `${space}${name}=${quote}${name}${quote}` : '';
+    },
+  );
+}
+
+function jspBoolean(guard, facts, snapshot) {
+  const atom = (text) => {
+    const compare = text.match(/^([A-Za-z_][\w.]*)\s+(eq|ne|==|!=)\s+(['"])([A-Z][A-Z0-9_]*)\3$/);
+    if (compare && Object.hasOwn(facts, compare[1]))
+      return (facts[compare[1]] === compare[4]) === ['eq', '=='].includes(compare[2]);
+    const flag = text.match(/^([A-Za-z_][\w.]*)\s+(eq|ne|==|!=)\s+(true|false)$/);
+    if (flag && typeof facts[flag[1]] === 'boolean')
+      return (facts[flag[1]] === (flag[3] === 'true')) === ['eq', '=='].includes(flag[2]);
+    const empty = text.match(/^(not\s+|!\s*)?empty\s+([A-Za-z_][\w.]*)$/);
+    if (empty && typeof facts['#empty:' + empty[2]] === 'boolean')
+      return empty[1] ? !facts['#empty:' + empty[2]] : facts['#empty:' + empty[2]];
+    const simple = text.match(/^(?:(not\s+|!\s*))?([A-Za-z_][\w.]*)$/);
+    if (simple && typeof facts[simple[2]] === 'boolean')
+      return simple[1] ? !facts[simple[2]] : facts[simple[2]];
+    if (snapshot && /^not\s+empty\s+[A-Za-z_][\w.]*$/.test(text)) return false;
+    return undefined;
+  };
+  const results = guard.split(/\s+(?:or|\|\|)\s+/).map((terms) => {
+    const values = terms.split(/\s+(?:and|&&)\s+/).map((text) => atom(text.trim()));
+    return values.includes(false)
+      ? false
+      : values.every((value) => value === true)
+        ? true
+        : undefined;
+  });
+  return results.includes(true)
+    ? true
+    : results.every((value) => value === false)
+      ? false
+      : undefined;
+}
+
+function screenModelFacts(screen) {
+  // A request-mode screen has renders of its own (ADR 0186); a JSP state screen uses its base's.
+  const own = (graph.relationships || []).filter(
+    (edge) => edge.type === 'RENDERS' && edge.to === screen.id,
+  );
+  const renders = own.length
+    ? own
+    : (graph.relationships || []).filter(
+        (edge) =>
+          edge.type === 'RENDERS' && edge.to === (screen.attributes?.stateVariantOf || screen.id),
+      );
+  const facts = renders.map((edge) => {
+    const values = Object.create(null);
+    for (const item of edge.evidence || [])
+      if (item.parser === 'SpringRequestCondition')
+        try {
+          const condition = JSON.parse(item.detail);
+          if (condition.modelAttribute && ['true', 'false'].includes(condition.negated))
+            values[condition.modelAttribute] = condition.negated === 'false';
+          for (const [key, value] of Object.entries(condition.derivedFacts || {}))
+            if (typeof value === 'boolean') values[key] = value;
+        } catch {
+          // Model hints are optional.
+        }
+    return values;
+  });
+  const common = Object.fromEntries(
+    Object.entries(facts[0] || {}).filter(([key, value]) =>
+      facts.every((candidate) => candidate[key] === value),
+    ),
+  );
+  try {
+    // Session values the application's access rule proves for this screen (ADR 0188).
+    for (const [key, value] of Object.entries(JSON.parse(screen.attributes?.sessionFacts || '{}')))
+      if (typeof value === 'boolean') common[key] = value;
+  } catch {
+    // No session facts.
+  }
+  try {
+    for (const [key, value] of Object.entries(JSON.parse(screen.attributes?.requestFacts || '{}')))
+      if (typeof value?.empty === 'boolean') common['#empty:' + key] = value.empty;
+  } catch {
+    // No request mode.
+  }
+  return common;
+}
+
+function stripJstlUrlDefinitions(source) {
+  let depth = 0;
+  return markupTokens(source)
+    .map((token) => {
+      if (token.name === 'c:url' && !token.closing && (depth || markupAttributes(token.text).var)) {
+        if (!token.selfClosing) depth++;
+        return '';
+      }
+      if (!depth) return token.text;
+      if (token.name === 'c:url' && token.closing) depth--;
+      return '';
+    })
+    .join('');
+}
+
+function sampleFilteredRows(source, screen, sampleGuards) {
+  const filter = (graph.behaviors || [])
+    .filter((b) => b.triggerId === screen.id && b.event === 'load')
+    .flatMap((b) => b.evidence || [])
+    .filter((e) => e.parser === 'AcornStaticAnalyzer')
+    .map((e) => {
+      try {
+        return JSON.parse(e.detail);
+      } catch {
+        return null;
+      }
+    })
+    .find(
+      (action) =>
+        action?.operation === 'filterVisibility' &&
+        /^\.[A-Za-z_][\w-]*$/.test(action.selector) &&
+        /^#[A-Za-z_][\w-]*$/.test(action.inputSelector) &&
+        /^data-[a-z][a-z0-9-]*$/.test(action.property),
+    );
+  if (!filter) return source;
+  const tokens = markupTokens(source);
+  const select = tokens.findIndex(
+    (token) =>
+      !token.closing &&
+      ['select', 'form:select'].includes(token.name) &&
+      markupAttributes(token.text).id === filter.inputSelector.slice(1),
+  );
+  if (select < 0) return source;
+  const end = tokens.findIndex(
+    (token, i) => i > select && token.closing && token.name === tokens[select].name,
+  );
+  if (end < 0) return source;
+  const options = [
+    ...new Set(
+      tokens
+        .slice(select + 1, end)
+        .filter((token) => !token.closing && ['option', 'form:option'].includes(token.name))
+        .map((token) => markupAttributes(token.text).value)
+        .filter((value) => /^[A-Za-z0-9_.-]{1,64}$/.test(value || '')),
+    ),
+  ];
+  if (options.length < 2 || options.length > 8) return source;
+  let result = '',
+    cursor = 0;
+  for (let i = 0; i < tokens.length; i++) {
+    const begin = tokens[i];
+    if (begin.name !== 'c:foreach' || begin.closing || begin.selfClosing) continue;
+    const variable = markupAttributes(begin.text).var;
+    if (!/^[A-Za-z_][\w]*$/.test(variable || '')) continue;
+    const close = tokens.findIndex((token, at) => at > i && token.name === 'c:foreach');
+    if (close < 0 || !tokens[close].closing) continue;
+    const rows = tokens
+      .slice(i + 1, close)
+      .filter(
+        (token) =>
+          token.name &&
+          !token.closing &&
+          (markupAttributes(token.text).class || '')
+            .split(/\s+/)
+            .includes(filter.selector.slice(1)),
+      );
+    if (
+      rows.length !== 1 ||
+      tokens
+        .slice(i + 1, close)
+        .some(
+          (token) =>
+            token.name &&
+            ['a', 'button', 'input', 'select', 'textarea', 'form'].includes(token.name),
+        )
+    )
+      continue;
+    const row = rows[0],
+      attributes = markupAttributes(row.text);
+    const expression = attributes[filter.property]?.match(
+      /(?:^|value\s*=\s*['"])\$\{([\w]+\.[\w]+)}(?:$|['"])/,
+    )?.[1];
+    if (!expression?.startsWith(variable + '.')) continue;
+    const start = begin.start + begin.text.length;
+    const body = source.slice(start, tokens[close].start);
+    result += source.slice(cursor, begin.start);
+    for (const [index, value] of options.entries()) {
+      const hidden = filter.value === '===' ? index === 0 : index !== 0;
+      const opening = replaceMarkupAttribute(row.text, filter.property, value).replace(
+        /\s*(\/?)>$/,
+        (_, slash) => (hidden ? ' hidden' : '') + slash + '>',
+      );
+      const sample =
+        body.slice(0, row.start - start) +
+        opening +
+        body.slice(row.start - start + row.text.length);
+      result += sample.replace(
+        /\$\{([\w]+\.[\w]+)\s+(?:eq|==)\s+(['"])([\w.-]+)\2\s*\?\s*(['"])([^'"\\]*)\4\s*:\s*(['"])([^'"\\]*)\6}/g,
+        (raw, property, _a, expected, _b, yes, _c, no) =>
+          property === expression ? escapeHtml(value === expected ? yes : no) : raw,
+      );
+    }
+    cursor = tokens[close].start + tokens[close].text.length;
+    i = close;
+  }
+  if (cursor > 0) {
+    const when = tokens.slice(0, select).findLast((token) => token.name === 'c:when');
+    const test = when && !when.closing && markupAttributes(when.text).test;
+    if (test && /^\$\{empty\s+[\w]+\.[\w]+}$/.test(test)) sampleGuards.add(test);
+  }
+  return result + source.slice(cursor);
 }
 let localTagDirs = new Map(),
   previewExpressions = new Set();
@@ -820,6 +1052,10 @@ function htmlControls(source) {
       /<fmt:formatDate\b([^>]*)\/>/g,
       (_, attributeText) => attrs(attributeText).value || '2020-05-12',
     )
+    .replace(
+      /<fmt:formatNumber\b([^>]*)\/>/g,
+      (_, attributeText) => attrs(attributeText).value || '1,000',
+    )
     .replace(/<spring:url\s+value=["']([^"']+)["'][^>]*\/>/g, '$1')
     .replace(/<form:form\b([^>]*)>/g, '<form$1>')
     .replace(/<\/form:form>/g, '</form>')
@@ -949,6 +1185,14 @@ async function renderJsp(screen) {
   source = await expandTags(source, { customScript: custom });
   source = renderStrutsMessages(source, strutsMessages);
   source = renderUnsupportedJsfTags(source);
+  const modelFacts = previewV2 ? screenModelFacts(screen) : {};
+  const stateField = screen.attributes?.jspStateField;
+  if (stateField) {
+    modelFacts[stateField] = screen.attributes.jspStateValue;
+    if (stateField.endsWith('.code'))
+      modelFacts[stateField.replace(/\.code$/, '.label')] =
+        screen.attributes.jspStateLabel || screen.attributes.jspStateValue;
+  }
   const urls = {};
   source = source.replace(/<spring:url\b([^>]*?)\/>/g, (_, attributeText) => {
     const attributes = attrs(attributeText);
@@ -965,11 +1209,22 @@ async function renderJsp(screen) {
     return '';
   });
   if (previewV2) {
-    source = convertControls(annotateConditions(source));
+    source = stripJstlUrlDefinitions(source);
+    const sampleGuards = new Set();
+    source = sampleFilteredRows(source, screen, sampleGuards);
+    source = convertControls(
+      annotateConditions(source, (guard) =>
+        sampleGuards.has(guard)
+          ? true
+          : jspBoolean(guard.replace(/^\$\{(.*)}$/, '$1').trim(), modelFacts, !!stateField),
+      ),
+    );
     source = source.replace(/<%(?!@|--)[\s\S]*?%>/g, '示例值');
   }
   if (previewV2) source = await projectRequestAssets(source, screen);
-  source = rewriteAssetUrls(htmlControls(replaceExpressions(source, urls)));
+  source = rewriteAssetUrls(
+    htmlControls(replaceExpressions(booleanAttributes(source, modelFacts), urls, modelFacts)),
+  );
   if (!/<html[\s>]/i.test(source))
     source = `<!doctype html><html><head></head><body>${source}</body></html>`;
   source = source
@@ -1157,19 +1412,29 @@ async function captureScreen(screen, page, context, r) {
     }));
     const width = Math.min(4096, Math.max(1, dimensions.width));
     const height = Math.min(16384, Math.max(1, dimensions.height), Math.floor(16_000_000 / width));
-    r.interactions = { width, height, items };
     const file = `static-${screen.id.replace(/[^a-z0-9-]/gi, '_')}.png`;
     const screenshot = await page.screenshot({
       timeout: 5_000,
+      // With fullPage, Playwright applies the clip to the document rather than the viewport.
+      fullPage: true,
       clip: { x: 0, y: 0, width, height },
+      scale: 'css',
       animations: 'disabled',
     });
+    const capturedWidth = screenshot.readUInt32BE(16);
+    const capturedHeight = screenshot.readUInt32BE(20);
+    r.interactions = { width: capturedWidth, height: capturedHeight, items };
     await writeBufferWithin(output, path.join(screenshotRootReal, file), screenshot);
     r.screenshots = `screenshots/${file}`;
     if (previewV2) {
-      r.styleScreen.thumbnail = await thumbnailDataUri(context, screenshot, width, height);
-      r.styleScreen.width = width;
-      r.styleScreen.height = height;
+      r.styleScreen.thumbnail = await thumbnailDataUri(
+        context,
+        screenshot,
+        capturedWidth,
+        capturedHeight,
+      );
+      r.styleScreen.width = capturedWidth;
+      r.styleScreen.height = capturedHeight;
       if (width < dimensions.width || height < dimensions.height) {
         const diagnostic = {
           code: 'SCREENSHOT_DIMENSION_LIMIT',

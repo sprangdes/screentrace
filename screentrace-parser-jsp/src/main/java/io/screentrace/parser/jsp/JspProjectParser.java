@@ -161,6 +161,7 @@ public final class JspProjectParser {
             MarkupAnalysis.componentId(
                 relative, componentKind, tagName, tag.attributes(), componentOccurrences);
       int interactionStart = interactions.size();
+      int diagnosticStart = diagnostics.size();
       UrlVariableResolver.Resolution resolution = null;
       switch (tagName) {
         case "spring:url", "c:url" -> {}
@@ -280,6 +281,10 @@ public final class JspProjectParser {
         }
         default -> {}
       }
+      if (resolution != null && !resolution.alternatives().isEmpty())
+        diagnostics
+            .subList(diagnosticStart, diagnostics.size())
+            .removeIf(d -> "JSP_UNRESOLVED".equals(d.code()));
       if (resolution != null)
         for (int i = interactionStart; i < interactions.size(); i++) {
           var item = interactions.get(i);
@@ -298,6 +303,10 @@ public final class JspProjectParser {
                   ? Confidence.INFERRED
                   : item.confidence();
           var proof = new ArrayList<>(resolution.definitions());
+          if (!resolution.alternatives().isEmpty()) {
+            confidence = Confidence.AMBIGUOUS;
+            proof.add(ConditionalUrlTargets.jspEvidence(source, resolution.alternatives()));
+          }
           if (template != null)
             proof.add(
                 new io.screentrace.core.ApplicationGraph.AnalysisEvidence(

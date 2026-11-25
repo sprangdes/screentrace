@@ -1,4 +1,5 @@
 import { Graph, Node, Behavior, requireGraph } from './contracts';
+import { permitsRender, screenScopes } from './request-outcomes';
 /** The behavior that starts `b`'s chain: `b` itself when it has a trigger, otherwise its
  * nearest ancestor with one (or the last one reachable), stopping at a cycle. */
 export function rootBehavior(behaviors: Map<string, Behavior>, b: Behavior): Behavior {
@@ -67,7 +68,10 @@ export function indexGraph(input: Graph): Index {
           continue;
         }
         for (const e of outgoing.get(current) || [])
-          if (['HANDLED_BY', 'RENDERS', 'FORWARDS_TO', 'NAVIGATES_TO'].includes(e.type))
+          if (
+            ['HANDLED_BY', 'RENDERS', 'FORWARDS_TO', 'NAVIGATES_TO'].includes(e.type) &&
+            permitsRender(e, id)
+          )
             queue.push(e.to);
       }
       const resolved = [...result].sort(order);
@@ -83,10 +87,23 @@ export function indexGraph(input: Graph): Index {
         for (const value of [n.attributes.path, n.attributes.route, n.attributes.url])
           if (value) routes.get(id)!.add(value);
   const pairs = new Map<string, Relation>();
+  for (const screen of screens) {
+    const base = screen.attributes.stateVariantOf;
+    if (base) for (const route of routes.get(base) || []) routes.get(screen.id)!.add(route);
+  }
+  const scopes = screenScopes(edges);
+  // A shared component narrowed on one screen reaches only what its kept endpoints reach there.
+  const scoped = (from: string, trigger: string, target: string, to: string) => {
+    const allowed = scopes.get(from + '\u0000' + trigger);
+    if (!allowed) return true;
+    if (nodes.get(target)?.type === 'ENDPOINT') return allowed.has(target);
+    return [...allowed].some((endpoint) => destinations(endpoint).includes(to));
+  };
   const add = (trigger: string, target: string, behavior?: string) => {
     const sources = nodes.get(trigger)?.type === 'SCREEN' ? [trigger] : owners.get(trigger) || [];
     for (const from of sources)
       for (const to of destinations(target)) {
+        if (!scoped(from, trigger, target, to)) continue;
         const key = JSON.stringify([from, to]),
           r = pairs.get(key) || { from, to, triggers: [], behaviorIds: [] };
         if (nodes.get(trigger)?.type !== 'SCREEN') r.triggers.push(trigger);
@@ -105,9 +122,32 @@ export function indexGraph(input: Graph): Index {
   // A request proven to be only an API call (e.g. fetch of a fragment) is not a page transition; the behavior loop below still adds external logins.
   const apiOnly = requests(['CALL_API']),
     navigations = requests(['NAVIGATE', 'SUBMIT_FORM']);
+  const stateForms = new Set<string>();
+  for (const edge of edges) {
+    if (edge.type !== 'NAVIGATES_TO') continue;
+    const request = edge.evidence?.find((p) => p.parser === 'JspStateTransition')?.detail;
+    const form = nodes.get(edge.from)?.attributes.formId;
+    const base = nodes.get(edge.to)?.attributes.stateVariantOf;
+    if (!form || !request || !base) continue;
+    stateForms.add(JSON.stringify([form, request]));
+    stateForms.add(JSON.stringify([form, base]));
+  }
+  const narrowed = new Set(
+    edges
+      .filter(
+        (e) =>
+          e.type === 'NAVIGATES_TO' &&
+          e.evidence?.some((p) =>
+            ['SpringRequestCondition', 'JspStateTransition'].includes(p.parser),
+          ),
+      )
+      .map((e) => e.from),
+  );
   for (const e of edges)
     if (['NAVIGATES_TO', 'TRIGGERS', 'FORWARDS_TO'].includes(e.type)) {
       const key = JSON.stringify([e.from, e.to]);
+      if (stateForms.has(key)) continue;
+      if (e.type === 'TRIGGERS' && narrowed.has(e.from)) continue;
       if (e.type === 'TRIGGERS' && apiOnly.has(key) && !navigations.has(key)) continue;
       add(e.from, e.to);
     }
@@ -118,7 +158,12 @@ export function indexGraph(input: Graph): Index {
         (b.type === 'CALL_API' && nodes.get(b.targetId)?.attributes.externalLogin === 'true'))
     ) {
       const trigger = rootTrigger(b);
-      if (trigger) add(trigger, b.targetId, b.id);
+      if (
+        trigger &&
+        !narrowed.has(trigger) &&
+        !stateForms.has(JSON.stringify([trigger, b.targetId]))
+      )
+        add(trigger, b.targetId, b.id);
     }
   const relations = [...pairs.values()].sort((a, b) => order(a.from, b.from) || order(a.to, b.to));
   for (const r of relations) {
@@ -131,7 +176,10 @@ export function indexGraph(input: Graph): Index {
       if (handled.type === 'HANDLED_BY') {
         const handlerEdges = outgoing.get(handled.to) || [],
           rendered = handlerEdges.filter(
-            (edge) => edge.type === 'RENDERS' && nodes.get(edge.to)?.type === 'SCREEN',
+            (edge) =>
+              edge.type === 'RENDERS' &&
+              nodes.get(edge.to)?.type === 'SCREEN' &&
+              permitsRender(edge, endpoint.id),
           ),
           outcomes = handlerEdges.filter((edge) =>
             ['RENDERS', 'FORWARDS_TO'].includes(edge.type),
@@ -147,7 +195,10 @@ export function indexGraph(input: Graph): Index {
       }
   const displayRoutes = new Map<string, string[]>();
   for (const screen of screens) {
-    const candidates = endpointCandidates.get(screen.id) || new Map<string, number>(),
+    const candidates =
+        endpointCandidates.get(screen.id) ||
+        endpointCandidates.get(screen.attributes.stateVariantOf || '') ||
+        new Map<string, number>(),
       explicit = screen.attributes.route || screen.attributes.url || screen.attributes.path;
     displayRoutes.set(
       screen.id,
@@ -329,8 +380,43 @@ export function searchScreens(index: Index, query: string): Set<string> {
       .map((s) => s.id),
   );
 }
-export function fileEntries(index: Index): { path: string; screenId: string }[] {
+/**
+ * The source file each screen is written in. A Tiles screen's `view` is its shared layout; the page
+ * itself is the definition's body (or its only JSP attribute), which is what the file list shows.
+ */
+export function fileEntries(index: Index): { path: string; screenId: string; layout?: string }[] {
   return index.screens
-    .map((s) => ({ path: s.attributes.view || s.source?.file || s.name, screenId: s.id }))
-    .sort((a, b) => order(a.path, b.path) || order(a.screenId, b.screenId));
+    .map((s) => {
+      const view = s.attributes.view || s.source?.file || s.name;
+      const body = tilesBody(s.attributes.tilesAttributes);
+      return body && body !== view
+        ? { path: body, screenId: s.id, layout: view }
+        : { path: view, screenId: s.id };
+    })
+    .sort((a, b) => {
+      // Within one file: each screen together, its states in flow order.
+      const x = index.nodes.get(a.screenId)!,
+        y = index.nodes.get(b.screenId)!;
+      const state = (n: typeof x) => Number(n.attributes.jspStateOrder ?? 0);
+      return (
+        order(a.path, b.path) ||
+        order(x.attributes.tilesDefinitionName || '', y.attributes.tilesDefinitionName || '') ||
+        state(x) - state(y) ||
+        order(a.screenId, b.screenId)
+      );
+    });
+}
+function tilesBody(raw: string | undefined): string | undefined {
+  if (!raw) return undefined;
+  try {
+    const attributes = JSON.parse(raw)?.attributes || {};
+    const pages = Object.entries(attributes as Record<string, { path?: unknown }>)
+      .map(([name, value]) => [name, value?.path] as const)
+      .filter((entry): entry is readonly [string, string] => typeof entry[1] === 'string')
+      .filter(([, path]) => path.endsWith('.jsp') || path.endsWith('.jspf'));
+    return (pages.find(([name]) => name === 'body') ||
+      (pages.length === 1 ? pages[0] : undefined))?.[1];
+  } catch {
+    return undefined;
+  }
 }

@@ -49,7 +49,14 @@ Controller、回傳 view、表單綁定與伺服器端檢核以 JavaParser 靜�
 |---|---|---|
 | [0013](0013-request-behavior-endpoint-correlation.md) | 請求行為與後端端點對應 | 有效 |
 | [0014](0014-server-contracts-and-validation.md) | API 契約與 SERVER 檢核的靜態來源 | 有效 |
-| [0037](0037-controller-return-flow.md) | Controller 回傳與表單畫面流程 | 有效 |
+| [0037](0037-controller-return-flow.md) | Controller 回傳與表單畫面流程 | 由 [0182](0182-spring-jsp-flow-resolution.md) 擴充 |
+| [0182](0182-spring-jsp-flow-resolution.md) | Spring MVC JSP 回傳分流、URL 樣板與 Tiles 共用頁身 | 有效 |
+| [0183](0183-jsp-form-state-variants.md) | Spring MVC JSP 表單流程的獨立狀態畫面 | 由 [0185](0185-jsp-screen-model-facts.md) 擴充 |
+| [0184](0184-spring-form-success-replay.md) | Spring 表單成功回放與重複目的合併 | 由 [0186](0186-spring-jsp-journey-replay.md) 擴充 |
+| [0185](0185-jsp-screen-model-facts.md) | JSP 畫面的模型事實、共用狀態與條件連結 | 有效 |
+| [0186](0186-spring-jsp-journey-replay.md) | Spring JSP 操作回放：正常流程、請求模式與流程延續 | 有效 |
+| [0187](0187-simulated-journey-data.md) | 模擬流程中輸入的資料與返回上一頁 | 有效 |
+| [0188](0188-spring-session-roles.md) | Spring MVC／JSP 依存取規則推論角色並依角色呈現 | 有效 |
 | [0102](0102-r18-spring-api-paths-and-external-call-notes.md) | R18 WP82 的 Spring API 選路與外部呼叫附註 | 有效 |
 | [0159](0159-r81-background-jobs.md) | R81 排程、事件監聽與啟動時作業成為 HANDLER，API 頁「系統自動作業」與 md §12（OQ-056） | 有效 |
 | [0171](0171-r96-more-background-jobs.md) | R96 背景作業移到共用模組並套用 Struts 管線，新增 XML 排程、程式排程、Quartz 與 @Async | 有效 |
@@ -67,7 +74,7 @@ JSP、JSPF、tag file、Tiles 與有限的 Thymeleaf 以 `MarkupTag` 等 parser 
 
 | ADR | 決定 | 狀態 |
 |---|---|---|
-| [0005](0005-source-local-url-variable-exception.md) | 有證據的同來源 URL 變數例外 | 有效 |
+| [0005](0005-source-local-url-variable-exception.md) | 有證據的同來源 URL 變數例外 | 由 [0182](0182-spring-jsp-flow-resolution.md) 擴充 |
 | [0006](0006-shared-markup-graph-contribution.md) | 共用標記圖貢獻與來源所有權 | 有效 |
 | [0008](0008-script-context-prefix-and-static-dom.md) | script src 的 context 前綴例外與靜態 DOM | 有效 |
 | [0011](0011-url-resolution-context-and-yaml.md) | 共用 URL 對應與明確 context path | 有效 |
@@ -117,7 +124,7 @@ JSP、JSPF、tag file、Tiles 與有限的 Thymeleaf 以 `MarkupTag` 等 parser 
 | [0179](0179-r104-tasks-written-in-place.md) | R104 多行 lambda 與匿名類別的排程工作成為作業，後端呼叫只追工作本身 | 有效 |
 | [0180](0180-r105-compared-text-fields-are-states.md) | R105 名稱不像狀態、但被拿來和代碼字比對且寫入代碼字的欄位也列為文字狀態 | 有效 |
 | [0165](0165-r87-api-purpose.md) | R87 API 詳情與清單顯示由呼叫來源組成的白話用途 | 有效 |
-| [0167](0167-r89-suggested-personas.md) | R89 沒有設定角色時依路由守衛自動建議角色，描述標「自動建議」（OQ-057） | 有效 |
+| [0167](0167-r89-suggested-personas.md) | R89 沒有設定角色時依路由守衛自動建議角色，描述標「自動建議」（OQ-057） | 由 [0188](0188-spring-session-roles.md) 擴充 |
 
 ## 角色（persona）流程
 
@@ -125,7 +132,7 @@ JSP、JSPF、tag file、Tiles 與有限的 Thymeleaf 以 `MarkupTag` 等 parser 
 
 | ADR | 決定 | 狀態 |
 |---|---|---|
-| [0107](0107-r19-persona-settings-and-dimensions.md) | R19 角色設定、身分維度與 schema 2.4 | 有效 |
+| [0107](0107-r19-persona-settings-and-dimensions.md) | R19 角色設定、身分維度與 schema 2.4 | 由 [0188](0188-spring-session-roles.md) 擴充 |
 | [0108](0108-r19-persona-verdicts.md) | R19 畫面與導覽角色判定 | 有效 |
 | [0109](0109-r19-persona-flows.md) | R19 角色流程可達性 | 有效 |
 | [0110](0110-r19-dimension-matching-and-shell-redirects.md) | R19 身分維度比對與外框重導 | 有效 |

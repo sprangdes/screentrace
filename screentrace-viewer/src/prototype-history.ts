@@ -1,6 +1,8 @@
 export interface Visit {
   screenId: string;
   scroll: number;
+  /** What the person had typed there, restored when going back (ADR 0187). */
+  inputs?: import('./journey-data').Snapshot;
 }
 /** Simulation-only history. Never reads/writes browser history, storage, graph or review. */
 export class PrototypeHistory {

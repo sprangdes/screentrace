@@ -2,6 +2,8 @@
 
 R3 WP18 controller flows: `SpringControllerReturns` in `screentrace-adapter-spring` classifies annotation-handler returns with JavaParser, retaining each return line, class/method, original expression and enclosing branch conditions. Literal views use `RENDERS`; application-relative `redirect:`/`forward:` and constant RedirectView targets resolve through existing endpoints into `FORWARDS_TO`. A constant redirect prefix plus an unknown whole path segment becomes an `INFERRED` template, never a concrete runtime value. `SpringControllerFlow` projects only proven navigation/form `TRIGGERS → HANDLED_BY → RENDERS/FORWARDS_TO` chains into `NAVIGATES_TO`; AJAX responses do not imply page navigation. All endpoint candidates and return branches remain visible, including validation self returns. Mutable/aliased ModelAndView values, unsupported targets and unknown methods remain unresolved; redirect recursion has a cycle guard and depth 10. No graph schema change. Details: [ADR 0037](adr/0037-controller-return-flow.md).
 
+R107 adds Spring JSP branch correlation. Return evidence connects finite conditional views and private helpers, records named query and servlet-path conditions, and preserves the compatible endpoint alias on a render edge. The viewer uses this evidence when projecting routes and simulating requests. JSP URL alternatives retain the source guard and request query, while Tiles definitions each own the components of their shared body. Details in [ADR 0182](adr/0182-spring-jsp-flow-resolution.md).
+
 WP74 keeps resource references in graph `SOURCE_ARTIFACT` nodes (`STATIC_RESOURCE_REFERENCE`, `StaticResourceParser` evidence) and conditional request alternatives in source-proven component attributes. `SpringSubmittedModel` JSON v1 evidence on RENDERS carries direct scalar input bindings; capture emits inert markers and the viewer owns per-payload submitted strings. These are projections of the canonical graph, with no core framework dependency or schema version change. Details and limits: [ADR 0094](adr/0094-public-batch4-workflow-repairs.md).
 
 ## Current POC implementation
@@ -193,6 +195,8 @@ viewer 只讀 schema 2.4 的 `application.personas`，不重新判定。每個�
 ### R80：頁面狀態變體
 
 React 路由中以常值初始化、只有常值寫入的元件狀態，若不同值顯示不同元件，且步驟內的元件會寫入其他值（精靈步驟），每個值成為一個 SCREEN（`stateVariant`）。初始值沿用路由的畫面 ID 並由入口 RENDERS；其他值的 ID 加上 `:state:<名稱>=<值>`，只能經由 setter 寫入產生的 `NAVIGATES_TO` 到達。偵測與轉換在 `screentrace-js/react/state-variants.mjs`。見 [ADR 0158](adr/0158-r80-page-state-variants.md)。
+
+R108 將此變體契約延伸到 Spring MVC JSP 的有限表單流程。Adapter 以 JSTL 條件、提交的常值與轉址關聯建立狀態畫面。捕捉器分別渲染各狀態，報表依使用的提交按鈕選取對應畫面。見 [ADR 0183](adr/0183-jsp-form-state-variants.md)。R110 以 controller 分支證明的模型事實（`JspScreenFacts`）判斷共用頁身在各畫面的元件歸屬與連結目的，並把狀態畫面延伸到共用同一 JSP 的其他畫面，見 [ADR 0185](adr/0185-jsp-screen-model-facts.md)。R111 以 `SpringRequestVariants` 依模型物件來源把同一 JSP 分成請求模式畫面（如新投保／續保），並以 `SpringMainPath` 標示 handler 的正常回傳，報表依此直接回放，見 [ADR 0186](adr/0186-spring-jsp-journey-replay.md)。R114 的 `SpringSessionRoles` 由過濾器的存取規則推論畫面的工作階段事實與兩個建議角色，並直接在 Spring 圖上計算角色流程，報表依角色分區，見 [ADR 0188](adr/0188-spring-session-roles.md)。
 
 ### R35：放大畫面的關聯線左進右出、依區塊合併
 

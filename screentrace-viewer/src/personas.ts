@@ -200,16 +200,19 @@ export function flowGroups(index: Index, view: PersonaView): FlowGroup[] {
 export const factLabel = (fact: PersonaFact) => `${fact.text}：${fact.truth ? '是' : '否'}`;
 /** Who the persona is, in the analyst's words when given; otherwise how many conditions decide it. */
 export const personaDescription = (persona: Persona) =>
-  persona.description || `依 ${persona.facts.length} 個條件判定`;
+  // Only words an analyst wrote; an automatic suggestion's derivation is not shown (ADR 0188).
+  persona.description && !persona.description.startsWith('自動建議') ? persona.description : '';
 /** The persona's screens at a glance: only the counts that say where it goes. */
 export const reachSummary = (view: PersonaView) =>
   `${reachLabel.REACHABLE} ${view.counts.REACHABLE} · ${reachLabel.POSSIBLE} ${view.counts.POSSIBLE}`;
 /** Every screen of the map by where it sits for this persona, in reach order: the persona row's bar. */
+// Role views show what a role reaches; screens it does not reach are not part of them (ADR 0188).
+const SHOWN_REACH = ['REACHABLE', 'POSSIBLE'] as const;
 export const reachShares = (view: PersonaView) =>
-  REACH_ORDER.map((key) => ({ key, count: view.counts[key] }));
+  SHOWN_REACH.map((key) => ({ key, count: view.counts[key] }));
 /** The four counts in words, e.g. `會走到 3、可能走到 1、走不到 2、不適用 0`. */
 export const reachCountsLabel = (view: PersonaView) =>
-  REACH_ORDER.map((key) => `${reachLabel[key]} ${view.counts[key]}`).join('、');
+  SHOWN_REACH.map((key) => `${reachLabel[key]} ${view.counts[key]}`).join('、');
 export interface StepCount {
   step: number;
   reachable: number;
@@ -303,6 +306,8 @@ export function personaLayout(index: Index, view: PersonaView): GroupedLayout {
       key: column.key,
       label: column.label,
       members: column.members,
+      // A role's own flow map wears the role's tint; screens it does not reach stay neutral.
+      tint: column.key.startsWith('step-') ? roleTint(index.graph, view.persona.id) : 'none',
       box: {
         x,
         y,
@@ -367,4 +372,93 @@ export function personaLayout(index: Index, view: PersonaView): GroupedLayout {
   const width = Math.max(...groups.map((g) => g.box.x + g.box.width), 0) + FLOW.origin,
     height = Math.max(...groups.map((g) => g.box.y + g.box.height), 0) + FLOW.origin;
   return { positions, routes, width, height, groups, links: [], cross: [] };
+}
+
+/** Which role uses each screen: the one role whose flow reaches it, 共用 when several do. */
+export interface RolePartition {
+  /** Role keys in display order: each persona, then 共用, then 其他. */
+  keys: string[];
+  label: (key: string) => string;
+  of: Map<string, string>;
+  /** The step each role's flow first reaches a screen at. */
+  depth: Map<string, Map<string, number>>;
+}
+export const SHARED_ROLE = 'shared',
+  NO_ROLE = 'none';
+export function rolePartition(index: Index): RolePartition | undefined {
+  const personas = graphPersonas(index.graph).filter((p) => p.flow?.reached?.length);
+  if (personas.length < 2) return undefined;
+  const of = new Map<string, string>();
+  for (const screen of index.screens) {
+    const users = personas.filter((p) => p.flow!.reached.some((r) => r.screenId === screen.id));
+    of.set(screen.id, users.length === 1 ? users[0].id : users.length ? SHARED_ROLE : NO_ROLE);
+  }
+  const names = new Map(personas.map((p) => [p.id, p.name]));
+  const keys = [...personas.map((p) => p.id), SHARED_ROLE, NO_ROLE].filter((key) =>
+    [...of.values()].includes(key),
+  );
+  const depth = new Map(
+    personas.map((p) => [p.id, new Map(p.flow!.reached.map((r) => [r.screenId, r.depth]))]),
+  );
+  return {
+    keys,
+    of,
+    depth,
+    label: (key) => names.get(key) || (key === SHARED_ROLE ? '共用' : '其他'),
+  };
+}
+
+/** Features under each role (ADR 0188): a feature used by two roles shows under each with its own screens. */
+export function featuresByRole<
+  F extends { screens: string[]; flows: { entry: string; screens: string[] }[] },
+>(
+  list: F[],
+  roles: RolePartition,
+): { key: string; label: string; screens: number; features: F[] }[] {
+  return roles.keys
+    .map((key) => {
+      const mine = (id: string) => roles.of.get(id) === key;
+      const steps = roles.depth.get(key);
+      const features = list
+        .map((feature) => {
+          const screens = feature.screens.filter(mine);
+          // In a role, the feature's screens read in the order that role's flow reaches them.
+          const ordered = steps
+            ? [
+                {
+                  entry: '',
+                  screens: feature.flows
+                    .flatMap((flow) => flow.screens)
+                    .filter(mine)
+                    .sort((a, b) => (steps.get(a) ?? 99) - (steps.get(b) ?? 99)),
+                },
+              ]
+            : feature.flows.map((flow) => ({ ...flow, screens: flow.screens.filter(mine) }));
+          return {
+            ...feature,
+            screens,
+            flows: ordered
+              .filter((flow) => flow.screens.length)
+              .map((flow) => ({ ...flow, entry: flow.screens[0] })),
+          };
+        })
+        .filter((feature) => feature.screens.length);
+      return {
+        key,
+        label: roles.label(key),
+        screens: [...roles.of.values()].filter((v) => v === key).length,
+        features,
+      };
+    })
+    .filter((group) => group.features.length);
+}
+
+/**
+ * The one tint a role has everywhere in the report (ADR 0188): `1`, `2`, … by the role's order
+ * among the analysis's personas, `shared` for screens several roles use, `none` otherwise.
+ */
+export function roleTint(graph: Graph, key: string | undefined): string {
+  if (key === SHARED_ROLE) return 'shared';
+  const at = graphPersonas(graph).findIndex((p) => p.id === key);
+  return at < 0 ? 'none' : String(at + 1);
 }

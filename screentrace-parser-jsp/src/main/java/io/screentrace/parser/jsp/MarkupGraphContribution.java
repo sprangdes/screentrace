@@ -139,6 +139,7 @@ public final class MarkupGraphContribution {
           attrs.put("targetStatus", interaction.confidence().name());
         List<AnalysisEvidence> proof = new ArrayList<>(node.evidence());
         proof.addAll(interaction.definitionEvidence());
+        ConditionalUrlTargets.addJspAlternatives(attrs, proof);
         nodes.put(
             node.id(),
             new GraphNode(

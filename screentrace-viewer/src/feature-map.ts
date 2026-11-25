@@ -10,6 +10,7 @@ import {
   featureDecision,
 } from './shared/review';
 import { decisionSwitch, decisionLabel, noteEditor } from './review-ui';
+import { featuresByRole, rolePartition, roleTint } from './personas';
 
 export interface FeatureMapActions {
   open: (screenId: string) => void;
@@ -60,7 +61,25 @@ export function featureMap(
   trunk.append(icon('screen'), element('strong', index.graph.application.name));
   trunk.append(element('span', `${list.length} 個功能 · ${index.screens.length} 個畫面`, 'muted'));
   const branches = element('ul', undefined, 'fm-features');
-  for (const feature of list) branches.append(branch(feature));
+  // With roles, each role is a branch of its own and its features hang under it (ADR 0188).
+  const roles = rolePartition(index);
+  if (roles)
+    for (const group of featuresByRole(list, roles)) {
+      const item = element('li', undefined, 'fm-role-branch'),
+        node = element('div', undefined, 'fm-role'),
+        inner = element('ul', undefined, 'fm-features');
+      item.dataset.role = group.key;
+      node.dataset.roleTint = roleTint(index.graph, group.key);
+      node.append(
+        icon('persona'),
+        element('strong', group.label),
+        element('span', `${group.features.length} 個功能 · ${group.screens} 個畫面`, 'muted'),
+      );
+      for (const feature of group.features) inner.append(branch(feature));
+      item.append(node, inner);
+      branches.append(item);
+    }
+  else for (const feature of list) branches.append(branch(feature));
   tree.append(trunk, branches);
   root.append(tree);
   return root;
@@ -133,14 +152,14 @@ export function featureMap(
       row.dataset.flowEntry = flow.entry;
       row.append(element('span', `流程 ${at + 1}`, 'fm-flow-label'));
       const steps = element('ol', undefined, 'fm-steps');
+      // Every step is the same size (arrow slot + box) so wrapped steps line up in columns.
       flow.screens.forEach((id, step) => {
-        if (step) {
-          const arrow = element('li', undefined, 'fm-arrow');
-          arrow.setAttribute('aria-hidden', 'true');
-          arrow.append(icon('arrow'));
-          steps.append(arrow);
-        }
-        steps.append(chip(id));
+        const item = chip(id),
+          arrow = element('span', undefined, 'fm-arrow');
+        arrow.setAttribute('aria-hidden', 'true');
+        if (step) arrow.append(icon('arrow'));
+        item.prepend(arrow);
+        steps.append(item);
       });
       row.append(steps);
       flows.append(row);
@@ -152,16 +171,15 @@ export function featureMap(
   function chip(id: string): HTMLLIElement {
     const screen = index.nodes.get(id)!,
       { decision, inherited } = actions.status(id),
-      item = element('li'),
+      item = element('li', undefined, 'fm-step'),
       button = element('button', undefined, 'fm-screen');
     button.type = 'button';
     button.dataset.featureScreen = id;
     button.dataset.decision = decision;
     if (inherited) button.dataset.inherited = 'true';
-    button.append(
-      element('strong', screen.name),
-      element('code', index.routes.get(id)?.[0] || text.noUrl),
-    );
+    const route = index.routes.get(id)?.[0] || text.noUrl;
+    button.title = `${screen.name}\n${route}`;
+    button.append(element('strong', screen.name), element('code', route));
     if (decision !== 'UNDECIDED')
       button.append(
         element(

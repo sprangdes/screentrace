@@ -306,8 +306,7 @@ public final class UrlResolution {
       List<String> extensions,
       boolean provenContext) {
     var base = resolve(raw, method, context, endpoints, extensions, provenContext);
-    if (raw == null || raw.contains("{") || raw.contains("*") || base.candidates().isEmpty())
-      return base;
+    if (raw == null || base.candidates().isEmpty()) return base;
     var exact =
         endpoints.stream()
             .filter(

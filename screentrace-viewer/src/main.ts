@@ -1,5 +1,7 @@
 import { projectSimulationData } from './simulation-data';
 import { attachSimulation } from './simulation-ui';
+import { setJourney } from './simulation';
+import { applyJourney, resetJourney, restoreInputs, snapshotInputs } from './journey-data';
 import { inertDocument } from './inert-document';
 import { iconSprite, icon, iconButton } from './shell-ui';
 import { initializeComponentLabels } from './labels';
@@ -39,6 +41,9 @@ import {
   personaDescription,
   personaLayout,
   PersonaView,
+  featuresByRole,
+  rolePartition,
+  roleTint,
 } from './personas';
 import { personaPage } from './persona-page';
 import { suggestedPersonaNames, withSuggestedPersonaNames } from './shared/persona-names';
@@ -332,9 +337,35 @@ try {
   modes.setAttribute('role', 'group');
   modes.setAttribute('aria-label', '清單顯示方式');
   modes.append(listButton, filesButton, featuresButton);
-  const chips = element('div', undefined, 'chips');
+  // The status filter folds into one button beside the search box; it opens a short menu.
+  const searchRow = element('div', undefined, 'search-row'),
+    filterButton = element('button', undefined, 'filter-button'),
+    filterLabel = element('span'),
+    chips = element('div', undefined, 'filter-pop');
+  filterButton.type = 'button';
+  filterButton.dataset.filterToggle = 'true';
+  filterButton.setAttribute('aria-haspopup', 'true');
+  filterButton.setAttribute('aria-expanded', 'false');
+  filterButton.append(icon('filter'), filterLabel);
   chips.setAttribute('role', 'group');
   chips.setAttribute('aria-label', '依狀態篩選');
+  chips.hidden = true;
+  const showFilter = (open: boolean) => {
+    chips.hidden = !open;
+    filterButton.setAttribute('aria-expanded', String(open));
+  };
+  filterButton.onclick = () => showFilter(chips.hidden === true);
+  document.addEventListener('pointerdown', (event) => {
+    if (!chips.hidden && !searchRow.contains(event.target as Node)) showFilter(false);
+  });
+  searchRow.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && !chips.hidden) {
+      event.stopPropagation();
+      showFilter(false);
+      filterButton.focus();
+    }
+  });
+  searchRow.append(searchBox, filterButton, chips);
   const notices = element('div', undefined, 'sidebar-notices'),
     list = element('div', undefined, 'screen-list');
   // The persona bar sits on the map: one button per persona turns the map into that persona's flow, step by step.
@@ -353,6 +384,7 @@ try {
   ].map((option) => {
     const button = element('button', option.name);
     button.dataset.personaOption = option.id;
+    if (option.id) button.dataset.roleTint = roleTint(graph, option.id);
     button.onclick = () => {
       if ((personaId || '') === option.id) return;
       personaId = option.id || undefined;
@@ -376,7 +408,9 @@ try {
     render();
   };
   showAll.append(showAllBox, showAllText);
-  personaLegend.append(personaKeys, showAll);
+  // A role's map shows its own flow only; screens it does not reach are not offered (ADR 0188).
+  showAll.hidden = true;
+  personaLegend.append(personaKeys);
   personaInfo.append(personaWho, personaLegend, personaNote);
   const renderPersonaBar = () => {
     for (const button of personaButtons)
@@ -388,10 +422,9 @@ try {
     personaInfo.hidden = !persona;
     if (!persona) return;
     personaWho.dataset.personaDescription = persona.persona.id;
-    personaWho.replaceChildren(
-      element('strong', persona.persona.name),
-      element('span', personaDescription(persona.persona)),
-    );
+    const about = personaDescription(persona.persona);
+    personaWho.replaceChildren(element('strong', persona.persona.name));
+    if (about) personaWho.append(element('span', about));
     personaKeys.replaceChildren(
       ...(['REACHABLE', 'POSSIBLE'] as const).map((reach) => {
         const key = element('span', `${reachLabel[reach]} ${persona.counts[reach]}`, 'persona-key');
@@ -400,11 +433,6 @@ try {
         return key;
       }),
     );
-    const hidden = persona.counts.UNREACHED + persona.counts.EXCLUDED;
-    showAll.hidden = !hidden;
-    showAllBox.disabled = !hidden;
-    showAllBox.checked = showUnreached;
-    showAllText.textContent = `顯示走不到、不適用的畫面 ${hidden}`;
     personaNote.textContent = !persona.depth.size
       ? '這個角色從起點走不到任何畫面；請確認設定中的起點網址與條件。'
       : persona.unevaluated
@@ -422,7 +450,7 @@ try {
   expandList.classList.add('rail-toggle');
   rail.append(expandList, railSearch);
   const sidebarBody = element('div', undefined, 'sidebar-body');
-  sidebarBody.append(sidebarHeader, searchBox, modes, chips, notices, list);
+  sidebarBody.append(sidebarHeader, searchRow, modes, notices, list);
   nav.append(
     rail,
     sidebarBody,
@@ -960,20 +988,29 @@ try {
   const renderSidebar = () => {
     const counts = statistics(graph, reviewState).screens;
     chips.replaceChildren();
+    const filterName = (value: 'ALL' | 'UNDECIDED' | 'KEEP' | 'REMOVE') =>
+      value === 'ALL' ? '全部' : decisionLabel(value);
     for (const value of ['ALL', 'UNDECIDED', 'KEEP', 'REMOVE'] as const) {
-      const chip = element(
-        'button',
-        `${value === 'ALL' ? '全部' : decisionLabel(value)} ${value === 'ALL' ? index.screens.length : counts[value]}`,
-        'chip',
+      const chip = element('button', undefined, 'filter-option');
+      chip.type = 'button';
+      chip.append(
+        element('span', filterName(value)),
+        element('span', String(value === 'ALL' ? index.screens.length : counts[value]), 'muted'),
       );
       chip.dataset.stateFilter = value;
       chip.setAttribute('aria-pressed', String(filter === value));
       chip.onclick = () => {
         filter = value;
+        showFilter(false);
         render();
       };
       chips.append(chip);
     }
+    // The button says which filter is on when it is not 全部.
+    filterLabel.textContent = filter === 'ALL' ? '' : filterName(filter);
+    filterButton.dataset.active = String(filter !== 'ALL');
+    filterButton.title = `依狀態篩選：${filterName(filter)}`;
+    filterButton.setAttribute('aria-label', `依狀態篩選：${filterName(filter)}`);
     listButton.setAttribute('aria-pressed', String(listMode === 'list'));
     filesButton.setAttribute('aria-pressed', String(listMode === 'files'));
     featuresButton.setAttribute('aria-pressed', String(listMode === 'features'));
@@ -1028,11 +1065,11 @@ try {
       // The persona's flow: what it is, then its screens step by step from the start URL.
       const summary = element('section', undefined, 'persona-summary');
       summary.dataset.personaSummary = persona.persona.id;
-      summary.append(
-        element('strong', persona.persona.name),
-        element('p', personaDescription(persona.persona)),
-        element('p', reachSummary(persona), 'muted'),
-      );
+      summary.dataset.roleTint = roleTint(graph, persona.persona.id);
+      const about = personaDescription(persona.persona);
+      summary.append(element('strong', persona.persona.name));
+      if (about) summary.append(element('p', about));
+      summary.append(element('p', reachSummary(persona), 'muted'));
       const facts = element('details', undefined, 'persona-conditions');
       facts.append(
         element('summary', '判定條件'),
@@ -1045,17 +1082,13 @@ try {
       summary.append(facts);
       list.append(summary);
       for (const group of flowGroups(index, persona)) {
+        // The list is the role's flow, step by step; screens it does not reach are left out.
+        if (group.reach === 'UNREACHED' || group.reach === 'EXCLUDED') continue;
         const ids = group.screens.filter(shown);
         if (!ids.length) continue;
-        // Screens the persona never reaches stay folded: the list reads as the flow, step by step.
-        const folded = group.reach === 'UNREACHED' || group.reach === 'EXCLUDED';
-        const section = folded
-          ? element('details', undefined, 'persona-group')
-          : element('div', undefined, 'persona-group');
+        const section = element('div', undefined, 'persona-group');
         section.dataset.personaGroup = group.key;
-        const title = folded
-          ? element('summary', `${group.title} ${ids.length}`)
-          : element('h3', `${group.title} · ${ids.length}`);
+        const title = element('h3', `${group.title} · ${ids.length}`);
         section.append(title);
         for (const id of ids) section.append(row(id, persona));
         list.append(section);
@@ -1064,20 +1097,57 @@ try {
         list.append(element('p', '沒有符合的畫面', 'empty-list'));
       return;
     }
+    // With roles, each role heads its own part of the list (ADR 0188).
+    const roles = rolePartition(index);
+    const roleHeading = (key: string, label: string, count: number) => {
+      const heading = element('div', undefined, 'role-heading');
+      heading.dataset.roleTint = roleTint(graph, key);
+      heading.append(icon('persona'), element('span', label), element('span', `${count}`, 'muted'));
+      return heading;
+    };
     if (listMode === 'features') {
+      const byRole = roles
+        ? featuresByRole(featureList, roles)
+        : [{ key: '', label: '', screens: 0, features: featureList }];
+      for (const group of byRole) {
+        if (group.key) {
+          const shownCount = group.features.flatMap((f) => f.screens).filter(shown).length;
+          if (shownCount) list.append(roleHeading(group.key, group.label, shownCount));
+        }
+        appendFeatures(group.features, group.key);
+      }
+      if (!list.querySelector('.screen-row'))
+        list.append(element('p', '沒有符合的畫面', 'empty-list'));
+      return;
+    }
+    if (roles) {
+      for (const key of roles.keys) {
+        const ids = orderedScreens.filter((s) => roles.of.get(s.id) === key && shown(s.id));
+        if (!ids.length) continue;
+        list.append(roleHeading(key, roles.label(key), ids.length));
+        for (const screen of ids) list.append(row(screen.id));
+      }
+      if (!list.childElementCount) list.append(element('p', '沒有符合的畫面', 'empty-list'));
+      return;
+    }
+    for (const screen of orderedScreens) if (shown(screen.id)) list.append(row(screen.id));
+    if (!list.childElementCount) list.append(element('p', '沒有符合的畫面', 'empty-list'));
+    return;
+    function appendFeatures(features: typeof featureList, roleKey: string) {
       // Screens under their feature, in the order its flows reach them.
-      for (const feature of featureList) {
+      for (const feature of features) {
         const ids = feature.flows.flatMap((flow) => flow.screens).filter(shown);
         if (!ids.length) continue;
+        const fold = roleKey ? `${roleKey}\u0000${feature.key}` : feature.key;
         const section = element('details', undefined, 'feature-group'),
           summary = element('summary'),
           decision = featureDecision(reviewState, feature.key);
         section.dataset.featureGroup = feature.key;
-        section.open = !featuresCollapsed.has(feature.key) || ids.includes(current || '');
-        summary.append(
-          element('span', feature.label),
-          element('span', String(ids.length), 'muted'),
-        );
+        section.open = !featuresCollapsed.has(fold) || ids.includes(current || '');
+        // Written like the canvas group titles: 「/admin · 3 個畫面」.
+        const name = element('span', undefined, 'feature-group-name');
+        name.append(feature.label, element('span', ` · ${ids.length} 個畫面`, 'muted'));
+        summary.append(name);
         if (decision !== 'UNDECIDED') {
           const mark = icon(decision === 'KEEP' ? 'check' : 'close');
           mark.classList.add('status-mark', `decision-${decision}`);
@@ -1085,20 +1155,19 @@ try {
           mark.setAttribute('aria-label', `功能${decisionLabel(decision)}`);
           summary.append(mark);
         }
+        const chevron = icon('chevronRight');
+        chevron.classList.add('feature-group-chevron');
+        summary.append(chevron);
         section.addEventListener('toggle', () => {
-          if (section.open) featuresCollapsed.delete(feature.key);
-          else featuresCollapsed.add(feature.key);
+          if (section.open) featuresCollapsed.delete(fold);
+          else featuresCollapsed.add(fold);
         });
-        section.append(summary);
-        for (const id of ids) section.append(row(id));
+        const items = element('div', undefined, 'feature-group-items');
+        for (const id of ids) items.append(row(id));
+        section.append(summary, items);
         list.append(section);
       }
-      if (!list.querySelector('.screen-row'))
-        list.append(element('p', '沒有符合的畫面', 'empty-list'));
-      return;
     }
-    for (const screen of orderedScreens) if (shown(screen.id)) list.append(row(screen.id));
-    if (!list.childElementCount) list.append(element('p', '沒有符合的畫面', 'empty-list'));
   };
 
   // The screen list folds into a rail on its own edge; zooming into a screen folds it, returning restores it.
@@ -1486,6 +1555,35 @@ try {
       pageStates.title =
         '依程式中的條件名稱（loading、error、清單長度為 0 等）判斷，可能不完全準確';
       pageStates.hidden = true;
+      // States of one JSP page are separate screens (ADR 0183); the switch moves between them (ADR 0185).
+      const screenStates = element('div', undefined, 'segmented page-state-switch');
+      screenStates.dataset.screenStateSwitch = 'true';
+      screenStates.setAttribute('role', 'group');
+      screenStates.setAttribute('aria-label', '流程狀態');
+      screenStates.title = '依原始碼中的狀態條件與送出按鈕推論；每個狀態是獨立的畫面';
+      const stateBase = index.nodes.get(id)?.attributes.stateVariantOf || id,
+        family = [...index.nodes.values()]
+          .filter(
+            (n) =>
+              n.type === 'SCREEN' &&
+              n.attributes.stateVariant &&
+              (n.id === stateBase || n.attributes.stateVariantOf === stateBase),
+          )
+          .sort(
+            (a, b) =>
+              Number(a.attributes.jspStateOrder ?? 99) - Number(b.attributes.jspStateOrder ?? 99),
+          );
+      screenStates.hidden = family.length < 2;
+      for (const state of family) {
+        const button = element(
+          'button',
+          state.attributes.jspStateLabel || state.attributes.stateVariant,
+        );
+        button.type = 'button';
+        button.setAttribute('aria-pressed', String(state.id === id));
+        if (state.id !== id) button.onclick = () => openScreen(state.id, { simulated: true });
+        screenStates.append(button);
+      }
       const fillPageStates = (doc: Document) => {
         const present = new Set(
           [...doc.querySelectorAll('[data-st-state]')].map((n) => n.getAttribute('data-st-state')),
@@ -1525,6 +1623,12 @@ try {
         const doc = own.contentDocument;
         if (!doc || !own.getAttribute('srcdoc')) return;
         projectSimulationData(payload, id, doc);
+        setJourney(payload, [...history.trail, id]);
+        // Typed values follow the simulated flow; going back shows what was typed there.
+        if (arrival !== 'direct')
+          applyJourney(payload, id, doc, index.routes.get(id)?.[0] || '', arrival === 'history');
+        const saved = arrival === 'history' ? history.current?.inputs : undefined;
+        if (saved) restoreInputs(doc, saved);
         fillPageStates(doc);
         decorate(doc, id);
         selectFromPreview(doc, id);
@@ -1532,7 +1636,7 @@ try {
         shown();
         doc.addEventListener('keydown', onKey);
         simulation = attachSimulation(payload, id, own, viewer!, {
-          focus: (target, notice) => openScreen(target, { notice, refresh: true }),
+          focus: (target, notice) => openScreen(target, { notice, refresh: true, simulated: true }),
           api: (target) => showApi(target),
           thumbnail,
         });
@@ -1552,13 +1656,14 @@ try {
         back: () => showCanvas(),
         focus: (target) => openScreen(target),
         move: (delta) => {
+          rememberInputs();
           const visit = history.move(delta, viewerScroll());
           if (visit) openScreen(visit.screenId, { push: false });
         },
         scroll,
       });
       // The notice sits beside the URL, outside the page, so it never covers the page's own buttons.
-      viewer.querySelector('.prototype-present')?.before(notice, pageStates, trust);
+      viewer.querySelector('.prototype-present')?.before(notice, screenStates, pageStates, trust);
       viewer.querySelector('.prototype-status')?.after(legend);
       host.replaceChildren(viewer);
       // A simulated click that requested APIs on the way here says so on the screen it arrived at.
@@ -1637,16 +1742,12 @@ try {
       main.replaceChildren(
         personaPage(index, personaViews, {
           selected: personaId,
+          status: screenState,
           // A screen opens as that persona; a screen its flow does not reach is shown with the rest of the map.
           onOpen: (screenId, id) => {
             personaId = id;
             showUnreached = !activePersona()?.depth.has(screenId);
             openScreen(screenId);
-          },
-          onPersona: (id) => {
-            personaId = id;
-            showUnreached = false;
-            showCanvas();
           },
         }),
       );
@@ -1716,11 +1817,27 @@ try {
   };
 
   let pendingNotice: string | undefined;
+  // How the shown screen was reached: by a simulated action, by the history buttons, or directly.
+  let arrival: 'simulated' | 'history' | 'direct' = 'direct';
+  const rememberInputs = () => {
+    const doc = frame?.contentDocument;
+    if (history.current && doc && current === history.current.screenId)
+      history.current.inputs = snapshotInputs(doc);
+  };
   const openScreen = (
     id: string,
-    options: { component?: string; push?: boolean; notice?: string; refresh?: boolean } = {},
+    options: {
+      component?: string;
+      push?: boolean;
+      notice?: string;
+      refresh?: boolean;
+      simulated?: boolean;
+    } = {},
   ) => {
     const refreshing = options.refresh && current === id;
+    arrival = options.simulated ? 'simulated' : options.push === false ? 'history' : 'direct';
+    if (options.push !== false) rememberInputs();
+    if (arrival === 'direct') resetJourney();
     pendingNotice = options.notice;
     if (pendingNotice && current === id && viewer) {
       const status = viewer.querySelector('.prototype-status');
@@ -1895,6 +2012,7 @@ try {
       current
     ) {
       event.preventDefault();
+      rememberInputs();
       const visit = history.move(event.key === 'ArrowLeft' ? -1 : 1, viewerScroll());
       if (visit) openScreen(visit.screenId, { push: false });
       return;

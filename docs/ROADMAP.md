@@ -620,3 +620,31 @@
 ## R106 Struts 與 Thymeleaf 的疊加狀態
 
 - WP178：`logic:empty`、`logic:messagesPresent` 等 Struts 標籤與 Thymeleaf `th:if`／否定的 `th:unless`（含 `#lists.isEmpty`、`#fields.hasErrors`）標出沒有資料與錯誤區塊，預覽預設隱藏、可切換。見 [ADR 0181](adr/0181-r106-struts-and-thymeleaf-page-states.md)。
+
+## R107 Spring MVC JSP 實案驗收
+
+- WP179：以 `insure` 驗證 Spring MVC、JSTL、Tiles 的投保、續保、核保、繳費與查詢流程。新增 Controller 回傳分流、JSTL URL 樣板、共用 Tiles 的互動歸屬及離線預覽樣本。見 [ADR 0182](adr/0182-spring-jsp-flow-resolution.md)。
+
+## R108 JSP 流程狀態預覽
+
+- WP180：辨識 Spring MVC JSP 的條件式表單狀態，沿用既有畫面變體契約建立獨立截圖，並依送出的按鈕切換至對應畫面。見 [ADR 0183](adr/0183-jsp-form-state-variants.md)。
+
+## R109 Spring 表單成功路徑回放
+
+- WP181：表單回放合併相同目的及呈現結果，依原始碼中的成功轉址證據直接回放正常流程。保留各回傳分支的圖證據。見 [ADR 0184](adr/0184-spring-form-success-replay.md)。
+
+## R110 JSP 畫面的模型事實與共用狀態
+
+- WP182：以 `insure` 驗證。Controller 分支設定的模型屬性（含 `!adminPage && …` 這類衍生值）決定共用 Tiles 頁身在各畫面的元件歸屬與條件連結的目的地；客戶申請明細取得與後台相同的核保狀態畫面，報表以「流程狀態」切換；條件式連結文字列出兩種文字；多目的請求以 handler 回傳條件標示選項。見 [ADR 0185](adr/0185-jsp-screen-model-facts.md)。
+
+## R111 像操作真實系統一樣回放 insure
+
+- WP183：逐一點擊 insure 報表的每個操作並與真實系統比對。handler 未被條件包覆的回傳成為正常流程並直接前往；新投保與續保依模型屬性的來源分成兩組畫面，並在流程中延續；元素自身的 JSP 條件不再跳出選單；多目的選單以 JSP 條件標示；核保後顯示成功訊息。見 [ADR 0186](adr/0186-spring-jsp-journey-replay.md)。
+
+## R112 模擬中輸入的資料隨流程帶值
+
+- WP184：報表模擬記錄送出表單的欄位值，依真實伺服器的方式帶到後續畫面（確認頁、明細、繳費、保單、返回修改、續保表單），查詢表單維持空白；上一頁／下一頁還原該畫面當時的輸入。送出申請在必填核取方塊未勾選時，於核取方塊旁標示並捲動到該處。以 EL 寫的 `readonly` 等布林屬性依畫面事實判斷，新投保表單的車牌、姓名、證號可以輸入。見 [ADR 0187](adr/0187-simulated-journey-data.md)。
+
+## R114 依存取規則分出角色
+
+- WP186：以 `insure` 驗證。Spring MVC／JSP 由 servlet 過濾器的存取規則（路徑前綴＋工作階段屬性＋導向登入頁）推論畫面的工作階段事實，自動建議「一般用戶」與登入後的角色（insure 為「後台管理員」），並在 Spring 圖上計算各角色的流程；登入頁預覽不再顯示後台導覽列。畫布、功能頁、左側清單與預覽工具列依角色分區或標示。見 [ADR 0188](adr/0188-spring-session-roles.md)。

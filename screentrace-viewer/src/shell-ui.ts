@@ -1,6 +1,7 @@
 import { element } from './text';
 const paths: Record<string, string> = {
   search: 'M21 21l-5-5 M10 3a7 7 0 1 0 0 14a7 7 0 1 0 0-14',
+  filter: 'M3 5h18l-7 8v6l-4-2v-4z',
   screen: 'M3 4h18v13H3z M8 21h8 M12 17v4',
   api: 'M8 6l-6 6 6 6 M16 6l6 6-6 6',
   persona: 'M12 12a4 4 0 1 0 0-8a4 4 0 1 0 0 8 M4 21a8 8 0 0 1 16 0',

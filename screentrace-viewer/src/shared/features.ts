@@ -250,6 +250,12 @@ export function features(input: Graph | Index): Feature[] {
     }
     chosen.set(screen.id, pick);
   }
+  // The states of one JSP page (ADR 0183, 0186) are that page: they take its feature.
+  for (const screen of index.screens) {
+    const base = screen.attributes.stateVariantOf;
+    if (base && (screen.attributes.jspStateField || screen.attributes.requestProperty))
+      chosen.set(screen.id, chosen.get(base));
+  }
   // A value other screens took a higher rule for can leave one screen alone: that is no feature either.
   const chosenCounts = new Map<string, number>();
   for (const c of chosen.values())

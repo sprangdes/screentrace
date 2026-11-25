@@ -1,10 +1,12 @@
 import { DataAction, behaviorDataAction } from './simulation-data';
 import { Payload, ElementRecord, Behavior, Evidence, Rule } from './contracts';
+import { permitsRender, requestPaths, screenScopes } from './request-outcomes';
 export interface Intent {
   event?: string;
   tag: string;
   href?: string;
   valid?: boolean;
+  uncheckedRequired?: boolean;
   dialogIds?: string[];
   componentId?: string;
 }
@@ -61,6 +63,8 @@ export interface Effect {
   flags?: string;
   days?: number;
   inputSelector?: string;
+  fallbackSelector?: string;
+  inputTag?: string;
   property?: string;
   relative?: string;
   when?: { selector: string; value: string };
@@ -117,7 +121,7 @@ function state(b: Behavior): string {
         ? 'INFERRED'
         : 'UNRESOLVED';
 }
-function screens(payload: Payload, targetId: string): Effect[] {
+function screens(payload: Payload, targetId: string, paths: string[]): Effect[] {
   const nodes = new Map(payload.graph.nodes.map((n) => [n.id, n])),
     edges = payload.graph.relationships || [],
     result = new Map<string, Effect>();
@@ -163,7 +167,8 @@ function screens(payload: Payload, targetId: string): Effect[] {
       result.set(key, {
         kind: 'navigate',
         targetId: id,
-        label: node.name,
+        label:
+          node.name + (node.attributes.jspStateLabel ? `（${node.attributes.jspStateLabel}）` : ''),
         resolution,
         evidence: proof,
       });
@@ -173,9 +178,23 @@ function screens(payload: Payload, targetId: string): Effect[] {
     next.add(id);
     for (const edge of edges.filter(
       (e) =>
-        e.from === id && ['HANDLED_BY', 'RENDERS', 'FORWARDS_TO', 'NAVIGATES_TO'].includes(e.type),
+        e.from === id &&
+        ['HANDLED_BY', 'RENDERS', 'FORWARDS_TO', 'NAVIGATES_TO'].includes(e.type) &&
+        permitsRender(e, targetId, paths),
     )) {
-      const evidence = (edge as any).evidence || [];
+      const evidence = (edge.evidence || []).filter(
+        (item) =>
+          (item.parser !== 'SpringSuccessRedirect' && item.parser !== 'SpringMainPath') ||
+          (item.parser === 'SpringMainPath' &&
+            depth === 1 &&
+            (item.detail || '').startsWith(
+              `方法=${node.attributes.class}.${node.attributes.method}；`,
+            )) ||
+          (depth === 1 &&
+            edge.type === 'FORWARDS_TO' &&
+            item.source?.file === edge.source?.file &&
+            item.source?.line === edge.source?.line),
+      );
       if (!['CONFIRMED', 'INFERRED', 'AMBIGUOUS'].includes(edge.confidence)) {
         const target = nodes.get(edge.to);
         result.set(edge.id, {
@@ -224,7 +243,17 @@ export function staticAction(b: Behavior): Effect | undefined {
     if (proof.parser === 'AcornStaticAnalyzer' && proof.detail)
       try {
         const item = JSON.parse(proof.detail);
-        if (!['CONFIRMED', 'INFERRED'].includes(item.status) || (b.guard && !b.parentId)) continue;
+        if (
+          !['CONFIRMED', 'INFERRED'].includes(item.status) ||
+          (b.guard &&
+            !b.parentId &&
+            !(
+              b.event === 'change' &&
+              item.operation === 'filterVisibility' &&
+              item.guardChecked === true
+            ))
+        )
+          continue;
         if (
           item.operation === 'workflowGate' &&
           Array.isArray(item.checks) &&
@@ -273,6 +302,7 @@ export function staticAction(b: Behavior): Effect | undefined {
             'setValue',
             'setText',
             'setStyle',
+            'filterVisibility',
             'datePicker',
             'reload',
             'print',
@@ -285,6 +315,8 @@ export function staticAction(b: Behavior): Effect | undefined {
             flags: item.flags,
             days: item.days,
             inputSelector: item.inputSelector,
+            fallbackSelector: item.fallbackSelector,
+            inputTag: item.inputTag,
             condition: b.guard,
             property: item.property,
             relative: item.relative,
@@ -345,7 +377,15 @@ function effect(
       : unknown(b.expression, '彈窗內容無法從靜態分析重建');
   if (!['NAVIGATE', 'SUBMIT_FORM'].includes(b.type))
     return unknown(b.expression, '這個操作的結果取決於頁面腳本，靜態分析無法確認');
-  const outcomes = screens(payload, targetId);
+  const trigger = payload.graph.nodes.find((n) => n.id === b.triggerId);
+  const transitions = jspTransitions(payload, b, targetId);
+  const transitionNotice = transitions.length ? successNotice(payload, targetId) : undefined;
+  const outcomes = continueJourney(
+    payload,
+    transitions.length
+      ? transitions.flatMap((edge) => screens(payload, edge.to, []))
+      : screens(payload, targetId, requestPaths(targetId, trigger, b.evidence || [])),
+  );
   if (!outcomes.length)
     return {
       ...unknown(b.expression),
@@ -356,6 +396,7 @@ function effect(
       reason: 'DESTINATION_UNRESOLVED',
     };
   for (const item of outcomes) {
+    if (transitionNotice && !item.message) item.message = transitionNotice;
     item.dataAction = behaviorDataAction(payload, b, targetId);
     item.resolution = item.resolution === 'CONFIRMED' ? resolution : item.resolution;
     item.evidence = [...(b.evidence || []), ...(item.evidence || [])];
@@ -421,7 +462,39 @@ function effect(
         item.label += ' · 示範成功路徑';
       }
   }
-  if (b.type === 'SUBMIT_FORM')
+  if (b.type === 'SUBMIT_FORM') {
+    const distinct = new Map<string, Effect>();
+    for (const outcome of outcomes) {
+      const { evidence, ...presentation } = outcome;
+      const key = JSON.stringify(presentation);
+      const previous = distinct.get(key);
+      if (previous) previous.evidence = [...(previous.evidence || []), ...(evidence || [])];
+      else distinct.set(key, outcome);
+    }
+    const choices = [...distinct.values()];
+    const success = choices.filter(
+      (outcome) =>
+        outcome.kind === 'navigate' &&
+        outcome.resolution !== 'AMBIGUOUS' &&
+        !outcome.condition &&
+        !outcome.dataAction?.conditional &&
+        outcome.evidence?.some((proof) => proof.parser === 'SpringSuccessRedirect'),
+    );
+    if (node.attributes.httpMethod === 'POST' && success.length === 1) {
+      if (intent.uncheckedRequired)
+        return { kind: 'invalid', message: '請勾選必填的確認項目後再送出。' };
+      return {
+        ...success[0],
+        message: success[0].evidence?.find((proof) => proof.parser === 'SpringSuccessRedirect')
+          ?.detail,
+      };
+    }
+    const main = mainPath(choices);
+    if (!success.length && main) {
+      if (intent.uncheckedRequired)
+        return { kind: 'invalid', message: '請勾選必填的確認項目後再送出。' };
+      return main;
+    }
     return {
       kind: 'form',
       targetId,
@@ -430,19 +503,70 @@ function effect(
       path: node.attributes.path || node.attributes.route || node.name,
       resolution,
       evidence: b.evidence,
-      choices: outcomes,
+      choices,
       rules: serverRules(payload, targetId),
     };
-  return outcomes.length === 1 &&
+  }
+  if (
+    outcomes.length === 1 &&
     (outcomes[0].resolution !== 'AMBIGUOUS' ||
       (resolution === 'AMBIGUOUS' && node.type === 'SCREEN'))
-    ? outcomes[0]
-    : {
-        kind: 'choices',
-        choices: outcomes,
-        expression: b.expression,
-        message: '有多個可能目的，請選擇；系統不會替你決定',
-      };
+  )
+    return outcomes[0];
+  const main = mainPath(outcomes);
+  if (main) return main;
+  // Outcomes split by the handler's own branches say which branch leads where (ADR 0185).
+  const branches = outcomes.map((item) => handlerBranch(item.evidence || []));
+  const labelled = branches.some(Boolean);
+  if (labelled)
+    outcomes.forEach((item, i) => {
+      item.label = `${item.label || ''}（${branches[i] ? '當 ' + branches[i] : '其他情況'}）`;
+    });
+  return {
+    kind: 'choices',
+    choices: outcomes,
+    expression: labelled ? undefined : b.expression,
+    message: '有多個可能目的，請選擇；系統不會替你決定',
+  };
+}
+/**
+ * The handler's unguarded return (no if, catch, switch or loop around it) is what the request does
+ * normally; guard and error branches are named in the notice (ADR 0186).
+ */
+function mainPath(outcomes: Effect[]): Effect | undefined {
+  const main = outcomes.filter(
+    (o) =>
+      o.kind === 'navigate' &&
+      o.resolution !== 'AMBIGUOUS' &&
+      !o.condition &&
+      !o.dataAction?.conditional &&
+      o.evidence?.some((proof) => proof.parser === 'SpringMainPath'),
+  );
+  if (new Set(main.map((o) => o.targetId)).size !== 1) return undefined;
+  const others = [
+    ...new Set(
+      outcomes
+        .filter((o) => o.targetId !== main[0].targetId || o.feedback)
+        .filter((o) => !main.includes(o))
+        .map((o) => o.label || o.targetId || ''),
+    ),
+  ].filter(Boolean);
+  const success = main[0].evidence?.find((p) => p.parser === 'SpringSuccessRedirect')?.detail;
+  return {
+    ...main[0],
+    message: success
+      ? success + (others.length ? `（其他情況可能前往：${others.join('、')}）` : '')
+      : others.length
+        ? `正常流程；其他情況可能前往：${others.join('、')}`
+        : undefined,
+  };
+}
+/** The first controller return condition on the way to an outcome, when the source states one. */
+function handlerBranch(evidence: Evidence[]): string | undefined {
+  const proof = evidence.find((item) => item.parser === 'SpringControllerReturns');
+  const condition = /；條件=(.+)$/.exec(proof?.detail || '')?.[1]?.trim();
+  if (!condition || condition.includes('未求值')) return undefined;
+  return condition.replace(/^\((.*)\)$/, '$1');
 }
 /** Same bounded callback-root and event selection used by simulation and explanation. */
 function componentBehaviors(payload: Payload, component: string): Behavior[] {
@@ -462,6 +586,14 @@ function componentBehaviors(payload: Payload, component: string): Behavior[] {
 
   return (payload.graph.behaviors || []).filter((b) => root(b) === component);
 }
+function jspTransitions(payload: Payload, b: Behavior, endpoint: string) {
+  return (payload.graph.relationships || []).filter(
+    (edge) =>
+      edge.from === b.triggerId &&
+      edge.type === 'NAVIGATES_TO' &&
+      edge.evidence?.some((e) => e.parser === 'JspStateTransition' && e.detail === endpoint),
+  );
+}
 function applicable(b: Behavior, intent: Intent): boolean {
   if (intent.event && !b.parentId)
     return !b.event || b.event === intent.event || b.event.split('.')[0] === intent.event;
@@ -470,7 +602,10 @@ function applicable(b: Behavior, intent: Intent): boolean {
     !!b.parentId ||
     (intent.tag === 'form'
       ? b.event === 'submit' || (b.type === 'SUBMIT_FORM' && b.event === 'click')
-      : ['click', 'change'].includes(b.event))
+      : ['click', 'change'].includes(b.event) ||
+        (['button', 'input'].includes(intent.tag) &&
+          b.type === 'SUBMIT_FORM' &&
+          b.event === 'submit'))
   );
 }
 function simulateRaw(
@@ -529,16 +664,56 @@ function simulateRaw(
       continue;
     }
     const resolution = state(b);
+    const allowed = screenScopes(payload.graph.relationships || []).get(
+      screenId + '\u0000' + component,
+    );
+    const narrowed = allowed && candidates(b).filter((id) => allowed.has(id));
+    if (resolution === 'AMBIGUOUS' && narrowed?.length === 1) {
+      // The screen's model facts leave one literal URL alternative (ADR 0185).
+      effects.push(effect(payload, b, narrowed[0], intent, 'INFERRED'));
+      continue;
+    }
     if (resolution === 'AMBIGUOUS') {
-      const ids = candidates(b);
+      const ids = narrowed?.length ? narrowed : candidates(b);
+      const outcomes = ids.map((id) => effect(payload, b, id, intent, 'AMBIGUOUS'));
+      const leaves = choiceLeaves(outcomes);
+      if (
+        b.type === 'NAVIGATE' &&
+        !b.guard &&
+        !b.condition &&
+        ids.length > 1 &&
+        leaves.length &&
+        leaves.every(
+          (leaf) =>
+            leaf.kind === 'navigate' &&
+            leaf.targetId === leaves[0].targetId &&
+            !leaf.condition &&
+            !leaf.dataAction &&
+            !leaf.feedback &&
+            !leaf.inputProjection,
+        ) &&
+        b.evidence?.some((e) => e.parser === 'JspRequestPath')
+      ) {
+        effects.push({
+          ...leaves[0],
+          resolution: 'INFERRED',
+          evidence: leaves.flatMap((leaf) => leaf.evidence || []),
+        });
+        continue;
+      }
+      const named = alternativeConditions(b, ids);
+      if (named)
+        outcomes.forEach((outcome, i) => {
+          for (const item of outcome.kind === 'choices' ? outcome.choices || [] : [outcome])
+            item.label = `${item.label || ''}（${named[i]}）`;
+        });
       effects.push({
         kind: 'choices',
         message: '有多個候選，請選擇；系統不會替你決定',
-        expression: b.expression,
+        expression: named ? undefined : b.expression,
         evidence: b.evidence,
         reason: 'BEHAVIOR_AMBIGUOUS',
-        choices: ids.flatMap((id) => {
-          const outcome = effect(payload, b, id, intent, 'AMBIGUOUS');
+        choices: outcomes.flatMap((outcome) => {
           return b.type === 'SUBMIT_FORM' &&
             payload.graph.nodes.find((n) => n.id === b.triggerId)?.attributes.requestAlternatives &&
             outcome.kind === 'form' &&
@@ -554,7 +729,9 @@ function simulateRaw(
     } else if (['CONFIRMED', 'INFERRED'].includes(resolution) && b.targetId) {
       const resolved = effect(payload, b, b.targetId, intent, resolution);
       effects.push(
-        b.guard || b.condition
+        (b.guard || b.condition) &&
+          !ownGuard(payload, screenId, component, b) &&
+          !jspTransitions(payload, b, b.targetId).length
           ? {
               kind: 'choices',
               message: `條件尚未求值，請選擇可能結果：${b.guard || b.condition}`,
@@ -621,7 +798,9 @@ export function choiceLeaves(choices: Effect[], depth = 0): Effect[] {
 function finalize(effect: Effect): Effect {
   if (effect.choices) effect.choices = effect.choices.map(finalize);
   effect.simulatable =
-    ['navigate', 'dialog', 'api', 'ui', 'message', 'confirm', 'gate'].includes(effect.kind) ||
+    ['navigate', 'dialog', 'api', 'ui', 'message', 'confirm', 'gate', 'invalid'].includes(
+      effect.kind,
+    ) ||
     (['form', 'choices', 'sequence'].includes(effect.kind) &&
       !!effect.choices?.some((choice) => choice.simulatable));
   if (!effect.simulatable && !effect.reason)
@@ -706,4 +885,99 @@ export function assessSimulation(
     possible: result.simulatable === true,
     reason: result.simulatable ? undefined : result.reason || 'UNSUPPORTED_SIMULATION',
   };
+}
+/** A JSP guard around the clicked element held, or the element would not be on the page. */
+function ownGuard(payload: Payload, screenId: string, component: string, b: Behavior): boolean {
+  if (!b.guard || b.condition) return false;
+  const node = payload.graph.nodes.find((n) => n.id === component);
+  if (node?.attributes.guard === b.guard) return true;
+  return (payload.graph.relationships || []).some(
+    (e) =>
+      e.type === 'CONTAINS' &&
+      e.from === screenId &&
+      e.to === component &&
+      e.evidence?.some((p) => (p.detail || '').includes('guard=' + b.guard)),
+  );
+}
+/** The JSP condition that selects each candidate endpoint's literal URL, in plain words. */
+function alternativeConditions(b: Behavior, ids: string[]): string[] | undefined {
+  let alternatives: { path?: string; guard?: string }[] = [];
+  try {
+    const raw = (b.evidence || []).find((e) => e.parser === 'JspConditionalUrl')?.detail;
+    alternatives = raw ? JSON.parse(raw) : [];
+  } catch {
+    return undefined;
+  }
+  if (!Array.isArray(alternatives) || !alternatives.length) return undefined;
+  const words = (guard: string) =>
+    guard === 'otherwise'
+      ? '其他情況'
+      : '當 ' + guard.replace(/\$\{\s*([^}]*?)\s*}/g, '$1').replace(/^!\((.*)\)$/, 'not $1');
+  const names = ids.map((id) => {
+    const paths = (b.evidence || [])
+      .filter((e) => e.parser === 'JspRequestPath' && e.detail?.startsWith(id + ' '))
+      .map((e) => e.detail!.slice(id.length + 1));
+    const found = alternatives.filter((a) => a.path && paths.includes(a.path) && a.guard);
+    return found.length === 1 ? words(found[0].guard!) : '';
+  });
+  return names.every(Boolean) ? names : undefined;
+}
+
+/** Request modes (ADR 0186) of the latest screens of this simulated journey, e.g. a renewal. */
+let journey: Record<string, boolean> = {};
+export function setJourney(payload: Payload, screens: string[]) {
+  const nodes = new Map(payload.graph.nodes.map((n) => [n.id, n]));
+  journey = {};
+  for (const id of [...screens].reverse()) {
+    const mode = requestMode(nodes.get(id));
+    if (mode && !(mode.property in journey)) journey[mode.property] = mode.empty;
+  }
+}
+function requestMode(node: { attributes: Record<string, string> } | undefined) {
+  const property = node?.attributes.requestProperty;
+  if (!property) return undefined;
+  try {
+    const facts = Object.values(JSON.parse(node.attributes.requestFacts || '{}')) as {
+      empty?: unknown;
+    }[];
+    return typeof facts[0]?.empty === 'boolean'
+      ? { property, empty: facts[0].empty as boolean }
+      : undefined;
+  } catch {
+    return undefined;
+  }
+}
+/** Where a request may open either mode of a page, the journey's mode is the one it continues. */
+function continueJourney(payload: Payload, outcomes: Effect[]): Effect[] {
+  const nodes = new Map(payload.graph.nodes.map((n) => [n.id, n]));
+  const family = (id?: string) => {
+    const node = id ? nodes.get(id) : undefined;
+    return node?.attributes.requestProperty ? node.attributes.stateVariantOf || node.id : undefined;
+  };
+  const fits = (id?: string) => {
+    const mode = requestMode(id ? nodes.get(id) : undefined);
+    return !!mode && mode.property in journey && journey[mode.property] === mode.empty;
+  };
+  return outcomes.filter((outcome) => {
+    const home = family(outcome.targetId);
+    if (!home || fits(outcome.targetId)) return true;
+    return !outcomes.some(
+      (other) => other !== outcome && family(other.targetId) === home && fits(other.targetId),
+    );
+  });
+}
+/** The success message an endpoint's handler flashes before redirecting back, when unique. */
+function successNotice(payload: Payload, endpoint: string): string | undefined {
+  const edges = payload.graph.relationships || [];
+  const handlers = edges
+    .filter((e) => e.type === 'HANDLED_BY' && e.from === endpoint)
+    .map((e) => e.to);
+  const messages = new Set(
+    edges
+      .filter((e) => handlers.includes(e.from) && e.type === 'FORWARDS_TO')
+      .flatMap((e) => e.evidence || [])
+      .filter((p) => p.parser === 'SpringSuccessRedirect' && p.detail)
+      .map((p) => p.detail!),
+  );
+  return messages.size === 1 ? [...messages][0] : undefined;
 }

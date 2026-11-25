@@ -16,6 +16,31 @@ final class ConditionalUrlTargets {
 
   record Alternative(String path, String guard, int line) {}
 
+  static AnalysisEvidence jspEvidence(SourceLocation source, List<Alternative> alternatives) {
+    try {
+      return new AnalysisEvidence(
+          source,
+          "JspConditionalUrl",
+          ResolutionStatus.INFERRED,
+          JSON.writeValueAsString(alternatives));
+    } catch (com.fasterxml.jackson.core.JsonProcessingException error) {
+      throw new IllegalStateException(error);
+    }
+  }
+
+  static void addJspAlternatives(Map<String, String> attributes, List<AnalysisEvidence> evidence) {
+    evidence.stream()
+        .filter(e -> e.parser().equals("JspConditionalUrl"))
+        .findFirst()
+        .ifPresent(
+            e -> {
+              attributes.put("requestAlternatives", e.detail());
+              evidence.add(
+                  new AnalysisEvidence(
+                      e.source(), "ConditionalUrlTargets", e.resolution(), e.detail()));
+            });
+  }
+
   static ApplicationGraph enrich(ApplicationGraph graph, ProjectInventory inventory) {
     Map<String, GraphNode> nodes = new TreeMap<>();
     graph.nodes().forEach(n -> nodes.put(n.id(), n));
