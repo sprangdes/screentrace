@@ -5,6 +5,8 @@ import { partitionNavigation } from './overview';
 import { sharedNavigation } from './relations';
 import { componentLabelsForScreen } from './labels';
 import { focusLines } from './canvas';
+import { apiEndpoints } from './api-page';
+import { endpointMethod, endpointPath } from './endpoint-presentation';
 
 /** Which flow rails beside the preview are open; kept by the caller so moving between screens keeps them. */
 export interface RailState {
@@ -30,10 +32,39 @@ export interface Stage {
   light(component: string | undefined): void;
   /** Rebuilds the rails (decisions or rail state changed) without touching the preview. */
   update(): void;
+  /** How many ways in and out the rails list, for the full-window toolbar. */
+  counts: { in: number; out: number };
 }
 
 type Card = { other: string; triggers: string[] };
 
+const endpoints = new WeakMap<Index, Set<string>>();
+/** The APIs the given buttons call on their way, as 「POST /path」. */
+function apisOf(index: Index, triggers: string[]): string[] {
+  let known = endpoints.get(index);
+  if (!known) endpoints.set(index, (known = new Set(apiEndpoints(index).map((n) => n.id))));
+  const targets = new Set<string>();
+  for (const trigger of triggers) {
+    for (const e of index.graph.relationships || []) if (e.from === trigger) targets.add(e.to);
+    for (const b of index.graph.behaviors || [])
+      if (b.triggerId === trigger && b.targetId) targets.add(b.targetId);
+  }
+  return [...targets]
+    .filter((id) => known!.has(id))
+    .map((id) => index.nodes.get(id)!)
+    .map((node) => `${endpointMethod(node)} ${endpointPath(node)}`)
+    .sort();
+}
+const apiLine = (index: Index, triggers: string[], prefix: string) => {
+  const apis = apisOf(index, triggers);
+  return apis.length
+    ? element(
+        'span',
+        `${prefix} ${apis.slice(0, 2).join('、')}${apis.length > 2 ? ' 等' : ''}`,
+        'flow-card-api',
+      )
+    : undefined;
+};
 const navigation = new WeakMap<Index, ReturnType<typeof partitionNavigation>>();
 const flowsOf = (index: Index) => {
   let found = navigation.get(index);
@@ -83,6 +114,8 @@ export function reviewStage(index: Index, id: string, options: StageOptions): St
     button.append(element('strong', name));
     const how = via(side === 'in' ? card.other : id, card.triggers);
     if (how) button.append(element('span', how, 'flow-card-via'));
+    const api = side === 'out' ? apiLine(index, card.triggers, '經') : undefined;
+    if (api) button.append(api);
     if (side === 'out' && options.status(card.other) === 'REMOVE') {
       button.dataset.removed = 'true';
       button.append(element('span', '目的畫面已標記移除', 'flow-card-warn'));
@@ -205,6 +238,8 @@ export function reviewStage(index: Index, id: string, options: StageOptions): St
         stay.append(element('strong', '留在本頁'));
         const how = via(id, stays);
         if (how) stay.append(element('span', how, 'flow-card-via'));
+        const api = apiLine(index, stays, '呼叫');
+        if (api) stay.append(api);
         body.append(stay);
       }
       if (unknown.length) {
@@ -237,6 +272,10 @@ export function reviewStage(index: Index, id: string, options: StageOptions): St
     element: root,
     host,
     update,
+    counts: {
+      in: incoming.length + shared.into.length,
+      out: outgoing.length + shared.out.length + (stays.length ? 1 : 0) + (unknown.length ? 1 : 0),
+    },
     light: (component) => {
       for (const { card, triggers } of lit)
         card.classList.toggle('is-lit', !!component && triggers.includes(component));

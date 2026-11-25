@@ -27,6 +27,7 @@ const paths: Record<string, string> = {
   menu: 'M4 7h16 M4 12h16 M4 17h16',
   maximize: 'M14 4h6v6 M10 20H4v-6 M20 4l-7 7 M4 20l7-7',
   minimize: 'M4 14h6v6 M20 10h-6V4 M10 14l-7 7 M14 10l7-7',
+  reset: 'M4 12a8 8 0 1 0 2.6-5.9 M4 4v5h5',
 };
 export function iconSprite(): SVGSVGElement {
   const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');

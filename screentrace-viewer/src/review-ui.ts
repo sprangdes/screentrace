@@ -68,12 +68,22 @@ export function decisionSwitch(
     button.setAttribute('role', 'radio');
     button.setAttribute('aria-checked', String(value === decision));
     button.tabIndex = value === decision ? 0 : -1;
+    // In a row, 「未確認」 means following the screen's (or the API's derived) decision: a reset arrow (ADR 0189).
     button.append(
-      icon(decision === 'KEEP' ? 'check' : decision === 'REMOVE' ? 'close' : 'question'),
+      icon(
+        decision === 'KEEP'
+          ? 'check'
+          : decision === 'REMOVE'
+            ? 'close'
+            : options.compact
+              ? 'reset'
+              : 'question',
+      ),
     );
     if (options.compact) {
-      button.setAttribute('aria-label', `${label}：${decisionLabel(decision)}`);
-      button.title = decisionLabel(decision);
+      const name = decision === 'UNDECIDED' ? '跟隨（未確認）' : decisionLabel(decision);
+      button.setAttribute('aria-label', `${label}：${name}`);
+      button.title = name;
     } else button.append(element('span', decisionLabel(decision)));
     // The shortcut that makes the same choice, shown where the choice is made.
     if (options.keys) {
@@ -113,6 +123,8 @@ export interface NoteEditorOptions {
   note: DecisionNote;
   open: boolean;
   compact?: boolean;
+  /** Always shown with a heading instead of a toggle (the screen's own note, ADR 0189). */
+  alwaysOpen?: boolean;
   onToggle: (open: boolean) => void;
   /** Every keystroke: keep the text without rebuilding the panel, so typing is never interrupted. */
   onInput: (note: DecisionNote) => void;
@@ -144,7 +156,11 @@ export function noteEditor(options: NoteEditorOptions): HTMLDivElement {
     options.onToggle(open);
     if (open) body.querySelector<HTMLTextAreaElement>('textarea')?.focus();
   };
-  box.append(toggle, body);
+  if (options.alwaysOpen) {
+    box.dataset.alwaysOpen = 'true';
+    show(true);
+    box.append(element('span', '給 AI 的備註', 'note-heading'), body);
+  } else box.append(toggle, body);
   let current: DecisionNote = { ...options.note };
   if (options.decision !== 'UNDECIDED') {
     const codes = reasonCodes[options.decision] as readonly ReasonCode[],
@@ -165,7 +181,7 @@ export function noteEditor(options: NoteEditorOptions): HTMLDivElement {
   }
   const area = element('textarea');
   area.dataset.noteText = 'true';
-  area.rows = 3;
+  area.rows = options.alwaysOpen ? 2 : 3;
   area.maxLength = NOTE_LIMIT;
   area.value = current.note || '';
   area.placeholder = '例如：這個欄位改成必填、這個流程併到另一個畫面、移除的理由';

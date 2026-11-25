@@ -204,7 +204,9 @@ try {
     selectedApi: string | undefined,
     personaId: string | undefined,
     showUnreached = false,
-    panelTab: PanelTab = 'buttons';
+    panelTab: PanelTab = 'buttons',
+    lastOverview: 'screens' | 'personas' = 'screens',
+    lastReviewed: string | undefined;
   // The flow rails beside an open screen start folded; the person's choice holds while moving between screens.
   let rails: RailState = { in: false, out: false };
   // Note editors left open (screen panel keys and API IDs), so rebuilding a panel keeps them open.
@@ -227,17 +229,17 @@ try {
   document.querySelector<HTMLElement>('#application')!.title = graph.application.name;
   const tabs = element('nav', undefined, 'page-tabs');
   tabs.setAttribute('aria-label', '主要分頁');
-  const screensTab = element('button', undefined, 'page-tab'),
+  // Three places to work (ADR 0189): the overview in its layouts, the review of one screen, and the APIs.
+  const overviewTab = element('button', undefined, 'page-tab'),
+    reviewTab = element('button', undefined, 'page-tab'),
     apiTab = element('button', undefined, 'page-tab');
-  screensTab.append(icon('screen'), element('span', '畫面'));
+  overviewTab.append(icon('screen'), element('span', '流程總覽'));
+  reviewTab.append(icon('check'), element('span', '審查'));
   apiTab.append(icon('api'), element('span', 'API'));
-  screensTab.dataset.page = 'screens';
+  overviewTab.dataset.page = 'overview';
+  reviewTab.dataset.page = 'review';
   apiTab.dataset.page = 'api';
-  tabs.append(screensTab, apiTab);
-  const personasTab = element('button', undefined, 'page-tab');
-  personasTab.append(icon('persona'), element('span', '角色'));
-  personasTab.dataset.page = 'personas';
-  if (personaViews.length) tabs.append(personasTab);
+  tabs.append(overviewTab, reviewTab, apiTab);
   const actions = element('div', undefined, 'topbar-actions');
   const progress = element('details', undefined, 'progress-menu'),
     progressSummary = element('summary', undefined, 'progress-button'),
@@ -247,7 +249,7 @@ try {
   const saveStatus = element('span', undefined, 'save-status');
   saveStatus.setAttribute('role', 'status');
   const download = element('button', undefined, 'primary download-md');
-  download.append(icon('import'), element('span', '下載 md'));
+  download.append(icon('import'), element('span', '交付 md'));
   download.dataset.mdExport = 'true';
   // A dot on the button while there are marks that are neither in a progress file nor in a downloaded md.
   const unsavedDot = element('span', undefined, 'unsaved-dot');
@@ -283,7 +285,7 @@ try {
     'n 前往下一個未確認的畫面',
     '/ 搜尋畫面',
     'f 全螢幕預覽（展示用，再按一次或 Esc 結束）',
-    'Esc 返回畫布',
+    'Esc 返回總覽',
   ]);
   helpList('操作方式', [
     '觸控板兩指滑動或滑鼠拖曳移動畫布；兩指捏合或 ⌘／Ctrl＋滾輪縮放',
@@ -291,12 +293,12 @@ try {
     '在預覽中點連結或按鈕，會模擬前往的畫面；點輸入欄位或表格，右側欄會標出對應的欄位',
     '右側欄的「備註」可寫下修改意見或移除理由，會寫進 md 交給 AI',
     'API 頁可直接標記 API；與畫面標記推導的狀態不一致時列為衝突',
-    '標記會自動暫存在這個瀏覽器，但換電腦或清除瀏覽資料就會遺失；請用「下載 md」保存並交付',
+    '標記會自動暫存在這個瀏覽器，但換電腦或清除瀏覽資料就會遺失；請用「交付 md」保存並交給 AI',
   ]);
   helpList('狀態', [
     '綠色勾：保留',
     '紅色叉：移除',
-    '沒有標示：未確認',
+    '虛線圓：未確認（按鈕列的 ↺ 表示跟隨畫面）',
     '隨畫面移除：畫面標記移除時，沒有個別標記的按鈕與欄位一起移除',
   ]);
   helpList('ScreenTrace 看不到的事', [
@@ -333,7 +335,10 @@ try {
   search.type = 'search';
   search.placeholder = '搜尋 URL 或畫面名稱';
   search.setAttribute('aria-label', '搜尋 URL 或畫面名稱');
-  searchBox.append(icon('search'), search, clearSearch);
+  const slashKey = element('kbd', '/');
+  slashKey.setAttribute('aria-hidden', 'true');
+  slashKey.title = '按 / 搜尋';
+  searchBox.append(icon('search'), search, clearSearch, slashKey);
   const modes = element('div', undefined, 'segmented'),
     listButton = element('button', '清單'),
     filesButton = element('button', '檔案結構'),
@@ -342,35 +347,12 @@ try {
   modes.setAttribute('role', 'group');
   modes.setAttribute('aria-label', '清單顯示方式');
   modes.append(listButton, filesButton, featuresButton);
-  // The status filter folds into one button beside the search box; it opens a short menu.
+  // The status filter sits in plain sight under the search box, each choice with its count (ADR 0189).
   const searchRow = element('div', undefined, 'search-row'),
-    filterButton = element('button', undefined, 'filter-button'),
-    filterLabel = element('span'),
-    chips = element('div', undefined, 'filter-pop');
-  filterButton.type = 'button';
-  filterButton.dataset.filterToggle = 'true';
-  filterButton.setAttribute('aria-haspopup', 'true');
-  filterButton.setAttribute('aria-expanded', 'false');
-  filterButton.append(icon('filter'), filterLabel);
+    chips = element('div', undefined, 'filter-chips');
   chips.setAttribute('role', 'group');
   chips.setAttribute('aria-label', '依狀態篩選');
-  chips.hidden = true;
-  const showFilter = (open: boolean) => {
-    chips.hidden = !open;
-    filterButton.setAttribute('aria-expanded', String(open));
-  };
-  filterButton.onclick = () => showFilter(chips.hidden === true);
-  document.addEventListener('pointerdown', (event) => {
-    if (!chips.hidden && !searchRow.contains(event.target as Node)) showFilter(false);
-  });
-  searchRow.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape' && !chips.hidden) {
-      event.stopPropagation();
-      showFilter(false);
-      filterButton.focus();
-    }
-  });
-  searchRow.append(searchBox, filterButton, chips);
+  searchRow.append(searchBox);
   const notices = element('div', undefined, 'sidebar-notices'),
     list = element('div', undefined, 'screen-list');
   // The persona bar sits on the map: one button per persona turns the map into that persona's flow, step by step.
@@ -453,14 +435,20 @@ try {
     expandList = iconButton('展開畫面清單', 'sidebar'),
     railSearch = iconButton('搜尋畫面', 'search');
   expandList.classList.add('rail-toggle');
-  rail.append(expandList, railSearch);
+  const railCount = element('span', undefined, 'rail-count'),
+    railNext = element('button', undefined, 'rail-next');
+  railNext.type = 'button';
+  railNext.setAttribute('aria-label', '下一個未確認');
+  railNext.title = '下一個未確認（n）';
+  railNext.append(element('kbd', 'n'));
+  rail.append(expandList, railSearch, railCount, railNext);
   const sidebarBody = element('div', undefined, 'sidebar-body');
   // The way through the review: the next screen nobody has decided on, always at the foot of the list.
   const nextButton = element('button', undefined, 'next-undecided');
   nextButton.type = 'button';
   nextButton.dataset.nextUndecided = 'true';
   nextButton.append(element('span', '下一個未確認'), element('kbd', 'n'));
-  sidebarBody.append(sidebarHeader, searchRow, modes, notices, list, nextButton);
+  sidebarBody.append(sidebarHeader, searchRow, chips, modes, notices, list, nextButton);
   nav.append(
     rail,
     sidebarBody,
@@ -481,7 +469,8 @@ try {
     expandDetails = iconButton('展開畫面資訊', 'sidebarRight');
   collapseDetails.classList.add('details-toggle');
   expandDetails.classList.add('rail-toggle');
-  detailsRail.append(expandDetails);
+  const railDecide = element('div', undefined, 'rail-decide');
+  detailsRail.append(expandDetails, railDecide);
   panel.append(collapseDetails, detailsRail, panelBody);
   shell.append(nav, main, panel);
   if (restored.warning && !restored.warning.includes('覆寫'))
@@ -520,7 +509,7 @@ try {
   let edits = 0;
   const persist = () => {
     edits++;
-    if (saveReview(storage, reviewState)) say('⚠ 無法暫存在瀏覽器，請下載 md', 'error');
+    if (saveReview(storage, reviewState)) say('⚠ 無法暫存在瀏覽器，請用「交付 md」保存', 'error');
   };
   // ---- keeping the marks: when the md was last downloaded, and whether marks exist that no file holds
   const exportKey = `screentrace:last-export:v1:${encodeURIComponent(graph.application.name)}:${payload.fingerprint}`;
@@ -631,7 +620,7 @@ try {
     download.dataset.unsaved = String(pending);
     download.title = [
       pending ? '有尚未保存到檔案的標記' : '',
-      lastExport ? `上次下載 md：${exportTime(lastExport)}` : '尚未下載過 md',
+      lastExport ? `上次交付 md：${exportTime(lastExport)}` : '尚未交付過 md',
     ]
       .filter(Boolean)
       .join('\n');
@@ -639,7 +628,7 @@ try {
   const lastExportLine = () =>
     element(
       'p',
-      lastExport ? `上次下載 md：${exportTime(lastExport)}` : '這份報表尚未下載過 md。',
+      lastExport ? `上次交付 md：${exportTime(lastExport)}` : '這份報表尚未交付過 md。',
       'muted last-export',
     );
   const menuButton = (label: string, action: () => void, primary = false) => {
@@ -662,11 +651,11 @@ try {
     const text = (value: string) => savePanel.append(element('p', value, 'muted'));
     if (fileState === 'unsupported') {
       text(
-        '這個瀏覽器不支援自動存檔。標記只暫存在這個瀏覽器，換電腦或清除瀏覽資料就會遺失；請用「下載 md」保存，之後用「開啟 md」接續。',
+        '這個瀏覽器不支援自動存檔。標記只暫存在這個瀏覽器，換電腦或清除瀏覽資料就會遺失；請用「交付 md」保存，之後用「開啟 md」接續。',
       );
       savePanel.append(
         lastExportLine(),
-        menuButton('下載 md', () => download.click(), true),
+        menuButton('交付 md', () => download.click(), true),
         openMd,
       );
       return;
@@ -675,7 +664,7 @@ try {
       text('選擇一個 md 檔的存放位置，之後每次標記都會自動寫入。這個檔案就是要交給 AI 的 md。');
       savePanel.append(
         menuButton('選擇存放位置…', () => void choose(), true),
-        menuButton('下載 md', () => download.click()),
+        menuButton('交付 md', () => download.click()),
         openMd,
         lastExportLine(),
       );
@@ -916,7 +905,16 @@ try {
       bar.append(part);
     }
     bar.setAttribute('aria-hidden', 'true');
-    meter.append(element('span', `已確認 ${done}／${total}`, 'progress-count'), bar);
+    const line = element('span', undefined, 'progress-line');
+    line.append(
+      element('span', `已確認 ${done}／${total}`, 'progress-count'),
+      element(
+        'span',
+        `保留 ${counts.screens.KEEP} · 移除 ${counts.screens.REMOVE}`,
+        'progress-split',
+      ),
+    );
+    meter.append(line, bar);
     progressSummary.replaceChildren(meter);
     const conflictTotal = issues.length + apiIssues.length;
     if (conflictTotal) {
@@ -1015,30 +1013,29 @@ try {
 
   const renderSidebar = () => {
     const counts = statistics(graph, reviewState).screens;
+    railCount.textContent = `未確認 ${counts.UNDECIDED}`;
     chips.replaceChildren();
     const filterName = (value: 'ALL' | 'UNDECIDED' | 'KEEP' | 'REMOVE') =>
       value === 'ALL' ? '全部' : decisionLabel(value);
     for (const value of ['ALL', 'UNDECIDED', 'KEEP', 'REMOVE'] as const) {
-      const chip = element('button', undefined, 'filter-option');
+      const chip = element('button', undefined, 'filter-chip');
       chip.type = 'button';
       chip.append(
         element('span', filterName(value)),
-        element('span', String(value === 'ALL' ? index.screens.length : counts[value]), 'muted'),
+        element(
+          'span',
+          String(value === 'ALL' ? index.screens.length : counts[value]),
+          'filter-count',
+        ),
       );
       chip.dataset.stateFilter = value;
       chip.setAttribute('aria-pressed', String(filter === value));
       chip.onclick = () => {
         filter = value;
-        showFilter(false);
         render();
       };
       chips.append(chip);
     }
-    // The button says which filter is on when it is not 全部.
-    filterLabel.textContent = filter === 'ALL' ? '' : filterName(filter);
-    filterButton.dataset.active = String(filter !== 'ALL');
-    filterButton.title = `依狀態篩選：${filterName(filter)}`;
-    filterButton.setAttribute('aria-label', `依狀態篩選：${filterName(filter)}`);
     listButton.setAttribute('aria-pressed', String(listMode === 'list'));
     filesButton.setAttribute('aria-pressed', String(listMode === 'files'));
     featuresButton.setAttribute('aria-pressed', String(listMode === 'features'));
@@ -1050,7 +1047,8 @@ try {
     }
     list.replaceChildren();
     const shown = (id: string) => !(visible && !visible.has(id)) && !(query && !matches.has(id));
-    const row = (id: string, persona?: PersonaView) => {
+    const conflicted = new Set(conflicts(graph, reviewState).map((c) => c.screenId));
+    const row = (id: string, persona?: PersonaView, roleKey?: string) => {
       const screen = index.nodes.get(id)!,
         status = screenState(id),
         button = element('button', undefined, 'screen-row');
@@ -1063,6 +1061,26 @@ try {
         element('code', index.routes.get(id)?.[0] || text.noUrl),
       );
       button.append(label);
+      // Under a role's heading: the step the role first sees the screen at, and 「可能」 when the role may not get there.
+      const role = roleKey ? personaViews.find((v) => v.persona.id === roleKey) : undefined,
+        step = role?.depth.get(id);
+      if (step !== undefined) {
+        const number = element('span', String(step), 'screen-row-step');
+        number.title = `第 ${step} 步`;
+        button.prepend(number);
+      }
+      if (role?.reach.get(id) === 'POSSIBLE') {
+        const maybe = element('span', '可能', 'screen-row-maybe');
+        maybe.title = reachHelp.POSSIBLE;
+        button.append(maybe);
+      }
+      if (conflicted.has(id)) {
+        const warn = icon('warning');
+        warn.classList.add('screen-row-conflict');
+        warn.setAttribute('role', 'img');
+        warn.setAttribute('aria-label', '有衝突');
+        button.append(warn);
+      }
       if (persona) {
         const reach = persona.reach.get(id)!,
           tag = element('span', reachLabel[reach], 'persona-reach');
@@ -1159,7 +1177,7 @@ try {
         const ids = orderedScreens.filter((s) => roles.of.get(s.id) === key && shown(s.id));
         if (!ids.length) continue;
         list.append(roleHeading(key, roles.label(key), ids.length));
-        for (const screen of ids) list.append(row(screen.id));
+        for (const screen of ids) list.append(row(screen.id, undefined, key));
       }
       if (!list.childElementCount) list.append(element('p', '沒有符合的畫面', 'empty-list'));
       return;
@@ -1224,6 +1242,7 @@ try {
   railSearch.onclick = () => setList(false, search);
   collapseList.onclick = () => setList(true);
   nextButton.onclick = () => nextUndecided();
+  railNext.onclick = () => nextUndecided();
   let detailsCollapsed = false;
   const syncDetails = () => {
     shell.dataset.details =
@@ -1243,7 +1262,23 @@ try {
   const renderPanel = () => {
     if (page !== 'screens' || !current) {
       panelBody.replaceChildren();
+      railDecide.replaceChildren();
       return;
+    }
+    // Folded, the panel still decides: K／X／U as three buttons, and a warning when the screen has a conflict.
+    const id = current;
+    railDecide.replaceChildren(
+      decisionSwitch('這個畫面', screenDecision(reviewState, id), (v) => decide.screen(id, v), {
+        compact: true,
+        screen: id,
+      }),
+    );
+    if (conflicts(graph, reviewState).some((c) => c.screenId === id || c.targetScreenId === id)) {
+      const warn = icon('warning');
+      warn.classList.add('rail-conflict');
+      warn.setAttribute('role', 'img');
+      warn.setAttribute('aria-label', '有衝突');
+      railDecide.append(warn);
     }
     const shown = panel.querySelector<HTMLDetailsElement>(
       `[data-screen-panel="${CSS.escape(current)}"] .panel-buttons`,
@@ -1284,6 +1319,21 @@ try {
       hover: (id) => pointAt(id),
       locate: (id) => locate(id),
     });
+    // Whose screen this is and at which step of that role's flow, at the top of the panel.
+    const roles = rolePartition(index),
+      roleKey = roles?.of.get(current);
+    if (roles && roleKey) {
+      const tag = element('div', undefined, 'panel-role'),
+        chip = element('span', roles.label(roleKey), 'panel-role-chip'),
+        view = personaViews.find((v) => v.persona.id === roleKey),
+        step = view?.depth.get(current);
+      chip.dataset.roleTint = roleTint(graph, roleKey);
+      tag.append(chip);
+      if (step !== undefined) tag.append(element('span', `第 ${step} 步`, 'muted'));
+      if (view?.reach.get(current) === 'POSSIBLE')
+        tag.append(element('span', '可能走到', 'panel-maybe'));
+      panelBody.querySelector('.panel-header')?.prepend(tag);
+    }
     const persona = activePersona();
     if (persona) {
       const reach = persona.reach.get(current)!,
@@ -1802,25 +1852,36 @@ try {
     const id = current,
       counts = statistics(graph, reviewState).screens,
       next = element('button', undefined, 'present-next'),
-      exit = element('button', undefined, 'present-exit');
-    next.type = exit.type = 'button';
+      ways = element('span', undefined, 'present-ways');
+    next.type = 'button';
     next.append(element('span', '下一個未確認'), element('kbd', 'n'));
     next.onclick = () => nextUndecided();
-    exit.append(icon('minimize'), element('span', '結束全螢幕'), element('kbd', 'Esc'));
-    exit.onclick = () => setPresenting(false);
-    presentBar.replaceChildren(
+    // Leaving full window is on the top bar beside the screen's name; here: decide, see the ways, move on.
+    ways.append(
+      element('span', `進來 ${stage?.counts.in ?? 0}`, 'present-in'),
+      element('span', `出去 ${stage?.counts.out ?? 0}`, 'present-out'),
+    );
+    const parts: HTMLElement[] = [
       decisionSwitch('這個畫面', screenDecision(reviewState, id), (v) => decide.screen(id, v), {
         screen: id,
         keys: true,
       }),
+      ways,
+    ];
+    if (conflicts(graph, reviewState).some((c) => c.screenId === id || c.targetScreenId === id)) {
+      const warn = element('span', undefined, 'present-conflict');
+      warn.append(icon('warning'), element('span', '衝突'));
+      parts.push(warn);
+    }
+    parts.push(
+      next,
       element(
         'span',
         `已確認 ${counts.KEEP + counts.REMOVE}／${index.screens.length}`,
         'present-count',
       ),
-      next,
-      exit,
     );
+    presentBar.replaceChildren(...parts);
   };
 
   const render = () => {
@@ -1830,9 +1891,14 @@ try {
     if (!zoomed) detailsCollapsed = false;
     syncList();
     syncDetails();
-    screensTab.setAttribute('aria-current', page === 'screens' ? 'page' : 'false');
+    overviewTab.setAttribute(
+      'aria-current',
+      page === 'personas' || (page === 'screens' && !current) ? 'page' : 'false',
+    );
+    reviewTab.setAttribute('aria-current', page === 'screens' && current ? 'page' : 'false');
     apiTab.setAttribute('aria-current', page === 'api' ? 'page' : 'false');
-    personasTab.setAttribute('aria-current', page === 'personas' ? 'page' : 'false');
+    if (page === 'personas' || (page === 'screens' && !current))
+      lastOverview = page === 'personas' ? 'personas' : 'screens';
     renderProgress();
     renderSidebar();
     renderPanel();
@@ -1987,6 +2053,7 @@ try {
     if (refreshing) stage = undefined;
     page = 'screens';
     current = id;
+    lastReviewed = id;
     render();
   };
   // Presenting lays the preview over the whole window, top bar and side panels included; the layout underneath stays.
@@ -2004,9 +2071,10 @@ try {
       .querySelector('use')
       ?.setAttribute('href', `#st-icon-${presenting ? 'minimize' : 'maximize'}`);
   };
+  // Leaving a screen goes back to the overview layout it was opened from.
   const showCanvas = () => {
     setPresenting(false);
-    page = 'screens';
+    page = lastOverview;
     current = undefined;
     highlightComponent = undefined;
     frame = undefined;
@@ -2021,16 +2089,21 @@ try {
     current = undefined;
     render();
   };
-  screensTab.onclick = () => {
-    if (page !== 'screens' || current) showCanvas();
-  };
-  apiTab.onclick = () => showApi();
-  personasTab.onclick = () => {
+  // The overview returns to the layout last shown; the review returns to the screen last open, or the next undecided one.
+  overviewTab.onclick = () => {
+    if (page === 'personas' || (page === 'screens' && !current)) return;
     setPresenting(false);
-    page = 'personas';
+    page = lastOverview;
     current = undefined;
+    highlightComponent = undefined;
     render();
   };
+  reviewTab.onclick = () => {
+    if (page === 'screens' && current) return;
+    const id = lastReviewed || nextUndecidedId() || orderedScreens[0]?.id;
+    if (id) openScreen(id);
+  };
+  apiTab.onclick = () => showApi();
   listButton.onclick = () => {
     listMode = 'list';
     render();
@@ -2204,7 +2277,7 @@ try {
   );
   setTimeout(() => prepare(nextUndecidedId()), 1000);
 
-  if (!storage) say('⚠ 無法暫存在瀏覽器，請下載 md', 'error');
+  if (!storage) say('⚠ 無法暫存在瀏覽器，請用「交付 md」保存', 'error');
   renderFile();
   if (fileState === 'none') {
     const startEdits = edits;

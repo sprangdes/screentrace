@@ -34,11 +34,11 @@ export function prototypeViewer(
     stage = element('div', undefined, 'prototype-stage'),
     status = element('div', undefined, 'prototype-status');
   status.setAttribute('role', 'status');
-  const back = iconButton('返回畫布', 'back'),
+  const back = iconButton('返回總覽', 'back'),
     previous = iconButton('上一頁', 'back'),
     next = iconButton('下一頁', 'arrow');
   back.classList.add('prototype-back');
-  back.append(element('span', '返回畫布'));
+  back.append(element('span', '返回總覽'));
   const url = element('code', index.routes.get(id)?.[0] || '沒有已知 URL', 'prototype-url');
   url.setAttribute('aria-label', '主要 URL');
   url.title = url.textContent!;
@@ -67,7 +67,27 @@ export function prototypeViewer(
     toolbar.append(tag);
   }
   toolbar.append(present);
-  root.append(toolbar, status, scroller);
+  // The way here, as a breadcrumb beside the back／forward arrows: the last few screens, each a step back (ADR 0189).
+  const crumbs = element('nav', undefined, 'prototype-trail');
+  crumbs.setAttribute('aria-label', '瀏覽歷程');
+  const trail = history.trail,
+    shown = trail.slice(-3);
+  crumbs.hidden = !trail.length;
+  crumbs.append(element('span', '歷程', 'prototype-trail-label'));
+  if (trail.length > shown.length) crumbs.append(element('span', '…', 'prototype-trail-sep'));
+  shown.forEach((screenId, i) => {
+    const step = element(
+      'button',
+      index.nodes.get(screenId)?.name || screenId,
+      'prototype-trail-step',
+    );
+    step.type = 'button';
+    step.dataset.trailStep = screenId;
+    step.onclick = () => options.move(trail.length - shown.length + i - trail.length);
+    crumbs.append(step, element('span', '›', 'prototype-trail-sep'));
+  });
+  crumbs.append(element('strong', index.nodes.get(id)?.name || id, 'prototype-trail-here'));
+  root.append(toolbar, crumbs, status, scroller);
   frame.style.width = `${width}px`;
   frame.style.height = `${height}px`;
   frame.style.maxWidth = 'none';

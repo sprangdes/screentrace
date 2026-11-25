@@ -193,8 +193,8 @@ async function main() {
     await screenshot('simulate-choices.png');
     await page.keyboard.press('Escape');
     await toCanvas();
-    // 11. The role page.
-    await tab('角色');
+    // 11. The role overview.
+    await page.locator('[data-overview-layout="personas"]').click();
     await page.locator('.persona-step-group').first().waitFor();
     await screenshot('role-page.png');
     // 12. The API page.
@@ -203,7 +203,8 @@ async function main() {
     await page.locator('[data-api-section="callers"]').waitFor();
     await screenshot('api-page.png');
     // 13. Help.
-    await tab('畫面');
+    await tab('流程總覽');
+    await page.locator('[data-overview-layout="canvas"]').click();
     await page.getByRole('button', { name: '重設畫布' }).click();
     await page.locator('.help-menu>summary').click();
     await page.locator('.help-menu[open]').waitFor();

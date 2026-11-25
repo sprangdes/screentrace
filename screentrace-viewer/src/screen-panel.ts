@@ -142,6 +142,7 @@ export function screenPanel(
       editor = noteEditor({
         label,
         compact: componentId !== undefined,
+        alwaysOpen: componentId === undefined,
         decision:
           componentId === undefined ? decision : componentDecision(state, screenId, componentId),
         note:
