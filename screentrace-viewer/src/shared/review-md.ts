@@ -342,8 +342,9 @@ function fragment(value: string | undefined, source?: Source): string {
   return projectText(value, source);
 }
 interface MachineState {
-  format_version: 1 | 2 | 3 | 4 | 5;
+  format_version: 1 | 2 | 3 | 4 | 5 | 6;
   feature_decisions?: Record<string, string>;
+  canvas_layouts?: Record<string, Record<string, { x: number; y: number }>>;
   component_overrides?: Record<string, Record<string, string>>;
   orphan_component_overrides?: OverrideRecord[];
   decision_notes?: DecisionNotes;
@@ -393,8 +394,11 @@ export async function generateMarkdown(
     usage = deriveApiUsage(graph, state),
     notes = exportableNotes(state),
     featureList = features(index),
-    // Format 5 carries feature decisions; format 4 notes and API decisions; otherwise format 1.
+    // Format 6 adds card positions on the overview map (ADR 0189); format 5 carries feature decisions;
+    // format 4 notes and API decisions; otherwise format 1.
+    v6 = Object.keys(state.canvasLayouts || {}).length > 0,
     v5 =
+      v6 ||
       Object.values(state.featureDecisions || {}).some((d) => d !== 'UNDECIDED') ||
       Object.keys(notes.features).length > 0,
     v4 =
@@ -404,7 +408,7 @@ export async function generateMarkdown(
       Object.keys(notes.components).length > 0 ||
       Object.keys(notes.apis).length > 0,
     machine: MachineState = {
-      format_version: v5 ? 5 : v4 ? 4 : 1,
+      format_version: v6 ? 6 : v5 ? 5 : v4 ? 4 : 1,
       analysis_fingerprint: state.fingerprint,
       screen_decisions: state.screenDecisions,
       component_decisions: state.componentDecisions,
@@ -417,6 +421,7 @@ export async function generateMarkdown(
           }
         : {}),
       ...(v5 ? { feature_decisions: state.featureDecisions || {} } : {}),
+      ...(v6 ? { canvas_layouts: state.canvasLayouts || {} } : {}),
     };
   const ownNote = (values: Record<string, DecisionNote> | undefined, id: string) =>
     values && Object.hasOwn(values, id) ? values[id] : undefined;
@@ -1396,18 +1401,19 @@ export async function importMarkdown(
             'orphan_component_overrides',
             ...(data.format_version === 3 ? ['decision_notes'] : []),
           ]
-        : data.format_version === 4 || data.format_version === 5
+        : data.format_version === 4 || data.format_version === 5 || data.format_version === 6
           ? [
               ...baseKeys,
               'decision_notes',
               'api_decisions',
-              ...(data.format_version === 5 ? ['feature_decisions'] : []),
+              ...(data.format_version !== 4 ? ['feature_decisions'] : []),
+              ...(data.format_version === 6 ? ['canvas_layouts'] : []),
             ]
           : baseKeys;
   if (Object.keys(data).some((k) => !keys.includes(k)) || keys.some((k) => !Object.hasOwn(data, k)))
     throw Error('附錄包含未知／缺少欄位');
   if (
-    ![1, 2, 3, 4, 5].includes(data.format_version as number) ||
+    ![1, 2, 3, 4, 5, 6].includes(data.format_version as number) ||
     typeof data.analysis_fingerprint !== 'string' ||
     typeof data.state_sha256 !== 'string'
   )
@@ -1459,13 +1465,19 @@ export async function importMarkdown(
           orphan_component_overrides: data.orphan_component_overrides,
         }
       : {}),
-    ...(data.format_version === 3 || data.format_version === 4 || data.format_version === 5
+    ...(data.format_version === 3 ||
+    data.format_version === 4 ||
+    data.format_version === 5 ||
+    data.format_version === 6
       ? { decisionNotes: data.decision_notes }
       : {}),
-    ...(data.format_version === 4 || data.format_version === 5
+    ...(data.format_version === 4 || data.format_version === 5 || data.format_version === 6
       ? { apiDecisions: data.api_decisions }
       : {}),
-    ...(data.format_version === 5 ? { featureDecisions: data.feature_decisions } : {}),
+    ...(data.format_version === 5 || data.format_version === 6
+      ? { featureDecisions: data.feature_decisions }
+      : {}),
+    ...(data.format_version === 6 ? { canvasLayouts: data.canvas_layouts } : {}),
   };
   const state = validateReview(
     candidate,

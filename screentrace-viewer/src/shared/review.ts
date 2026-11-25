@@ -61,9 +61,52 @@ export interface ReviewState {
   apiDecisions?: Record<string, Decision>;
   /** Decisions on whole features (feature key); a screen without its own decision follows its feature. */
   featureDecisions?: Record<string, Decision>;
+  /** Where the person dragged screen cards on the overview map, per layout (ADR 0189); not a decision. */
+  canvasLayouts?: Record<string, Record<string, CanvasPoint>>;
   manifest_sha256?: string;
   component_overrides?: Record<string, Record<string, string>>;
   orphan_component_overrides?: OverrideRecord[];
+}
+export interface CanvasPoint {
+  x: number;
+  y: number;
+}
+/** Limits on saved card positions, so a damaged file cannot make the report allocate without bound. */
+export const CANVAS_LAYOUT_LIMITS = {
+  layouts: 32,
+  screens: 10000,
+  keyLength: 120,
+  extent: 1_000_000,
+};
+/** The positions saved for one overview layout; an empty set removes the layout. */
+export function setCanvasLayout(
+  state: ReviewState,
+  key: string,
+  positions: Record<string, CanvasPoint>,
+): ReviewState {
+  if (!key || key.length > CANVAS_LAYOUT_LIMITS.keyLength || /[\u0000-\u001f]/.test(key))
+    throw Error('畫布版面名稱無效');
+  const layouts = { ...(state.canvasLayouts || {}) },
+    clean: Record<string, CanvasPoint> = {};
+  for (const [id, point] of Object.entries(positions)) {
+    if (
+      !point ||
+      typeof point !== 'object' ||
+      !Number.isFinite(point.x) ||
+      !Number.isFinite(point.y) ||
+      Math.abs(point.x) > CANVAS_LAYOUT_LIMITS.extent ||
+      Math.abs(point.y) > CANVAS_LAYOUT_LIMITS.extent
+    )
+      throw Error('畫面位置必須為有限的座標');
+    clean[id] = { x: Math.round(point.x), y: Math.round(point.y) };
+  }
+  if (Object.keys(clean).length > CANVAS_LAYOUT_LIMITS.screens) throw Error('畫布版面的畫面過多');
+  if (Object.keys(clean).length) layouts[key] = clean;
+  else delete layouts[key];
+  if (Object.keys(layouts).length > CANVAS_LAYOUT_LIMITS.layouts) throw Error('畫布版面過多');
+  const { canvasLayouts: _old, ...rest } = state;
+  void _old;
+  return Object.keys(layouts).length ? { ...rest, canvasLayouts: layouts } : rest;
 }
 const own = (value: object, key: string) => Object.prototype.hasOwnProperty.call(value, key);
 export function emptyReview(graph: Graph, fingerprint: string): ReviewState {
@@ -609,6 +652,19 @@ export function validateReview(
       requireDecision(decision);
       result = setFeature(result, key, decision);
     }
+  if (data.canvasLayouts !== undefined)
+    for (const [key, layout] of Object.entries(dictionary(data.canvasLayouts)))
+      result = setCanvasLayout(
+        result,
+        key,
+        Object.fromEntries(
+          Object.entries(dictionary(layout)).map(([id, point]) => {
+            const p = dictionary(point);
+            if (Object.keys(p).some((k) => k !== 'x' && k !== 'y')) throw Error('畫面位置欄位錯誤');
+            return [id, p as unknown as CanvasPoint];
+          }),
+        ),
+      );
   if (data.decisionNotes !== undefined) {
     const value = dictionary(data.decisionNotes),
       keys = Object.keys(value);
