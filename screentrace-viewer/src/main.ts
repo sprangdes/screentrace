@@ -86,12 +86,13 @@ function withoutRetiredFields(state: ReviewState): { state: ReviewState; dropped
     !!component_overrides || !!(orphan_component_overrides as unknown[] | undefined)?.length;
   return { state: rest as ReviewState, dropped };
 }
-/** Whether the state holds anything worth keeping: a keep／remove decision or a note. */
+/** Whether the state holds anything worth keeping: a keep／remove decision, a note or hand-placed cards. */
 function hasMarks(state: ReviewState): boolean {
   const decided = (values: Record<string, Decision>) =>
     Object.values(values).some((d) => d !== 'UNDECIDED');
   const notes = exportableNotes(state);
   return (
+    Object.keys(state.canvasLayouts || {}).length > 0 ||
     decided(state.screenDecisions) ||
     Object.values(state.componentDecisions).some(decided) ||
     decided(state.apiDecisions || {}) ||
@@ -454,6 +455,9 @@ try {
       state.apiDecisions || {},
       state.featureDecisions || {},
       exportableNotes(state),
+      // The md also carries the card positions (format 6), so moving a card makes the last download stale.
+      // Added only when there are any, so a fingerprint remembered before format 6 still matches.
+      ...(Object.keys(state.canvasLayouts || {}).length ? [state.canvasLayouts] : []),
     ]);
     for (let i = 0; i < text.length; i++) hash = Math.imul(hash ^ text.charCodeAt(i), 0x01000193);
     return (hash >>> 0).toString(16);
@@ -1669,7 +1673,7 @@ try {
         revealInPreview(node, frame!, viewer?.querySelector('.prototype-scroll') ?? null);
       }
   };
-  // Each persona has its own map laid out as its flow; switching persona builds that map and fits it anew.
+  // One free map for every persona (a role's flow lives on 依角色步驟); it is built once and kept.
   let canvasKey: string | undefined;
   const ensureCanvas = () => {
     const key = '';

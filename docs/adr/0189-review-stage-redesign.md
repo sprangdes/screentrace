@@ -48,7 +48,7 @@ R17 起，開啟畫面是把畫布放大到該畫面（ADR 0085），預覽四�
 ## 第四批：自由畫布與字型（2026-11-25）
 
 19. **自由畫布的四項新功能**（`canvas.ts`、`canvas-panel.ts`、`canvas-minimap.ts`、`canvas-arrange.ts`）：點一下卡片時右側顯示畫面摘要（進出數量與審查舞台相同的算法）；右下角的縮圖導覽可點擊或拖曳平移；Shift＋拖曳框選、Shift＋點擊加入選取，選取兩個以上可一次標記；拖曳卡片自由排版。移動過的卡片改用簡單的直角線（不走原本的路線演算法），區塊框依成員重新計算；回到原位或「重設排版」時恢復原本的線。
-20. **排版位置存進審查狀態**（需求方決定）：依版面（`roles`、`areas`、`persona:<id>`）各存一份，只寫在 md 附錄 A 的 `canvas_layouts`，有位置時 md 為 `format_version` 6，沒有時維持原版本（見 REVIEW_MD_CONTRACT）。位置不是保留／移除決定，不計入「尚未保存的標記」提醒。
+20. **排版位置存進審查狀態**（需求方決定）：依版面（`roles`、`areas`）各存一份，只寫在 md 附錄 A 的 `canvas_layouts`，有位置時 md 為 `format_version` 6，沒有時維持原版本（見 REVIEW_MD_CONTRACT）。位置不是保留／移除決定，但因為 md 會帶著它，移動卡片後也會顯示「尚未保存」提醒，避免下載過的 md 少了新的排版。
 21. **字型**（需求方同意下載 `@fontsource/inter`、`@fontsource/jetbrains-mono` 5.3.0，OFL 1.1）：建置時只取 Latin 子集的 Inter 400／600／700 與 JetBrains Mono 400，以 data URI 連同授權放在 viewer.css 前面，報表增加約 160 KB；中文仍用系統字型。
 
 ## 第五批：與設計稿逐項對齊（2026-11-25）

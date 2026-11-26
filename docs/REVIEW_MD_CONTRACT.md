@@ -124,6 +124,6 @@ D5 文字、共用 deriveApiUsage 與 md v1 的欄位／位元組契約不變。
 ## R115：format_version 6（畫布排版位置，ADR 0189）
 
 - 使用者在自由畫布上拖曳過畫面卡片時輸出 `format_version` 6；沒有拖曳過時維持 1／4／5，既有位元組不變。
-- v6 的機器區鍵為 v5 的全部鍵（`decision_notes`、`api_decisions`、`feature_decisions` 必有，可為空）加上 `canvas_layouts`：版面名稱 → 畫面 ID → `{x, y}`（整數世界座標）。版面名稱為 `roles`（依角色分區）、`areas`（依網址分區）或 `persona:<角色 ID>`（單一角色流程圖），每種版面各自保存。
+- v6 的機器區鍵為 v5 的全部鍵（`decision_notes`、`api_decisions`、`feature_decisions` 必有，可為空）加上 `canvas_layouts`：版面名稱 → 畫面 ID → `{x, y}`（整數世界座標）。viewer 寫出的版面名稱為 `roles`（依角色分區）或 `areas`（依網址分區），每種版面各自保存；匯入時接受其他合法名稱並原樣保留，但不使用。拖回原本計算位置的卡片不寫入。
 - 位置只寫在附錄 A，不出現在正文各節，也不是保留／移除決定；`state_sha256` 照常涵蓋它。
 - 匯入驗證：版面最多 32 個、每個版面最多 10000 個畫面、座標必須是絕對值不超過 1,000,000 的有限數字、每個位置只能有 `x` 與 `y`，否則拒絕整個檔案；指向已不存在畫面的位置保留但不顯示，不列為孤兒標記。
