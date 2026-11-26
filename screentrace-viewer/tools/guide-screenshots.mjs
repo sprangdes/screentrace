@@ -17,7 +17,6 @@ const output = path.join(root, 'docs/images/user-guide');
 const shots = [
   'canvas.png',
   'search-url.png',
-  'role-canvas.png',
   'zoom-focus.png',
   'screen-buttons.png',
   'progress-file.png',
@@ -98,6 +97,8 @@ async function main() {
         await page.locator('.prototype-back').click();
         await settle();
       }
+      const canvasLayout = page.locator('[data-overview-layout="canvas"]');
+      if (await canvasLayout.count()) await canvasLayout.click();
       await page.locator('.canvas[data-mode="overview"]').waitFor();
     };
     const open = async (name) => {
@@ -111,40 +112,33 @@ async function main() {
       await frame().locator('h1').first().waitFor();
       await settle();
     };
-    const persona = (name) => page.locator('.persona-switch button', { hasText: name }).click();
 
     // 1. Canvas overview, split into role areas.
     await page.locator('.canvas[data-fitted="true"]').waitFor();
     await screenshot('canvas.png');
-    // 2. Search by a real URL.
-    await page
-      .getByRole('searchbox', { name: '搜尋 URL 或畫面名稱' })
-      .fill('/applications/7/payment');
-    await page.locator('.screen-card.search-match').first().waitFor();
+    // 2. The review page, searching the queue by a real URL.
+    await page.locator('[data-page="review"]').click();
+    await page.locator('.prototype-viewer iframe').last().waitFor();
+    await page.locator('.search-box input').fill('/applications/7/payment');
+    await page.waitForFunction(() => document.querySelectorAll('[data-screen-list]').length > 0);
+    await settle();
     await screenshot('search-url.png');
-    await page.getByRole('button', { name: '清除搜尋' }).click();
-    // 3. One role's flow on the canvas.
-    await persona('一般用戶');
-    await settle();
-    await screenshot('role-canvas.png');
-    await persona('不套用角色');
-    await settle();
-    // 4. A screen opened, with a relation line hovered.
+    await page.locator('.search-box input').fill('');
+    await page.keyboard.press('Escape');
+    await toCanvas();
+    // 4. A screen opened on the review stage, both flow rails unfolded and a way out pointed at.
     await open('adminDetail（核保中）');
-    const line = page.locator('.focus-line-hit[data-kind="known"]').first();
-    if (await line.count()) {
-      const point = await line.evaluate((hit) => {
-        const at = hit.getPointAtLength(hit.getTotalLength() * 0.5),
-          box = hit.ownerSVGElement.getBoundingClientRect();
-        return { x: box.left + at.x, y: box.top + at.y };
-      });
-      await page.mouse.move(point.x, point.y);
-      await page.locator('.focus-tooltip:not([hidden])').waitFor();
-    }
+    for (const side of ['in', 'out'])
+      await page.locator(`[data-flow-rail="${side}"] .flow-rail-tab`).click();
+    const card = page.locator('[data-flow-rail="out"] .flow-card').first();
+    if (await card.count()) await card.hover();
+    await settle();
     await screenshot('zoom-focus.png', true);
+    for (const side of ['in', 'out'])
+      await page.locator(`[data-flow-rail="${side}"] .flow-rail-close`).click();
     // 5. The screen's buttons in the side panel.
     const panel = page.locator('[data-screen-panel]').first();
-    await panel.locator('.panel-buttons>summary').click();
+    await panel.locator('[data-panel-tab="buttons"]').click();
     await screenshot('screen-buttons.png');
     // 6. The progress file prompt on the first mark.
     await panel.locator('.panel-header [data-decision="REMOVE"]').click();
@@ -158,10 +152,10 @@ async function main() {
     await page.locator('.progress-button').click();
     // 7. The feature map, by role.
     await toCanvas();
-    await page.locator('button[data-list-mode="features"]').click();
+    await page.locator('button[data-overview-layout="features"]').click();
     await page.locator('.feature-map').waitFor();
     await screenshot('feature-map.png');
-    await page.locator('.segmented button', { hasText: '清單' }).first().click();
+    await page.locator('button[data-overview-layout="canvas"]').click();
     // 8. Typed data carried into the next screen.
     await open('form（填寫投保資料）');
     await present(true);
@@ -196,18 +190,18 @@ async function main() {
     await screenshot('simulate-choices.png');
     await page.keyboard.press('Escape');
     await toCanvas();
-    // 11. The role page.
-    await tab('角色');
-    await page.locator('.persona-step-group').first().waitFor();
+    // 11. The role overview.
+    await page.locator('[data-overview-layout="personas"]').click();
+    await page.locator('.role-overview').first().waitFor();
     await screenshot('role-page.png');
     // 12. The API page.
     await tab('API');
     await page.locator('[data-api-row]', { hasText: '/underwriting' }).first().click();
     await page.locator('[data-api-section="callers"]').waitFor();
     await screenshot('api-page.png');
-    // 13. Help.
-    await tab('畫面');
-    await page.getByRole('button', { name: '重設畫布' }).click();
+    // 13. Help, which sits with the review controls on the review page.
+    await page.locator('[data-page="review"]').click();
+    await page.locator('.prototype-viewer iframe').last().waitFor();
     await page.locator('.help-menu>summary').click();
     await page.locator('.help-menu[open]').waitFor();
     await screenshot('help-popover.png');

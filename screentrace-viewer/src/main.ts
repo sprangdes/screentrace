@@ -4,19 +4,20 @@ import { setJourney } from './simulation';
 import { applyJourney, resetJourney, restoreInputs, snapshotInputs } from './journey-data';
 import { inertDocument } from './inert-document';
 import { iconSprite, icon, iconButton } from './shell-ui';
-import { initializeComponentLabels } from './labels';
+import { initializeComponentLabels, componentLabelsForScreen } from './labels';
 import { screenNames, NameHint } from './names';
 import { Payload, requireGraph, requirePreview } from './contracts';
 import { element, text } from './text';
 import { indexGraph, searchScreens } from './map';
-import { canvas, fileTree, CanvasTransform, CanvasView } from './canvas';
+import { canvas, CanvasTransform, CanvasView } from './canvas';
 import { prototypeViewer } from './prototype';
 import { PrototypeHistory } from './prototype-history';
 import { apiPage } from './api-page';
-import { screenPanel } from './screen-panel';
+import { screenPanel, PanelTab, showPanelTab } from './screen-panel';
+import { reviewStage, RailState, Stage } from './review-stage';
 import { featureMap } from './feature-map';
 import { features } from './shared/features';
-import { placeBadge, decisionLabel } from './review-ui';
+import { placeBadge, decisionLabel, decisionSwitch } from './review-ui';
 import { previewDocument, previewSelector } from './preview';
 import { generateMarkdown, importMarkdown, markdownSizeWarning } from './shared/review-md';
 import {
@@ -39,9 +40,7 @@ import {
   reachText,
   reachSummary,
   personaDescription,
-  personaLayout,
   PersonaView,
-  featuresByRole,
   rolePartition,
   roleTint,
 } from './personas';
@@ -52,6 +51,7 @@ import {
   loadReview,
   saveReview,
   componentDecision,
+  screenDecision,
   effectiveComponent,
   setScreen,
   setComponent,
@@ -61,6 +61,7 @@ import {
   effectiveScreen,
   screenInherited,
   setDecisionNote,
+  setCanvasLayout,
   exportableNotes,
   statistics,
   conflicts,
@@ -193,7 +194,8 @@ try {
   let page: 'screens' | 'api' | 'personas' = 'screens',
     current: string | undefined,
     filter: Filter = 'ALL',
-    listMode: 'list' | 'files' | 'features' = 'list',
+    // The overview layout shown when no screen is open: the free map or the features (依角色步驟 is its own page).
+    listMode: 'list' | 'features' = 'list',
     query = '',
     canvasTransform: CanvasTransform | undefined;
   let buttonsOpen = false,
@@ -201,7 +203,11 @@ try {
     highlightComponent: string | undefined,
     selectedApi: string | undefined,
     personaId: string | undefined,
-    showUnreached = false;
+    panelTab: PanelTab = 'buttons',
+    lastOverview: 'screens' | 'personas' = 'screens',
+    lastReviewed: string | undefined;
+  // The flow rails beside an open screen start folded; the person's choice holds while moving between screens.
+  let rails: RailState = { in: false, out: false };
   // Note editors left open (screen panel keys and API IDs), so rebuilding a panel keeps them open.
   const notesOpen = new Set<string>(),
     apiNotesOpen = new Set<string>(),
@@ -222,17 +228,17 @@ try {
   document.querySelector<HTMLElement>('#application')!.title = graph.application.name;
   const tabs = element('nav', undefined, 'page-tabs');
   tabs.setAttribute('aria-label', '主要分頁');
-  const screensTab = element('button', undefined, 'page-tab'),
+  // Three places to work (ADR 0189): the overview in its layouts, the review of one screen, and the APIs.
+  const overviewTab = element('button', undefined, 'page-tab'),
+    reviewTab = element('button', undefined, 'page-tab'),
     apiTab = element('button', undefined, 'page-tab');
-  screensTab.append(icon('screen'), element('span', '畫面'));
-  apiTab.append(icon('api'), element('span', 'API'));
-  screensTab.dataset.page = 'screens';
+  overviewTab.append(element('span', '流程總覽'));
+  reviewTab.append(element('span', '審查'));
+  apiTab.append(element('span', 'API'));
+  overviewTab.dataset.page = 'overview';
+  reviewTab.dataset.page = 'review';
   apiTab.dataset.page = 'api';
-  tabs.append(screensTab, apiTab);
-  const personasTab = element('button', undefined, 'page-tab');
-  personasTab.append(icon('persona'), element('span', '角色'));
-  personasTab.dataset.page = 'personas';
-  if (personaViews.length) tabs.append(personasTab);
+  tabs.append(overviewTab, reviewTab, apiTab);
   const actions = element('div', undefined, 'topbar-actions');
   const progress = element('details', undefined, 'progress-menu'),
     progressSummary = element('summary', undefined, 'progress-button'),
@@ -242,7 +248,7 @@ try {
   const saveStatus = element('span', undefined, 'save-status');
   saveStatus.setAttribute('role', 'status');
   const download = element('button', undefined, 'primary download-md');
-  download.append(icon('import'), element('span', '下載 md'));
+  download.append(icon('import'), element('span', '交付 md'));
   download.dataset.mdExport = 'true';
   // A dot on the button while there are marks that are neither in a progress file nor in a downloaded md.
   const unsavedDot = element('span', undefined, 'unsaved-dot');
@@ -264,7 +270,7 @@ try {
     helpSummary = element('summary', undefined, 'icon-button');
   helpSummary.setAttribute('aria-label', '說明');
   helpSummary.title = '說明';
-  helpSummary.append(icon('question'));
+  helpSummary.append(element('span', '?'));
   const helpPanel = element('div', undefined, 'popover help-panel');
   helpPanel.append(element('h2', '操作說明'));
   const helpList = (title: string, items: string[]) => {
@@ -274,11 +280,11 @@ try {
     helpPanel.append(list);
   };
   helpList('快捷鍵', [
-    'k 保留、x 移除、u 未確認（作用於目前畫面，或右側欄中選取的按鈕、欄位）',
+    'k 保留、x 移除、u 未確認（作用於目前畫面，或右側欄中選取的按鈕）',
     'n 前往下一個未確認的畫面',
     '/ 搜尋畫面',
     'f 全螢幕預覽（展示用，再按一次或 Esc 結束）',
-    'Esc 返回畫布',
+    'Esc 返回總覽',
   ]);
   helpList('操作方式', [
     '觸控板兩指滑動或滑鼠拖曳移動畫布；兩指捏合或 ⌘／Ctrl＋滾輪縮放',
@@ -286,12 +292,12 @@ try {
     '在預覽中點連結或按鈕，會模擬前往的畫面；點輸入欄位或表格，右側欄會標出對應的欄位',
     '右側欄的「備註」可寫下修改意見或移除理由，會寫進 md 交給 AI',
     'API 頁可直接標記 API；與畫面標記推導的狀態不一致時列為衝突',
-    '標記會自動暫存在這個瀏覽器，但換電腦或清除瀏覽資料就會遺失；請用「下載 md」保存並交付',
+    '標記會自動暫存在這個瀏覽器，但換電腦或清除瀏覽資料就會遺失；請用「交付 md」保存並交給 AI',
   ]);
   helpList('狀態', [
     '綠色勾：保留',
     '紅色叉：移除',
-    '沒有標示：未確認',
+    '虛線圓：未確認（按鈕列的 ↺ 表示跟隨畫面）',
     '隨畫面移除：畫面標記移除時，沒有個別標記的按鈕與欄位一起移除',
   ]);
   helpList('ScreenTrace 看不到的事', [
@@ -300,7 +306,11 @@ try {
     '比對不到已知網址格式的程式組成連結',
   ]);
   help.append(helpSummary, helpPanel);
-  actions.append(progress, saveMenu, saveStatus, download, fileInput, help);
+  // The overview's three layouts sit at the right of the top bar while an overview is shown (ADR 0189).
+  const layoutSwitch = element('div', undefined, 'segmented layout-switch');
+  layoutSwitch.setAttribute('role', 'group');
+  layoutSwitch.setAttribute('aria-label', '總覽版面');
+  actions.append(layoutSwitch, progress, saveMenu, saveStatus, download, fileInput, help);
   header.append(tabs, actions);
   for (const menu of [progress, help, saveMenu])
     menu.addEventListener('keydown', (event) => {
@@ -326,131 +336,50 @@ try {
     search = element('input'),
     clearSearch = iconButton('清除搜尋', 'close');
   search.type = 'search';
-  search.placeholder = '搜尋 URL 或畫面名稱';
-  search.setAttribute('aria-label', '搜尋 URL 或畫面名稱');
-  searchBox.append(icon('search'), search, clearSearch);
-  const modes = element('div', undefined, 'segmented'),
-    listButton = element('button', '清單'),
-    filesButton = element('button', '檔案結構'),
-    featuresButton = element('button', '功能');
-  featuresButton.dataset.listMode = 'features';
-  modes.setAttribute('role', 'group');
-  modes.setAttribute('aria-label', '清單顯示方式');
-  modes.append(listButton, filesButton, featuresButton);
-  // The status filter folds into one button beside the search box; it opens a short menu.
-  const searchRow = element('div', undefined, 'search-row'),
-    filterButton = element('button', undefined, 'filter-button'),
-    filterLabel = element('span'),
-    chips = element('div', undefined, 'filter-pop');
-  filterButton.type = 'button';
-  filterButton.dataset.filterToggle = 'true';
-  filterButton.setAttribute('aria-haspopup', 'true');
-  filterButton.setAttribute('aria-expanded', 'false');
-  filterButton.append(icon('filter'), filterLabel);
+  search.placeholder = '/owners/5/edit';
+  search.id = 'screen-search';
+  const slashKey = element('kbd', '/');
+  slashKey.setAttribute('aria-hidden', 'true');
+  slashKey.title = '按 / 搜尋';
+  // The clear button shows only while there is something to clear.
+  clearSearch.hidden = true;
+  searchBox.append(icon('search'), search, clearSearch, slashKey);
+  // The status filter sits in plain sight under the search box, each choice with its count (ADR 0189).
+  const searchRow = element('label', undefined, 'search-row'),
+    chips = element('div', undefined, 'filter-chips');
+  searchRow.htmlFor = 'screen-search';
   chips.setAttribute('role', 'group');
   chips.setAttribute('aria-label', '依狀態篩選');
-  chips.hidden = true;
-  const showFilter = (open: boolean) => {
-    chips.hidden = !open;
-    filterButton.setAttribute('aria-expanded', String(open));
-  };
-  filterButton.onclick = () => showFilter(chips.hidden === true);
-  document.addEventListener('pointerdown', (event) => {
-    if (!chips.hidden && !searchRow.contains(event.target as Node)) showFilter(false);
-  });
-  searchRow.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape' && !chips.hidden) {
-      event.stopPropagation();
-      showFilter(false);
-      filterButton.focus();
-    }
-  });
-  searchRow.append(searchBox, filterButton, chips);
+  searchRow.append(element('span', '搜尋畫面或網址', 'search-label'), searchBox);
   const notices = element('div', undefined, 'sidebar-notices'),
     list = element('div', undefined, 'screen-list');
-  // The persona bar sits on the map: one button per persona turns the map into that persona's flow, step by step.
-  const personaBar = element('section', undefined, 'persona-bar'),
-    personaSwitch = element('div', undefined, 'persona-switch'),
-    personaInfo = element('div', undefined, 'persona-info');
-  personaBar.dataset.personaBar = 'true';
-  personaBar.setAttribute('aria-label', '角色流程');
-  personaSwitch.setAttribute('role', 'group');
-  personaSwitch.setAttribute('aria-label', '依角色顯示流程');
-  personaBar.append(personaSwitch, personaInfo);
-  // The buttons and the checkbox stay mounted, so keyboard focus survives a switch; only their state and the text change.
-  const personaButtons = [
-    { id: '', name: '不套用角色' },
-    ...personaViews.map((view) => ({ id: view.persona.id, name: view.persona.name })),
-  ].map((option) => {
-    const button = element('button', option.name);
-    button.dataset.personaOption = option.id;
-    if (option.id) button.dataset.roleTint = roleTint(graph, option.id);
-    button.onclick = () => {
-      if ((personaId || '') === option.id) return;
-      personaId = option.id || undefined;
-      showUnreached = false;
-      render();
-    };
-    personaSwitch.append(button);
-    return button;
-  });
-  const personaWho = element('p', undefined, 'persona-who'),
-    personaKeys = element('span', undefined, 'persona-keys'),
-    personaLegend = element('div', undefined, 'persona-legend'),
-    personaNote = element('p', undefined, 'persona-note');
-  const showAll = element('label', undefined, 'persona-toggle'),
-    showAllBox = element('input'),
-    showAllText = element('span');
-  showAllBox.type = 'checkbox';
-  showAllBox.dataset.personaShowAll = 'true';
-  showAllBox.onchange = () => {
-    showUnreached = showAllBox.checked;
-    render();
-  };
-  showAll.append(showAllBox, showAllText);
-  // A role's map shows its own flow only; screens it does not reach are not offered (ADR 0188).
-  showAll.hidden = true;
-  personaLegend.append(personaKeys);
-  personaInfo.append(personaWho, personaLegend, personaNote);
-  const renderPersonaBar = () => {
-    for (const button of personaButtons)
-      button.setAttribute(
-        'aria-pressed',
-        String((personaId || '') === button.dataset.personaOption),
-      );
-    const persona = activePersona();
-    personaInfo.hidden = !persona;
-    if (!persona) return;
-    personaWho.dataset.personaDescription = persona.persona.id;
-    const about = personaDescription(persona.persona);
-    personaWho.replaceChildren(element('strong', persona.persona.name));
-    if (about) personaWho.append(element('span', about));
-    personaKeys.replaceChildren(
-      ...(['REACHABLE', 'POSSIBLE'] as const).map((reach) => {
-        const key = element('span', `${reachLabel[reach]} ${persona.counts[reach]}`, 'persona-key');
-        key.dataset.reach = reach;
-        key.title = reachHelp[reach];
-        return key;
-      }),
-    );
-    personaNote.textContent = !persona.depth.size
-      ? '這個角色從起點走不到任何畫面；請確認設定中的起點網址與條件。'
-      : persona.unevaluated
-        ? `有 ${persona.unevaluated} 個導覽的條件程式無法判定，經過它們的畫面列為「可能走到」。`
-        : '';
-    personaNote.hidden = !personaNote.textContent;
-  };
-  // The same sidebar toggle sits in the same top-left spot whether the list is open or folded into the rail.
+  // The list's title with its fold button on the right; folded, the rail keeps the way back, search and the next screen.
   const sidebarHeader = element('div', undefined, 'sidebar-header'),
-    collapseList = iconButton('收起畫面清單', 'sidebar');
-  sidebarHeader.append(collapseList, element('h2', '畫面清單'));
+    collapseList = iconButton('收起畫面清單', 'chevronLeft');
+  sidebarHeader.append(element('h2', '待審畫面'), collapseList);
   const rail = element('div', undefined, 'sidebar-rail'),
-    expandList = iconButton('展開畫面清單', 'sidebar'),
+    expandList = iconButton('展開畫面清單', 'chevronRight'),
     railSearch = iconButton('搜尋畫面', 'search');
   expandList.classList.add('rail-toggle');
-  rail.append(expandList, railSearch);
+  const railCount = element('span', undefined, 'rail-count'),
+    railNext = element('button', 'n', 'rail-next');
+  railNext.type = 'button';
+  railNext.setAttribute('aria-label', '下一個未確認');
+  railNext.title = '下一個未確認（n）';
+  rail.append(
+    expandList,
+    railSearch,
+    element('span', undefined, 'rail-divider'),
+    railCount,
+    railNext,
+  );
   const sidebarBody = element('div', undefined, 'sidebar-body');
-  sidebarBody.append(sidebarHeader, searchRow, modes, notices, list);
+  // The way through the review: the next screen nobody has decided on, always at the foot of the list.
+  const nextButton = element('button', undefined, 'next-undecided');
+  nextButton.type = 'button';
+  nextButton.dataset.nextUndecided = 'true';
+  nextButton.append(element('span', '下一個未確認'), element('kbd', 'n'));
+  sidebarBody.append(sidebarHeader, searchRow, chips, notices, list, nextButton);
   nav.append(
     rail,
     sidebarBody,
@@ -466,13 +395,15 @@ try {
   );
   // The screen details appear only while a screen is open; they fold into a rail on their own edge, mirroring the list.
   const panelBody = element('div', undefined, 'details-body'),
-    collapseDetails = iconButton('收起畫面資訊', 'sidebarRight'),
+    collapseDetails = iconButton('收起標記面板', 'chevronRight'),
     detailsRail = element('div', undefined, 'details-rail'),
-    expandDetails = iconButton('展開畫面資訊', 'sidebarRight');
+    expandDetails = iconButton('展開標記面板', 'chevronLeft');
   collapseDetails.classList.add('details-toggle');
   expandDetails.classList.add('rail-toggle');
-  detailsRail.append(expandDetails);
-  panel.append(collapseDetails, detailsRail, panelBody);
+  const railDecide = element('div', undefined, 'rail-decide');
+  detailsRail.append(expandDetails, element('span', undefined, 'rail-divider'), railDecide);
+  // The fold button sits at the end of the panel's role row; it is put there each time the panel is drawn.
+  panel.append(detailsRail, panelBody);
   shell.append(nav, main, panel);
   if (restored.warning && !restored.warning.includes('覆寫'))
     notices.append(element('p', restored.warning, 'notice'));
@@ -510,7 +441,7 @@ try {
   let edits = 0;
   const persist = () => {
     edits++;
-    if (saveReview(storage, reviewState)) say('⚠ 無法暫存在瀏覽器，請下載 md', 'error');
+    if (saveReview(storage, reviewState)) say('⚠ 無法暫存在瀏覽器，請用「交付 md」保存', 'error');
   };
   // ---- keeping the marks: when the md was last downloaded, and whether marks exist that no file holds
   const exportKey = `screentrace:last-export:v1:${encodeURIComponent(graph.application.name)}:${payload.fingerprint}`;
@@ -621,7 +552,7 @@ try {
     download.dataset.unsaved = String(pending);
     download.title = [
       pending ? '有尚未保存到檔案的標記' : '',
-      lastExport ? `上次下載 md：${exportTime(lastExport)}` : '尚未下載過 md',
+      lastExport ? `上次交付 md：${exportTime(lastExport)}` : '尚未交付過 md',
     ]
       .filter(Boolean)
       .join('\n');
@@ -629,7 +560,7 @@ try {
   const lastExportLine = () =>
     element(
       'p',
-      lastExport ? `上次下載 md：${exportTime(lastExport)}` : '這份報表尚未下載過 md。',
+      lastExport ? `上次交付 md：${exportTime(lastExport)}` : '這份報表尚未交付過 md。',
       'muted last-export',
     );
   const menuButton = (label: string, action: () => void, primary = false) => {
@@ -644,7 +575,10 @@ try {
     renderExport();
     saveMenu.dataset.fileState = fileState;
     const dot = element('span', undefined, 'file-dot');
-    saveSummary.replaceChildren(dot, element('span', fileLabels[fileState]), icon('more'));
+    // Plain status text, like a note beside the progress: the state, then the file it writes to.
+    saveSummary.replaceChildren(dot, element('span', fileLabels[fileState]));
+    if (fileHandle && ['saved', 'saving', 'error'].includes(fileState))
+      saveSummary.append(element('span', '·'), element('code', fileHandle.name, 'file-name'));
     saveSummary.title = fileHandle
       ? `${fileLabels[fileState]}：${fileHandle.name}`
       : fileLabels[fileState];
@@ -652,11 +586,11 @@ try {
     const text = (value: string) => savePanel.append(element('p', value, 'muted'));
     if (fileState === 'unsupported') {
       text(
-        '這個瀏覽器不支援自動存檔。標記只暫存在這個瀏覽器，換電腦或清除瀏覽資料就會遺失；請用「下載 md」保存，之後用「開啟 md」接續。',
+        '這個瀏覽器不支援自動存檔。標記只暫存在這個瀏覽器，換電腦或清除瀏覽資料就會遺失；請用「交付 md」保存，之後用「開啟 md」接續。',
       );
       savePanel.append(
         lastExportLine(),
-        menuButton('下載 md', () => download.click(), true),
+        menuButton('交付 md', () => download.click(), true),
         openMd,
       );
       return;
@@ -665,7 +599,7 @@ try {
       text('選擇一個 md 檔的存放位置，之後每次標記都會自動寫入。這個檔案就是要交給 AI 的 md。');
       savePanel.append(
         menuButton('選擇存放位置…', () => void choose(), true),
-        menuButton('下載 md', () => download.click()),
+        menuButton('交付 md', () => download.click()),
         openMd,
         lastExportLine(),
       );
@@ -897,7 +831,33 @@ try {
       total = index.screens.length,
       issues = conflicts(graph, reviewState),
       apiIssues = apiConflicts(graph, reviewState);
-    progressSummary.replaceChildren(element('span', `已確認 ${done}／${total}`), icon('more'));
+    // The count, a bar of what is kept and removed, and the conflicts, always in sight (ADR 0189).
+    const meter = element('span', undefined, 'progress-meter'),
+      bar = element('span', undefined, 'progress-bar');
+    for (const value of ['KEEP', 'REMOVE'] as const) {
+      const part = element('span', undefined, `progress-part decision-${value}`);
+      part.style.width = `${total ? (counts.screens[value] / total) * 100 : 0}%`;
+      bar.append(part);
+    }
+    bar.setAttribute('aria-hidden', 'true');
+    const line = element('span', undefined, 'progress-line');
+    line.append(
+      element('span', `已確認 ${done} / ${total}`, 'progress-count'),
+      element(
+        'span',
+        `保留 ${counts.screens.KEEP} · 移除 ${counts.screens.REMOVE}`,
+        'progress-split',
+      ),
+    );
+    meter.append(line, bar);
+    progressSummary.replaceChildren(meter);
+    const conflictTotal = issues.length + apiIssues.length;
+    if (conflictTotal) {
+      const pill = element('span', undefined, 'conflict-pill');
+      pill.dataset.conflictPill = String(conflictTotal);
+      pill.append(icon('warning'), element('span', `${conflictTotal} 衝突`));
+      progressSummary.append(pill);
+    }
     progressSummary.dataset.done = String(done);
     progressPanel.replaceChildren(element('h2', '確認進度'));
     const row = (label: string, value: Filter, count: number) => {
@@ -926,16 +886,6 @@ try {
         'muted',
       ),
     );
-    const fieldTotal = counts.fields.KEEP + counts.fields.REMOVE + counts.fields.UNDECIDED;
-    if (fieldTotal) {
-      const line = element(
-        'p',
-        `保留 ${counts.fields.KEEP} · 移除 ${counts.fields.REMOVE} · 隨畫面移除 ${counts.fieldsInherited}`,
-        'muted',
-      );
-      line.dataset.progressFields = 'true';
-      progressPanel.append(element('h3', '欄位'), line);
-    }
     const apiLine = element('p', `保留 ${counts.apis.KEEP} · 移除 ${counts.apis.REMOVE}`, 'muted');
     apiLine.dataset.progressApis = 'true';
     progressPanel.append(element('h3', 'API（直接標記）'), apiLine);
@@ -987,42 +937,35 @@ try {
 
   const renderSidebar = () => {
     const counts = statistics(graph, reviewState).screens;
+    railCount.textContent = `未確認 ${counts.UNDECIDED}`;
     chips.replaceChildren();
     const filterName = (value: 'ALL' | 'UNDECIDED' | 'KEEP' | 'REMOVE') =>
       value === 'ALL' ? '全部' : decisionLabel(value);
     for (const value of ['ALL', 'UNDECIDED', 'KEEP', 'REMOVE'] as const) {
-      const chip = element('button', undefined, 'filter-option');
+      const chip = element('button', undefined, 'filter-chip');
       chip.type = 'button';
       chip.append(
         element('span', filterName(value)),
-        element('span', String(value === 'ALL' ? index.screens.length : counts[value]), 'muted'),
+        element(
+          'span',
+          String(value === 'ALL' ? index.screens.length : counts[value]),
+          'filter-count',
+        ),
       );
       chip.dataset.stateFilter = value;
       chip.setAttribute('aria-pressed', String(filter === value));
       chip.onclick = () => {
         filter = value;
-        showFilter(false);
         render();
       };
       chips.append(chip);
     }
-    // The button says which filter is on when it is not 全部.
-    filterLabel.textContent = filter === 'ALL' ? '' : filterName(filter);
-    filterButton.dataset.active = String(filter !== 'ALL');
-    filterButton.title = `依狀態篩選：${filterName(filter)}`;
-    filterButton.setAttribute('aria-label', `依狀態篩選：${filterName(filter)}`);
-    listButton.setAttribute('aria-pressed', String(listMode === 'list'));
-    filesButton.setAttribute('aria-pressed', String(listMode === 'files'));
-    featuresButton.setAttribute('aria-pressed', String(listMode === 'features'));
     const visible = visibleScreens(),
       matches = searchScreens(index, query);
-    if (listMode === 'files') {
-      list.replaceChildren(fileTree(index, query, (id) => openScreen(id), { visible, current }));
-      return;
-    }
     list.replaceChildren();
     const shown = (id: string) => !(visible && !visible.has(id)) && !(query && !matches.has(id));
-    const row = (id: string, persona?: PersonaView) => {
+    const conflicted = new Set(conflicts(graph, reviewState).map((c) => c.screenId));
+    const row = (id: string, persona?: PersonaView, roleKey?: string) => {
       const screen = index.nodes.get(id)!,
         status = screenState(id),
         button = element('button', undefined, 'screen-row');
@@ -1035,6 +978,26 @@ try {
         element('code', index.routes.get(id)?.[0] || text.noUrl),
       );
       button.append(label);
+      // Under a role's heading: the step the role first sees the screen at, and 「可能」 when the role may not get there.
+      const role = roleKey ? personaViews.find((v) => v.persona.id === roleKey) : undefined,
+        step = role?.depth.get(id);
+      if (step !== undefined) {
+        const number = element('span', String(step), 'screen-row-step');
+        number.title = `第 ${step} 步`;
+        button.prepend(number);
+      } else if (roleKey) button.prepend(element('span', undefined, 'screen-row-step'));
+      if (conflicted.has(id)) {
+        const warn = icon('warning');
+        warn.classList.add('screen-row-conflict');
+        warn.setAttribute('role', 'img');
+        warn.setAttribute('aria-label', '有衝突');
+        button.append(warn);
+      }
+      if (role?.reach.get(id) === 'POSSIBLE') {
+        const maybe = element('span', '可能', 'screen-row-maybe');
+        maybe.title = reachHelp.POSSIBLE;
+        button.append(maybe);
+      }
       if (persona) {
         const reach = persona.reach.get(id)!,
           tag = element('span', reachLabel[reach], 'persona-reach');
@@ -1056,6 +1019,12 @@ try {
           inherited ? `隨功能${decisionLabel(status)}` : decisionLabel(status),
         );
         button.append(mark);
+      } else {
+        // Undecided screens show an empty dashed ring, so every row says where it stands.
+        const open = element('span', undefined, 'status-open');
+        open.setAttribute('role', 'img');
+        open.setAttribute('aria-label', decisionLabel('UNDECIDED'));
+        button.append(open);
       }
       button.onclick = () => openScreen(id);
       return button;
@@ -1099,85 +1068,44 @@ try {
     }
     // With roles, each role heads its own part of the list (ADR 0188).
     const roles = rolePartition(index);
+    // A role's heading: its colour as a small square, its name, and how many of its screens are listed.
     const roleHeading = (key: string, label: string, count: number) => {
       const heading = element('div', undefined, 'role-heading');
       heading.dataset.roleTint = roleTint(graph, key);
-      heading.append(icon('persona'), element('span', label), element('span', `${count}`, 'muted'));
+      const swatch = element('span', undefined, 'role-swatch');
+      swatch.setAttribute('aria-hidden', 'true');
+      heading.append(
+        swatch,
+        element('span', label, 'role-heading-name'),
+        element('span', `${count} 個畫面`, 'role-heading-count'),
+      );
       return heading;
     };
-    if (listMode === 'features') {
-      const byRole = roles
-        ? featuresByRole(featureList, roles)
-        : [{ key: '', label: '', screens: 0, features: featureList }];
-      for (const group of byRole) {
-        if (group.key) {
-          const shownCount = group.features.flatMap((f) => f.screens).filter(shown).length;
-          if (shownCount) list.append(roleHeading(group.key, group.label, shownCount));
-        }
-        appendFeatures(group.features, group.key);
-      }
-      if (!list.querySelector('.screen-row'))
-        list.append(element('p', '沒有符合的畫面', 'empty-list'));
-      return;
-    }
     if (roles) {
       for (const key of roles.keys) {
-        const ids = orderedScreens.filter((s) => roles.of.get(s.id) === key && shown(s.id));
+        // In the role's order of steps, then by name.
+        const depth = personaViews.find((v) => v.persona.id === key)?.depth,
+          step = (id: string) => depth?.get(id) ?? Number.MAX_SAFE_INTEGER,
+          ids = orderedScreens
+            .filter((s) => roles.of.get(s.id) === key && shown(s.id))
+            .sort((a, b) => step(a.id) - step(b.id));
         if (!ids.length) continue;
-        list.append(roleHeading(key, roles.label(key), ids.length));
-        for (const screen of ids) list.append(row(screen.id));
+        const group = element('section', undefined, 'role-group');
+        group.append(roleHeading(key, roles.label(key), ids.length));
+        for (const screen of ids) group.append(row(screen.id, undefined, key));
+        list.append(group);
       }
       if (!list.childElementCount) list.append(element('p', '沒有符合的畫面', 'empty-list'));
       return;
     }
     for (const screen of orderedScreens) if (shown(screen.id)) list.append(row(screen.id));
     if (!list.childElementCount) list.append(element('p', '沒有符合的畫面', 'empty-list'));
-    return;
-    function appendFeatures(features: typeof featureList, roleKey: string) {
-      // Screens under their feature, in the order its flows reach them.
-      for (const feature of features) {
-        const ids = feature.flows.flatMap((flow) => flow.screens).filter(shown);
-        if (!ids.length) continue;
-        const fold = roleKey ? `${roleKey}\u0000${feature.key}` : feature.key;
-        const section = element('details', undefined, 'feature-group'),
-          summary = element('summary'),
-          decision = featureDecision(reviewState, feature.key);
-        section.dataset.featureGroup = feature.key;
-        section.open = !featuresCollapsed.has(fold) || ids.includes(current || '');
-        // Written like the canvas group titles: 「/admin · 3 個畫面」.
-        const name = element('span', undefined, 'feature-group-name');
-        name.append(feature.label, element('span', ` · ${ids.length} 個畫面`, 'muted'));
-        summary.append(name);
-        if (decision !== 'UNDECIDED') {
-          const mark = icon(decision === 'KEEP' ? 'check' : 'close');
-          mark.classList.add('status-mark', `decision-${decision}`);
-          mark.setAttribute('role', 'img');
-          mark.setAttribute('aria-label', `功能${decisionLabel(decision)}`);
-          summary.append(mark);
-        }
-        const chevron = icon('chevronRight');
-        chevron.classList.add('feature-group-chevron');
-        summary.append(chevron);
-        section.addEventListener('toggle', () => {
-          if (section.open) featuresCollapsed.delete(fold);
-          else featuresCollapsed.add(fold);
-        });
-        const items = element('div', undefined, 'feature-group-items');
-        for (const id of ids) items.append(row(id));
-        section.append(summary, items);
-        list.append(section);
-      }
-    }
   };
 
-  // The screen list folds into a rail on its own edge; zooming into a screen folds it, returning restores it.
-  // While zoomed in, opening it floats the list over the canvas so the preview keeps its size.
-  let listCollapsed = false,
-    overviewCollapsed = false,
-    wasZoomed = false;
-  const overlayOpen = () => wasZoomed && !listCollapsed;
+  // The screen list is the review queue: it stays beside an open screen and folds into a rail only when asked (ADR 0189).
+  let listCollapsed = false;
   const syncList = () => {
-    shell.dataset.sidebar = listCollapsed ? 'collapsed' : wasZoomed ? 'overlay' : 'expanded';
+    shell.dataset.sidebar = listCollapsed ? 'collapsed' : 'expanded';
     sidebarBody.inert = listCollapsed;
     expandList.setAttribute('aria-expanded', 'false');
     collapseList.setAttribute('aria-expanded', 'true');
@@ -1187,19 +1115,14 @@ try {
     focus: HTMLElement = collapsed ? expandList : collapseList,
   ) => {
     listCollapsed = collapsed;
-    if (!wasZoomed) overviewCollapsed = collapsed;
     syncList();
     focus.focus();
   };
   expandList.onclick = () => setList(false);
   railSearch.onclick = () => setList(false, search);
   collapseList.onclick = () => setList(true);
-  document.addEventListener('click', (event) => {
-    if (overlayOpen() && !nav.contains(event.target as Node)) {
-      listCollapsed = true;
-      syncList();
-    }
-  });
+  nextButton.onclick = () => nextUndecided();
+  railNext.onclick = () => nextUndecided();
   let detailsCollapsed = false;
   const syncDetails = () => {
     shell.dataset.details =
@@ -1219,7 +1142,24 @@ try {
   const renderPanel = () => {
     if (page !== 'screens' || !current) {
       panelBody.replaceChildren();
+      railDecide.replaceChildren();
       return;
+    }
+    // Folded, the panel still decides: K／X／U as three buttons, and a warning when the screen has a conflict.
+    const id = current;
+    railDecide.replaceChildren(
+      decisionSwitch('這個畫面', screenDecision(reviewState, id), (v) => decide.screen(id, v), {
+        compact: true,
+        rail: true,
+        screen: id,
+      }),
+    );
+    if (conflicts(graph, reviewState).some((c) => c.screenId === id || c.targetScreenId === id)) {
+      const warn = icon('warning');
+      warn.classList.add('rail-conflict');
+      warn.setAttribute('role', 'img');
+      warn.setAttribute('aria-label', '有衝突');
+      railDecide.append(warn);
     }
     const shown = panel.querySelector<HTMLDetailsElement>(
       `[data-screen-panel="${CSS.escape(current)}"] .panel-buttons`,
@@ -1243,8 +1183,11 @@ try {
       onFieldsToggle: (open) => {
         fieldsOpen = open;
       },
-      focus: (id) => openScreen(id),
       api: (id) => showApi(id),
+      tab: panelTab,
+      onTab: (tab) => {
+        panelTab = tab;
+      },
       buttonsOpen,
       onButtonsToggle: (open) => {
         buttonsOpen = open;
@@ -1257,6 +1200,23 @@ try {
       hover: (id) => pointAt(id),
       locate: (id) => locate(id),
     });
+    // Whose screen this is and at which step of that role's flow, at the top of the panel.
+    // The row ends with the panel's fold button, with or without a role.
+    const roles = rolePartition(index),
+      roleKey = roles?.of.get(current),
+      tag = element('div', undefined, 'panel-role');
+    if (roles && roleKey) {
+      const chip = element('span', roles.label(roleKey), 'panel-role-chip'),
+        view = personaViews.find((v) => v.persona.id === roleKey),
+        step = view?.depth.get(current);
+      chip.dataset.roleTint = roleTint(graph, roleKey);
+      tag.append(chip);
+      if (step !== undefined) tag.append(element('span', `第 ${step} 步`, 'panel-step'));
+      if (view?.reach.get(current) === 'POSSIBLE')
+        tag.append(element('span', '可能走到', 'panel-maybe'));
+    }
+    tag.append(element('span', undefined, 'panel-role-spacer'), collapseDetails);
+    panelBody.querySelector('.panel-header')?.prepend(tag);
     const persona = activePersona();
     if (persona) {
       const reach = persona.reach.get(current)!,
@@ -1268,39 +1228,55 @@ try {
       note.dataset.personaStatus = reach;
       panelBody.querySelector('.panel-header')?.append(note);
     }
-    if (highlightComponent)
-      requestAnimationFrame(() =>
-        panel
-          .querySelector(`[data-component-row="${CSS.escape(highlightComponent!)}"]`)
-          ?.scrollIntoView({ block: 'nearest' }),
-      );
+    if (highlightComponent) {
+      const row = panel.querySelector<HTMLElement>(
+          `[data-component-row="${CSS.escape(highlightComponent)}"]`,
+        ),
+        tab = row?.closest<HTMLElement>('[data-tab-panel]')?.dataset.tabPanel as
+          PanelTab | undefined;
+      if (tab && tab !== panelTab) {
+        panelTab = tab;
+        showPanelTab(panel, tab);
+      }
+      requestAnimationFrame(() => row?.scrollIntoView({ block: 'nearest' }));
+    }
   };
 
   // ---- main area: the canvas (zooming into the open screen) or the API page
   let simulation: ReturnType<typeof attachSimulation> | undefined,
     view: CanvasView | undefined,
+    stage: (Stage & { id: string }) | undefined,
     frame: HTMLIFrameElement | undefined,
-    viewer: HTMLElement | undefined;
+    viewer: HTMLElement | undefined,
+    stageControls: HTMLElement[] = [];
+  /** Puts the states and the demo-content switch where they are seen: above the preview, or in the full-window bar. */
+  const placeControls = () => {
+    const slot = presenting
+      ? viewer?.querySelector('.present-controls')
+      : stage?.top.querySelector('.stage-controls');
+    slot?.append(...stageControls);
+  };
   const thumbnail = (id: string) => {
     const value = payload.preview.screens?.find((s) => s.graphScreenId === id)?.thumbnail;
     return value?.startsWith('data:image/') ? value : undefined;
   };
-  /** With a persona chosen, the map keeps only the screens on its flow unless the person asks for the rest. */
-  const mapScreens = (): Set<string> | undefined => {
-    const base = visibleScreens(),
-      persona = activePersona();
-    if (!persona || showUnreached) return base;
-    return new Set(
-      index.screens
-        .filter((s) => persona.depth.has(s.id) && (!base || base.has(s.id)))
-        .map((s) => s.id),
-    );
-  };
+  /** With a persona chosen, the map keeps only the screens on its flow unless the person asks for the rest.
+   * The list's search and status filter belong to the review page; they do not narrow the overview map. */
+  // The free map shows every screen in its role or URL areas; a role's own flow lives on 依角色步驟 (ADR 0189).
+  // Hand-placed cards are kept per layout: the role areas or the URL areas.
+  const canvasLayoutKey = () => (rolePartition(index) ? 'roles' : 'areas');
   const canvasState = () => ({
-    query,
-    visible: mapScreens(),
+    query: '',
+    visible: undefined,
     screenStatus: (id: string) => screenState(id),
-    persona: activePersona(),
+    persona: undefined,
+    arranged: reviewState.canvasLayouts?.[canvasLayoutKey()] || {},
+    conflict: (id: string) => {
+      const issue = conflicts(graph, reviewState).find((c) => c.screenId === id);
+      if (!issue) return undefined;
+      const label = componentLabelsForScreen(index, id).get(issue.componentId);
+      return `${label ? `「${label}」` : '保留的按鈕'}會前往已標記移除的「${index.nodes.get(issue.targetScreenId)?.name || '畫面'}」。`;
+    },
   });
   const nodesFor = (doc: Document, id: string, component: string) => {
     const nodes = new Set<HTMLElement>(
@@ -1335,7 +1311,7 @@ try {
   };
   /** A dashed frame drawn over the button, so the page's own styles and decision outlines stay untouched. */
   const pointAt = (component: string | undefined) => {
-    view?.lightLines(component);
+    stage?.light(component);
     const doc = frame?.contentDocument;
     if (!doc || !current) return;
     doc.querySelectorAll('[data-st-viewer-pointer]').forEach((node) => node.remove());
@@ -1356,6 +1332,13 @@ try {
     const row = panel.querySelector<HTMLElement>(`[data-component-row="${CSS.escape(component)}"]`);
     if (!row) return;
     row.classList.add('is-highlighted');
+    // A field's row is on the fields tab: show that tab first.
+    const tab = row.closest<HTMLElement>('[data-tab-panel]')?.dataset.tabPanel as
+      PanelTab | undefined;
+    if (tab && tab !== panelTab) {
+      panelTab = tab;
+      showPanelTab(panel, tab);
+    }
     for (let parent = row.parentElement; parent && parent !== panel; parent = parent.parentElement)
       if (parent instanceof HTMLDetailsElement) parent.open = true;
     buttonsOpen = true;
@@ -1403,12 +1386,12 @@ try {
       },
       true,
     );
-    // Pointing at a button in the preview brings back the focus lines it leads along.
+    // Pointing at a button in the preview marks the flow cards it leads to.
     doc.addEventListener('mouseover', (event) => {
-      if (current === id) view?.lightLines(ownerOf(event.target));
+      if (current === id) stage?.light(ownerOf(event.target));
     });
     doc.documentElement.addEventListener('mouseleave', () => {
-      if (current === id) view?.lightLines(undefined);
+      if (current === id) stage?.light(undefined);
     });
   };
   // ---- how far the preview can be trusted (ADR 0157): demo data and content shown only under conditions
@@ -1494,7 +1477,7 @@ try {
       }
       if (!decided) continue;
       const effective = effectiveComponent(reviewState, id, record.graphComponentId, graph),
-        color = effective === 'KEEP' ? '#1d6b45' : '#9e3410';
+        color = effective === 'KEEP' ? '#13795b' : '#b42318';
       node.dataset.reviewStatus = effective;
       if (!spotlight) node.style.outline = `3px solid ${color}`;
       const badge = doc.createElement('span');
@@ -1527,25 +1510,16 @@ try {
       }
     }, 0);
   };
-  const renderFocus = (id: string, host: HTMLElement) =>
+  const renderFocus = (id: string, host: HTMLElement, top: HTMLElement) =>
     new Promise<void>((shown) => {
       const preview = element('section', undefined, 'preview'),
-        notice = element('span', '示意畫面：資料為範例值，不是真實系統', 'preview-notice'),
-        trust = element('button', undefined, 'trust-toggle'),
-        legend = element('div', undefined, 'trust-legend');
+        trust = element('button', undefined, 'trust-toggle');
       trust.type = 'button';
       trust.dataset.trustToggle = 'true';
-      trust.append(icon('info'), element('span', '標示示範內容'));
-      trust.title = '框出示範資料與依條件才出現的內容';
-      legend.dataset.trustLegend = 'true';
-      legend.append(
-        element('span', '藍色虛線：示範資料，不是真實資料', 'trust-key trust-demo'),
-        element('span', '橘色虛線：依條件才顯示（權限、狀態等）', 'trust-key trust-conditional'),
-        element('span', '灰框：無法確定的動態內容', 'trust-key trust-dynamic'),
-      );
+      trust.append(icon('dashedSquare'), element('span', '標示示範內容'));
+      trust.title = '框出示範資料（藍色虛線）與依條件才出現的內容（橘色虛線）';
       const syncTrust = () => {
         trust.setAttribute('aria-pressed', String(showTrust));
-        legend.hidden = !showTrust;
       };
       // Loading, error and empty content stays hidden until asked for, one state at a time (ADR 0162).
       const pageStates = element('div', undefined, 'segmented page-state-switch');
@@ -1573,17 +1547,24 @@ try {
             (a, b) =>
               Number(a.attributes.jspStateOrder ?? 99) - Number(b.attributes.jspStateOrder ?? 99),
           );
-      screenStates.hidden = family.length < 2;
-      for (const state of family) {
-        const button = element(
-          'button',
-          state.attributes.jspStateLabel || state.attributes.stateVariant,
-        );
+      // Always shown: a screen without states reads as its one state, 「預設」.
+      if (family.length < 2) {
+        const only = index.nodes.get(id)?.attributes,
+          button = element('button', only?.jspStateLabel || only?.stateVariant || '預設');
         button.type = 'button';
-        button.setAttribute('aria-pressed', String(state.id === id));
-        if (state.id !== id) button.onclick = () => openScreen(state.id, { simulated: true });
+        button.setAttribute('aria-pressed', 'true');
         screenStates.append(button);
-      }
+      } else
+        for (const state of family) {
+          const button = element(
+            'button',
+            state.attributes.jspStateLabel || state.attributes.stateVariant,
+          );
+          button.type = 'button';
+          button.setAttribute('aria-pressed', String(state.id === id));
+          if (state.id !== id) button.onclick = () => openScreen(state.id, { simulated: true });
+          screenStates.append(button);
+        }
       const fillPageStates = (doc: Document) => {
         const present = new Set(
           [...doc.querySelectorAll('[data-st-state]')].map((n) => n.getAttribute('data-st-state')),
@@ -1661,11 +1642,12 @@ try {
           if (visit) openScreen(visit.screenId, { push: false });
         },
         scroll,
+        top,
       });
-      // The notice sits beside the URL, outside the page, so it never covers the page's own buttons.
-      viewer.querySelector('.prototype-present')?.before(notice, screenStates, pageStates, trust);
-      viewer.querySelector('.prototype-status')?.after(legend);
+      // The states and the demo-content switch sit above the preview, or in the full-window bar.
+      stageControls = [screenStates, pageStates, trust];
       host.replaceChildren(viewer);
+      placeControls();
       // A simulated click that requested APIs on the way here says so on the screen it arrived at.
       if (pendingNotice) {
         const status = viewer.querySelector('.prototype-status');
@@ -1690,15 +1672,14 @@ try {
   // Each persona has its own map laid out as its flow; switching persona builds that map and fits it anew.
   let canvasKey: string | undefined;
   const ensureCanvas = () => {
-    const persona = activePersona(),
-      key = persona?.persona.id || '';
-    if (view && main.contains(view.element) && canvasKey === key) return view;
+    const key = '';
+    // Returning from a screen puts the same map back, where the person left it.
+    if (view && canvasKey === key) {
+      if (!main.contains(view.element)) main.replaceChildren(view.element);
+      return view;
+    }
     if (canvasKey !== undefined && canvasKey !== key) canvasTransform = undefined;
     canvasKey = key;
-    // The persona bar moves into the new map; whatever in it had keyboard focus keeps it.
-    const active = personaBar.contains(document.activeElement)
-      ? (document.activeElement as HTMLElement)
-      : undefined;
     view = canvas(index, payload, {
       ...canvasState(),
       transform: canvasTransform,
@@ -1706,51 +1687,133 @@ try {
         canvasTransform = state;
       },
       onOpen: (id) => openScreen(id),
-      renderFocus,
-      presenting: () => presenting,
-      onLineHover: highlightTriggers,
       onIntent: prepare,
-      onExitRequest: () => showCanvas(),
-      layout: persona ? personaLayout(index, persona) : undefined,
-      toolbar: personaViews.length ? personaBar : undefined,
+      onArrange: (positions) => {
+        try {
+          reviewState = setCanvasLayout(reviewState, canvasLayoutKey(), positions);
+          changed();
+        } catch (error) {
+          say(`排版未儲存：${String(error instanceof Error ? error.message : error)}`, 'error');
+        }
+      },
+      onDecideMany: (ids, value) => {
+        for (const id of ids) reviewState = setScreen(reviewState, id, value);
+        changed();
+      },
     });
     main.replaceChildren(view.element);
-    active?.focus({ preventScroll: true });
     return view;
   };
   const viewerScroll = () => viewer?.querySelector('.prototype-scroll')?.scrollTop || 0;
+  // The overview offers its three layouts in one place (ADR 0189): the free map, by feature, and by role step.
+  const layouts: { key: 'canvas' | 'features' | 'personas'; label: string }[] = [
+    ...(personaViews.length ? [{ key: 'personas' as const, label: '依角色步驟' }] : []),
+    { key: 'features', label: '依功能' },
+    { key: 'canvas', label: '自由畫布' },
+  ];
+  const layoutButtons = layouts.map((layout) => {
+    const button = element('button', layout.label);
+    button.type = 'button';
+    button.dataset.overviewLayout = layout.key;
+    button.onclick = () => {
+      setPresenting(false);
+      current = undefined;
+      if (layout.key === 'personas') page = 'personas';
+      else {
+        page = 'screens';
+        listMode = layout.key === 'features' ? 'features' : 'list';
+      }
+      render();
+    };
+    layoutSwitch.append(button);
+    return button;
+  });
+  const mountLayoutSwitch = () => {
+    const on = page === 'personas' ? 'personas' : listMode === 'features' ? 'features' : 'canvas';
+    for (const button of layoutButtons)
+      button.setAttribute('aria-pressed', String(button.dataset.overviewLayout === on));
+  };
+  // Full-window preview keeps the review going: a floating bar to decide, move on and leave (ADR 0189).
+  const presentBar = element('div', undefined, 'present-bar');
+  presentBar.setAttribute('role', 'toolbar');
+  presentBar.setAttribute('aria-label', '審查工具');
+  const renderPresentBar = () => {
+    if (!current) return;
+    const id = current,
+      counts = statistics(graph, reviewState).screens,
+      next = element('button', undefined, 'present-next'),
+      ways = element('span', undefined, 'present-ways');
+    next.type = 'button';
+    next.append(element('span', '下一個未確認'), element('kbd', 'n'));
+    next.onclick = () => nextUndecided();
+    // Leaving full window is on the top bar beside the screen's name; here: decide, see the ways, move on.
+    const into = element('span', undefined, 'present-in'),
+      out = element('span', undefined, 'present-out');
+    into.append(icon('arrow'), element('span', `進來 ${stage?.counts.in ?? 0}`));
+    out.append(element('span', `出去 ${stage?.counts.out ?? 0}`), icon('arrow'));
+    ways.append(into, out);
+    const divider = () => {
+      const line = element('span', undefined, 'present-divider');
+      line.setAttribute('aria-hidden', 'true');
+      return line;
+    };
+    const parts: HTMLElement[] = [
+      decisionSwitch('這個畫面', screenDecision(reviewState, id), (v) => decide.screen(id, v), {
+        screen: id,
+        keys: true,
+      }),
+      divider(),
+      ways,
+    ];
+    if (conflicts(graph, reviewState).some((c) => c.screenId === id || c.targetScreenId === id)) {
+      const warn = element('span', undefined, 'present-conflict');
+      warn.append(icon('warning'), element('span', '衝突'));
+      parts.push(warn);
+    }
+    const count = element(
+      'span',
+      `${counts.KEEP + counts.REMOVE} / ${index.screens.length}`,
+      'present-count',
+    );
+    count.title = '已確認的畫面';
+    parts.push(divider(), next, count);
+    presentBar.replaceChildren(...parts);
+  };
 
   const render = () => {
     shell.dataset.page = page;
     const zoomed = page === 'screens' && !!current;
-    if (zoomed && !wasZoomed) {
-      overviewCollapsed = listCollapsed;
-      listCollapsed = true;
-    } else if (!zoomed && wasZoomed) listCollapsed = overviewCollapsed;
+    // The top bar shows the layouts on an overview and the review's progress, file and delivery on the review.
+    header.dataset.view = page === 'api' ? 'api' : zoomed ? 'review' : 'overview';
+    shell.dataset.review = String(zoomed);
     if (!zoomed) detailsCollapsed = false;
-    wasZoomed = zoomed;
     syncList();
     syncDetails();
-    screensTab.setAttribute('aria-current', page === 'screens' ? 'page' : 'false');
+    overviewTab.setAttribute(
+      'aria-current',
+      page === 'personas' || (page === 'screens' && !current) ? 'page' : 'false',
+    );
+    reviewTab.setAttribute('aria-current', page === 'screens' && current ? 'page' : 'false');
     apiTab.setAttribute('aria-current', page === 'api' ? 'page' : 'false');
-    personasTab.setAttribute('aria-current', page === 'personas' ? 'page' : 'false');
+    if (page === 'personas' || (page === 'screens' && !current))
+      lastOverview = page === 'personas' ? 'personas' : 'screens';
     renderProgress();
     renderSidebar();
     renderPanel();
-    renderPersonaBar();
     if (page === 'personas') {
       main.replaceChildren(
         personaPage(index, personaViews, {
           selected: personaId,
           status: screenState,
+          conflicts: conflicts(graph, reviewState),
           // A screen opens as that persona; a screen its flow does not reach is shown with the rest of the map.
           onOpen: (screenId, id) => {
             personaId = id;
-            showUnreached = !activePersona()?.depth.has(screenId);
             openScreen(screenId);
           },
         }),
       );
+      mountLayoutSwitch();
       view = undefined;
       frame = undefined;
       viewer = undefined;
@@ -1803,17 +1866,44 @@ try {
           }),
         }),
       );
+      mountLayoutSwitch();
       view = undefined;
       frame = undefined;
       viewer = undefined;
       simulation = undefined;
       return;
     }
+    // An open screen is the main body of the review: its preview between two foldable flow rails (ADR 0189).
+    if (current) {
+      if (!stage || stage.id !== current || !main.contains(stage.element)) {
+        const id = current;
+        stage = {
+          id,
+          ...reviewStage(index, id, {
+            rails: () => rails,
+            onRails: (next) => {
+              rails = next;
+            },
+            open: (target) => openScreen(target),
+            intent: prepare,
+            triggers: highlightTriggers,
+            status: screenState,
+          }),
+        };
+        stage.element.append(presentBar);
+        main.replaceChildren(stage.element);
+        void renderFocus(id, stage.host, stage.top);
+      } else {
+        stage.update();
+        if (frame?.contentDocument) decorate(frame.contentDocument, current);
+      }
+      renderPresentBar();
+      return;
+    }
+    stage = undefined;
     const canvasView = ensureCanvas();
     canvasView.update(canvasState());
-    if (current && canvasView.focused !== current) canvasView.focus(current);
-    else if (!current && canvasView.focused) canvasView.exit();
-    else if (current && frame?.contentDocument) decorate(frame.contentDocument, current);
+    mountLayoutSwitch();
   };
 
   let pendingNotice: string | undefined;
@@ -1856,30 +1946,29 @@ try {
       viewer = undefined;
       simulation = undefined;
     }
-    if (overlayOpen()) listCollapsed = true;
+    // A simulated action that lands on the same screen shows it afresh.
+    if (refreshing) stage = undefined;
     page = 'screens';
     current = id;
+    lastReviewed = id;
     render();
-    if (refreshing) view?.focus(id);
   };
   // Presenting lays the preview over the whole window, top bar and side panels included; the layout underneath stays.
   let presenting = false;
   const setPresenting = (on: boolean) => {
     presenting = on && page === 'screens' && !!current;
     document.body.dataset.presenting = String(presenting);
-    const button = viewer?.querySelector<HTMLButtonElement>('.prototype-present');
-    if (!button) return;
-    const label = presenting ? '結束全螢幕' : '全螢幕預覽';
-    button.setAttribute('aria-label', label);
-    button.title = label;
-    button.setAttribute('aria-pressed', String(presenting));
-    button
-      .querySelector('use')
-      ?.setAttribute('href', `#st-icon-${presenting ? 'minimize' : 'maximize'}`);
+    placeControls();
+    viewer
+      ?.querySelector<HTMLButtonElement>('.prototype-present')
+      ?.setAttribute('aria-pressed', String(presenting));
   };
+  // Leaving a screen goes back to the overview layout it was opened from.
   const showCanvas = () => {
     setPresenting(false);
-    page = 'screens';
+    // A screen opened as a role shows that role's steps in the list; going back to the overview ends that.
+    personaId = undefined;
+    page = lastOverview;
     current = undefined;
     highlightComponent = undefined;
     frame = undefined;
@@ -1894,42 +1983,37 @@ try {
     current = undefined;
     render();
   };
-  screensTab.onclick = () => {
-    if (page !== 'screens' || current) showCanvas();
+  // The overview returns to the layout last shown; the review returns to the screen last open, or the next undecided one.
+  overviewTab.onclick = () => {
+    if (page === 'personas' || (page === 'screens' && !current)) return;
+    setPresenting(false);
+    personaId = undefined;
+    page = lastOverview;
+    current = undefined;
+    highlightComponent = undefined;
+    render();
+  };
+  reviewTab.onclick = () => {
+    if (page === 'screens' && current) return;
+    const id = lastReviewed || nextUndecidedId() || orderedScreens[0]?.id;
+    if (id) openScreen(id);
   };
   apiTab.onclick = () => showApi();
-  personasTab.onclick = () => {
-    setPresenting(false);
-    page = 'personas';
-    current = undefined;
-    render();
-  };
-  listButton.onclick = () => {
-    listMode = 'list';
-    render();
-  };
-  filesButton.onclick = () => {
-    listMode = 'files';
-    render();
-  };
-  featuresButton.onclick = () => {
-    listMode = 'features';
-    render();
-  };
   let searchTimer: ReturnType<typeof setTimeout> | undefined;
-  const applySearch = () => {
-    renderSidebar();
-    if (page === 'screens') view?.update(canvasState());
-  };
+  const applySearch = () => renderSidebar();
   search.oninput = () => {
+    clearSearch.hidden = !search.value;
     clearTimeout(searchTimer);
     searchTimer = setTimeout(() => {
       query = search.value.trim();
       applySearch();
     }, 150);
   };
-  clearSearch.onclick = () => {
+  clearSearch.onclick = (event) => {
+    // Inside the search label: keep the click from also focusing the field through the label.
+    event.preventDefault();
     search.value = '';
+    clearSearch.hidden = true;
     query = '';
     applySearch();
     search.focus();
@@ -2018,11 +2102,6 @@ try {
       return;
     }
     if (event.altKey || event.ctrlKey || event.metaKey) return;
-    if (event.key === 'Escape' && overlayOpen()) {
-      event.preventDefault();
-      setList(true);
-      return;
-    }
     if (event.key === 'Escape' && editable) {
       (target as HTMLElement).blur();
       return;
@@ -2044,9 +2123,10 @@ try {
     const key = event.key.toLowerCase();
     if (key === '/') {
       event.preventDefault();
-      if (page !== 'screens') {
-        page = 'screens';
-        render();
+      // The search is on the review page's list: open the review first when elsewhere.
+      if (page !== 'screens' || !current) {
+        const id = lastReviewed || nextUndecidedId() || orderedScreens[0]?.id;
+        if (id) openScreen(id);
       }
       if (listCollapsed) {
         listCollapsed = false;
@@ -2071,7 +2151,8 @@ try {
     const row = (document.activeElement as Element | null)?.closest?.(
       '[data-component-row]',
     ) as HTMLElement | null;
-    if (row) decide.component(current, row.dataset.componentRow!, value);
+    // Fields are read-only in the panel: the key decides the screen instead.
+    if (row && !row.dataset.field) decide.component(current, row.dataset.componentRow!, value);
     else decide.screen(current, value);
   };
   document.addEventListener('keydown', onKey);
@@ -2082,7 +2163,7 @@ try {
   );
   setTimeout(() => prepare(nextUndecidedId()), 1000);
 
-  if (!storage) say('⚠ 無法暫存在瀏覽器，請下載 md', 'error');
+  if (!storage) say('⚠ 無法暫存在瀏覽器，請用「交付 md」保存', 'error');
   renderFile();
   if (fileState === 'none') {
     const startEdits = edits;

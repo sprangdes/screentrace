@@ -49,7 +49,16 @@ export function decisionSwitch(
   label: string,
   value: Decision,
   onChange: (value: Decision) => void,
-  options: { compact?: boolean; screen?: string; component?: string } = {},
+  options: {
+    compact?: boolean;
+    screen?: string;
+    component?: string;
+    keys?: boolean;
+    /** What an undecided row follows (the screen's decision), drawn as a dashed hint on that choice. */
+    follows?: Decision;
+    /** The folded panel's three buttons: 「未確認」 reads 「?」 instead of the reset arrow. */
+    rail?: boolean;
+  } = {},
 ): HTMLElement {
   const group = element(
     'div',
@@ -59,6 +68,7 @@ export function decisionSwitch(
   group.setAttribute('role', 'radiogroup');
   group.setAttribute('aria-label', label);
   group.dataset.decision = value;
+  if (options.follows && options.follows !== 'UNDECIDED') group.dataset.follows = options.follows;
   if (options.screen) group.dataset.screenId = options.screen;
   if (options.component) group.dataset.componentId = options.component;
   const buttons = choices.map((decision) => {
@@ -68,13 +78,23 @@ export function decisionSwitch(
     button.setAttribute('role', 'radio');
     button.setAttribute('aria-checked', String(value === decision));
     button.tabIndex = value === decision ? 0 : -1;
-    button.append(
-      icon(decision === 'KEEP' ? 'check' : decision === 'REMOVE' ? 'close' : 'question'),
-    );
+    // In a row, 「未確認」 means following the screen's (or the API's derived) decision: a reset arrow (ADR 0189).
+    // The full switch names 「未確認」 in words only; the folded panel shows it as 「?」.
+    if (decision === 'KEEP') button.append(icon('check'));
+    else if (decision === 'REMOVE') button.append(icon('close'));
+    else if (options.rail) button.append(element('span', '?', 'decision-mark'));
+    else if (options.compact) button.append(icon('reset'));
     if (options.compact) {
-      button.setAttribute('aria-label', `${label}：${decisionLabel(decision)}`);
-      button.title = decisionLabel(decision);
+      const name = decision === 'UNDECIDED' ? '跟隨（未確認）' : decisionLabel(decision);
+      button.setAttribute('aria-label', `${label}：${name}`);
+      button.title = name;
     } else button.append(element('span', decisionLabel(decision)));
+    // The shortcut that makes the same choice, shown where the choice is made.
+    if (options.keys) {
+      const key = element('kbd', { KEEP: 'K', REMOVE: 'X', UNDECIDED: 'U' }[decision]);
+      key.setAttribute('aria-hidden', 'true');
+      button.append(key);
+    }
     button.onclick = () => {
       if (value !== decision) onChange(decision);
     };
@@ -107,6 +127,8 @@ export interface NoteEditorOptions {
   note: DecisionNote;
   open: boolean;
   compact?: boolean;
+  /** Always shown with a heading instead of a toggle (the screen's own note, ADR 0189). */
+  alwaysOpen?: boolean;
   onToggle: (open: boolean) => void;
   /** Every keystroke: keep the text without rebuilding the panel, so typing is never interrupted. */
   onInput: (note: DecisionNote) => void;
@@ -138,7 +160,11 @@ export function noteEditor(options: NoteEditorOptions): HTMLDivElement {
     options.onToggle(open);
     if (open) body.querySelector<HTMLTextAreaElement>('textarea')?.focus();
   };
-  box.append(toggle, body);
+  if (options.alwaysOpen) {
+    box.dataset.alwaysOpen = 'true';
+    show(true);
+    box.append(element('span', '給 AI 的備註', 'note-heading'), body);
+  } else box.append(toggle, body);
   let current: DecisionNote = { ...options.note };
   if (options.decision !== 'UNDECIDED') {
     const codes = reasonCodes[options.decision] as readonly ReasonCode[],
@@ -159,14 +185,19 @@ export function noteEditor(options: NoteEditorOptions): HTMLDivElement {
   }
   const area = element('textarea');
   area.dataset.noteText = 'true';
-  area.rows = 3;
+  area.rows = options.alwaysOpen ? 2 : 3;
   area.maxLength = NOTE_LIMIT;
   area.value = current.note || '';
-  area.placeholder = '例如：這個欄位改成必填、這個流程併到另一個畫面、移除的理由';
+  area.placeholder = options.alwaysOpen
+    ? '例如：這個流程併到投保申請確認頁'
+    : '例如：這個欄位改成必填、這個流程併到另一個畫面、移除的理由';
   area.setAttribute('aria-label', `${options.label}的備註`);
   const count = element('span', undefined, 'note-count');
   const showCount = () => {
-    count.textContent = `${Array.from(area.value).length}／${NOTE_LIMIT}`;
+    const used = Array.from(area.value).length;
+    count.textContent = `${used}／${NOTE_LIMIT}`;
+    // The screen's note shows its count only near the limit.
+    if (options.alwaysOpen) count.hidden = used <= NOTE_LIMIT - 100;
   };
   showCount();
   area.oninput = () => {
@@ -176,8 +207,11 @@ export function noteEditor(options: NoteEditorOptions): HTMLDivElement {
     options.onInput(current);
   };
   area.onchange = () => options.onCommit();
-  const help = element('p', undefined, 'muted note-help');
-  help.append(element('span', '備註會寫進 md，交給 AI 作為修改依據。'), count);
-  body.append(area, help);
+  if (options.alwaysOpen) body.append(area, count);
+  else {
+    const help = element('p', undefined, 'muted note-help');
+    help.append(element('span', '備註會寫進 md，交給 AI 作為修改依據。'), count);
+    body.append(area, help);
+  }
   return box;
 }
