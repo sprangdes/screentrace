@@ -46,6 +46,9 @@ jobs:
         run: ./mvnw -B com.diffplug.spotless:spotless-maven-plugin:check
       - name: Build Java modules
         run: ./mvnw -B clean verify
+      # The desktop app's launcher helpers and the CLI `desktop` commands it runs (ADR 0190).
+      - name: Test desktop app commands
+        run: node --test screentrace-desktop/*.test.mjs screentrace-cli/src/test/desktop.test.mjs
 
   windows:
     runs-on: windows-2025
@@ -168,6 +171,7 @@ jobs:
           cache: npm
           cache-dependency-path: |
             screentrace-capture/package-lock.json
+            screentrace-desktop/package-lock.json
             screentrace-js/package-lock.json
             screentrace-viewer/package-lock.json
       - name: Audit capture dependencies
@@ -182,3 +186,7 @@ jobs:
         run: |
           npm --prefix screentrace-js ci --ignore-scripts
           npm --prefix screentrace-js audit --audit-level=high
+      - name: Audit desktop app dependencies
+        run: |
+          npm --prefix screentrace-desktop ci --ignore-scripts
+          npm --prefix screentrace-desktop audit --audit-level=high

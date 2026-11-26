@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:"
+    />
+    <title>ScreenTrace</title>
+    <link rel="stylesheet" href="style.css" />
+    <script src="app.js" defer></script>
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="brand">
+        <span class="name">ScreenTrace</span>
+        <span class="subtitle">分析工作台</span>
+      </div>
+      <div class="topbar-actions">
+        <button type="button" class="chip" id="doctor-chip" title="檢查 Java、Maven、Node 與預覽工具">
+          <span class="dot" id="doctor-dot"></span><span id="doctor-label">檢查環境中…</span>
+        </button>
+        <button type="button" class="ghost" id="settings-button">設定</button>
+      </div>
+    </header>
+
+    <div class="layout">
+      <aside class="sidebar">
+        <input type="search" id="search" placeholder="搜尋專案" autocomplete="off" />
+        <ul class="projects" id="projects" role="listbox" aria-label="專案"></ul>
+        <div class="sidebar-foot">
+          <button type="button" class="secondary wide" id="other-folder">分析其他資料夾…</button>
+        </div>
+      </aside>
+
+      <main class="main" id="main">
+        <section class="empty" id="empty">
+          <h1>開始分析一個專案</h1>
+          <p id="empty-text">
+            設定專案根目錄後，根目錄下的每個資料夾都會列在左側；也可以直接選擇一個資料夾分析。
+          </p>
+          <div class="row">
+            <button type="button" class="primary" id="empty-settings">設定專案根目錄</button>
+            <button type="button" class="secondary" id="empty-other">選擇資料夾分析…</button>
+          </div>
+        </section>
+
+        <section class="detail" id="detail" hidden>
+          <div class="detail-head">
+            <div>
+              <h1 id="project-name"></h1>
+              <div class="meta" id="project-source"></div>
+            </div>
+            <span class="status" id="project-status"></span>
+          </div>
+
+          <div class="actions">
+            <button type="button" class="primary" id="analyze">分析專案</button>
+            <button type="button" class="secondary" id="open-report">開啟報表</button>
+            <button type="button" class="ghost" id="open-output">開啟分析資料夾</button>
+            <button type="button" class="ghost" id="open-source">開啟原始碼資料夾</button>
+          </div>
+
+          <div class="card run" id="run-card" hidden>
+            <div class="run-head">
+              <span class="run-icon" id="run-icon" aria-hidden="true"></span>
+              <div class="run-text">
+                <div class="run-title" id="run-title"></div>
+                <div class="run-sub" id="run-sub"></div>
+              </div>
+              <span class="run-time" id="run-time"></span>
+              <button type="button" class="secondary danger" id="cancel">停止分析</button>
+            </div>
+            <details class="log-details" id="log-details">
+              <summary>詳細紀錄</summary>
+              <pre class="log" id="log"></pre>
+            </details>
+          </div>
+
+          <div class="card result" id="summary-card" hidden>
+            <div class="result-head">
+              <h2>分析結果</h2>
+              <span class="result-meta" id="summary-meta"></span>
+            </div>
+            <dl class="stats">
+              <div><dt>畫面</dt><dd id="stat-screens">—</dd></div>
+              <div><dt>API</dt><dd id="stat-endpoints">—</dd></div>
+              <div><dt>元件</dt><dd id="stat-components">—</dd></div>
+            </dl>
+            <div class="result-section" id="technology-section">
+              <h3>技術</h3>
+              <div class="tags" id="stat-technologies"></div>
+            </div>
+            <div class="result-section" id="persona-section" hidden>
+              <h3>角色流程</h3>
+              <div class="legend">
+                <span><i class="swatch reachable"></i>可達</span>
+                <span><i class="swatch possible"></i>可能</span>
+                <span><i class="swatch unreached"></i>未到達</span>
+              </div>
+              <ul class="personas" id="stat-personas"></ul>
+            </div>
+            <div class="callout" id="stat-hint" hidden></div>
+            <div class="result-foot">
+              <span class="label">分析結果資料夾</span>
+              <span class="mono" id="project-output"></span>
+            </div>
+          </div>
+
+          <div class="card placeholder" id="pending-card" hidden>
+            <h2>尚未分析</h2>
+            <p>按「分析專案」開始，完成後會在這裡顯示畫面、API、元件與角色流程。</p>
+            <p class="mono" id="pending-output"></p>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <dialog id="settings">
+      <form method="dialog" id="settings-form">
+        <h2>設定</h2>
+        <label class="field">
+          <span>專案根目錄</span>
+          <span class="picker">
+            <input type="text" id="setting-root" readonly placeholder="尚未設定" />
+            <button type="button" class="secondary" id="pick-root">選擇…</button>
+          </span>
+        </label>
+        <label class="field">
+          <span>分析結果根目錄</span>
+          <span class="picker">
+            <input type="text" id="setting-output" readonly />
+            <button type="button" class="secondary" id="pick-output">選擇…</button>
+          </span>
+        </label>
+        <label class="field">
+          <span>開啟報表的瀏覽器</span>
+          <select id="setting-browser"></select>
+          <small>報表的自動存檔只支援 Chrome／Edge。</small>
+        </label>
+        <div class="dialog-error" id="settings-error" hidden></div>
+        <div class="dialog-actions">
+          <button type="button" class="ghost" id="settings-cancel">取消</button>
+          <button type="submit" class="primary" id="settings-save">儲存</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="doctor">
+      <h2>環境檢查</h2>
+      <pre class="log" id="doctor-output"></pre>
+      <p class="hint" id="doctor-hint" hidden>
+        缺少的項目請在終端機執行 <code>./bin/screentrace setup</code>（Windows：<code
+          >.\bin\screentrace.cmd setup</code
+        >）安裝後，再按「重新檢查」。
+      </p>
+      <div class="dialog-actions">
+        <button type="button" class="secondary" id="doctor-rerun">重新檢查</button>
+        <button type="button" class="primary" id="doctor-close">關閉</button>
+      </div>
+    </dialog>
+
+    <div class="toast" id="toast" role="status" hidden></div>
+  </body>
+</html>

@@ -71,7 +71,7 @@ Consumers include:
 
 ## 2. 實際模組與分析流程
 
-根目錄 `pom.xml` 宣告七個 Maven 模組，另有三個 Node 套件（screentrace-js、screentrace-capture、screentrace-viewer）。下圖只列目前存在的模組；箭頭表示資料流，不表示 Maven 相依方向。
+根目錄 `pom.xml` 宣告七個 Maven 模組，另有四個 Node 套件（screentrace-js、screentrace-capture、screentrace-viewer、screentrace-desktop）。下圖只列目前存在的模組；箭頭表示資料流，不表示 Maven 相依方向。
 
 ```text
 唯讀目標原始碼
@@ -154,6 +154,7 @@ Node 模組，使用 Playwright 1.55.1；靜態化 JSP、展開支援的標記�
 - `screentrace-js`：已建立的 Node 模組，由 `JavaScriptGraphContribution` 以 `node screentrace-js/cli.mjs` 子行程呼叫，stdin／stdout JSON，逾時 60 秒，Acorn / acorn-loose AST 與容錯診斷；ADR 0007 記錄釘選與 JSON 邊界。
   `screentrace-js/react/` 以 @babel/parser 解析 React／TSX：路由、渲染展開、元件、事件處理器效果與靜態重建預覽 markup，由 `ReactGraphContribution`（screentrace-parser-jsp）轉成圖；見 [ADR 0088](adr/0088-react-ast-analysis.md)、[ADR 0089](adr/0089-react-static-preview.md)。
 - `screentrace-viewer`：WP7 TypeScript + esbuild 離線檢視器。`tsc --noEmit` 後以 esbuild 產生 `dist/viewer.js`、`viewer.sha256`、`viewer.version`、`template.html`、`viewer.css` 與 `review-md.mjs`；screentrace-report 把 `dist/` 打包為 jar 內的 `/viewer`。
+- `screentrace-desktop`：R116 Electron 桌面 App，`./bin/screentrace gui` 開啟。不含分析邏輯：每個動作都以子行程執行 `bin/screentrace`（Windows 為 `screentrace.ps1`），分析即 `analyze <資料夾>`，專案清單與設定經由 CLI 的 `desktop` 指令（一行 JSON）。見 ADR 0190。
 - `review-md`：不是獨立模組，而是 `screentrace-viewer/src/shared/review-md.ts`，建置另產出 ESM `dist/review-md.mjs` 供 Node 使用。
 
 ---

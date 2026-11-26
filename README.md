@@ -73,6 +73,32 @@ Windows：
 
 `analyze` 只分析、印出報表路徑，不開啟瀏覽器；參數含 `/`、`\` 或以 `~`、`.` 開頭時視為資料夾路徑，不需先設定。`doctor` 檢查 Java、Maven、Node、Playwright Chromium 與 JS parser 是否就緒，缺項時結束碼 1。`report` 以既有分析結果重新產生並開啟報表，不重新掃描。`config` 開啟同一個「設定」選單。報表為單一 HTML，可搬移後直接開啟，不依賴分析資料夾、網路或本機服務。
 
+### 圖形介面（桌面 App）
+
+不想用終端機選單時，可開啟桌面 App：
+
+```bash
+./bin/screentrace gui
+```
+
+Windows：
+
+```powershell
+.\bin\screentrace.cmd gui
+```
+
+第一次執行會下載 Electron（約 100 MB，需要網路）。App 左側列出專案根目錄下的資料夾與已分析的專案，選一個專案後可「分析專案／重新分析」「開啟報表」「開啟分析資料夾」「開啟原始碼資料夾」，並看到上次分析的畫面、API、元件數、技術與各角色流程的可達比例。分析時顯示經過時間與目前進度，可隨時停止，完整輸出收在「詳細紀錄」；一次只進行一個分析。「分析其他資料夾…」可分析根目錄以外的專案。右上角的環境檢查等同 `doctor`，「設定」可選專案根目錄、分析結果根目錄與開啟報表的瀏覽器，與終端機的「設定」寫入同一個 `~/.screentrace/config.json`。
+
+macOS 可以把它安裝成一般的 App，之後從「應用程式」、Launchpad、Spotlight 或 Dock 點圖示開啟：
+
+```bash
+./bin/screentrace gui install
+```
+
+安裝到 `/Applications/ScreenTrace.app`（沒有寫入權限時改為 `~/Applications`）。這個 App 仍使用這份 ScreenTrace 原始碼目錄與本機的 Java、Maven、Node；移動原始碼目錄或想更新 App 的圖示與名稱時，再執行一次 `gui install`。分析程式更新後不需要重新安裝。
+
+App 本身不做分析：每個動作都執行同一個 `bin/screentrace`，結果與終端機完全相同。供 App 使用的 `screentrace desktop status|workspace|browser|report` 指令輸出 JSON，一般使用不需要直接執行。
+
 ## 報表操作
 
 報表有「畫面」「API」兩頁；有角色時另有「角色」頁。角色可由分析人員在設定中定義（`personas`，目前只支援 React 畫面），或在沒有設定時自動建議：React 依路由守衛，Spring MVC／JSP 依 servlet 過濾器的存取規則。每個角色在整份報表使用同一個淡底色（第 1 個藍、第 2 個琥珀，依序類推；多個角色共用的畫面為淡青，角色流程都走不到的畫面維持中性灰）。

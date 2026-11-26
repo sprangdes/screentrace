@@ -252,6 +252,14 @@ JSP、JSPF、tag file、Tiles 與有限的 Thymeleaf 以 `MarkupTag` 等 parser 
 | [0094](0094-public-batch4-workflow-repairs.md) | 第四批公開專案的有限流程修正 | 有效 |
 | [0095](0095-public-batch5-workflow-repairs.md) | 第五批公開專案的來源分析與有限流程回放 | 有效 |
 
+## 操作介面（CLI 與桌面 App）
+
+分析以 `./bin/screentrace` 的終端機選單或腳本化指令操作；R116 起另有 Electron 桌面 App，所有動作都經由同一個啟動腳本執行。
+
+| ADR | 決定 | 狀態 |
+|---|---|---|
+| [0190](0190-desktop-analysis-app.md) | R116 桌面分析工作台：`gui` 啟動 Electron App，透過啟動腳本與 CLI `desktop` 指令操作分析 | 有效 |
+
 ## 建置、品質與效能（健檢 HC）
 
 Java 以 google-java-format、TS／JS 以 Prettier 排版，JS 以 ESLint、TS 以 tsc 檢查，CI 都會擋；工具鏈版本固定（Maven Wrapper、Node 22、Playwright 1.63.0），CI 含 Windows 與覆蓋率。主程式不得有沒說明的空 `catch`（R50）；Java 不導入 Error Prone（R52）。

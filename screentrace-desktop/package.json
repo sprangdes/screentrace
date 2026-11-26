@@ -1,0 +1,17 @@
+{
+  "name": "screentrace-desktop",
+  "private": true,
+  "type": "module",
+  "main": "main.mjs",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "start": "electron .",
+    "test": "node --test"
+  },
+  "devDependencies": {
+    "@electron/packager": "20.3.0",
+    "electron": "45.3.0"
+  }
+}

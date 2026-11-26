@@ -122,12 +122,37 @@ needs_build=false
 if [[ ! -f "$jar" ]]; then
   needs_build=true
 # Analysis output (default under $base_dir/analyze) holds generated .html/.css; it is not source.
-elif find "$base_dir" -path "$base_dir/analyze" -prune -o -path '*/target' -prune -o -path '*/node_modules' -prune -o \( -name '*.java' -o -name 'pom.xml' -o -name '*.ts' -o -name '*.css' -o -name '*.html' -o -name 'build.mjs' -o -name 'package-lock.json' \) -newer "$jar" -print -quit | grep -q .; then
+elif find "$base_dir" -path "$base_dir/analyze" -prune -o -path "$base_dir/screentrace-desktop" -prune -o -path '*/target' -prune -o -path '*/node_modules' -prune -o \( -name '*.java' -o -name 'pom.xml' -o -name '*.ts' -o -name '*.css' -o -name '*.html' -o -name 'build.mjs' -o -name 'package-lock.json' \) -newer "$jar" -print -quit | grep -q .; then
   needs_build=true
 fi
 if [[ "$needs_build" == true ]]; then
   echo "Building updated ScreenTrace..."
   (cd "$base_dir/screentrace-viewer" && npm ci --ignore-scripts --no-fund && npm run build)
   (cd "$base_dir" && mvn -q -DskipTests package)
+fi
+# `gui` opens the desktop app; `gui install` builds ScreenTrace.app for this Mac (ADR 0190).
+if [[ "${1:-}" == gui ]]; then
+  desktop_dir="$base_dir/screentrace-desktop"
+  if [[ ! -f "$desktop_dir/node_modules/electron/path.txt" || ! -f "$desktop_dir/node_modules/@electron/packager/package.json" ]]; then
+    echo "Installing ScreenTrace desktop app..."
+    # Newer npm versions skip dependency install scripts; Electron's fetches its binary.
+    (cd "$desktop_dir" && npm ci --no-fund && node node_modules/electron/install.js)
+  fi
+  if [[ "${2:-}" == install ]]; then
+    if [[ "$(uname)" != Darwin ]]; then
+      echo "gui install 目前只支援 macOS。" >&2
+      exit 2
+    fi
+    echo "Building ScreenTrace.app..."
+    built="$(cd "$desktop_dir" && node package-app.mjs | tail -n 1)"
+    target_dir=/Applications
+    [[ -w "$target_dir" ]] || { target_dir="$HOME/Applications"; mkdir -p "$target_dir"; }
+    rm -rf "$target_dir/ScreenTrace.app"
+    ditto "$built" "$target_dir/ScreenTrace.app"
+    echo "已安裝：$target_dir/ScreenTrace.app"
+    echo "可從「應用程式」、Launchpad 或 Spotlight 開啟 ScreenTrace；專案資料夾移動後請重新執行 ./bin/screentrace gui install。"
+    exit 0
+  fi
+  SCREENTRACE_LAUNCHER="$base_dir/bin/screentrace" exec "$desktop_dir/node_modules/.bin/electron" "$desktop_dir"
 fi
 exec java "-Dscreentrace.home=$base_dir" "-Dscreentrace.js.module=$base_dir/screentrace-js/cli.mjs" -jar "$jar" "$@"

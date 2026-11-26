@@ -1,0 +1,21 @@
+<!-- ScreenTrace app icon (ADR 0190): two screens and the flow between them. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#3563e9"/>
+      <stop offset="1" stop-color="#1d43b4"/>
+    </linearGradient>
+  </defs>
+  <rect x="100" y="100" width="824" height="824" rx="185" fill="url(#bg)"/>
+  <rect x="210" y="300" width="300" height="230" rx="34" fill="#ffffff"/>
+  <rect x="210" y="300" width="300" height="52" rx="26" fill="#e8eefd"/>
+  <rect x="246" y="390" width="150" height="22" rx="11" fill="#9db3f2"/>
+  <rect x="246" y="438" width="210" height="22" rx="11" fill="#9db3f2"/>
+  <rect x="514" y="494" width="300" height="230" rx="34" fill="#ffffff" opacity="0.92"/>
+  <rect x="514" y="494" width="300" height="52" rx="26" fill="#e8eefd"/>
+  <rect x="550" y="584" width="150" height="22" rx="11" fill="#9db3f2"/>
+  <rect x="550" y="632" width="210" height="22" rx="11" fill="#9db3f2"/>
+  <circle cx="360" cy="600" r="34" fill="#13c08a"/>
+  <path d="M360 634 L360 690 Q360 730 400 730 L480 730" fill="none" stroke="#13c08a" stroke-width="22" stroke-linecap="round"/>
+  <path d="M462 700 L500 730 L462 760" fill="none" stroke="#13c08a" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
