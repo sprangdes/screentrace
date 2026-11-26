@@ -25,9 +25,17 @@ import {
   chooseSaveFile,
   chooseOpenFile,
   isCancel,
+  isMissing,
   writeFile,
   handleStore,
   FileHandle,
+  FolderHandle,
+  PermissionHandle,
+  folderSupported,
+  chooseFolder,
+  loadFolder,
+  saveFolder,
+  existingFile,
 } from './progress-file';
 import { revealInPreview } from './reveal';
 import {
@@ -321,9 +329,12 @@ try {
         menu.querySelector('summary')!.focus();
       }
     });
+  // The path is fixed when the click starts: a menu that re-rendered under the click (its button
+  // replaced) still counts the click as its own and stays open.
   document.addEventListener('click', (event) => {
+    const path = event.composedPath();
     for (const menu of [progress, help, saveMenu])
-      if (menu.open && !menu.contains(event.target as Node)) menu.open = false;
+      if (menu.open && !path.includes(menu)) menu.open = false;
   });
 
   // ---- shell
@@ -533,6 +544,7 @@ try {
   const fileKey = graph.application.name,
     suggestedName = `screentrace-review-${fileKey.replace(/[\\/:*?"<>|\s]+/g, '-')}.md`;
   let fileHandle: FileHandle | undefined,
+    defaultFolder: FolderHandle | undefined,
     fileState: FileState = autosaveSupported() ? 'none' : 'unsupported',
     fileError = '',
     promptDismissed = false,
@@ -575,6 +587,17 @@ try {
     };
     return button;
   };
+  /** Sets the default folder; with `use`, this report's progress md is created there right away. */
+  const folderButton = (use: boolean) => {
+    const button = menuButton(
+      defaultFolder ? '更換預設資料夾…' : '設定預設資料夾…',
+      () => void pickFolder(use),
+    );
+    button.title = defaultFolder
+      ? `目前的預設資料夾：${defaultFolder.name}`
+      : '之後每份報表的進度檔都自動存在這個資料夾，不用再選位置';
+    return button;
+  };
   const renderFile = () => {
     renderExport();
     saveMenu.dataset.fileState = fileState;
@@ -587,7 +610,14 @@ try {
       ? `${fileLabels[fileState]}：${fileHandle.name}`
       : fileLabels[fileState];
     savePanel.replaceChildren(element('h2', '進度檔'));
+    const name = fileHandle?.name || '';
     const text = (value: string) => savePanel.append(element('p', value, 'muted'));
+    // A sentence naming the file: the name is its own element so a long one wraps instead of overflowing.
+    const fileText = (before: string, after: string) => {
+      const line = element('p', before, 'muted');
+      line.append(element('code', name, 'panel-file'), after);
+      savePanel.append(line);
+    };
     if (fileState === 'unsupported') {
       text(
         '這個瀏覽器不支援自動存檔。標記只暫存在這個瀏覽器，換電腦或清除瀏覽資料就會遺失；請用「交付 md」保存，之後用「開啟 md」接續。',
@@ -600,9 +630,26 @@ try {
       return;
     }
     if (fileState === 'none') {
-      text('選擇一個 md 檔的存放位置，之後每次標記都會自動寫入。這個檔案就是要交給 AI 的 md。');
+      if (defaultFolder) {
+        const line = element('p', '預設資料夾：', 'muted');
+        line.append(
+          element('code', defaultFolder.name, 'panel-file'),
+          '。進度檔會存成 ',
+          element('code', suggestedName, 'panel-file'),
+          '，之後每次標記都會自動寫入。這個檔案就是要交給 AI 的 md。',
+        );
+        savePanel.append(
+          line,
+          menuButton('存到預設資料夾', () => void useFolder(defaultFolder!), true),
+          menuButton('選擇其他位置…', () => void choose()),
+          folderButton(true),
+        );
+      } else {
+        text('選擇一個 md 檔的存放位置，之後每次標記都會自動寫入。這個檔案就是要交給 AI 的 md。');
+        savePanel.append(menuButton('選擇存放位置…', () => void choose(), true));
+        if (folderSupported()) savePanel.append(folderButton(true));
+      }
       savePanel.append(
-        menuButton('選擇存放位置…', () => void choose(), true),
         menuButton('交付 md', () => download.click()),
         openMd,
         lastExportLine(),
@@ -615,18 +662,17 @@ try {
         );
       return;
     }
-    const name = fileHandle?.name || '';
     if (fileState === 'pending') {
-      text(`上次的進度檔：${name}。載入後以進度檔的內容為準。`);
+      fileText('上次的進度檔：', '。載入後以進度檔的內容為準。');
       savePanel.append(
-        menuButton(`繼續上次進度：${name}`, () => void resume(), true),
+        menuButton('繼續上次進度', () => void resume(), true),
         openMd,
         menuButton('選擇新的存放位置…', () => void choose()),
       );
       return;
     }
     if (fileState === 'error') {
-      text(`寫入 ${name} 失敗：${fileError}。標記仍保留在這個頁面。`);
+      fileText('寫入 ', ` 失敗：${fileError}。標記仍保留在這個頁面。`);
       savePanel.append(
         menuButton(
           '重試',
@@ -639,11 +685,12 @@ try {
       );
       return;
     }
-    text(`每次標記都會自動寫入 ${name}。`);
+    fileText('每次標記都會自動寫入 ', '。');
     savePanel.append(
       menuButton('更換存放位置…', () => void choose()),
       openMd,
     );
+    if (folderSupported()) savePanel.append(folderButton(false));
   };
   const writeNow = async () => {
     if (!fileHandle) return;
@@ -667,15 +714,31 @@ try {
       writing = writing.then(writeNow);
     }, 500);
   };
+  let folderTried = false,
+    pendingPrompted = false;
   const maybePrompt = () => {
-    if ((fileState === 'none' && !promptDismissed) || fileState === 'pending') {
+    if (fileState === 'none' && defaultFolder && !folderTried) {
+      // A default folder the browser already lets this page write to: save there without asking.
+      folderTried = true;
+      const folder = defaultFolder;
+      void folder
+        .queryPermission({ mode: 'readwrite' })
+        .catch(() => 'prompt')
+        .then((permission) => (permission === 'granted' ? useFolder(folder) : maybePrompt()));
+      return;
+    }
+    if (
+      (fileState === 'none' && !promptDismissed) ||
+      (fileState === 'pending' && !pendingPrompted)
+    ) {
+      if (fileState === 'pending') pendingPrompted = true;
       renderFile();
       setTimeout(() => {
         saveMenu.open = true;
       });
     }
   };
-  const grant = async (handle: FileHandle) => {
+  const grant = async (handle: PermissionHandle) => {
     if (
       (await handle.queryPermission({ mode: 'readwrite' })) !== 'granted' &&
       (await handle.requestPermission({ mode: 'readwrite' })) !== 'granted'
@@ -701,6 +764,48 @@ try {
       if (fileState === 'saved') say(`已設定進度檔：${handle.name}`);
     } catch (error) {
       if (!isCancel(error)) say(`無法設定進度檔：${String(error)}`, 'error');
+    }
+  };
+  /** Use `name` in the default folder as this report's progress md: an existing one is
+   * loaded like a remembered file, a missing one is created and written. */
+  const useFolder = async (folder: FolderHandle) => {
+    try {
+      await grant(folder);
+      const existing = await existingFile(folder, suggestedName);
+      if (existing && (await existing.getFile()).size > 0) {
+        fileHandle = existing;
+        if (hasMarks(reviewState)) {
+          // Marks on this page and a file with marks: let the person choose which wins.
+          fileState = 'pending';
+          renderFile();
+          saveMenu.open = true;
+        } else await resume(edits);
+        return;
+      }
+      await remember(existing || (await folder.getFileHandle(suggestedName, { create: true })));
+      clearTimeout(writeTimer);
+      await (writing = writing.then(writeNow));
+      if (fileState === 'saved') say(`已設定進度檔：${folder.name}/${suggestedName}`);
+    } catch (error) {
+      if (!isCancel(error)) say(`無法使用預設資料夾：${String(error)}`, 'error');
+    }
+  };
+  const pickFolder = async (use: boolean) => {
+    try {
+      const folder = await chooseFolder();
+      defaultFolder = folder;
+      try {
+        await saveFolder(folder);
+      } catch {
+        /* remembered for this page only */
+      }
+      if (use) await useFolder(folder);
+      else {
+        renderFile();
+        say(`已設定預設資料夾：${folder.name}`);
+      }
+    } catch (error) {
+      if (!isCancel(error)) say(`無法設定預設資料夾：${String(error)}`, 'error');
     }
   };
   /** Read `handle` into the page; with `since`, give up (returning false) when a decision
@@ -732,6 +837,25 @@ try {
         saveMenu.open = true;
       }
     } catch (error) {
+      if (isMissing(error)) {
+        // The remembered file is gone (moved or deleted): forget it and ask for a new place,
+        // instead of offering a file that can never load.
+        fileHandle = undefined;
+        fileState = 'none';
+        promptDismissed = false;
+        try {
+          await handleStore().remove?.(fileKey);
+        } catch {
+          /* it is only offered again after a reload */
+        }
+        renderFile();
+        saveMenu.open = true;
+        say(
+          `上次的進度檔 ${handle.name} 已不存在（可能被移動或刪除），請重新選擇存放位置。`,
+          'error',
+        );
+        return;
+      }
       fileState = 'pending';
       renderFile();
       say(`無法載入上次進度：${String(error)}`, 'error');
@@ -2171,9 +2295,25 @@ try {
   renderFile();
   if (fileState === 'none') {
     const startEdits = edits;
-    handleStore()
-      .load(fileKey)
-      .then(async (handle) => {
+    Promise.all([
+      handleStore()
+        .load(fileKey)
+        .catch(() => undefined),
+      loadFolder().catch(() => undefined),
+    ])
+      .then(async ([remembered, folder]) => {
+        if (folder && !defaultFolder) {
+          defaultFolder = folder;
+          if (!fileHandle) renderFile();
+        }
+        let handle = remembered;
+        // No file remembered for this report: an md already in the default folder is its progress file.
+        if (
+          !handle &&
+          folder &&
+          (await folder.queryPermission({ mode: 'readwrite' })) === 'granted'
+        )
+          handle = await existingFile(folder, suggestedName);
         if (!handle || fileHandle) return;
         fileHandle = handle;
         fileState = 'pending';
@@ -2184,6 +2324,7 @@ try {
         )
           await resume(startEdits);
         else {
+          pendingPrompted = true;
           saveMenu.open = true;
         }
       })
