@@ -931,7 +931,16 @@ export function canvas(index: Index, payload: Payload, options: CanvasOptions): 
   const update = (next: CanvasState) => {
     const refit = !sameSet(next.visible, state.visible);
     state = next;
-    if (next.arranged && !sameArrangement(next.arranged, arranged)) arrange(next.arranged);
+    // Saved places of screens no longer on the map are kept in the file but never shown, so they do not count here;
+    // otherwise every render would rearrange the map.
+    if (next.arranged) {
+      const shown = Object.fromEntries(
+        Object.entries(next.arranged).filter(
+          ([id, at]) => base.has(id) && Number.isFinite(at.x) && Number.isFinite(at.y),
+        ),
+      );
+      if (!sameArrangement(shown, arranged)) arrange(next.arranged);
+    }
     const matches = searchScreens(index, state.query);
     for (const [id, card] of cards) {
       card.hidden = !visible(id);
@@ -1164,8 +1173,12 @@ export function canvas(index: Index, payload: Payload, options: CanvasOptions): 
     const next = { ...arranged };
     for (const id of done.ids) {
       cards.get(id)?.classList.remove('is-carried');
-      const p = positions.get(id)!;
-      next[id] = { x: Math.round(p.x), y: Math.round(p.y) };
+      const p = positions.get(id)!,
+        at = { x: Math.round(p.x), y: Math.round(p.y) },
+        home = base.get(id);
+      // A card put back exactly where the layout places it is no longer moved.
+      if (home && home.x === at.x && home.y === at.y) delete next[id];
+      else next[id] = at;
     }
     arrange(next);
     options.onArrange?.({ ...arranged });

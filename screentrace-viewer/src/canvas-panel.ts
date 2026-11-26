@@ -23,7 +23,7 @@ export interface PanelActions {
 
 const HELP = [
   '點一下：標出關聯線　點兩下：開啟審查',
-  '拖曳空白處：移動　⌘＋滾輪：縮放',
+  '拖曳空白處：移動　⌘／Ctrl＋滾輪：縮放',
   'Shift＋拖曳：框選多個畫面一起標記',
 ];
 
