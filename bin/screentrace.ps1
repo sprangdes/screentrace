@@ -112,6 +112,7 @@ function Test-BuildRequired([string]$jar) {
   return $null -ne (Get-ChildItem $baseDir -Recurse -File |
     Where-Object {
       $_.FullName -notmatch '[\\/](target|node_modules)[\\/]' -and
+      -not $_.FullName.StartsWith((Join-Path $baseDir 'screentrace-desktop') + [IO.Path]::DirectorySeparatorChar) -and
       -not $_.FullName.StartsWith((Join-Path $baseDir 'analyze') + [IO.Path]::DirectorySeparatorChar) -and
       ($_.Name -in @('pom.xml','build.mjs','package-lock.json') -or $_.Extension -in @('.java','.ts','.css','.html')) -and
       $_.LastWriteTimeUtc -gt $jarTime
@@ -164,5 +165,27 @@ if (Test-BuildRequired $jar) {
   }
 }
 
+# `gui` opens the desktop app (ADR 0190); it runs every other command through this launcher.
+if ($args.Count -gt 0 -and $args[0] -eq 'gui') {
+  if ($args.Count -gt 1 -and $args[1] -eq 'install') {
+    Write-Host 'gui install is only available on macOS; run .\bin\screentrace.cmd gui instead.'
+    exit 2
+  }
+  $desktopDir = Join-Path $baseDir 'screentrace-desktop'
+  if (-not (Test-Path (Join-Path $desktopDir 'node_modules/electron/path.txt'))) {
+    Write-Host 'Installing ScreenTrace desktop app...'
+    Push-Location $desktopDir
+    try {
+      & npm ci --no-fund
+      if ($LASTEXITCODE -ne 0) { throw 'Unable to install the ScreenTrace desktop app.' }
+      # Newer npm versions skip dependency install scripts; Electron's fetches its binary.
+      & node node_modules/electron/install.js
+      if ($LASTEXITCODE -ne 0) { throw 'Unable to download Electron for the ScreenTrace desktop app.' }
+    } finally { Pop-Location }
+  }
+  $env:SCREENTRACE_LAUNCHER = $PSCommandPath
+  & (Join-Path $desktopDir 'node_modules\.bin\electron.cmd') $desktopDir
+  exit $LASTEXITCODE
+}
 & java "-Dscreentrace.home=$baseDir" "-Dscreentrace.js.module=$(Join-Path $baseDir 'screentrace-js/cli.mjs')" -jar $jar @cliArgs
 exit $LASTEXITCODE

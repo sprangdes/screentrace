@@ -653,3 +653,8 @@
 
 - WP187：依需求方確認的設計稿重新設計報表介面。開啟的畫面在審查舞台上成為主體，「從哪裡來」「會去哪裡」改為預覽兩側可收合的卡片欄（預設收起）；左側清單作為審查佇列常駐，每列有狀態符號，底部有「下一個未確認」；右側決定面板改為按鈕／欄位／API 分頁並標出 K／X／U；頂部進度加上比例條與衝突數；全螢幕預覽有浮動的審查工具列；總覽右上角統一切換「依角色步驟／依功能／自由畫布」；API 呼叫鏈延伸到 Service／DAO；更新配色。畫布原本的放大聚焦程式碼移除。
 - WP188：與需求方逐項比對設計稿後補齊：頂部「流程總覽／審查／API」、「交付 md」、攤開的狀態篩選、常駐的畫面備註、歷程麵包屑、✓ ✕ ↺、窄欄快速操作與全螢幕上下兩列；「依角色步驟」改為所有角色的同一張表（含需要注意、可證明的交接點、走不到的畫面），「依功能」改為功能卡片；自由畫布加上摘要欄、縮圖導覽、Shift 框選批次標記與拖曳排版（位置存入 md v6 附錄 A）；嵌入 Inter 與 JetBrains Mono 的 Latin 子集。見 [ADR 0189](adr/0189-review-stage-redesign.md)。
+
+## R116 桌面分析工作台
+
+- WP189：新增 Electron 桌面 App（`screentrace-desktop`），以 `./bin/screentrace gui` 開啟。左側列出專案根目錄下的資料夾與已完成的分析，右側可分析／重新分析、開啟報表與資料夾，並顯示上次分析的畫面／API／元件數、分析中的計時與即時紀錄，可停止分析；頂部有環境檢查與設定（專案根目錄、分析結果根目錄、瀏覽器）。App 的每個動作都執行啟動腳本；CLI 新增 `desktop status|workspace|browser|report` 回傳 JSON。見 [ADR 0190](adr/0190-desktop-analysis-app.md)。
+- WP190：`./bin/screentrace gui install` 在 macOS 建立 `ScreenTrace.app`（自己的名稱與圖示）並安裝到「應用程式」，可從 Finder、Launchpad、Dock 點擊開啟。App 記錄原始碼目錄的啟動腳本路徑，啟動時補上登入 shell 與 Homebrew 的 PATH；結果介面改為分析結果卡（數量、技術、角色流程比例條）與分析狀態卡，完整輸出收在「詳細紀錄」。見 [ADR 0190](adr/0190-desktop-analysis-app.md)。

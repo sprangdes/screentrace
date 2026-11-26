@@ -15,3 +15,7 @@ screentrace-viewer/dist/
 # Python bytecode from report audit scripts
 __pycache__/
 *.py[cod]
+
+# Desktop app build output and the checkout path an installed app records (ADR 0190)
+screentrace-desktop/dist/
+screentrace-desktop/install.json

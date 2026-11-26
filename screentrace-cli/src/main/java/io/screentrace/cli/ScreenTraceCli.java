@@ -79,6 +79,13 @@ public final class ScreenTraceCli {
   }
 
   static int run(String[] args) throws IOException, InterruptedException {
+    if (args.length > 0 && args[0].equals("desktop")) {
+      try {
+        return DesktopCommands.run(args, System.out);
+      } catch (IllegalArgumentException usage) {
+        throw new CommandRefusedException(usage.getMessage(), 2, usage);
+      }
+    }
     if (args.length > 0 && args[0].equals("library")) {
       String result;
       try {
@@ -435,7 +442,7 @@ public final class ScreenTraceCli {
     return settings;
   }
 
-  private static WorkspaceSettings existingSettings() {
+  static WorkspaceSettings existingSettings() {
     try {
       Path file = WorkspaceSettings.defaultFile();
       return Files.isRegularFile(file) ? WorkspaceSettings.load(file) : null;

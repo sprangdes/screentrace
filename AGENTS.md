@@ -62,7 +62,7 @@ Unless there is a strong technical reason to change it, use:
 
 ### Backend
 - Java 17+
-- Maven multi-module project, run as a CLI (`bin/screentrace`); there is no Spring Boot runtime or server
+- Maven multi-module project, run as a CLI (`bin/screentrace`, or the Electron desktop app via `bin/screentrace gui`, which runs the same launcher); there is no Spring Boot runtime or server
 - Main libraries: JavaParser, Jackson, SnakeYAML
 
 ### Frontend
@@ -83,7 +83,7 @@ Avoid regex as the primary parser for structured programming languages.
 
 ## 4. Module Boundaries
 
-Current structure (7 Maven modules + 3 Node packages):
+Current structure (7 Maven modules + 4 Node packages):
 
 ```text
 screentrace/
@@ -96,7 +96,8 @@ screentrace/
 ├── screentrace-cli             workspace, commands, orchestration
 ├── screentrace-js        (Node) JavaScript / React AST analysis
 ├── screentrace-capture   (Node) static preview, Playwright Chromium capture, packing
-└── screentrace-viewer    (Node) TypeScript report viewer and shared review/md modules
+├── screentrace-viewer    (Node) TypeScript report viewer and shared review/md modules
+└── screentrace-desktop   (Node) Electron desktop app that runs the launcher (ADR 0190)
 ```
 
 Original target structure (the modules below that are not listed above are still planned, see `docs/ARCHITECTURE.md`):
@@ -279,7 +280,7 @@ Before implementing a task:
 6. Keep changes scoped to the requested task.
 7. Add tests for newly introduced parsing or graph behavior.
 8. Update documentation if the architecture or graph schema changes.
-9. Format Java changes with `./mvnw com.diffplug.spotless:spotless-maven-plugin:apply` (google-java-format, ADR 0130); CI rejects unformatted Java. Format TypeScript / JavaScript in `screentrace-js`, `screentrace-capture` and `screentrace-viewer` with `npm --prefix screentrace-viewer run format` (Prettier, ADR 0131); CI rejects unformatted sources. JavaScript must pass `npm --prefix screentrace-viewer run lint` (ESLint recommended rules) and TypeScript the viewer build's `tsc` (strict, no unused locals or parameters) (ADR 0140).
+9. Format Java changes with `./mvnw com.diffplug.spotless:spotless-maven-plugin:apply` (google-java-format, ADR 0130); CI rejects unformatted Java. Format TypeScript / JavaScript in `screentrace-js`, `screentrace-capture`, `screentrace-desktop` and `screentrace-viewer` with `npm --prefix screentrace-viewer run format` (Prettier, ADR 0131); CI rejects unformatted sources. JavaScript must pass `npm --prefix screentrace-viewer run lint` (ESLint recommended rules) and TypeScript the viewer build's `tsc` (strict, no unused locals or parameters) (ADR 0140).
 
 When requirements are ambiguous, prefer the smallest implementation that preserves extensibility.
 
