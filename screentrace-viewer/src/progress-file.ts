@@ -2,6 +2,8 @@
 
 export interface PermissionHandle {
   readonly name: string;
+  /** Set by the browser on every FileSystemHandle; tells a stored file from a stored folder. */
+  readonly kind?: 'file' | 'directory';
   queryPermission(options: { mode: 'readwrite' }): Promise<PermissionState>;
   requestPermission(options: { mode: 'readwrite' }): Promise<PermissionState>;
 }
@@ -13,9 +15,10 @@ export interface FileHandle extends PermissionHandle {
 export interface FolderHandle extends PermissionHandle {
   getFileHandle(name: string, options?: { create?: boolean }): Promise<FileHandle>;
 }
+/** Remembered handles: each report's progress md under its application name, and the default folder. */
 export interface HandleStore {
-  load(key: string): Promise<FileHandle | undefined>;
-  save(key: string, handle: FileHandle): Promise<void>;
+  load(key: string): Promise<PermissionHandle | undefined>;
+  save(key: string, handle: PermissionHandle): Promise<void>;
   remove?(key: string): Promise<void>;
 }
 interface PickerWindow {
@@ -92,12 +95,32 @@ function open(): Promise<IDBDatabase> {
 }
 export const handleStore = (): HandleStore => picker().__screentraceHandleStore || indexedStore;
 
+const isFile = (handle: PermissionHandle): handle is FileHandle =>
+  handle.kind !== 'directory' && typeof (handle as Partial<FileHandle>).getFile === 'function';
+const isFolder = (handle: PermissionHandle): handle is FolderHandle =>
+  handle.kind !== 'file' && typeof (handle as Partial<FolderHandle>).getFileHandle === 'function';
+/** The progress md remembered for `key`; anything else stored there is ignored. */
+export const loadFile = async (key: string) => {
+  const handle = await handleStore().load(key);
+  return handle && isFile(handle) ? handle : undefined;
+};
 /** The default folder shares the handle store under a key no application name can produce. */
 const folderKey = '\u0000default-folder';
-export const loadFolder = async () =>
-  (await handleStore().load(folderKey)) as unknown as FolderHandle | undefined;
-export const saveFolder = (folder: FolderHandle) =>
-  handleStore().save(folderKey, folder as unknown as FileHandle);
+export const loadFolder = async () => {
+  const handle = await handleStore().load(folderKey);
+  return handle && isFolder(handle) ? handle : undefined;
+};
+export const saveFolder = (folder: FolderHandle) => handleStore().save(folderKey, folder);
+/** The progress md's name in the default folder. Names are made filename-safe, so the
+ * application name's hash keeps two applications ("a b" and "a-b", or "App" and "app" on
+ * a case-insensitive disk) from sharing one file. */
+export function folderFileName(applicationName: string) {
+  let hash = 0x811c9dc5;
+  for (let i = 0; i < applicationName.length; i++)
+    hash = Math.imul(hash ^ applicationName.charCodeAt(i), 0x01000193);
+  const safe = applicationName.replace(/[\\/:*?"<>|\s]+/g, '-');
+  return `screentrace-review-${safe}-${(hash >>> 0).toString(16).padStart(8, '0')}.md`;
+}
 /** The file named `name` in `folder`, or undefined when it does not exist yet. */
 export async function existingFile(folder: FolderHandle, name: string) {
   try {

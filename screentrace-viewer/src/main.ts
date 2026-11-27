@@ -34,6 +34,8 @@ import {
   folderSupported,
   chooseFolder,
   loadFolder,
+  loadFile,
+  folderFileName,
   saveFolder,
   existingFile,
 } from './progress-file';
@@ -542,9 +544,15 @@ try {
   // ---- progress file: the md the person chose, rewritten after every decision (Chrome／Edge)
   type FileState = 'unsupported' | 'none' | 'pending' | 'saving' | 'saved' | 'error';
   const fileKey = graph.application.name,
-    suggestedName = `screentrace-review-${fileKey.replace(/[\\/:*?"<>|\s]+/g, '-')}.md`;
+    suggestedName = `screentrace-review-${fileKey.replace(/[\\/:*?"<>|\s]+/g, '-')}.md`,
+    folderName = folderFileName(fileKey);
   let fileHandle: FileHandle | undefined,
     defaultFolder: FolderHandle | undefined,
+    // Startup is still looking for this report's remembered md: no automatic folder save yet.
+    lookingUp = false,
+    // The menu was already opened for the current pending decision (reset when it is made).
+    pendingPrompted = false,
+    folderTried = false,
     fileState: FileState = autosaveSupported() ? 'none' : 'unsupported',
     fileError = '',
     promptDismissed = false,
@@ -599,6 +607,7 @@ try {
     return button;
   };
   const renderFile = () => {
+    if (fileState !== 'pending') pendingPrompted = false;
     renderExport();
     saveMenu.dataset.fileState = fileState;
     const dot = element('span', undefined, 'file-dot');
@@ -635,7 +644,7 @@ try {
         line.append(
           element('code', defaultFolder.name, 'panel-file'),
           '。進度檔會存成 ',
-          element('code', suggestedName, 'panel-file'),
+          element('code', folderName, 'panel-file'),
           '，之後每次標記都會自動寫入。這個檔案就是要交給 AI 的 md。',
         );
         savePanel.append(
@@ -714,10 +723,15 @@ try {
       writing = writing.then(writeNow);
     }, 500);
   };
-  let folderTried = false,
-    pendingPrompted = false;
+  /** Show the pending choice (the file's progress or this page's marks) and count it as asked. */
+  const askPending = () => {
+    fileState = 'pending';
+    renderFile();
+    pendingPrompted = true;
+    saveMenu.open = true;
+  };
   const maybePrompt = () => {
-    if (fileState === 'none' && defaultFolder && !folderTried) {
+    if (fileState === 'none' && defaultFolder && !folderTried && !lookingUp) {
       // A default folder the browser already lets this page write to: save there without asking.
       folderTried = true;
       const folder = defaultFolder;
@@ -766,26 +780,30 @@ try {
       if (!isCancel(error)) say(`無法設定進度檔：${String(error)}`, 'error');
     }
   };
-  /** Use `name` in the default folder as this report's progress md: an existing one is
-   * loaded like a remembered file, a missing one is created and written. */
+  /** Use `folderName` in the default folder as this report's progress md: an existing one is
+   * loaded like a remembered file, a missing one is created and written. Only runs while no
+   * progress file is set; it stops when one was set (chosen, remembered) during its awaits. */
   const useFolder = async (folder: FolderHandle) => {
+    const taken = () => fileHandle !== undefined || fileState !== 'none';
     try {
+      if (taken()) return;
       await grant(folder);
-      const existing = await existingFile(folder, suggestedName);
-      if (existing && (await existing.getFile()).size > 0) {
+      const existing = await existingFile(folder, folderName),
+        filled = existing && (await existing.getFile()).size > 0;
+      if (taken()) return;
+      if (existing && filled) {
         fileHandle = existing;
-        if (hasMarks(reviewState)) {
-          // Marks on this page and a file with marks: let the person choose which wins.
-          fileState = 'pending';
-          renderFile();
-          saveMenu.open = true;
-        } else await resume(edits);
+        // Marks on this page and a file with marks: let the person choose which wins.
+        if (hasMarks(reviewState)) askPending();
+        else await resume(edits);
         return;
       }
-      await remember(existing || (await folder.getFileHandle(suggestedName, { create: true })));
+      const created = existing || (await folder.getFileHandle(folderName, { create: true }));
+      if (taken()) return;
+      await remember(created);
       clearTimeout(writeTimer);
       await (writing = writing.then(writeNow));
-      if (fileState === 'saved') say(`已設定進度檔：${folder.name}/${suggestedName}`);
+      if (fileState === 'saved') say(`已設定進度檔：${folder.name}/${folderName}`);
     } catch (error) {
       if (!isCancel(error)) say(`無法使用預設資料夾：${String(error)}`, 'error');
     }
@@ -832,9 +850,7 @@ try {
       else {
         // Decided before the remembered file arrived: keep those decisions and let the
         // person choose whether the file replaces them.
-        fileState = 'pending';
-        renderFile();
-        saveMenu.open = true;
+        askPending();
       }
     } catch (error) {
       if (isMissing(error)) {
@@ -843,17 +859,23 @@ try {
         fileHandle = undefined;
         fileState = 'none';
         promptDismissed = false;
+        // The default folder is tried again: it creates a new md there (or loads one that is
+        // there now), or the menu asks for a place when the folder needs permission first.
+        folderTried = false;
         try {
           await handleStore().remove?.(fileKey);
         } catch {
           /* it is only offered again after a reload */
         }
-        renderFile();
-        saveMenu.open = true;
         say(
-          `上次的進度檔 ${handle.name} 已不存在（可能被移動或刪除），請重新選擇存放位置。`,
+          `上次的進度檔 ${handle.name} 已不存在（可能被移動或刪除）${defaultFolder ? '。' : '，請重新選擇存放位置。'}`,
           'error',
         );
+        if (defaultFolder) maybePrompt();
+        else {
+          renderFile();
+          saveMenu.open = true;
+        }
         return;
       }
       fileState = 'pending';
@@ -2295,12 +2317,8 @@ try {
   renderFile();
   if (fileState === 'none') {
     const startEdits = edits;
-    Promise.all([
-      handleStore()
-        .load(fileKey)
-        .catch(() => undefined),
-      loadFolder().catch(() => undefined),
-    ])
+    lookingUp = true;
+    Promise.all([loadFile(fileKey).catch(() => undefined), loadFolder().catch(() => undefined)])
       .then(async ([remembered, folder]) => {
         if (folder && !defaultFolder) {
           defaultFolder = folder;
@@ -2313,7 +2331,7 @@ try {
           folder &&
           (await folder.queryPermission({ mode: 'readwrite' })) === 'granted'
         )
-          handle = await existingFile(folder, suggestedName);
+          handle = await existingFile(folder, folderName);
         if (!handle || fileHandle) return;
         fileHandle = handle;
         fileState = 'pending';
@@ -2323,13 +2341,15 @@ try {
           (await handle.queryPermission({ mode: 'readwrite' })) === 'granted'
         )
           await resume(startEdits);
-        else {
-          pendingPrompted = true;
-          saveMenu.open = true;
-        }
+        else askPending();
       })
       .catch(() => {
         /* no remembered file */
+      })
+      .finally(() => {
+        lookingUp = false;
+        // Marked while looking: the default folder can be used now that nothing was found.
+        if (fileState === 'none' && edits !== startEdits) maybePrompt();
       });
   }
   render();

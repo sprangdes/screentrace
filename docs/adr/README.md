@@ -221,6 +221,7 @@ JSP、JSPF、tag file、Tiles 與有限的 Thymeleaf 以 `MarkupTag` 等 parser 
 | [0062](0062-confirmation-dashboard-workflow.md) | 以既有決策模型擴充確認工作流 | 部分被取代：介面於 R17 重寫或移除，見 [0084](0084-r17-two-page-report-and-retired-tests.md) |
 | [0069](0069-r14-wp47-decision-notes-and-md-v3.md) | R14 WP47 決策原因、備註與 Markdown v3 | 部分被取代：決策原因與備註曾退場（[0084](0084-r17-two-page-report-and-retired-tests.md)），md 改為 v1（[0086](0086-r17-progress-file-autosave-and-md-v1.md)）；R77 恢復原因與備註並改用 md v4（[0155](0155-r77-notes-fields-api-decisions-and-save-reminder.md)） |
 | [0086](0086-r17-progress-file-autosave-and-md-v1.md) | R17 進度檔自動存檔與 md v1 | 部分被取代：有備註或 API 標注時輸出 md v4，見 [0155](0155-r77-notes-fields-api-decisions-and-save-reminder.md) |
+| [0191](0191-progress-file-default-folder.md) | R117 進度檔的預設資料夾（檔名含應用名稱雜湊）、記住的進度檔不存在時重新選擇、待決定提醒每次一次 | 有效 |
 | [0153](0153-r70-review-md-trailing-empty-lines.md) | R70 review md 的附錄區塊之後允許空行 | 有效 |
 | [0155](0155-r77-notes-fields-api-decisions-and-save-reminder.md) | R77 標注備註、欄位與 API 標注、進度保存提醒（md v4） | 有效 |
 | [0156](0156-r78-features-backend-calls-and-system-md.md) | R78 功能分組與心智圖、後端呼叫鏈、md 系統分析章節（md v5、migration_target 設定） | 有效 |
