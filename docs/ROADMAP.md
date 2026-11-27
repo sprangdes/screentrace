@@ -658,3 +658,7 @@
 
 - WP189：新增 Electron 桌面 App（`screentrace-desktop`），以 `./bin/screentrace gui` 開啟。左側列出專案根目錄下的資料夾與已完成的分析，右側可分析／重新分析、開啟報表與資料夾，並顯示上次分析的畫面／API／元件數、分析中的計時與即時紀錄，可停止分析；頂部有環境檢查與設定（專案根目錄、分析結果根目錄、瀏覽器）。App 的每個動作都執行啟動腳本；CLI 新增 `desktop status|workspace|browser|report` 回傳 JSON。見 [ADR 0190](adr/0190-desktop-analysis-app.md)。
 - WP190：`./bin/screentrace gui install` 在 macOS 建立 `ScreenTrace.app`（自己的名稱與圖示）並安裝到「應用程式」，可從 Finder、Launchpad、Dock 點擊開啟。App 記錄原始碼目錄的啟動腳本路徑，啟動時補上登入 shell 與 Homebrew 的 PATH；結果介面改為分析結果卡（數量、技術、角色流程比例條）與分析狀態卡，完整輸出收在「詳細紀錄」。見 [ADR 0190](adr/0190-desktop-analysis-app.md)。
+
+## R117 進度檔的預設資料夾
+
+- WP191：存檔選單可設定預設資料夾，之後每份報表的進度檔自動建立在其中（`screentrace-review-<名稱>-<雜湊>.md`），已授權時第一次標記即開始存檔，資料夾中已有該報表的 md 時當作上次進度。記住的進度檔被移動或刪除時改為重新選擇（有預設資料夾時改用它）；自動存檔不搶已設定或正在載入的進度檔；待決定的提醒每次進入時一次；長檔名在選單內換行，選單重繪時不自行關閉。見 [ADR 0191](adr/0191-progress-file-default-folder.md)。

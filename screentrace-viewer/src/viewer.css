@@ -62,6 +62,9 @@ h1,h2,h3{margin:0}
 .save-menu[data-file-state=pending] .file-state{border-color:var(--warning);color:var(--warning);font-weight:600}
 .save-panel{display:flex;flex-direction:column;gap:6px}
 .save-panel p{margin:0 0 4px;line-height:1.6}
+.save-panel{overflow-x:hidden}
+.save-panel .menu-row{white-space:normal;overflow-wrap:anywhere}
+.save-panel .panel-file{font:12px var(--mono);overflow-wrap:anywhere;color:var(--gray-700)}
 .menu-row{width:100%;text-align:left}
 .menu-row.primary{text-align:center}
 .progress-row{display:flex;justify-content:space-between;width:100%;border:0;padding:6px 8px;text-align:left}
