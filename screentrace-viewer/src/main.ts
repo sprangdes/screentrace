@@ -649,7 +649,7 @@ try {
         );
         savePanel.append(
           line,
-          menuButton('存到預設資料夾', () => void useFolder(defaultFolder!), true),
+          menuButton('存到預設資料夾', () => void useFolder(defaultFolder!, true), true),
           menuButton('選擇其他位置…', () => void choose()),
           folderButton(true),
         );
@@ -731,7 +731,7 @@ try {
     saveMenu.open = true;
   };
   const maybePrompt = () => {
-    if (fileState === 'none' && defaultFolder && !folderTried && !lookingUp) {
+    if (fileState === 'none' && defaultFolder && !folderTried && !lookingUp && !promptDismissed) {
       // A default folder the browser already lets this page write to: save there without asking.
       folderTried = true;
       const folder = defaultFolder;
@@ -782,9 +782,17 @@ try {
   };
   /** Use `folderName` in the default folder as this report's progress md: an existing one is
    * loaded like a remembered file, a missing one is created and written. Only runs while no
-   * progress file is set; it stops when one was set (chosen, remembered) during its awaits. */
-  const useFolder = async (folder: FolderHandle) => {
-    const taken = () => fileHandle !== undefined || fileState !== 'none';
+   * progress file is set; it stops when one was set (chosen, remembered) during its awaits,
+   * and with `clicked` (a button started it) says so instead of doing nothing silently. */
+  const useFolder = async (folder: FolderHandle, clicked = false) => {
+    const taken = () => {
+      if (fileHandle === undefined && fileState === 'none') return false;
+      if (clicked) {
+        renderFile();
+        say(`已在使用進度檔${fileHandle ? `：${fileHandle.name}` : ''}，未改用預設資料夾`);
+      }
+      return true;
+    };
     try {
       if (taken()) return;
       await grant(folder);
@@ -817,7 +825,7 @@ try {
       } catch {
         /* remembered for this page only */
       }
-      if (use) await useFolder(folder);
+      if (use) await useFolder(folder, true);
       else {
         renderFile();
         say(`已設定預設資料夾：${folder.name}`);
@@ -2332,6 +2340,8 @@ try {
           (await folder.queryPermission({ mode: 'readwrite' })) === 'granted'
         )
           handle = await existingFile(folder, folderName);
+        // Decided: a missing file found below may fall back to the default folder at once.
+        lookingUp = false;
         if (!handle || fileHandle) return;
         fileHandle = handle;
         fileState = 'pending';
@@ -2349,7 +2359,9 @@ try {
       .finally(() => {
         lookingUp = false;
         // Marked while looking: the default folder can be used now that nothing was found.
-        if (fileState === 'none' && edits !== startEdits) maybePrompt();
+        // (Without one, the menu already opened for that mark.)
+        if (fileState === 'none' && edits !== startEdits && defaultFolder && !folderTried)
+          maybePrompt();
       });
   }
   render();
