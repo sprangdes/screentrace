@@ -553,6 +553,8 @@ try {
     // The menu was already opened for the current pending decision (reset when it is made).
     pendingPrompted = false,
     folderTried = false,
+    // The automatic default-folder save is running: no menu until it is done.
+    folderSaving = false,
     fileState: FileState = autosaveSupported() ? 'none' : 'unsupported',
     fileError = '',
     promptDismissed = false,
@@ -731,14 +733,21 @@ try {
     saveMenu.open = true;
   };
   const maybePrompt = () => {
+    if (folderSaving) return;
     if (fileState === 'none' && defaultFolder && !folderTried && !lookingUp && !promptDismissed) {
       // A default folder the browser already lets this page write to: save there without asking.
       folderTried = true;
+      folderSaving = true;
       const folder = defaultFolder;
       void folder
         .queryPermission({ mode: 'readwrite' })
         .catch(() => 'prompt')
-        .then((permission) => (permission === 'granted' ? useFolder(folder) : maybePrompt()));
+        .then((permission) => (permission === 'granted' ? useFolder(folder) : undefined))
+        .finally(() => {
+          folderSaving = false;
+          // Not granted, or the save failed: ask for a place as without a default folder.
+          if (fileState === 'none') maybePrompt();
+        });
       return;
     }
     if (
@@ -2338,8 +2347,11 @@ try {
           !handle &&
           folder &&
           (await folder.queryPermission({ mode: 'readwrite' })) === 'granted'
-        )
-          handle = await existingFile(folder, folderName);
+        ) {
+          // An empty md holds no progress: it is reused when the first mark is saved.
+          const found = await existingFile(folder, folderName);
+          if (found && (await found.getFile()).size > 0) handle = found;
+        }
         // Decided: a missing file found below may fall back to the default folder at once.
         lookingUp = false;
         if (!handle || fileHandle) return;
